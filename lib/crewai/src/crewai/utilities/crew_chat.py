@@ -197,11 +197,13 @@ def chat_loop(
             flush_input()
 
             user_input = get_user_input()
-            handle_user_input(
+            should_continue = handle_user_input(
                 user_input, chat_llm, messages, crew_tool_schema, available_functions
             )
+            if not should_continue:
+                break
 
-        except KeyboardInterrupt:  # noqa: PERF203
+        except KeyboardInterrupt:
             click.echo("\nExiting chat. Goodbye!")
             break
         except Exception as e:
@@ -232,14 +234,19 @@ def handle_user_input(
     messages: list[LLMMessage],
     crew_tool_schema: dict[str, Any],
     available_functions: dict[str, Any],
-) -> None:
+) -> bool:
+    """Handle one round of user input.
+
+    Returns:
+        True to keep the chat going, False when the user asked to exit.
+    """
     if user_input.strip().lower() == "exit":
         click.echo("Exiting chat. Goodbye!")
-        return
+        return False
 
     if not user_input.strip():
         click.echo("Empty message. Please provide input or type 'exit' to quit.")
-        return
+        return True
 
     messages.append({"role": "user", "content": user_input})
 
@@ -254,6 +261,7 @@ def handle_user_input(
 
     messages.append({"role": "assistant", "content": final_response})
     click.secho(f"\nAssistant: {final_response}\n", fg="green")
+    return True
 
 
 def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict[str, Any]:
