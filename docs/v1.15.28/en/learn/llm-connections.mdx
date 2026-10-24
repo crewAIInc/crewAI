@@ -169,6 +169,21 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
     </Tab>
 </Tabs>
 
+### Example: Fikra API
+
+Fikra API (https://fikraapi.co.ke) is an OpenAI-compatible hosted inference endpoint serving DeepSeek, GLM, Kimi, StepFun and Qwen models.
+
+```python Code
+llm = LLM(
+    model="openai/deepseek-v4.1-flash",
+    base_url="https://api.fikraapi.co.ke/v1",
+    api_key="your-fikra-api-key"
+)
+agent = Agent(llm=llm, ...)
+```
+
+Models on the endpoint: DeepSeek V4.1 Flash ($0.045 per 1M input / $0.09 per 1M output, 1M context; the 1017 build is $0.05/$0.11), GLM 5.3 ($1.05/$3.35), GLM 5.3 Flash ($0.155/$0.49), GLM 5.2 ($0.75/$1.65), Kimi K3 ($2.10/$10.50), StepFun Step 5 (preview), Qwen 3.8 27B ($0.045/$0.35, cached input $0.10), MiMo V2.6 Pro, Nemotron 3.5 Super VL. Full id list at `https://api.fikraapi.co.ke/v1/models`. Per-token USD with $1 minimum top-up; M-Pesa and card payments. Prices verified 2026-10-19 at [fikraapi.co.ke/pricing](https://fikraapi.co.ke/pricing).
+
 ## Using Local Models with Ollama
 
 For local models like those provided by Ollama:
@@ -212,3 +227,4 @@ This is particularly useful when working with OpenAI-compatible APIs or when you
 ## Conclusion
 
 By leveraging LiteLLM, CrewAI offers seamless integration with a vast array of LLMs. This flexibility allows you to choose the most suitable model for your specific needs, whether you prioritize performance, cost-efficiency, or local deployment. Remember to consult the [LiteLLM documentation](https://docs.litellm.ai/docs/) for the most up-to-date information on supported models and configuration options.
+
