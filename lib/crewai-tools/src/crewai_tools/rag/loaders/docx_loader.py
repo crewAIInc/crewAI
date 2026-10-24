@@ -1,14 +1,26 @@
+from __future__ import annotations
+
+from collections.abc import Iterator
 import os
 import tempfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
 from crewai_tools.security.safe_requests import safe_get
 
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from docx.oxml.table import CT_Tc
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+
 class DOCXLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
+        """Load DOCX text from a local file or URL and clean up downloaded files."""
         try:
             from docx import Document as DocxDocument
         except ImportError as e:
@@ -33,6 +45,7 @@ class DOCXLoader(BaseLoader):
 
     @staticmethod
     def _download_from_url(url: str, kwargs: dict[str, Any]) -> str:
+        """Download DOCX content to a temporary file after checking HTTP status."""
         headers = kwargs.get(
             "headers",
             {
@@ -58,15 +71,11 @@ class DOCXLoader(BaseLoader):
         source_ref: str,
         DocxDocument: Any,  # noqa: N803
     ) -> LoaderResult:
+        """Extract ordered paragraph and table text while retaining source metadata."""
         try:
             doc = DocxDocument(file_path)
 
-            text_parts = []
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text_parts.append(paragraph.text)  # noqa: PERF401
-
-            content = "\n".join(text_parts)
+            content = "\n".join(self._iter_text(doc.iter_inner_content()))
 
             metadata = {
                 "format": "docx",
@@ -83,3 +92,26 @@ class DOCXLoader(BaseLoader):
 
         except Exception as e:
             raise ValueError(f"Error loading DOCX file: {e!s}") from e
+
+    def _iter_text(self, blocks: Iterable[Paragraph | Table]) -> Iterator[str]:
+        """Yield paragraph and table text in document order, including nested tables."""
+        from docx.text.paragraph import Paragraph
+
+        for block in blocks:
+            if isinstance(block, Paragraph):
+                if block.text.strip():
+                    yield block.text
+            else:
+                # Merged grid positions can refer to the same cell across rows.
+                seen_cells: set[CT_Tc] = set()
+                for row in block.rows:
+                    cells = []
+                    for cell in row.cells:
+                        if cell._tc in seen_cells:
+                            continue
+                        seen_cells.add(cell._tc)
+                        cells.append(
+                            "\n".join(self._iter_text(cell.iter_inner_content()))
+                        )
+                    if any(cell.strip() for cell in cells):
+                        yield " | ".join(cells)
