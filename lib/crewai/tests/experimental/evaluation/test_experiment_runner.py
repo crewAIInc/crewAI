@@ -207,3 +207,18 @@ class TestExperimentRunner:
         assert isinstance(result.expected_score, dict)
         assert "unknown_metric" in result.expected_score.keys()
         assert result.passed is False
+
+    def test_assert_scores_does_not_pass_on_empty_expected_score(self):
+        """An empty expected_score asserts nothing, so it must not be reported as a pass."""
+        runner = ExperimentRunner(dataset=[])
+
+        assert runner._assert_scores({}, 0) is False
+        assert runner._assert_scores({}, 10) is False
+        assert runner._assert_scores({}, {"goal_alignment": 0}) is False
+        assert runner._assert_scores({}, {"goal_alignment": 10}) is False
+
+        # An empty actual score stays failing, and a populated expectation is unaffected.
+        assert runner._assert_scores(5, {}) is False
+        assert runner._assert_scores({"goal_alignment": 7}, 9) is True
+        assert runner._assert_scores({"goal_alignment": 7}, 3) is False
+        assert runner._assert_scores({"goal_alignment": 7}, {"goal_alignment": 9}) is True
