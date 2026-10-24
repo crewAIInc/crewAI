@@ -293,12 +293,14 @@ class EvaluationStoppedError(RuntimeError):
 
 
 def _note(text: str, style: str = "dim") -> None:
+    """Print evaluation progress using the caller-selected style."""
     console.print(Text(text), style=style)
 
 
 def eval_crew(
     run_id: str | None = None,
     *,
+    open_browser: bool = True,
     run_again: bool = False,
     run_args: dict[str, Any] | None = None,
     trusted_amp_origins: set[str] | None = None,
@@ -380,7 +382,8 @@ def eval_crew(
         # carrying `[link=…]` would print a trustworthy label over a hostile
         # target. The style belongs to the span, not to the string.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_browser:
+            _open(url)
 
     console.print("Waiting for the verdict…", style="dim")
     try:
@@ -1630,7 +1633,9 @@ def _record_models_usage(models: list[str]) -> None:
         pass
 
 
-def eval_models(models_text: str, deployment_id: str | None = None) -> None:
+def eval_models(
+    models_text: str, deployment_id: str | None = None, *, open_browser: bool = True
+) -> None:
     """Run this project's deployment once as deployed and once per model, and compare.
 
     The deployment is AMP's to find, by the project id, unless DEPLOYMENT_ID
@@ -1688,7 +1693,8 @@ def eval_models(models_text: str, deployment_id: str | None = None) -> None:
     if url:
         # Appended, never interpolated — the same reason as `eval_crew`'s link.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_browser:
+            _open(url)
 
     console.print("Waiting for the comparison…", style="dim")
     # Every line once: setups run in parallel, so consecutive polls alternate
