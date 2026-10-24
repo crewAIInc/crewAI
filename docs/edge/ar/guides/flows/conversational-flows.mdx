@@ -607,6 +607,104 @@ finally:
 
 يمنع `suppress_flow_events=True` لوحات الطرفية وأحداث الطرق، لكنه لا يعطّل تتبع دورة حياة Flow الخارجي.
 
+## إعادة تشغيل محادثة من ثبات SQLite
+
+المثال أدناه كامل وحتمي: توجيه بالكلمات المفتاحية مع ردود مُعدّة مسبقاً، لذا يعمل **بدون بيانات اعتماد LLM وبدون استدعاءات نماذج**. وهو يغطي دورة حياة إعادة التشغيل الكاملة — معالجة جولة، ثم التخلص من النسخة، ثم إنشاء `Flow` جديد على ملف SQLite نفسه ومعرّف الجلسة نفسه، ومواصلة المحادثة مع بقاء السجل سليماً.
+
+```python
+# persist_restart_example.py
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+DB_PATH = "support_chat.db"  # explicit SQLite file, created next to this script
+SESSION_ID = "support-session-001"  # stable session id for the conversation
+
+
+@ConversationConfig(defer_trace_finalization=True)
+@persist(SQLiteFlowPersistence(DB_PATH))
+class SupportBot(Flow[ConversationState]):
+    """Deterministic support bot: keyword routing, scripted replies, no LLM."""
+
+    def route_turn(self, context):
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order"
+        return "help"
+
+    @listen("order")
+    def handle_order(self):
+        reply = f"Order update: '{self.state.current_user_message}' is on its way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "I can check order status. Ask me about your order."
+        self.append_assistant_message(reply)
+        return reply
+
+
+def show_history(flow, label):
+    print(f"--- {label} ---")
+    for message in flow.state.messages:
+        print(f"{message.role}: {message.content}")
+
+
+# Turn 1 on the first instance.
+bot = SupportBot()
+try:
+    bot.handle_turn("Where is my order?", session_id=SESSION_ID)
+    show_history(bot, "after turn 1")
+finally:
+    bot.finalize_session_traces()
+
+# Simulate a restart: a FRESH instance, same DB file, same session id.
+bot2 = SupportBot()
+try:
+    bot2.handle_turn("What about the delivery date?", session_id=SESSION_ID)
+    show_history(bot2, "after turn 2 (restored history + new turn)")
+finally:
+    bot2.finalize_session_traces()
+
+# A different session id starts a separate conversation.
+bot3 = SupportBot()
+try:
+    bot3.handle_turn("Where is my order?", session_id="support-session-002")
+    show_history(bot3, "different session id")
+finally:
+    bot3.finalize_session_traces()
+```
+
+شغّله من المجلد الذي يحتوي السكربت:
+
+```bash
+python persist_restart_example.py
+```
+
+المخرجات المتوقعة (بدون لوحات تحكم الـ flow):
+
+```text
+--- after turn 1 ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+--- after turn 2 (restored history + new turn) ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+user: What about the delivery date?
+assistant: I can check order status. Ask me about your order.
+--- different session id ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+```
+
+### ما الذي تسترجعه إعادة التشغيل — وما الذي لا تسترجعه
+
+النسخة الجديدة التي تستخدم ملف `SQLiteFlowPersistence` نفسه ومعرّف الجلسة `session_id` نفسه تسترجع **حالة المحادثة المحفوظة**: `state.messages` (جولة المستخدم ورد المساعد، بالترتيب، وبدون تكرار)، وأعلام الحالة، ومعرّف الجلسة نفسه. يحمّل `handle_turn()` أحدث لقطة قبل إلحاق سطر المستخدم الجديد، فتواصل الجولة الثانية من حيث توقفت الأولى تماماً. أما معرّف الجلسة المختلف `session_id` فلا يجد لقطة ويبدأ محادثة منفصلة.
+
+ما **لا** يُسترجع: العمل الخلفي الجاري. الثبات هو استرجاع للحالة وليس إحياءً للعملية — الخيوط (threads)، وبثوث LLM الجارية، والمؤقتات، والاتصالات المفتوحة، وأي موارد تنفيذ حية أخرى تختفي عند التخلص من النسخة القديمة. كل `handle_turn()` هو تشغيل جديد للرسم البياني فوق الحالة المسترجعة. إذا ألغيت جلسة بدل إنهائها، أغلق الـ trace المؤجل صراحةً عبر `finalize_session_traces(discard=True)` حتى يُتجاهَل دفعة الـ trace المفتوحة بدل تركها معلقة.
+
+بما أن المثال يضبط `defer_trace_finalization=True` (القيمة الافتراضية)، تُبقي كل نسخة دفعة trace واحدة مفتوحة عبر جولاتها؛ وتستدعي كتل `try/finally` الدالة `finalize_session_traces()` لتنتهي كل جلسة بحدث `FlowFinished` واحد. يقوم `flow.chat()` بذلك نيابة عنك في REPL؛ أما عندما تملك الحلقة بنفسك عبر `handle_turn()`، فأنهِها صراحةً.
+
 ## البث
 
 استخدم `stream_turn()` للواجهات المحادثية، وكرّر عبر كائنات `StreamFrame` المرتبة التي يعيدها:

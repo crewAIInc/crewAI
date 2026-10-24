@@ -606,6 +606,124 @@ An explicit `trace_scope` takes precedence over the old flag: `"turn"` closes ea
 
 `suppress_flow_events=True` suppresses console panels and method events; it does not disable tracing the outer Flow lifecycle.
 
+## Restarting a conversation from SQLite persistence
+
+The example below is complete and deterministic: keyword routing plus
+scripted replies, so it runs with **no LLM credentials and no model calls**.
+It exercises the full restart lifecycle — process a turn, drop the instance,
+create a fresh `Flow` on the same SQLite file and session id, and keep
+chatting with the history intact.
+
+```python
+# persist_restart_example.py
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+DB_PATH = "support_chat.db"  # explicit SQLite file, created next to this script
+SESSION_ID = "support-session-001"  # stable session id for the conversation
+
+
+@ConversationConfig(defer_trace_finalization=True)
+@persist(SQLiteFlowPersistence(DB_PATH))
+class SupportBot(Flow[ConversationState]):
+    """Deterministic support bot: keyword routing, scripted replies, no LLM."""
+
+    def route_turn(self, context):
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order"
+        return "help"
+
+    @listen("order")
+    def handle_order(self):
+        reply = f"Order update: '{self.state.current_user_message}' is on its way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "I can check order status. Ask me about your order."
+        self.append_assistant_message(reply)
+        return reply
+
+
+def show_history(flow, label):
+    print(f"--- {label} ---")
+    for message in flow.state.messages:
+        print(f"{message.role}: {message.content}")
+
+
+# Turn 1 on the first instance.
+bot = SupportBot()
+try:
+    bot.handle_turn("Where is my order?", session_id=SESSION_ID)
+    show_history(bot, "after turn 1")
+finally:
+    bot.finalize_session_traces()
+
+# Simulate a restart: a FRESH instance, same DB file, same session id.
+bot2 = SupportBot()
+try:
+    bot2.handle_turn("What about the delivery date?", session_id=SESSION_ID)
+    show_history(bot2, "after turn 2 (restored history + new turn)")
+finally:
+    bot2.finalize_session_traces()
+
+# A different session id starts a separate conversation.
+bot3 = SupportBot()
+try:
+    bot3.handle_turn("Where is my order?", session_id="support-session-002")
+    show_history(bot3, "different session id")
+finally:
+    bot3.finalize_session_traces()
+```
+
+Run it from the directory containing the script:
+
+```bash
+python persist_restart_example.py
+```
+
+Expected output (flow console panels omitted):
+
+```text
+--- after turn 1 ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+--- after turn 2 (restored history + new turn) ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+user: What about the delivery date?
+assistant: I can check order status. Ask me about your order.
+--- different session id ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+```
+
+### What a restart recovers — and what it does not
+
+A fresh instance with the same `SQLiteFlowPersistence` file and the same
+`session_id` recovers the **persisted conversation state**: `state.messages`
+(the user turn and the assistant reply, in order, with no duplicates), state
+flags, and the session id itself. `handle_turn()` loads the latest snapshot
+before appending the new user line, so the second turn continues exactly
+where the first one left off. A different `session_id` finds no snapshot and
+starts a separate conversation.
+
+What is **not** restored: running background work. Persistence is state
+recovery, not process resurrection — threads, in-flight LLM streams, timers,
+open connections, and any other live execution resources are gone when the
+old instance is dropped. Each `handle_turn()` is a fresh graph run over the
+restored state. If you cancel a session instead of finishing it, close its
+deferred trace explicitly with `finalize_session_traces(discard=True)` so the
+open trace batch is discarded rather than left dangling.
+
+Because the example sets `defer_trace_finalization=True` (the default), each
+instance keeps one trace batch open across its turns; the `try/finally`
+blocks call `finalize_session_traces()` so every session ends with a single
+`FlowFinished` event. `flow.chat()` does this for you in a REPL; when you own
+the loop with `handle_turn()`, finalize explicitly.
+
 ## Streaming
 
 For conversational UIs, use `stream_turn()` and iterate its ordered `StreamFrame` objects:

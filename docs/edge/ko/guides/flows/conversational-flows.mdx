@@ -603,6 +603,104 @@ finally:
 
 `suppress_flow_events=True`는 콘솔 패널과 메서드 이벤트를 숨기지만 외부 Flow 수명 주기의 tracing을 비활성화하지는 않습니다.
 
+## SQLite persistence에서 대화 다시 시작하기
+
+아래 예제는 완전하고 결정적입니다. 키워드 라우팅과 스크립트된 응답을 사용하므로 **LLM 자격 증명이나 모델 호출 없이** 실행됩니다. 전체 재시작 수명 주기를 다룹니다 — 턴을 처리하고, 인스턴스를 버린 뒤, 같은 SQLite 파일과 세션 ID로 새 `Flow`를 만들어 기록이 그대로 유지된 채 대화를 이어갑니다.
+
+```python
+# persist_restart_example.py
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+DB_PATH = "support_chat.db"  # explicit SQLite file, created next to this script
+SESSION_ID = "support-session-001"  # stable session id for the conversation
+
+
+@ConversationConfig(defer_trace_finalization=True)
+@persist(SQLiteFlowPersistence(DB_PATH))
+class SupportBot(Flow[ConversationState]):
+    """Deterministic support bot: keyword routing, scripted replies, no LLM."""
+
+    def route_turn(self, context):
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order"
+        return "help"
+
+    @listen("order")
+    def handle_order(self):
+        reply = f"Order update: '{self.state.current_user_message}' is on its way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "I can check order status. Ask me about your order."
+        self.append_assistant_message(reply)
+        return reply
+
+
+def show_history(flow, label):
+    print(f"--- {label} ---")
+    for message in flow.state.messages:
+        print(f"{message.role}: {message.content}")
+
+
+# Turn 1 on the first instance.
+bot = SupportBot()
+try:
+    bot.handle_turn("Where is my order?", session_id=SESSION_ID)
+    show_history(bot, "after turn 1")
+finally:
+    bot.finalize_session_traces()
+
+# Simulate a restart: a FRESH instance, same DB file, same session id.
+bot2 = SupportBot()
+try:
+    bot2.handle_turn("What about the delivery date?", session_id=SESSION_ID)
+    show_history(bot2, "after turn 2 (restored history + new turn)")
+finally:
+    bot2.finalize_session_traces()
+
+# A different session id starts a separate conversation.
+bot3 = SupportBot()
+try:
+    bot3.handle_turn("Where is my order?", session_id="support-session-002")
+    show_history(bot3, "different session id")
+finally:
+    bot3.finalize_session_traces()
+```
+
+스크립트가 있는 디렉터리에서 실행하세요:
+
+```bash
+python persist_restart_example.py
+```
+
+예상 출력 (flow 콘솔 패널 생략):
+
+```text
+--- after turn 1 ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+--- after turn 2 (restored history + new turn) ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+user: What about the delivery date?
+assistant: I can check order status. Ask me about your order.
+--- different session id ---
+user: Where is my order?
+assistant: Order update: 'Where is my order?' is on its way.
+```
+
+### 재시작이 복원하는 것과 복원하지 않는 것
+
+같은 `SQLiteFlowPersistence` 파일과 같은 `session_id`를 사용하는 새 인스턴스는 **영속화된 대화 상태**를 복원합니다: `state.messages`(사용자 턴과 어시스턴트 응답을 순서대로, 중복 없이), 상태 플래그, 그리고 세션 ID 자체입니다. `handle_turn()`은 새 사용자 라인을 추가하기 전에 최신 스냅샷을 로드하므로, 두 번째 턴은 첫 번째 턴이 끝난 지점에서 정확히 이어집니다. 다른 `session_id`는 스냅샷을 찾지 못해 별도의 대화를 시작합니다.
+
+**복원되지 않는** 것: 실행 중인 백그라운드 작업입니다. persistence는 상태 복원이지 프로세스 부활이 아닙니다 — 스레드, 진행 중인 LLM 스트림, 타이머, 열린 연결 등 라이브 실행 리소스는 이전 인스턴스를 버리는 순간 사라집니다. 각 `handle_turn()`은 복원된 상태 위에서 그래프를 새로 실행합니다. 세션을 완료하지 않고 취소한다면, 열린 trace batch가 방치되지 않도록 `finalize_session_traces(discard=True)`로 지연된 trace를 명시적으로 닫으세요.
+
+예제가 `defer_trace_finalization=True`(기본값)를 설정하므로 각 인스턴스는 턴에 걸쳐 하나의 trace batch를 열어 둡니다. `try/finally` 블록에서 `finalize_session_traces()`를 호출하므로 모든 세션은 단일 `FlowFinished` 이벤트로 끝납니다. REPL에서는 `flow.chat()`이 이를 대신 처리합니다. `handle_turn()`으로 루프를 직접 관리한다면 명시적으로 finalize하세요.
+
 ## 스트리밍
 
 대화형 UI에서는 `stream_turn()`을 사용하고 순서가 보장된 `StreamFrame` 객체를 순회하세요:
