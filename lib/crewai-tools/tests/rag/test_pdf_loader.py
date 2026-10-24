@@ -1,3 +1,4 @@
+import os
 import tempfile
 from unittest.mock import patch
 
@@ -8,6 +9,29 @@ import pytest
 
 
 pymupdf = pytest.importorskip("pymupdf")
+
+
+def write_pdf_temp_file(data: bytes) -> str:
+    """Write *data* to a closed temp file and return its path.
+
+    The handle must be closed before the loader opens the path: on Windows
+    an open NamedTemporaryFile blocks other opens of the same file.
+    """
+    fd, path = tempfile.mkstemp(suffix=".pdf")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+    except BaseException:
+        cleanup_temp_file(path)
+        raise
+    return path
+
+
+def cleanup_temp_file(path: str) -> None:
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
 
 # Patched at the loader's seam rather than at requests.get: safe_get_bounded
 # resolves the hostname before issuing a request, which would make these tests
@@ -33,11 +57,11 @@ def fetch_result(body: bytes, url: str = "https://example.com/report.pdf"):
 class TestPDFLoader:
     def test_load_pdf_from_file(self):
         """A PDF on disk has its text extracted with page markers."""
-        with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
-            f.write(build_pdf())
-            f.flush()
-
-            result = PDFLoader().load(SourceContent(f.name))
+        path = write_pdf_temp_file(build_pdf())
+        try:
+            result = PDFLoader().load(SourceContent(path))
+        finally:
+            cleanup_temp_file(path)
 
         assert isinstance(result, LoaderResult)
         assert "Page 1:" in result.content
@@ -123,12 +147,12 @@ class TestPDFLoader:
 
     def test_load_corrupt_pdf_raises_value_error(self):
         """Bytes that are not a parseable PDF produce a read error."""
-        with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
-            f.write(b"%PDF-1.4 not really a pdf")
-            f.flush()
-
+        path = write_pdf_temp_file(b"%PDF-1.4 not really a pdf")
+        try:
             with pytest.raises(ValueError, match="Error reading PDF"):
-                PDFLoader().load(SourceContent(f.name))
+                PDFLoader().load(SourceContent(path))
+        finally:
+            cleanup_temp_file(path)
 
     def test_pdf_with_no_extractable_text(self):
         """A PDF whose pages hold no text says so instead of returning empty."""
@@ -137,20 +161,20 @@ class TestPDFLoader:
         blank = document.tobytes()
         document.close()
 
-        with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
-            f.write(blank)
-            f.flush()
-
-            result = PDFLoader().load(SourceContent(f.name))
+        path = write_pdf_temp_file(blank)
+        try:
+            result = PDFLoader().load(SourceContent(path))
+        finally:
+            cleanup_temp_file(path)
 
         assert "no extractable text" in result.content
 
     def test_pdf_doc_id_is_stable(self):
         """The same source yields the same doc_id across loads."""
-        with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
-            f.write(build_pdf())
-            f.flush()
-
+        path = write_pdf_temp_file(build_pdf())
+        try:
             loader = PDFLoader()
-            source = SourceContent(f.name)
+            source = SourceContent(path)
             assert loader.load(source).doc_id == loader.load(source).doc_id
+        finally:
+            cleanup_temp_file(path)
