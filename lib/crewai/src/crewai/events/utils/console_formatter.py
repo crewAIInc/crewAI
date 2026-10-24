@@ -1,7 +1,8 @@
 from contextvars import ContextVar
 import os
+import sys
 import threading
-from typing import Any, ClassVar, cast
+from typing import IO, Any, ClassVar, cast
 
 from crewai_core.printer import (
     set_suppress_console_output as set_suppress_console_output,
@@ -28,6 +29,34 @@ _disable_version_check: ContextVar[bool] = ContextVar(
 )
 
 
+class _EncodingSafeStdout:
+    """Write to the current ``sys.stdout``, replacing what its encoding can't hold.
+
+    On Windows, redirected output (pipes, files, CI runners) encodes with the
+    ANSI code page, which cannot represent the emoji used in panel titles; rich
+    re-raises the resulting ``UnicodeEncodeError``. Without this wrapper every
+    console formatter handler fails into the event bus's handler-error report
+    and no panel is printed at all.
+    """
+
+    def write(self, text: str) -> int:
+        stream = sys.stdout
+        try:
+            return stream.write(text)
+        except UnicodeEncodeError:
+            encoding = stream.encoding or "utf-8"
+            fallback = text.encode(encoding, errors="replace").decode(
+                encoding, errors="replace"
+            )
+            return stream.write(fallback)
+
+    def flush(self) -> None:
+        sys.stdout.flush()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(sys.stdout, name)
+
+
 class ConsoleFormatter:
     tool_usage_counts: ClassVar[dict[str, int]] = {}
     _tool_counts_lock: ClassVar[threading.Lock] = threading.Lock()
@@ -41,7 +70,7 @@ class ConsoleFormatter:
     crew_completion_printed: ClassVar[threading.Event] = threading.Event()
 
     def __init__(self, verbose: bool = False):
-        self.console = Console(width=None)
+        self.console = Console(width=None, file=cast("IO[str]", _EncodingSafeStdout()))
         self.verbose = verbose
         self._streaming_live: Live | None = None
         self._is_streaming: bool = False
