@@ -743,6 +743,11 @@ def test_infrastructure_flows_do_not_pollute_outcome_signals(
     task = Task(description="Do it", expected_output="A result", agent=agent)
     Crew(agents=[agent], tasks=[task]).kickoff()
 
+    # kickoff() emits without awaiting its handlers; the records asserted
+    # below are filled by them, so drain the bus first (CI workers can be
+    # slower than the handler thread pool).
+    wait_for_event_handlers()
+
     # Internal outcomes are still recorded - on the span, tagged internal -
     # they simply do not masquerade as a user's flow finishing.
     assert ("AgentExecutor", "completed") in [

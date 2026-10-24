@@ -299,11 +299,7 @@ def _summarize_chunks(
 
     async def summarize_chunk(chunk: list[LLMMessage]) -> str:
         async with semaphore:
-            response = str(
-                await llm.acall(build_summary_prompt(chunk), callbacks=callbacks)
-            )
-        match = re.search(r"<summary>(.*?)</summary>", response, re.DOTALL)
-        return match.group(1).strip() if match else response.strip()
+            return await _summarize_chunk_with_recovery(llm, chunk, callbacks)
 
     semaphore = asyncio.Semaphore(4)
 
@@ -319,6 +315,69 @@ def _summarize_chunks(
     context = contextvars.copy_context()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
         return pool.submit(context.run, asyncio.run, coroutine).result()
+
+
+_MAX_SUMMARY_SPLIT_DEPTH: Final[int] = 6
+
+
+async def _summarize_chunk_with_recovery(
+    llm: Any,
+    chunk: list[LLMMessage],
+    callbacks: list[Any],
+    depth: int = 0,
+) -> str:
+    """Summarize one chunk, splitting it in half when the provider rejects it.
+
+    The chunker packs requests by a chars/4 estimate when the model has no
+    native token counter, so a token-dense conversation can exceed the real
+    window even though the estimate said it fit. The pre-refactor
+    ``SummarizeMessages`` re-chunked with tighter estimates (4.0/3.0/2.5
+    chars/token) in that case instead of failing; this preserves that
+    recovery: a rejected chunk is split at message boundaries (then
+    mid-text for a single oversized message) and each half is summarized
+    separately, up to a bounded depth. The original provider error
+    propagates when even the smallest piece is rejected.
+    """
+    # Local import: agent_utils imports back into the llms package.
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    try:
+        response = str(
+            await llm.acall(build_summary_prompt(chunk), callbacks=callbacks)
+        )
+    except Exception as error:
+        is_context_error = isinstance(
+            error, LLMContextLengthExceededError
+        ) or is_context_length_exceeded(error)
+        halves = _split_chunk_for_retry(chunk) if len(chunk) else None
+        if not is_context_error or depth >= _MAX_SUMMARY_SPLIT_DEPTH or not halves:
+            raise
+        left, right = halves
+        results = await asyncio.gather(
+            _summarize_chunk_with_recovery(llm, left, callbacks, depth + 1),
+            _summarize_chunk_with_recovery(llm, right, callbacks, depth + 1),
+        )
+        return "\n\n".join(results)
+    match = re.search(r"<summary>(.*?)</summary>", response, re.DOTALL)
+    return match.group(1).strip() if match else response.strip()
+
+
+def _split_chunk_for_retry(
+    chunk: list[LLMMessage],
+) -> tuple[list[LLMMessage], list[LLMMessage]] | None:
+    """Split a rejected chunk in half, at message boundaries when possible."""
+    if len(chunk) >= 2:
+        mid = len(chunk) // 2
+        return chunk[:mid], chunk[mid:]
+    message = chunk[0]
+    content = message.get("content")
+    text = content if isinstance(content, str) else str(content)
+    mid = len(text) // 2
+    if mid == 0:
+        return None
+    left = cast("LLMMessage", {**message, "content": text[:mid]})
+    right = cast("LLMMessage", {**message, "content": text[mid:]})
+    return [left], [right]
 
 
 def _chunk_messages(
