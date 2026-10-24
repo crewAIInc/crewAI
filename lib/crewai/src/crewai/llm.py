@@ -1132,15 +1132,9 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallFailedEvent(
-                    error=str(e),
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    call_id=get_current_call_id(),
-                ),
-            )
+            # The failed event is emitted by call()/acall()'s blanket except;
+            # emitting here as well would double-report and pop the caller's
+            # scope.
             raise Exception(f"Failed to get streaming response: {e!s}") from e
 
     def _handle_streaming_tool_calls(
@@ -1880,6 +1874,8 @@ class LLM(BaseLLM):
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
         with llm_call_context():
+            self._validate_call_params()
+
             self._emit_call_started_event(
                 messages=messages,
                 tools=tools,
@@ -1888,8 +1884,6 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
-
-            self._validate_call_params()
 
             if isinstance(messages, str):
                 messages = [{"role": "user", "content": messages}]
@@ -1908,82 +1902,84 @@ class LLM(BaseLLM):
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
                     self.set_callbacks(callbacks)
-                try:
-                    params = self._prepare_completion_params(messages, tools)
-                    if self._effective_stream():
-                        result = self._handle_streaming_response(
-                            params=params,
-                            callbacks=callbacks,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_model=response_model,
-                        )
-                    else:
-                        result = self._handle_non_streaming_response(
-                            params=params,
-                            callbacks=callbacks,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_model=response_model,
-                        )
-
-                    if isinstance(result, str):
-                        result = self._invoke_after_llm_call_hooks(
-                            messages, result, from_agent
-                        )
-
-                    return result
-                except LLMContextLengthExceededError:
-                    # Re-raise LLMContextLengthExceededError as it should be handled
-                    # by AgentExecutor, which can then decide
-                    # whether to summarize the content or abort based on the respect_context_window flag
-                    raise
-                except Exception as e:
-                    error_str = str(e)
-                    unsupported_stop = "'stop'" in error_str and (
-                        "Unsupported parameter" in error_str
-                        or "does not support parameters" in error_str
-                    )
-
-                    if unsupported_stop:
-                        if (
-                            "additional_drop_params" in self.additional_params
-                            and isinstance(
-                                self.additional_params["additional_drop_params"], list
-                            )
-                        ):
-                            self.additional_params["additional_drop_params"].append(
-                                "stop"
+                # The unsupported-'stop' retry loops in place so the call keeps
+                # the single started scope above; a recursive self.call() would
+                # push a second started scope and leak the first.
+                while True:
+                    try:
+                        params = self._prepare_completion_params(messages, tools)
+                        if self._effective_stream():
+                            result = self._handle_streaming_response(
+                                params=params,
+                                callbacks=callbacks,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                response_model=response_model,
                             )
                         else:
-                            self.additional_params = {
-                                "additional_drop_params": ["stop"]
-                            }
+                            result = self._handle_non_streaming_response(
+                                params=params,
+                                callbacks=callbacks,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                response_model=response_model,
+                            )
 
-                        logging.info("Retrying LLM call without the unsupported 'stop'")
+                        if isinstance(result, str):
+                            result = self._invoke_after_llm_call_hooks(
+                                messages, result, from_agent
+                            )
 
-                        return self.call(
-                            messages,
-                            tools=tools,
-                            callbacks=callbacks,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_model=response_model,
+                        return result
+                    except LLMContextLengthExceededError as e:  # noqa: PERF203
+                        # AgentExecutor may still recover (respect_context_window),
+                        # but this attempt is over and the started scope above
+                        # needs its terminal event.
+                        self._emit_call_failed_event(
+                            error=str(e), from_task=from_task, from_agent=from_agent
+                        )
+                        raise
+                    except Exception as e:
+                        error_str = str(e)
+                        unsupported_stop = "'stop'" in error_str and (
+                            "Unsupported parameter" in error_str
+                            or "does not support parameters" in error_str
                         )
 
-                    crewai_event_bus.emit(
-                        self,
-                        event=LLMCallFailedEvent(
-                            error=str(e),
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            call_id=get_current_call_id(),
-                        ),
-                    )
-                    raise
+                        if unsupported_stop:
+                            if (
+                                "additional_drop_params" in self.additional_params
+                                and isinstance(
+                                    self.additional_params["additional_drop_params"],
+                                    list,
+                                )
+                            ):
+                                self.additional_params["additional_drop_params"].append(
+                                    "stop"
+                                )
+                            else:
+                                self.additional_params = {
+                                    "additional_drop_params": ["stop"]
+                                }
+
+                            logging.info(
+                                "Retrying LLM call without the unsupported 'stop'"
+                            )
+
+                            continue
+
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMCallFailedEvent(
+                                error=str(e),
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                call_id=get_current_call_id(),
+                            ),
+                        )
+                        raise
 
     async def acall(
         self,
@@ -2022,6 +2018,8 @@ class LLM(BaseLLM):
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
         with llm_call_context():
+            self._validate_call_params()
+
             self._emit_call_started_event(
                 messages=messages,
                 tools=tools,
@@ -2031,12 +2029,16 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
             )
 
-            self._validate_call_params()
-
             if isinstance(messages, str):
                 messages = [{"role": "user", "content": messages}]
 
-            messages = await self._aprocess_message_files(messages)
+            try:
+                messages = await self._aprocess_message_files(messages)
+            except Exception as e:
+                self._emit_call_failed_event(
+                    error=str(e), from_task=from_task, from_agent=from_agent
+                )
+                raise
 
             if "o1" in self.model.lower():
                 for message in messages:
@@ -2053,13 +2055,26 @@ class LLM(BaseLLM):
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
                     self.set_callbacks(callbacks)
-                try:
-                    params = self._prepare_completion_params(
-                        messages, tools, skip_file_processing=True
-                    )
+                # The unsupported-'stop' retry loops in place so the call keeps
+                # the single started scope above; a recursive self.acall() would
+                # push a second started scope and leak the first.
+                while True:
+                    try:
+                        params = self._prepare_completion_params(
+                            messages, tools, skip_file_processing=True
+                        )
 
-                    if self._effective_stream():
-                        return await self._ahandle_streaming_response(
+                        if self._effective_stream():
+                            return await self._ahandle_streaming_response(
+                                params=params,
+                                callbacks=callbacks,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                response_model=response_model,
+                            )
+
+                        return await self._ahandle_non_streaming_response(
                             params=params,
                             callbacks=callbacks,
                             available_functions=available_functions,
@@ -2067,61 +2082,53 @@ class LLM(BaseLLM):
                             from_agent=from_agent,
                             response_model=response_model,
                         )
-
-                    return await self._ahandle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
-                except LLMContextLengthExceededError:
-                    raise
-                except Exception as e:
-                    error_str = str(e)
-                    unsupported_stop = "'stop'" in error_str and (
-                        "Unsupported parameter" in error_str
-                        or "does not support parameters" in error_str
-                    )
-
-                    if unsupported_stop:
-                        if (
-                            "additional_drop_params" in self.additional_params
-                            and isinstance(
-                                self.additional_params["additional_drop_params"], list
-                            )
-                        ):
-                            self.additional_params["additional_drop_params"].append(
-                                "stop"
-                            )
-                        else:
-                            self.additional_params = {
-                                "additional_drop_params": ["stop"]
-                            }
-
-                        logging.info("Retrying LLM call without the unsupported 'stop'")
-
-                        return await self.acall(
-                            messages,
-                            tools=tools,
-                            callbacks=callbacks,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_model=response_model,
+                    except LLMContextLengthExceededError as e:  # noqa: PERF203
+                        # AgentExecutor may still recover (respect_context_window),
+                        # but this attempt is over and the started scope above
+                        # needs its terminal event.
+                        self._emit_call_failed_event(
+                            error=str(e), from_task=from_task, from_agent=from_agent
+                        )
+                        raise
+                    except Exception as e:
+                        error_str = str(e)
+                        unsupported_stop = "'stop'" in error_str and (
+                            "Unsupported parameter" in error_str
+                            or "does not support parameters" in error_str
                         )
 
-                    crewai_event_bus.emit(
-                        self,
-                        event=LLMCallFailedEvent(
-                            error=str(e),
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            call_id=get_current_call_id(),
-                        ),
-                    )
-                    raise
+                        if unsupported_stop:
+                            if (
+                                "additional_drop_params" in self.additional_params
+                                and isinstance(
+                                    self.additional_params["additional_drop_params"],
+                                    list,
+                                )
+                            ):
+                                self.additional_params["additional_drop_params"].append(
+                                    "stop"
+                                )
+                            else:
+                                self.additional_params = {
+                                    "additional_drop_params": ["stop"]
+                                }
+
+                            logging.info(
+                                "Retrying LLM call without the unsupported 'stop'"
+                            )
+
+                            continue
+
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMCallFailedEvent(
+                                error=str(e),
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                call_id=get_current_call_id(),
+                            ),
+                        )
+                        raise
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
