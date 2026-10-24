@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import logging
+import threading
 from typing import TYPE_CHECKING, Any
 
 from aiocache import Cache  # type: ignore[import-untyped]
@@ -403,14 +404,39 @@ class UploadCache:
     def _run_sync(coro: Any) -> Any:
         """Run an async coroutine from sync context without blocking event loop."""
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
-            loop = None
+            return asyncio.run(coro)
 
-        if loop is not None and loop.is_running():
-            future = asyncio.run_coroutine_threadsafe(coro, loop)
-            return future.result(timeout=30)
-        return asyncio.run(coro)
+        # We are on a thread that is itself running an event loop (a sync
+        # method called from async code, or a Jupyter kernel): scheduling
+        # the coroutine on that loop and blocking on the result can only
+        # deadlock, because the only thread that could drive the loop is
+        # the one blocking on it. Run the coroutine to completion on a
+        # private loop in a short-lived worker thread instead. The in-
+        # memory backend keeps no loop-affine state, so entries cross
+        # between this loop and the caller's loop safely.
+        result: dict[str, Any] = {}
+
+        def _run() -> None:
+            try:
+                result["value"] = asyncio.run(coro)
+            except BaseException as e:  # noqa: BLE001 - re-raised below
+                result["error"] = e
+
+        worker = threading.Thread(
+            target=_run, daemon=True, name="crewai-files-sync-cache"
+        )
+        worker.start()
+        worker.join(timeout=30)
+        if worker.is_alive():
+            raise TimeoutError(
+                "UploadCache sync wrapper timed out after 30s; if this "
+                "repeats, use the async methods (aset/aget/...) directly"
+            )
+        if "error" in result:
+            raise result["error"]
+        return result.get("value")
 
     def get(self, file: FileInput, provider: ProviderType) -> CachedUpload | None:
         """Sync wrapper for aget."""
