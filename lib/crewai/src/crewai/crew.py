@@ -1454,13 +1454,26 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[TaskOutput]:
         """Process pending async tasks and return their outputs."""
         task_outputs: list[TaskOutput] = []
-        for future_task, async_task, task_index in pending_tasks:
-            task_output = await async_task
-            task_outputs.append(task_output)
-            self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
+        try:
+            for future_task, async_task, task_index in pending_tasks:
+                task_output = await async_task
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+                self._store_execution_log(
+                    future_task, task_output, task_index, was_replayed
+                )
+        except BaseException:
+            # The run has failed: cancel sibling tasks still in flight so they
+            # don't keep executing (LLM calls, events) after kickoff raised,
+            # and retrieve their outcomes so cancellation/errors aren't lost.
+            for _, orphan, _ in pending_tasks:
+                if not orphan.done():
+                    orphan.cancel()
+            await asyncio.gather(
+                *(orphan for _, orphan, _ in pending_tasks),
+                return_exceptions=True,
             )
+            raise
         return task_outputs
 
     def _handle_crew_planning(self) -> None:
@@ -2140,7 +2153,7 @@ class Crew(FlowTrackable, BaseModel):
         if future is not None:
             try:
                 future.result()
-            except Exception:  # noqa: BLE001,S110
+            except Exception:  # noqa: S110
                 pass
 
         if self.process == Process.hierarchical:
