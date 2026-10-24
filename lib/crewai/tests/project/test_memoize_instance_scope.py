@@ -9,7 +9,6 @@ request's Crew, agents, and tasks. The memo store must live on the instance
 so it dies with it.
 """
 
-import gc
 
 from crewai.project.utils import memoize
 
@@ -36,7 +35,9 @@ def test_memoized_method_does_not_serve_a_recycled_id():
         if len(calls) == executions_before:
             stale_hits += 1  # served a cached result from a previous instance
         del instance, result
-        gc.collect()
+        # No gc.collect() here: CPython refcounting frees the slot at the
+        # del above (CrewLike has no cycles), and 200 full collections blew
+        # CI's 60s per-test timeout on slower runners.
 
     assert stale_hits == 0, (
         f"{stale_hits}/200 fresh instances received a recycled id's cached "
