@@ -258,6 +258,7 @@ class PlusAPI:
     TOOLS_RESOURCE: Final = "/crewai_plus/api/v1/tools"
     SKILLS_RESOURCE: Final = "/crewai_plus/api/v1/skills"
     ORGANIZATIONS_RESOURCE: Final = "/crewai_plus/api/v1/me/organizations"
+    INTEGRATION_TOKEN_RESOURCE: Final = "/crewai_plus/api/v1/me/integration-token"  # noqa: S105 - API path, not a secret
     CREWS_RESOURCE: Final = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE: Final = "/crewai_plus/api/v1/agents"
     TRACING_RESOURCE: Final = "/crewai_plus/api/v1/tracing"
@@ -565,6 +566,18 @@ class PlusAPI:
 
     def get_organizations(self) -> httpx.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
+
+    def get_integration_token(self) -> str:
+        """Return the Enterprise Action Auth Token for the active organization."""
+        response = self._make_request(
+            "GET", self.INTEGRATION_TOKEN_RESOURCE, timeout=30
+        )
+        response.raise_for_status()
+        payload = response.json()
+        token = payload.get("api_key") if isinstance(payload, dict) else None
+        if not isinstance(token, str) or not token:
+            raise RuntimeError("AMP did not return an integration token")
+        return token
 
     def initialize_trace_batch(self, payload: TraceBatchInitPayload) -> httpx.Response:
         return self._make_request(

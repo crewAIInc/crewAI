@@ -9,16 +9,34 @@ call site shares one matching rule.
 
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
 from collections.abc import Mapping, Sequence
+import concurrent.futures
+import contextvars
 from importlib.resources import files
 import json
 import re
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
+from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.message_utils import (
+    build_summary_prompt,
+    collect_user_message_files,
+    format_message_for_llm,
+    message_content_text,
+)
+
+
+if TYPE_CHECKING:
+    from crewai.utilities.types import LLMMessage
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
+MESSAGE_SPLIT_BUDGET_RATIO: Final[float] = 0.75
 
 _CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
@@ -238,3 +256,138 @@ def resolve_context_window_size(
         if size is not None:
             return int(size * CONTEXT_WINDOW_USAGE_RATIO)
     return int(default * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def summarize_messages(
+    llm: Any,
+    messages: list[LLMMessage],
+    callbacks: list[Any],
+    verbose: bool,
+) -> None:
+    """Compact ``messages`` in place using ``llm``'s context-window contract."""
+    system_messages: list[LLMMessage] = []
+    work_messages: list[LLMMessage] = []
+    for message in messages:
+        if message.get("role") == "system":
+            system_messages.append(message)
+        else:
+            work_messages.append(message)
+    if not work_messages:
+        return
+
+    preserved_files = collect_user_message_files(messages)
+    max_tokens = llm.get_context_window_size()
+    chunks = _chunk_messages(llm, work_messages, max_tokens)
+    summaries = _summarize_chunks(llm, chunks, callbacks)
+    summary_message = format_message_for_llm(
+        I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
+    )
+    if preserved_files:
+        summary_message["files"] = preserved_files
+
+    messages.clear()
+    messages.extend(system_messages)
+    messages.append(summary_message)
+
+
+def _summarize_chunks(
+    llm: Any,
+    chunks: list[list[LLMMessage]],
+    callbacks: list[Any],
+) -> list[str]:
+    """Summarize chunks concurrently, preserving their order."""
+
+    async def summarize_chunk(chunk: list[LLMMessage]) -> str:
+        async with semaphore:
+            response = str(
+                await llm.acall(build_summary_prompt(chunk), callbacks=callbacks)
+            )
+        match = re.search(r"<summary>(.*?)</summary>", response, re.DOTALL)
+        return match.group(1).strip() if match else response.strip()
+
+    semaphore = asyncio.Semaphore(4)
+
+    async def gather_summaries() -> list[str]:
+        return list(await asyncio.gather(*(summarize_chunk(chunk) for chunk in chunks)))
+
+    coroutine = gather_summaries()
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+
+    context = contextvars.copy_context()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(context.run, asyncio.run, coroutine).result()
+
+
+def _chunk_messages(
+    llm: Any, messages: list[LLMMessage], max_tokens: int
+) -> list[list[LLMMessage]]:
+    """Greedily pack rendered summary requests, splitting only oversized messages."""
+    if _summary_request_tokens(llm, []) > max_tokens:
+        raise LLMContextLengthExceededError(
+            "Summarization prompt exceeds the context window before conversation history is added."
+        )
+    chunks: list[list[LLMMessage]] = []
+    current: list[LLMMessage] = []
+    for message in messages:
+        if _summary_request_tokens(llm, [*current, message]) <= max_tokens:
+            current.append(message)
+            continue
+
+        if current:
+            chunks.append(current)
+            current = []
+        if _summary_request_tokens(llm, [message]) <= max_tokens:
+            current.append(message)
+            continue
+
+        for part in _split_message_to_fit(llm, message, max_tokens):
+            if _summary_request_tokens(llm, [*current, part]) > max_tokens:
+                if not current:
+                    raise LLMContextLengthExceededError(
+                        "Summarization message could not be split to fit the context window."
+                    )
+                chunks.append(current)
+                current = []
+            current.append(part)
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _split_message_to_fit(
+    llm: Any, message: LLMMessage, max_tokens: int
+) -> list[LLMMessage]:
+    """Split an oversized message using 75% of the available token budget."""
+    message_tokens = _summary_request_tokens(llm, [message])
+    if message_tokens <= max_tokens:
+        return [message]
+
+    text = message_content_text(message)
+    if not text:
+        raise LLMContextLengthExceededError(
+            "Summarization message has no text that can be split to fit the context window."
+        )
+
+    base_tokens = _summary_request_tokens(llm, [])
+    available_tokens = max_tokens - base_tokens
+    content_tokens = message_tokens - base_tokens
+    if available_tokens <= 0 or content_tokens <= 0:
+        raise LLMContextLengthExceededError(
+            "Summarization prompt leaves no room for message content."
+        )
+
+    part_budget = max(1, int(available_tokens * MESSAGE_SPLIT_BUDGET_RATIO))
+    part_length = max(1, int(len(text) * part_budget / content_tokens))
+    return [
+        cast("LLMMessage", {**message, "content": text[start : start + part_length]})
+        for start in range(0, len(text), part_length)
+    ]
+
+
+def _summary_request_tokens(llm: Any, messages: list[LLMMessage]) -> int:
+    """Count the exact request used for a summary call through the active LLM."""
+    return int(llm.get_input_tokens_count(build_summary_prompt(messages)))
