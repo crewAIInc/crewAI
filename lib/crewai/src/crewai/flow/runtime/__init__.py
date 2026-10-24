@@ -1252,9 +1252,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             for task in racing_tasks:
                 if not task.done():
                     task.cancel()
+            # Retrieve the cancelled racers' outcomes so their cleanup
+            # finishes before this batch returns.
+            await asyncio.gather(*racing_tasks, return_exceptions=True)
 
         if other_tasks:
-            await asyncio.gather(*other_tasks, return_exceptions=True)
+            # Non-racing listeners must fail the flow exactly like the plain
+            # listener batch does; collect first, then re-raise, so failing
+            # siblings are not abandoned mid-flight.
+            outcomes = await asyncio.gather(*other_tasks, return_exceptions=True)
+            for outcome in outcomes:
+                if isinstance(outcome, BaseException):
+                    raise outcome
 
     @classmethod
     def from_pending(
