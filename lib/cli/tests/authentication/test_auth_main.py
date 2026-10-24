@@ -174,11 +174,12 @@ class TestAuthenticationCommand:
         mock_settings_instance = MagicMock()
         mock_settings_instance.org_name = "Test Org"
         mock_settings_instance.org_uuid = "test-uuid-123"
+        mock_settings_instance.enterprise_base_url = "https://app.crewai.com"
         mock_settings.return_value = mock_settings_instance
 
         self.auth_command._login_to_tool_repository()
 
-        mock_tool_command.assert_called_once()
+        mock_tool_command.assert_called_once_with(base_url="https://app.crewai.com")
         mock_tool_instance.login.assert_called_once()
 
         expected_calls = [
@@ -282,6 +283,7 @@ class TestAuthenticationCommand:
             patch.object(
                 self.auth_command, "_login_to_tool_repository"
             ) as mock_tool_login,
+            patch.object(self.auth_command, "_select_organization") as mock_select_org,
         ):
             self.auth_command.oauth2_provider = MagicMock()
             self.auth_command.oauth2_provider.get_token_url.return_value = (
@@ -302,6 +304,7 @@ class TestAuthenticationCommand:
             )
 
             mock_validate.assert_called_once()
+            mock_select_org.assert_called_once()
             mock_tool_login.assert_called_once()
 
             expected_calls = [
@@ -310,6 +313,102 @@ class TestAuthenticationCommand:
                 call("\n[bold green]Welcome to CrewAI AMP![/bold green]\n"),
             ]
             mock_console_print.assert_has_calls(expected_calls)
+
+    @patch("crewai_cli.authentication.main.pick", return_value="org-research")
+    @patch("crewai_cli.authentication.main.console")
+    @patch("crewai_cli.authentication.main.Settings")
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_saves_the_prompted_choice(
+        self,
+        mock_plus_api,
+        mock_get_auth_token,
+        mock_settings,
+        mock_console,
+        mock_pick,
+    ):
+        response = MagicMock()
+        response.json.return_value = [
+            {"name": "Engineering", "uuid": "org-engineering"},
+            {"name": "Research", "uuid": "org-research"},
+        ]
+        mock_plus_api.return_value.get_organizations.return_value = response
+        mock_settings.return_value.enterprise_base_url = "https://app.crewai.com"
+
+        self.auth_command._select_organization()
+
+        mock_plus_api.assert_called_once_with(
+            api_key="token", base_url="https://app.crewai.com"
+        )
+        response.raise_for_status.assert_called_once()
+        mock_pick.assert_called_once_with(
+            "Select an organization (Name / ID):",
+            [("org-engineering", "Engineering"), ("org-research", "Research")],
+            labels=["Engineering  org-engineering", "Research     org-research"],
+        )
+        settings = mock_settings.return_value
+        assert settings.org_name == "Research"
+        assert settings.org_uuid == "org-research"
+        settings.dump.assert_called_once()
+
+    @patch("crewai_cli.authentication.main.Settings")
+    @patch("crewai_cli.authentication.main.pick", return_value=None)
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_keeps_settings_when_picker_is_cancelled(
+        self, mock_plus_api, mock_get_auth_token, mock_pick, mock_settings
+    ):
+        response = MagicMock()
+        response.json.return_value = [{"name": "Engineering", "uuid": "org-engineering"}]
+        mock_plus_api.return_value.get_organizations.return_value = response
+
+        self.auth_command._select_organization()
+
+        mock_settings.return_value.dump.assert_not_called()
+
+    @patch("crewai_cli.authentication.main.pick", return_value="org-unknown")
+    @patch("crewai_cli.authentication.main.console")
+    @patch("crewai_cli.authentication.main.Settings")
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_displays_a_fallback_for_a_missing_name(
+        self,
+        mock_plus_api,
+        mock_get_auth_token,
+        mock_settings,
+        mock_console,
+        mock_pick,
+    ):
+        response = MagicMock()
+        response.json.return_value = [{"name": None, "uuid": "org-unknown"}]
+        mock_plus_api.return_value.get_organizations.return_value = response
+
+        self.auth_command._select_organization()
+
+        mock_pick.assert_called_once_with(
+            "Select an organization (Name / ID):",
+            [("org-unknown", None)],
+            labels=["Unnamed organization  org-unknown"],
+        )
+        settings = mock_settings.return_value
+        assert settings.org_name is None
+        assert settings.org_uuid == "org-unknown"
+
+    @patch("crewai_cli.authentication.main.console")
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_handles_no_available_organizations(
+        self, mock_plus_api, mock_get_auth_token, mock_console
+    ):
+        response = MagicMock()
+        response.json.return_value = []
+        mock_plus_api.return_value.get_organizations.return_value = response
+
+        self.auth_command._select_organization()
+
+        mock_console.print.assert_called_once_with(
+            "You don't belong to any organizations yet.", style="yellow"
+        )
 
     @patch("crewai_core.auth.oauth2.httpx.post")
     @patch("crewai_core.auth.oauth2.console.print")

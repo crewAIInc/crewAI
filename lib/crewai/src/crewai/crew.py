@@ -85,6 +85,7 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
     CrewTestStartedEvent,
@@ -118,6 +119,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_failure import ToolFailurePolicy
@@ -1532,7 +1534,11 @@ class Crew(FlowTrackable, BaseModel):
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
-            if manager.tools is not None and len(manager.tools) > 0:
+            # Delegation tools are the crew's own: a manager built from
+            # manager_llm keeps them on the next kickoff, copy() or train().
+            if manager.tools is not None and any(
+                not isinstance(tool, BaseAgentTool) for tool in manager.tools
+            ):
                 self._logger.log(
                     "warning",
                     "Manager agent should not have tools",
@@ -1867,7 +1873,9 @@ class Crew(FlowTrackable, BaseModel):
         self, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
         if self.manager_agent:
-            if task.agent:
+            # A previous run leaves the manager assigned to the task; that is
+            # not a worker to delegate to.
+            if task.agent and task.agent is not self.manager_agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
                 tools = self._inject_delegation_tools(
@@ -2119,6 +2127,22 @@ class Crew(FlowTrackable, BaseModel):
         if replay_inputs:
             self._interpolate_inputs(replay_inputs)
 
+        # Mirror prepare_kickoff: replay's execution tail emits
+        # CrewKickoffCompletedEvent(started_event_id=self._kickoff_event_id),
+        # so a start event must scope it — otherwise the bus warns about an
+        # unpaired ending event and the completion points at the original
+        # kickoff's start id.
+        started_event = CrewKickoffStartedEvent(
+            crew_name=self.name, inputs=replay_inputs
+        )
+        self._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(self, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: BLE001,S110
+                pass
+
         if self.process == Process.hierarchical:
             self._create_manager_agent()
 
@@ -2138,7 +2162,21 @@ class Crew(FlowTrackable, BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        return self._execute_tasks(self.tasks, start_index, True)
+        try:
+            return self._execute_tasks(self.tasks, start_index, True)
+        except Exception as e:
+            # Mirror kickoff()'s failure terminal: the start event above is
+            # scope-starting, so a failed replay must close its own scope or
+            # the leaked frame parents every later event in this context.
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
+            )
+            raise
 
     def query_knowledge(
         self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
@@ -2306,20 +2344,23 @@ class Crew(FlowTrackable, BaseModel):
 
         Uses concurrent.futures for concurrent execution.
         """
+        # Emit the start event before setup: crew_test_failed is
+        # scope-ending, so a failure during create_llm must find its opener
+        # already on the stack instead of popping the caller's scope.
+        crewai_event_bus.emit(
+            self,
+            CrewTestStartedEvent(
+                crew_name=self.name,
+                n_iterations=n_iterations,
+                eval_llm=eval_llm,
+                inputs=inputs,
+            ),
+        )
         try:
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
 
-            crewai_event_bus.emit(
-                self,
-                CrewTestStartedEvent(
-                    crew_name=self.name,
-                    n_iterations=n_iterations,
-                    eval_llm=llm_instance,
-                    inputs=inputs,
-                ),
-            )
             test_crew = self.copy()
 
             evaluator = CrewEvaluator(test_crew, llm_instance)

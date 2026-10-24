@@ -39,7 +39,6 @@ from crewai.utilities.agent_utils import (
     execute_single_native_tool_call,
     extract_task_section,
     extract_tool_call_info,
-    format_message_for_llm,
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
     process_llm_response,
@@ -47,6 +46,7 @@ from crewai.utilities.agent_utils import (
     setup_native_tools,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
