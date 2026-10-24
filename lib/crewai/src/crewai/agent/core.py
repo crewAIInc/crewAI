@@ -1246,8 +1246,8 @@ class Agent(BaseAgent):
         stop_words = [I18N_DEFAULT.slice("observation")]
         if self.response_template:
             parts = self.response_template.split("{{ .Response }}")
-            if len(parts) > 1:
-                stop_words.append(parts[1].strip())
+            if len(parts) > 1 and (stop := parts[1].strip()):
+                stop_words.append(stop)
 
         rpm_limit_fn = (
             self._rpm_controller.check_or_wait if self._rpm_controller else None

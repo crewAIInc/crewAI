@@ -27,6 +27,7 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.tools import tool
 from crewai.utilities import RPMController
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 def test_agent_memory_true_uses_agent_llm_model():
@@ -199,7 +200,7 @@ def test_agent_response_template_without_placeholder():
     _, stop_words, _ = agent._build_execution_prompt([])
 
     assert len(stop_words) == 1
-    assert "Observation" in stop_words[0]
+    assert stop_words[0] == I18N_DEFAULT.slice("observation")
 
 
 def test_agent_response_template_with_placeholder():
@@ -216,6 +217,21 @@ def test_agent_response_template_with_placeholder():
 
     assert len(stop_words) == 2
     assert stop_words[1] == "MYSTOP"
+
+def test_agent_response_template_with_trailing_placeholder():
+    """Test that a response_template ending with the placeholder adds no empty stop word."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        response_template="prefix {{ .Response }}",
+    )
+
+    _, stop_words, _ = agent._build_execution_prompt([])
+
+    assert len(stop_words) == 1
+    assert stop_words[0] == I18N_DEFAULT.slice("observation")
 
 
 def test_agent_default_values():
