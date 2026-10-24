@@ -457,6 +457,88 @@ def test_a_task_with_no_agent_still_reports_a_failure_type(failing_task):
     assert captured[0].error_type is Exception
 
 
+def test_no_agent_failure_pairs_started_with_failed():
+    """The no-agent task_failed must pair with its own task_started.
+
+    ``task_failed`` is scope-ending. Until the opener was emitted on this
+    branch, a direct ``Task.execute_sync()`` emitted a task_failed with
+    ``started_event_id=None`` on an empty stack -- or, inside an enclosing
+    scope, stole that scope's id and ended the wrong span. Same class of fix
+    as Crew.test()'s setup failure (#8420).
+    """
+    from crewai import Task
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.task_events import TaskFailedEvent, TaskStartedEvent
+
+    task = Task(description="orphan", expected_output="nothing")
+
+    started: list[TaskStartedEvent] = []
+    failed: list[TaskFailedEvent] = []
+
+    @crewai_event_bus.on(TaskStartedEvent)
+    def on_started(source, event: TaskStartedEvent) -> None:
+        started.append(event)
+
+    @crewai_event_bus.on(TaskFailedEvent)
+    def on_failed(source, event: TaskFailedEvent) -> None:
+        failed.append(event)
+
+    crewai_event_bus.register_handler(TaskStartedEvent, on_started)
+    crewai_event_bus.register_handler(TaskFailedEvent, on_failed)
+    try:
+        with pytest.raises(Exception, match="has no agent assigned"):
+            task._execute_core(None, None, None)
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(TaskStartedEvent, on_started)
+        crewai_event_bus.off(TaskFailedEvent, on_failed)
+
+    assert started, "the no-agent branch must emit TaskStartedEvent before raising"
+    assert failed, "the no-agent branch must still emit TaskFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the failure must pair with the task's own start event, not pop the "
+        "caller's enclosing scope"
+    )
+
+
+@pytest.mark.asyncio
+async def test_no_agent_async_failure_pairs_started_with_failed():
+    """The async producer is a separate emit site and regresses independently."""
+    from crewai import Task
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.task_events import TaskFailedEvent, TaskStartedEvent
+
+    task = Task(description="orphan", expected_output="nothing")
+
+    started: list[TaskStartedEvent] = []
+    failed: list[TaskFailedEvent] = []
+
+    @crewai_event_bus.on(TaskStartedEvent)
+    def on_started(source, event: TaskStartedEvent) -> None:
+        started.append(event)
+
+    @crewai_event_bus.on(TaskFailedEvent)
+    def on_failed(source, event: TaskFailedEvent) -> None:
+        failed.append(event)
+
+    crewai_event_bus.register_handler(TaskStartedEvent, on_started)
+    crewai_event_bus.register_handler(TaskFailedEvent, on_failed)
+    try:
+        with pytest.raises(Exception, match="has no agent assigned"):
+            await task._aexecute_core(None, None, None)
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(TaskStartedEvent, on_started)
+        crewai_event_bus.off(TaskFailedEvent, on_failed)
+
+    assert started, "the no-agent branch must emit TaskStartedEvent before raising"
+    assert failed, "the no-agent branch must still emit TaskFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the failure must pair with the task's own start event, not pop the "
+        "caller's enclosing scope"
+    )
+
+
 def test_the_event_stays_json_serializable_with_a_class_valued_error_type():
     """A class is not a JSON type, so the field needs a serializer or the event breaks.
 
