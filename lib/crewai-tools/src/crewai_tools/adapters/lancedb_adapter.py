@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from crewai.utilities.lock_store import lock as store_lock
-from lancedb import (  # type: ignore[import-untyped]
+from lancedb import (
     connect as lancedb_connect,
 )
 from openai import Client as OpenAIClient
