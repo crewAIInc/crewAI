@@ -477,6 +477,21 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 إذا لم يطابق `restore_from_state_id` المقدم أي حالة مستمرة، يعود kickoff بصمت إلى السلوك الافتراضي — نفس سلوك `inputs["id"]` عند عدم العثور عليه. الجمع بين `restore_from_state_id` و `from_checkpoint` يطلق `ValueError`؛ اختر مصدر ترطيب واحدًا. تثبيت `inputs["id"]` أثناء التفرع يشارك مفتاح الاستمرارية مع تدفق آخر — عادةً ما تريد استخدام `restore_from_state_id` فقط.
 
+### فحص سجل الحالة
+
+يحتفظ `SQLiteFlowPersistence` بكل لقطة يحفظها، بينما يعيد `load_state` أحدثها فقط. استخدم `list_state_history` للتنقل بين صفحات بيانات اللقطات الوصفية للتدفق — `id` الصف و `method_name` و `timestamp` — دون تحميل حمولات الحالة. تُرتَّب السجلات من الأقدم إلى الأحدث حسب `id` الصف؛ يجب أن تكون قيمة `limit` بين 1 و `MAX_HISTORY_LIMIT` (1000) وأن تكون قيمة `offset` غير سالبة. قيمة `id` في السجل هي معرّف صف في التخزين وليست `state.id` الخاص بالتدفق — لا يمكن تمريرها إلى `restore_from_state_id`. لأدوات الفحص مثل CLI، تفتح `read_flow_state_history` قاعدة البيانات للقراءة فقط وتعيد قائمة فارغة عندما لا يكون ملف قاعدة البيانات أو الجدول أو التدفق موجودًا. لا تنشئ قاعدة البيانات أو جداولها أبدًا، لكن قراءة قاعدة بيانات بوضع WAL قد تنشئ أو تترك ملفات جانبية `-wal`/`-shm` بجوارها. يمكن للواجهات الخلفية الأخرى تجاوز `list_state_history`؛ التنفيذ الأساسي يطلق `NotImplementedError`.
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, read_flow_state_history
+
+persistence = SQLiteFlowPersistence("flows.db")
+for record in persistence.list_state_history(flow.state.id, limit=20, offset=0):
+    print(record.id, record.method_name, record.timestamp)
+
+# Read-only: never creates the database or tables, never changes schema or data
+records = read_flow_state_history("flows.db", flow.state.id)
+```
+
 ### كيف تعمل
 
 1. **تعريف الحالة الفريد**
