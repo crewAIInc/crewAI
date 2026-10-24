@@ -1317,6 +1317,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
+        instance._completed_methods = {
+            FlowMethodName(name) for name in pending_context.completed_methods
+        }
+        instance._method_outputs = list(pending_context.method_outputs)
+        instance._method_execution_counts = {
+            FlowMethodName(name): count
+            for name, count in pending_context.method_execution_counts.items()
+        }
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1344,6 +1352,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ```
         """
         return self._pending_feedback_context
+
+    def _snapshot_pending_execution(self, context: PendingFeedbackContext) -> None:
+        """Carry completed execution history across persisted feedback pauses."""
+        context.completed_methods = sorted(self._completed_methods)
+        context.method_outputs = list(self._method_outputs)
+        context.method_execution_counts = {
+            str(name): count for name, count in self._method_execution_counts.items()
+        }
 
     def resume(self, feedback: str = "") -> Any:
         """Resume flow execution, optionally with human feedback.
@@ -1628,6 +1644,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
+                self._snapshot_pending_execution(e.context)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -2492,6 +2509,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
+                    self._snapshot_pending_execution(e.context)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
