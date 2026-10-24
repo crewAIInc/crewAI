@@ -1,4 +1,5 @@
-from unittest.mock import Mock, patch
+import asyncio
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -45,6 +46,177 @@ def test_task_without_guardrail():
     result = task.execute_sync(agent=agent)
     assert isinstance(result, TaskOutput)
     assert result.raw == "test result"
+
+
+@pytest.mark.parametrize("guardrail_field", ["guardrail", "guardrails", "list"])
+@pytest.mark.parametrize("judge_config", ["task", "agent", "default"])
+@pytest.mark.parametrize("replacement", ["none", "argument", "assignment"])
+@pytest.mark.parametrize("execution", ["sync", "thread", "async"])
+def test_string_guardrail_uses_configured_judge(
+    guardrail_field, judge_config, replacement, execution
+):
+    from crewai.lite_agent_output import LiteAgentOutput
+    from crewai.tasks.llm_guardrail import LLMGuardrailResult
+
+    subject = LLM(model="gpt-4o-mini", api_key="unit-test-key")
+    agent_judge = LLM(model="gpt-4o-mini", api_key="unit-test-key")
+    task_judge = LLM(model="gpt-4o-mini", api_key="unit-test-key")
+    agent = Agent(
+        role="Writer",
+        goal="Write a short answer",
+        backstory="A concise writer",
+        llm=subject,
+        guardrail_llm=agent_judge if judge_config != "default" else None,
+    )
+    guardrail = "The answer is concise"
+    kwargs = (
+        {"guardrails": [guardrail]}
+        if guardrail_field == "list"
+        else {guardrail_field: guardrail}
+    )
+    replace_agent = replacement != "none"
+    assigned_agent = agent
+    if replace_agent:
+        assigned_agent = Agent(
+            role="Original writer",
+            goal=agent.goal,
+            backstory=agent.backstory,
+            llm=subject,
+            guardrail_llm=LLM(model="gpt-4o-mini", api_key="unit-test-key"),
+        )
+    task = Task(
+        description="Write an answer",
+        expected_output="A short answer",
+        agent=assigned_agent,
+        guardrail_llm=task_judge if judge_config == "task" else None,
+        **kwargs,
+    )
+    expected_judge = {
+        "task": task_judge,
+        "agent": agent_judge,
+        "default": subject,
+    }[judge_config]
+    judging_clients = []
+
+    def validate(judge, *args, **kwargs):
+        judging_clients.append(judge.llm)
+        return LiteAgentOutput(
+            agent_role=judge.role,
+            pydantic=LLMGuardrailResult(valid=True),
+        )
+
+    def execute(executing_agent):
+        if replacement == "assignment":
+            task.agent = executing_agent
+            executing_agent = None
+        if execution == "async":
+            return asyncio.run(task.aexecute_sync(agent=executing_agent))
+        if execution == "thread":
+            return task.execute_async(agent=executing_agent).result(timeout=5)
+        return task.execute_sync(agent=executing_agent)
+
+    with (
+        patch.object(Agent, "execute_task", return_value="A short answer"),
+        patch.object(
+            Agent, "aexecute_task", new_callable=AsyncMock, return_value="A short answer"
+        ),
+        patch.object(Agent, "kickoff", autospec=True, side_effect=validate),
+    ):
+        result = execute(agent)
+        if replace_agent:
+            execute(assigned_agent)
+            result = execute(agent)
+
+    assert result.raw == "A short answer"
+    assert task.agent is agent
+    expected_clients = [expected_judge]
+    if replace_agent:
+        expected_clients.extend(
+            [
+                task_judge if judge_config == "task" else assigned_agent.guardrail_llm,
+                expected_judge,
+            ]
+        )
+    assert len(judging_clients) == len(expected_clients)
+    assert all(
+        actual is expected
+        for actual, expected in zip(judging_clients, expected_clients)
+    )
+    assert agent.llm is subject
+
+
+@pytest.mark.parametrize("owner", ["agent", "lite_agent", "task"])
+@pytest.mark.parametrize("as_config", [False, True])
+def test_guardrail_llm_resolves_and_serializes_model_configuration(
+    owner, as_config, monkeypatch
+):
+    from crewai.lite_agent import LiteAgent
+    from crewai.llms.base_llm import BaseLLM
+
+    monkeypatch.setenv("OPENAI_API_KEY", "unit-test-key")
+    value = {"model": "gpt-4o-mini"} if as_config else "gpt-4o-mini"
+    if owner == "task":
+        cls = Task
+        kwargs = {"description": "Write an answer", "expected_output": "An answer"}
+    else:
+        cls = Agent if owner == "agent" else LiteAgent
+        kwargs = {
+            "role": "Writer",
+            "goal": "Write an answer",
+            "backstory": "A writer",
+            "llm": LLM(model="gpt-4o-mini", api_key="unit-test-key"),
+        }
+    instance = cls(guardrail_llm=value, **kwargs)
+
+    assert isinstance(instance.guardrail_llm, BaseLLM)
+    assert instance.guardrail_llm.model == "gpt-4o-mini"
+    serialized = instance.model_dump(mode="json")
+    assert serialized["guardrail_llm"]["model"] == "gpt-4o-mini"
+    restored = cls(guardrail_llm=serialized["guardrail_llm"], **kwargs)
+    assert isinstance(restored.guardrail_llm, BaseLLM)
+    assert restored.guardrail_llm.model == "gpt-4o-mini"
+
+
+@pytest.mark.parametrize("value", [123, []])
+def test_invalid_guardrail_llm_does_not_silently_create_a_default(value):
+    with pytest.raises(ValueError, match="guardrail_llm"):
+        Task(
+            description="Write an answer",
+            expected_output="An answer",
+            guardrail_llm=value,
+        )
+
+
+@pytest.mark.parametrize("owner", ["agent", "task"])
+def test_copy_preserves_custom_guardrail_llm(owner):
+    from crewai.llms.base_llm import BaseLLM
+
+    class CustomJudge(BaseLLM):
+        def call(self, messages, **kwargs):
+            return '{"valid": true}'
+
+    judge = CustomJudge(model="custom-judge", temperature=0.2)
+    agent = Agent(
+        role="Writer",
+        goal="Write an answer",
+        backstory="A writer",
+        llm=LLM(model="gpt-4o-mini", api_key="unit-test-key"),
+        guardrail_llm=judge,
+    )
+    if owner == "agent":
+        copied = agent.copy()
+    else:
+        task = Task(
+            description="Write an answer",
+            expected_output="An answer",
+            agent=agent,
+            guardrail_llm=judge,
+        )
+        copied = task.copy([agent], {})
+
+    assert isinstance(copied.guardrail_llm, CustomJudge)
+    assert copied.guardrail_llm.model == judge.model
+    assert copied.guardrail_llm.temperature == judge.temperature
 
 
 def test_task_with_successful_guardrail_func():
