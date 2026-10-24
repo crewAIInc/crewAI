@@ -78,6 +78,8 @@ class EmbeddingService:
         if model is None:
             if provider == "openrouter":
                 model = "openai/text-embedding-3-small"
+            elif provider == "deepinfra":
+                model = "Qwen/Qwen3-Embedding-8B"
             else:
                 model = "text-embedding-3-small"
 
@@ -98,6 +100,7 @@ class EmbeddingService:
             "azure": "AZURE_OPENAI_API_KEY",
             "amazon-bedrock": "AWS_ACCESS_KEY_ID",  # or AWS_PROFILE
             "cohere": "COHERE_API_KEY",
+            "deepinfra": "DEEPINFRA_API_KEY",
             "google-generativeai": "GOOGLE_API_KEY",
             "google-vertex": "GOOGLE_APPLICATION_CREDENTIALS",
             "huggingface": "HUGGINGFACE_API_KEY",
@@ -152,6 +155,12 @@ class EmbeddingService:
                 **self.config.extra_config,
             }
         elif self.config.provider == "openrouter":
+            base_config["config"] = {
+                "api_key": self.config.api_key,
+                "model_name": self.config.model,
+                **self.config.extra_config,
+            }
+        elif self.config.provider == "deepinfra":
             base_config["config"] = {
                 "api_key": self.config.api_key,
                 "model_name": self.config.model,
@@ -375,6 +384,7 @@ class EmbeddingService:
             "amazon-bedrock",
             "cohere",
             "custom",
+            "deepinfra",
             "google-generativeai",
             "google-vertex",
             "huggingface",
@@ -411,6 +421,16 @@ class EmbeddingService:
     ) -> EmbeddingService:
         """Create an OpenRouter embedding service."""
         return cls(provider="openrouter", model=model, api_key=api_key, **kwargs)
+
+    @classmethod
+    def create_deepinfra_service(
+        cls,
+        model: str = "Qwen/Qwen3-Embedding-8B",
+        api_key: str | None = None,
+        **kwargs: Any,
+    ) -> EmbeddingService:
+        """Create a DeepInfra embedding service."""
+        return cls(provider="deepinfra", model=model, api_key=api_key, **kwargs)
 
     @classmethod
     def create_voyage_service(
