@@ -1100,6 +1100,12 @@ class _ConversationalMixin:
             return None
         return _conversation_state_with_defaults(state_definition.default)
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        # Public custom-handler replies must be recorded while the turn's trace
+        # is active, including trace_scope="turn" and streaming turns.
+        if self._should_apply_pending_kickoff_context():
+            self._append_public_turn_result_and_persist(output)
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         return (
             self._is_conversational_enabled() and self._pending_user_message is not None
