@@ -36,9 +36,6 @@ from crewai.core.providers.human_input import (
     get_provider,
 )
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled_in_context,
-)
 from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
@@ -252,6 +249,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _deferred_file_reader_added_by_executor: bool = PrivateAttr(default=False)
     _deferred_file_aliases: list[str] = PrivateAttr(default_factory=list)
 
+    def model_post_init(self, __context: Any) -> None:
+        # Flow init resolves ``tracing=None`` from the environment and writes it
+        # to the tracing context, so the crew's explicit choice must be set first.
+        if self.tracing is None:
+            self.tracing = getattr(self.crew, "tracing", None)
+        super().model_post_init(__context)
+
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
         """Configure executor after Pydantic field initialization."""
@@ -261,8 +265,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._state = AgentExecutorState()
         self.max_method_calls = self.max_iter * 10
 
-        current_tracing = is_tracing_enabled_in_context()
-        self.tracing = current_tracing if current_tracing else None
         self._flow_post_init()
         return self
 
