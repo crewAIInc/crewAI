@@ -16,10 +16,10 @@ HttpMethod = Literal["GET", "POST", "PATCH", "DELETE"]
 class PlusAPI(_CorePlusAPI):
     """CLI API client.
 
-    The ZIP deployment methods live here as well as in newer crewai-core
-    versions so editable CLI installs still work when an older crewai-core is
-    present in the runtime environment. The evaluation methods live here
-    because only the CLI calls them.
+    The ZIP deployment and integration-token methods live here as well as in
+    newer crewai-core versions so editable CLI installs still work when an
+    older crewai-core is present in the runtime environment. The evaluation
+    methods live here because only the CLI calls them.
     """
 
     EVALUATIONS_RESOURCE = f"{_CorePlusAPI.TRACING_RESOURCE}/evaluations"
@@ -29,6 +29,19 @@ class PlusAPI(_CorePlusAPI):
     # The export carries every setup's outputs, checks and traces — tens of MB
     # for a large comparison — and AMP gathers them before it answers.
     EVALUATION_EXPORT_TIMEOUT = httpx.Timeout(EVALUATION_POLL_TIMEOUT, read=120.0)
+    CLI_INTEGRATION_TOKEN_RESOURCE = "/crewai_plus/api/v1/me/integration-token"  # noqa: S105 - API path, not a secret
+
+    def get_integration_token(self) -> str:
+        """Return the Enterprise Action Auth Token for the active organization."""
+        response = self._make_request(
+            "GET", self.CLI_INTEGRATION_TOKEN_RESOURCE, timeout=30
+        )
+        response.raise_for_status()
+        payload = response.json()
+        token = payload.get("api_key") if isinstance(payload, dict) else None
+        if not isinstance(token, str) or not token:
+            raise RuntimeError("AMP did not return an integration token")
+        return token
 
     def create_evaluation(
         self,
@@ -103,13 +116,16 @@ class PlusAPI(_CorePlusAPI):
             timeout=self.EVALUATION_POLL_TIMEOUT,
         )
 
-    def export_evaluation(self, evaluation_id: str) -> httpx.Response:
+    def export_evaluation(
+        self, evaluation_id: str, *, timeout: httpx.Timeout | None = None
+    ) -> httpx.Response:
         """The evaluation's full data as files (crewai eval export):
-        `{"id", "kind", "files": {relative path: text}}`."""
+        `{"id", "kind", "files": {relative path: text}}`. TIMEOUT replaces the
+        default, which allows the two minutes a large comparison may take."""
         return self._make_request(
             "GET",
             f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}/export",
-            timeout=self.EVALUATION_EXPORT_TIMEOUT,
+            timeout=timeout or self.EVALUATION_EXPORT_TIMEOUT,
         )
 
     def _make_multipart_request(

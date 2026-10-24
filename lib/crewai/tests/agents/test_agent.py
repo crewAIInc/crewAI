@@ -1427,7 +1427,7 @@ def test_handle_context_length_exceeds_limit():
     respect_context_window = True
     callbacks = []
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize:
+    with patch.object(llm, "summarize_messages") as mock_summarize:
         mock_summarize.side_effect = ValueError("Context length limit exceeded")
 
         # Directly call handle_context_length with our parameters
