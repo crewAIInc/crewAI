@@ -228,6 +228,109 @@ Com `trace_scope="turn"`, cada `handle_turn()` conclui uma execução do grafo e
 
 Não use `@human_feedback` para linhas de chat de follow-up, a menos que um humano precise aprovar uma saída específica antes de exibi-la.
 
+## Exemplo executável: persistência e reinício
+
+O início rápido mantém todos os turnos em uma única instância de Flow. Aplicações reais reiniciam: um servidor web recicla o processo, uma CLI encerra entre mensagens, um worker retoma a conversa depois. Este exemplo completo mostra a outra metade — o histórico vivendo em SQLite para que uma instância **nova** de Flow retome a mesma conversa. O roteamento é uma verificação determinística por palavra-chave, então o exemplo roda sem credenciais de provedor e sem chamadas a modelos.
+
+```python
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+DB_PATH = "conversation_history.db"
+SESSION_ID = "order-desk-demo"
+
+store = SQLiteFlowPersistence(DB_PATH)
+
+
+@ConversationConfig()
+@persist(store)
+class OrderDeskFlow(Flow[ConversationState]):
+    """A deterministic support chat: keyword routing, no LLM calls."""
+
+    suppress_flow_events = True  # Keep the console output to the printed history.
+
+    def route_turn(self, context: dict) -> str | None:
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order_status"
+        return "general"
+
+    @listen("order_status")
+    def handle_order_status(self) -> str:
+        reply = "Your order is on its way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("general")
+    def handle_general(self) -> str:
+        reply = f"You said: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+def show_history(label: str, flow: OrderDeskFlow) -> None:
+    print(f"\n{label}")
+    for message in flow.state.messages:
+        print(f"  {message.role}: {message.content}")
+
+
+def main() -> None:
+    # First "process": one turn, then the instance is discarded.
+    first = OrderDeskFlow()
+    first.handle_turn("Where is my order?", session_id=SESSION_ID)
+    first.finalize_session_traces()
+    show_history("After turn 1:", first)
+
+    # Restart: a fresh instance with the same store and session id
+    # restores the persisted history before its turn runs.
+    restarted = OrderDeskFlow()
+    restarted.handle_turn("And what about returns?", session_id=SESSION_ID)
+    restarted.finalize_session_traces()
+    show_history("After restart + turn 2 (same session):", restarted)
+
+    # A different session id starts a separate conversation.
+    other = OrderDeskFlow()
+    other.handle_turn("Where is my order?", session_id="other-session")
+    other.finalize_session_traces()
+    show_history("Different session:", other)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Salve como `conversation_persistence.py` e execute:
+
+```bash
+python conversation_persistence.py
+```
+
+Saída esperada (o framework também registra seus carregamentos de estado — uma linha `No flow state found` no primeiro turno e uma linha `Loading flow state` em uma restauração):
+
+```text
+After turn 1:
+  user: Where is my order?
+  assistant: Your order is on its way.
+
+After restart + turn 2 (same session):
+  user: Where is my order?
+  assistant: Your order is on its way.
+  user: And what about returns?
+  assistant: You said: And what about returns?
+
+Different session:
+  user: Where is my order?
+  assistant: Your order is on its way.
+```
+
+O que observar:
+
+- **O store é a memória.** As instâncias não compartilham nada em memória; elas compartilham um arquivo `SQLiteFlowPersistence` e um `session_id`, então `@persist` carrega o snapshot mais recente daquele id antes do primeiro turno da instância nova.
+- **A ordem é preservada, nada é duplicado.** O histórico restaurado contém a linha do usuário e a resposta do assistente do primeiro turno, seguidas do segundo turno, em ordem.
+- **Um session id diferente é uma conversa diferente.** A terceira instância lê o mesmo arquivo de banco de dados sob um id diferente, então começa vazia.
+- **`finalize_session_traces()` fecha os traces adiados de cada instância** antes que ela termine. Estado persistido e tempo de vida do trace são independentes: a conversa sobrevive ao reinício; os traces de cada instância são finalizados por ela.
+- **Um reinício restaura estado, não trabalho.** O exemplo modela a recuperação do estado persistido. Ele não restaura trabalho em segundo plano em execução, recursos de execução, nem um turno que estava em andamento quando o processo parou.
+
 ## `Flow` conversacional
 
 Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn` e `end_conversation`. O listener descontinuado `answer_from_history_turn` permanece disponível para compatibilidade. O framework gerencia `state.messages`, pode acionar um LLM de roteamento e pode finalizar o trace de cada turno automaticamente com `trace_scope="turn"`. Você escreve as **rotas customizadas**; o framework cuida do resto.

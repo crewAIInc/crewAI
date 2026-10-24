@@ -228,6 +228,109 @@ def route_turn(self, context):
 
 لا تستخدم `@human_feedback` لأسطر المتابعة في الدردشة إلا عند الحاجة لموافقة بشرية على مخرجات خطوة محددة.
 
+## مثال قابل للتشغيل: الاستمرارية وإعادة التشغيل
+
+تُبقي البداية السريعة كل الجولات على مثيل واحد من Flow. أما التطبيقات الحقيقية فتُعاد تشغيلها: خادم ويب يُعيد تدوير العملية، أو CLI يخرج بين الرسائل، أو عامل يلتقط المحادثة لاحقاً. يُظهر هذا المثال الكامل النصف الآخر — سجل يعيش في SQLite بحيث يستأنف مثيل **جديد** من Flow المحادثة نفسها. التوجيه هنا فحص حتمي بالكلمات المفتاحية، لذا يعمل المثال دون أي بيانات اعتماد لمزوّد ودون أي استدعاءات للنماذج.
+
+```python
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+DB_PATH = "conversation_history.db"
+SESSION_ID = "order-desk-demo"
+
+store = SQLiteFlowPersistence(DB_PATH)
+
+
+@ConversationConfig()
+@persist(store)
+class OrderDeskFlow(Flow[ConversationState]):
+    """A deterministic support chat: keyword routing, no LLM calls."""
+
+    suppress_flow_events = True  # Keep the console output to the printed history.
+
+    def route_turn(self, context: dict) -> str | None:
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order_status"
+        return "general"
+
+    @listen("order_status")
+    def handle_order_status(self) -> str:
+        reply = "Your order is on its way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("general")
+    def handle_general(self) -> str:
+        reply = f"You said: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+def show_history(label: str, flow: OrderDeskFlow) -> None:
+    print(f"\n{label}")
+    for message in flow.state.messages:
+        print(f"  {message.role}: {message.content}")
+
+
+def main() -> None:
+    # First "process": one turn, then the instance is discarded.
+    first = OrderDeskFlow()
+    first.handle_turn("Where is my order?", session_id=SESSION_ID)
+    first.finalize_session_traces()
+    show_history("After turn 1:", first)
+
+    # Restart: a fresh instance with the same store and session id
+    # restores the persisted history before its turn runs.
+    restarted = OrderDeskFlow()
+    restarted.handle_turn("And what about returns?", session_id=SESSION_ID)
+    restarted.finalize_session_traces()
+    show_history("After restart + turn 2 (same session):", restarted)
+
+    # A different session id starts a separate conversation.
+    other = OrderDeskFlow()
+    other.handle_turn("Where is my order?", session_id="other-session")
+    other.finalize_session_traces()
+    show_history("Different session:", other)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+احفظه باسم `conversation_persistence.py` وشغّله:
+
+```bash
+python conversation_persistence.py
+```
+
+المخرجات المتوقعة (يُسجّل الإطار أيضاً عمليات تحميل الحالة — سطر `No flow state found` في الجولة الأولى وسطر `Loading flow state` عند الاستعادة):
+
+```text
+After turn 1:
+  user: Where is my order?
+  assistant: Your order is on its way.
+
+After restart + turn 2 (same session):
+  user: Where is my order?
+  assistant: Your order is on its way.
+  user: And what about returns?
+  assistant: You said: And what about returns?
+
+Different session:
+  user: Where is my order?
+  assistant: Your order is on its way.
+```
+
+ما الذي يجب ملاحظته:
+
+- **المخزن هو الذاكرة.** لا تتشارك المثيلات شيئاً في الذاكرة؛ بل تتشارك ملف `SQLiteFlowPersistence` واحداً و`session_id` واحداً، لذا يُحمّل `@persist` أحدث لقطة لذلك المعرف قبل تشغيل الجولة الأولى للمثيل الجديد.
+- **الترتيب محفوظ ولا شيء يتكرر.** يحتوي السجل المستعاد على سطر المستخدم ورد المساعد من الجولة الأولى، تليهما الجولة الثانية، بالترتيب.
+- **معرف جلسة مختلف يعني محادثة مختلفة.** يقرأ المثيل الثالث ملف قاعدة البيانات نفسه لكن بمعرف مختلف، فيبدأ فارغاً.
+- **تُغلق `finalize_session_traces()` آثار traces المؤجلة لكل مثيل** قبل خروجه. حالة الاستمرارية وعمر الـ trace مستقلان: المحادثة تنجو من إعادة التشغيل، وكل مثيل يُنهي آثاره بنفسه.
+- **إعادة التشغيل تستعيد الحالة لا العمل.** يُنمذج المثال استعادة الحالة المحفوظة. وهو لا يستعيد أعمالاً خلفية قيد التشغيل، ولا موارد تنفيذ، ولا جولة كانت جارية عندما توقفت العملية.
+
 ## `Flow` المحادثاتي
 
 اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation`. يظل المستمع المهمل `answer_from_history_turn` متاحاً للتوافق. يدير الإطار `state.messages`، ويمكنه تشغيل LLM للموجّه، ويمكنه إنهاء trace كل جولة تلقائياً باستخدام `trace_scope="turn"`. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
