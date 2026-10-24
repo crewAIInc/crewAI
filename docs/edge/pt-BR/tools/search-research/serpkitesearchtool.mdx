@@ -1,0 +1,57 @@
+---
+title: "Busca SerpKite"
+description: "Resultados de pesquisa do Google em Markdown usando o pacote externo SerpKite."
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+# `SerpKiteSearchTool`
+
+Esta integração é mantida pela equipe SerpKite e distribuída em `serpkite[crewai]`. Ela não faz parte de `crewai-tools`.
+
+## Instalação
+
+Instale o pacote e defina `SERPKITE_API_KEY` com uma chave do [SerpKite](https://app.serpkite.com/keys).
+
+```shell
+uv add "serpkite[crewai]"
+export SERPKITE_API_KEY="skt_live_..."
+```
+
+## Uso
+
+A ferramenta retorna Markdown com resultados de pesquisa e links das fontes. Passe-a diretamente para um agente CrewAI. Configure seu provedor de LLM preferido separadamente.
+
+```python
+from crewai import Agent
+from serpkite.crewai import SerpKiteSearchTool
+
+search = SerpKiteSearchTool()
+print(search.run(query="latest Python release"))
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information and cite sources",
+    backstory="You research public information using web search.",
+    tools=[search],
+)
+```
+
+## Configuração
+
+Use `endpoint` para escolher `search` (padrão), `news`, `images`, `videos`, `maps`, `places`, `shopping`, `scholar`, `patents` ou `autocomplete`. Defina `country`, `language`, `location` e `num` como valores padrão. O agente pode fornecer `query`, `num`, `country`, `language` e `time` (`hour`, `day`, `week`, `month`, `year`).
+
+Nem todo endpoint aceita todas as opções. Por exemplo, `scholar` não aceita `time`. Consulte a [referência dos endpoints](https://serpkite.com/docs) antes de definir opções específicas de cada endpoint.
+
+```python
+news = SerpKiteSearchTool(endpoint="news", country="us", language="en", num=10)
+print(news.run(query="renewable energy", time="week"))
+```
+
+## Recursos
+
+- [Guia do provedor](https://serpkite.com/integrations/crewai)
+- [Código-fonte e pacote](https://github.com/SerpKite/serpkite-python)
+- [PyPI](https://pypi.org/project/serpkite/)
+
+Google é uma marca registrada da Google LLC.
