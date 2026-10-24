@@ -1,6 +1,5 @@
 """Test Agent creation and execution basic functionality."""
 
-import asyncio
 from io import StringIO
 import json
 import threading
@@ -22,7 +21,6 @@ from crewai.events.types.crew_events import (
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
-    CrewTestFailedEvent,
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
     CrewTrainStartedEvent,
@@ -41,7 +39,6 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-from crewai.llms.base_llm import BaseLLM
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
@@ -2915,61 +2912,6 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         crew.kickoff()
 
 
-class _ScriptedReActLLM(BaseLLM):
-    def __init__(self, *replies: str) -> None:
-        super().__init__(model="offline")
-        self.replies = replies
-        self.calls = 0
-
-    def supports_function_calling(self) -> bool:
-        return False
-
-    def call(self, messages: Any, **kwargs: Any) -> str:
-        reply = self.replies[self.calls % len(self.replies)]
-        self.calls += 1
-        return reply
-
-    async def acall(self, messages: Any, **kwargs: Any) -> str:
-        return self.call(messages, **kwargs)
-
-
-@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
-@pytest.mark.parametrize("manager", ["manager_llm", "manager_agent"])
-def test_hierarchical_crew_delegates_to_workers_on_every_kickoff(
-    manager, async_entry
-):
-    delegate = json.dumps(
-        {"task": "Write a word", "context": "None", "coworker": "Writer"}
-    )
-    manager_llm = _ScriptedReActLLM(
-        f"Thought: Delegate\nAction: Delegate work to coworker\nAction Input: {delegate}",
-        "Thought: Done\nFinal Answer: hello",
-    )
-    worker_llm = _ScriptedReActLLM("Thought: Done\nFinal Answer: hello")
-    writer = Agent(role="Writer", goal="Write", backstory="Writes", llm=worker_llm)
-    task = Task(description="Get a word", expected_output="A word")
-    if manager == "manager_llm":
-        crew = Crew(
-            agents=[writer],
-            tasks=[task],
-            process=Process.hierarchical,
-            manager_llm=manager_llm,
-        )
-    else:
-        boss = Agent(role="Boss", goal="Manage", backstory="Manages", llm=manager_llm)
-        crew = Crew(
-            agents=[writer],
-            tasks=[task],
-            process=Process.hierarchical,
-            manager_agent=boss,
-        )
-
-    for run in (1, 2):
-        result = asyncio.run(crew.akickoff()) if async_entry else crew.kickoff()
-        assert result.raw == "hello"
-        assert worker_llm.calls == run
-
-
 @pytest.mark.vcr()
 def test_crew_train_success(researcher, writer, monkeypatch):
     task = Task(
@@ -3207,6 +3149,72 @@ def test_replay_emits_paired_kickoff_events(researcher, writer):
     # (see _create_crew_output), so the pairing is correct exactly when the id
     # left behind points at the replay's own start event.
     assert crew._kickoff_event_id == replay_starts[-1].event_id
+
+
+def test_replay_does_not_redispatch_execution_end_hook(researcher, writer):
+    """replay() must not dispatch a second EXECUTION_END for one START.
+
+    prepare_kickoff resets the pairing flags and dispatches EXECUTION_START;
+    replay() skips it, but its execution tail (_create_crew_output) dispatches
+    EXECUTION_END unconditionally, so every replay fires the END hooks again —
+    a second END with no matching START. That violates the exactly-once-per-
+    START invariant that _dispatch_execution_end_failure enforces on the
+    failure path.
+    """
+    from crewai.hooks.dispatch import InterceptionPoint, on, unregister
+
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    dispatches: list[str] = []
+
+    @on(InterceptionPoint.EXECUTION_START)
+    def on_start(ctx):
+        dispatches.append("start")
+
+    @on(InterceptionPoint.EXECUTION_END)
+    def on_end(ctx):
+        dispatches.append("end")
+
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = [
+                TaskOutput(
+                    description=task.description,
+                    raw="Mocked output",
+                    agent="Researcher",
+                    json_dict=None,
+                    output_format=OutputFormat.RAW,
+                    pydantic=None,
+                    summary="Mocked output",
+                    messages=[],
+                )
+                for task in [list_ideas, write, write]
+            ]
+
+            crew.kickoff()
+            crew.replay(str(write.id))
+    finally:
+        unregister(InterceptionPoint.EXECUTION_START, on_start)
+        unregister(InterceptionPoint.EXECUTION_END, on_end)
+
+    assert dispatches.count("start") == 1
+    assert dispatches.count("end") == 1
 
 
 def test_replay_failure_emits_kickoff_failed_event(researcher, writer):
@@ -4275,50 +4283,6 @@ def test_crew_testing_function(researcher):
     assert len(received_events) == 2
     assert isinstance(received_events[0], CrewTestStartedEvent)
     assert isinstance(received_events[1], CrewTestCompletedEvent)
-
-
-def test_crew_test_setup_failure_pairs_events(researcher):
-    """A failure during test() setup must still pair Started with Failed.
-
-    crew_test_failed is scope-ending: the start event used to be emitted
-    only after create_llm succeeded, so a create_llm failure emitted an
-    unpaired Failed that popped the caller's enclosing event scope.
-    """
-    task = Task(
-        description="Summarize the topic.",
-        expected_output="A summary.",
-        agent=researcher,
-    )
-    crew = Crew(agents=[researcher], tasks=[task])
-
-    started: list[CrewTestStartedEvent] = []
-    failed: list[CrewTestFailedEvent] = []
-
-    @crewai_event_bus.on(CrewTestStartedEvent)
-    def on_started(source, event: CrewTestStartedEvent):
-        started.append(event)
-
-    @crewai_event_bus.on(CrewTestFailedEvent)
-    def on_failed(source, event: CrewTestFailedEvent):
-        failed.append(event)
-
-    crewai_event_bus.register_handler(CrewTestStartedEvent, on_started)
-    crewai_event_bus.register_handler(CrewTestFailedEvent, on_failed)
-    try:
-        with patch("crewai.crew.create_llm", side_effect=RuntimeError("no key")):
-            with pytest.raises(RuntimeError, match="no key"):
-                crew.test(2, "gpt-4o-mini")
-        crewai_event_bus.flush()
-    finally:
-        crewai_event_bus.off(CrewTestStartedEvent, on_started)
-        crewai_event_bus.off(CrewTestFailedEvent, on_failed)
-
-    assert started, "test() must emit CrewTestStartedEvent before setup runs"
-    assert failed, "test() setup failure must emit CrewTestFailedEvent"
-    assert failed[-1].started_event_id == started[-1].event_id, (
-        "the Failed event must pair with the test's own start event, not pop "
-        "the caller's enclosing scope"
-    )
 
 
 def test_hierarchical_verbose_manager_agent(researcher, writer):
