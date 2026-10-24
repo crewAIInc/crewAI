@@ -6,6 +6,8 @@ from crewai_tools.rag.base_loader import LoaderResult
 from crewai_tools.rag.loaders.csv_loader import CSVLoader
 from crewai_tools.rag.source_content import SourceContent
 import pytest
+from requests import Response
+from requests.utils import get_encoding_from_headers
 
 
 @pytest.fixture
@@ -75,6 +77,86 @@ class TestCSVLoader:
         assert "Row 2: col1: value3 | col2: value4" in result.content
         assert result.metadata["columns"] == ["col1", "col2"]
         assert result.metadata["rows"] == 2
+
+    @pytest.mark.parametrize("source_kind", ["text", "file", "url"])
+    @pytest.mark.parametrize("bom", ["", "\ufeff"], ids=["utf-8", "utf-8-bom"])
+    @pytest.mark.parametrize(
+        "header, column", [("name", "name"), ('"last, first"', "last, first")]
+    )
+    def test_load_csv_with_utf8_bom(self, tmp_path, source_kind, bom, header, column):
+        """Parse quoted and plain headers across UTF-8 input sources."""
+        raw_csv = f'{bom}{header},age\n"Doe, Jane",30\n'
+        if source_kind == "file":
+            path = tmp_path / "people.csv"
+            path.write_bytes(raw_csv.encode("utf-8"))
+            source = SourceContent(path)
+        elif source_kind == "url":
+            source = SourceContent("https://example.com/people.csv")
+        else:
+            source = SourceContent(raw_csv)
+
+        with patch("crewai_tools.security.safe_requests._raw_get") as mock_get:
+            response = Response()
+            response.status_code = 200
+            response.headers["Content-Type"] = "text/csv"
+            response.encoding = get_encoding_from_headers(response.headers)
+            response._content = raw_csv.encode("utf-8")
+            mock_get.return_value = response
+            result = CSVLoader().load(source)
+
+        assert result.metadata == {
+            "format": "csv",
+            "columns": [column, "age"],
+            "rows": 1,
+        }
+        assert f"Row 1: {column}: Doe, Jane | age: 30" in result.content
+        assert result.source == source.source_ref
+
+    @pytest.mark.parametrize("source_kind", ["text", "url"])
+    def test_load_csv_preserves_bom_inside_field(self, source_kind):
+        """Remove the file signature while preserving BOMs in field values."""
+        raw_csv = "\ufeffname,value\nAlice,\ufeffkeep\ufeff\n"
+        source = SourceContent(
+            "https://example.com/data.csv" if source_kind == "url" else raw_csv
+        )
+        response = Response()
+        response.status_code = 200
+        response.headers["Content-Type"] = "text/csv"
+        response.encoding = get_encoding_from_headers(response.headers)
+        response._content = raw_csv.encode("utf-8")
+        with patch(
+            "crewai_tools.security.safe_requests._raw_get", return_value=response
+        ):
+            result = CSVLoader().load(source)
+
+        assert result.metadata["columns"] == ["name", "value"]
+        assert "value: \ufeffkeep\ufeff" in result.content
+
+    @pytest.mark.parametrize(
+        "content_type, encoding",
+        [
+            ("text/csv", "utf-8-sig"),
+            ("text/csv; charset=utf-8", "utf-8-sig"),
+            ("application/csv", "utf-8-sig"),
+            ("text/csv; charset=utf-8", "utf-8"),
+            ("text/csv", "latin-1"),
+            ("text/csv; charset=iso-8859-1", "latin-1"),
+        ],
+    )
+    def test_load_csv_from_url_preserves_encoding(self, content_type, encoding):
+        """Decode UTF-8 signatures without changing BOM-free response encodings."""
+        response = Response()
+        response.status_code = 200
+        response.headers["Content-Type"] = content_type
+        response.encoding = get_encoding_from_headers(response.headers)
+        response._content = "name,city\nAndré,Montréal\n".encode(encoding)
+        with patch(
+            "crewai_tools.security.safe_requests._raw_get", return_value=response
+        ):
+            result = CSVLoader().load(SourceContent("https://example.com/data.csv"))
+
+        assert result.metadata["columns"] == ["name", "city"]
+        assert "Row 1: name: André | city: Montréal" in result.content
 
     def test_doc_id_is_deterministic(self, temp_csv_file):
         path = temp_csv_file("name,value\ntest,123")
