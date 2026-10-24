@@ -96,7 +96,16 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "together": ProviderConfig(
+        base_url="https://api.together.ai/v1",
+        api_key_env="TOGETHER_API_KEY",
+        base_url_env="TOGETHER_BASE_URL",
+        api_key_required=True,
+    ),
 }
+
+# The catalog's name for a provider, where it differs from the name used here.
+_CATALOG_PROVIDER_NAMES: dict[str, str] = {"together": "together_ai"}
 
 _OLLAMA_DEFAULT_PORT = 11434
 
@@ -149,6 +158,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - together: Together AI (https://together.ai)
 
     Example:
         # Using provider prefix
@@ -285,3 +295,27 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def get_context_window_size(self) -> int:
+        """Get the context window size for the model.
+
+        The catalog lists these providers' models under provider-qualified
+        ids such as ``groq/llama-3.3-70b-versatile``, so that id is looked up
+        first and the id as given second.
+
+        Returns:
+            The usable context window size in tokens.
+        """
+        from crewai.llms.context_window import (
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            LLM_CONTEXT_WINDOW_SIZES,
+            resolve_context_window_size,
+        )
+
+        catalog_provider = _CATALOG_PROVIDER_NAMES.get(self.provider, self.provider)
+        return resolve_context_window_size(
+            f"{catalog_provider}/{self.model}",
+            LLM_CONTEXT_WINDOW_SIZES,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            extra_names=(self.model,),
+        )
