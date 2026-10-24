@@ -1,0 +1,94 @@
+"""Shared cache configuration helpers for Valkey/Redis URL parsing."""
+
+from __future__ import annotations
+
+import logging
+import os
+from typing import Any
+from urllib.parse import urlparse
+
+
+_logger = logging.getLogger(__name__)
+
+
+def parse_cache_url() -> dict[str, Any] | None:
+    """Parse VALKEY_URL or REDIS_URL from environment.
+
+    Priority: VALKEY_URL > REDIS_URL.
+
+    Returns:
+        Dict with host, port, db, username, password keys, or None if no URL
+        is set.
+    """
+    url = os.environ.get("VALKEY_URL") or os.environ.get("REDIS_URL")
+    if not url:
+        return None
+    parsed = urlparse(url)
+    # A password-only URL (redis://:pw@host) yields username="". Normalize the
+    # empty string to None so credential builders can treat "no ACL user" as
+    # password-only auth instead of authenticating as a blank ACL user.
+    username = parsed.username or None
+    return {
+        "host": parsed.hostname or "localhost",
+        "port": parsed.port or 6379,
+        "db": _parse_db_from_path(parsed.path),
+        "username": username,
+        "password": parsed.password,
+        "use_tls": parsed.scheme in ("rediss", "valkeys"),
+    }
+
+
+def _parse_db_from_path(path: str | None) -> int:
+    """Parse database number from URL path, defaulting to 0."""
+    if not path or path == "/":
+        return 0
+    try:
+        return int(path.lstrip("/"))
+    except ValueError:
+        _logger.warning(
+            "Invalid database number in URL path: %s, using default 0", path
+        )
+        return 0
+
+
+def get_aiocache_config() -> dict[str, Any]:
+    """Build an aiocache configuration dict from environment.
+
+    Uses VALKEY_URL or REDIS_URL (both are Redis-wire-compatible) to
+    configure ``aiocache.RedisCache``.  Falls back to
+    ``aiocache.SimpleMemoryCache`` when neither variable is set.
+
+    Returns:
+        Configuration dict suitable for ``aiocache.caches.set_config()``.
+    """
+    conn = parse_cache_url()
+    if conn is not None:
+        redis_config: dict[str, Any] = {
+            "cache": "aiocache.RedisCache",
+            "endpoint": conn["host"],
+            "port": conn["port"],
+            "db": conn.get("db", 0),
+            "password": conn.get("password"),
+        }
+        # Forward an ACL username when present (managed Valkey/Redis commonly
+        # requires it alongside the password). aiocache's RedisCache forwards
+        # unknown top-level keys to BaseCache.__init__, which rejects
+        # "username" with a TypeError; the username must reach the underlying
+        # redis ConnectionPool via connection_pool_kwargs instead.
+        if conn.get("username"):
+            redis_config["connection_pool_kwargs"] = {"username": conn["username"]}
+        # Forward TLS for rediss:// / valkeys:// so the aiocache Redis path
+        # opens an encrypted connection instead of plaintext.
+        if conn.get("use_tls"):
+            redis_config["ssl"] = True
+        return {"default": redis_config}
+    return {
+        "default": {
+            "cache": "aiocache.SimpleMemoryCache",
+        }
+    }
+
+
+def use_valkey_cache() -> bool:
+    """Return True if VALKEY_URL is set in the environment."""
+    return bool(os.environ.get("VALKEY_URL"))
