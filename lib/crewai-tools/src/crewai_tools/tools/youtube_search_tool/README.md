@@ -64,7 +64,7 @@ results = tool._run(search_query="Python programming tutorial", max_results=5)
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools.tools.youtube_search_tool.youtube_search_tool import YouTubeSearchTool
+from crewai_tools import YouTubeSearchTool
 
 youtube_search = YouTubeSearchTool()
 
