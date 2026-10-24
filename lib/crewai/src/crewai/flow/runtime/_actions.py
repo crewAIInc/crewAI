@@ -98,12 +98,23 @@ class ToolAction:
         self.definition = definition
         self.tool = self._build_tool()
         self.kwargs = definition.with_ or {}
+        # Tool instances are built once per flow object and reused across
+        # kickoffs; register the tool so each kickoff can reset its usage
+        # budget (Flow._reset_tool_action_usage_budgets). Without the reset,
+        # current_usage_count survives runs and a budget exhausted in an
+        # earlier kickoff makes every later kickoff fail.
+        tools = getattr(flow, "_tool_action_tools", None)
+        if tools is None:
+            tools = []
+            object.__setattr__(flow, "_tool_action_tools", tools)
+        tools.append(self.tool)
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         from crewai.tools.tool_failure import (
             ToolExecutionFailedError,
             ToolFailureRecord,
             detect_tool_failure,
+            handle_tool_failure,
         )
 
         local_context = _pop_local_context(kwargs)
@@ -112,11 +123,26 @@ class ToolAction:
         ).render_template()
         result = self.tool.run(**rendered)
         if failure := detect_tool_failure(result):
-            raise ToolExecutionFailedError(
-                ToolFailureRecord(
-                    tool_name=self.tool.name, failure=failure, tool_args=rendered
+            if getattr(self.tool, "tool_failure_policy", None) is not None:
+                # The tool declares an explicit policy, which per BaseTool's
+                # contract overrides everything for this tool: WARN records
+                # the failure, emits ToolFailureDetectedEvent and the flow
+                # continues; IGNORE stays silent; RAISE aborts. Only a tool
+                # that sets no policy keeps flow actions' fail-hard default.
+                handle_tool_failure(
+                    failure,
+                    tool_name=self.tool.name,
+                    tool_args=rendered,
+                    tool=self.tool,
                 )
-            )
+            else:
+                raise ToolExecutionFailedError(
+                    ToolFailureRecord(
+                        tool_name=self.tool.name,
+                        failure=failure,
+                        tool_args=rendered,
+                    )
+                )
         return result
 
     def _build_tool(self) -> Any:

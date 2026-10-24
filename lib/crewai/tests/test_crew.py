@@ -18,6 +18,7 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import (
+    CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
@@ -3214,6 +3215,153 @@ def test_replay_does_not_redispatch_execution_end_hook(researcher, writer):
 
     assert dispatches.count("start") == 1
     assert dispatches.count("end") == 1
+
+
+def test_replay_failure_emits_kickoff_failed_event(researcher, writer):
+    """A failed replay must terminate its own start event like kickoff() does.
+
+    replay() emits CrewKickoffStartedEvent (scoping the completion), but its
+    execution tail had no except: a failure raised out of _execute_tasks left
+    the start event dangling — no CrewKickoffFailedEvent for listeners, and a
+    leaked crew_kickoff_started frame on the event-scope stack that parents
+    every later event in the context.
+    """
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas.",
+        expected_output="Bullet point list of 5 ideas.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    started_events: list[CrewKickoffStartedEvent] = []
+    failed_events: list[CrewKickoffFailedEvent] = []
+
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started_events.append(event)
+
+    def on_failed(source, event: CrewKickoffFailedEvent):
+        failed_events.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewKickoffFailedEvent, on_failed)
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = [
+                TaskOutput(
+                    description=task.description,
+                    raw="Mocked output",
+                    agent="Researcher",
+                    json_dict=None,
+                    output_format=OutputFormat.RAW,
+                    pydantic=None,
+                    summary="Mocked output",
+                    messages=[],
+                )
+                for task in [list_ideas, write]
+            ]
+            crew.kickoff()
+        kickoff_start_ids = {event.event_id for event in started_events}
+
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = RuntimeError("boom during replay")
+            with pytest.raises(RuntimeError, match="boom during replay"):
+                crew.replay(str(write.id))
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        crewai_event_bus.off(CrewKickoffFailedEvent, on_failed)
+
+    replay_starts = [
+        event for event in started_events if event.event_id not in kickoff_start_ids
+    ]
+    assert replay_starts, "replay() must emit its own CrewKickoffStartedEvent"
+    assert failed_events, (
+        "replay() failure emitted no CrewKickoffFailedEvent; the "
+        "CrewKickoffStartedEvent from replay is left dangling"
+    )
+    assert failed_events[-1].started_event_id == replay_starts[-1].event_id
+    assert "boom during replay" in failed_events[-1].error
+
+
+def test_replay_failure_does_not_leak_kickoff_scope_into_next_kickoff(
+    researcher, writer,
+):
+    """The leaked replay start scope must not parent the next kickoff's events."""
+    from crewai.events.event_context import _event_id_stack
+
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas.",
+        expected_output="Bullet point list of 5 ideas.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    def _mocked_outputs():
+        return [
+            TaskOutput(
+                description=task.description,
+                raw="Mocked output",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output",
+                messages=[],
+            )
+            for task in [list_ideas, write]
+        ]
+
+    started_events: list[CrewKickoffStartedEvent] = []
+
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started_events.append(event)
+
+    _event_id_stack.set(())
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = _mocked_outputs()
+            crew.kickoff()
+
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = RuntimeError("boom during replay")
+            with pytest.raises(RuntimeError):
+                crew.replay(str(write.id))
+
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = _mocked_outputs()
+            crew.kickoff()
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        _event_id_stack.set(())
+
+    assert started_events[-1].parent_event_id is None, (
+        "previous failed replay's crew_kickoff_started scope leaked onto the "
+        "event-id stack; the next kickoff's start event is parented to it"
+    )
 
 
 def test_replay_rejects_changed_task_order(researcher):
