@@ -24,10 +24,10 @@ class BaseCommand:
 
 
 class PlusAPIMixin:
-    def __init__(self, telemetry: Telemetry) -> None:
+    def __init__(self, telemetry: Telemetry, *, base_url: str | None = None) -> None:
         try:
             telemetry.set_tracer()
-            self.plus_api_client = PlusAPI(api_key=get_auth_token())
+            self.plus_api_client = PlusAPI(api_key=get_auth_token(), base_url=base_url)
         except Exception:
             telemetry.deploy_signup_error_span()
             console.print(

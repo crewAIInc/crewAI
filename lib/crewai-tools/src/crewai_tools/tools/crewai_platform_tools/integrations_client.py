@@ -132,9 +132,12 @@ class ClipperClient:
 
     _RESOURCE = "/clipper/v1"
 
+    def __init__(self, *, base_url: str | None = None) -> None:
+        self._base_url = base_url
+
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         base_url = f"{plus_api.base_url.rstrip('/')}{self._RESOURCE}"
         headers = self._headers()
         tool_infos: list[ToolInfo] = []
@@ -177,7 +180,7 @@ class ClipperClient:
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         payload: dict[str, Any] = {"arguments": arguments}
         if tool.connection_id is not None:
             payload["connection_id"] = str(tool.connection_id)
@@ -230,9 +233,12 @@ class ClipperClient:
 class LegacyClient:
     """Use the existing CrewAI platform integrations API."""
 
+    def __init__(self, *, base_url: str | None = None) -> None:
+        self._base_url = base_url
+
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         apps = [
             f"{selector.app}/{selector.action}"
             if selector.action is not None
@@ -279,7 +285,7 @@ class LegacyClient:
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         response = requests.post(
             url=(
                 f"{plus_api.base_url.rstrip('/')}{plus_api.INTEGRATIONS_RESOURCE}"
@@ -314,8 +320,10 @@ class LegacyClient:
         return ToolExecutionSuccess(output=data)
 
 
-def client_for_selector(selector: ApplicationSelector) -> IntegrationsClient:
+def client_for_selector(
+    selector: ApplicationSelector, *, base_url: str | None = None
+) -> IntegrationsClient:
     """Select the integrations client for an application selector."""
     if selector.connection_id is not None:
-        return ClipperClient()
-    return LegacyClient()
+        return ClipperClient(base_url=base_url)
+    return LegacyClient(base_url=base_url)
