@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import Any
 
+from packaging.version import InvalidVersion, Version
 import tomli_w
 
 from crewai_cli.utils import read_toml
@@ -34,13 +35,12 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
         new_pyproject["project"]["version"] = poetry_data.get("version")
         new_pyproject["project"]["description"] = poetry_data.get("description")
         new_pyproject["project"]["authors"] = [
-            {
-                "name": author.split("<")[0].strip(),
-                "email": author.split("<")[1].strip(">").strip(),
-            }
+            _poetry_author_to_pep621(author)
             for author in poetry_data.get("authors", [])
         ]
-        new_pyproject["project"]["requires-python"] = poetry_data.get("python")
+        python_constraint = poetry_data.get("python")
+        if python_constraint:
+            new_pyproject["project"]["requires-python"] = python_constraint
     else:
         new_pyproject["project"] = pyproject_data.get("project", {})
         new_pyproject["tool"] = pyproject_data.get("tool", {})
@@ -52,7 +52,7 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
         for dep, version in poetry_data["dependencies"].items():
             if isinstance(version, dict):
                 extras = ",".join(version.get("extras", []))
-                new_dep = f"{dep}[{extras}]"
+                new_dep = f"{dep}[{extras}]" if extras else dep
                 if "version" in version:
                     new_dep += parse_version(version["version"])
             elif dep == "python":
@@ -75,10 +75,15 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
     ):
         existing_scripts = new_pyproject["project"]["scripts"]
         module_name = next(
-            (value.split(".")[0] for value in existing_scripts.values() if "." in value)
+            (
+                value.split(".")[0]
+                for value in existing_scripts.values()
+                if "." in value
+            ),
+            None,
         )
-
-        new_pyproject["project"]["scripts"]["run_crew"] = f"{module_name}.main:run"
+        if module_name:
+            new_pyproject["project"]["scripts"]["run_crew"] = f"{module_name}.main:run"
 
     if poetry_data and "extras" in poetry_data:
         new_pyproject["project"]["optional-dependencies"] = poetry_data["extras"]
@@ -97,8 +102,33 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
         tomli_w.dump(new_pyproject, f)
 
 
+def _poetry_author_to_pep621(author: str) -> dict[str, str]:
+    """Convert a poetry author string (``Name <email>``) to a PEP 621 table.
+
+    Poetry also accepts name-only entries, so the email is optional.
+    """
+    name, sep, email = author.partition("<")
+    entry: dict[str, str] = {"name": name.strip()}
+    if sep:
+        entry["email"] = email.strip(">").strip()
+    return entry
+
+
 def parse_version(version: str) -> str:
-    """Parse and convert version specifiers."""
+    """Translate a poetry version constraint into a PEP 508 specifier."""
+    version = version.strip()
+    if not version:
+        raise ValueError(
+            "Poetry version constraint must not be empty; use '*' for any version"
+        )
+    if version == "*":
+        return ""
+    if "," in version:
+        return ",".join(
+            constraint
+            for clause in version.split(",")
+            if (constraint := parse_version(clause))
+        )
     if version.startswith("^"):
         main_lib_version = version[1:].split(",")[0]
         addtional_lib_version = None
@@ -108,4 +138,20 @@ def parse_version(version: str) -> str:
         return f">={main_lib_version}" + (
             f",{addtional_lib_version}" if addtional_lib_version else ""
         )
+    if version.startswith("~") and not version.startswith("~="):
+        # Poetry tilde keeps the minor line when a minor is specified.
+        try:
+            parsed = Version(version[1:])
+            release = parsed.release
+        except InvalidVersion:
+            return version
+        upper = (
+            f"{release[0]}.{release[1] + 1}"
+            if len(release) > 1
+            else str(release[0] + 1)
+        )
+        epoch = f"{parsed.epoch}!" if parsed.epoch else ""
+        return f">={version[1:]},<{epoch}{upper}"
+    if version[0].isdigit():
+        return f"=={version}"
     return version
