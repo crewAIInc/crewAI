@@ -34,7 +34,7 @@ def _make_hashable(arg: Any) -> Any:
     return arg
 
 
-def _instance_memo_store(target: Any) -> dict[str, Any] | None:
+def _instance_memo_store(target: Any) -> dict[tuple[str, str], Any] | None:
     """Return the per-instance memo store, or None when not applicable.
 
     Args:
@@ -49,13 +49,13 @@ def _instance_memo_store(target: Any) -> dict[str, Any] | None:
     if target is None or not hasattr(target, "__dict__"):
         return None
     store = target.__dict__.get(_MEMO_STORE_ATTR)
-    if store is None:
+    if not isinstance(store, dict):
         store = {}
         try:
             target.__dict__[_MEMO_STORE_ATTR] = store
         except (AttributeError, TypeError):
             return None
-    return store
+    return cast("dict[tuple[str, str], Any]", store)
 
 
 def memoize(meth: Callable[P, R]) -> Callable[P, R]:
@@ -95,7 +95,7 @@ def _memoize_sync(meth: Callable[P, R]) -> Callable[P, R]:
         cache_key = (meth.__name__, str((hashable_args, hashable_kwargs)))
 
         if cache_key in store:
-            return store[cache_key]
+            return cast("R", store[cache_key])
 
         result = meth(*args, **kwargs)
         store[cache_key] = result
@@ -122,7 +122,7 @@ def _memoize_async(
         cache_key = (meth.__name__, str((hashable_args, hashable_kwargs)))
 
         if cache_key in store:
-            return store[cache_key]
+            return cast("R", store[cache_key])
 
         result = await meth(*args, **kwargs)
         store[cache_key] = result
