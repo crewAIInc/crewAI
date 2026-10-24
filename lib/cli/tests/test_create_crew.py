@@ -1589,6 +1589,22 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     assert "crewai-eval:" not in agents_md  # the markers never reach a project
 
 
+def test_scaffolded_agents_md_evaluates_logged_out_without_skipping_the_login(
+    tmp_path, monkeypatch
+):
+    """Logged out, agents evaluate right away and still start the login; measured 10-19,
+    "don't wait on a login" alone made agents stop offering to log in."""
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "`crewai eval`, logged in or out, with or without a terminal" in agents_md
+    assert "start the login hand-off" in agents_md
+    assert "evaluate without waiting for it" in agents_md
+    assert "Stop when the goal gate passes or after three rounds" in agents_md
+    assert "report the first and latest grades with both report links" in agents_md
+
+
 def _cli_args(line: str) -> list[str]:
     """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
     words = shlex.split(line.split("#", 1)[0])[1:]
