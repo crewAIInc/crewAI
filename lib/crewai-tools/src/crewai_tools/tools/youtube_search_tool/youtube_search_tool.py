@@ -131,8 +131,8 @@ class YouTubeSearchTool(BaseTool):
         except HttpError as e:
             error_msg = f"YouTube API error: {e.resp.status} - {e.content.decode('utf-8', errors='replace')}"
             logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            raise RuntimeError(error_msg)
         except Exception as e:
             error_msg = f"Error searching YouTube: {str(e)}"
             logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            raise RuntimeError(error_msg)
