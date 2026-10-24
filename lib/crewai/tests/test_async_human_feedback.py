@@ -471,6 +471,74 @@ def test_completed_race_winner_does_not_resume_losing_feedback(tmp_path: Path) -
     asyncio.run(run())
 
 
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_losing_race_review_cannot_authorize_a_nested_review(
+    tmp_path: Path, async_mode: bool
+) -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / f"{context.method_name}.request").write_text(context.message)
+            if context.method_name == "losing_review":
+                entered.set()
+                if not release.wait(timeout=5):
+                    raise TimeoutError("provider was not released")
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @listen(begin)
+        @human_feedback(message="Approve losing branch?", provider=FileReview())
+        def losing_review(self) -> str:
+            return "losing document"
+
+        @listen(begin)
+        async def faster(self) -> str:
+            assert await asyncio.to_thread(entered.wait, 5)
+            return "automatic result"
+
+        @listen(or_(losing_review, faster))
+        async def choose(self, result: HumanFeedbackResult | str) -> None:
+            self.state["chosen"] = result
+            asyncio.get_running_loop().call_later(0.05, release.set)
+
+        @listen(begin)
+        def other_branch(self) -> None:
+            pass
+
+        @listen(other_branch)
+        @human_feedback(message="Approve other branch?", provider=FileReview())
+        def nested_review(self) -> str:
+            return "other document"
+
+        @listen(nested_review)
+        def publish(self) -> None:
+            self.state["published"] = True
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+    flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+    with pytest.raises(ValueError, match="Multiple parallel human feedback requests"):
+        if async_mode:
+            asyncio.run(flow.kickoff_async())
+        else:
+            flow.kickoff()
+    assert len(list(tmp_path.glob("*.request"))) == 2
+    assert "published" not in flow.state
+    assert persistence.load_pending_feedback(flow.state["id"]) is None
+    with pytest.raises(ValueError, match="No pending feedback"):
+        flow.resume("reply to losing branch")
+    with pytest.raises(ValueError, match="No pending feedback"):
+        asyncio.run(flow.resume_async("reply to other branch"))
+
+
 class TestPendingFeedbackContext:
     """Tests for PendingFeedbackContext dataclass."""
 

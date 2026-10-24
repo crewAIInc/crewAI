@@ -808,6 +808,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _cel_now: datetime | None = PrivateAttr(default=None)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
+    _parallel_feedback_requests: contextvars.ContextVar[
+        list[PendingFeedbackContext] | None
+    ] = PrivateAttr(
+        default_factory=lambda: contextvars.ContextVar(
+            "parallel_feedback_requests", default=None
+        )
+    )
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
@@ -3214,6 +3221,33 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     async def _execute_parallel(
         self, coroutines: Sequence[Coroutine[Any, Any, Any]]
     ) -> None:
+        if self._parallel_feedback_requests.get() is not None:
+            await self._gather_parallel(coroutines)
+            return
+
+        requests: list[PendingFeedbackContext] = []
+        token = self._parallel_feedback_requests.set(requests)
+        try:
+            try:
+                await self._gather_parallel(coroutines)
+            except HumanFeedbackPending:
+                if len(requests) > 1:
+                    raise ValueError(
+                        "Multiple parallel human feedback requests cannot be resumed. "
+                        "Chain feedback methods sequentially."
+                    ) from None
+                raise
+            if len(requests) > 1:
+                raise ValueError(
+                    "Multiple parallel human feedback requests cannot be resumed. "
+                    "Chain feedback methods sequentially."
+                )
+        finally:
+            self._parallel_feedback_requests.reset(token)
+
+    async def _gather_parallel(
+        self, coroutines: Sequence[Coroutine[Any, Any, Any]]
+    ) -> None:
         tasks = [asyncio.create_task(coroutine) for coroutine in coroutines]
         try:
             await asyncio.gather(*tasks)
@@ -3763,12 +3797,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
 
             async def request_feedback() -> Any:
-                value = await asyncio.to_thread(
-                    provider.request_feedback, context, self
-                )
-                if asyncio.iscoroutine(value):
-                    return await value
-                return value
+                try:
+                    value = await asyncio.to_thread(
+                        provider.request_feedback, context, self
+                    )
+                    if asyncio.iscoroutine(value):
+                        return await value
+                    return value
+                except HumanFeedbackPending as pending:
+                    # 记录已发出的审批及竞速取消后才返回的请求。
+                    requests = self._parallel_feedback_requests.get()
+                    if requests is not None:
+                        requests.append(pending.context)
+                    raise
 
             request = asyncio.create_task(request_feedback())
             try:
