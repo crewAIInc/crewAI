@@ -2602,6 +2602,40 @@ class TestDeferredNativeToolResults:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
 
+    def test_deferred_read_guidance_counts_file_lines_not_unicode_separators(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 2_000)
+        llm.get_context_window_size.return_value = 1_000
+        executor = _build_executor(llm=llm, original_tools=[])
+        first_line = "\u2028".join(["part"] * 100) + "\n"
+        try:
+            reference = executor._prepare_tool_result_for_context(
+                {
+                    "func_name": "search_docs",
+                    "result": first_line + "tail\n",
+                    "tool_args": {},
+                    "original_tool": None,
+                    "tool_failure": None,
+                }
+            )
+            reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            )
+            alias = executor._deferred_file_aliases[0]
+
+            assert "It contains 2 lines and is estimated at 2000 tokens" in reference
+            assert "roughly 50-token read, request about 1 lines" in reference
+            assert reader.run(file_path=alias, start_line=1, line_count=1) == first_line
+            assert reader.run(file_path=alias, start_line=2, line_count=1) == "tail\n"
+        finally:
+            executor._cleanup_deferred_tool_results()
+
     def test_multiple_overflowed_results_reuse_one_file_reader(self):
         from crewai.tools.agent_tools.deferred_tool_result_reader import (
             DeferredToolResultReader,
