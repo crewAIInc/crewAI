@@ -172,6 +172,13 @@ ExecutionContext = Any  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
+# Restoring a checkpoint rebuilds the flow instance before its runtime state is
+# installed. Construction emits ``FlowCreatedEvent``, so suppress it for that
+# window and emit it once the restored instance is in place.
+_suppress_flow_created_event: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "crewai_suppress_flow_created_event", default=False
+)
+
 
 def _condition_branches(
     condition: dict[str, Any],
@@ -680,27 +687,69 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if definition is not None:
             context["flow_definition"] = definition
         state = RuntimeState.from_checkpoint(config, context=context)
-        crewai_event_bus.set_runtime_state(state)
-        for entity in state.root:
-            if not isinstance(entity, Flow):
-                continue
-            if entity.execution_context is not None:
-                apply_execution_context(entity.execution_context)
-            if isinstance(entity, cls):
-                entity._restore_from_checkpoint()
-                return entity
+        flow_slots: list[tuple[int, Flow[Any]]] = []
+        for i, candidate in enumerate(state.root):
+            if isinstance(candidate, Flow):
+                flow_slots.append((i, candidate))
+        if not flow_slots:
+            crewai_event_bus.set_runtime_state(state)
+            raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+        # Entities deserialize as plain ``Flow`` objects, so the class alone
+        # cannot identify the target when several flows are stored. Blank
+        # duplicates carry no restore data, so prefer the entity that does.
+        index, entity = next(
+            (
+                slot
+                for slot in flow_slots
+                if (
+                    slot[1].checkpoint_completed_methods
+                    or slot[1].checkpoint_method_outputs
+                    or slot[1].checkpoint_method_counts
+                )
+            ),
+            flow_slots[0],
+        )
+        if entity.execution_context is not None:
+            apply_execution_context(entity.execution_context)
+        if isinstance(entity, cls):
+            entity._restore_from_checkpoint()
+            crewai_event_bus.set_runtime_state(state)
+            if not entity.suppress_flow_events:
+                crewai_event_bus.emit(
+                    entity,
+                    FlowCreatedEvent(
+                        type="flow_created", flow_name=entity._definition.name
+                    ),
+                )
+            return entity
+        # Construction emits FlowCreatedEvent. Suppress it until the instance
+        # is hydrated and installed, so listeners never observe the old runtime
+        # state or a newly-created, empty flow during restore. Custom flows may
+        # only expose a no-argument constructor, so do not inject keywords.
+        token = _suppress_flow_created_event.set(True)
+        try:
             instance = (
                 cls.from_declaration(contents=definition)
                 if definition is not None
                 else cls()
             )
-            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
-            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
-            instance.checkpoint_method_counts = entity.checkpoint_method_counts
-            instance.checkpoint_state = entity.checkpoint_state
-            instance._restore_from_checkpoint()
-            return instance
-        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+        finally:
+            _suppress_flow_created_event.reset(token)
+        instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+        instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+        instance.checkpoint_method_counts = entity.checkpoint_method_counts
+        instance.checkpoint_state = entity.checkpoint_state
+        instance._restore_from_checkpoint()
+        state.root[index] = cast(Any, instance)
+        crewai_event_bus.set_runtime_state(state)
+        if not instance.suppress_flow_events:
+            crewai_event_bus.emit(
+                instance,
+                FlowCreatedEvent(
+                    type="flow_created", flow_name=instance._definition.name
+                ),
+            )
+        return instance
 
     @classmethod
     def fork(
@@ -838,10 +887,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             object.__setattr__(self, name, value)
 
     def model_post_init(self, __context: Any) -> None:
-        definition = (
-            __context.get("flow_definition") if isinstance(__context, dict) else None
+        context = __context if isinstance(__context, dict) else {}
+        token = (
+            _suppress_flow_created_event.set(True)
+            if context.get("from_checkpoint")
+            else None
         )
-        self._flow_post_init(definition)
+        try:
+            self._flow_post_init(context.get("flow_definition"))
+        finally:
+            if token is not None:
+                _suppress_flow_created_event.reset(token)
 
     def _flow_post_init(self, definition: FlowDefinition | None = None) -> None:
         """Heavy initialization: state creation, events, memory, method registration."""
@@ -878,7 +934,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
 
-        if not self.suppress_flow_events:
+        if not self.suppress_flow_events and not _suppress_flow_created_event.get():
             crewai_event_bus.emit(
                 self,
                 FlowCreatedEvent(
