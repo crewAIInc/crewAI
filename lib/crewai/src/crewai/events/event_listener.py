@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from asyncio import CancelledError
 from io import StringIO
+from threading import RLock
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -151,6 +153,9 @@ class EventListener(BaseEventListener):
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
     logger: Logger = Logger(verbose=True, default_color=EMITTER_COLOR)
     execution_spans: dict[Task, Any] = Field(default_factory=dict)
+    _task_span_lock: RLock
+    _terminal_task_outcomes: dict[str, tuple[bool, type[BaseException] | None]]
+
     next_chunk: int = 0
     text_stream: StringIO = StringIO()
     knowledge_retrieval_in_progress: bool = False
@@ -168,6 +173,8 @@ class EventListener(BaseEventListener):
             self._telemetry = Telemetry()
             self._telemetry.set_tracer()
             self.execution_spans = {}
+            self._task_span_lock = RLock()
+            self._terminal_task_outcomes = {}
             self._initialized = True
             self.formatter = ConsoleFormatter(verbose=True)
 
@@ -277,17 +284,32 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskStartedEvent)
         def on_task_started(source: Any, event: TaskStartedEvent) -> None:
-            span = self._telemetry.task_started(crew=source.agent.crew, task=source)
-            self.execution_spans[source] = span
+            with self._task_span_lock:
+                span = self._telemetry.task_started(crew=source.agent.crew, task=source)
+                outcome = self._terminal_task_outcomes.pop(event.event_id, None)
+                if outcome is None:
+                    self.execution_spans[source] = span
+                elif span is not None and outcome[0]:
+                    self._telemetry.task_failed(span, source, outcome[1])
+                elif span is not None:
+                    self._telemetry.task_ended(span, source, source.agent.crew)
 
             task_name = get_task_name(source)
             self.formatter.handle_task_started(source.id, task_name)
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
-            span = self.execution_spans.pop(source, None)
-            if span:
-                self._telemetry.task_ended(span, source, source.agent.crew)
+            with self._task_span_lock:
+                started = source in self.execution_spans
+                span = self.execution_spans.pop(source, None)
+                if span:
+                    self._telemetry.task_ended(span, source, source.agent.crew)
+                elif (
+                    not started
+                    and event.started_event_id is not None
+                    and source._task_started_event_id == event.started_event_id
+                ):
+                    self._terminal_task_outcomes[event.started_event_id] = (False, None)
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
@@ -296,18 +318,29 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
-            span = self.execution_spans.pop(source, None)
-            if span:
-                # Routed to task_failed, not task_ended: the latter closes the span
-                # as OK, which is why a failed task was indistinguishable from a
-                # successful one. No longer conditional on source.agent.crew either -
-                # task_failed does not need a crew, and requiring one meant the span
-                # was popped and then never closed, so it was never exported at all.
-                self._telemetry.task_failed(span, source, event.error_type)
+            with self._task_span_lock:
+                started = source in self.execution_spans
+                span = self.execution_spans.pop(source, None)
+                if span:
+                    self._telemetry.task_failed(span, source, event.error_type)
+                elif (
+                    not started
+                    and source._task_started_event_id is not None
+                    and (
+                        source._task_started_event_id == event.started_event_id
+                        or event.error_type is CancelledError
+                    )
+                ):
+                    # Cancellation may leave a nested agent scope on the event stack.
+                    # Use the task's own start id to reconcile its delayed handler.
+                    self._terminal_task_outcomes[source._task_started_event_id] = (
+                        True,
+                        event.error_type,
+                    )
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
-                source.id, source.agent.role, "failed", task_name
+                source.id, getattr(source.agent, "role", ""), "failed", task_name
             )
 
         @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
