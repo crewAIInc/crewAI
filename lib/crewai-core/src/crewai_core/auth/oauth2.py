@@ -17,6 +17,10 @@ from crewai_core.token_manager import TokenManager
 
 console = Console()
 
+# RFC 8628 makes the device code's `expires_in` required; this covers a
+# self-hosted provider that omits it anyway.
+_FALLBACK_DEVICE_CODE_LIFETIME_SECONDS = 600
+
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
@@ -91,7 +95,12 @@ class AuthenticationCommand:
         self.oauth2_provider = ProviderFactory.from_settings()
 
     def login(self) -> None:
-        """Sign in to the CrewAI platform via the OAuth2 device flow."""
+        """Sign in to the CrewAI platform via the OAuth2 device flow.
+
+        Raises:
+            SystemExit: With code 1 when the device code expires before the
+                user finishes signing in.
+        """
         console.print("Signing in to CrewAI AMP...\n", style="bold blue")
 
         device_code_data = self._get_device_code()
@@ -125,7 +134,7 @@ class AuthenticationCommand:
         webbrowser.open(verification_uri)
 
     def _poll_for_token(self, device_code_data: dict[str, Any]) -> None:
-        """Poll the token endpoint until authentication completes or times out."""
+        """Poll the token endpoint until authentication completes or the code expires."""
         token_payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": device_code_data["device_code"],
@@ -134,8 +143,10 @@ class AuthenticationCommand:
 
         console.print("\nWaiting for authentication... ", style="bold blue", end="")
 
-        attempts = 0
-        while True and attempts < 10:
+        deadline = time.monotonic() + device_code_data.get(
+            "expires_in", _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS
+        )
+        while time.monotonic() < deadline:
             response = httpx.post(
                 self.oauth2_provider.get_token_url(), data=token_payload, timeout=30
             )
@@ -160,11 +171,13 @@ class AuthenticationCommand:
                 )
 
             time.sleep(device_code_data["interval"])
-            attempts += 1
 
         console.print(
-            "Timeout: Failed to get the token. Please try again.", style="bold red"
+            "Timeout: the login code expired before sign-in finished. "
+            "Please try again.",
+            style="bold red",
         )
+        raise SystemExit(1)
 
     def _validate_and_save_token(self, token_data: dict[str, Any]) -> None:
         """Validate the JWT and persist it via the token manager."""

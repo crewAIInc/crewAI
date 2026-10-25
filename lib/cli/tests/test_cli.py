@@ -363,6 +363,15 @@ def test_login(command, runner):
     mock_auth.login.assert_called_once()
 
 
+@mock.patch("crewai_cli.cli.AuthenticationCommand")
+def test_login_exits_non_zero_when_the_login_times_out(command, runner):
+    command.return_value.login.side_effect = SystemExit(1)
+
+    result = runner.invoke(login)
+
+    assert result.exit_code == 1
+
+
 @mock.patch("crewai_cli.cli.DeployCommand")
 def test_deploy_create(command, runner):
     mock_deploy = command.return_value
