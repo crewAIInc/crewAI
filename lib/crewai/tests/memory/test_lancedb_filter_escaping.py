@@ -199,3 +199,61 @@ def test_percent_underscore_and_backslash_in_scope_names_match_literally(
     deleted = storage.delete(scope_prefix="/a_b")
     assert deleted == 1
     assert _all_ids(storage) == {"pct", "pct-child", "digits", "lookalike", "backslash"}
+
+
+def test_delete_scope_prefix_respects_delimiter_boundary(tmp_path: Path) -> None:
+    storage = _new_storage(
+        tmp_path / "mem",
+        [
+            _record("root", "/"),
+            _record("user-base", "user"),
+            _record("user-child", "user/alice"),
+            _record("user-analytics", "user_analytics"),
+            _record("users-sibling", "users"),
+        ],
+    )
+    assert storage.delete(scope_prefix="") == 0
+    assert storage.delete(scope_prefix="   ") == 0
+    assert _all_ids(storage) == {
+        "root",
+        "user-base",
+        "user-child",
+        "user-analytics",
+        "users-sibling",
+    }
+
+    deleted = storage.delete(scope_prefix="user")
+    assert deleted == 2
+    assert _all_ids(storage) == {"root", "user-analytics", "users-sibling"}
+
+
+def test_delete_subscope_preserves_root_scope_records(tmp_path: Path) -> None:
+    storage = _new_storage(
+        tmp_path / "mem",
+        [
+            _record("root", "/"),
+            _record("user-base", "/user"),
+            _record("user-child", "/user/alice"),
+            _record("user-settings", "/user_settings"),
+            _record("users-sibling", "/users"),
+        ],
+    )
+    deleted = storage.delete(scope_prefix="/user")
+    assert deleted == 2
+    assert _all_ids(storage) == {"root", "user-settings", "users-sibling"}
+
+
+def test_delete_with_categories_respects_scope_boundary(tmp_path: Path) -> None:
+    storage = _new_storage(
+        tmp_path / "mem",
+        [
+            _record("user-base", "user", categories=["note"]),
+            _record("user-child", "user/alice", categories=["note"]),
+            _record("user-analytics", "user_analytics", categories=["note"]),
+            _record("users-sibling", "users", categories=["note"]),
+            _record("root", "/", categories=["note"]),
+        ],
+    )
+    deleted = storage.delete(scope_prefix="user", categories=["note"])
+    assert deleted == 2
+    assert _all_ids(storage) == {"root", "user-analytics", "users-sibling"}
