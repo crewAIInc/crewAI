@@ -1224,6 +1224,8 @@ def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
     flow = Flow()
     calls = []
 
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
@@ -1249,6 +1251,161 @@ def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
 
     assert capsys.readouterr().out == ""
     assert calls == [flow]
+
+
+def _patch_conversational_flow_project(monkeypatch) -> list[str]:
+    """A flow project whose kickoff script yields a conversational flow.
+
+    Returns the list that records whether the chat TUI or the kickoff
+    subprocess was reached; a headless run must reach neither.
+    """
+    reached: list[str] = []
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: object(),
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda _flow: reached.append("tui"),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: reached.append("uv"),
+    )
+    return reached
+
+
+def test_run_crew_conversational_flow_without_terminal_exits_with_guidance(
+    monkeypatch, capsys
+):
+    """No stdin TTY (a coding agent, CI): the chat TUI would wait forever."""
+    reached = _patch_conversational_flow_project(monkeypatch)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module.run_crew()
+
+    assert exc_info.value.code == 1
+    assert reached == []
+    err = capsys.readouterr().err
+    assert "This flow is conversational, which needs an interactive terminal." in err
+    assert "flow.handle_turn(message, session_id=...)" in err
+    assert "flow.stream_turn(...)" in err
+
+
+def test_run_crew_conversational_flow_in_dmn_mode_exits_with_guidance(
+    monkeypatch, capsys
+):
+    """CREWAI_DMN counts as headless even when stdin is a terminal."""
+    reached = _patch_conversational_flow_project(monkeypatch)
+    monkeypatch.setenv("CREWAI_DMN", "true")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module.run_crew()
+
+    assert exc_info.value.code == 1
+    assert reached == []
+    assert "needs an interactive terminal" in capsys.readouterr().err
+
+
+def test_run_crew_non_conversational_flow_without_terminal_still_runs_kickoff(
+    monkeypatch, capsys
+):
+    """The gate is for the chat TUI only; a plain Python flow stays headless-safe."""
+    calls = []
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+
+    run_crew_module.run_crew()
+
+    assert calls == [("kickoff", {"entity_type": "flow"})]
+    assert "interactive terminal" not in capsys.readouterr().err
+
+
+_CONVERSATIONAL_FLOW_MODULE = "t3_headless_chat_project"
+
+
+@pytest.fixture
+def conversational_flow_project(tmp_path, monkeypatch):
+    """A real project on disk whose kickoff module defines a conversational flow."""
+    package_dir = tmp_path / "src" / _CONVERSATIONAL_FLOW_MODULE
+    package_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("")
+    (package_dir / "main.py").write_text(
+        "from crewai.flow import Flow\n\n"
+        "class HeadlessChatFlow(Flow):\n"
+        "    conversational = True\n\n"
+        "def kickoff():\n"
+        "    HeadlessChatFlow().chat()\n"
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "headless-chat"\n'
+        "[project.scripts]\n"
+        f'kickoff = "{_CONVERSATIONAL_FLOW_MODULE}.main:kickoff"\n'
+        "[tool.crewai]\n"
+        'type = "flow"\n'
+    )
+    monkeypatch.chdir(tmp_path)
+    # The loader imports the project in-process and prepends src/ to sys.path.
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    yield tmp_path
+    for name in (f"{_CONVERSATIONAL_FLOW_MODULE}.main", _CONVERSATIONAL_FLOW_MODULE):
+        sys.modules.pop(name, None)
+
+
+@pytest.mark.parametrize(
+    "args", [["run"], ["flow", "kickoff"]], ids=["run", "flow-kickoff-alias"]
+)
+def test_cli_conversational_python_flow_without_terminal_does_not_hang(
+    conversational_flow_project, monkeypatch, args
+):
+    """End to end through the CLI: CliRunner's stdin is not a TTY, like an agent's."""
+    from click.testing import CliRunner
+
+    from crewai_cli.cli import crewai
+
+    reached: list[str] = []
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda _flow: reached.append("tui"),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: reached.append("uv"),
+    )
+
+    result = CliRunner().invoke(crewai, args)
+
+    assert reached == []
+    assert isinstance(result.exception, SystemExit)
+    assert result.exit_code == 1
+    assert "needs an interactive terminal" in result.output
+    assert "flow.handle_turn(message, session_id=...)" in result.output
 
 
 def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
