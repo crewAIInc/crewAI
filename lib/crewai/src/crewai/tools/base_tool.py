@@ -61,7 +61,7 @@ _BASE_TOOL_CLS: type | None = None
 _FIRST_PARTY_TOOL_PACKAGES = ("crewai.", "crewai_tools.")
 
 
-def _resolve_tool_dict(value: dict[str, Any]) -> Any:
+def _resolve_tool_dict(value: dict[str, Any], context: Any = None) -> Any:
     """Validate a dict with ``tool_type`` into the concrete BaseTool subclass."""
     dotted = value.get("tool_type", "")
     tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
@@ -85,7 +85,7 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
     # The default needs no import, so restoring it must not require the opt-in.
     if data.get("cache_function") == _DEFAULT_CACHE_FUNCTION_PATH:
         del data["cache_function"]
-    return tool_cls.model_validate(data)  # type: ignore[attr-defined]
+    return tool_cls.model_validate(data, context=context)  # type: ignore[attr-defined]
 
 
 def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
@@ -132,14 +132,18 @@ class BaseTool(BaseModel, ABC):
         if cls is not _BASE_TOOL_CLS:
             return default_schema
 
-        def _validate_tool(value: Any, nxt: Any) -> Any:
+        def _validate_tool(
+            value: Any, nxt: Any, info: core_schema.ValidationInfo
+        ) -> Any:
             if isinstance(value, _BASE_TOOL_CLS):
                 return value
             if isinstance(value, dict) and "tool_type" in value:
-                return _resolve_tool_dict(value)
+                # Pass the context on, as _resolve_agent does, so agents held
+                # by a restored tool see from_checkpoint.
+                return _resolve_tool_dict(value, info.context)
             return nxt(value)
 
-        return core_schema.no_info_wrap_validator_function(
+        return core_schema.with_info_wrap_validator_function(
             _validate_tool,
             default_schema,
             serialization=core_schema.plain_serializer_function_ser_schema(
