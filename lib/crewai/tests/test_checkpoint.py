@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
 from contextlib import closing
@@ -255,6 +256,22 @@ class TestAutomaticCheckpointFailures:
             "crewai.state.checkpoint_listener._do_checkpoint",
             side_effect=KeyboardInterrupt,
         ), pytest.raises(KeyboardInterrupt):
+            _on_any_event(flow, event, RuntimeState(root=[flow]))
+
+    def test_cancellation_still_propagates(self) -> None:
+        """Auto-checkpoint failure handling must not swallow cancellation."""
+
+        flow = Flow(checkpoint=CheckpointConfig(on_events=["method_execution_finished"]))
+        event = MethodExecutionFinishedEvent(
+            flow_name=flow.__class__.__name__,
+            method_name="write_state",
+            state={},
+        )
+
+        with patch(
+            "crewai.state.checkpoint_listener._do_checkpoint",
+            side_effect=asyncio.CancelledError,
+        ), pytest.raises(asyncio.CancelledError):
             _on_any_event(flow, event, RuntimeState(root=[flow]))
 
 

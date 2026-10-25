@@ -7,6 +7,7 @@ avoids per-event overhead when no entity uses checkpointing.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import threading
@@ -240,7 +241,7 @@ def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
         return
     try:
         _do_checkpoint(state, cfg, event)
-    except (KeyboardInterrupt, SystemExit, GeneratorExit):
+    except (KeyboardInterrupt, SystemExit, GeneratorExit, asyncio.CancelledError):
         raise
     except BaseException:
         logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
