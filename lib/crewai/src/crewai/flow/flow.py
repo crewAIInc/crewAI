@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from crewai.flow.conversational_mixin import _ConversationalMixin
 from crewai.flow.dsl import and_, listen, or_, router, start
+from crewai.flow.persistence import persist
 from crewai.flow.runtime import (
     _INITIAL_STATE_CLASS_MARKER,
     Flow as RuntimeFlow,
@@ -42,6 +43,7 @@ __all__ = [
     "and_",
     "listen",
     "or_",
+    "persist",
     "router",
     "start",
 ]
