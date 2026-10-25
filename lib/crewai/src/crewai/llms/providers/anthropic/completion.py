@@ -1763,6 +1763,18 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
+        thinking_blocks: list[ThinkingBlock] = []
+
+        if response.content:
+            for content_block in response.content:
+                thinking_block = self._extract_thinking_block(content_block)
+                if thinking_block:
+                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        # Assign unconditionally: a response without thinking must drop the
+        # cached blocks, or they would be replayed on a later assistant turn.
+        self._previous_thinking_blocks = thinking_blocks
+
         # Handle Anthropic tool-use blocks across stable, beta, and preview SDK shapes.
         if response.content:
             tool_uses = _tool_use_blocks(list(response.content))
@@ -1930,6 +1942,16 @@ class AnthropicCompletion(BaseLLM):
                             )
 
             final_message = await stream.get_final_message()
+
+        thinking_blocks: list[ThinkingBlock] = []
+        if final_message.content:
+            for content_block in final_message.content:
+                thinking_block = self._extract_thinking_block(content_block)
+                if thinking_block:
+                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        # Assign unconditionally so a no-thinking response drops stale blocks.
+        self._previous_thinking_blocks = thinking_blocks
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
