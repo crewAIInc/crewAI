@@ -174,11 +174,12 @@ class TestAuthenticationCommand:
         mock_settings_instance = MagicMock()
         mock_settings_instance.org_name = "Test Org"
         mock_settings_instance.org_uuid = "test-uuid-123"
+        mock_settings_instance.enterprise_base_url = "https://app.crewai.com"
         mock_settings.return_value = mock_settings_instance
 
         self.auth_command._login_to_tool_repository()
 
-        mock_tool_command.assert_called_once()
+        mock_tool_command.assert_called_once_with(base_url="https://app.crewai.com")
         mock_tool_instance.login.assert_called_once()
 
         expected_calls = [
@@ -332,10 +333,13 @@ class TestAuthenticationCommand:
             {"name": "Research", "uuid": "org-research"},
         ]
         mock_plus_api.return_value.get_organizations.return_value = response
+        mock_settings.return_value.enterprise_base_url = "https://app.crewai.com"
 
         self.auth_command._select_organization()
 
-        mock_plus_api.assert_called_once_with(api_key="token")
+        mock_plus_api.assert_called_once_with(
+            api_key="token", base_url="https://app.crewai.com"
+        )
         response.raise_for_status.assert_called_once()
         mock_pick.assert_called_once_with(
             "Select an organization (Name / ID):",
@@ -360,7 +364,7 @@ class TestAuthenticationCommand:
 
         self.auth_command._select_organization()
 
-        mock_settings.assert_not_called()
+        mock_settings.return_value.dump.assert_not_called()
 
     @patch("crewai_cli.authentication.main.pick", return_value="org-unknown")
     @patch("crewai_cli.authentication.main.console")

@@ -1,0 +1,69 @@
+---
+title: Coding Tools
+description: Use AGENTS.md to guide coding agents and IDEs across your CrewAI projects.
+icon: terminal
+mode: "wide"
+---
+
+## Why AGENTS.md
+
+`AGENTS.md` is a lightweight, repo-local instruction file that gives coding agents consistent, project-specific guidance. Keep it in the project root and treat it as the source of truth for how you want assistants to work: conventions, commands, architecture notes, and guardrails.
+
+## Create a Project with the CLI
+
+Use the CrewAI CLI to scaffold a project. `AGENTS.md` is added at the root, together with a `CLAUDE.md` and a `GEMINI.md` that import it, so Claude Code and Gemini CLI read the same guidance as every other assistant.
+
+```bash
+# Crew
+crewai create crew my_crew
+
+# Flow
+crewai create flow my_flow
+
+# Tool repository
+crewai create tool my_tool
+```
+
+<Note>
+  `crewai tool create` is deprecated and still works with a warning. Use `crewai create tool` instead.
+</Note>
+
+## Tool Setup: Point Assistants to AGENTS.md
+
+### Codex
+
+Codex can be guided by `AGENTS.md` files placed in your repository. Use them to supply persistent project context such as conventions, commands, and workflow expectations.
+
+### Claude Code
+
+Claude Code reads `CLAUDE.md` and ignores `AGENTS.md`. Scaffolded projects ship a `CLAUDE.md` whose only instruction is the import line `@AGENTS.md`, so the shared guidance is loaded without duplicating it. Add Claude-specific notes under that line and keep shared conventions in `AGENTS.md`.
+
+For a project created before `CLAUDE.md` was scaffolded, add the import yourself:
+
+```bash
+printf '@AGENTS.md\n' > CLAUDE.md
+```
+
+Do not rename `AGENTS.md` to `CLAUDE.md`: Codex and Cursor read `AGENTS.md`, and the rename hides it from them.
+
+### Gemini CLI and Google Antigravity
+
+Gemini CLI and Antigravity load a project context file (default: `GEMINI.md`) from the repo root and parent directories. Scaffolded projects ship a `GEMINI.md` whose only instruction is the import line `@./AGENTS.md`, so the shared guidance is loaded without duplicating it. Add Gemini-specific notes under that line and keep shared conventions in `AGENTS.md`.
+
+For a project created before `GEMINI.md` was scaffolded, add the import yourself:
+
+```bash
+printf '@./AGENTS.md\n' > GEMINI.md
+```
+
+Alternatively, set `context.fileName` in your Gemini CLI settings to include `AGENTS.md` and Gemini reads it directly. Do not rename `AGENTS.md` to `GEMINI.md`: Codex and Cursor read `AGENTS.md`, and the rename hides it from them.
+
+### Cursor
+
+Cursor supports `AGENTS.md` as a project instruction file. Place it at the project root to provide guidance for Cursor’s coding assistant.
+
+### Windsurf
+
+Claude Code provides an official integration with Windsurf. If you use Claude Code inside Windsurf, follow the Claude Code guidance above and import `AGENTS.md` from `CLAUDE.md`.
+
+If you are using Windsurf’s native assistant, configure its project rules or instructions feature (if available) to read from `AGENTS.md` or paste the contents directly.

@@ -172,7 +172,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", oauthlib = "2026-09-29T00:00:00Z", certifi = "2026-10-21T00:00:00Z", uv = "2026-10-21T00:00:00Z" }
+exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", oauthlib = "2026-09-29T00:00:00Z", certifi = "2026-10-21T00:00:00Z", uv = "2026-10-21T00:00:00Z", pypdf = "2026-10-22T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
@@ -201,8 +201,15 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # pypdf <6.21.1 has GHSA-w23x-9jrw-r45c (alphabetical page labels), GHSA-php9-fj8v-98fj
 # (appearance streams), GHSA-v247-6f48-mgcj (embedded files), GHSA-qfv9-64jg-mh7p,
 # GHSA-7mh2-4gg2-979f, GHSA-9mx8-4j7g-633p, and GHSA-39mj-jf6j-2qj3; force 6.21.1+.
-# 6.21.1 (2026-10-14) is older than the global 3-day cutoff, so no exclude-newer-package
-# override is needed.
+# pypdf <6.21.2 has GHSA-6c7f-9265-g8fw, GHSA-jr96-gvgh-j3r4, and GHSA-gmh7-3g9r-mjh5 (long
+# runtimes on crafted indirect objects, cross-reference streams, and xref limits); force 6.21.2+.
+# 6.21.2 (2026-10-21) is newer than the global 3-day cutoff, hence its exclude-newer-package entry.
+# filelock <4.2.1 has GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5 (SQLite-backed ReadWriteLock), and
+# GHSA-567q-5qvw-pf92 (Windows soft-lock markers). 4.2.x requires Python 3.11+, so Python 3.10
+# stays on filelock 3.x, as with Pillow. unstructured (through 0.27.34) and
+# snowflake-connector-python 4.x cap filelock<4 but only use FileLock/BaseFileLock/Timeout, which
+# 4.x keeps; the 4.0 break is the SoftReadWriteLock on-disk protocol. An override replaces every
+# requirement on the package, so the 3.10 entry restates virtualenv's >=3.24.2 floor and the <4 cap.
 # uv <0.11.15 has GHSA-4gg8-gxpx-9rph (and earlier GHSA-pjjw-68hj-v9mw). uv <0.13.4
 # trusts a compromised emSign root CA (PYSEC-2026-4321); force 0.13.4+.
 # python-multipart <0.0.27 has GHSA-pp6c-gr5w-3c5g (DoS via unbounded multipart headers).
@@ -310,7 +317,7 @@ override-dependencies = [
     "virtualenv>=21.14.11",
     "transformers>=5.4.0; python_version >= '3.10'",
     "cryptography>=50.0.0",
-    "pypdf>=6.21.1,<7",
+    "pypdf>=6.21.2,<7",
     "uv>=0.13.4,<1",
     "certifi>=2026.10.18",
     "python-multipart>=0.0.27,<1",
@@ -330,7 +337,9 @@ override-dependencies = [
     "starlette>=1.3.1",
     "msgpack>=1.2.1",
     "pydantic-settings>=2.14.2",
-    "setuptools>=83.0.0", # PYSEC-2026-3447
+    "setuptools>=84.1.0", # PYSEC-2026-3447 / GHSA-xmj3-9gf7-h52w — fixed in 84.1.0
+    "filelock>=4.2.1; python_version >= '3.11'",
+    "filelock>=3.24.2,<4; python_version < '3.11'",
     "nltk>=3.10.3",
     "h2>=4.4.1",
     "torch>=2.13.0",
