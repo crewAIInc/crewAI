@@ -441,15 +441,18 @@ class LanceDBStorage:
         if self._table is None:
             return 0
         with store_lock(self._lock_name):
-            if record_ids and not (categories or metadata_filter):
+            if record_ids and not (categories or metadata_filter or older_than):
                 before = int(self._table.count_rows())
                 self._do_write("delete", _id_in_filter(record_ids))
                 return before - int(self._table.count_rows())
             if categories or metadata_filter:
                 rows = self._scan_rows(scope_prefix)
+                allowed_ids: set[str] | None = set(record_ids) if record_ids else None
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
+                    if allowed_ids and record.id not in allowed_ids:
+                        continue
                     if categories and not any(
                         c in record.categories for c in categories
                     ):
@@ -467,6 +470,8 @@ class LanceDBStorage:
                 self._do_write("delete", _id_in_filter(to_delete))
                 return before - int(self._table.count_rows())
             conditions = []
+            if record_ids:
+                conditions.append(_id_in_filter(record_ids))
             if scope_prefix is not None and scope_prefix.strip("/"):
                 prefix = scope_prefix.rstrip("/")
                 if not prefix.startswith("/"):
