@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from annotated_types import Gt
 from pydantic import BaseModel, Field
@@ -45,6 +46,11 @@ class WalletTool(BaseTool):
 def legacy_wallet(args: WalletArgs) -> str:
     """Spend from the wallet."""
     return f"spent {args['amount']}"
+
+
+def tracked_wallet(args: WalletArgs, note: str = "wire") -> str:
+    """Spend from the wallet with an audit note."""
+    return f"spent {args['amount']} with {note}"
 
 
 def orphan(value: MissingAtRuntime) -> str:  # noqa: F821
@@ -112,6 +118,49 @@ class TestFromLangchainWithFutureAnnotations:
         )
         converted = Tool.from_langchain(wrapper)
         assert converted.run(args={"amount": 7}) == "spent 7"
+
+
+class _PartialConversionTool(BaseTool):
+    """Minimal concrete tool so the ``BaseTool.from_langchain`` path can run."""
+
+    name: str = "partial_conversion_tool"
+    description: str = "Convert a partial into a BaseTool."
+
+    def _run(self, *args: Any, **kwargs: Any) -> str:
+        return tracked_wallet(**kwargs)
+
+
+class TestFromLangchainPartialWithFutureAnnotations:
+    """A ``functools.partial`` over a PEP 563 function keeps raw string
+    annotations in its signature, and ``get_type_hints`` cannot evaluate the
+    adapter itself; both ``from_langchain`` paths must resolve the remaining
+    parameters against the underlying function's module instead of handing
+    pydantic forward references it cannot resolve.
+    """
+
+    def _make_wrapper(self) -> SimpleNamespace:
+        return SimpleNamespace(
+            name="partial_wallet",
+            description="Spend from the wallet with a note.",
+            func=partial(tracked_wallet, note="ach"),
+        )
+
+    def test_base_tool_from_langchain_resolves_partial_annotations(self):
+        converted = _PartialConversionTool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["args"].annotation is WalletArgs
+        assert converted.args_schema.model_json_schema()["properties"]["args"] == {
+            "$ref": "#/$defs/WalletArgs"
+        }
+
+    def test_tool_from_langchain_resolves_partial_annotations(self):
+        converted = Tool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["args"].annotation is WalletArgs
+        assert converted.run(args={"amount": 7}) == "spent 7 with ach"
+
+    def test_tool_from_langchain_partial_validates_remaining_arguments(self):
+        converted = Tool.from_langchain(self._make_wrapper())
+        with pytest.raises(ValueError, match="Input should be a valid integer"):
+            converted.run(args={"amount": "not-a-number"})
 
 
 class TestAnnotationMissingAtRuntime:
