@@ -486,7 +486,12 @@ class BaseTool(BaseModel, ABC):
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
-                param_annotation = func_hints.get(name, Any)
+                param_annotation = func_hints.get(
+                    name,
+                    param.annotation
+                    if param.annotation is not Parameter.empty
+                    else Any,
+                )
                 if param.default is param.empty:
                     fields[name] = (param_annotation, ...)
                 else:
@@ -678,7 +683,12 @@ class Tool(BaseTool, Generic[P, R]):
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
-                param_annotation = func_hints.get(name, Any)
+                param_annotation = func_hints.get(
+                    name,
+                    param.annotation
+                    if param.annotation is not Parameter.empty
+                    else Any,
+                )
                 if param.default is param.empty:
                     fields[name] = (param_annotation, ...)
                 else:
