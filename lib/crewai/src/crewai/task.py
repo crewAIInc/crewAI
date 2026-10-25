@@ -668,6 +668,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
+            self._reset_execution_counters()
             executor = agent.agent_executor
             if not (
                 executor and executor._resuming and resume_task_scope(str(self.id))
@@ -827,6 +828,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
+            self._reset_execution_counters()
             executor = agent.agent_executor
             if not (
                 executor and executor._resuming and resume_task_scope(str(self.id))
@@ -1144,6 +1146,20 @@ Follow these guidelines:
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
+
+    def _reset_execution_counters(self) -> None:
+        """Reset per-execution counters before a fresh (non-resumed) run.
+
+        These fields describe the current execution attempt. Without a reset
+        they accumulate across executions of the same Task instance (e.g.
+        multiple crew kickoffs or replays), leaking stale retry counts into
+        guardrail events and skewing tool usage statistics.
+        """
+        self.retry_count = 0
+        self._guardrail_retry_counts = {}
+        self.used_tools = 0
+        self.tools_errors = 0
+        self.delegations = 0
 
     def increment_delegations(self, agent_name: str | None) -> None:
         """Increment the delegations counter."""
