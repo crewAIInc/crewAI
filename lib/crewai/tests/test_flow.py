@@ -1451,6 +1451,63 @@ def test_siblings_emitting_the_same_outcome_run_its_router_once():
     assert calls == ["shared_route"]
 
 
+def test_or_router_matched_by_two_sibling_outcomes_runs_once():
+    """An or_() router that two sibling outcomes satisfy runs once per wave."""
+    calls = []
+
+    class OrRouterFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            return "left"
+
+        @router(begin)
+        def second_route(self):
+            return "right"
+
+        @router(or_("left", "right"))
+        def merge_route(self):
+            calls.append("merge_route")
+            return "merged"
+
+        @listen("merged")
+        def merged_listener(self):
+            calls.append("merged_listener")
+
+    OrRouterFlow().kickoff()
+
+    assert calls == ["merge_route", "merged_listener"]
+
+
+def test_or_router_still_loops_on_its_own_outcome():
+    """An or_() router re-runs when its own outcome matches it again."""
+    calls = []
+
+    class LoopingRouterFlow(Flow):
+        attempts = 0
+
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(or_(begin, "retry"))
+        def attempt(self):
+            self.attempts += 1
+            calls.append(f"attempt_{self.attempts}")
+            return "retry" if self.attempts < 3 else "done"
+
+        @listen("done")
+        def finish(self):
+            calls.append("finish")
+
+    LoopingRouterFlow().kickoff()
+
+    assert calls == ["attempt_1", "attempt_2", "attempt_3", "finish"]
+
+
 def test_router_cascade_chain():
     """Test a chain of routers where each router triggers the next."""
     execution_order = []
