@@ -3,7 +3,14 @@ from __future__ import annotations
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Annotated, Any, Literal, Optional, no_type_check
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Literal,
+    Optional,
+    no_type_check,
+)
 
 from annotated_types import Gt
 from pydantic import BaseModel, Field
@@ -63,6 +70,22 @@ def ledger(entry: LedgerEntry, note: str = "wire") -> str:
     return f"recorded {entry['amount']} with {note}"
 
 
+if TYPE_CHECKING:
+    class SpendReport(BaseModel):
+        total: int
+
+
+def audited(entry: LedgerEntry) -> SpendReport:  # noqa: F821
+    """Record a ledger entry, annotated with a TYPE_CHECKING-only report."""
+    return f"recorded {entry['amount']}"
+
+
+@no_type_check
+def audited_ledger(entry: LedgerEntry) -> SpendReport:  # noqa: F821
+    """Record a ledger entry, annotated with a TYPE_CHECKING-only report."""
+    return f"recorded {entry['amount']}"
+
+
 def orphan(value: MissingAtRuntime) -> str:  # noqa: F821
     """Annotated with a name that only exists under TYPE_CHECKING."""
     return str(value)
@@ -80,6 +103,14 @@ class BoundedTool(BaseTool):
 
     def _run(self, x: Annotated[int, Field(gt=10)]) -> str:
         return f"got {x}"
+
+
+class AuditedTool(BaseTool):
+    name: str = "audited_tool"
+    description: str = "Record a ledger entry, annotated with a TYPE_CHECKING-only report."
+
+    def _run(self, entry: LedgerEntry) -> SpendReport:  # noqa: F821
+        return f"recorded {entry['amount']}"
 
 
 class TestToolDecoratorWithFutureAnnotations:
@@ -247,3 +278,98 @@ class TestAnnotatedMetadataWithFutureAnnotations:
     def test_base_tool_subclass_rejects_a_violating_value(self):
         with pytest.raises(ValueError, match="Input should be greater than 10"):
             BoundedTool().run(x=5)
+
+
+class _AuditedLedgerConversionTool(BaseTool):
+    """Minimal concrete tool so the ``BaseTool.from_langchain`` path can run."""
+
+    name: str = "audited_ledger_conversion_tool"
+    description: str = "Convert a callable into a BaseTool."
+
+    def _run(self, *args: Any, **kwargs: Any) -> str:
+        return audited_ledger(**kwargs)
+
+
+class TestUnresolvableReturnWithFutureAnnotations:
+    """A return annotation visible only under TYPE_CHECKING makes
+    ``get_type_hints`` fail for the whole callable; the resolvable
+    parameters must still be evaluated in their defining module instead of
+    degrading to raw PEP 563 strings that pydantic cannot resolve.
+    """
+
+    def test_tool_decorator_resolves_parameter_annotations(self):
+        converted = tool("audited")(audited)
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+
+    def test_decorated_tool_validates_arguments(self):
+        converted = tool("audited")(audited)
+        with pytest.raises(ValueError, match="Input should be a valid integer"):
+            converted.run(entry={"amount": "not-a-number"})
+
+    def test_decorated_tool_renders_json_schema(self):
+        converted = tool("audited")(audited)
+        assert converted.args_schema.model_json_schema()["properties"]["entry"] == {
+            "$ref": "#/$defs/LedgerEntry"
+        }
+
+    def test_base_tool_subclass_resolves_parameter_annotations(self):
+        instance = AuditedTool()
+        assert instance.args_schema.model_fields["entry"].annotation is LedgerEntry
+
+    def test_base_tool_subclass_rejects_invalid_arguments(self):
+        with pytest.raises(ValueError, match="Input should be a valid integer"):
+            AuditedTool().run(entry={"amount": "not-a-number"})
+
+    def test_tool_from_langchain_resolves_and_runs(self):
+        wrapper = SimpleNamespace(
+            name="audited",
+            description="Record a ledger entry, annotated with a TYPE_CHECKING-only report.",
+            func=audited,
+        )
+        converted = Tool.from_langchain(wrapper)
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+        assert converted.run(entry={"amount": 9}) == "recorded 9"
+
+    def test_partial_resolves_remaining_parameters(self):
+        wrapper = SimpleNamespace(
+            name="partial_audited",
+            description="Record a ledger entry, annotated with a TYPE_CHECKING-only report.",
+            func=partial(audited),
+        )
+        converted = Tool.from_langchain(wrapper)
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+
+
+class TestNoTypeCheckUnresolvableReturnWithFutureAnnotations:
+    """The same TYPE_CHECKING-only return type on a ``@no_type_check``
+    callable must not defeat evaluation of the resolvable parameters either;
+    each annotation is resolved on its own.
+    """
+
+    def _make_wrapper(self) -> SimpleNamespace:
+        return SimpleNamespace(
+            name="audited_ledger",
+            description="Record a ledger entry, annotated with a TYPE_CHECKING-only report.",
+            func=audited_ledger,
+        )
+
+    def test_tool_decorator_resolves_parameter_annotations(self):
+        converted = tool("audited_ledger")(audited_ledger)
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+
+    def test_decorated_tool_validates_arguments(self):
+        converted = tool("audited_ledger")(audited_ledger)
+        with pytest.raises(ValueError, match="Input should be a valid integer"):
+            converted.run(entry={"amount": "not-a-number"})
+
+    def test_base_tool_from_langchain_resolves_parameter_annotations(self):
+        converted = _AuditedLedgerConversionTool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+        assert converted.args_schema.model_json_schema()["properties"]["entry"] == {
+            "$ref": "#/$defs/LedgerEntry"
+        }
+
+    def test_tool_from_langchain_resolves_and_runs(self):
+        converted = Tool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+        assert converted.run(entry={"amount": 8}) == "recorded 8"
