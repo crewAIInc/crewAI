@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Annotated, Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional, no_type_check
 
 from annotated_types import Gt
 from pydantic import BaseModel, Field
@@ -51,6 +51,16 @@ def legacy_wallet(args: WalletArgs) -> str:
 def tracked_wallet(args: WalletArgs, note: str = "wire") -> str:
     """Spend from the wallet with an audit note."""
     return f"spent {args['amount']} with {note}"
+
+
+class LedgerEntry(BaseModel):
+    amount: int
+
+
+@no_type_check
+def ledger(entry: LedgerEntry, note: str = "wire") -> str:
+    """Record a ledger entry with an audit note."""
+    return f"recorded {entry['amount']} with {note}"
 
 
 def orphan(value: MissingAtRuntime) -> str:  # noqa: F821
@@ -168,6 +178,55 @@ class TestAnnotationMissingAtRuntime:
         deferred = tool("deferred")(orphan)
 
         assert "value" in deferred.args_schema.model_fields
+
+
+class _LedgerConversionTool(BaseTool):
+    """Minimal concrete tool so the ``BaseTool.from_langchain`` path can run."""
+
+    name: str = "ledger_conversion_tool"
+    description: str = "Convert a callable into a BaseTool."
+
+    def _run(self, *args: Any, **kwargs: Any) -> str:
+        return ledger(**kwargs)
+
+
+class TestNoTypeCheckWithFutureAnnotations:
+    """``@typing.no_type_check`` makes ``get_type_hints`` return an empty dict
+    while the callable keeps its raw PEP 563 string annotations; the schema
+    paths must evaluate them in this module instead of handing pydantic
+    forward references it cannot resolve.
+    """
+
+    def _make_wrapper(self) -> SimpleNamespace:
+        return SimpleNamespace(
+            name="ledger",
+            description="Record a ledger entry with an audit note.",
+            func=ledger,
+        )
+
+    def test_tool_decorator_resolves_no_type_check_annotations(self):
+        converted = tool("ledger")(ledger)
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+        assert converted.args_schema.model_fields["note"].annotation is str
+        assert converted.run(entry={"amount": 4}) == "recorded 4 with wire"
+        with pytest.raises(ValueError, match="Input should be a valid integer"):
+            converted.run(entry={"amount": "not-a-number"})
+
+    def test_base_tool_from_langchain_resolves_no_type_check_annotations(self):
+        converted = _LedgerConversionTool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+        assert converted.args_schema.model_fields["note"].annotation is str
+        assert converted.args_schema.model_json_schema()["properties"]["entry"] == {
+            "$ref": "#/$defs/LedgerEntry"
+        }
+        with pytest.raises(ValueError, match="arguments validation failed"):
+            converted.run(entry={"amount": "not-a-number"})
+
+    def test_tool_from_langchain_resolves_no_type_check_annotations(self):
+        converted = Tool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
+        assert converted.args_schema.model_fields["note"].annotation is str
+        assert converted.run(entry={"amount": 7}) == "recorded 7 with wire"
 
 
 class TestAnnotatedMetadataWithFutureAnnotations:
