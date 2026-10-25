@@ -92,7 +92,6 @@ from crewai.utilities.agent_utils import (
     check_repeated_tool_call,
     enforce_rpm_limit,
     extract_tool_call_info,
-    format_message_for_llm,
     format_native_tool_output_for_agent,
     get_llm_response,
     get_tool_names,
@@ -115,6 +114,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
@@ -1856,6 +1856,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except HookAborted:
+            # A deliberate stop: the generic handler below would feed the
+            # policy abort back to the LLM as a recoverable observation.
+            raise
+
         except ToolExecutionFailedError:
             # A deliberate stop: the generic handler below would feed it back
             # to the LLM as a recoverable observation.
