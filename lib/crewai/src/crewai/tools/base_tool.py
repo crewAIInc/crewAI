@@ -132,10 +132,23 @@ def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
     # ``functools.partial`` adapters are not functions, so ``get_type_hints``
     # cannot evaluate them directly; the parameters that survive in the
     # adapter's signature belong to the underlying function, whose hints do
-    # resolve in its defining module.
+    # resolve in its defining module. ``functools.wraps`` decorators likewise
+    # copy the original annotations onto the wrapper while leaving
+    # ``__globals__`` pointed at the decorator's own module, so resolution —
+    # the batch call below and the per-annotation fallback alike — has to
+    # follow ``__wrapped__`` to the callable ``inspect.signature`` derives
+    # the parameter list from.
     target = func
-    while isinstance(target, functools.partial):
-        target = target.func
+    seen: set[int] = set()
+    while id(target) not in seen:
+        seen.add(id(target))
+        if isinstance(target, functools.partial):
+            target = target.func
+        else:
+            inner = getattr(target, "__wrapped__", None)
+            if inner is None:
+                break
+            target = inner
     try:
         hints = get_type_hints(target, include_extras=True)
     except Exception:
