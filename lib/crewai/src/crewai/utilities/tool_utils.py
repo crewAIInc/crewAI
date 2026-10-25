@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
@@ -16,6 +16,7 @@ from crewai.tools.tool_failure import (
     ToolFailureReason,
     handle_tool_failure,
 )
+from crewai.tools.tool_results import active_tool_results
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -30,6 +31,37 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
     from crewai.task import Task
+
+
+def _record_after_hook_result(
+    agent: Any,
+    tool_name: str,
+    result: Any,
+    start_index: int = 0,
+    result_as_answer: bool = False,
+    tool_args: dict[str, Any] | None = None,
+) -> None:
+    active = active_tool_results()
+    target = active if active is not None else getattr(agent, "tools_results", None)
+    if target is None:
+        return
+
+    for i in range(len(target) - 1, start_index - 1, -1):
+        if target[i].get("tool_name") == tool_name:
+            target[i]["result"] = result
+            if result_as_answer:
+                target[i]["result_as_answer"] = True
+            return
+
+    if result_as_answer:
+        entry = {
+            "tool_name": tool_name,
+            "result": result,
+            "result_as_answer": True,
+        }
+        if tool_args is not None:
+            entry["tool_args"] = tool_args
+        target.append(entry)
 
 
 async def aexecute_tool_and_check_finality(
@@ -142,6 +174,11 @@ async def aexecute_tool_and_check_finality(
                 False,
             )
 
+        active = active_tool_results()
+        recorded = (
+            active if active is not None else getattr(agent, "tools_results", None)
+        )
+        start_index = len(recorded) if recorded is not None else 0
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
 
@@ -157,6 +194,25 @@ async def aexecute_tool_and_check_finality(
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
+        is_final_answer = (
+            getattr(tool, "result_as_answer", False) and tool_usage.last_failure is None
+        )
+        effective_result = (
+            modified_result if modified_result is not None else tool_result
+        )
+
+        recorded_len = len(recorded) if recorded is not None else 0
+        if modified_result is not None or (
+            is_final_answer and recorded_len <= start_index
+        ):
+            _record_after_hook_result(
+                agent=agent,
+                tool_name=sanitized_tool_name,
+                result=effective_result,
+                start_index=start_index,
+                result_as_answer=is_final_answer,
+                tool_args=tool_input,
+            )
 
         # After the hooks, so post_tool_call can still inspect or rewrite the
         # result before the policy aborts.
@@ -172,10 +228,10 @@ async def aexecute_tool_and_check_finality(
             )
 
         return ToolResult(
-            modified_result if modified_result is not None else tool_result,
+            effective_result,
             # A failed tool must not become the final answer -- the same
             # exclusion the native paths already apply to raised errors.
-            tool.result_as_answer and tool_usage.last_failure is None,
+            is_final_answer,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
@@ -305,6 +361,11 @@ def execute_tool_and_check_finality(
                 False,
             )
 
+        active = active_tool_results()
+        recorded = (
+            active if active is not None else getattr(agent, "tools_results", None)
+        )
+        start_index = len(recorded) if recorded is not None else 0
         tool_result = tool_usage.use(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
 
@@ -320,6 +381,25 @@ def execute_tool_and_check_finality(
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
+        is_final_answer = (
+            getattr(tool, "result_as_answer", False) and tool_usage.last_failure is None
+        )
+        effective_result = (
+            modified_result if modified_result is not None else tool_result
+        )
+
+        recorded_len = len(recorded) if recorded is not None else 0
+        if modified_result is not None or (
+            is_final_answer and recorded_len <= start_index
+        ):
+            _record_after_hook_result(
+                agent=agent,
+                tool_name=sanitized_tool_name,
+                result=effective_result,
+                start_index=start_index,
+                result_as_answer=is_final_answer,
+                tool_args=tool_input,
+            )
 
         # After the hooks, so post_tool_call can still inspect or rewrite the
         # result before the policy aborts.
@@ -335,10 +415,10 @@ def execute_tool_and_check_finality(
             )
 
         return ToolResult(
-            modified_result if modified_result is not None else tool_result,
+            effective_result,
             # A failed tool must not become the final answer -- the same
             # exclusion the native paths already apply to raised errors.
-            tool.result_as_answer and tool_usage.last_failure is None,
+            is_final_answer,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
