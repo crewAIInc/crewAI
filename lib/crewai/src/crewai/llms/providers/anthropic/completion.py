@@ -271,6 +271,12 @@ class AnthropicCompletion(BaseLLM):
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
     _previous_thinking_blocks: list[Any] = PrivateAttr(default_factory=list)
+    # Fingerprint of the assistant turn `_previous_thinking_blocks` belong
+    # to: the tool_use ids of that response, or its text when it used no
+    # tools. One LLM instance can serve several conversations, so the
+    # formatter only replays the blocks on the matching turn.
+    _previous_thinking_tool_ids: frozenset[str] = PrivateAttr(default_factory=frozenset)
+    _previous_thinking_text: str = PrivateAttr(default="")
 
     @model_validator(mode="before")
     @classmethod
@@ -807,19 +813,47 @@ class AnthropicCompletion(BaseLLM):
                 thinking_block["signature"] = signature
             return thinking_block
         if block_type == "redacted_thinking":
-            redacted_block = {"type": "redacted_thinking"}
-            if isinstance(content_block, dict):
-                if "thinking" in content_block:
-                    redacted_block["thinking"] = content_block["thinking"]
-                if "signature" in content_block:
-                    redacted_block["signature"] = content_block["signature"]
-            else:
-                if hasattr(content_block, "thinking"):
-                    redacted_block["thinking"] = content_block.thinking
-                if hasattr(content_block, "signature"):
-                    redacted_block["signature"] = content_block.signature
+            # A RedactedThinkingBlock carries an opaque, encrypted ``data``
+            # field (no thinking/signature) that Anthropic requires to be
+            # passed back unchanged on the follow-up request.
+            data = (
+                content_block.get("data")
+                if isinstance(content_block, dict)
+                else getattr(content_block, "data", None)
+            )
+            redacted_block: dict[str, Any] = {"type": "redacted_thinking"}
+            if data:
+                redacted_block["data"] = data
             return redacted_block
         return None
+
+    def _store_thinking_blocks(self, content_blocks: Any) -> None:
+        """Cache a response's thinking blocks for the follow-up request.
+
+        The blocks are stored together with a fingerprint of the assistant
+        turn they co-occurred with: the response's tool_use ids, or its text
+        when it used no tools. The formatter replays the blocks only on a
+        turn whose fingerprint matches, so a different conversation sharing
+        this LLM instance never receives foreign thinking blocks. The cache
+        is assigned unconditionally: a response without thinking must drop
+        stale blocks, or they would be replayed on a later assistant turn.
+        """
+        thinking_blocks: list[ThinkingBlock] = []
+        tool_ids: list[str] = []
+        text = ""
+        for block in content_blocks or []:
+            thinking_block = self._extract_thinking_block(block)
+            if thinking_block:
+                thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+            elif _is_tool_use_block(block):
+                tool_ids.append(_tool_use_id(block))
+            # Some non-text blocks (e.g. tool-search results) expose a
+            # ``text`` attribute set to None, so require a real string.
+            elif isinstance(getattr(block, "text", None), str):
+                text += block.text
+        self._previous_thinking_blocks = thinking_blocks
+        self._previous_thinking_tool_ids = frozenset(tool_ids)
+        self._previous_thinking_text = text
 
     @staticmethod
     def _convert_image_blocks(content: Any) -> Any:
@@ -987,10 +1021,20 @@ class AnthropicCompletion(BaseLLM):
                             }
                             assistant_content.append(tool_use)
                     if assistant_content:
+                        # Replay the cached thinking only on the assistant
+                        # turn that produced it, matched by tool_use ids: a
+                        # different conversation sharing this LLM instance
+                        # must not receive foreign thinking blocks.
+                        turn_tool_ids = frozenset(
+                            tc.get("id", "")
+                            for tc in tool_calls
+                            if isinstance(tc, dict)
+                        )
                         if (
                             index == last_assistant_index
                             and self.thinking
                             and self._previous_thinking_blocks
+                            and self._previous_thinking_tool_ids == turn_tool_ids
                         ):
                             assistant_content = [
                                 *self._previous_thinking_blocks,
@@ -1005,6 +1049,8 @@ class AnthropicCompletion(BaseLLM):
                     index == last_assistant_index
                     and self.thinking
                     and self._previous_thinking_blocks
+                    and not self._previous_thinking_tool_ids
+                    and (content if content else "") == self._previous_thinking_text
                 ):
                     structured_content = cast(
                         list[dict[str, Any]],
@@ -1202,17 +1248,7 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
-        thinking_blocks: list[ThinkingBlock] = []
-
-        if response.content:
-            for content_block in response.content:
-                thinking_block = self._extract_thinking_block(content_block)
-                if thinking_block:
-                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
-
-        # Assign unconditionally: a response without thinking must drop the
-        # cached blocks, or they would be replayed on a later assistant turn.
-        self._previous_thinking_blocks = thinking_blocks
+        self._store_thinking_blocks(response.content)
 
         # Check if Claude wants to use tools
         if response.content:
@@ -1387,15 +1423,7 @@ class AnthropicCompletion(BaseLLM):
 
             final_message = stream.get_final_message()
 
-        thinking_blocks: list[ThinkingBlock] = []
-        if final_message.content:
-            for content_block in final_message.content:
-                thinking_block = self._extract_thinking_block(content_block)
-                if thinking_block:
-                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
-
-        # Assign unconditionally so a no-thinking response drops stale blocks.
-        self._previous_thinking_blocks = thinking_blocks
+        self._store_thinking_blocks(final_message.content)
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
@@ -1616,19 +1644,12 @@ class AnthropicCompletion(BaseLLM):
             self._track_token_usage_internal(follow_up_usage)
 
             final_content = ""
-            thinking_blocks: list[ThinkingBlock] = []
-
             if final_response.content:
                 for content_block in final_response.content:
                     if hasattr(content_block, "text"):
                         final_content += content_block.text
-                    else:
-                        thinking_block = self._extract_thinking_block(content_block)
-                        if thinking_block:
-                            thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
-            # Assign unconditionally so a no-thinking response drops stale blocks.
-            self._previous_thinking_blocks = thinking_blocks
+            self._store_thinking_blocks(final_response.content)
 
             final_content = self._apply_stop_words(final_content)
 
@@ -1763,17 +1784,7 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
-        thinking_blocks: list[ThinkingBlock] = []
-
-        if response.content:
-            for content_block in response.content:
-                thinking_block = self._extract_thinking_block(content_block)
-                if thinking_block:
-                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
-
-        # Assign unconditionally: a response without thinking must drop the
-        # cached blocks, or they would be replayed on a later assistant turn.
-        self._previous_thinking_blocks = thinking_blocks
+        self._store_thinking_blocks(response.content)
 
         # Handle Anthropic tool-use blocks across stable, beta, and preview SDK shapes.
         if response.content:
@@ -1943,15 +1954,7 @@ class AnthropicCompletion(BaseLLM):
 
             final_message = await stream.get_final_message()
 
-        thinking_blocks: list[ThinkingBlock] = []
-        if final_message.content:
-            for content_block in final_message.content:
-                thinking_block = self._extract_thinking_block(content_block)
-                if thinking_block:
-                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
-
-        # Assign unconditionally so a no-thinking response drops stale blocks.
-        self._previous_thinking_blocks = thinking_blocks
+        self._store_thinking_blocks(final_message.content)
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
