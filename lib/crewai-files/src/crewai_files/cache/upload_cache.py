@@ -375,6 +375,7 @@ class UploadCache:
         count = sum(len(keys) for keys in self._provider_keys.values())
         await self._cache.clear(namespace=self.namespace)
         self._provider_keys.clear()
+        self._key_access_order.clear()
 
         if count > 0:
             logger.debug(f"Cleared {count} cache entries")
