@@ -928,11 +928,23 @@ class AnthropicCompletion(BaseLLM):
 
         base_formatted = super()._format_messages(messages)
 
+        # `_previous_thinking_blocks` holds the thinking blocks of the most
+        # recent response, so they belong to exactly one assistant turn: the
+        # last assistant message in the history. Prepending them to every
+        # historical assistant message (e.g. with multiple tool-use turns)
+        # attaches the latest blocks to earlier turns, corrupting the
+        # reconstructed transcript. Anthropic also only requires thinking
+        # blocks to be preserved for that final assistant turn.
+        last_assistant_index = -1
+        for index, message in enumerate(base_formatted):
+            if message.get("role") == "assistant":
+                last_assistant_index = index
+
         formatted_messages: list[LLMMessage] = []
         system_message: str | None = None
         pending_tool_results: list[dict[str, Any]] = []
 
-        for message in base_formatted:
+        for index, message in enumerate(base_formatted):
             role = message.get("role")
             content = message.get("content", "")
 
@@ -975,7 +987,11 @@ class AnthropicCompletion(BaseLLM):
                             }
                             assistant_content.append(tool_use)
                     if assistant_content:
-                        if self.thinking and self._previous_thinking_blocks:
+                        if (
+                            index == last_assistant_index
+                            and self.thinking
+                            and self._previous_thinking_blocks
+                        ):
                             assistant_content = [
                                 *self._previous_thinking_blocks,
                                 *assistant_content,
@@ -985,7 +1001,11 @@ class AnthropicCompletion(BaseLLM):
                         )
                 elif isinstance(content, list):
                     formatted_messages.append({"role": "assistant", "content": content})
-                elif self.thinking and self._previous_thinking_blocks:
+                elif (
+                    index == last_assistant_index
+                    and self.thinking
+                    and self._previous_thinking_blocks
+                ):
                     structured_content = cast(
                         list[dict[str, Any]],
                         [

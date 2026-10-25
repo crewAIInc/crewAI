@@ -1012,6 +1012,170 @@ def test_anthropic_thinking_blocks_preserved_on_tool_use_turn():
     assert assistant_message["content"][1]["id"] == "toolu_1"
 
 
+def test_anthropic_thinking_blocks_only_on_matching_tool_use_turn():
+    """Across two consecutive tool-use turns, thinking blocks stay on their own turn"""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    first_tool_response = MagicMock()
+    first_tool_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Look up the weather in Paris.",
+            "signature": "sig-one",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    first_tool_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    first_tool_response.stop_reason = "tool_use"
+    first_tool_response.id = "msg_1"
+
+    second_tool_response = MagicMock()
+    second_tool_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Now look up the weather in Rome.",
+            "signature": "sig-two",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_2",
+            "name": "get_weather",
+            "input": {"city": "Rome"},
+        },
+    ]
+    second_tool_response.usage = MagicMock(input_tokens=11, output_tokens=6)
+    second_tool_response.stop_reason = "tool_use"
+    second_tool_response.id = "msg_2"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="18C in Paris, 24C in Rome.")]
+    final_response.usage = MagicMock(input_tokens=13, output_tokens=7)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_3"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [
+        first_tool_response,
+        second_tool_response,
+        final_response,
+    ]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris and Rome?"}]
+
+    assert llm.call(messages, tools=tools)[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    assert llm.call(messages, tools=tools)[0]["id"] == "toolu_2"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_2",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Rome"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_2", "content": "24C"})
+
+    llm.call(messages, tools=tools)
+
+    # Second request: the first tool-use turn is the matching turn, so it
+    # carries the thinking blocks of the response that produced toolu_1.
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    first_turn = next(
+        msg
+        for msg in second_call_messages
+        if msg["role"] == "assistant" and msg.get("content")
+        and isinstance(msg["content"], list)
+        and any(block.get("id") == "toolu_1" for block in msg["content"])
+    )
+    assert first_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Look up the weather in Paris.",
+        "signature": "sig-one",
+    }
+
+    # Third request: the latest thinking blocks belong to the second
+    # tool-use turn only. The earlier turn must not receive them.
+    third_call_messages = mock_client.messages.create.call_args_list[2].kwargs["messages"]
+    tool_use_turns = [
+        msg
+        for msg in third_call_messages
+        if msg["role"] == "assistant"
+        and isinstance(msg.get("content"), list)
+        and any(block.get("type") == "tool_use" for block in msg["content"])
+    ]
+    assert len(tool_use_turns) == 2
+
+    earlier_turn, matching_turn = tool_use_turns
+    assert earlier_turn["content"] == [
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        }
+    ]
+    assert matching_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Now look up the weather in Rome.",
+        "signature": "sig-two",
+    }
+    assert matching_turn["content"][1]["type"] == "tool_use"
+    assert matching_turn["content"][1]["id"] == "toolu_2"
+
+
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
 def test_anthropic_function_calling():
     """Test that function calling is properly handled"""
