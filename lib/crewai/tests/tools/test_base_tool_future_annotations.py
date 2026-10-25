@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from functools import partial
+import importlib
 from pathlib import Path
+import sys
 from types import SimpleNamespace
 from typing import (
     TYPE_CHECKING,
@@ -373,3 +375,108 @@ class TestNoTypeCheckUnresolvableReturnWithFutureAnnotations:
         converted = Tool.from_langchain(self._make_wrapper())
         assert converted.args_schema.model_fields["entry"].annotation is LedgerEntry
         assert converted.run(entry={"amount": 8}) == "recorded 8"
+
+
+_ORIGIN_MODULE_SOURCE = '''\
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel
+
+
+class Parcel(BaseModel):
+    tracking: str
+
+
+if TYPE_CHECKING:
+    class DeliveryNote(BaseModel):
+        signed: bool
+
+
+def deliver(parcel: Parcel) -> str:
+    """Deliver a parcel."""
+    return f"delivered {parcel['tracking']}"
+
+
+def deliver_reported(parcel: Parcel) -> DeliveryNote:  # noqa: F821
+    """Deliver a parcel and return a TYPE_CHECKING-only note."""
+    return f"delivered {parcel['tracking']}"
+'''
+
+_DECORATOR_MODULE_SOURCE = '''\
+from functools import wraps
+
+
+def audited(fn):
+    """Wrap ``fn`` so the wrapper's globals live in this module alone."""
+
+    @wraps(fn)
+    def inner(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return inner
+'''
+
+
+class TestCrossModuleWrapsWithFutureAnnotations:
+    """A ``functools.wraps`` decorator defined in another module copies the
+    original annotations onto the wrapper but leaves ``__globals__`` pointed
+    at the decorator's own module. ``get_type_hints`` follows ``__wrapped__``
+    itself, so only its failures — one annotation unresolvable at runtime,
+    typically a TYPE_CHECKING-only return type — reach the per-annotation
+    fallback, which must resolve the surviving parameters in the original
+    function's module instead of degrading them to strings pydantic cannot
+    resolve.
+    """
+
+    @pytest.fixture
+    def cross_module(self, tmp_path, monkeypatch):
+        (tmp_path / "wrap_origin_module.py").write_text(_ORIGIN_MODULE_SOURCE)
+        (tmp_path / "wrap_decorator_module.py").write_text(_DECORATOR_MODULE_SOURCE)
+        monkeypatch.syspath_prepend(tmp_path)
+        for name in ("wrap_origin_module", "wrap_decorator_module"):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+        origin = importlib.import_module("wrap_origin_module")
+        decorators = importlib.import_module("wrap_decorator_module")
+        return SimpleNamespace(
+            deliver=decorators.audited(origin.deliver),
+            deliver_reported=decorators.audited(origin.deliver_reported),
+            Parcel=origin.Parcel,
+        )
+
+    def test_tool_from_langchain_resolves_wrapped_annotations(self, cross_module):
+        converted = Tool.from_langchain(
+            SimpleNamespace(
+                name="deliver",
+                description="Deliver a parcel.",
+                func=cross_module.deliver,
+            )
+        )
+        parcel = converted.args_schema.model_fields["parcel"]
+        assert parcel.annotation is cross_module.Parcel
+        assert converted.run(parcel={"tracking": "TRK-1"}) == "delivered TRK-1"
+
+    def test_wrapped_tool_with_type_checking_only_return_stays_callable(
+        self, cross_module
+    ):
+        converted = Tool.from_langchain(
+            SimpleNamespace(
+                name="deliver_reported",
+                description="Deliver a parcel and return a TYPE_CHECKING-only note.",
+                func=cross_module.deliver_reported,
+            )
+        )
+        parcel = converted.args_schema.model_fields["parcel"]
+        assert parcel.annotation is cross_module.Parcel
+        assert converted.args_schema.model_json_schema()["properties"]["parcel"] == {
+            "$ref": "#/$defs/Parcel"
+        }
+        assert converted.run(parcel={"tracking": "TRK-2"}) == "delivered TRK-2"
+
+    def test_tool_decorator_resolves_wrapped_annotations(self, cross_module):
+        converted = tool("deliver_reported")(cross_module.deliver_reported)
+        parcel = converted.args_schema.model_fields["parcel"]
+        assert parcel.annotation is cross_module.Parcel
+        with pytest.raises(ValueError, match="Input should be a valid string"):
+            converted.run(parcel={"tracking": 3})
