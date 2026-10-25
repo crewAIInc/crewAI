@@ -110,9 +110,17 @@ def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
     while isinstance(target, functools.partial):
         target = target.func
     try:
-        return get_type_hints(target, include_extras=True)
+        hints = get_type_hints(target, include_extras=True)
     except Exception:
         return dict(getattr(func, "__annotations__", {}))
+    # ``@typing.no_type_check`` makes ``get_type_hints`` return an empty dict
+    # while the callable keeps its raw annotations; preserve them so schema
+    # paths do not silently widen every parameter to ``Any``.
+    if not hints:
+        raw = getattr(target, "__annotations__", None) or {}
+        if raw:
+            return dict(raw)
+    return hints
 
 
 class EnvVar(BaseModel):
