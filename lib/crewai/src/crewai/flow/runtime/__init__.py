@@ -9,6 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
@@ -3185,7 +3186,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Note:
             - Routers are executed sequentially to maintain flow control
-            - Each router's result becomes a new trigger_method
+            - Each router's outcome is matched against downstream routers in turn
             - Normal listeners are executed in parallel for efficiency
             - Listeners can receive the trigger method's result as a parameter
         """
@@ -3195,19 +3196,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         router_result_to_feedback: dict[
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
-        current_trigger = trigger_method
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
         # Methods already run per trigger, so a conditional start that also
         # listens to the same event is not run a second time below.
         ran_for_trigger: dict[str, set[FlowMethodName]] = {}
+        # Outcomes still to be matched against downstream routers. Routers fired
+        # by one trigger are siblings, and each outcome continues its own chain.
+        pending_triggers: deque[FlowMethodName] = deque([trigger_method])
 
-        while True:
+        while pending_triggers:
+            current_trigger = pending_triggers.popleft()
             routers_triggered = self._find_triggered_methods(
                 current_trigger, router_only=True
             )
             if not routers_triggered:
-                break
+                continue
             ran_for_trigger.setdefault(str(current_trigger), set()).update(
                 routers_triggered
             )
@@ -3224,7 +3228,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     router_name, router_input, current_triggering_event_id
                 )
                 if router_result is None:
-                    current_trigger = FlowMethodName("")
                     continue
 
                 router_result = (
@@ -3245,7 +3248,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     router_result_to_feedback[router_result_str] = (
                         self.last_human_feedback
                     )
-                current_trigger = router_result_event
+                if router_result_event not in pending_triggers:
+                    pending_triggers.append(router_result_event)
 
         all_triggers = [trigger_method, *router_results]
 

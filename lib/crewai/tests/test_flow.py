@@ -1336,6 +1336,121 @@ def test_diamond_dependency_pattern():
     assert execution_order.index("converge") > execution_order.index("path_b")
 
 
+def test_sibling_routers_each_continue_their_own_router_chain():
+    """Routers fired by the same method each hand their outcome to downstream routers."""
+    calls = []
+
+    class SiblingRouterFlow(Flow):
+        @start()
+        def begin(self):
+            calls.append("begin")
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            calls.append("first_route")
+            return "left"
+
+        @router(begin)
+        def second_route(self):
+            calls.append("second_route")
+            return "right"
+
+        @router("left")
+        def left_route(self):
+            calls.append("left_route")
+            return "left_done"
+
+        @router("right")
+        def right_route(self):
+            calls.append("right_route")
+            return "right_done"
+
+        @listen("left_done")
+        def left_listener(self):
+            calls.append("left_listener")
+
+        @listen("right_done")
+        def right_listener(self):
+            calls.append("right_listener")
+
+    SiblingRouterFlow().kickoff()
+
+    assert sorted(calls) == sorted(
+        [
+            "begin",
+            "first_route",
+            "second_route",
+            "left_route",
+            "right_route",
+            "left_listener",
+            "right_listener",
+        ]
+    )
+    assert calls.index("left_route") > calls.index("first_route")
+    assert calls.index("right_route") > calls.index("second_route")
+
+
+def test_sibling_router_outcome_continues_when_a_later_sibling_returns_none():
+    """A sibling that emits no outcome does not cancel the chain of an earlier one."""
+    calls = []
+
+    class QuietSiblingFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def emits(self):
+            calls.append("emits")
+            return "left"
+
+        @router(begin)
+        def stays_silent(self):
+            calls.append("stays_silent")
+            return None
+
+        @router("left")
+        def left_route(self):
+            calls.append("left_route")
+            return "left_done"
+
+        @listen("left_done")
+        def left_listener(self):
+            calls.append("left_listener")
+
+    QuietSiblingFlow().kickoff()
+
+    assert calls == ["emits", "stays_silent", "left_route", "left_listener"]
+
+
+def test_siblings_emitting_the_same_outcome_run_its_router_once():
+    """Two routers that emit one outcome still trigger a downstream router once."""
+    calls = []
+
+    class SharedOutcomeFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            return "shared"
+
+        @router(begin)
+        def second_route(self):
+            return "shared"
+
+        @router("shared")
+        def shared_route(self):
+            calls.append("shared_route")
+            return "done"
+
+    SharedOutcomeFlow().kickoff()
+
+    assert calls == ["shared_route"]
+
+
 def test_router_cascade_chain():
     """Test a chain of routers where each router triggers the next."""
     execution_order = []
