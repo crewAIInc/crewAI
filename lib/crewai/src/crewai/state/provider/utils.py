@@ -12,7 +12,9 @@ def detect_provider(path: str) -> BaseProvider:
     """Detect the storage provider from a checkpoint path.
 
     Reads the file's magic bytes to determine if it's a SQLite database.
-    For paths containing ``#``, checks the portion before the ``#``.
+    For paths containing ``#``, checks the portion before the last ``#``,
+    matching how ``SqliteProvider.extract_id`` and ``from_checkpoint`` split
+    ``db_path#checkpoint_id``.
     Falls back to JsonProvider.
 
     Args:
@@ -24,7 +26,7 @@ def detect_provider(path: str) -> BaseProvider:
     from crewai.state.provider.json_provider import JsonProvider
     from crewai.state.provider.sqlite_provider import SqliteProvider
 
-    file_path = path.split("#")[0] if "#" in path else path
+    file_path = path.rsplit("#", 1)[0] if "#" in path else path
     try:
         with open(file_path, "rb") as f:
             if f.read(16) == _SQLITE_MAGIC:
