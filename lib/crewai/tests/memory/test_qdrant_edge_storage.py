@@ -338,3 +338,71 @@ def test_memory_string_storage_qdrant_edge(tmp_path: Path) -> None:
         m.close()
     finally:
         os.environ.pop("CREWAI_STORAGE_DIR", None)
+
+@pytest.mark.parametrize(
+    "older_than",
+    [
+        None,
+        datetime(2025, 1, 2, 12, 0, 0),
+        datetime(2025, 1, 2, 12, 0, 0, tzinfo=timezone.utc),
+        datetime(2025, 1, 2, 17, 0, 0, tzinfo=timezone(timedelta(hours=5))),
+        datetime(2025, 1, 2, 7, 0, 0, tzinfo=timezone(timedelta(hours=-5))),
+    ],
+    ids=["none", "naive", "utc", "non_utc_ahead", "non_utc_behind"],
+)
+def test_delete_older_than_timezone_handling(
+    storage: QdrantEdgeStorage,
+    older_than: datetime | None,
+) -> None:
+    old_rec = _rec(content="old", created_at=datetime(2025, 1, 1, 12, 0, 0))
+    new_rec = _rec(content="new", created_at=datetime(2025, 1, 3, 12, 0, 0))
+    storage.save([old_rec, new_rec])
+
+    deleted = storage.delete(older_than=older_than)
+    if older_than is None:
+        assert deleted == 2
+        assert storage.get_record(old_rec.id) is None
+        assert storage.get_record(new_rec.id) is None
+    else:
+        assert deleted == 1
+        assert storage.get_record(old_rec.id) is None
+        assert storage.get_record(new_rec.id) is not None
+
+
+@pytest.mark.parametrize(
+    "older_than",
+    [
+        None,
+        datetime(2025, 1, 2, 12, 0, 0),
+        datetime(2025, 1, 2, 12, 0, 0, tzinfo=timezone.utc),
+        datetime(2025, 1, 2, 17, 0, 0, tzinfo=timezone(timedelta(hours=5))),
+        datetime(2025, 1, 2, 7, 0, 0, tzinfo=timezone(timedelta(hours=-5))),
+    ],
+    ids=["none", "naive", "utc", "non_utc_ahead", "non_utc_behind"],
+)
+def test_delete_older_than_with_categories(
+    storage: QdrantEdgeStorage,
+    older_than: datetime | None,
+) -> None:
+    old_rec = _rec(
+        content="old",
+        categories=["agent"],
+        created_at=datetime(2025, 1, 1, 12, 0, 0),
+    )
+    new_rec = _rec(
+        content="new",
+        categories=["agent"],
+        created_at=datetime(2025, 1, 3, 12, 0, 0),
+    )
+    storage.save([old_rec, new_rec])
+
+    deleted = storage.delete(categories=["agent"], older_than=older_than)
+    if older_than is None:
+        assert deleted == 2
+        assert storage.get_record(old_rec.id) is None
+        assert storage.get_record(new_rec.id) is None
+    else:
+        assert deleted == 1
+        assert storage.get_record(old_rec.id) is None
+        assert storage.get_record(new_rec.id) is not None
+

@@ -392,6 +392,8 @@ class QdrantEdgeStorage:
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
         """Delete matching records from central shard."""
+        if older_than is not None and older_than.tzinfo is not None:
+            older_than = older_than.astimezone(timezone.utc).replace(tzinfo=None)
         total_deleted = 0
         for shard_path in (self._central_path, self._local_path):
             if not shard_path.exists():
@@ -444,6 +446,8 @@ class QdrantEdgeStorage:
         metadata_filter: dict[str, Any] | None,
     ) -> int:
         """Delete matching records from a single shard, returning count deleted."""
+        if older_than is not None and older_than.tzinfo is not None:
+            older_than = older_than.astimezone(timezone.utc).replace(tzinfo=None)
         before = shard.count(CountRequest())
 
         if record_ids and not (categories or metadata_filter or older_than):

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -438,6 +438,8 @@ class LanceDBStorage:
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
+        if older_than is not None and older_than.tzinfo is not None:
+            older_than = older_than.astimezone(timezone.utc).replace(tzinfo=None)
         if self._table is None:
             return 0
         with store_lock(self._lock_name):
