@@ -225,7 +225,7 @@ class Settings(BaseModel):
             try:
                 with config_path.open("r") as f:
                     file_data = json.load(f)
-            except (OSError, json.JSONDecodeError) as e:
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
                 logger.warning(
                     "Could not parse settings file %s (%s); ignoring its contents "
                     "and falling back to defaults. The file will be overwritten "
@@ -265,7 +265,7 @@ class Settings(BaseModel):
             try:
                 with self.config_path.open("r") as f:
                     existing_data = json.load(f)
-            except (OSError, json.JSONDecodeError) as e:
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
                 backup = self.config_path.with_suffix(".json.bak")
                 try:
                     self.config_path.replace(backup)
