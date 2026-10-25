@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_runcrate_config(self):
+        """Test Runcrate provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["runcrate"]
+        assert config.base_url == "https://api.runcrate.ai/v1"
+        assert config.api_key_env == "RUNCRATE_API_KEY"
+        assert config.base_url_env == "RUNCRATE_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -360,6 +368,28 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepinfra"
             assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+
+    def test_llm_creates_openai_compatible_for_runcrate(self):
+        """runcrate/<org>/<model> routes natively and keeps the org/model id intact."""
+        with patch.dict(os.environ, {"RUNCRATE_API_KEY": "test-key"}):
+            llm = LLM(model="runcrate/deepseek-ai/DeepSeek-V4.1-Flash")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "runcrate"
+            assert llm.model == "deepseek-ai/DeepSeek-V4.1-Flash"
+            assert llm.base_url == "https://api.runcrate.ai/v1"
+
+    def test_runcrate_base_url_env_override(self):
+        """RUNCRATE_BASE_URL redirects Runcrate to a proxy."""
+        with patch.dict(
+            os.environ,
+            {
+                "RUNCRATE_API_KEY": "test-key",
+                "RUNCRATE_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="runcrate/zai-org/GLM-5.3")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1"
 
     @pytest.mark.parametrize(
         "model",
