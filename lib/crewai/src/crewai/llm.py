@@ -1259,8 +1259,8 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
+            from crewai.utilities.message_utils import message_content_text
 
             messages = params.get("messages", [])
             if not messages:
@@ -1418,8 +1418,8 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
+            from crewai.utilities.message_utils import message_content_text
 
             messages = params.get("messages", [])
             if not messages:
