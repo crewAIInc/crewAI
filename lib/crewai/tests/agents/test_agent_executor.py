@@ -509,8 +509,8 @@ class TestAgentExecutor:
         executor.llm.call.return_value = "Final Answer: done"
         events: list[str] = []
 
-        with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
-            summarize.side_effect = lambda **_: events.append("summarize")
+        with patch.object(executor.llm, "summarize_messages") as summarize:
+            summarize.side_effect = lambda *_args, **_kwargs: events.append("summarize")
             executor.llm.call.side_effect = (
                 lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
             )
