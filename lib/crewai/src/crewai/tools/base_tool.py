@@ -39,7 +39,7 @@ from crewai.tools.structured_tool import (
     format_description_for_llm,
 )
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
-from crewai.types.callback import SerializableCallable, _resolve_dotted_path
+from crewai.types.callback import SerializableCallable, _trusted_deserialize
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -61,21 +61,16 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
     dotted = value.get("tool_type", "")
     tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
     if tool_cls is None:
+        if not _trusted_deserialize():
+            raise ValueError(
+                f"Refusing to resolve tool type '{dotted}': set "
+                "CREWAI_DESERIALIZE_CALLBACKS=1 to allow. Only enable "
+                "this for trusted checkpoint data."
+            )
         mod_path, cls_name = dotted.rsplit(".", 1)
         tool_cls = getattr(importlib.import_module(mod_path), cls_name)
 
-    # Pre-resolve serialized callback strings so SerializableCallable's
-    # BeforeValidator sees a callable and skips the env-var guard.
-    data = dict(value)
-    for key in ("cache_function",):
-        val = data.get(key)
-        if isinstance(val, str):
-            try:
-                data[key] = _resolve_dotted_path(val)
-            except (ValueError, ImportError):
-                data.pop(key)
-
-    return tool_cls.model_validate(data)  # type: ignore[union-attr]
+    return tool_cls.model_validate(value)  # type: ignore[union-attr]
 
 
 def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:

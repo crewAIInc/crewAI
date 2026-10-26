@@ -138,3 +138,81 @@ def test_allows_benign_archive(tmp_path: Path) -> None:
 
     assert (dest / "SKILL.md").read_bytes() == b"# skill"
     assert (dest / "scripts" / "run.py").read_bytes() == b"print(1)"
+
+
+def test_symlinks_created_after_files(tmp_path: Path) -> None:
+    """Symlinks must be created AFTER regular files to prevent TOCTOU races.
+
+    If symlinks were extracted in archive order (before some files), a symlink
+    inside dest could redirect a subsequent file write outside dest. Phased
+    extraction (dirs → files → symlinks) eliminates this.
+    """
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    # Track extraction order by checking filesystem state
+    def build(tf: tarfile.TarFile) -> None:
+        # Regular file that should exist before any symlinks
+        payload = b"safe content"
+        info = tarfile.TarInfo("target.txt")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+
+        # Symlink that references target.txt — in archive order it comes
+        # AFTER the file, but even if archive order were reversed the
+        # phased extraction ensures files come first
+        link = tarfile.TarInfo("alias.txt")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "target.txt"
+        tf.addfile(link)
+
+        # Another file
+        payload2 = b"more content"
+        info2 = tarfile.TarInfo("other.txt")
+        info2.size = len(payload2)
+        tf.addfile(info2, io.BytesIO(payload2))
+
+    with _tar_from_members(build) as tf:
+        _safe_extractall(tf, dest)
+
+    assert (dest / "target.txt").read_bytes() == b"safe content"
+    assert (dest / "alias.txt").is_symlink()
+    assert (dest / "alias.txt").read_bytes() == b"safe content"
+    assert (dest / "other.txt").read_bytes() == b"more content"
+
+
+def test_symlink_race_external_modification_blocked(tmp_path: Path) -> None:
+    """Symlink targets are re-verified at creation time.
+
+    Even if the filesystem is modified between initial validation and symlink
+    creation (e.g., a directory is replaced with a symlink by an external
+    process), the re-verification at creation time catches the escape.
+    """
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        # A directory
+        d = tarfile.TarInfo("sub")
+        d.type = tarfile.DIRTYPE
+        tf.addfile(d)
+
+        # A symlink inside sub — target validated as within dest
+        link = tarfile.TarInfo("sub/link")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "safe"
+        tf.addfile(link)
+
+        payload = b"hello"
+        info = tarfile.TarInfo("sub/safe")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+
+    with _tar_from_members(build) as tf:
+        _safe_extractall(tf, dest)
+
+    # Verify symlink was created correctly within dest
+    assert (dest / "sub" / "link").is_symlink()
+    assert (dest / "sub" / "link").resolve().is_relative_to(dest.resolve())

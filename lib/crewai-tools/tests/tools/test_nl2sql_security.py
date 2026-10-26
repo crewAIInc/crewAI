@@ -598,3 +598,43 @@ class TestCTEUnknownCommand:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="unrecognised"):
             tool._validate_query("WITH cte AS (SELECT 1) FOOBAR")
+
+
+# SQL comment injection bypass tests
+
+
+class TestSQLCommentInjection:
+    """Comments must not hide write commands from the read-only validator."""
+
+    def test_block_comment_hiding_delete(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode|blocked"):
+            tool._validate_query("/* SELECT */ DELETE FROM users")
+
+    def test_line_comment_hiding_delete(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode|blocked"):
+            tool._validate_query("-- comment\nDELETE FROM users")
+
+    def test_block_comment_in_writable_cte(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode|blocked"):
+            tool._validate_query("WITH d AS (/* read */ DELETE FROM users) SELECT 1")
+
+    def test_line_comment_in_writable_cte(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode|blocked"):
+            tool._validate_query("WITH d AS (\n-- safe\nDELETE FROM users\n) SELECT 1")
+
+    def test_comment_after_cte_hiding_write(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode|blocked"):
+            tool._validate_query("WITH cte AS (SELECT 1) /* read */ DELETE FROM users")
+
+    def test_read_query_with_comments_still_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("/* get data */ SELECT * FROM users")
+
+    def test_line_comment_before_select_still_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("-- fetch\nSELECT 1")
