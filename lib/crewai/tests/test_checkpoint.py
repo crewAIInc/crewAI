@@ -33,6 +33,13 @@ from crewai.state.runtime import RuntimeState
 from crewai.task import Task
 
 
+class _DeclarativeCheckpointFlowMethods:
+    calls = 0
+
+    def begin(self) -> str:
+        _DeclarativeCheckpointFlowMethods.calls += 1
+        self.state["ran"] = True
+        return "ok"
 
 
 class TestResolve:
@@ -686,7 +693,7 @@ class TestKickoffFromCheckpoint:
         class OrderFlow(Flow):
             suppress_flow_events: bool = suppress_events
 
-        entity = Flow(suppress_flow_events=True)
+        entity = Flow(suppress_flow_events=suppress_events)
         entity.checkpoint_completed_methods = {"reserve"}
         entity.checkpoint_state = {"id": "restored", "order": 42}
         restored_state = RuntimeState(root=[entity])
@@ -1009,6 +1016,81 @@ class TestKickoffFromCheckpoint:
             assert restored._definition.name == "custom-order"
             assert restored._completed_methods == {"reserve"}
             assert restored.state["order"] == 42
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    def test_declarative_kickoff_resumes_from_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.flow.flow_definition import FlowDefinition
+
+        _DeclarativeCheckpointFlowMethods.calls = 0
+        definition = FlowDefinition.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "DeclarativeCheckpointFlow",
+                "methods": {
+                    "begin": {
+                        "do": {
+                            "call": "code",
+                            "ref": (
+                                f"{__name__}:"
+                                "_DeclarativeCheckpointFlowMethods.begin"
+                            ),
+                        },
+                        "start": True,
+                    }
+                },
+            }
+        )
+        flow = Flow.from_declaration(contents=definition)
+        try:
+            flow.kickoff()
+            flow._completed_methods = {"begin"}
+            location = RuntimeState(root=[flow]).checkpoint(str(tmp_path))
+
+            resumed = Flow.from_declaration(contents=definition)
+            result = resumed.kickoff(
+                from_checkpoint=CheckpointConfig(restore_from=location)
+            )
+
+            assert result == "ok"
+            assert _DeclarativeCheckpointFlowMethods.calls == 1
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    def test_from_checkpoint_preserves_suppress_flow_events(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        original = OrderFlow(suppress_flow_events=True)
+        original._completed_methods = {"reserve"}
+        original.state["order"] = 42
+        location = RuntimeState(root=[original]).checkpoint(str(tmp_path))
+        observed: list[Any] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if isinstance(source, OrderFlow) and isinstance(event, FlowCreatedEvent):
+                observed.append(source)
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        try:
+            restored = OrderFlow.from_checkpoint(
+                CheckpointConfig(restore_from=location)
+            )
+
+            assert restored.suppress_flow_events is True
+            assert observed == []
         finally:
             crewai_event_bus.flush()
             crewai_event_bus.reset_runtime_state()

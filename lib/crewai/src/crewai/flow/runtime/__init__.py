@@ -782,6 +782,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
         instance.checkpoint_method_counts = entity.checkpoint_method_counts
         instance.checkpoint_state = entity.checkpoint_state
+        instance.suppress_flow_events = entity.suppress_flow_events
         instance._restore_from_checkpoint()
         state.root[index] = cast(Any, instance)
         crewai_event_bus.set_runtime_state(state)
@@ -877,6 +878,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     )
     _method_outputs: list[Any] = PrivateAttr(default_factory=list)
     _definition: FlowDefinition = PrivateAttr()
+    # Definition supplied by ``from_declaration``. ``type(self)`` stays ``Flow``
+    # for declarative flows, so the restore path must receive this explicitly.
+    _declaration: FlowDefinition | None = PrivateAttr(default=None)
     # Definition name before the public ``name`` field overrides it. Checkpoint
     # matching must use this stable name, not the per-instance display name.
     _stable_definition_name: str = PrivateAttr(default="")
@@ -954,6 +958,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._initialize_runtime_extension_attrs()
 
         self._definition = definition or type(self).flow_definition()
+        self._declaration = definition
         self._stable_definition_name = self._definition.name
         restore_target = _restore_flow_name.get()
         if restore_target is not None and type(self) is restore_target[0]:
@@ -2255,7 +2260,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
-        restored = apply_checkpoint(self, from_checkpoint)
+        restored = apply_checkpoint(self, from_checkpoint, definition=self._declaration)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
         if self.stream:
@@ -2321,7 +2326,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
-        restored = apply_checkpoint(self, from_checkpoint)
+        restored = apply_checkpoint(self, from_checkpoint, definition=self._declaration)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
