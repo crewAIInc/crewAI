@@ -127,7 +127,7 @@ agent = Agent(
 النمط الأكثر شيوعًا في العالم الحقيقي. المهارة توفر *كيف* تقترب من العمل؛ الأدوات توفر *ما* يمكن للوكيل فعله:
 
 ```python
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 analyst = Agent(
     role="Security Analyst",
@@ -137,7 +137,6 @@ analyst = Agent(
     tools=[
         SerperDevTool(),                  # البحث عن ثغرات معروفة
         FileReadTool(),                   # قراءة ملفات التكوين
-        CodeInterpreterTool(),            # تشغيل سكربتات التحليل
     ],
 )
 ```

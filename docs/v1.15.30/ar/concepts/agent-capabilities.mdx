@@ -88,7 +88,7 @@ agent = Agent(
 
 ```python
 from crewai import Agent
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 # وكيل بحث مجهز بالكامل
 researcher = Agent(
@@ -100,7 +100,6 @@ researcher = Agent(
     tools=[
         SerperDevTool(),         # البحث على الويب
         FileReadTool(),          # قراءة الملفات المحلية
-        CodeInterpreterTool(),   # تشغيل كود Python للتحليل
     ],
     mcps=["https://data-api.example.com/sse"],  # الوصول لـ API بيانات عن بُعد
     apps=["google_sheets"],                      # الكتابة في Google Sheets

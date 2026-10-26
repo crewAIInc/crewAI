@@ -353,17 +353,16 @@ multimodal_agent = Agent(
 
 ```python Code
 from crewai import Agent
-from crewai_tools import SerperDevTool, WikipediaTools
+from crewai_tools import SerperDevTool
 
 # 도구 생성
 search_tool = SerperDevTool()
-wiki_tool = WikipediaTools()
 
 # 에이전트에 도구 추가
 researcher = Agent(
     role="AI Technology Researcher",
     goal="Research the latest AI developments",
-    tools=[search_tool, wiki_tool],
+    tools=[search_tool],
     verbose=True
 )
 ```

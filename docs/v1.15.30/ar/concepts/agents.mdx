@@ -312,17 +312,16 @@ analysis_agent = Agent(
 
 ```python Code
 from crewai import Agent
-from crewai_tools import SerperDevTool, WikipediaTools
+from crewai_tools import SerperDevTool
 
 # إنشاء الأدوات
 search_tool = SerperDevTool()
-wiki_tool = WikipediaTools()
 
 # إضافة أدوات للوكيل
 researcher = Agent(
     role="AI Technology Researcher",
     goal="Research the latest AI developments",
-    tools=[search_tool, wiki_tool],
+    tools=[search_tool],
     verbose=True
 )
 ```
