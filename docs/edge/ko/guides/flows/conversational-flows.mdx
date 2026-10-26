@@ -228,6 +228,109 @@ def route_turn(self, context):
 
 후속 채팅 줄에 `@human_feedback`를 쓰지 마세요. 특정 스텝 출력을 사람이 승인해야 할 때만 사용하세요.
 
+## 실행 가능한 예제: 영속성과 재시작
+
+빠른 시작에서는 모든 턴이 하나의 Flow 인스턴스에서 실행됩니다. 실제 앱은 재시작합니다. 웹 서버가 프로세스를 재활용하거나, CLI가 메시지 사이에 종료되거나, 워커가 나중에 대화를 이어받습니다. 이 완전한 예제는 나머지 절반, 즉 히스토리가 SQLite에 저장되어 **새** Flow 인스턴스가 같은 대화를 재개하는 모습을 보여줍니다. 라우팅은 결정적인 키워드 검사이므로, 이 예제는 공급자 자격 증명이나 모델 호출 없이 실행됩니다.
+
+```python
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+DB_PATH = "conversation_history.db"
+SESSION_ID = "order-desk-demo"
+
+store = SQLiteFlowPersistence(DB_PATH)
+
+
+@ConversationConfig()
+@persist(store)
+class OrderDeskFlow(Flow[ConversationState]):
+    """A deterministic support chat: keyword routing, no LLM calls."""
+
+    suppress_flow_events = True  # Keep the console output to the printed history.
+
+    def route_turn(self, context: dict) -> str | None:
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order_status"
+        return "general"
+
+    @listen("order_status")
+    def handle_order_status(self) -> str:
+        reply = "Your order is on its way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("general")
+    def handle_general(self) -> str:
+        reply = f"You said: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+def show_history(label: str, flow: OrderDeskFlow) -> None:
+    print(f"\n{label}")
+    for message in flow.state.messages:
+        print(f"  {message.role}: {message.content}")
+
+
+def main() -> None:
+    # First "process": one turn, then the instance is discarded.
+    first = OrderDeskFlow()
+    first.handle_turn("Where is my order?", session_id=SESSION_ID)
+    first.finalize_session_traces()
+    show_history("After turn 1:", first)
+
+    # Restart: a fresh instance with the same store and session id
+    # restores the persisted history before its turn runs.
+    restarted = OrderDeskFlow()
+    restarted.handle_turn("And what about returns?", session_id=SESSION_ID)
+    restarted.finalize_session_traces()
+    show_history("After restart + turn 2 (same session):", restarted)
+
+    # A different session id starts a separate conversation.
+    other = OrderDeskFlow()
+    other.handle_turn("Where is my order?", session_id="other-session")
+    other.finalize_session_traces()
+    show_history("Different session:", other)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+`conversation_persistence.py`로 저장하고 실행하세요:
+
+```bash
+python conversation_persistence.py
+```
+
+예상 출력 (프레임워크는 상태 로드도 로그로 남깁니다 — 첫 턴에는 `No flow state found` 줄, 복원 시에는 `Loading flow state` 줄):
+
+```text
+After turn 1:
+  user: Where is my order?
+  assistant: Your order is on its way.
+
+After restart + turn 2 (same session):
+  user: Where is my order?
+  assistant: Your order is on its way.
+  user: And what about returns?
+  assistant: You said: And what about returns?
+
+Different session:
+  user: Where is my order?
+  assistant: Your order is on its way.
+```
+
+주목할 점:
+
+- **스토어가 곧 메모리입니다.** 인스턴스들은 메모리를 공유하지 않습니다. 하나의 `SQLiteFlowPersistence` 파일과 하나의 `session_id`를 공유하므로, `@persist`가 새 인스턴스의 첫 턴이 실행되기 전에 해당 id의 최신 스냅샷을 로드합니다.
+- **순서는 보존되고 중복은 없습니다.** 복원된 히스토리에는 첫 턴의 사용자 줄과 어시스턴트 답변이 순서대로 담기고, 그 뒤에 두 번째 턴이 이어집니다.
+- **다른 session id는 다른 대화입니다.** 세 번째 인스턴스는 같은 데이터베이스 파일을 다른 id로 읽기 때문에 비어 있는 상태로 시작합니다.
+- **`finalize_session_traces()`는 각 인스턴스가 종료되기 전에 그 인스턴스의 지연된 trace를 닫습니다.** 영속 상태와 trace 수명은 독립적입니다. 대화는 재시작 후에도 살아남고, 각 인스턴스의 trace는 그 인스턴스가 finalize합니다.
+- **재시작은 작업이 아니라 상태를 복원합니다.** 이 예제는 영속 상태 복구를 모델링합니다. 실행 중인 백그라운드 작업, 실행 리소스, 프로세스가 멈춘 시점에 진행 중이던 턴은 복원하지 않습니다.
+
 ## 대화형 `Flow`
 
 `Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation` 리스너를 제공합니다. 사용 중단된 `answer_from_history_turn` 리스너는 호환성을 위해 계속 제공됩니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 `trace_scope="turn"`으로 각 턴의 trace를 자동으로 종료할 수 있습니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
