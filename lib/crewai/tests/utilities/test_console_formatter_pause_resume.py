@@ -12,6 +12,11 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.events.utils.console_formatter import ConsoleFormatter
 
 
+class _TTYStringIO(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
 class TestConsoleFormatterPauseResume:
     """Test ConsoleFormatter pause/resume functionality for HITL features."""
 
@@ -69,6 +74,7 @@ class TestConsoleFormatterPauseResume:
         """Test that streaming after pause/resume creates new Live session."""
         formatter = ConsoleFormatter()
         formatter.verbose = True
+        formatter.console = Console(file=_TTYStringIO())
 
         # Simulate having an active session
         mock_live = MagicMock(spec=Live)
@@ -97,6 +103,7 @@ class TestConsoleFormatterPauseResume:
         """Test full pause/resume cycle during streaming."""
         formatter = ConsoleFormatter()
         formatter.verbose = True
+        formatter.console = Console(file=_TTYStringIO())
 
         with patch("crewai.events.utils.console_formatter.Live") as mock_live_class:
             mock_live_instance = MagicMock()
@@ -121,11 +128,6 @@ class TestConsoleFormatterPauseResume:
             assert formatter._streaming_live == mock_live_instance_2
 
 
-class _TTYStringIO(io.StringIO):
-    def isatty(self) -> bool:
-        return True
-
-
 FINAL_ANSWER_TITLE = "Agent Final Answer"
 
 
@@ -148,6 +150,19 @@ def _stream(formatter: ConsoleFormatter, chunks: int, call_type: Any) -> None:
     for i in range(chunks):
         text += f"word{i} " + ("\n" if i % 8 == 7 else "")
         formatter.handle_llm_stream_chunk(text, call_type=call_type)
+
+
+class _WriteOnlyFile:
+    """A stdout replacement (tee, log shim) that has no isatty."""
+
+    def __init__(self, target: io.StringIO) -> None:
+        self._target = target
+
+    def write(self, text: str) -> int:
+        return self._target.write(text)
+
+    def flush(self) -> None:
+        self._target.flush()
 
 
 class TestStreamingLiveOffTerminal:
@@ -235,7 +250,7 @@ class TestStreamingLiveOffTerminal:
         assert "word99" in output
         assert "\x1b[" not in output
 
-    def test_chunk_on_closed_stream_starts_without_repaints(
+    def test_chunk_on_closed_stream_does_not_raise(
         self, clean_terminal_env: pytest.MonkeyPatch
     ) -> None:
         buf = io.StringIO()
@@ -244,8 +259,45 @@ class TestStreamingLiveOffTerminal:
 
         formatter.handle_llm_stream_chunk("partial", call_type=LLMCallType.LLM_CALL)
 
-        assert formatter._streaming_live is not None
-        assert formatter._streaming_live.auto_refresh is False
+    def test_file_without_isatty_renders_final_panel_once(
+        self, clean_terminal_env: pytest.MonkeyPatch
+    ) -> None:
+        clean_terminal_env.setenv("FORCE_COLOR", "1")
+        buf = io.StringIO()
+        formatter = _streaming_formatter(_WriteOnlyFile(buf))
+
+        _stream(formatter, 50, LLMCallType.LLM_CALL)
+        formatter.handle_llm_stream_completed()
+
+        output = buf.getvalue()
+        assert output.count(FINAL_ANSWER_TITLE) == 1
+        assert "word49" in output
+
+    @pytest.mark.parametrize("via_console", [True, False])
+    def test_prints_during_stream_do_not_repeat_panel(
+        self,
+        clean_terminal_env: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        via_console: bool,
+    ) -> None:
+        clean_terminal_env.setenv("FORCE_COLOR", "1")
+        buf = io.StringIO()
+        formatter = _streaming_formatter(buf)
+
+        text = ""
+        for i in range(30):
+            text += f"word{i} "
+            formatter.handle_llm_stream_chunk(text, call_type=LLMCallType.LLM_CALL)
+            if via_console:
+                formatter.console.print(f"side note {i}")
+            else:
+                print(f"side note {i}")
+        formatter.handle_llm_stream_completed()
+
+        output = buf.getvalue() + capsys.readouterr().out
+        assert output.count(FINAL_ANSWER_TITLE) == 1
+        assert output.count("side note") == 30
+        assert "word29" in output
 
 
 class TestStreamingLiveOnTerminal:
@@ -266,7 +318,7 @@ class TestStreamingLiveOnTerminal:
         assert output.count(FINAL_ANSWER_TITLE) >= 20
         assert "\x1b[2K" in output, "cursor-erase repaints expected on a terminal"
 
-    def test_jupyter_keeps_auto_refresh(
+    def test_jupyter_keeps_live_panel(
         self, clean_terminal_env: pytest.MonkeyPatch
     ) -> None:
         formatter = _streaming_formatter(io.StringIO(), force_jupyter=True)
@@ -277,5 +329,5 @@ class TestStreamingLiveOnTerminal:
                 "partial 2", call_type=LLMCallType.LLM_CALL
             )
 
-        assert mock_live_class.call_args.kwargs["auto_refresh"] is True
+        mock_live_class.return_value.start.assert_called_once_with()
         mock_live_class.return_value.update.assert_called_once_with(ANY, refresh=True)
