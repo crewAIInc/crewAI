@@ -75,46 +75,26 @@ _CTE_WRITE_INDICATORS = {
 }
 
 
-def _strip_sql_comments(sql: str) -> str:
-    """Replace SQL comments with a space while preserving string literals.
+def _has_sql_comment(sql: str) -> bool:
+    """Return True if *sql* has a ``--`` or ``/*`` marker outside '...' literals.
 
-    Handles ``--`` line comments and ``/* ... */`` block comments.  A comment
-    separates tokens, so ``DELETE/**/FROM`` must become ``DELETE FROM``.
-
-    MySQL/MariaDB executable comments (``/*! ... */``, ``/*!50000 ... */``,
-    ``/*M! ... */``) are not comments to the server -- it parses and executes
-    their contents -- so they are kept verbatim.  Stripping them would let the
-    validator see an innocuous ``SELECT`` while the server ran the statement
-    hidden inside; kept, they leave an unrecognised first token that read-only
-    mode rejects.
+    Read-only validation refuses commented statements rather than stripping
+    the comments: stripping has to agree with every database's quoting rules
+    (double-quoted and backtick identifiers, dollar quotes, MySQL ``/*! */``
+    executable comments), and any disagreement lets a write hide from the
+    validator.  This scan only ends a literal at an unescaped ``'``, which is
+    never later than a database does, so it cannot miss a marker the database
+    would read as code.
     """
-    result: list[str] = []
     i = 0
-    length = len(sql)
-    while i < length:
+    while i < len(sql):
         if sql[i] == "'":
-            end = _skip_string_literal(sql, i)
-            result.append(sql[i:end])
-            i = end
-        elif sql[i : i + 2] == "--":
-            newline = sql.find("\n", i)
-            if newline == -1:
-                break
-            result.append(" ")
-            i = newline + 1
-        elif sql[i : i + 2] == "/*":
-            close = sql.find("*/", i + 2)
-            if close == -1:
-                break
-            if sql[i + 2 : i + 3] == "!" or sql[i + 2 : i + 4].upper() == "M!":
-                result.append(sql[i : close + 2])
-            else:
-                result.append(" ")
-            i = close + 2
+            i = _skip_string_literal(sql, i)
+        elif sql[i : i + 2] in ("--", "/*"):
+            return True
         else:
-            result.append(sql[i])
             i += 1
-    return "".join(result)
+    return False
 
 
 _AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
@@ -357,9 +337,11 @@ class NL2SQLTool(BaseTool):
 
     def _validate_statement(self, stmt: str) -> None:
         """Validate a single SQL statement (no semicolons)."""
-        # Every check below reads the comment-free text, so a comment cannot
-        # hide a keyword from one of them (leading, inside a CTE, after EXPLAIN).
-        stmt = _strip_sql_comments(stmt)
+        if not self.allow_dml and _has_sql_comment(stmt):
+            raise ValueError(
+                "NL2SQLTool blocked a query containing SQL comments in read-only "
+                "mode. Remove the comments and retry."
+            )
         command = self._extract_command(stmt)
 
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
@@ -506,7 +488,10 @@ class NL2SQLTool(BaseTool):
         _stmts = [s.strip() for s in sql_query.split(";") if s.strip()]
 
         def _is_write_stmt(s: str) -> bool:
-            s = _strip_sql_comments(s)
+            # A comment can hide the command from the checks below; committing
+            # a read is harmless, so treat commented statements as writes.
+            if _has_sql_comment(s):
+                return True
             cmd = self._extract_command(s)
             if cmd in _WRITE_COMMANDS:
                 return True

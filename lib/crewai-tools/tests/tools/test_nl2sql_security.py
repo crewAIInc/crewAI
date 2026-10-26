@@ -5,7 +5,6 @@ SQLite does not have information_schema, so we patch the schema-introspection
 helpers to avoid bootstrap failures and focus purely on the security logic.
 """
 import os
-import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -605,84 +604,56 @@ class TestCTEUnknownCommand:
 
 
 class TestSQLCommentInjection:
-    """Comments must not hide write commands from the read-only validator."""
-
-    def test_block_comment_hiding_delete(self):
-        tool = _make_tool(allow_dml=False)
-        with pytest.raises(ValueError, match="read-only mode|blocked"):
-            tool._validate_query("/* SELECT */ DELETE FROM users")
-
-    def test_line_comment_hiding_delete(self):
-        tool = _make_tool(allow_dml=False)
-        with pytest.raises(ValueError, match="read-only mode|blocked"):
-            tool._validate_query("-- comment\nDELETE FROM users")
-
-    def test_block_comment_in_writable_cte(self):
-        tool = _make_tool(allow_dml=False)
-        with pytest.raises(ValueError, match="read-only mode|blocked"):
-            tool._validate_query("WITH d AS (/* read */ DELETE FROM users) SELECT 1")
-
-    def test_line_comment_in_writable_cte(self):
-        tool = _make_tool(allow_dml=False)
-        with pytest.raises(ValueError, match="read-only mode|blocked"):
-            tool._validate_query("WITH d AS (\n-- safe\nDELETE FROM users\n) SELECT 1")
-
-    def test_comment_after_cte_hiding_write(self):
-        tool = _make_tool(allow_dml=False)
-        with pytest.raises(ValueError, match="read-only mode|blocked"):
-            tool._validate_query("WITH cte AS (SELECT 1) /* read */ DELETE FROM users")
-
-    def test_read_query_with_comments_still_allowed(self):
-        tool = _make_tool(allow_dml=False)
-        tool._validate_query("/* get data */ SELECT * FROM users")
-
-    def test_line_comment_before_select_still_allowed(self):
-        tool = _make_tool(allow_dml=False)
-        tool._validate_query("-- fetch\nSELECT 1")
-
-    @pytest.mark.parametrize(
-        ("query", "token"),
-        [
-            ("/*!50000 DROP TABLE users */ SELECT 1", "/*!50000"),
-            ("/*! CREATE TABLE t2 (a INT) */ SELECT 1", "/*!"),
-            ("/*M!100000 DROP TABLE users */ SELECT 1", "/*M!100000"),
-        ],
-    )
-    def test_mysql_executable_comment_is_not_treated_as_a_comment(
-        self, query, token
-    ):
-        """MySQL/MariaDB run the contents of /*! */ comments, so they must not vanish."""
-        tool = _make_tool(allow_dml=False)
-        with pytest.raises(
-            ValueError, match=rf"unrecognised SQL command '{re.escape(token)}'"
-        ):
-            tool._validate_query(query)
+    """Read-only mode refuses commented statements instead of stripping comments."""
 
     @pytest.mark.parametrize(
         "query",
         [
+            "/* SELECT */ DELETE FROM users",
+            "-- comment\nDELETE FROM users",
+            "WITH d AS (/* read */ DELETE FROM users) SELECT 1",
+            "WITH d AS (\n-- safe\nDELETE FROM users\n) SELECT 1",
+            "WITH cte AS (SELECT 1) /* read */ DELETE FROM users",
+            "WITH d AS /* x */ (DELETE FROM users) SELECT 1",
             "/* plan */ EXPLAIN ANALYZE DELETE FROM users",
             "EXPLAIN /* plan */ ANALYZE DELETE FROM users",
-            "EXPLAIN ANALYZE /* plan */ DELETE FROM users",
+            "/*!50000 DROP TABLE users */ SELECT 1",
+            "/*M!100000 DROP TABLE users */ SELECT 1",
+            # Comment markers inside identifiers or dollar quotes: a stripper
+            # that missed these quoting rules truncated the statement here.
+            'WITH "a--" AS (SELECT 1) DELETE FROM users',
+            "WITH `a--` AS (SELECT 1) DELETE FROM users",
+            "WITH x AS (SELECT $$--$$) DELETE FROM users",
+            'WITH "a/*" AS (SELECT 1) DELETE FROM users WHERE "*/" = 1',
         ],
     )
-    def test_comment_cannot_hide_explain_analyze_write(self, query):
+    def test_commented_statement_is_blocked(self, query):
         tool = _make_tool(allow_dml=False)
-        with pytest.raises(ValueError, match="blocked a 'DELETE' statement"):
+        with pytest.raises(ValueError, match="query containing SQL comments"):
             tool._validate_query(query)
 
-    def test_comment_between_as_and_paren_cannot_hide_writable_cte(self):
+    @pytest.mark.parametrize(
+        "query",
+        ["/* get data */ SELECT * FROM users", "-- fetch\nSELECT 1"],
+    )
+    def test_commented_read_query_is_also_blocked(self, query):
         tool = _make_tool(allow_dml=False)
-        with pytest.raises(
-            ValueError, match="blocked a writable CTE containing a 'DELETE'"
-        ):
-            tool._validate_query("WITH d AS /* x */ (DELETE FROM users) SELECT 1")
+        with pytest.raises(ValueError, match="Remove the comments and retry"):
+            tool._validate_query(query)
 
-    def test_comment_markers_inside_string_literals_are_kept(self):
+    @pytest.mark.parametrize(
+        "query",
+        ["SELECT '/* x */ DELETE -- y' AS v", "SELECT 'it''s -- fine' AS v"],
+    )
+    def test_comment_markers_inside_string_literals_are_allowed(self, query):
         tool = _make_tool(allow_dml=False)
-        tool._validate_query("SELECT '/* x */ DELETE -- y' AS v")
+        tool._validate_query(query)
 
-    def test_comment_separates_tokens_for_write_commit(self, tmp_path):
+    def test_comments_are_allowed_when_dml_is_allowed(self):
+        tool = _make_tool(allow_dml=True)
+        tool._validate_query("-- note\nSELECT 1")
+
+    def test_commented_write_is_committed_when_dml_is_allowed(self, tmp_path):
         """DELETE/**/FROM is a DELETE, so allow_dml=True must commit it."""
         uri = f"sqlite:///{tmp_path / 'items.db'}"
         engine = create_engine(uri)
