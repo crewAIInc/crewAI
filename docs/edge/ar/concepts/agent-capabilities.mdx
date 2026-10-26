@@ -51,6 +51,29 @@ agent = Agent(
 )
 ```
 
+#### تشغيل إجراء تطبيق واحد من الكود
+
+عندما يعرف الكود الوسائط مسبقًا، استدعِ الإجراء مباشرةً بدلًا من تسليمه إلى وكيل. تشغّل `run_platform_action` إجراءً واحدًا بالضبط وتُرجع مخرجاته. وبينما يُرجع استدعاء الأداة لدى الوكيل فشلًا ليقرأه الوكيل، فإن هذه الدالة تطلق استثناءً، لذا يمكنك التحقق من تكامل دون بناء طاقم.
+
+```python
+from crewai.tools import ToolExecutionFailedError
+from crewai_tools import run_platform_action
+
+try:
+    output = run_platform_action(
+        "slack/send_message", channel="#general", text="Report is ready"
+    )
+    print(output)
+except ToolExecutionFailedError as error:
+    print(error.record.failure.code, error.record.failure.retryable)
+    raise
+```
+
+- يسمّي المحدِّد إجراءً واحدًا بصيغة `<app>/<action>`؛ أضف `@<connection>` لاختيار اتصال.
+- المحدِّد الذي لا يقود إلى أي إجراء، أو الوسائط التي لا تطابق مخطط الإجراء، يطلقان `ValueError`.
+- تحتاج الدالة إلى `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` نفسه الذي تحتاجه `apps=[...]`.
+- الدالة متزامنة. من الكود غير المتزامن، استدعِها باستخدام `asyncio.to_thread`.
+
 ### قدرات السياق (المهارات، المعرفة)
 
 تُعدّل **إرشادات** الوكيل — بحقن الخبرة أو التعليمات أو البيانات المُسترجعة قبل أن يبدأ الوكيل في التفكير. لا تمنح الوكلاء إجراءات جديدة؛ بل تُشكّل كيف يفكر الوكلاء وما هي المعلومات التي يمكنهم الوصول إليها.

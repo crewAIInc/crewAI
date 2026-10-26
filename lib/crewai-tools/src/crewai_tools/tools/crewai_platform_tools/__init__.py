@@ -19,6 +19,7 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import
 )
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
+    run_platform_action,
 )
 
 
@@ -32,4 +33,5 @@ __all__ = [
     "PLATFORM_CATALOG",
     "CrewAIPlatformActionTool",
     "CrewaiPlatformTools",
+    "run_platform_action",
 ]

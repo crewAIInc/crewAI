@@ -1,7 +1,13 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from crewai_tools.tools.crewai_platform_tools import CrewaiPlatformTools
+from crewai.tools import ToolExecutionFailedError, ToolFailure
+import pytest
+
+from crewai_tools.tools.crewai_platform_tools import (
+    CrewaiPlatformTools,
+    run_platform_action,
+)
 
 
 class TestCrewaiPlatformTools(unittest.TestCase):
@@ -389,3 +395,283 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert tools[0].name == (
             "google_drive_create_file_550e8400_e29b_41d4_a716_446655440000"
         )
+
+
+_CLIENT = "crewai_tools.tools.crewai_platform_tools.integrations_client"
+_CONNECTION = "550e8400-e29b-41d4-a716-446655440000"
+_SEND_MESSAGE = {
+    "name": "send_message",
+    "description": "Send a Slack message",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "channel": {"type": "string"},
+            "text": {"type": "string"},
+            "thread": {"type": "string"},
+            "selector": {"type": "string"},
+        },
+        "required": ["channel", "text"],
+    },
+}
+_CREATE_ISSUE = {
+    "data": {
+        "slug": "create_issue",
+        "description": "Create a GitHub issue",
+        "input_schema": {
+            "type": "object",
+            "properties": {"title": {"type": "string"}},
+        },
+    }
+}
+
+
+def _legacy_discovery(*actions: dict) -> Mock:
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"actions": {"slack": list(actions)}}
+    return response
+
+
+def _response(status_code: int, body: object) -> Mock:
+    response = Mock(status_code=status_code)
+    response.raise_for_status.return_value = None
+    response.json.return_value = body
+    return response
+
+
+@pytest.fixture
+def platform_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test_token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://platform.example.test/")
+
+
+@pytest.fixture
+def mock_get():
+    with patch(f"{_CLIENT}.requests.get") as get:
+        yield get
+
+
+@pytest.fixture
+def mock_post():
+    with patch(f"{_CLIENT}.requests.post") as post:
+        yield post
+
+
+@pytest.mark.usefixtures("platform_env")
+class TestRunPlatformAction:
+    def test_is_exported_from_the_package_root(self) -> None:
+        import crewai_tools
+        from crewai_tools.tools.crewai_platform_tools import crewai_platform_tools
+
+        assert (
+            crewai_tools.run_platform_action
+            is crewai_platform_tools.run_platform_action
+        )
+
+    def test_legacy_action_returns_its_output(self, mock_get, mock_post) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.return_value = _response(200, {"ok": True, "ts": "1.2"})
+
+        output = run_platform_action(
+            "slack/send_message", channel="#general", text="hi"
+        )
+
+        assert output == {"ok": True, "ts": "1.2"}
+        assert mock_get.call_args.kwargs["params"] == {"apps": "slack/send_message"}
+        assert mock_post.call_args.kwargs["url"].endswith(
+            "/actions/send_message/execute"
+        )
+        assert mock_post.call_args.kwargs["json"] == {
+            "integration": {"channel": "#general", "text": "hi"}
+        }
+
+    def test_connection_action_returns_its_output(self, mock_get, mock_post) -> None:
+        mock_get.return_value = _response(200, _CREATE_ISSUE)
+        mock_post.return_value = _response(200, {"data": {"output": {"issue": 42}}})
+
+        output = run_platform_action(
+            f"github/create_issue@{_CONNECTION}", title="Contract test"
+        )
+
+        assert output == {"issue": 42}
+        assert mock_post.call_args.args[0].endswith(
+            "/clipper/v1/applications/github/tools/create_issue/execute"
+        )
+        assert mock_post.call_args.kwargs["json"] == {
+            "arguments": {"title": "Contract test"},
+            "connection_id": _CONNECTION,
+        }
+
+    def test_server_error_raises_a_retryable_failure(self, mock_get, mock_post) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.return_value = _response(
+            503, {"error": {"message": "Slack is unavailable"}}
+        )
+
+        with pytest.raises(
+            ToolExecutionFailedError,
+            match="API request failed: Slack is unavailable",
+        ) as raised:
+            run_platform_action("slack/send_message", channel="#general", text="hi")
+
+        record = raised.value.record
+        assert record.tool_name == "slack_send_message"
+        assert record.tool_args == {"channel": "#general", "text": "hi"}
+        assert record.failure.code == "503"
+        assert record.failure.retryable is True
+
+    def test_client_error_raises_a_non_retryable_failure(
+        self, mock_get, mock_post
+    ) -> None:
+        mock_get.return_value = _response(200, _CREATE_ISSUE)
+        mock_post.return_value = _response(
+            422,
+            {"errors": [{"detail": "Repository is archived", "code": "archived"}]},
+        )
+
+        with pytest.raises(
+            ToolExecutionFailedError, match="Repository is archived"
+        ) as raised:
+            run_platform_action(f"github/create_issue@{_CONNECTION}", title="x")
+
+        assert raised.value.record.failure.code == "archived"
+        assert raised.value.record.failure.retryable is False
+
+    def test_execute_exception_raises_a_failure(self, mock_get, mock_post) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.side_effect = ConnectionError("connection reset")
+
+        with pytest.raises(
+            ToolExecutionFailedError,
+            match="Error executing action send_message: connection reset",
+        ) as raised:
+            run_platform_action("slack/send_message", channel="#general", text="hi")
+
+        assert raised.value.record.failure.code == "ConnectionError"
+
+    def test_unknown_action_raises_without_executing(
+        self, mock_get, mock_post
+    ) -> None:
+        mock_get.return_value = _legacy_discovery()
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                "selector 'slack/missing' resolved to 0 actions; the action does "
+                "not exist or the app is not connected"
+            ),
+        ):
+            run_platform_action("slack/missing")
+
+        mock_post.assert_not_called()
+
+    def test_several_resolved_actions_raise_without_executing(
+        self, mock_get, mock_post
+    ) -> None:
+        mock_get.return_value = _legacy_discovery(
+            _SEND_MESSAGE, {**_SEND_MESSAGE, "name": "send_dm"}
+        )
+
+        with pytest.raises(ValueError, match="resolved to 2 actions"):
+            run_platform_action("slack/send_message", channel="#general", text="hi")
+
+        mock_post.assert_not_called()
+
+    def test_app_selector_raises_before_discovery(self, mock_get, mock_post) -> None:
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"selector 'slack' names an app, not one action; expected "
+                r"'<app>/<action>\[@<connection>\]'"
+            ),
+        ):
+            run_platform_action("slack")
+
+        mock_get.assert_not_called()
+        mock_post.assert_not_called()
+
+    def test_malformed_selector_raises_before_discovery(
+        self, mock_get, mock_post
+    ) -> None:
+        with pytest.raises(ValueError, match="action cannot be empty"):
+            run_platform_action("slack/")
+
+        mock_get.assert_not_called()
+        mock_post.assert_not_called()
+
+    def test_arguments_that_fail_the_schema_raise_without_executing(
+        self, mock_get, mock_post
+    ) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+
+        with pytest.raises(
+            ValueError,
+            match="Tool 'slack_send_message' arguments validation failed",
+        ):
+            run_platform_action("slack/send_message", channel="#general")
+
+        mock_post.assert_not_called()
+
+    def test_argument_named_selector_reaches_the_action(
+        self, mock_get, mock_post
+    ) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.return_value = _response(200, {"ok": True})
+
+        run_platform_action(
+            "slack/send_message", channel="#general", text="hi", selector="mine"
+        )
+
+        assert mock_post.call_args.kwargs["json"] == {
+            "integration": {"channel": "#general", "text": "hi", "selector": "mine"}
+        }
+
+    def test_none_arguments_are_not_sent(self, mock_get, mock_post) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.return_value = _response(200, {"ok": True})
+
+        run_platform_action(
+            "slack/send_message", channel="#general", text="hi", thread=None
+        )
+
+        assert mock_post.call_args.kwargs["json"] == {
+            "integration": {"channel": "#general", "text": "hi"}
+        }
+
+    def test_output_that_is_not_an_object_raises(self, mock_get, mock_post) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.return_value = _response(200, ["not", "an", "object"])
+
+        with pytest.raises(
+            TypeError,
+            match="action 'slack/send_message' returned list, not a JSON object",
+        ):
+            run_platform_action("slack/send_message", channel="#general", text="hi")
+
+    def test_missing_token_raises_before_any_request(
+        self, monkeypatch: pytest.MonkeyPatch, mock_get, mock_post
+    ) -> None:
+        monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN")
+
+        with pytest.raises(
+            ValueError,
+            match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable",
+        ):
+            run_platform_action("slack/send_message", channel="#general", text="hi")
+
+        mock_get.assert_not_called()
+        mock_post.assert_not_called()
+
+    def test_discovered_tool_run_still_returns_a_failure(
+        self, mock_get, mock_post
+    ) -> None:
+        mock_get.return_value = _legacy_discovery(_SEND_MESSAGE)
+        mock_post.return_value = _response(
+            503, {"error": {"message": "Slack is unavailable"}}
+        )
+
+        [tool] = CrewaiPlatformTools(apps=["slack/send_message"])
+        result = tool.run(channel="#general", text="hi")
+
+        assert isinstance(result, ToolFailure)
+        assert result.message == "API request failed: Slack is unavailable"

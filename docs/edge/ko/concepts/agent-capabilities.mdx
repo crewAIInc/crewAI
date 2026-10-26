@@ -51,6 +51,29 @@ agent = Agent(
 )
 ```
 
+#### 코드에서 앱 액션 하나 실행하기
+
+코드가 이미 인수를 알고 있다면 액션을 에이전트에게 맡기지 말고 직접 호출하세요. `run_platform_action`은 정확히 하나의 액션을 실행하고 그 출력을 반환합니다. 에이전트의 도구 호출은 에이전트가 읽을 실패를 반환하지만, 이 함수는 예외를 발생시키므로 crew를 만들지 않고도 통합을 확인할 수 있습니다.
+
+```python
+from crewai.tools import ToolExecutionFailedError
+from crewai_tools import run_platform_action
+
+try:
+    output = run_platform_action(
+        "slack/send_message", channel="#general", text="Report is ready"
+    )
+    print(output)
+except ToolExecutionFailedError as error:
+    print(error.record.failure.code, error.record.failure.retryable)
+    raise
+```
+
+- 셀렉터는 하나의 액션을 `<app>/<action>` 형식으로 지정합니다. 연결을 선택하려면 `@<connection>`을 추가하세요.
+- 어떤 액션으로도 확인되지 않는 셀렉터나 액션의 스키마와 맞지 않는 인수는 `ValueError`를 발생시킵니다.
+- `apps=[...]`와 같은 `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`이 필요합니다.
+- 동기 함수입니다. 비동기 코드에서는 `asyncio.to_thread`로 호출하세요.
+
 ### 컨텍스트 기능 (스킬, 지식)
 
 에이전트의 **프롬프트**를 수정합니다 — 에이전트가 추론을 시작하기 전에 전문성, 지침 또는 검색된 데이터를 주입합니다. 에이전트에게 새로운 액션을 제공하는 것이 아니라, 에이전트가 어떻게 생각하고 어떤 정보에 접근할 수 있는지를 형성합니다.

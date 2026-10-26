@@ -51,6 +51,29 @@ agent = Agent(
 )
 ```
 
+#### Run One App Action from Code
+
+When your code already knows the arguments, call the action directly instead of giving it to an agent. `run_platform_action` runs exactly one action and returns its output. Where an agent's tool call returns a failure for the agent to read, this raises, so you can check an integration without building a crew.
+
+```python
+from crewai.tools import ToolExecutionFailedError
+from crewai_tools import run_platform_action
+
+try:
+    output = run_platform_action(
+        "slack/send_message", channel="#general", text="Report is ready"
+    )
+    print(output)
+except ToolExecutionFailedError as error:
+    print(error.record.failure.code, error.record.failure.retryable)
+    raise
+```
+
+- The selector names one action as `<app>/<action>`; add `@<connection>` to pick a connection.
+- A selector that resolves to no action, or arguments that do not match the action's schema, raise `ValueError`.
+- It needs the same `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` as `apps=[...]`.
+- It is synchronous. From async code, call it with `asyncio.to_thread`.
+
 ### Context Capabilities (Skills, Knowledge)
 
 These modify the agent's **prompt** — injecting expertise, instructions, or retrieved data before the agent starts reasoning. They don't give agents new actions; they shape how agents think and what information they have access to.

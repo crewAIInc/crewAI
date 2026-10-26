@@ -51,6 +51,29 @@ agent = Agent(
 )
 ```
 
+#### Executar uma Ação de App a partir do Código
+
+Quando seu código já conhece os argumentos, chame a ação diretamente em vez de entregá-la a um agente. `run_platform_action` executa exatamente uma ação e retorna a saída dela. Enquanto a chamada de ferramenta de um agente retorna uma falha para o agente ler, esta função lança uma exceção, então você pode verificar uma integração sem montar uma crew.
+
+```python
+from crewai.tools import ToolExecutionFailedError
+from crewai_tools import run_platform_action
+
+try:
+    output = run_platform_action(
+        "slack/send_message", channel="#general", text="Report is ready"
+    )
+    print(output)
+except ToolExecutionFailedError as error:
+    print(error.record.failure.code, error.record.failure.retryable)
+    raise
+```
+
+- O seletor nomeia uma ação como `<app>/<action>`; adicione `@<connection>` para escolher uma conexão.
+- Um seletor que não resolve para nenhuma ação, ou argumentos que não correspondem ao schema da ação, lançam `ValueError`.
+- A função precisa do mesmo `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` que `apps=[...]`.
+- A função é síncrona. Em código assíncrono, chame-a com `asyncio.to_thread`.
+
 ### Capacidades de Contexto (Skills, Knowledge)
 
 Estas modificam o **prompt** do agente — injetando expertise, instruções ou dados recuperados antes do agente começar a raciocinar. Não dão aos agentes novas ações; elas moldam como os agentes pensam e a quais informações têm acesso.

@@ -58,6 +58,7 @@ from crewai_tools.tools.couchbase_tool.couchbase_tool import (
 )
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
+    run_platform_action,
 )
 from crewai_tools.tools.csv_search_tool.csv_search_tool import CSVSearchTool
 from crewai_tools.tools.dalle_tool.dalle_tool import DallETool
@@ -356,6 +357,7 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
+    "run_platform_action",
 ]
 
 __version__ = "1.15.30"
