@@ -1463,7 +1463,7 @@ class TestDeployCommand(unittest.TestCase):
         *,
         origin: str | None = "https://github.com/test/repo.git",
         head_commit: str | None = "abc1234",
-        dirty: bool = False,
+        dirty: bool | None = False,
     ) -> MagicMock:
         """A repository mock, and AMP accepting a ZIP create."""
         mock_fetch_env.return_value = {"ENV_VAR": "value"}
@@ -1471,7 +1471,7 @@ class TestDeployCommand(unittest.TestCase):
         repository.origin_url.return_value = origin
         repository.create_initial_commit_if_needed.return_value = False
         repository.head_commit.return_value = head_commit
-        repository.has_uncommitted_changes.return_value = dirty
+        repository.has_changes_under_path.return_value = dirty
         mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
         response = MagicMock()
         response.status_code = 201
@@ -2062,22 +2062,20 @@ def _git(cwd: Path, *args: str) -> str:
     ).stdout.strip()
 
 
-def test_create_with_zip_uploads_the_working_tree_of_a_real_repo_with_an_origin(
-    monkeypatch, tmp_path: Path
-):
-    """Real git, real archive: `--zip` never fetches the (unreachable) origin,
-    and the printed commit is the local HEAD the ZIP was built from."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
-    (tmp_path / "uv.lock").write_text("")
-    (tmp_path / "main.py").write_text("print('committed')\n")
-    _git(tmp_path, "init", "-q")
-    _git(tmp_path, "add", ".")
-    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
-    _git(tmp_path, "remote", "add", "origin", "https://example.invalid/demo.git")
-    (tmp_path / "draft.py").write_text("print('not committed')\n")
-    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+def _write_project(path: Path) -> None:
+    path.mkdir(exist_ok=True)
+    (path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (path / "uv.lock").write_text("")
+    (path / "main.py").write_text("print('committed')\n")
 
+
+def _real_zip_create(
+    monkeypatch, *, force_zip: bool
+) -> tuple[str, list[str], deploy_main.DeployCommand]:
+    """Run `deploy create` on the cwd's real repo against a fake AMP.
+
+    Returns the printed output, the uploaded ZIP's names, and the command.
+    """
     monkeypatch.setattr("crewai_cli.command.get_auth_token", lambda: "t")
     monkeypatch.setattr("crewai_cli.command.PlusAPI", MagicMock())
     monkeypatch.setattr(deploy_main, "get_project_name", lambda require=False: "demo")
@@ -2085,7 +2083,7 @@ def test_create_with_zip_uploads_the_working_tree_of_a_real_repo_with_an_origin(
     monkeypatch.setattr(
         deploy_main.git.Repository,
         "fetch",
-        Mock(side_effect=AssertionError("--zip must not fetch origin")),
+        Mock(side_effect=AssertionError("a ZIP create must not fetch origin")),
     )
     command = deploy_main.DeployCommand()
     uploaded: list[str] = []
@@ -2105,8 +2103,26 @@ def test_create_with_zip_uploads_the_working_tree_of_a_real_repo_with_an_origin(
         patch("sys.stdout", new=StringIO()) as fake_out,
         patch("crewai_cli.deploy.main.webbrowser.open"),
     ):
-        command.create_crew(confirm=True, skip_validate=True, force_zip=True)
+        command.create_crew(confirm=True, skip_validate=True, force_zip=force_zip)
         output = fake_out.getvalue()
+    return output, uploaded, command
+
+
+def test_create_with_zip_uploads_the_working_tree_of_a_real_repo_with_an_origin(
+    monkeypatch, tmp_path: Path
+):
+    """Real git, real archive: `--zip` never fetches the (unreachable) origin,
+    and the printed commit is the local HEAD the ZIP was built from."""
+    monkeypatch.chdir(tmp_path)
+    _write_project(tmp_path)
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    _git(tmp_path, "remote", "add", "origin", "https://example.invalid/demo.git")
+    (tmp_path / "draft.py").write_text("print('not committed')\n")
+    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+
+    output, uploaded, command = _real_zip_create(monkeypatch, force_zip=True)
 
     assert (
         f"ZIP built from commit {head} (working tree has uncommitted changes)."
@@ -2115,3 +2131,76 @@ def test_create_with_zip_uploads_the_working_tree_of_a_real_repo_with_an_origin(
     assert any(name.endswith("draft.py") for name in uploaded)
     assert any(name.endswith("main.py") for name in uploaded)
     command.plus_api_client.create_crew.assert_not_called()
+
+
+def test_a_zip_create_still_uploads_when_git_status_fails(
+    monkeypatch, tmp_path: Path
+):
+    """A gitlink whose `.git` points nowhere breaks `git status` but not the
+    archive. The commit line is informational, so it must not abort the deploy."""
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    _git(sub, "init", "-q")
+    _git(sub, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "s")
+    sub_head = _git(sub, "rev-parse", "HEAD")
+    project = tmp_path / "proj"
+    _write_project(project)
+    monkeypatch.chdir(project)
+    _git(project, "init", "-q")
+    _git(project, "add", ".")
+    _git(project, "update-index", "--add", "--cacheinfo", f"160000,{sub_head},vendor")
+    _git(project, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    (project / "vendor").mkdir()
+    (project / "vendor" / ".git").write_text("gitdir: /nonexistent/path\n")
+    head = _git(project, "rev-parse", "--short", "HEAD")
+
+    output, uploaded, _ = _real_zip_create(monkeypatch, force_zip=False)
+
+    assert (
+        f"ZIP built from commit {head} (could not check for uncommitted changes)."
+        in output
+    )
+    assert any(name.endswith("main.py") for name in uploaded)
+
+
+def test_a_zip_with_hidden_untracked_files_is_not_reported_clean(
+    monkeypatch, tmp_path: Path
+):
+    """`status.showUntrackedFiles=no` hides files the ZIP still uploads."""
+    monkeypatch.chdir(tmp_path)
+    _write_project(tmp_path)
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    _git(tmp_path, "config", "status.showUntrackedFiles", "no")
+    (tmp_path / "new_module.py").write_text("print('untracked')\n")
+    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+
+    output, uploaded, _ = _real_zip_create(monkeypatch, force_zip=True)
+
+    assert any(name.endswith("new_module.py") for name in uploaded)
+    assert (
+        f"ZIP built from commit {head} (working tree has uncommitted changes)."
+        in output
+    )
+
+
+def test_a_change_outside_the_project_directory_leaves_the_zip_clean(
+    monkeypatch, tmp_path: Path
+):
+    """In a monorepo the ZIP holds only the project directory, so a change
+    elsewhere in the repository is not an uncommitted change in the ZIP."""
+    project = tmp_path / "proj"
+    _write_project(project)
+    (tmp_path / "other.txt").write_text("v1\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    (tmp_path / "other.txt").write_text("v2\n")
+    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+    monkeypatch.chdir(project)
+
+    output, uploaded, _ = _real_zip_create(monkeypatch, force_zip=True)
+
+    assert not any(name.endswith("other.txt") for name in uploaded)
+    assert f"ZIP built from commit {head}." in output

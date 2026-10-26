@@ -93,7 +93,12 @@ def _display_zip_source(repository: git.Repository | None) -> None:
     commit = repository.head_commit()
     if commit is None:
         return
-    if repository.has_uncommitted_changes():
+    changed = repository.has_changes_under_path()
+    if changed is None:
+        console.print(
+            f"ZIP built from commit {commit} (could not check for uncommitted changes)."
+        )
+    elif changed:
         console.print(
             f"ZIP built from commit {commit} (working tree has uncommitted changes)."
         )

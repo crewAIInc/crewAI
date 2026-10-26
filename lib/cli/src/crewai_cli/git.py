@@ -144,6 +144,22 @@ class Repository:
         )
         return result.stdout.strip() if result.returncode == 0 else None
 
+    def has_changes_under_path(self) -> bool | None:
+        """Return whether files under ``path`` differ from HEAD, or None if unknown.
+
+        Matches the file set of ``deployable_files``: only paths under ``path``,
+        and untracked files count whatever ``status.showUntrackedFiles`` says.
+        """
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=normal", "--", "."],  # noqa: S607
+            cwd=self.path,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        return bool(result.stdout.strip())
+
     def create_initial_commit_if_needed(self) -> bool:
         """Create a local initial commit when the repository has no commits."""
         if self.has_commits():
