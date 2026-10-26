@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import re
 from typing import Any
 
 from crewai_files.core.resolved import (
@@ -36,6 +37,32 @@ _VIDEO_FORMATS: dict[str, str] = {
     "video/mpeg": "mpeg",
     "video/3gpp": "three_gp",
 }
+
+# Converse API DocumentBlock.name only accepts alphanumerics, single
+# whitespace characters, hyphens, parentheses and square brackets, and is
+# limited to 200 characters.
+_DOCUMENT_NAME_DISALLOWED = re.compile(r"[^A-Za-z0-9\s\-()\[\]]+")
+_DOCUMENT_NAME_WHITESPACE = re.compile(r"\s+")
+_DOCUMENT_NAME_MAX_LENGTH = 200
+
+
+def _sanitize_document_name(name: str | None) -> str:
+    """Make a file name acceptable as a Bedrock document block name.
+
+    Characters the Converse API rejects (such as ``.`` or ``_`` in
+    ``"q3_report.pdf"``) are replaced with spaces and whitespace runs are
+    collapsed, so ``"q3_report.pdf"`` becomes ``"q3 report pdf"``.
+
+    Args:
+        name: Original file name.
+
+    Returns:
+        A valid document name, or ``"document"`` if nothing usable remains.
+    """
+    cleaned = _DOCUMENT_NAME_DISALLOWED.sub(" ", name or "")
+    cleaned = _DOCUMENT_NAME_WHITESPACE.sub(" ", cleaned).strip()
+    cleaned = cleaned[:_DOCUMENT_NAME_MAX_LENGTH].rstrip()
+    return cleaned or "document"
 
 
 class BedrockFormatter:
@@ -129,7 +156,7 @@ class BedrockFormatter:
         if doc_format:
             return {
                 "document": {
-                    "name": name or "document",
+                    "name": _sanitize_document_name(name),
                     "format": doc_format,
                     "source": {"s3Location": s3_location},
                 }
@@ -176,7 +203,7 @@ class BedrockFormatter:
         if doc_format:
             return {
                 "document": {
-                    "name": name or "document",
+                    "name": _sanitize_document_name(name),
                     "format": doc_format,
                     "source": {"bytes": file_bytes},
                 }
