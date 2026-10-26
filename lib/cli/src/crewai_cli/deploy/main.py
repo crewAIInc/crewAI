@@ -6,6 +6,7 @@ from typing import Any, NoReturn
 from urllib.parse import quote
 import webbrowser
 
+import click
 from crewai_core.plus_api import CreateCrewPayload
 from crewai_core.telemetry import DeployFailureReason, DeploySource
 import httpx
@@ -224,7 +225,7 @@ def _refuse_on_running_comparison(response: httpx.Response) -> None:
 
 
 _TEST_POLL_INTERVAL = 3.0
-_TEST_POLL_ERRORS_TOLERATED = 3
+_TEST_STATUS_FAILURES_IN_A_ROW = 3
 _TEST_RUN_RUNNING_STATES = {"PENDING", "STARTED", "RUNNING"}
 
 
@@ -256,9 +257,12 @@ def _test_run_succeeded(kickoff_id: str, status: dict[str, Any]) -> bool:
     if state == "SUCCESS":
         console.print(f"Run {kickoff_id} succeeded.", style="bold green", markup=False)
         result = status.get("result")
-        console.print(
-            "It returned no result." if result is None else result, markup=False
-        )
+        if result is None:
+            console.print("It returned no result.")
+        else:
+            # click.echo, not Rich: Rich hard-wraps at 80 columns on a pipe and
+            # converts :emoji: codes, which breaks a JSON result read by a script.
+            click.echo(result if isinstance(result, str) else json.dumps(result))
         return True
     if state == "PAUSED":
         _fail_test_run(
@@ -955,7 +959,13 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 problem = repr(e)
             else:
                 if response.is_success:
-                    if _test_run_succeeded(kickoff_id, _json_object(response)):
+                    status = _json_object(response)
+                    if not status:
+                        _fail_test_run(
+                            "AMP answered the run's status with something "
+                            f"unexpected: {response.text}"
+                        )
+                    if _test_run_succeeded(kickoff_id, status):
                         return
                     failed_polls = 0
                     continue
@@ -964,7 +974,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 if not response.is_server_error:
                     _fail_test_run(f"AMP refused the run's status ({problem})")
             failed_polls += 1
-            if failed_polls >= _TEST_POLL_ERRORS_TOLERATED:
+            if failed_polls >= _TEST_STATUS_FAILURES_IN_A_ROW:
                 _fail_test_run(
                     f"Could not read run {kickoff_id}'s status {failed_polls} "
                     f"times in a row (last: {problem}). It may still be running in AMP."

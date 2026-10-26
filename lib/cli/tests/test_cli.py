@@ -476,6 +476,33 @@ def test_deploy_test_refuses_a_timeout_below_one_second(command, runner):
     command.assert_not_called()
 
 
+def test_deploy_test_exits_1_when_logged_out(runner, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'my crew'\ndependencies = ['crewai']\n"
+    )
+
+    def no_login() -> str:
+        raise Exception("No token found, make sure you are logged in")
+
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", no_login)
+
+    result = runner.invoke(deploy_test, ["-u", "dep-uuid"])
+
+    assert result.exit_code == 1
+    assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
+
+
+def test_deploy_test_exits_1_outside_a_crewai_project(runner, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", lambda: "t")
+
+    result = runner.invoke(deploy_test, ["-u", "dep-uuid"])
+
+    assert result.exit_code == 1
+    assert "Error: pyproject.toml not found." in result.output
+
+
 @mock.patch("crewai_cli.cli.DeployCommand")
 def test_deploy_logs(command, runner):
     mock_deploy = command.return_value

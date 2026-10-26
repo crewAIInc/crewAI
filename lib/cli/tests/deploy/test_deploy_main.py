@@ -1851,6 +1851,8 @@ def test_deploy_test_runs_the_deployment_by_uuid_and_prints_its_result_as_writte
     assert json.loads(kickoff.content) == {"inputs": {"topic": "AI"}}
     # AMP gives a sleeping deployment 60 s to wake before it answers.
     assert kickoff.extensions["timeout"]["read"] == 90.0
+    # A hung status read must not carry the command far past --timeout.
+    assert {poll.extensions["timeout"]["read"] for poll in polls} == {30.0}
     assert [poll.url.path for poll in polls] == [
         f"/crewai_plus/api/v1/crew/dep-uuid/tasks/{KICKOFF_ID}/status"
     ] * 3
@@ -1870,6 +1872,30 @@ def test_deploy_test_without_a_uuid_runs_the_deployment_named_after_the_project(
         f"/crewai_plus/api/v1/crew/by-name/my%20crew/tasks/{KICKOFF_ID}/status".encode(),
     ]
     assert json.loads(amp.requests[0].content) == {"inputs": {}}
+
+
+@pytest.mark.parametrize(
+    ("result", "line"),
+    [
+        (
+            '{"summary": ":warning: ' + "x" * 120 + '", "items": [1, 2, 3]}',
+            '{"summary": ":warning: ' + "x" * 120 + '", "items": [1, 2, 3]}',
+        ),
+        (
+            {"summary": "y" * 100, "count": 2},
+            json.dumps({"summary": "y" * 100, "count": 2}),
+        ),
+    ],
+    ids=["long-json-string", "json-object"],
+)
+def test_deploy_test_prints_the_result_unwrapped_on_its_own_line(
+    amp: _FakeAmp, capsys, result: object, line: str
+):
+    amp.statuses = [_status("SUCCESS", result=result)]
+
+    deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert line in capsys.readouterr().out.splitlines()
 
 
 def test_deploy_test_says_when_the_run_returned_nothing(amp: _FakeAmp, capsys):
@@ -1905,7 +1931,8 @@ def test_deploy_test_says_when_the_run_returned_nothing(amp: _FakeAmp, capsys):
         ),
         (
             httpx.Response(200, text="<html>ok</html>"),
-            f"Run {KICKOFF_ID} ended in state None: no details",
+            "AMP answered the run's status with something unexpected: "
+            "<html>ok</html>",
         ),
     ],
     ids=["failed", "paused", "revoked", "not-found", "unknown-state", "not-json"],

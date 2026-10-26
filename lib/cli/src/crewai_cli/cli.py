@@ -949,7 +949,14 @@ def deploy_test(uuid: str | None, inputs: str | None, timeout: int) -> None:
     from crewai_cli.input_prompt import parse_inputs_json
 
     run_inputs = parse_inputs_json(inputs) or {}
-    deploy_cmd = DeployCommand()
+    try:
+        deploy_cmd = DeployCommand()
+    except SystemExit as e:
+        # A missing login or project exits with no code (0); this command
+        # promises 1 for anything but a successful run.
+        if e.code in (None, 0):
+            raise SystemExit(1) from e
+        raise
     deploy_cmd.test_deployment(uuid=uuid, inputs=run_inputs, timeout=timeout)
 
 

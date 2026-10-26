@@ -33,6 +33,9 @@ class PlusAPI(_CorePlusAPI):
     CREW_RUN_RESOURCE = "/crewai_plus/api/v1/crew"
     # AMP gives a sleeping deployment 60 s to wake before it answers.
     CREW_RUN_TIMEOUT = httpx.Timeout(5.0, read=90.0)
+    # A status read answers from the runtime's store; keep it short so one hung
+    # read cannot carry `crewai deploy test` far past its --timeout.
+    CREW_STATUS_TIMEOUT = httpx.Timeout(5.0, read=30.0)
 
     def _crew_run_path(self, uuid: str | None, name: str | None) -> str:
         if uuid:
@@ -71,7 +74,7 @@ class PlusAPI(_CorePlusAPI):
         return self._make_request(
             "GET",
             f"{self._crew_run_path(uuid, name)}/tasks/{run}/status",
-            timeout=self.CREW_RUN_TIMEOUT,
+            timeout=self.CREW_STATUS_TIMEOUT,
         )
 
     def get_integration_token(self) -> str:
