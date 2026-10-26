@@ -1170,8 +1170,6 @@ def test_agent_use_trained_data(crew_training_handler):
     crew_training_handler.assert_has_calls(
         [mock.call("trained_agents_data.json"), mock.call().load()]
     )
-
-
 @patch("crewai.agent.core.CrewTrainingHandler")
 def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatch):
     monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "my_custom_trained.json")

@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import os
+import tempfile
 from typing import Any, TypedDict
 
 from crewai_core.lock_store import lock as store_lock
@@ -148,8 +149,21 @@ class JSONHandler:
           data: The data to be saved to the file.
         """
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            with open(self.file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f)
+            file_descriptor, temporary_path = tempfile.mkstemp(
+                dir=os.path.dirname(self.file_path),
+                prefix=f".{os.path.basename(self.file_path)}.",
+                suffix=".tmp",
+            )
+            try:
+                with os.fdopen(file_descriptor, "w", encoding="utf-8") as file:
+                    json.dump(data, file)
+                    file.flush()
+                    os.fsync(file.fileno())
+                os.replace(temporary_path, self.file_path)
+            except Exception:
+                if os.path.exists(temporary_path):
+                    os.remove(temporary_path)
+                raise
 
     def load(self) -> Any:
         """Load the data from the specified JSON file.
@@ -164,5 +178,9 @@ class JSONHandler:
             try:
                 with open(self.file_path, encoding="utf-8") as file:
                     return json.load(file)
-            except (FileNotFoundError, json.JSONDecodeError):
+            except FileNotFoundError:
                 return {}
+            except json.JSONDecodeError as error:
+                raise ValueError(
+                    f"Training data file contains invalid JSON: {self.file_path}"
+                ) from error
