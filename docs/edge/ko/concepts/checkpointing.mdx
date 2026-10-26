@@ -26,7 +26,7 @@ mode: "wide"
 
 ### 체크포인트란
 
-체크포인트는 실행 중인 작업을 재현하기 위해 CrewAI가 필요한 모든 것을 캡처합니다: 크루, 플로우 또는 에이전트의 전체 상태 — 구성, 에이전트의 메모리 및 지식 소스, 태스크 진행 상황, 중간 출력값, 내부 상태 및 속성 — 그리고 kickoff 입력, 해당 시점까지의 이벤트 기록, 그리고 체크포인트를 원본 실행에 연결하는 lineage ID를 포함합니다.
+체크포인트는 실행 중인 작업을 재현하기 위해 CrewAI가 필요한 상태를 캡처합니다: 크루, 플로우 또는 에이전트의 전체 상태 — 구성, 에이전트의 메모리 및 지식 소스, 태스크 진행 상황, 중간 출력값, 내부 상태 및 속성 — 그리고 kickoff 입력, 해당 시점까지의 이벤트 기록, 그리고 체크포인트를 원본 실행에 연결하는 lineage ID를 포함합니다. 콜백은 이름 있는 함수에 대한 참조로만 저장됩니다. [복원 시 되돌아오지 않는 것](#복원-시-되돌아오지-않는-것)을 참고하세요.
 
 복원하면 해당 상태를 재구성하고 계속 진행합니다. 완료된 태스크는 건너뛰고, 메모리와 지식은 재수화되며, 다운스트림 작업은 원본 실행이 생성한 동일한 출력을 기반으로 실행됩니다. 포크하면 새 lineage 아래에서 동일한 복원을 수행하여 새 브랜치와 원본 실행이 서로 덮어쓰지 않고 나란히 체크포인트를 기록할 수 있습니다.
 
@@ -50,6 +50,37 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
 ### 상속 모델
 
 `Crew`, `Flow`, `Agent` 모두 `checkpoint` 인수를 받습니다. 자식은 자체 값을 설정하거나 `False`를 전달하여 옵트아웃하지 않는 한 부모로부터 상속합니다. 크루에서 체크포인팅을 한 번 활성화하면 모든 에이전트가 참여하거나, 특정 에이전트만 선택적으로 제외할 수 있습니다.
+
+### 복원 시 되돌아오지 않는 것
+
+복원은 `kickoff()`를 호출한 객체가 아니라 체크포인트 파일로부터 크루, 플로우 또는 에이전트를 만듭니다. `crew.kickoff(from_checkpoint=...)`는 파일에 저장된 크루를 실행하므로, `crew`에 설정한 callable은 복사되지 않습니다.
+
+체크포인트는 콜백을 `"my_project.hooks.on_task_done"`과 같은 모듈 수준 함수의 점 표기 경로로 저장하고, 복원할 때 다시 import합니다. 체크포인트는 데이터이므로, CrewAI는 `CREWAI_DESERIALIZE_CALLBACKS=1` 환경 변수가 설정된 경우에만 이 경로를 import합니다. 이 변수가 없으면 콜백을 지정한 체크포인트를 복원할 때 `ValueError`가 발생합니다. 신뢰할 수 있는 체크포인트 파일에만 설정하세요.
+
+다음 항목은 저장되지 않으며 복원 후 실행되지 않습니다:
+
+- 람다, 클로저, `notifier.on_task_done` 같은 바운드 메서드, `functools.partial` 객체, 호출 가능한 인스턴스. 이런 콜백을 지정하면 CrewAI가 `A ... callback cannot be saved in a checkpoint` 경고를 표시합니다.
+- 호출 가능한 가드레일. CrewAI는 체크포인트를 기록할 때 경고합니다. 문자열 가드레일은 저장됩니다.
+- `@CrewBase` 클래스의 `@before_kickoff` 및 `@after_kickoff` 훅.
+
+저장할 수 없는 콜백을 유지하려면 `Crew.from_checkpoint()`로 복원한 뒤 `kickoff()` 전에 다시 지정하세요:
+
+```python
+from crewai import CheckpointConfig, Crew
+
+
+class Notifier:
+    def on_task_done(self, output):
+        print(f"Finished: {output.description}")
+
+
+notifier = Notifier()
+crew = Crew.from_checkpoint(
+    CheckpointConfig(restore_from="./.checkpoints/<timestamp>_<uuid>.json")
+)
+crew.tasks[-1].callback = notifier.on_task_done
+result = crew.kickoff()
+```
 
 ## 튜토리얼: 실패한 크루 재개하기
 
@@ -92,6 +123,10 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
     ```
 
     연구 태스크는 건너뛰고, 작성자는 저장된 연구 출력에 대해 실행되며, 크루가 완료됩니다.
+
+    <Note>
+    재개된 크루는 `crew`가 아니라 체크포인트 파일로부터 만들어집니다. 태스크에서 콜백을 사용한다면 [복원 시 되돌아오지 않는 것](#복원-시-되돌아오지-않는-것)을 읽어 보세요.
+    </Note>
   </Step>
 </Steps>
 

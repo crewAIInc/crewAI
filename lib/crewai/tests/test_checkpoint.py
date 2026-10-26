@@ -819,7 +819,7 @@ class TestCheckpointReusedExecutor:
                 tasks=[task1, task2],
                 verbose=False,
                 checkpoint=CheckpointConfig(
-                    provider=JsonProvider(location=d),
+                    location=d,
                     on_events=["task_started", "task_completed"],
                 ),
             )
@@ -880,3 +880,155 @@ class TestCrewCheckpointTaskTemplates:
         assert restored_task.checkpoint_original_description == "Research {topic}"
         assert restored_task.checkpoint_original_expected_output == expected_template
         assert restored_task._original_expected_output == expected_template
+
+
+_RAN_TASKS: list[str] = []
+
+
+def _record_task(output: Any) -> None:
+    _RAN_TASKS.append(output.description)
+
+
+def _record_task_level(output: Any) -> None:
+    _RAN_TASKS.append(f"task:{output.description}")
+
+
+class _CallbackOwner:
+    def on_task_done(self, output: Any) -> None:
+        _RAN_TASKS.append(f"bound:{output.description}")
+
+
+class TestCallbacksAcrossRestore:
+    """A restore builds the crew from the checkpoint file, not from the crew
+    ``kickoff`` is called on, so callbacks survive only as dotted paths.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _fake_openai(self, monkeypatch: pytest.MonkeyPatch) -> Any:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-fake")
+        # The root conftest clears the event bus after every test, but the
+        # listener's register-once flag stays set; reset it so this test's
+        # checkpoint handlers are registered again.
+        monkeypatch.setattr(
+            "crewai.state.checkpoint_listener._handlers_registered", False
+        )
+        # from_checkpoint() attaches the restored state to the bus and nothing
+        # detaches it; a stale state would become this run's checkpoint parent.
+        crewai_event_bus.reset_runtime_state()
+        _RAN_TASKS.clear()
+        with (
+            patch.object(OpenAICompletion, "call", return_value="Final Answer: done."),
+            patch.object(OpenAICompletion, "acall", return_value="Final Answer: done."),
+        ):
+            yield
+        crewai_event_bus.reset_runtime_state()
+        _RAN_TASKS.clear()
+
+    def _build(self, location: Path, second_callback: Any) -> Crew:
+        from crewai.llm import LLM
+
+        agent = Agent(role="r", goal="g", backstory="b", llm=LLM(model="gpt-4o-mini"))
+        first = Task(description="first", expected_output="x", agent=agent)
+        second = Task(
+            description="second",
+            expected_output="y",
+            agent=agent,
+            callback=second_callback,
+        )
+        return Crew(
+            agents=[agent],
+            tasks=[first, second],
+            verbose=False,
+            task_callback=_record_task,
+            checkpoint=CheckpointConfig(
+                location=str(location), on_events=["task_completed"]
+            ),
+        )
+
+    def _first_task_checkpoint(self, location: Path) -> str:
+        """Return the checkpoint written after the first task completed."""
+        roots = list(location.rglob("*_p-none.json"))
+        assert len(roots) == 1, roots
+        return str(roots[0])
+
+    def _restore_config(self, tmp_path: Path, saved: str) -> CheckpointConfig:
+        return CheckpointConfig(
+            restore_from=saved, location=str(tmp_path / "resumed")
+        )
+
+    def _run_once(self, tmp_path: Path, second_callback: Any) -> str:
+        self._build(tmp_path / "run", second_callback).kickoff()
+        _RAN_TASKS.clear()
+        return self._first_task_checkpoint(tmp_path / "run")
+
+    @pytest.mark.parametrize("kickoff", ["kickoff", "kickoff_async", "akickoff"])
+    def test_bound_method_callback_is_dropped_and_restore_completes(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        kickoff: str,
+    ) -> None:
+        import asyncio
+
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        with pytest.warns(UserWarning, match="dropped and will not run"):
+            saved = self._run_once(tmp_path, _CallbackOwner().on_task_done)
+        assert _RAN_TASKS == []
+
+        with pytest.warns(UserWarning, match="dropped and will not run"):
+            crew = self._build(tmp_path / "unused", _CallbackOwner().on_task_done)
+        config = self._restore_config(tmp_path, saved)
+        if kickoff == "kickoff":
+            result = crew.kickoff(from_checkpoint=config)
+        else:
+            result = asyncio.run(getattr(crew, kickoff)(from_checkpoint=config))
+
+        assert len(result.tasks_output) == 2
+        assert _RAN_TASKS == ["second"]
+
+    def test_partial_callback_still_writes_checkpoints(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import functools
+
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        callback = functools.partial(_record_task_level)
+        with pytest.warns(UserWarning, match="A partial callback cannot be saved"):
+            saved = self._run_once(tmp_path, callback)
+
+        with open(saved) as f:
+            data = json.loads(f.read())
+        assert data["entities"][0]["tasks"][1]["callback"] is None
+
+        with pytest.warns(UserWarning, match="A partial callback cannot be saved"):
+            crew = self._build(tmp_path / "unused", callback)
+        result = crew.kickoff(from_checkpoint=self._restore_config(tmp_path, saved))
+        assert len(result.tasks_output) == 2
+        assert _RAN_TASKS == ["second"]
+
+    def test_named_callback_runs_once_for_the_remaining_task(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        saved = self._run_once(tmp_path, _record_task_level)
+
+        self._build(tmp_path / "unused", None).kickoff(
+            from_checkpoint=self._restore_config(tmp_path, saved)
+        )
+
+        assert _RAN_TASKS == ["task:second", "second"]
+
+    def test_named_callback_restore_is_refused_without_opt_in(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        saved = self._run_once(tmp_path, _record_task_level)
+
+        with pytest.raises(ValueError, match="set CREWAI_DESERIALIZE_CALLBACKS=1"):
+            self._build(tmp_path / "unused", _record_task_level).kickoff(
+                from_checkpoint=self._restore_config(tmp_path, saved)
+            )
+        assert _RAN_TASKS == []
