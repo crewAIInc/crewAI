@@ -1138,7 +1138,7 @@ Follow these guidelines:
 
         if self.output_file is not None:
             try:
-                self.output_file = interpolate_only(
+                output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
@@ -1147,13 +1147,15 @@ Follow these guidelines:
             # Re-validate after interpolation: inputs are caller-controlled, so
             # they must not add traversal segments or make the path absolute.
             # Only the developer's template may anchor the path at a root.
+            # Assign only once every check passes, so a rejected path never
+            # stays on the task for a later run that skips interpolation.
             try:
-                self.output_file = self._validate_output_file_path(
-                    self.output_file, allow_templates=False
+                output_file = self._validate_output_file_path(
+                    output_file, allow_templates=False
                 )
                 # Set at the top of this method whenever output_file is.
                 template = cast(str, self._original_output_file)
-                if _is_rooted_path(self.output_file) and not _is_rooted_path(template):
+                if _is_rooted_path(output_file) and not _is_rooted_path(template):
                     raise ValueError(
                         "Template inputs cannot make output_file an absolute path"
                     )
@@ -1161,6 +1163,7 @@ Follow these guidelines:
                 raise ValueError(
                     f"Interpolated output_file path failed validation: {e!s}"
                 ) from e
+            self.output_file = output_file
 
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(

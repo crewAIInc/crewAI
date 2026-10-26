@@ -1221,6 +1221,26 @@ def test_output_file_absolute_path_via_interpolation(injected):
         task.interpolate_inputs_and_add_conversation_history({"topic": injected})
 
 
+@pytest.mark.parametrize(
+    "injected", ["../../etc/cron.d", "foo;rm -rf /", "{secret}"]
+)
+def test_rejected_output_file_is_not_kept_for_later_runs(injected):
+    """A rejected interpolation must leave output_file as it was, so a later run
+    with no inputs (which skips interpolation) cannot write to the injected path."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}.txt",
+    )
+    task.interpolate_inputs_and_add_conversation_history({"topic": "finance"})
+
+    with pytest.raises(ValueError, match="failed validation"):
+        task.interpolate_inputs_and_add_conversation_history({"topic": injected})
+    task.interpolate_inputs_and_add_conversation_history({})
+
+    assert task.output_file == "reports/finance.txt"
+
+
 def test_output_file_unresolved_template_via_interpolation():
     """An input that smuggles template syntax back into the path is rejected."""
     task = Task(
