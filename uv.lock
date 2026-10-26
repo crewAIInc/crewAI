@@ -10719,7 +10719,7 @@ dependencies = [
     { name = "cffi" },
     { name = "protobuf" },
     { name = "sniffio" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b0/d8/ed10fa0fe319daf0651c69221372b8523cfa865df5b9b1040c9a9a41b518/valkey_glide-2.5.3.tar.gz", hash = "sha256:ce3da1a0a927631385d6bc0a1ac8ab4e8e2efa9f41404bf54bbcf82904f3ea98", size = 1012668, upload-time = "2026-09-25T02:10:19.611Z" }
 wheels = [
