@@ -694,11 +694,32 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if not flow_slots:
             crewai_event_bus.set_runtime_state(state)
             raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
-        # Entities deserialize as plain ``Flow`` objects, so the class alone
-        # cannot identify the target when several flows are stored. Blank
-        # duplicates carry no restore data, so prefer the entity that does.
-        index, entity = next(
-            (
+        # Entities deserialize as plain ``Flow`` objects, so match the stable
+        # definition name recorded at checkpoint time. Older checkpoints do
+        # not carry it; retain their restore-data fallback only when it selects
+        # exactly one flow instead of silently restoring the wrong one.
+        expected_flow_name = (
+            definition.name if definition is not None else cls.flow_definition().name
+        )
+        named_slots = [
+            slot
+            for slot in flow_slots
+            if slot[1].checkpoint_flow_name == expected_flow_name
+        ]
+        if len(named_slots) > 1:
+            raise ValueError(
+                f"Checkpoint contains multiple flows named {expected_flow_name!r}; "
+                "flow names must be unique for restore"
+            )
+        if named_slots:
+            index, entity = named_slots[0]
+        elif any(candidate.checkpoint_flow_name for _, candidate in flow_slots):
+            raise ValueError(
+                f"No Flow named {expected_flow_name!r} found in checkpoint: "
+                f"{config.restore_from}"
+            )
+        else:
+            restorable_slots = [
                 slot
                 for slot in flow_slots
                 if (
@@ -706,9 +727,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     or slot[1].checkpoint_method_outputs
                     or slot[1].checkpoint_method_counts
                 )
-            ),
-            flow_slots[0],
-        )
+            ]
+            if len(restorable_slots) > 1:
+                raise ValueError(
+                    "Checkpoint contains multiple legacy Flow entities with "
+                    "restore data; recreate the checkpoint with unique flow names"
+                )
+            if restorable_slots:
+                index, entity = restorable_slots[0]
+            elif len(flow_slots) == 1:
+                index, entity = flow_slots[0]
+            else:
+                raise ValueError(
+                    "Checkpoint contains multiple legacy Flow entities and no "
+                    "unambiguous restore target"
+                )
         if entity.execution_context is not None:
             apply_execution_context(entity.execution_context)
         if isinstance(entity, cls):
@@ -785,6 +818,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             object.__setattr__(flow._state, "id", new_id)
         return flow
 
+    checkpoint_flow_name: str | None = Field(default=None)
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)

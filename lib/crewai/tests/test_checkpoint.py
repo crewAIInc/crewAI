@@ -897,6 +897,8 @@ class TestKickoffFromCheckpoint:
 
         payload = json.loads(real_checkpoint.read_text(encoding="utf-8"))
         blank = copy.deepcopy(payload["entities"][0])
+        payload["entities"][0].pop("checkpoint_flow_name", None)
+        blank.pop("checkpoint_flow_name", None)
         blank["checkpoint_completed_methods"] = None
         blank["checkpoint_method_outputs"] = None
         blank["checkpoint_method_counts"] = None
@@ -915,6 +917,45 @@ class TestKickoffFromCheckpoint:
         state = crewai_event_bus.runtime_state
         assert state is not None
         assert state.root[1] is restored
+
+    def test_from_checkpoint_matches_flow_name_with_multiple_restorable_entities(
+        self,
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.runtime import _sync_checkpoint_fields
+
+        class OtherFlow(Flow[dict[str, Any]]):
+            pass
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        other: Flow[Any] = Flow(suppress_flow_events=True)
+        other.checkpoint_flow_name = OtherFlow.flow_definition().name
+        other.checkpoint_completed_methods = {"other_step"}
+        other.checkpoint_state = {"id": "other", "order": 1}
+
+        target: Flow[Any] = Flow(suppress_flow_events=True)
+        target.checkpoint_flow_name = OrderFlow.flow_definition().name
+        target.checkpoint_completed_methods = {"reserve"}
+        target.checkpoint_state = {"id": "target", "order": 42}
+
+        restored_state = RuntimeState(root=[other, target])
+        with patch.object(RuntimeState, "from_checkpoint", return_value=restored_state):
+            try:
+                restored = OrderFlow.from_checkpoint(
+                    CheckpointConfig(restore_from="unused.json")
+                )
+
+                assert restored._completed_methods == {"reserve"}
+                assert restored.state["id"] == "target"
+                assert restored.state["order"] == 42
+                assert restored_state.root == [other, restored]
+                _sync_checkpoint_fields(other)
+                assert other.checkpoint_flow_name == OtherFlow.flow_definition().name
+            finally:
+                crewai_event_bus.flush()
+                crewai_event_bus.reset_runtime_state()
 
 
 
