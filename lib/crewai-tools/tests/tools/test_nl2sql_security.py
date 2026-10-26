@@ -625,6 +625,8 @@ class TestSQLCommentInjection:
             "WITH `a--` AS (SELECT 1) DELETE FROM users",
             "WITH x AS (SELECT $$--$$) DELETE FROM users",
             'WITH "a/*" AS (SELECT 1) DELETE FROM users WHERE "*/" = 1',
+            # A quote inside an identifier must not hide a real comment.
+            'WITH "q\'" AS (SELECT 1 --\') SELECT 1\n) DELETE FROM users',
         ],
     )
     def test_commented_statement_is_blocked(self, query):
@@ -641,13 +643,22 @@ class TestSQLCommentInjection:
         with pytest.raises(ValueError, match="Remove the comments and retry"):
             tool._validate_query(query)
 
-    @pytest.mark.parametrize(
-        "query",
-        ["SELECT '/* x */ DELETE -- y' AS v", "SELECT 'it''s -- fine' AS v"],
-    )
-    def test_comment_markers_inside_string_literals_are_allowed(self, query):
+    def test_comment_markers_inside_string_literals_are_also_blocked(self):
+        """Literal-aware scanning disagreed with identifier quoting; refuse instead."""
         tool = _make_tool(allow_dml=False)
-        tool._validate_query(query)
+        with pytest.raises(ValueError, match="query containing SQL comments"):
+            tool._validate_query("SELECT 'a -- b' AS v")
+
+    def test_hash_comment_is_blocked_on_mysql(self):
+        tool = _make_tool(allow_dml=False)
+        tool.db_uri = "mysql+pymysql://user@localhost/db"
+        with pytest.raises(ValueError, match="query containing SQL comments"):
+            tool._validate_query("WITH a AS (SELECT 1 #) SELECT 1\n) DELETE FROM users")
+
+    def test_hash_is_an_operator_on_postgres(self):
+        tool = _make_tool(allow_dml=False)
+        tool.db_uri = "postgresql://user@localhost/db"
+        tool._validate_query("SELECT data #> '{a,b}' FROM docs")
 
     def test_comments_are_allowed_when_dml_is_allowed(self):
         tool = _make_tool(allow_dml=True)
