@@ -17,6 +17,18 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
+            const { data: collaborator } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.payload.sender.login,
+            });
+            const permittedRoles = new Set(["triage", "write", "maintain", "admin"]);
+
+            if (!permittedRoles.has(collaborator.permission)) {
+              core.info(`Skipping issue closure by ${context.payload.sender.login}: insufficient repository permission.`);
+              return;
+            }
+
             const query = `
               query($owner: String!, $repo: String!, $issueNumber: Int!, $cursor: String) {
                 repository(owner: $owner, name: $repo) {
@@ -27,6 +39,9 @@ jobs:
                     ) {
                       nodes {
                         number
+                        repository {
+                          nameWithOwner
+                        }
                         state
                       }
                       pageInfo {
@@ -40,6 +55,7 @@ jobs:
             `;
 
             const pullRequests = new Set();
+            const repositoryName = `${context.repo.owner}/${context.repo.repo}`;
             let cursor = null;
 
             do {
@@ -52,7 +68,10 @@ jobs:
               const pullRequestReferences = result.repository.issue.closedByPullRequestsReferences;
 
               for (const pullRequest of pullRequestReferences.nodes) {
-                if (pullRequest.state === "OPEN") {
+                if (
+                  pullRequest.repository.nameWithOwner === repositoryName &&
+                  pullRequest.state === "OPEN"
+                ) {
                   pullRequests.add(pullRequest.number);
                 }
               }
