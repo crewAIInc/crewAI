@@ -10,7 +10,8 @@ from crewai_cli.utils import read_toml
 
 
 _NOTHING_TO_CONVERT = """\
-Nothing to convert: `crewai update` only converts Poetry projects to uv. It does not upgrade CrewAI.
+Nothing to convert: `crewai update` only converts projects with a [tool.poetry] table to uv.
+It does not upgrade CrewAI.
 To upgrade CrewAI:
   CLI:     uv tool upgrade crewai
   Project: crewai install --upgrade-package crewai --upgrade-package crewai-tools

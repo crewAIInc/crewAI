@@ -103,13 +103,31 @@ type = "flow"
 definition = "flow.json"
 """
 
+# Poetry 2 projects can use the PEP 621 layout with no [tool.poetry] table; uv
+# already reads them, so there is nothing to convert.
+_POETRY2_PEP621_PYPROJECT = """\
+[project]
+name = "demo"
+version = "0.1.0"
+requires-python = ">=3.10,<3.14"
+dependencies = ["crewai>=1.0.0"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+"""
+
+_NOTHING_TO_CONVERT = "only converts projects with a [tool.poetry] table to uv"
+
 
 def _invoke_update() -> Result:
     return CliRunner().invoke(crewai, ["update"])
 
 
 @pytest.mark.parametrize(
-    "content", [_UV_PYPROJECT, _FLOW_DEFINITION_PYPROJECT], ids=["uv", "flow"]
+    "content",
+    [_UV_PYPROJECT, _FLOW_DEFINITION_PYPROJECT, _POETRY2_PEP621_PYPROJECT],
+    ids=["uv", "flow", "poetry2-pep621"],
 )
 def test_update_leaves_uv_project_untouched_and_prints_upgrade_commands(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str
@@ -121,7 +139,7 @@ def test_update_leaves_uv_project_untouched_and_prints_upgrade_commands(
     result = _invoke_update()
 
     assert result.exit_code == 0, result.output
-    assert "only converts Poetry projects to uv" in result.output
+    assert _NOTHING_TO_CONVERT in result.output
     assert "does not upgrade CrewAI" in result.output
     assert "uv tool upgrade crewai" in result.output
     assert _UPGRADE_HINT in result.output
@@ -137,6 +155,8 @@ def test_update_without_pyproject_prints_upgrade_commands(
     result = _invoke_update()
 
     assert result.exit_code == 0, result.output
+    assert _NOTHING_TO_CONVERT in result.output
+    assert "does not upgrade CrewAI" in result.output
     assert "uv tool upgrade crewai" in result.output
     assert _UPGRADE_HINT in result.output
     assert list(tmp_path.iterdir()) == []
