@@ -200,6 +200,19 @@ def test_deployment_page_url_does_not_use_uuid_as_deployment_id():
     )
 
 
+def _run_from_locked_project(test: unittest.TestCase) -> None:
+    # In a dir with a pyproject.toml and no uv.lock (e.g. lib/cli), create and
+    # deploy run a real `uv sync` that strips the shared venv.
+    project_dir = tempfile.TemporaryDirectory()
+    test.addCleanup(project_dir.cleanup)
+    Path(project_dir.name, "pyproject.toml").write_text(
+        "[project]\nname = 'test_project'\n"
+    )
+    Path(project_dir.name, "uv.lock").write_text("# lock\n")
+    test.addCleanup(os.chdir, os.getcwd())
+    os.chdir(project_dir.name)
+
+
 class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.command.get_auth_token")
     @patch("crewai_cli.deploy.main.get_project_name")
@@ -210,17 +223,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_get_project_name,
         mock_get_auth_token,
     ):
-        # Run from a locked project dir: in a dir with a pyproject.toml and no
-        # uv.lock (e.g. lib/cli), deploy runs a real `uv sync` that strips the venv.
-        project_dir = tempfile.TemporaryDirectory()
-        self.addCleanup(project_dir.cleanup)
-        Path(project_dir.name, "pyproject.toml").write_text(
-            "[project]\nname = 'test_project'\n"
-        )
-        Path(project_dir.name, "uv.lock").write_text("# lock\n")
-        self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(project_dir.name)
-
+        _run_from_locked_project(self)
         self.mock_get_auth_token = mock_get_auth_token
         self.mock_get_project_name = mock_get_project_name
         self.mock_plus_api = mock_plus_api
@@ -1656,6 +1659,7 @@ class TestDeploySendsTheProjectId(unittest.TestCase):
     @patch("crewai_cli.deploy.main.get_project_name", return_value="test_project")
     @patch("crewai_cli.command.PlusAPI")
     def setUp(self, _plus_api, _name, _project_id, _token):
+        _run_from_locked_project(self)
         self.deploy_command = deploy_main.DeployCommand()
         self.mock_client = self.deploy_command.plus_api_client
         self.mock_client.base_url = "https://app.crewai.com"
