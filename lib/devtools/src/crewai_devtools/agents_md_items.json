@@ -381,13 +381,17 @@
  },
  {
   "id": "A-038",
-  "item": "Checking login from a script: `crewai org list` exits 0 even when logged out; read the output for 'Please sign up/login'.",
+  "item": "Checking login from a script: `crewai org list` exits 1 when logged out and prints 'Please sign up/login'.",
   "q": "From a shell script, how do I tell whether the user is logged in to CrewAI AMP?",
   "key": [
-   "sign up/login|output|exits? 0|exit code (is )?0"
+   "crewai org list",
+   "sign up/login|exits? (1|non-?zero)|exit (code|status)|\\$\\?|if !?\\s*crewai org list"
+  ],
+  "partial": [
+   "crewai org list"
   ],
   "trap": [
-   "if crewai org (list|current)[^|]*; then"
+   "exits? 0 (even )?when logged out"
   ]
  },
  {

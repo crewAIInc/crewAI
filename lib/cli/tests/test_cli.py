@@ -3,8 +3,10 @@ from unittest import mock
 
 import pytest
 from click.testing import CliRunner
+from crewai_cli.authentication.token import AuthError
 from crewai_cli.cli import (
     create,
+    crewai,
     deploy_create,
     deploy_list,
     deploy_logs,
@@ -640,3 +642,26 @@ def test_log_tasks_outputs_plain_output(mock_load, runner):
 
     assert result.exit_code == 0
     assert "Output: REAL" in result.output
+
+
+def _no_saved_login() -> str:
+    raise AuthError("No token")
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["deploy", "list"],
+        ["deploy", "status"],
+        ["triggers", "list"],
+        ["tool", "install", "my-tool"],
+        ["skill", "list"],
+    ],
+)
+def test_commands_that_need_a_login_exit_1_when_logged_out(runner, args):
+    with mock.patch("crewai_cli.command.get_auth_token", _no_saved_login):
+        result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 1, result.output
+    assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
+    assert "Run 'crewai login' to sign up/login." in result.output

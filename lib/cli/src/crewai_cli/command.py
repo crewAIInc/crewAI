@@ -35,7 +35,7 @@ class PlusAPIMixin:
                 style="bold red",
             )
             console.print("Run 'crewai login' to sign up/login.", style="bold green")
-            raise AuthenticationRequiredError from None
+            raise AuthenticationRequiredError(1) from None
 
     def _validate_response(self, response: httpx.Response) -> None:
         """Handle and display error messages from API responses.
