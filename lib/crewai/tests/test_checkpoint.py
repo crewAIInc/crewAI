@@ -957,7 +957,36 @@ class TestKickoffFromCheckpoint:
                 crewai_event_bus.flush()
                 crewai_event_bus.reset_runtime_state()
 
+    def test_from_checkpoint_matches_stable_name_when_name_is_overridden(
+        self, tmp_path: Path
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
 
+        class OtherFlow(Flow[dict[str, Any]]):
+            pass
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        other = OtherFlow(name="custom-other", suppress_flow_events=True)
+        other._completed_methods = {"other_step"}
+        other.state["order"] = 1
+
+        target = OrderFlow(name="custom-target", suppress_flow_events=True)
+        target._completed_methods = {"reserve"}
+        target.state["order"] = 42
+
+        location = RuntimeState(root=[other, target]).checkpoint(str(tmp_path))
+        try:
+            restored = OrderFlow.from_checkpoint(
+                CheckpointConfig(restore_from=location)
+            )
+
+            assert restored._completed_methods == {"reserve"}
+            assert restored.state["order"] == 42
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
 
 
 class TestLegacyMethodOutputsRestore:

@@ -867,6 +867,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     )
     _method_outputs: list[Any] = PrivateAttr(default_factory=list)
     _definition: FlowDefinition = PrivateAttr()
+    # Definition name before the public ``name`` field overrides it. Checkpoint
+    # matching must use this stable name, not the per-instance display name.
+    _stable_definition_name: str = PrivateAttr(default="")
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
@@ -941,6 +944,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._initialize_runtime_extension_attrs()
 
         self._definition = definition or type(self).flow_definition()
+        self._stable_definition_name = self._definition.name
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
         self._definition = self._extend_definition(self._definition)
