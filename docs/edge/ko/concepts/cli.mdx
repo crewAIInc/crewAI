@@ -450,3 +450,23 @@ crewai config reset
   같은 일부 설정 값은 읽기 전용이며 인증 및 조직 명령을 통해 관리됩니다. 도구
   저장소 관련 설정은 숨겨져 있으며 사용자가 직접 설정할 수 없습니다.
 </Note>
+
+### 13. Doctor
+
+프로젝트의 CrewAI AMP 상태를 하나의 명령으로 확인합니다: 로그인, 트레이싱, 그리고 에이전트가 사용하는 통합입니다. 프로젝트 디렉터리에서 실행하세요. `crewai run`과 같은 방식으로 프로젝트의 `.env`를 읽습니다.
+
+```shell Terminal
+crewai doctor [--app SELECTOR ...]
+```
+
+각 검사는 `<status> <check>: <detail>` 형식의 한 줄을 출력하며, 상태는 `ok`, `warn`, `fail`, `skip` 중 하나입니다:
+
+- `login`: 로그인 여부와 선택된 조직. 네트워크로 아무것도 전송하지 않습니다.
+- `tracing`: 실행이 트레이싱되는지, 그 이유(`.env` 또는 환경의 `CREWAI_TRACING_ENABLED`, 또는 이 머신에 기록된 설정), 그리고 트레이스가 전송되는 곳. 트레이싱이 꺼져 있으면 `fail`이 아니라 `warn`입니다: 사용자의 선택이기 때문입니다.
+- `integration <selector>`: `--app`마다 한 줄이며, `apps=[...]`와 같은 셀렉터를 사용합니다(예: `gmail` 또는 `gmail/send_email`). `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`으로 사용할 수 있는 액션을 나열하며, crew가 보내는 것과 같은 읽기 전용 요청입니다.
+
+```shell Terminal
+uv run crewai doctor --app gmail --app slack
+```
+
+검사 중 하나라도 실패하면 명령은 종료 코드 1로 끝납니다. 통합 검사에는 `crewai-tools`가 필요하므로 `crewai[tools]`에 의존하는 프로젝트에서 `uv run crewai doctor`를 사용하세요. 액션이 없는 통합은 연결되지 않았거나, 철자가 틀렸거나, AMP에서 사용할 수 없는 경우일 수 있으며, 명령은 이들을 구분할 수 없습니다.

@@ -847,6 +847,24 @@ def logout(reset: bool) -> None:
         click.echo("Successfully logged out from CrewAI AMP.")
 
 
+@crewai.command()
+@click.option(
+    "--app",
+    "apps",
+    multiple=True,
+    metavar="SELECTOR",
+    help=(
+        "An integration selector to check, as in `apps=[...]` (e.g. gmail, "
+        "gmail/send_email). Repeat for more than one."
+    ),
+)
+def doctor(apps: tuple[str, ...]) -> None:
+    """Check login, tracing and integrations for this project, one line each."""
+    from crewai_cli.doctor import doctor as run_doctor
+
+    run_doctor(apps)
+
+
 @crewai.group()
 def deploy() -> None:
     """Deploy the Crew CLI group."""

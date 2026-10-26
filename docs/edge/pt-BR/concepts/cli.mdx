@@ -473,3 +473,23 @@ crewai config reset
   relacionadas ao repositório de ferramentas são ocultas e não podem ser
   definidas diretamente pelo usuário.
 </Note>
+
+### 13. Doctor
+
+Verifique o estado do projeto no CrewAI AMP com um único comando: seu login, o tracing e as integrações que seus agentes usam. Execute-o a partir do diretório do projeto; ele lê o `.env` do projeto da mesma forma que o `crewai run`.
+
+```shell Terminal
+crewai doctor [--app SELECTOR ...]
+```
+
+Cada verificação imprime uma linha, `<status> <check>: <detail>`, em que o status é `ok`, `warn`, `fail` ou `skip`:
+
+- `login`: se você está logado e qual organização está selecionada. Nada é enviado pela rede.
+- `tracing`: se as execuções são rastreadas, por quê (`CREWAI_TRACING_ENABLED` no `.env` ou no ambiente, ou a preferência registrada nesta máquina) e para onde os traces vão. Tracing desligado é um `warn`, nunca um `fail`: a escolha é sua.
+- `integration <selector>`: uma linha por `--app`, usando os mesmos seletores de `apps=[...]` (por exemplo `gmail` ou `gmail/send_email`). Lista as ações disponíveis com `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`, a mesma requisição somente leitura que um crew faz.
+
+```shell Terminal
+uv run crewai doctor --app gmail --app slack
+```
+
+O comando termina com código 1 quando alguma verificação falha. Verificar uma integração exige `crewai-tools`, então use `uv run crewai doctor` em um projeto que dependa de `crewai[tools]`. Uma integração sem ações pode não estar conectada, estar com o nome errado ou estar indisponível no AMP; o comando não consegue distinguir esses casos.

@@ -602,6 +602,26 @@ Higher priority settings override lower ones.
   documentation](/observability/tracing).
 </Tip>
 
+### 15. Doctor
+
+Check the project's CrewAI AMP state in one command: your login, tracing, and the integrations your agents use. Run it from the project directory; it reads the project's `.env` the same way `crewai run` does.
+
+```shell Terminal
+crewai doctor [--app SELECTOR ...]
+```
+
+Each check prints one line, `<status> <check>: <detail>`, where the status is `ok`, `warn`, `fail` or `skip`:
+
+- `login`: whether you are logged in and which organization is selected. Nothing is sent over the network.
+- `tracing`: whether runs are traced, why (`CREWAI_TRACING_ENABLED` in `.env` or the environment, or the preference recorded on this machine), and where traces go. Tracing off is a `warn`, never a `fail`: it is your choice.
+- `integration <selector>`: one line per `--app`, using the same selectors as `apps=[...]` (for example `gmail` or `gmail/send_email`). It lists the actions available with `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`, the same read-only request a crew makes.
+
+```shell Terminal
+uv run crewai doctor --app gmail --app slack
+```
+
+The command exits with code 1 when any check fails. Checking an integration needs `crewai-tools`, so use `uv run crewai doctor` in a project that depends on `crewai[tools]`. An integration with no actions can be not connected, misspelled, or unavailable on AMP; the command cannot tell these apart.
+
 <Tip>
   CrewAI CLI handles authentication to the Tool Repository automatically when
   adding packages to your project. Just append `crewai` before any `uv` command
