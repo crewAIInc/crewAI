@@ -1198,21 +1198,57 @@ def test_output_file_shell_injection_via_interpolation():
         )
 
 
-def test_save_file_rejects_path_outside_cwd(tmp_path, monkeypatch):
-    """Test that _save_file rejects resolved paths outside the working directory."""
-    # Set cwd to tmp_path so any path outside it is rejected
-    monkeypatch.chdir(tmp_path)
+@pytest.mark.parametrize(
+    "injected",
+    [
+        "/etc/cron.d",
+        "//etc/cron.d",
+        "\\\\server\\share",
+        "C:\\Windows\\System32",
+    ],
+)
+def test_output_file_absolute_path_via_interpolation(injected):
+    """Inputs cannot turn a relative output_file template into an absolute path."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="{topic}/output.txt",
+    )
+
+    with pytest.raises(
+        ValueError, match="Template inputs cannot make output_file an absolute path"
+    ):
+        task.interpolate_inputs_and_add_conversation_history({"topic": injected})
+
+
+def test_output_file_unresolved_template_via_interpolation():
+    """An input that smuggles template syntax back into the path is rejected."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}.txt",
+    )
+
+    with pytest.raises(ValueError, match="Unresolved template variables"):
+        task.interpolate_inputs_and_add_conversation_history({"topic": "{secret}"})
+
+
+def test_absolute_template_output_file_saves_outside_cwd(tmp_path, monkeypatch):
+    """A developer-written absolute template keeps working outside the cwd."""
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    monkeypatch.chdir(workdir)
+    output_root = tmp_path / "outputs"
 
     task = Task(
-        description="Test",
-        expected_output="Test",
-        output_file="/etc/passwd",
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file=str(output_root / "{topic}" / "report.txt"),
     )
-    # Field validator strips leading slash, but we force it back for this test
-    task.output_file = "/etc/passwd"
+    task.interpolate_inputs_and_add_conversation_history({"topic": "AI"})
+    task._save_file("report body")
 
-    with pytest.raises(ValueError, match="outside the working directory"):
-        task._save_file("malicious content")
+    assert (output_root / "AI" / "report.txt").read_text() == "report body"
 
 
 def test_create_directory_true():

@@ -10,7 +10,7 @@ from hashlib import md5
 import inspect
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import threading
 from typing import (
     Annotated,
@@ -115,6 +115,11 @@ def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
 
         return create_model_from_schema(v)
     return None
+
+
+def _is_rooted_path(path: str) -> bool:
+    """Return True for POSIX/backslash-rooted, drive-qualified, or UNC paths."""
+    return path.startswith(("/", "\\")) or bool(PureWindowsPath(path).drive)
 
 
 class Task(BaseModel):
@@ -505,8 +510,9 @@ class Task(BaseModel):
             value: The output file path to validate.
             allow_templates: If True, permit ``{var}`` template placeholders and
                 preserve leading slashes for template paths.  When False (the
-                default), template syntax is rejected and leading slashes are
-                stripped — this is the mode used after interpolation.
+                default), template syntax is rejected and the path is returned
+                unchanged — this is the mode used after interpolation, where
+                the caller decides whether an absolute result is allowed.
 
         Returns:
             The validated (and potentially modified) path string.
@@ -542,7 +548,7 @@ class Task(BaseModel):
                     raise ValueError(f"Invalid template variable name: {var}")
             return value
 
-        if value.startswith("/"):
+        if allow_templates and value.startswith("/"):
             return value[1:]
         return value
 
@@ -1138,12 +1144,19 @@ Follow these guidelines:
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
-            # Re-validate after interpolation to prevent path traversal via
-            # caller-controlled template variables (e.g. {topic} = "../../etc").
+            # Re-validate after interpolation: inputs are caller-controlled, so
+            # they must not add traversal segments or make the path absolute.
+            # Only the developer's template may anchor the path at a root.
             try:
                 self.output_file = self._validate_output_file_path(
                     self.output_file, allow_templates=False
                 )
+                # Set at the top of this method whenever output_file is.
+                template = cast(str, self._original_output_file)
+                if _is_rooted_path(self.output_file) and not _is_rooted_path(template):
+                    raise ValueError(
+                        "Template inputs cannot make output_file an absolute path"
+                    )
             except ValueError as e:
                 raise ValueError(
                     f"Interpolated output_file path failed validation: {e!s}"
@@ -1322,15 +1335,6 @@ Follow these guidelines:
 
         try:
             resolved_path = Path(self.output_file).expanduser().resolve()
-
-            # Defense-in-depth: ensure resolved path stays within cwd to
-            # prevent path traversal even if upstream validation is bypassed.
-            cwd = Path.cwd().resolve()
-            if not resolved_path.is_relative_to(cwd):
-                raise ValueError(
-                    f"output_file path resolves outside the working directory: {resolved_path}"
-                )
-
             directory = resolved_path.parent
 
             if self.create_directory and not directory.exists():
