@@ -56,26 +56,44 @@ _TOOL_TYPE_REGISTRY: dict[str, type] = {}
 _BASE_TOOL_CLS: type | None = None
 
 
+# Tool types from these packages may be imported from checkpoint data without
+# CREWAI_DESERIALIZE_CALLBACKS, so resuming in a fresh process keeps working.
+_FIRST_PARTY_TOOL_PACKAGES = ("crewai.", "crewai_tools.")
+
+
 def _resolve_tool_dict(value: dict[str, Any]) -> Any:
     """Validate a dict with ``tool_type`` into the concrete BaseTool subclass."""
     dotted = value.get("tool_type", "")
     tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
     if tool_cls is None:
-        if not _trusted_deserialize():
+        if not (
+            dotted.startswith(_FIRST_PARTY_TOOL_PACKAGES) or _trusted_deserialize()
+        ):
             raise ValueError(
                 f"Refusing to resolve tool type '{dotted}': set "
                 "CREWAI_DESERIALIZE_CALLBACKS=1 to allow. Only enable "
                 "this for trusted checkpoint data."
             )
-        mod_path, cls_name = dotted.rsplit(".", 1)
-        tool_cls = getattr(importlib.import_module(mod_path), cls_name)
+        # Importing the module registers its BaseTool subclasses, so the
+        # registry lookup below rejects anything that is not a tool class.
+        importlib.import_module(dotted.rpartition(".")[0])
+        tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
+        if tool_cls is None:
+            raise ValueError(f"Tool type '{dotted}' is not a BaseTool subclass")
 
-    return tool_cls.model_validate(value)  # type: ignore[union-attr]
+    data = dict(value)
+    # The default needs no import, so restoring it must not require the opt-in.
+    if data.get("cache_function") == _DEFAULT_CACHE_FUNCTION_PATH:
+        del data["cache_function"]
+    return tool_cls.model_validate(data)  # type: ignore[attr-defined]
 
 
 def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
     """Default cache function that always allows caching."""
     return True
+
+
+_DEFAULT_CACHE_FUNCTION_PATH = f"{__name__}._default_cache_function"
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
