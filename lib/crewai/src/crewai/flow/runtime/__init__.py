@@ -178,6 +178,12 @@ logger = logging.getLogger(__name__)
 _suppress_flow_created_event: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "crewai_suppress_flow_created_event", default=False
 )
+# The public ``name`` field is part of the checkpoint, but rebuilt instances are
+# constructed without keyword arguments. Apply the saved name during post-init
+# for the flow class being rebuilt, preserving its memory scope and events.
+_restore_flow_name: contextvars.ContextVar[tuple[type[Any], str] | None] = (
+    contextvars.ContextVar("crewai_restore_flow_name", default=None)
+)
 
 
 def _condition_branches(
@@ -760,6 +766,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # state or a newly-created, empty flow during restore. Custom flows may
         # only expose a no-argument constructor, so do not inject keywords.
         token = _suppress_flow_created_event.set(True)
+        name_token = _restore_flow_name.set(
+            (cls, entity.name) if entity.name is not None else None
+        )
         try:
             instance = (
                 cls.from_declaration(contents=definition)
@@ -767,6 +776,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else cls()
             )
         finally:
+            _restore_flow_name.reset(name_token)
             _suppress_flow_created_event.reset(token)
         instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
         instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
@@ -945,6 +955,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         self._definition = definition or type(self).flow_definition()
         self._stable_definition_name = self._definition.name
+        restore_target = _restore_flow_name.get()
+        if restore_target is not None and type(self) is restore_target[0]:
+            self.name = restore_target[1]
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
         self._definition = self._extend_definition(self._definition)
