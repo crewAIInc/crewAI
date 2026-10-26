@@ -1,0 +1,808 @@
+---
+title: Flows Conversacionais
+description: Crie apps de chat multi-turno com handle_turn por turno, histórico de mensagens, roteamento de intenção, tracing e streaming estruturado.
+icon: comments
+mode: "wide"
+---
+
+## Visão geral
+
+Apps conversacionais tratam cada linha do usuário como uma **nova execução do flow** com o **mesmo id de sessão**. A CrewAI oferece helpers para histórico de mensagens, roteamento opcional de intenção, tracing adiado, streaming estruturado de turnos e um REPL local `flow.chat()`.
+
+| Conceito | Implementação |
+|---------|----------------|
+| Id de sessão | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
+| Linha do usuário | `handle_turn(message)` acrescenta em `state.messages` antes do grafo rodar |
+| Turno concluído | `conversation_turn_completed`; com o adiamento padrão de traces, `FlowFinished` aguarda `finalize_session_traces()` |
+| Trace da sessão inteira | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
+
+## APIs de turno
+
+Use **`flow.handle_turn(message, session_id=...)`** para cada mensagem de usuário em REST, WebSocket, testes e UIs customizadas. Use **`flow.chat()`** quando quiser um loop de chat local no terminal para um `Flow` conversacional.
+
+`Flow.kickoff()` não aceita os argumentos nomeados `user_message=` ou `session_id=`. Para flows conversacionais, `handle_turn()` guarda a mensagem pendente e chama `kickoff(inputs={"id": session_id})` internamente depois de redefinir o estado de execução do turno.
+
+| API | Uso |
+|-----|-----|
+| `handle_turn(message, session_id=...)` | Wrapper ergonômico de um turno para `Flow` conversacional |
+| `stream_turn(message, session_id=...)` | Transmite um turno conversacional como frames ordenados do runtime |
+| `chat()` | REPL local no terminal para `Flow` conversacional |
+| `kickoff(inputs={...})` | Execução avançada do flow sem tratamento de turno conversacional |
+| `ask()` | Prompt bloqueante **dentro** de um passo (wizard, esclarecimento) |
+| `@human_feedback` | Aprovar/rejeitar **saída de um passo** — não a próxima linha do chat |
+
+`handle_turn()`, `stream_turn()` e `chat()` geram `ValueError` se o modo conversacional não estiver habilitado. Aplicar `@ConversationConfig(...)` o habilita automaticamente; caso contrário, defina `conversational = True`.
+
+## Início rápido
+
+```python
+from uuid import uuid4
+
+from crewai import Flow
+from crewai.flow import listen
+from crewai.flow import (
+    ConversationConfig,
+    ConversationState,
+)
+
+
+@ConversationConfig(defer_trace_finalization=True)
+class SupportFlow(Flow[ConversationState]):
+    def route_turn(self, context):
+        message = (self.state.current_user_message or "").lower()
+        if "order" in message:
+            return "order"
+        if "bye" in message or "goodbye" in message:
+            return "goodbye"
+        return "help"
+
+    @listen("order")
+    def handle_order(self):
+        reply = "Your order is on the way."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "How can I help?"
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("goodbye")
+    def handle_goodbye(self):
+        reply = "Goodbye!"
+        self.append_assistant_message(reply)
+        return reply
+
+
+session_id = str(uuid4())
+flow = SupportFlow()
+
+try:
+    flow.handle_turn("Where is my order?", session_id=session_id)
+    flow.handle_turn("What about returns?", session_id=session_id)
+finally:
+    flow.finalize_session_traces()  # one trace link for the whole chat
+```
+
+## Streaming de um turno
+
+Use `stream_turn()` quando uma UI ou um runtime precisar de eventos estruturados para um turno de chat. Ele retorna uma sessão de stream com frames ordenados para roteamento do Flow, chunks do LLM, atividade de tools e mensagens da conversa.
+
+```python
+stream = flow.stream_turn("Where is my order?", session_id=session_id)
+
+with stream:
+    for frame in stream.events:
+        if frame.channel == "llm" and frame.type == "llm_stream_chunk":
+            print(frame.content, end="", flush=True)
+
+result = stream.result
+```
+
+Para o contrato completo dos frames e a lista de canais, consulte [Contrato do Runtime de Streaming](/edge/pt-BR/learn/streaming-runtime-contract).
+
+## Ciclo de vida do turno
+
+Cada `handle_turn` executa este pipeline:
+
+1. **Preparação do turno** — armazena a mensagem pendente do usuário, resolve o id da sessão, redefine o acompanhamento de execução por turno e chama `kickoff(inputs={"id": session_id})`.
+2. **Restauração de estado** — se `inputs["id"]` existe e `@persist` está configurado, carrega o snapshot mais recente.
+3. **`FlowStarted`** — emitido apenas no primeiro turno da sessão adiada.
+4. **Hidratação do turno pendente** — acrescenta a mensagem do usuário em `state.messages`, define `current_user_message` / `last_user_message` e classifica opcionalmente quando `intents` / `default_intents` + `intent_llm` estão definidos.
+5. **Execução do grafo** — métodos `@start` definidos pelo usuário (se houver) → `route_conversation` (o start/router embutido) → o handler `@listen` selecionado. `route_conversation` também chama o helper sobrescrevível `conversation_start()`.
+6. **Fim da execução** — `flow_finished` por turno e finalização de trace são **ignorados** com adiamento; `Agent.kickoff()` / crews aninhados também não fecham o batch pai.
+
+Os handlers devem chamar **`append_assistant_message(reply)`** quando a resposta visível não for o valor de retorno, ou ao recortar o histórico. Um retorno de string pública também é gravado como assistente e entra no snapshot `@persist`, então uma nova instância de Flow o restaura. A linha do usuário já é salva por `handle_turn` — não acrescente de novo nos handlers.
+
+## Visão geral da configuração
+
+Decorar uma subclasse de `Flow` com `ConversationConfig` anexa os padrões de chat e habilita o modo conversacional. Consulte a [referência completa de campos](#conversationconfig) abaixo. Sobrescreva a pré-classificação por turno com `handle_turn(..., intents=..., intent_llm=...)`.
+
+## Helpers `ChatState` de mais baixo nível
+
+`ChatState`, o `ConversationalConfig` legado e os helpers de `crewai.flow.conversation` continuam disponíveis para importação em orquestração avançada, testes ou wrappers customizados. Eles são separados da API `ConversationState` / `ConversationConfig` e não adicionam os argumentos nomeados `user_message=` ou `session_id=` a `Flow.kickoff()`.
+
+```python
+from crewai.flow import ChatState
+
+
+class MyChatState(ChatState):
+    # Herdados: id, messages, last_user_message, last_intent, session_ready
+    research_turn_count: int = 0
+    custom_flag: bool = False
+```
+
+| Campo | Função |
+|-------|--------|
+| `id` | UUID da sessão (igual a `inputs["id"]`) |
+| `messages` | `list` de `{role, content}` para histórico de LLM |
+| `last_user_message` | Última linha do usuário neste turno |
+| `last_intent` | Rótulo de rota após classificação (se usado) |
+| `session_ready` | Flag de bootstrap único (permissões, caches, etc.) |
+
+`ConversationalInputs` é um `TypedDict` para as chaves convencionais de `kickoff(inputs={...})`: `id`, `user_message`, `last_intent`.
+
+O `ConversationState` armazena `messages` como objetos `ConversationMessage` e também fornece `current_user_message`, `ended`, `events` e `agent_threads`. Use `conversation_messages` ao passar seu histórico canônico para um LLM.
+
+## API conversacional em `Flow`
+
+### Parâmetros de `handle_turn`
+
+| Parâmetro | Propósito |
+|-----------|-----------|
+| `message` | Texto deste turno |
+| `session_id` | UUID da conversa → `inputs["id"]` / `state.id` |
+| `intents` | Rótulos de outcome para `classify_intent` antes do kickoff |
+| `intent_llm` | LLM para classificação (obrigatório com `intents`) |
+| `**kickoff_kwargs` | Encaminhados para `kickoff()` para opções como `input_files`, `from_checkpoint` e `restore_from_state_id` |
+
+### Parâmetros de `kickoff`
+
+`Flow.kickoff()` aceita `inputs`, `input_files`, `from_checkpoint` e `restore_from_state_id`. Passe `inputs={"id": session_id}` quando precisar executar o flow diretamente, mas use `handle_turn()` quando a chamada representar uma mensagem de chat.
+
+### Atributos de instância
+
+| Atributo | Propósito |
+|-----------|-----------|
+| `conversational` | Defina como `True` para habilitar o grafo conversacional e `handle_turn()` |
+| `defer_trace_finalization` | Sobrescrita opcional na instância. Caso contrário, `_should_defer_trace_finalization()` lê `ConversationConfig.defer_trace_finalization`. |
+| `suppress_flow_events` | Oculta painéis do flow no console e suprime eventos de execução de métodos; os eventos de início/fim do flow continuam sendo emitidos |
+| `stream` | Flag genérica de streaming do Flow. Para turnos conversacionais, use `stream_turn()` em vez de combinar esta flag com `handle_turn()`. |
+
+### Métodos e propriedades
+
+| Nome | Descrição |
+|------|-------------|
+| `append_assistant_message(content)` | Acrescenta uma resposta visível ao usuário em `state.messages` |
+| `append_message(role, content, **extra)` | Acréscimo de mais baixo nível em `state.messages` |
+| `conversation_messages` | Histórico somente leitura para chamadas LLM |
+| `classify_intent(text, outcomes, *, llm, context=None)` | Mapeia texto a um outcome (mesma lógica de `@human_feedback`) |
+| `receive_user_message(text, *, outcomes=None, llm=None)` | Acrescenta mensagem do usuário; opcionalmente define `last_intent` |
+| `finalize_session_traces()` | Emite `flow_finished` adiado e finaliza o batch de trace da sessão |
+| `_should_defer_trace_finalization()` | Hook avançado/interno que resolve se a finalização de trace por turno é adiada |
+| `input_history` | Trilha de auditoria de prompts e respostas de `ask()` |
+
+### Helpers do módulo (`crewai.flow.conversation`)
+
+Importáveis de `crewai.flow.conversation` para testes ou orquestração customizada. Esses helpers usam o formato legado de `ConversationalConfig`; `prepare_conversational_turn()` também limpa `last_intent`, ao contrário do `handle_turn()`, que o preserva como contexto do router.
+
+| Função | Descrição |
+|----------|-------------|
+| `normalize_kickoff_inputs(inputs, user_message=..., session_id=...)` | Mescla kwargs conversacionais em `inputs` |
+| `get_conversation_messages(flow)` | Lê mensagens do estado ou buffer interno |
+| `append_message(flow, role, content, **extra)` | Igual ao método de instância |
+| `prepare_conversational_turn(flow, user_message=..., intents=..., intent_llm=..., config=...)` | Hidratação de turno de mais baixo nível para wrappers customizados |
+| `receive_user_message(flow, text, ...)` | Igual ao método de instância |
+| `set_state_field(flow, name, value)` | Define campo em estado dict ou Pydantic |
+| `get_conversational_config(flow)` | Lê `conversational_config` da classe |
+| `input_history_to_messages(entries)` | Converte `input_history` para formato de mensagens LLM |
+
+## Padrões de roteamento de intenção
+
+### A. Pré-classificar via `ConversationalConfig` (mais simples)
+
+Defina `default_intents` e `intent_llm`. Cada `handle_turn()` pré-classifica a mensagem atual. Um resultado não vazio retornado por um `route_turn()` customizado tem precedência; caso contrário, `route_conversation` usa a intenção classificada do turno atual.
+
+### B. Classificar dentro de `route_turn` (prompts mais ricos)
+
+Defina `default_intents=None` para `handle_turn()` apenas acrescentar a mensagem do usuário. Em `route_turn()`, chame `classify_intent` com um prompt ou descrições customizadas:
+
+```python
+def route_turn(self, context):
+    intent = self.classify_intent(
+        self._routing_prompt(self.state.current_user_message),
+        ("GREETING", "ORDER", "RESEARCH", "GOODBYE"),
+        llm="gpt-4o-mini",
+    )
+    self.state.last_intent = intent
+    return intent
+```
+
+Use **`@listen("RESEARCH")`** (ou similar) para passos com `Agent.kickoff()` e ferramentas — não `LLM.call()` puro — quando precisar de pesquisa web ou uso multi-etapa de tools.
+
+## Quando o flow termina mas o usuário continua conversando
+
+Cada `handle_turn()` conclui uma execução do grafo, e a conversa continua com outro `handle_turn()` usando o mesmo `session_id`. Com o ciclo de vida de trace adiado padrão, essa execução emite `conversation_turn_completed`, enquanto `FlowFinished` é emitido uma vez quando `finalize_session_traces()` encerra a sessão. `@persist` restaura `messages`, flags e contexto.
+
+**Padrão de persistência:** prefira `@persist` em um **único passo terminal** (por exemplo `finalize`) em vez de na classe `Flow` inteira. Persist em nível de classe salva após cada método; `load_state` usa a linha mais recente, que pode ser snapshot no meio da execução e perder atualizações dos handlers no mesmo turno.
+
+Não use `@human_feedback` para linhas de chat de follow-up, a menos que um humano precise aprovar uma saída específica antes de exibi-la.
+
+## `Flow` conversacional
+
+Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn` e `end_conversation`. O listener descontinuado `answer_from_history_turn` permanece disponível para compatibilidade. O framework gerencia `state.messages`, pode acionar um LLM de roteamento e mantém o batch de trace aberto entre turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
+
+Use isto quando quiser um chat multi-turno com router e handlers por rota sem cablar o ciclo de vida na mão. Use `Flow[ChatState]` (o padrão de mais baixo nível acima) quando precisar de controle total.
+
+### Exemplo rápido
+
+```python
+from crewai import Flow
+from crewai.flow import listen
+from crewai.flow import (
+    ConversationConfig,
+    ConversationState,
+)
+
+
+@ConversationConfig(defer_trace_finalization=True)
+class SupportFlow(Flow[ConversationState]):
+    def route_turn(self, context: dict) -> str | None:
+        message = (self.state.current_user_message or "").lower()
+        if "search" in message or "news" in message:
+            return "INTERNET_SEARCH"
+        if "docs" in message or "crewai" in message:
+            return "CREWAI_DOCS"
+        return "converse"
+
+    @listen("INTERNET_SEARCH")
+    def handle_internet_search(self) -> str:
+        """Fresh web research, current news, real-time lookups."""
+        reply = "I would run the web research route here."
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("CREWAI_DOCS")
+    def handle_crewai_docs(self) -> str:
+        """Look up the CrewAI documentation for framework/API questions."""
+        reply = "I would look up the CrewAI docs here."
+        self.append_assistant_message(reply)
+        return reply
+
+
+flow = SupportFlow()
+try:
+    flow.handle_turn("What can you do?")              # routes to converse
+    flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
+    flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
+finally:
+    flow.finalize_session_traces()
+```
+
+Para um chat local no terminal, use `chat()`:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+`chat()` envolve `handle_turn()` em um REPL, sai com `exit` / `quit`, ignora linhas em branco por padrão e chama `finalize_session_traces()` quando a sessão termina.
+
+### `ConversationConfig`
+
+Decorador de classe que anexa os defaults de chat por classe.
+
+| Campo | Padrão | Propósito |
+|-------|--------|-----------|
+| `system_prompt` | `slices.conversational_system_prompt` (i18n) | System message usado pelo `converse_turn` embutido. Passe `""` para desativar totalmente. |
+| `llm` | `None` | LLM de conversa (usado pelo `converse_turn` e como fallback do router). |
+| `router` | `None` | Sobrescritas opcionais de `RouterConfig`. Com listeners customizados e um LLM que possa ser resolvido, o roteamento é habilitado automaticamente mesmo quando este campo é omitido. |
+| `answer_from_history_prompt` | padrão do framework | **Descontinuado.** Use o system prompt de `converse` ou sobrescreva `converse_turn()`. |
+| `answer_from_history_llm` | `None` | **Descontinuado.** Use `llm`; `converse` já recebe o histórico canônico. |
+| `intent_llm` | `None` | LLM para o caminho legado `intents=`/`default_intents`. |
+| `default_intents` | `None` | Labels de outcome para pré-classificação legada. |
+| `visible_agent_outputs` | `None` | `"all"` ou lista de nomes de agentes cujos `append_agent_result()` devem virar mensagens públicas. |
+| `defer_trace_finalization` | `True` | Mantém um único batch de trace aberto entre chamadas de `handle_turn()`. |
+
+<Warning>
+  `answer_from_history_prompt`, `answer_from_history_llm` e a rota
+  `answer_from_history` estão descontinuados e serão removidos em uma versão
+  futura. Eles duplicam `converse`, que já recebe o histórico canônico,
+  adicionam uma chamada de LLM para verificar elegibilidade e são ignorados
+  quando o auto-router normal retorna uma rota. As configurações existentes
+  continuam funcionando e emitem `DeprecationWarning`.
+</Warning>
+
+Sem rotas customizadas, os turnos caem em `converse`. Com rotas customizadas e um LLM de conversa/router, o framework sintetiza um `RouterConfig` padrão; forneça um explicitamente apenas para customizar seu prompt, lista de rotas, descrições ou comportamento de fallback. Definir `default_intents` usa o caminho legado de pré-classificação.
+
+Se nenhum LLM de conversa estiver configurado, o `converse_turn` embutido retorna um placeholder de configuração em vez de gerar uma resposta.
+
+### `RouterConfig` e o catálogo de rotas auto-gerado
+
+```python
+from typing import Literal
+
+from pydantic import BaseModel
+
+from crewai import LLM
+from crewai.flow import RouterConfig
+
+
+class MyRoute(BaseModel):
+    intent: Literal["INTERNET_SEARCH", "CREWAI_DOCS", "converse"]
+
+
+ROUTER_LLM = LLM(model="gpt-4o-mini")
+
+
+router_config = RouterConfig(
+    prompt="Optional domain framing (policy, voice, persona).",
+    response_format=MyRoute,        # optional; auto-generated otherwise
+    llm=ROUTER_LLM,                  # falls back to ConversationConfig.llm
+    routes=["INTERNET_SEARCH", "CREWAI_DOCS"],   # optional; inferred from listeners
+    route_descriptions={
+        "INTERNET_SEARCH": "Override the docstring for this one route.",
+    },
+    default_intent="converse",       # used when LLM call fails or no LLM available
+    fallback_intent="converse",      # used when LLM returns an invalid route
+    intent_field="intent",
+)
+```
+
+O prompt do router é montado automaticamente. Para cada rota o framework escolhe a descrição nesta precedência:
+
+1. `RouterConfig.route_descriptions[label]` — override explícito.
+2. `Flow.builtin_route_descriptions[label]` — texto canônico do framework para `converse`, `end` e a rota de compatibilidade descontinuada `answer_from_history` (otimizado para o LLM de routing).
+3. O `description` declarado do método (usado por flows declarativos e projeções da DSL).
+4. Primeira linha não vazia da docstring do handler `@listen(label)`.
+5. Vazio (a rota aparece no catálogo sem descrição).
+
+Na prática, **adicionar uma rota é `@listen("X")` + uma docstring de uma linha**:
+
+```python
+from crewai.flow import listen
+
+
+@listen("INTERNET_SEARCH")
+def handle_internet_search(self) -> str:
+    """Fresh web research, current news, real-time lookups."""
+    ...
+```
+
+…e o LLM de routing vê:
+
+```
+Routes:
+- CREWAI_DOCS: Look up the CrewAI documentation for framework/API questions.
+- INTERNET_SEARCH: Fresh web research, current news, real-time lookups.
+- converse: Ordinary chat, follow-ups, summaries, clarifications…
+- end: User signals the conversation is finished (goodbye, exit, done).
+```
+
+`RouterConfig.prompt` é para **enquadramento de domínio** (persona do assistente, regras de negócio, voz). O catálogo de rotas é auto-gerado — não liste rotas em `prompt`; elas vão sair de sincronia assim que você adicionar um handler.
+
+### Nomeando handlers
+
+A string em `@listen("…")` é um **rótulo de rota do router** (um nome de evento), e não o nome do método Python. Rótulos de rota e eventos de conclusão de métodos compartilham o mesmo namespace de gatilhos; portanto, dar ao handler o mesmo nome de sua rota faria o handler acionar a si próprio em loop.
+
+Use um nome de método diferente — os exemplos da documentação usam o prefixo `handle_*`:
+
+```python
+@listen("create_video")
+def handle_create_video(self) -> str:
+    """User wants a new video."""
+    ...
+```
+
+**Não** replique o rótulo da rota no método:
+
+```python
+@listen("create_video")
+def create_video(self) -> str:  # rejected at flow instantiation
+    ...
+```
+
+### Rotas embutidas
+
+| Rota | Handler | Propósito |
+|------|---------|-----------|
+| `converse` | `converse_turn` | Handler de chat padrão. Chama `ConversationConfig.llm` com o system prompt + histórico canônico. |
+| `end` | `end_conversation` | Define `state.ended = True` e emite uma resposta de encerramento. |
+| `answer_from_history` | `answer_from_history_turn` | **Rota de compatibilidade descontinuada.** Use `converse`, que já recebe o histórico canônico. |
+
+Você pode sobrescrever qualquer uma definindo um handler com o mesmo nome na subclasse.
+
+### Semântica de `handle_turn()`
+
+`flow.handle_turn(message)` roda um turno:
+
+1. Reseta o tracking por execução (`_completed_methods`, `_method_outputs`) para o grafo re-rodar — sem isso, chamadas repetidas de `kickoff` na mesma instância dariam curto-circuito no turno 2+ porque `Flow.kickoff_async` trata `inputs={"id": ...}` como restauração de checkpoint.
+2. Anexa a mensagem do usuário em `state.messages`, define `current_user_message` / `last_user_message`. `last_intent` é **preservado do turno anterior** para que o LLM de routing possa usá-lo como sinal.
+3. Executa métodos `@start` definidos pelo usuário (se houver), depois `route_conversation` como start/router embutido e, por fim, o handler `@listen` escolhido. `route_conversation` invoca o helper sobrescrevível `conversation_start()`.
+4. O router grava sua decisão em `state.last_intent` (visível para o contexto de routing do próximo turno).
+5. Se seu handler retornou uma string e ainda não chamou `append_assistant_message`, `handle_turn` anexa para você e persiste o `state.messages` atualizado para que a restauração `@persist` inclua o turno do assistente.
+
+Chame `handle_turn()` para mensagens de chat. Chamar `kickoff(inputs={"id": ...})` diretamente executa o grafo sem aplicar o wrapper de turno conversacional.
+
+### `chat()` para REPLs locais
+
+`flow.chat()` é o wrapper de terminal pronto para uso em cima de `handle_turn()`:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+Ele cobre o loop local comum:
+
+1. Solicita uma mensagem do usuário.
+2. Para com `exit` / `quit`, `EOFError` ou `KeyboardInterrupt`.
+3. Chama `handle_turn(message, session_id=...)`.
+4. Imprime o resultado do assistente.
+5. Finaliza traces de sessão adiados em um bloco `finally`.
+
+`chat(defer_trace_finalization=True)` habilita temporariamente a flag de adiamento na instância durante o REPL e restaura o valor anterior ao sair.
+
+Customize o comportamento do terminal com I/O injetável:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+Para apps web, workers em background, testes e transportes customizados, continue usando `handle_turn()` diretamente.
+
+### Comportamento customizado do router
+
+Para rodar efeitos colaterais (setup de event bus, telemetria) em toda decisão de routing, sobrescreva `route_turn`:
+
+```python
+from typing import Any
+
+from crewai import Flow
+from crewai.flow import ConversationState
+
+
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        self.event_bus = MyBus(self)
+        return super().route_turn(context)
+```
+
+Para ignorar completamente o router LLM e escolher uma rota programaticamente, retorne uma string não vazia de `route_turn`. Um retorno falsy **não** invoca `_route_with_config()` a partir da sua sobrescrita; o roteamento segue para a intenção pré-classificada deste turno, depois para o caminho de compatibilidade descontinuado `answer_from_history` quando configurado e, por fim, para `converse`. O `last_intent` do turno anterior fica disponível no contexto do router, mas nunca é repetido como fallback.
+
+### `append_assistant_message` e `append_agent_result`
+
+Dentro de um handler `@listen(label)`, escolha:
+
+- `self.append_assistant_message(text)` — adiciona um turno de assistente visível ao usuário em `state.messages`. O `converse_turn` do próximo turno vai vê-lo.
+- `self.append_agent_result(agent_name, result, visibility="private")` — registra um evento estruturado em `state.events` e uma thread em `state.agent_threads[agent_name]`. Visibilidade pública também chama `append_assistant_message` automaticamente. Use resultados privados para trabalho de bastidor que não deve poluir o histórico canônico.
+
+`ConversationConfig.visible_agent_outputs` pode promover globalmente os resultados privados de agentes específicos para públicos (`"all"` ou lista de nomes).
+
+## Declarando um flow conversacional em JSON/YAML
+
+Um [Flow declarativo](/edge/pt-BR/concepts/cli) também pode ser conversacional. Adicione um bloco `conversational` no nível raiz e declare suas próprias rotas como métodos que fazem `listen` em um rótulo de rota:
+
+```yaml
+schema: crewai.flow/v1
+name: SupportFlow
+
+conversational:
+  system_prompt: You are a terse support assistant.
+  llm: gpt-4o-mini
+  router:
+    llm: gpt-4o-mini
+
+methods:
+  handle_order:
+    description: Order status, shipping and delivery questions.
+    listen: order
+    do:
+      call: agent
+      with:
+        role: Support specialist
+        goal: Answer order questions accurately
+        backstory: Knows the fulfilment pipeline.
+        input: "${state.current_user_message}"
+```
+
+Declarar o bloco já é o opt-in — `enabled` tem valor padrão `true`. Use `enabled: false` para manter a configuração e desligar o chat. Isso também desabilita a síntese de métodos embutidos, portanto a declaração deve fornecer um grafo não conversacional normal.
+
+Três coisas são fornecidas para você:
+
+| Fornecido | Detalhe |
+|----------|--------|
+| O grafo interno | `route_conversation`, `converse_turn` e `end_conversation` são adicionados automaticamente. O `answer_from_history_turn` descontinuado é mantido para compatibilidade. Declare um método com um desses nomes para sobrescrevê-lo. |
+| Estado da conversa | `ConversationState` é usado quando não há bloco `state`. Um estado Pydantic definido por `ref` ou `json_schema` é composto automaticamente com os campos conversacionais; ele não precisa estender `ConversationState`. |
+| O catálogo de rotas | Inferido de métodos que não são routers e têm rótulos `listen`, excluindo rotas internas. As descrições seguem a precedência acima, e `router.routes` explícito pode limitar as opções. |
+
+Os campos declarativos `llm`, `router.llm` e `intent_llm` aceitam um id de modelo ou um mapping de configuração, como `{model: openai/gpt-4o-mini, max_tokens: 512}`. O bloco `conversational` também aceita `default_intents`, `visible_agent_outputs`, `defer_trace_finalization` e os campos de `RouterConfig` mostrados acima. As declarações descontinuadas `answer_from_history_prompt` / `answer_from_history_llm` continuam sendo aceitas para compatibilidade.
+
+Execute a partir do Python com as mesmas APIs de turno de um Flow conversacional baseado em classe:
+
+```python
+from crewai.flow import Flow
+
+flow = Flow.from_declaration(path="flow.yaml")
+
+try:
+    flow.handle_turn("Where is my order?", session_id="session-1")
+finally:
+    flow.finalize_session_traces()
+```
+
+### Nomeando rotas
+
+Rótulos de rota e nomes de métodos compartilham um único namespace de gatilhos, então um handler não pode ter o nome da rota que escuta — `create_video` escutando `create_video` é rejeitado na construção do flow. Use o prefixo `handle_*`.
+
+### O que uma declaração não consegue expressar
+
+| Não expressável | Use no lugar |
+|-----------------|-------------|
+| Uma instância `LLM` viva ou um `BaseLLM` customizado | Um id de modelo em string ou mapping estático de configuração |
+| `router.response_format` como classe de modelo viva | Nomeie a classe com um ref python: `response_format: {python: my_project.schemas.ConversationRoute}`. Omita e o framework sintetiza uma |
+| Uma sobrescrita de `route_turn()` | Escreva o Flow em Python ou substitua o método declarativo `route_conversation` por uma ação `call: code` / expressão |
+| Uma sobrescrita de `can_answer_from_history()` | Descontinuado. Use `converse` ou sobrescreva `converse_turn()` no Python. |
+
+O `crewai run` abre a TUI de chat para um flow conversacional declarativo — a mesma que um Flow conversacional em Python recebe. Um loop de chat precisa de um terminal, então uma execução headless encerra com código diferente de zero e orientações, em vez de rodar um único turno; ali, conduza pelo Python com `handle_turn()` ou `stream_turn()`. Um método declarativo com um bloco `human_feedback:` (Python: `@human_feedback`) roda em um REPL de terminal, porque o runtime coleta feedback com um prompt bloqueante que a TUI não consegue atender. O `--inputs` não é aceito em um flow conversacional — a entrada de cada turno é a mensagem que você digita — e retomar uma sessão por id ainda não está ligado à CLI; use `flow.handle_turn(message, session_id=...)` no Python para isso.
+
+## Tracing entre turnos
+
+Com `defer_trace_finalization=True` (padrão em `ConversationConfig`):
+
+- **Um batch de trace** para toda a sessão de chat.
+- **`flow_started`** só no primeiro turno; **`flow_finished`** uma vez em `finalize_session_traces()`.
+- **`kickoff` por turno** não exibe “Trace batch finalized”.
+- **Trabalho aninhado** (`Agent.kickoff()`, crews, tools Exa) acrescenta ao batch **pai**; flows internos de `AgentExecutor` não fecham o batch da sessão cedo.
+
+```python
+flow.chat(session_id=session_id)
+```
+
+`flow.chat()` chama `finalize_session_traces()` para você. Quando você controla o loop com `handle_turn()`, chame `finalize_session_traces()` quando a sessão terminar.
+
+`suppress_flow_events=True` oculta painéis Rich no console e suprime eventos de execução de métodos. Os eventos de início/fim do Flow continuam sendo emitidos, portanto o ciclo de vida externo do Flow permanece rastreável, mas os spans de métodos individuais são omitidos.
+
+### Ciclo de vida de trace do `Flow` conversacional
+
+O [`Flow` conversacional](#flow-conversacional) usa o mesmo ciclo de vida de tracing: `defer_trace_finalization` é `True` por padrão, então cada `handle_turn()` mantém o trace da sessão aberto. Turnos adiados também suprimem `flow_failed` por turno; em caso de erro em um turno ou encerramento antecipado da sessão, finalize a sessão explicitamente. Isso fecha o batch com o evento `FlowFinished` no nível da sessão, em vez de um evento `FlowFailed` por turno. Sempre envolva seu REPL/loop em `try/finally` e chame `flow.finalize_session_traces()` na saída. Sem isso, o batch fica aberto e a conversa final pode nunca ser exportada.
+
+## Streaming
+
+Para UIs conversacionais, use `stream_turn()` e itere sobre seus objetos `StreamFrame` ordenados:
+
+```python
+stream = flow.stream_turn("Where is my order?", session_id=session_id)
+
+with stream:
+    for frame in stream.events:
+        if frame.channel == "llm" and frame.type == "llm_stream_chunk":
+            print(frame.content, end="", flush=True)
+
+reply = stream.result
+```
+
+Para um Flow não conversacional, definir `stream = True` faz `kickoff()` retornar uma `StreamSession`. Não defina `flow.stream = True` ao usar `handle_turn()`; `stream_turn()` controla o ciclo de vida do streaming conversacional.
+
+## Imports
+
+```python
+from crewai.flow import (
+    ChatState,
+    ConversationalConfig,
+    ConversationalInputs,
+    Flow,
+    listen,
+    persist,
+    router,
+    start,
+)
+from crewai.flow.conversation import prepare_conversational_turn
+from crewai.flow import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
+```
+
+## Veja também
+
+- [Dominando o Gerenciamento de Estado em Flows](/pt-BR/guides/flows/mastering-flow-state) — persistência, estado Pydantic, `@persist`
+- [Construa Seu Primeiro Flow](/pt-BR/guides/flows/first-flow) — fundamentos de flow
+
+
+## Jobs experimentais que abrangem vários turnos de conversa
+
+Esta API é experimental e pode mudar. Importe-a explicitamente de `crewai.experimental.flow_jobs`; ela não faz parte da API estável de `crewai.flow`.
+
+`JobRecord`, `JobState`, `JobUpdate`, `JobWorkState`, `JobWorkFlow` e `JobRunner` oferecem um contrato opcional de jobs em memória. Os Flows conversacionais existentes mantêm seu comportamento. Um job possui identidade própria, turno de origem, revisão, tentativa de execução, status, etapa atual, etapas concluídas e erro. As aplicações adicionam entradas e saídas tipadas; não é necessária uma classe separada de artefatos.
+
+Declare os campos de resultado graváveis em `output_fields`. Updates do worker não podem alterar campos de entrada, propriedade ou ciclo de vida por meio do payload de saída. O registro candidato completo é validado antes do commit; updates inválidos, de outro proprietário, obsoletos, duplicados ou posteriores ao término não alteram o estado aceito.
+
+```python
+import asyncio
+from typing import ClassVar
+from pydantic import Field
+from crewai.flow import ConversationState, start
+from crewai.experimental.flow_jobs import (
+    JobRecord, JobRunner, JobState, JobWorkFlow, JobWorkState, add_job,
+)
+
+class ReportJob(JobRecord):
+    output_fields: ClassVar[frozenset[str]] = frozenset({"notes"})
+    question: str
+    notes: list[str] = Field(default_factory=list)
+    stage: str = "collect"
+
+class WorkChatState(ConversationState, JobState[ReportJob]):
+    pass
+
+class ReportWork(JobWorkFlow[JobWorkState[ReportJob]]):
+    @start()
+    def collect(self):
+        self.check_open()
+        self.publish_update("started")
+        self.publish_update(
+            "stage_completed", stage="collect", outputs={"notes": ["Example fact"]},
+        )
+        self.publish_update("completed")
+
+async def run_job():
+    state = WorkChatState()
+    changes = asyncio.Queue()
+
+    def make_work(job, inputs, publish):
+        return ReportWork(
+            initial_state=JobWorkState[ReportJob](job=job),
+            publish=publish, suppress_flow_events=True,
+        )
+
+    runner = JobRunner(state, make_work, on_update=changes.put)
+    try:
+        async with runner.state_lock:
+            job = ReportJob(session_id=state.id, question="Example report")
+            if not add_job(state, job):
+                raise RuntimeError("Job registration rejected")
+            runner.submit(job, {})
+        while True:
+            snapshot = await changes.get()
+            if snapshot["jobs"][0]["status"] in {"completed", "failed"}:
+                return snapshot
+    finally:
+        await runner.aclose()
+
+# Run in a script: asyncio.run(run_job())
+
+```
+
+Crie `JobRunner(state, make_work, on_update=publish_snapshot)` em um loop asyncio em execução. `make_work(job, inputs, publish)` retorna um `JobWorkFlow` sem streaming, com estado tipado próprio, cópias do job e das entradas, e `publish=publish`. `on_update` é um callback assíncrono que recebe snapshots compatíveis com JSON (`session_id`, `seq`, `jobs`); adapte-os ao transporte existente. `format_error` pode remover detalhes sensíveis do provider, e `on_worker_event` observa o início e o encerramento do worker.
+
+Use `runner.state_lock` para **todos** os turnos em primeiro plano, registros de jobs e alterações do estado pai. Registre com `add_job(state, job)` e então chame `runner.submit(job, inputs)`. Execute turnos síncronos em uma thread de trabalho mantendo esse lock; nunca execute dois turnos simultaneamente no mesmo Flow. O `publish_update()` do worker também é executado fora do event loop do runner e aguarda a aceitação do commit antes da próxima etapa. Um update `stage_started` exige que a etapa anterior tenha sido consolidada; `stage_completed` retém as saídas tipadas antes da conclusão bem-sucedida. Uma falha posterior preserva as saídas anteriores.
+
+Forneça status e saídas relevantes pelos hooks `build_router_context()` e `build_agent_context()`. Snapshots não se tornam automaticamente mensagens públicas ou respostas faladas. A interpretação do domínio e a capacidade de admissão continuam sendo políticas da aplicação.
+
+Ao encerrar a sessão, chame `runner.request_close()` no loop proprietário antes de aguardar a execução em primeiro plano e, depois, `await runner.aclose()`. Isso fecha a admissão e a publicação, sinaliza cada worker, libera publishers em espera e aguarda as tasks próprias. Os métodos de trabalho devem chamar `check_open()` nos limites das etapas. Uma operação do provider em andamento não é abortada. Uma falha do subscriber fecha o runner para não deixar publishers bloqueados. Interromper apenas a fala não deve fechar o runner.
+
+O ciclo inicial é `queued → running → completed/failed`. Pause/resume, substituição, entrega automática de respostas e recuperação distribuída não são fornecidos. Os registros podem ser serializados com os recursos de estado existentes, mas restaurá-los não recria workers ativos nem garante efeitos externos exatamente uma vez.
+
+## Identidades experimentais de turnos e respostas públicas
+
+Importe `TurnRecord`, `ReplyRecord`, `TurnState`, `ReplyEvent` e `TurnRunner` explicitamente de `crewai.experimental.flow_turns`. Esta API é opcional e pode mudar. Ela envolve um conversational Flow existente; as APIs estáveis `handle_turn()`/`stream_turn()`, seus valores de retorno e o contrato experimental de jobs permanecem inalterados.
+
+`TurnState` estende `ConversationState` com `turns` e `replies` serializáveis. Uma chamada a `TurnRunner.stream_turn()` acompanha uma entrada confirmada e sua resposta pública principal. Cada entrada tem um `turn_id` usado uma única vez na sessão; uma nova fala ou correção recebe um novo ID. `input_revision` é um inteiro positivo (padrão `1`), não uma substituição automática de transcrição provisória. `delivery_id` é a única identidade da resposta; não existe um segundo `reply_id`. Os tipos são `acknowledgment`, `answer` e `progress`.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.experimental.flow_turns import TurnRunner, TurnState
+
+class Chat(Flow[TurnState]):
+    conversational = True
+
+    def route_turn(self, context):
+        return "acknowledge"
+
+    @listen("acknowledge")
+    def handle_acknowledge(self):
+        return "Request received."
+
+flow = Chat(suppress_flow_events=True)
+runner = TurnRunner(flow)
+events = runner.stream_turn("Hello", turn_id="turn-1", kind="acknowledgment")
+try:
+    for event in events:
+        if runner.accept_event(event):
+            print(event.model_dump_json())
+finally:
+    events.close()
+
+snapshot = runner.snapshot()
+reply = snapshot["replies"][0]
+runner.interrupt(
+    session_id=reply["session_id"], turn_id=reply["turn_id"],
+    input_revision=reply["input_revision"], delivery_id=reply["delivery_id"],
+)
+```
+
+Respostas fixas e providers que retornam somente o resultado final usam o mesmo contrato público `text`/`completed` das respostas em streaming. O Flow existente continua responsável pelo histórico canônico. `seq` ordena eventos dentro de uma entrega; `segment_id` numera deltas de texto a partir de um. Um delta não é necessariamente uma frase falada completa. Eventos de rota e observação de geração incluem a mesma identidade. `completed` significa que a geração de texto terminou, **não** que o áudio foi reproduzido ou ouvido.
+
+Somente métodos dedicados à resposta pública (`converse_turn` e `answer_from_history_turn` por padrão), ou IDs de Agent públicos selecionados explicitamente, permitem texto ao vivo do modelo. Configure `public_methods` e o callback `public_agent_ids` com cuidado; não selecione um método que misture trabalho privado do modelo e geração pública. Streams do router, raciocínio, chunks de tool calls, chamadas com tools habilitadas e Agents não relacionados são excluídos. Resultados privados de Agent não viram respostas. Providers sem deltas observáveis publicam sua mensagem canônica final sem inventar métricas do modelo.
+
+`runner.accept_event(event)` aceita um evento emitido pelo runner antes do envio ao transporte. Rejeita identidade estrangeira, sequência duplicada ou fora de ordem e saída invalidada por interrupção ou falha. Chame após qualquer fila/espera da aplicação, imediatamente antes do envio. Não valida recibos de reprodução não confiáveis enviados pelo cliente. Saídas já enviadas precisam de proteção por identidade e interrupção de áudio no adapter.
+
+`runner.interrupt(session_id=..., turn_id=..., input_revision=..., delivery_id=...)` direciona exatamente uma resposta e é idempotente para pedidos válidos repetidos. Durante a geração, marca turno e resposta como interrupted; após a geração, preserva o texto completo e marca a interrupção sem alterar o sucesso do job. `on_interrupt` pode sinalizar verificações cooperativas existentes; `should_interrupt` pode observar o sinal de parada da aplicação. Esses callbacks não abortam chamadas arbitrárias de provider. O stream deve terminar antes de executar outro turno no mesmo Flow. Fechar o iterator sinaliza a interrupção e aguarda a execução nativa, podendo esperar uma operação de provider em andamento.
+
+Para combinar com trabalho em segundo plano, declare `class WorkChatState(TurnState, JobState[MyJob]): ...`. Mantenha `JobRunner.state_lock` durante **toda** a iteração em primeiro plano e todas as alterações de jobs no estado pai. TurnRunner protege seus registros e controles de interrupção separadamente. Não execute APIs nativas de turno simultaneamente com o wrapper. Após admitir um job com sucesso, `runner.associate_job(job)` associa sessão/turno de origem e revision/attempt à resposta ativa; nunca admite, inicia ou cancela trabalho. Um novo turno de conversa não invalida pesquisa independente.
+
+`elapsed_ms` usa um relógio monotônico do servidor a partir do início do turno acompanhado. Quando disponível, `model_first_text_ms` é a diferença entre os **timestamps dos eventos** de início da solicitação ao provider e primeiro texto público; inclui trabalho do provider/SDK/rede e não é TTFT isolado do motor de inferência. Não subtraia timestamps do navegador e do servidor. Primeiro chunk de TTS, áudio em cache, início audível físico e conclusão da reprodução continuam sendo métricas do adapter.
+
+Esta etapa não oferece filas de respostas em segundo plano, agendamento da vez de falar, recibos de reprodução, alinhamento exato de palavras, geração especulativa ou pause/resume de jobs. Snapshots contêm registros, não locks, sinais de cancelamento ou execuções ativas. Não retomam trabalho nem repetem entregas. Restaure o estado antes de criar um novo turno acompanhado; este wrapper rejeita `from_checkpoint` e `restore_from_state_id` deliberadamente. Reconciliação durável e persistência dos registros finais de acompanhamento continuam sendo trabalhos separados. Use as APIs estáveis de Flow para workflows existentes de checkpoint.
+
+Durante a execução acompanhada, o estado atual restaurado permanece como referência: o recarregamento automático da sessão é suprimido para não descartar registros de turn/reply admitidos nem atualizações aceitas de jobs em segundo plano. As APIs nativas de turno do Flow mantêm seu comportamento de recarregamento de persistência. Fechar o iterator após um evento terminal não interrompe a resposta concluída. Uma falha continua sendo um sinal terminal de ciclo de vida aceito se a interrupção chegar após a falha.
+
+## Respostas experimentais em fila para trabalho em segundo plano
+
+`crewai.experimental.flow_replies` adiciona `ReplyQueueState`, `ReplyQueue`, `DeliveryRecord`, `DeliveryFloor`, `CoveredUpdate` e `ClientActivity` ao contrato de turnos/respostas. Combine `ReplyQueueState` com `JobState[MyJob]` e crie **um** `TurnRunner` e **uma** `ReplyQueue` por Flow ativo. A integração é opcional; o executor de jobs e as APIs estáveis de conversa não mudam.
+
+Um job bem-sucedido fica disponível imediatamente no estado, mesmo quando seu anúncio espera. `enqueue(job)` aceita apenas um job atual, já confirmado como `completed`, com turno de origem existente. A entrega pendente guarda revision, attempt e sequência de atualização aceita; notificações duplicadas usam o mesmo `delivery_id`. Esse ID também identifica o `ReplyRecord` público posterior. Cada conclusão de job recebe um anúncio atribuível; progresso intermediário de etapas não cria uma fila de fala.
+
+```python
+from crewai.experimental.flow_jobs import JobState
+from crewai.experimental.flow_turns import TurnRunner
+from crewai.experimental.flow_replies import (
+    ClientActivity, CoveredUpdate, ReplyQueue, ReplyQueueState,
+)
+
+class WorkChatState(ReplyQueueState, JobState[MyJob]):
+    pass
+
+# Your conversational Flow uses WorkChatState; jobs is its JobRunner.
+turns = TurnRunner(flow)
+replies = ReplyQueue(turns, is_relevant=lambda job: job.job_id not in cancelled_job_ids)
+
+async def on_job_snapshot(snapshot):
+    async with jobs.state_lock:
+        for job in flow.state.jobs.values():
+            if job.status == "completed":
+                replies.enqueue(job)
+    # Publish snapshots and wake your application-owned delivery task.
+
+async def try_delivery():
+    async with jobs.state_lock:
+        delivery = replies.claim()
+        if delivery is None:
+            return
+        events = replies.prepare(
+            delivery.delivery_id,
+            lambda current_jobs: "\n\n".join(job.answer for job in current_jobs),
+        )
+    for event in events:
+        async with jobs.state_lock:
+            if not replies.accepts_output(delivery.delivery_id):
+                replies.settle(delivery.delivery_id, "skipped")
+                return
+            if turns.accept_event(event):
+                await send_public_event(event)
+    # Generation has completed. The speaking floor is still leased.
+    # Validate whole-message adapter feedback before calling:
+    # replies.settle(delivery.delivery_id, "completed")
+```
+
+Serialize enqueue, claim, preparação, alterações de coverage e envio de saída com o mesmo `JobRunner.state_lock` usado por turnos e commits de jobs. `ReplyQueue` protege seus controles com outro lock para que dois claims não adquiram a vez de falar. `prepare()` lê cópias dos **resultados atuais aceitos**, em vez de texto guardado no enqueue, e emite os eventos públicos compartilhados `started`/`text`/`completed` com origem e identidade do job. Não executa LLM, adiciona histórico ou agenda TTS. A aplicação escolhe texto público, histórico, tarefas de entrega e transporte.
+
+`set_foreground(True)` mantém o bloqueio durante geração e encerramento em primeiro plano, incluindo pedidos pendentes do usuário; libere após o trabalho terminar. `observe_client(ClientActivity(...))` aceita apenas a sessão dona e sequência crescente do client, com booleanos estritos `recording`, `playback` e `muted`. Playback identificado deve pertencer ao Flow; um stop antigo de outra resposta não pode liberar playback mais recente. `delivery_id` nulo permite acknowledgment local em cache. Gravação, playback, mute, turno em execução, sessão encerrada ou entrega já ativa bloqueiam `claim()`. Se gravação/mute ou um novo pedido chegar durante um anúncio, o adapter deve interromper e parar a entrega ativa, atualizar atividade e acordar o agendamento.
+
+`claim()` muda atomicamente uma entrega elegível de `pending` para `scheduled`. Antes da preparação e de **cada** envio, confira relevância com `accepts_output(delivery_id)` e aceite eventos de texto com `turns.accept_event(event)`. Mudanças de identidade/versão, jobs ausentes, trabalho sem sucesso, sessões encerradas, atualizações já cobertas e a política `is_relevant(job)` invalidam anúncios. O callback deve ser livre de efeitos colaterais; use-o para cancelamento/substituição da aplicação além do contrato atual de jobs. Acorde a tarefa quando atividade ou relevância mudar. Pular anúncios nunca remove resultados retidos.
+
+Depois que um resumo solicitado for realmente enviado, `mark_covered(CoveredUpdate.from_job(job))` registra a versão aceita e pula anúncios pendentes correspondentes. Apenas pedir um resumo não é entrega. Uma versão posterior do job continua elegível. Não marque todos os jobs do contexto como cobertos por uma resposta de status ou conversa não relacionada.
+
+`settle(delivery_id, status, reason=...)` libera apenas a entrega ativa, uma vez. Os estados finais são `completed`, `interrupted`, `skipped` e `failed`; terminar a geração **não** conclui a entrega. Valide sessão, turno, input revision e identidade no adapter e aceite conclusão apenas após a geração da saída terminar. Conclusão de mensagem inteira no adapter é uma observação de agendamento, não prova de palavras audíveis. Em interrupção, falha ou invalidação, pare playback local e entrega em andamento, bloqueie saída pública restante e mantenha o resultado disponível. Anúncios interrompidos/falhos não repetem automaticamente; usuários podem pedir um novo resumo. Falha no TTS não altera sucesso do job.
+
+Chame `close()` antes de cancelar e aguardar tarefas de entrega da aplicação. Isso bloqueia entregas pendentes/ativas e mantém resultados dos jobs. Snapshot inclui observações da vez de falar e registros de entrega, não timer, conexão de mídia ou lease retomável. Restaurar não reinicia entrega; reconcilie registros ativos pela política de recuperação da aplicação. Recibos de segmentos, contexto falado exato, cancelamento/substituição automática de jobs, agendamento distribuído e timeout de playback são funcionalidades separadas. Um client que nunca informa conclusão mantém conservadoramente a vez de falar até interrupção ou fechamento; a aplicação pode adicionar uma política explícita de timeout.

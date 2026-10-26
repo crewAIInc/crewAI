@@ -106,9 +106,37 @@ def copy_assistant_imports(destination: Path) -> None:
         shutil.copy2(_TEMPLATES_DIR / name, destination / name)
 
 
-def copy_assistant_instructions(destination: Path) -> None:
-    """Copy ``AGENTS.md`` and the files that import it into a project."""
-    shutil.copy2(_TEMPLATES_DIR / "AGENTS.md", destination / "AGENTS.md")
+# Lines that open and close guidance only a crew or flow project can follow —
+# `crewai eval` grades a traced `crewai run`, which a tool project has none of.
+EVALUATION_START = "<!-- crewai-eval:start -->"
+EVALUATION_END = "<!-- crewai-eval:end -->"
+
+
+def _assistant_instructions(text: str, *, evaluation: bool) -> str:
+    """AGENTS.md with its evaluation blocks kept (markers dropped) or removed."""
+    lines: list[str] = []
+    inside = False
+    for line in text.splitlines(keepends=True):
+        marker = line.strip()
+        if marker == EVALUATION_START:
+            inside = True
+        elif marker == EVALUATION_END:
+            inside = False
+        elif evaluation or not inside:
+            lines.append(line)
+    return "".join(lines)
+
+
+def copy_assistant_instructions(destination: Path, *, evaluation: bool = True) -> None:
+    """Copy ``AGENTS.md`` and the files that import it into a project.
+
+    EVALUATION: keep the `crewai eval` guidance — True for crew and flow
+    projects, False for a tool project, which has no run to evaluate.
+    """
+    text = (_TEMPLATES_DIR / "AGENTS.md").read_text(encoding="utf-8")
+    (destination / "AGENTS.md").write_text(
+        _assistant_instructions(text, evaluation=evaluation), encoding="utf-8"
+    )
     copy_assistant_imports(destination)
 
 
@@ -214,8 +242,9 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 
 
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """Writes environment variables to a .env file in the specified folder."""
+    """Writes environment variables to a gitignored .env file for local use."""
     env_file_path = folder_path / ".env"
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
+            # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")

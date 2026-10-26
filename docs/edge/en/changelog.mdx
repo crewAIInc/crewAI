@@ -4,6 +4,244 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Oct 23, 2026">
+  ## v1.15.30
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.30)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix AGENTS.md to start the login process while evaluating and stop after three rounds.
+
+  ### Documentation
+  - Update snapshot and changelog for v1.15.29.
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="Oct 23, 2026">
+  ## v1.15.29
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
+
+  ## What's Changed
+
+  ### Features
+  - Add support for LiteLLM-compatible kwargs.
+  - Implement platform application search in CLI.
+  - Highlight action picker search in CLI.
+  - Trace conversation routes and public replies in flow.
+  - Select organization during login in CLI.
+  - Add offline jev routing and guardrail evaluation runner.
+  - Run integration app actions directly with call: tool.
+  - Promote AgentExecutor out of experimental status.
+  - Add Azure DocumentDB vector search integration.
+  - Add read-only notebook text loader and standard-library jsonl loader.
+  - Ensure crewAI eval keeps the evaluation's full data in the project.
+  - Enable crewAI eval to run the crew itself for verdict from one command.
+  - Allow crewAI eval to export evaluations as files.
+
+  ### Bug Fixes
+  - Fix platform integration token derivation from login.
+  - Resolve logging issues by preserving JSON logs on serialization errors.
+  - Skip non-UTF-8 cached skill metadata.
+  - Fix tool actions to honor failure policies and get fresh usage budgets per kickoff.
+  - Prevent private memories without a source from leaking to every recall.
+  - Fix memory record retrieval order in LanceDBStorage.
+  - Restore task description when replanning fails.
+  - Stop agents from repeating the same tool call.
+  - Escape scope and id values in LanceDB filters.
+
+  ### Documentation
+  - Update broken links in crewAI examples and observability guides.
+  - Fix dead links in tools documentation.
+
+  ### Refactoring
+  - Refactor context compaction to be a BaseLLM capability.
+
+  ## Contributors
+
+  @Akaliup, @Arxsher, @Copilot, @D41910, @LindseyZ1205, @RaycarlLei, @Rohitkanithi, @Sakura-798, @Vidit-Ostwal, @Wilson0511, @Winoren, @abdullahajaz14, @bballhaus, @gabemilani, @iris-clawd, @joaomdmoura, @leom1919, @lorenzejay, @marcreniel, @mattatcha, @reubenjrouse, @rohitkanithi, @sandeepsnairms, @stepchanges, @subhashpolisetti, @theCyberTech, @vatsalyd
+
+</Update>
+
+<Update label="Oct 14, 2026">
+  ## v1.15.28
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## What's Changed
+
+  ### Features
+  - Add crewai eval command to report where a stopped model broke.
+  - Use LiteLLM catalog for context windows.
+
+  ### Bug Fixes
+  - Fix flow to learn from resumed human feedback and preserve reviewed output types.
+  - Warn when non-empty apps resolve to zero platform tools.
+  - Fix flow add-crew to correctly find the package from pyproject.
+  - Show reasons for deployment failures and fix deploy remove and lockfile checks.
+  - Fix trigger list and payload requests timeout to 60 seconds.
+  - Read AMP's source_type during deploy push to ensure ZIP deployments use the new code.
+  - Decode local JSON files with UTF-8 BOM in rag.
+  - Allow image input_files for OpenAI GPT-6 Sol/Luna/Astra.
+  - Emit call completed event for streamed anthropic tool calls.
+  - Stop JSON-schema models from warning about BaseModel-shadowing fields.
+  - Preserve native tool aborts and post-hook cache identity.
+  - Refresh LiteLLM catalog after the version-bump PR merges.
+  - Repair rotted evaluator regression tests.
+
+  ### Documentation
+  - Consolidate improvements in MongoDB documentation.
+  - Correct deploy and platform-tool guidance in AGENTS.md.
+  - Fix README imports for RagTool and XMLSearchTool.
+
+  ## Contributors
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
+<Update label="Oct 09, 2026">
+  ## v1.15.27
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.27)
+
+  ## What's Changed
+
+  ### Features
+  - Add XPU to OpenCLIP provider device options
+  - Add deepinfra as an OpenAI-compatible provider
+  - Record why an evaluation stopped before its verdict
+  - Record what the run app's Deploy met before an attempt
+  - Implement per-run cost and time tracking in crewai eval --models without repeated progress lines
+
+  ### Bug Fixes
+  - Fix issue where stopSequences were sent to OpenAI GPT-6/GPT-5.6/gpt-oss
+  - Preserve GitHub loader source attribution
+  - Fix SQLite flow initialization contention
+
+  ### Documentation
+  - Add snapshot and changelog for v1.15.26
+
+  ## Contributors
+
+  @StoyanD, @ats3v, @joaomdmoura, @kimnamu, @lorenzejay, @mhbuehler, @zouyonghe
+
+</Update>
+
+<Update label="Oct 08, 2026">
+  ## v1.15.26
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.26)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix ownership retention of rwlock when acquisition is interrupted.
+  - Resolve issue with documentation site source URLs not being preserved.
+  - Fix task output display in log-tasks-outputs to show actual output.
+
+  ### Documentation
+  - Update snapshot and changelog for version v1.15.25.
+
+  ## Contributors
+
+  @Velmet44, @Vidit-Ostwal, @joaomdmoura, @leilei3167, @lorenzejay, @lux-liang
+
+</Update>
+
+<Update label="Oct 07, 2026">
+  ## v1.15.25
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.25)
+
+  ## What's Changed
+
+  ### Documentation
+  - Snapshot and changelog for v1.15.24
+
+  ## Contributors
+
+  @lorenzejay
+
+</Update>
+
+<Update label="Oct 07, 2026">
+  ## v1.15.24
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.24)
+
+  ## What's Changed
+
+  ### Features
+  - Add crewai eval to print a markdown brief when run by an agent
+  - Queue relevant background replies
+  - Add experimental turn and reply identities
+  - Add Oracle Integrations
+  - Add experimental job lifecycle and runner
+  - Add crewai eval --models, and llm_overlay to swap models as well as roles
+
+  ### Bug Fixes
+  - Fix train filename error message in CLI
+  - Allow a start step to re-run on the events it listens to
+  - Let human_feedback emit steps expose the review in outputs
+  - Ensure crewai eval exits with code 1 unless the gate passed and prompt to log in when nothing was traced unattended
+  - Report tracing sent usage from the grant exporter
+  - Address multiple dependency advisories and update relevant packages
+
+  ### Refactoring
+  - Move message summarization into SummarizeMessages
+  - Centralize and refresh context windows
+
+  ## Contributors
+
+  @Velmet44, @Vidit-Ostwal, @dependabot[bot], @fileames, @gabemilani, @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="Sep 28, 2026">
+  ## v1.15.23
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.23)
+
+  ## What's Changed
+
+  ### Features
+  - Add support for native Gemini 3.8 Flash
+  - Implement evaluation of the last traced run through AMP in crewai eval
+  - Record the last traced run for crewai eval instead of printing it
+  - Improve platform integration setup UX
+  - Prioritize popular platform integrations
+  - Enhance tracing task spans to include declared output format and results
+
+  ### Bug Fixes
+  - Fix visibility of the panel for viewing traces
+  - Resolve issue with turning tracing on and add an Evaluate button in the TUI
+  - Retry throttled provider calls in LLM
+  - Fall back to synchronous calls from acall in Bedrock
+  - Print areas graded by the evaluation in CLI
+  - Ensure link is shown after finalizing traces
+  - Keep Selenium driver reusable
+  - Close S3 response bodies properly
+  - Collapse multimodal content with shared helper
+  - Match roles in LLM overlay that differ only by surrounding whitespace
+  - Close SQLite connections in flow persistence and SQLite provider
+  - Preserve directory listing paths
+
+  ### Documentation
+  - Update guides for assistants to platform tools
+
+  ## Contributors
+
+  @Copilot, @Mairaarshad19, @SharoonSharif, @Vidit-Ostwal, @gaoanze888, @joaomdmoura, @lorenzejay, @sclfcz, @stepchanges, @vinibrsl
+
+</Update>
+
 <Update label="Sep 16, 2026">
   ## v1.15.22
 
