@@ -1054,6 +1054,16 @@ def skill_list() -> None:
     skill_cmd.list_cached()
 
 
+@skill.command(name="search")
+@click.argument("query", required=False)
+def skill_search(query: str | None) -> None:
+    """List the organization's skills on AMP, optionally matching QUERY."""
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.search(query)
+
+
 @crewai.group()
 def template() -> None:
     """Browse and install project templates."""

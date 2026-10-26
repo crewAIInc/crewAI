@@ -225,6 +225,17 @@ agent = Agent(
 )
 ```
 
+### 검색
+
+AMP에서 조직에 게시된 스킬을 나열합니다. 검색어를 주면 각 스킬의 handle과 설명에서 일치하는 항목만 보여줍니다:
+
+```shell Terminal
+crewai skill search
+crewai skill search "code review"
+```
+
+각 줄에는 `<handle>@<latest-version>`, 최신 버전의 보안 검사 상태(`passed`, `pending` 또는 `failed`이며, `passed`인 버전만 설치됩니다), 그리고 설명이 표시됩니다. 첫 줄은 에이전트의 `skills`가 받는 참조 `@<org-uuid>/<handle>@<version>`에 현재 조직의 UUID를 채워 보여 주며, `crewai skill install`은 `@<org-uuid>/<handle>`을 받습니다. 먼저 `crewai org switch <org-uuid>`로 조직을 설정하세요.
+
 ### 목록 조회
 
 ```shell Terminal

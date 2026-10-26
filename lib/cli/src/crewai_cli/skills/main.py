@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import tarfile
+from typing import TypedDict
 import zipfile
 
 from rich.console import Console
@@ -20,6 +21,25 @@ from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 
 
 console = Console()
+
+
+class _RegistrySkill(TypedDict):
+    """A row of AMP's GET /crewai_plus/api/v1/skills (the fields shown)."""
+
+    handle: str
+    description: str | None
+    latest_version: str | None
+    virus_scanning_status: str | None
+
+
+class _PageMeta(TypedDict):
+    total_pages: int
+
+
+class _SkillPage(TypedDict):
+    data: list[_RegistrySkill]
+    meta: _PageMeta
+
 
 _SKILL_MD_TEMPLATE = """\
 ---
@@ -333,6 +353,59 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                             )
 
         console.print(table)
+
+    def search(self, query: str | None) -> None:
+        """List the current organization's registry skills, filtered by QUERY."""
+        self._print_current_organization()
+
+        skills: list[_RegistrySkill] = []
+        page, total_pages = 1, 1
+        while page <= total_pages:
+            response = self.plus_api_client.list_skills(search=query, page=page)
+            if response.status_code == 401:
+                console.print(
+                    "[red]Not authorized to list skills. Run `crewai login`.[/red]"
+                )
+                raise SystemExit(1)
+            if not response.is_success:
+                console.print(
+                    f"[red]Failed to list skills: {response.status_code}[/red]"
+                )
+                console.print(response.text, markup=False)
+                raise SystemExit(1)
+            body: _SkillPage = response.json()
+            skills.extend(body["data"])
+            total_pages = body["meta"]["total_pages"]
+            page += 1
+
+        if not skills:
+            console.print(
+                f"No skills match '{query}'." if query else "No skills found.",
+                markup=False,
+            )
+            return
+
+        # Plain lines, not a rich Table: a table cuts long cells to "…" when
+        # stdout is piped (80 columns), and a coding agent then copies a broken
+        # handle or ref.
+        org_uuid = Settings().org_uuid
+        if org_uuid:
+            console.print(
+                f'Attach as "@{org_uuid}/<handle>@<version>":',
+                markup=False,
+                soft_wrap=True,
+            )
+        for skill in skills:
+            name = skill["handle"]
+            if skill["latest_version"]:
+                name += f"@{skill['latest_version']}"
+            scan = skill["virus_scanning_status"] or "-"
+            description = " ".join((skill["description"] or "").split())
+            console.print(
+                f"{name}  scan: {scan}  {description}".rstrip(),
+                markup=False,
+                soft_wrap=True,
+            )
 
     def _print_current_organization(self) -> None:
         settings = Settings()

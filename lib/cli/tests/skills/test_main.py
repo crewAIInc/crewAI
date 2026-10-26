@@ -11,8 +11,9 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
+import httpx
 import pytest
 
 from crewai_cli.shared.token_manager import TokenManager
@@ -305,3 +306,194 @@ class TestSkillListCached:
                 "---\nname: my-skill\nversion: 0.5.0\ndescription: A skill.\n---\nBody."
             )
             skill_command.list_cached()
+
+
+ORG_UUID = "6f1c2a9e-3b7d-4c11-9a2e-8b0f4d2c1e77"
+
+
+def _skill_row(
+    handle: str,
+    *,
+    description: str | None = "A skill.",
+    latest_version: str | None = "1.0.0",
+    scan: str | None = "passed",
+) -> dict[str, object]:
+    return {
+        "handle": handle,
+        "description": description,
+        "license": None,
+        "is_public": False,
+        "latest_version": latest_version,
+        "virus_scanning_status": scan,
+        "created_at": "2026-10-01T00:00:00Z",
+    }
+
+
+def _skills_page(rows: list[dict[str, object]], total_pages: int) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "data": rows,
+            "meta": {
+                "current_page": 1,
+                "total_pages": total_pages,
+                "total_count": len(rows),
+                "per_page": 25,
+            },
+        },
+    )
+
+
+class TestSkillSearch:
+    def _search(
+        self,
+        skill_command: SkillCommand,
+        query: str | None,
+        responses: list[httpx.Response],
+        org_uuid: str | None = ORG_UUID,
+    ) -> MagicMock:
+        list_skills = MagicMock(side_effect=responses)
+        skill_command.plus_api_client.list_skills = list_skills
+        with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
+            mock_settings_cls.return_value.org_uuid = org_uuid
+            mock_settings_cls.return_value.org_name = "Acme" if org_uuid else None
+            skill_command.search(query)
+        return list_skills
+
+    def test_lists_every_page_with_the_query(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        list_skills = self._search(
+            skill_command,
+            "triage",
+            [
+                _skills_page([_skill_row("ticket-triage")], total_pages=2),
+                _skills_page([_skill_row("triage-rules")], total_pages=2),
+            ],
+        )
+
+        output = capsys.readouterr().out
+        assert "ticket-triage@1.0.0" in output
+        assert "triage-rules@1.0.0" in output
+        assert list_skills.call_args_list == [
+            call(search="triage", page=1),
+            call(search="triage", page=2),
+        ]
+
+    def test_prints_the_ref_form_for_the_current_organization(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        self._search(skill_command, None, [_skills_page([_skill_row("brand-voice")], 1)])
+
+        output = capsys.readouterr().out
+        assert f'Attach as "@{ORG_UUID}/<handle>@<version>":' in output
+        assert "brand-voice@1.0.0  scan: passed  A skill." in output.splitlines()
+
+    def test_long_handles_and_descriptions_are_never_cut_when_piped(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # capsys is not a terminal, so rich renders at 80 columns, as it does
+        # for a coding agent reading piped output.
+        handle = "customer-support-escalation-triage-playbook-for-enterprise-tier"
+        description = "Routes escalations by severity and account tier. " * 4
+        self._search(
+            skill_command,
+            None,
+            [_skills_page([_skill_row(handle, description=description)], 1)],
+        )
+
+        output = capsys.readouterr().out
+        assert "…" not in output
+        assert (
+            f"{handle}@1.0.0  scan: passed  {description.strip()}"
+            in output.splitlines()
+        )
+
+    def test_collapses_multiline_descriptions_and_prints_markup_literally(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        row = _skill_row(
+            "review-rules", description="Checks [bold]PRs[/bold].\n\nTwice.\n"
+        )
+        self._search(skill_command, None, [_skills_page([row], 1)])
+
+        assert (
+            "review-rules@1.0.0  scan: passed  Checks [bold]PRs[/bold]. Twice."
+            in capsys.readouterr().out.splitlines()
+        )
+
+    def test_shows_a_skill_without_version_or_description(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        row = _skill_row("draft", description=None, latest_version=None, scan=None)
+        self._search(skill_command, None, [_skills_page([row], 1)])
+
+        assert "draft  scan: -" in capsys.readouterr().out.splitlines()
+
+    def test_without_an_organization_points_to_org_switch(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        self._search(
+            skill_command, None, [_skills_page([_skill_row("brand-voice")], 1)], None
+        )
+
+        output = capsys.readouterr().out
+        assert "`crewai org switch <org_id>`" in " ".join(output.split())
+        assert "Attach as" not in output
+        assert "brand-voice@1.0.0" in output
+
+    @pytest.mark.parametrize(
+        ("query", "message"),
+        [("nothing", "No skills match 'nothing'."), (None, "No skills found.")],
+    )
+    def test_empty_result_says_so(
+        self,
+        skill_command: SkillCommand,
+        capsys: pytest.CaptureFixture[str],
+        query: str | None,
+        message: str,
+    ) -> None:
+        list_skills = self._search(skill_command, query, [_skills_page([], 0)])
+
+        assert message in capsys.readouterr().out
+        list_skills.assert_called_once_with(search=query, page=1)
+
+    def test_unauthorized_exits_1_and_points_to_login(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            self._search(
+                skill_command,
+                None,
+                [httpx.Response(401, json={"message": "Unauthorized"})],
+            )
+
+        assert exc_info.value.code == 1
+        assert "Not authorized to list skills. Run `crewai login`." in (
+            capsys.readouterr().out
+        )
+
+    def test_failure_on_a_later_page_exits_1_with_amp_message(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            self._search(
+                skill_command,
+                None,
+                [
+                    _skills_page([_skill_row("brand-voice")], total_pages=2),
+                    httpx.Response(
+                        500,
+                        json={
+                            "error": "internal_server_error",
+                            "message": "database is down",
+                        },
+                    ),
+                ],
+            )
+
+        assert exc_info.value.code == 1
+        output = capsys.readouterr().out
+        assert "Failed to list skills: 500" in output
+        assert "database is down" in output
+        assert "brand-voice@1.0.0" not in output

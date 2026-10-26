@@ -225,6 +225,17 @@ agent = Agent(
 )
 ```
 
+### البحث
+
+يعرض المهارات المنشورة في مؤسستك على AMP، مع إمكانية تصفيتها بكلمة تُطابَق مع معرّف كل مهارة (handle) ووصفها:
+
+```shell Terminal
+crewai skill search
+crewai skill search "code review"
+```
+
+يعرض كل سطر `<handle>@<latest-version>`، وحالة الفحص الأمني لأحدث إصدار (`passed` أو `pending` أو `failed`؛ ولا يُثبَّت إلا الإصدار الذي حالته `passed`)، ثم الوصف. ويعطي السطر الأول معرّف UUID للمؤسسة الحالية ضمن المرجع الذي تقبله `skills` الخاصة بالوكيل، `@<org-uuid>/<handle>@<version>`؛ أما `crewai skill install` فيقبل `@<org-uuid>/<handle>`. حدّد المؤسسة أولًا باستخدام `crewai org switch <org-uuid>`.
+
 ### عرض القائمة
 
 ```shell Terminal
