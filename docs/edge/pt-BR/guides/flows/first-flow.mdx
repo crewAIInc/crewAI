@@ -44,7 +44,7 @@ Vamos começar e construir seu primeiro flow!
 Antes de começar, certifique-se de ter:
 
 1. Instalado o CrewAI seguindo o [guia de instalação](/pt-BR/installation)
-2. Configurado sua chave de API LLM no ambiente, conforme o [guia de configuração do LLM](/pt-BR/concepts/llms#setting-up-your-llm)
+2. Configurado sua chave de API LLM no ambiente, conforme o [guia de configuração do LLM](/pt-BR/concepts/llms#configurando-seu-llm)
 3. Conhecimentos básicos de Python
 
 ## Passo 1: Crie um Novo Projeto de CrewAI Flow
@@ -64,7 +64,7 @@ Isso gerará um projeto com a estrutura básica necessária para seu flow.
 
 ## Passo 2: Entendendo a Estrutura do Projeto
 
-O projeto gerado possui a seguinte estrutura. A crew inicial embutida usa o layout clássico Python/YAML. Para usar uma crew JSON-first dentro de um Flow, crie `crew.jsonc` e `agents/*.jsonc` na pasta da crew e carregue com `crewai.project.load_crew`, como mostrado em [Flows](/pt-BR/concepts/flows#building-your-crews).
+O projeto gerado possui a seguinte estrutura. A crew inicial embutida usa o layout clássico Python/YAML. Para usar uma crew JSON-first dentro de um Flow, crie `crew.jsonc` e `agents/*.jsonc` na pasta da crew e carregue com `crewai.project.load_crew`, como mostrado em [Flows](/pt-BR/concepts/flows).
 
 ```
 guide_creator_flow/
@@ -370,7 +370,7 @@ Este é o poder dos flows – combinar diferentes tipos de processamento (intera
 
 ## Passo 6: Configure suas Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto com suas chaves de API. Veja o [guia de configuração do LLM](/pt-BR/concepts/llms#setting-up-your-llm) para detalhes sobre como configurar o provedor.
+Crie um arquivo `.env` na raiz do projeto com suas chaves de API. Veja o [guia de configuração do LLM](/pt-BR/concepts/llms#configurando-seu-llm) para detalhes sobre como configurar o provedor.
 
 ```sh .env
 OPENAI_API_KEY=sua_chave_openai
