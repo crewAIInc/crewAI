@@ -76,9 +76,17 @@ _CTE_WRITE_INDICATORS = {
 
 
 def _strip_sql_comments(sql: str) -> str:
-    """Remove SQL comments while preserving string literals.
+    """Replace SQL comments with a space while preserving string literals.
 
-    Handles ``--`` line comments and ``/* ... */`` block comments.
+    Handles ``--`` line comments and ``/* ... */`` block comments.  A comment
+    separates tokens, so ``DELETE/**/FROM`` must become ``DELETE FROM``.
+
+    MySQL/MariaDB executable comments (``/*! ... */``, ``/*!50000 ... */``,
+    ``/*M! ... */``) are not comments to the server -- it parses and executes
+    their contents -- so they are kept verbatim.  Stripping them would let the
+    validator see an innocuous ``SELECT`` while the server ran the statement
+    hidden inside; kept, they leave an unrecognised first token that read-only
+    mode rejects.
     """
     result: list[str] = []
     i = 0
@@ -88,15 +96,20 @@ def _strip_sql_comments(sql: str) -> str:
             end = _skip_string_literal(sql, i)
             result.append(sql[i:end])
             i = end
-        elif sql[i:i + 2] == "--":
+        elif sql[i : i + 2] == "--":
             newline = sql.find("\n", i)
             if newline == -1:
                 break
+            result.append(" ")
             i = newline + 1
-        elif sql[i:i + 2] == "/*":
+        elif sql[i : i + 2] == "/*":
             close = sql.find("*/", i + 2)
             if close == -1:
                 break
+            if sql[i + 2 : i + 3] == "!" or sql[i + 2 : i + 4].upper() == "M!":
+                result.append(sql[i : close + 2])
+            else:
+                result.append(" ")
             i = close + 2
         else:
             result.append(sql[i])
@@ -135,7 +148,7 @@ def _detect_writable_cte(stmt: str) -> str | None:
     between ``AS`` and ``(``.  Skips matches inside string literals.
     """
     for m in _iter_as_paren_matches(stmt):
-        body = _strip_sql_comments(stmt[m.end() :]).lstrip()
+        body = stmt[m.end() :].lstrip()
         first_word = body.split()[0].upper().strip("()") if body.split() else ""
         if first_word in _CTE_WRITE_INDICATORS:
             return first_word
@@ -189,7 +202,7 @@ def _extract_main_query_after_cte(stmt: str) -> str | None:
         last_cte_end = _find_matching_close_paren(stmt, m.end())
 
     if last_cte_end > 0:
-        remainder = _strip_sql_comments(stmt[last_cte_end:]).strip().lstrip(",").strip()
+        remainder = stmt[last_cte_end:].strip().lstrip(",").strip()
         if remainder:
             return remainder
     return None
@@ -344,6 +357,9 @@ class NL2SQLTool(BaseTool):
 
     def _validate_statement(self, stmt: str) -> None:
         """Validate a single SQL statement (no semicolons)."""
+        # Every check below reads the comment-free text, so a comment cannot
+        # hide a keyword from one of them (leading, inside a CTE, after EXPLAIN).
+        stmt = _strip_sql_comments(stmt)
         command = self._extract_command(stmt)
 
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
@@ -421,7 +437,7 @@ class NL2SQLTool(BaseTool):
     @staticmethod
     def _extract_command(sql_query: str) -> str:
         """Return the uppercased first keyword of *sql_query*."""
-        stripped = _strip_sql_comments(sql_query).strip().lstrip("(")
+        stripped = sql_query.strip().lstrip("(")
         first_token = stripped.split()[0] if stripped.split() else ""
         return first_token.upper().rstrip(";")
 
@@ -490,6 +506,7 @@ class NL2SQLTool(BaseTool):
         _stmts = [s.strip() for s in sql_query.split(";") if s.strip()]
 
         def _is_write_stmt(s: str) -> bool:
+            s = _strip_sql_comments(s)
             cmd = self._extract_command(s)
             if cmd in _WRITE_COMMANDS:
                 return True

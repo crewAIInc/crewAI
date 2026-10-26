@@ -5,6 +5,7 @@ SQLite does not have information_schema, so we patch the schema-introspection
 helpers to avoid bootstrap failures and focus purely on the security logic.
 """
 import os
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -638,3 +639,61 @@ class TestSQLCommentInjection:
     def test_line_comment_before_select_still_allowed(self):
         tool = _make_tool(allow_dml=False)
         tool._validate_query("-- fetch\nSELECT 1")
+
+    @pytest.mark.parametrize(
+        ("query", "token"),
+        [
+            ("/*!50000 DROP TABLE users */ SELECT 1", "/*!50000"),
+            ("/*! CREATE TABLE t2 (a INT) */ SELECT 1", "/*!"),
+            ("/*M!100000 DROP TABLE users */ SELECT 1", "/*M!100000"),
+        ],
+    )
+    def test_mysql_executable_comment_is_not_treated_as_a_comment(
+        self, query, token
+    ):
+        """MySQL/MariaDB run the contents of /*! */ comments, so they must not vanish."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(
+            ValueError, match=rf"unrecognised SQL command '{re.escape(token)}'"
+        ):
+            tool._validate_query(query)
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "/* plan */ EXPLAIN ANALYZE DELETE FROM users",
+            "EXPLAIN /* plan */ ANALYZE DELETE FROM users",
+            "EXPLAIN ANALYZE /* plan */ DELETE FROM users",
+        ],
+    )
+    def test_comment_cannot_hide_explain_analyze_write(self, query):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="blocked a 'DELETE' statement"):
+            tool._validate_query(query)
+
+    def test_comment_between_as_and_paren_cannot_hide_writable_cte(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(
+            ValueError, match="blocked a writable CTE containing a 'DELETE'"
+        ):
+            tool._validate_query("WITH d AS /* x */ (DELETE FROM users) SELECT 1")
+
+    def test_comment_markers_inside_string_literals_are_kept(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("SELECT '/* x */ DELETE -- y' AS v")
+
+    def test_comment_separates_tokens_for_write_commit(self, tmp_path):
+        """DELETE/**/FROM is a DELETE, so allow_dml=True must commit it."""
+        uri = f"sqlite:///{tmp_path / 'items.db'}"
+        engine = create_engine(uri)
+        with engine.connect() as conn:
+            conn.execute(text("CREATE TABLE items (id INTEGER PRIMARY KEY)"))
+            conn.execute(text("INSERT INTO items VALUES (1)"))
+            conn.commit()
+        tool = _make_tool(allow_dml=True)
+        tool.db_uri = uri
+
+        tool.execute_sql("DELETE/**/FROM items")
+
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT id FROM items")).fetchall() == []
