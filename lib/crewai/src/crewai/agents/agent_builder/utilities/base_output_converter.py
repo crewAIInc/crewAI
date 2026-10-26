@@ -32,6 +32,10 @@ class OutputConverter(BaseModel, ABC):
         description="Max number of attempts to try to get the output formatted.",
         default=3,
     )
+    agent: Any = Field(
+        default=None,
+        description="Optional agent instance for converter execution and retries.",
+    )
 
     @abstractmethod
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
