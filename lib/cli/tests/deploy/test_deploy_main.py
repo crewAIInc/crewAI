@@ -11,6 +11,7 @@ import pytest
 import json
 
 import crewai_cli.deploy.main as deploy_main
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.deploy.archive import ArchiveError
 import httpx
 from crewai_cli.deploy.validate import Severity, ValidationResult
@@ -334,6 +335,47 @@ class TestDeployCommand(unittest.TestCase):
             output = fake_out.getvalue()
             assert "Request to Enterprise API failed. Details:" in output
             assert "Details:\nSomething went wrong" in output
+
+    def test_validate_response_401_shows_amps_reason_and_asks_for_login(self):
+        response = httpx.Response(
+            401,
+            json={
+                "error": "bad_credentials",
+                "message": "Bad credentials - User not found [admin]",
+            },
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError) as exc_info:
+                self.deploy_command._validate_response(response)
+            output = fake_out.getvalue()
+
+        assert isinstance(exc_info.value, SystemExit)
+        assert exc_info.value.code is None
+        assert "CrewAI AMP did not accept your login:" in output
+        # AMP's words as they are: a bracketed word is not Rich markup.
+        assert "Bad credentials - User not found [admin]" in output
+        assert "Run 'crewai login' to sign in again." in output
+        assert "Request to Enterprise API failed" not in output
+
+    def test_validate_response_401_without_message_shows_the_error_code(self):
+        response = httpx.Response(401, json={"error": "not_allowed"})
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError):
+                self.deploy_command._validate_response(response)
+
+        assert "not_allowed" in fake_out.getvalue()
+
+    def test_validate_response_403_is_not_a_login_problem(self):
+        response = httpx.Response(403, json={"error": "forbidden"})
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit) as exc_info:
+                self.deploy_command._validate_response(response)
+
+        assert not isinstance(exc_info.value, AuthenticationRequiredError)
+        assert "Request to Enterprise API failed. Details:" in fake_out.getvalue()
 
     def test_standard_no_param_error_message(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -1287,6 +1329,30 @@ class TestDeployCommand(unittest.TestCase):
             "user_declined", source="cli"
         )
         self.mock_client.create_crew.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_create_amp_rejects_as_unauthorized_asks_for_login(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """Counted as before, then raised as the error the run app logs in on."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            401, {"error": "bad_credentials", "message": "Bad credentials"}
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(AuthenticationRequiredError):
+                    self.deploy_command.create_crew(
+                        skip_validate=True, confirm=True, source="tui"
+                    )
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_4xx", source="tui", status_code=401
+        )
+        telemetry.crew_deployment_created_span.assert_not_called()
 
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
