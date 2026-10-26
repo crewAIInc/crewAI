@@ -10,6 +10,7 @@ class InternalCrewTrainingHandler(unittest.TestCase):
     def setUp(self):
         self.temp_file = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
         self.temp_file.close()
+        os.remove(self.temp_file.name)
         self.handler = CrewTrainingHandler(self.temp_file.name)
 
     def tearDown(self):
@@ -63,6 +64,7 @@ class InternalCrewTrainingHandler(unittest.TestCase):
 
     def test_load_acquires_lock_for_zero_size_file(self):
         # Empty file mimics a concurrent save() mid-truncation (open "wb").
+        open(self.temp_file.name, "w", encoding="utf-8").close()
         assert os.path.getsize(self.temp_file.name) == 0
 
         with patch(

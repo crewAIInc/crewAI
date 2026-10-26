@@ -42,7 +42,7 @@ class TestJSONHandler(unittest.TestCase):
         ):
             JSONHandler("training-data")
 
-    def test_load_empty_file(self):
+    def test_load_missing_file(self):
         loaded_data = self.handler.load()
         assert loaded_data == {}
 
@@ -52,7 +52,17 @@ class TestJSONHandler(unittest.TestCase):
             file.flush()
             os.fsync(file.fileno())  # Ensure data is written to disk
 
-        assert self.handler.load() == {}
+        with self.assertRaisesRegex(ValueError, f"invalid JSON: {self.file_path}"):
+            self.handler.load()
+
+    def test_save_serialization_failure_preserves_existing_data(self):
+        original = {"key": "value"}
+        self.handler.save(original)
+
+        with self.assertRaises(TypeError):
+            self.handler.save({"unsupported": object()})
+
+        assert self.handler.load() == original
 
 
 @pytest.mark.parametrize("kind", ["unsupported", "circular"])
