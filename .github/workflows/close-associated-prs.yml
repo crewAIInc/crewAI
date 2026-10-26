@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   close-associated-prs:
+    if: github.event.issue.state_reason == 'completed'
     runs-on: ubuntu-latest
     steps:
       - name: Close open associated pull requests
