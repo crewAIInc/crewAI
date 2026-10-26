@@ -65,6 +65,35 @@ def _sanitize_document_name(name: str | None) -> str:
     return cleaned or "document"
 
 
+def dedupe_document_names(blocks: list[dict[str, Any]]) -> None:
+    """Give every Bedrock document block in a request a distinct name.
+
+    Sanitizing can map different file names onto the same document name
+    (``"a.pdf"`` and ``"a_pdf"`` both become ``"a pdf"``), and several
+    unusable names fall back to ``"document"``. Bedrock rejects a request
+    whose document blocks repeat a name, so later duplicates get a
+    ``" (2)"``, ``" (3)"``, ... suffix while staying within the length limit.
+
+    Args:
+        blocks: Content blocks for one request; updated in place.
+    """
+    seen: set[str] = set()
+    for block in blocks:
+        document = block.get("document")
+        if not isinstance(document, dict) or not isinstance(document.get("name"), str):
+            continue
+        base = document["name"]
+        candidate = base
+        counter = 2
+        while candidate.casefold() in seen:
+            suffix = f" ({counter})"
+            trimmed = base[: _DOCUMENT_NAME_MAX_LENGTH - len(suffix)].rstrip()
+            candidate = f"{trimmed}{suffix}"
+            counter += 1
+        seen.add(candidate.casefold())
+        document["name"] = candidate
+
+
 class BedrockFormatter:
     """Formats resolved files into Bedrock Converse API content blocks."""
 

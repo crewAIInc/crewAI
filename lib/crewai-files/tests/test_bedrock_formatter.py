@@ -2,9 +2,9 @@
 
 import re
 
-from crewai_files import PDFFile
+from crewai_files import PDFFile, format_multimodal_content
 from crewai_files.core.resolved import FileReference, InlineBytes
-from crewai_files.formatting.bedrock import BedrockFormatter
+from crewai_files.formatting.bedrock import BedrockFormatter, dedupe_document_names
 import pytest
 
 
@@ -65,3 +65,44 @@ def test_s3_document_name_is_sanitized() -> None:
     assert block is not None
     assert block["document"]["name"] == "annual report pdf"
     assert block["document"]["source"] == {"s3Location": {"uri": "s3://bucket/key"}}
+
+
+def test_duplicate_document_names_get_distinct_suffixes() -> None:
+    blocks = [
+        {"text": "hello"},
+        {"document": {"name": "a pdf"}},
+        {"document": {"name": "a pdf"}},
+        {"image": {"format": "png"}},
+        {"document": {"name": "A PDF"}},
+        {"document": {"name": "document"}},
+        {"document": {"name": "document"}},
+    ]
+
+    dedupe_document_names(blocks)
+
+    names = [b["document"]["name"] for b in blocks if "document" in b]
+    assert names == ["a pdf", "a pdf (2)", "A PDF (3)", "document", "document (2)"]
+    assert all(_VALID_NAME.fullmatch(n) for n in names)
+
+
+def test_duplicate_suffix_stays_within_200_characters() -> None:
+    long_name = "x" * 200
+    blocks = [{"document": {"name": long_name}}, {"document": {"name": long_name}}]
+
+    dedupe_document_names(blocks)
+
+    second = blocks[1]["document"]["name"]
+    assert second == "x" * 196 + " (2)"
+    assert len(second) == 200
+
+
+def test_format_multimodal_content_keeps_bedrock_document_names_unique() -> None:
+    files = {
+        "q3.report": PDFFile(source=MINIMAL_PDF),
+        "q3_report": PDFFile(source=MINIMAL_PDF),
+    }
+
+    blocks = format_multimodal_content(files, "bedrock")
+
+    names = [b["document"]["name"] for b in blocks]
+    assert names == ["q3 report", "q3 report (2)"]
