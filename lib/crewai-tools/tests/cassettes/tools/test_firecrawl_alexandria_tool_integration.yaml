@@ -1,0 +1,53 @@
+interactions:
+- request:
+    body: '{"alexandria": [{"provider": "sec-gov", "capability": "filings/companies_get",
+      "options": {"cik": "320193"}}], "integration": "_crewai", "origin": "python-sdk@4.54.0"}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '167'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    method: POST
+    uri: https://api.firecrawl.dev/v2/scrape
+  response:
+    body:
+      string: '{"success":true,"scrape_id":"01a177ea-f36b-72da-ab1d-4e108035157e","data":{"alexandria":[{"provider":"sec-gov","capability":"filings/companies_get","creditsCost":5,"data":{"filings":null,"filings_page":null,"filings_page_count":2,"filings_page_url":null,"has_more_filings":false,"observed_at_ms":1793013252681,"publication_id":"5891cf875f690e38f26ca628f7091184c9d73ca34ca7646b9cecd5013aeac4ab","record":{"business_address":{"city":"CUPERTINO","state_or_country":"CA","state_or_country_description":"CA","street1":"ONE
+        APPLE PARK WAY","street2":null,"zip_code":"95014"},"category":"Large accelerated
+        filer","cik":"0000320193","content_hash":"5891cf875f690e38f26ca628f7091184c9d73ca34ca7646b9cecd5013aeac4ab","ein":"942404110","entity_type":"operating","exchanges":["Nasdaq"],"filing_count":2270,"filing_files":[{"filing_count":1268,"filing_from":"1994-01-26","filing_to":"2015-10-01","name":"CIK0000320193-submissions-001.json","url":"https://data.sec.gov/submissions/CIK0000320193-submissions-001.json"}],"fiscal_year_end":"0926","former_names":[{"from":"2007-01-10T00:00:00.000Z","name":"APPLE
+        INC","to":"2019-08-05T00:00:00.000Z"},{"from":"1994-01-26T00:00:00.000Z","name":"APPLE
+        COMPUTER INC","to":"2007-01-04T00:00:00.000Z"},{"from":"1997-07-28T00:00:00.000Z","name":"APPLE
+        COMPUTER INC/ FA","to":"1997-07-28T00:00:00.000Z"}],"investor_website":null,"latest_filing_date":"2026-10-22","lei":null,"listings":[],"mailing_address":{"city":"CUPERTINO","state_or_country":"CA","state_or_country_description":"CA","street1":"ONE
+        APPLE PARK WAY","street2":null,"zip_code":"95014"},"name":"Apple Inc.","phone":"(408)
+        996-1010","publication_id":"5891cf875f690e38f26ca628f7091184c9d73ca34ca7646b9cecd5013aeac4ab","recent_filing_count":1002,"retrieved_at":"2026-10-26T11:14:12Z","sic":"3571","sic_description":"Electronic
+        Computers","source_record_id":"0000320193","source_url":"https://data.sec.gov/submissions/CIK0000320193.json","state_of_incorporation":"CA","submissions_url":"https://data.sec.gov/submissions/CIK0000320193.json","tickers":["AAPL"],"website":null},"source_url":"https://data.sec.gov/submissions/CIK0000320193.json"},"workflow":{"version":"1.3.0","digest":"sha256:7f78efd6a3618e9004e2b2ee9f763115e71b8c22e8f6296a1733330c6f49ed99"},"records":1,"upstreamStatus":200,"alexandriaId":"e8682344baf58a3929d46615c25327458a288d77f9c81f967bf9dccdcfb38e82","providerRequestId":"c082c20f-862d-480a-b389-9419392790c3","workflowRunId":"c082c20f-862d-480a-b389-9419392790c3"}],"creditsCost":5}}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Content-Length:
+      - '2491'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Mon, 26 Oct 2026 11:14:12 GMT
+      Etag:
+      - ETAG-XXX
+      X-Request-Id:
+      - X-REQUEST-ID-XXX
+      X-Response-Time:
+      - 3850.570ms
+    status:
+      code: 200
+      message: OK
+version: 1
