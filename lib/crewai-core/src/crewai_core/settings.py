@@ -51,16 +51,18 @@ def _read_settings_json(path: Path) -> dict[str, Any] | None:
     """Read settings from ``path``.
 
     Returns ``{}`` if the file does not exist, and ``None`` (after logging a
-    warning) if it exists but is unreadable or not a JSON object.
+    warning) if it exists but is not a valid JSON object. Raises ``OSError``
+    if it exists but can't be read, so callers never replace a file they
+    couldn't look at.
     """
-    try:
-        if not path.is_file():
-            return {}
-        with path.open("r") as f:
+    if not path.is_file():
+        return {}
+    with path.open("r") as f:
+        try:
             data = json.load(f)
-    except (OSError, ValueError) as e:
-        logger.warning("Ignoring unreadable settings file %s: %s", path, e)
-        return None
+        except ValueError as e:
+            logger.warning("Ignoring invalid settings file %s: %s", path, e)
+            return None
     if not isinstance(data, dict):
         logger.warning("Ignoring settings file %s: expected a JSON object", path)
         return None
@@ -240,7 +242,13 @@ class Settings(BaseModel):
             super().__init__(config_path=Path("/dev/null"), **merged_data)
             return
 
-        merged_data = {**(_read_settings_json(config_path) or {}), **data}
+        try:
+            file_data = _read_settings_json(config_path) or {}
+        except OSError as e:
+            logger.warning("Could not read settings file %s: %s", config_path, e)
+            file_data = {}
+
+        merged_data = {**file_data, **data}
         super().__init__(config_path=config_path, **merged_data)
 
     def clear_user_settings(self) -> None:
@@ -260,13 +268,13 @@ class Settings(BaseModel):
         if str(self.config_path) == "/dev/null":
             return
 
-        existing_data = _read_settings_json(self.config_path)
         try:
+            existing_data = _read_settings_json(self.config_path)
             if existing_data is None:
-                # Keep the unreadable file so the user can recover its values.
+                # Keep the invalid file so the user can recover its values.
                 backup_path = self.config_path.with_name(f"{self.config_path.name}.bak")
                 os.replace(self.config_path, backup_path)
-                logger.warning("Moved unreadable settings file to %s", backup_path)
+                logger.warning("Moved invalid settings file to %s", backup_path)
             _write_secure_json(
                 self.config_path,
                 {**(existing_data or {}), **self.model_dump(exclude_unset=True)},

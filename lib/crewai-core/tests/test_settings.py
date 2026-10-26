@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
 import threading
+from typing import Any
 
 import crewai_core.settings as settings_module
 import pytest
@@ -60,3 +61,29 @@ def test_corrupt_settings_file_is_reported_and_replaced_on_save(
 
     assert json.loads(config_path.read_text())["org_name"] == "new-org"
     assert (tmp_path / "settings.json.bak").read_text() == contents
+
+
+def test_settings_file_that_cannot_be_read_is_left_in_place(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A valid settings file that can't be read is never moved aside or replaced."""
+    config_path = tmp_path / "settings.json"
+    original = '{"org_name": "acme", "tool_repository_username": "u1"}'
+    config_path.write_text(original)
+    real_open = Path.open
+
+    def deny_reading_settings(
+        self: Path, mode: str = "r", *args: Any, **kwargs: Any
+    ) -> Any:
+        if self == config_path and "r" in mode:
+            raise PermissionError("simulated: file locked by another process")
+        return real_open(self, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", deny_reading_settings)
+    settings = settings_module.Settings(config_path=config_path)
+    settings.org_name = "new-org"
+    settings.dump()
+    monkeypatch.undo()
+
+    assert config_path.read_text() == original
+    assert not (tmp_path / "settings.json.bak").exists()
