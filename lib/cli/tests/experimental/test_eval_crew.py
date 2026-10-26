@@ -3896,6 +3896,7 @@ def test_tracing_already_on_follows_the_run_gate(
 ):
     from crewai_core.user_data import update_user_data
 
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_eval_tracing_on")
     monkeypatch.setattr(
         "crewai_core.paths.appdirs.user_data_dir",
@@ -3907,3 +3908,24 @@ def test_tracing_already_on_follows_the_run_gate(
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", env_value)
 
     assert eval_module.tracing_already_on() is already_on
+
+
+def test_tracing_already_on_lets_the_project_env_beat_a_shell_false(
+    tmp_path, monkeypatch
+):
+    """The run loads `.env` over the shell, so `.env` true with a shell false
+    is traced: nobody is asked to turn on what is already on."""
+    from crewai_core.user_data import update_user_data
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_eval_tracing_env")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    update_user_data({"trace_consent": True, "first_execution_done": True})
+    (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+
+    assert eval_module.tracing_turned_off() is False
+    assert eval_module.tracing_already_on() is True

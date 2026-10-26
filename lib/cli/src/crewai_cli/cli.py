@@ -1378,7 +1378,7 @@ def traces_status() -> None:
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="white")
 
-    env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
+    env_enabled = os.getenv("CREWAI_TRACING_ENABLED") or "not set"
     table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
 
     trace_consent = user_data.get("trace_consent")
