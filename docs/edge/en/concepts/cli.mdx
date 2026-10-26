@@ -356,6 +356,14 @@ crewai org switch <organization_id>
 
   This streams the deployment logs to your terminal.
 
+- **Test a deployment**: You can run your deployment once and wait for its result with:
+
+  ```shell Terminal
+  crewai deploy test --inputs '{"topic": "AI"}'
+  ```
+
+  This starts one run through CrewAI AMP with your CLI login, prints its kickoff ID, polls until the run finishes, and prints the result. It exits 0 only when the run succeeds; a failed, stopped or paused run, or no result within `--timeout` seconds (600 by default), exits 1. Each test run counts as an execution of your organization's plan.
+
 - **List deployments**: You can list all your deployments with:
 
   ```shell Terminal

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Literal, cast
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 from crewai_core.plus_api import PlusAPI as _CorePlusAPI
 import httpx
@@ -30,6 +30,49 @@ class PlusAPI(_CorePlusAPI):
     # for a large comparison — and AMP gathers them before it answers.
     EVALUATION_EXPORT_TIMEOUT = httpx.Timeout(EVALUATION_POLL_TIMEOUT, read=120.0)
     CLI_INTEGRATION_TOKEN_RESOURCE = "/crewai_plus/api/v1/me/integration-token"  # noqa: S105 - API path, not a secret
+    CREW_RUN_RESOURCE = "/crewai_plus/api/v1/crew"
+    # AMP gives a sleeping deployment 60 s to wake before it answers.
+    CREW_RUN_TIMEOUT = httpx.Timeout(5.0, read=90.0)
+
+    def _crew_run_path(self, uuid: str | None, name: str | None) -> str:
+        if uuid:
+            return f"{self.CREW_RUN_RESOURCE}/{quote(uuid, safe='')}"
+        if name:
+            return f"{self.CREW_RUN_RESOURCE}/by-name/{quote(name, safe='')}"
+        raise ValueError("Pass the deployment's uuid or name")
+
+    def kickoff_crew(
+        self,
+        inputs: dict[str, Any],
+        *,
+        uuid: str | None = None,
+        name: str | None = None,
+    ) -> httpx.Response:
+        """Start one run of the deployment UUID (or the one named NAME) with INPUTS.
+
+        AMP answers `{"kickoff_id": ...}`; the run counts as an execution.
+        """
+        return self._make_request(
+            "POST",
+            f"{self._crew_run_path(uuid, name)}/kickoff",
+            json={"inputs": inputs},
+            timeout=self.CREW_RUN_TIMEOUT,
+        )
+
+    def crew_kickoff_status(
+        self,
+        kickoff_id: str,
+        *,
+        uuid: str | None = None,
+        name: str | None = None,
+    ) -> httpx.Response:
+        """The runtime's status of run KICKOFF_ID: `{state, status, result}`."""
+        run = quote(kickoff_id, safe="")
+        return self._make_request(
+            "GET",
+            f"{self._crew_run_path(uuid, name)}/tasks/{run}/status",
+            timeout=self.CREW_RUN_TIMEOUT,
+        )
 
     def get_integration_token(self) -> str:
         """Return the Enterprise Action Auth Token for the active organization."""

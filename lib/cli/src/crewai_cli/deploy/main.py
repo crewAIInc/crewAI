@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
 import subprocess
-from typing import Any
+import time
+from typing import Any, NoReturn
 from urllib.parse import quote
 import webbrowser
 
@@ -220,6 +221,52 @@ def _refuse_on_running_comparison(response: httpx.Response) -> None:
     )
     console.print("Nothing was deployed.")
     raise SystemExit(1)
+
+
+_TEST_POLL_INTERVAL = 3.0
+_TEST_POLL_ERRORS_TOLERATED = 3
+_TEST_RUN_RUNNING_STATES = {"PENDING", "STARTED", "RUNNING"}
+
+
+def _fail_test_run(message: str) -> NoReturn:
+    # AMP's and the run's own words: Rich markup in them must print as written.
+    console.print(message, style="bold red", markup=False)
+    raise SystemExit(1)
+
+
+def _json_object(response: httpx.Response) -> dict[str, Any]:
+    try:
+        body = response.json()
+    except ValueError:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def _amp_message(body: dict[str, Any], response: httpx.Response) -> str:
+    return str(body.get("message") or body.get("error") or response.text)
+
+
+def _test_run_succeeded(kickoff_id: str, status: dict[str, Any]) -> bool:
+    """Whether the run behind STATUS (the runtime's `{state, status, result}`)
+    succeeded, printing its result; False while it runs. Any other state exits
+    1, an unknown one included."""
+    state = status.get("state")
+    if state in _TEST_RUN_RUNNING_STATES:
+        return False
+    if state == "SUCCESS":
+        console.print(f"Run {kickoff_id} succeeded.", style="bold green", markup=False)
+        result = status.get("result")
+        console.print(
+            "It returned no result." if result is None else result, markup=False
+        )
+        return True
+    if state == "PAUSED":
+        _fail_test_run(
+            f"Run {kickoff_id} is paused, waiting for human feedback. Answer it "
+            "in AMP to let it finish."
+        )
+    details = status.get("status") or "no details"
+    _fail_test_run(f"Run {kickoff_id} ended in state {state}: {details}")
 
 
 def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
@@ -864,6 +911,68 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         suggested_fix = status_data.get("error_suggested_fix")
         if suggested_fix:
             console.print(f"Fix:\t {suggested_fix}", markup=False)
+
+    def test_deployment(
+        self, uuid: str | None, inputs: dict[str, Any], timeout: float
+    ) -> None:
+        """Run the deployment once with INPUTS and wait up to TIMEOUT seconds for it.
+
+        Prints the run's result and returns only when the run succeeds; any
+        other outcome exits 1, so a script or agent can rely on the exit code.
+        """
+        deployment: dict[str, str | None] = (
+            {"uuid": uuid} if uuid else {"name": self.project_name}
+        )
+        console.print("Starting a run of the deployment...", style="bold blue")
+        try:
+            response = self.plus_api_client.kickoff_crew(inputs, **deployment)
+        except httpx.HTTPError as e:
+            _fail_test_run(
+                f"The request to start the run failed ({e!r}). It may have "
+                "started anyway: check the deployment's executions in AMP before "
+                "running it again."
+            )
+        body = _json_object(response)
+        if not response.is_success:
+            _fail_test_run(
+                f"AMP did not start the run ({response.status_code}): "
+                f"{_amp_message(body, response)}"
+            )
+        kickoff_id = body.get("kickoff_id")
+        if not isinstance(kickoff_id, str) or not kickoff_id:
+            _fail_test_run(f"AMP answered without a kickoff_id: {response.text}")
+        console.print(f"Kickoff ID: {kickoff_id}", markup=False)
+
+        deadline = time.monotonic() + timeout
+        failed_polls = 0
+        while time.monotonic() < deadline:
+            time.sleep(_TEST_POLL_INTERVAL)
+            try:
+                response = self.plus_api_client.crew_kickoff_status(
+                    kickoff_id, **deployment
+                )
+            except httpx.HTTPError as e:
+                problem = repr(e)
+            else:
+                if response.is_success:
+                    if _test_run_succeeded(kickoff_id, _json_object(response)):
+                        return
+                    failed_polls = 0
+                    continue
+                message = _amp_message(_json_object(response), response)
+                problem = f"{response.status_code}: {message}"
+                if not response.is_server_error:
+                    _fail_test_run(f"AMP refused the run's status ({problem})")
+            failed_polls += 1
+            if failed_polls >= _TEST_POLL_ERRORS_TOLERATED:
+                _fail_test_run(
+                    f"Could not read run {kickoff_id}'s status {failed_polls} "
+                    f"times in a row (last: {problem}). It may still be running in AMP."
+                )
+        _fail_test_run(
+            f"Run {kickoff_id} did not finish within {timeout:g} seconds. It keeps "
+            "running in AMP."
+        )
 
     def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
         """

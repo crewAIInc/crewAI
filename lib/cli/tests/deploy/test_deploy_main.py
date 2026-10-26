@@ -1754,3 +1754,319 @@ def test_the_project_id_is_read_from_pyproject(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(deploy_main, "get_project_name", lambda require=False: "demo")
 
     assert deploy_main.DeployCommand()._project() == {"project_id": PROJECT_ID}
+
+
+# `crewai deploy test`: one run of the deployment through AMP, answered locally.
+
+KICKOFF_ID = "5f0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d"
+_RealHttpxClient = httpx.Client
+AmpAnswer = httpx.Response | httpx.HTTPError
+
+
+class _FakeAmp:
+    """AMP's kickoff and status routes. The kickoff answers once; the status
+    answers come in order, and the last one repeats."""
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.kickoff: AmpAnswer = httpx.Response(200, json={"kickoff_id": KICKOFF_ID})
+        self.statuses: list[AmpAnswer] = [_status("SUCCESS", result="done")]
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        if request.method == "POST":
+            answer = self.kickoff
+        elif len(self.statuses) > 1:
+            answer = self.statuses.pop(0)
+        else:
+            answer = self.statuses[0]
+        if isinstance(answer, httpx.HTTPError):
+            raise answer
+        return answer
+
+    @property
+    def status_requests(self) -> list[httpx.Request]:
+        return [request for request in self.requests if request.method == "GET"]
+
+
+class _FakeClock:
+    """Time that moves only when the command sleeps."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+    def monotonic(self) -> float:
+        return self.now
+
+
+def _status(state: str, **fields: object) -> httpx.Response:
+    return httpx.Response(200, json={"state": state, **fields})
+
+
+def _printed(capsys: pytest.CaptureFixture[str]) -> str:
+    """What the command printed, with Rich's line wrapping undone."""
+    return " ".join(capsys.readouterr().out.split())
+
+
+@pytest.fixture
+def amp(monkeypatch, tmp_path: Path):
+    """A logged-in project named `my crew` whose PlusAPI talks to a _FakeAmp."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'my crew'\ndependencies = ['crewai']\n"
+    )
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", lambda: "t")
+    monkeypatch.setattr(deploy_main, "time", _FakeClock())
+    fake = _FakeAmp()
+    transport = httpx.MockTransport(fake)
+    # A machine or OS proxy would mount a real transport ahead of the mock one.
+    monkeypatch.setattr("crewai_core.plus_api._os_proxies", dict)
+    with (
+        patch.dict("crewai_core.plus_api._MACHINE_TRANSPORT_ENV", clear=True),
+        patch(
+            "crewai_core.plus_api.httpx.Client",
+            side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+        ),
+    ):
+        yield fake
+
+
+def test_deploy_test_runs_the_deployment_by_uuid_and_prints_its_result_as_written(
+    amp: _FakeAmp, capsys
+):
+    amp.statuses = [
+        _status("PENDING", status="Task is pending"),
+        _status("RUNNING", status="Task is Running"),
+        _status("SUCCESS", result="[bold]The report[/] is done"),
+    ]
+
+    deploy_main.DeployCommand().test_deployment("dep-uuid", {"topic": "AI"}, 600)
+
+    kickoff, *polls = amp.requests
+    assert kickoff.method == "POST"
+    assert kickoff.url.path == "/crewai_plus/api/v1/crew/dep-uuid/kickoff"
+    assert json.loads(kickoff.content) == {"inputs": {"topic": "AI"}}
+    # AMP gives a sleeping deployment 60 s to wake before it answers.
+    assert kickoff.extensions["timeout"]["read"] == 90.0
+    assert [poll.url.path for poll in polls] == [
+        f"/crewai_plus/api/v1/crew/dep-uuid/tasks/{KICKOFF_ID}/status"
+    ] * 3
+    printed = _printed(capsys)
+    assert f"Kickoff ID: {KICKOFF_ID}" in printed
+    assert f"Run {KICKOFF_ID} succeeded." in printed
+    assert "[bold]The report[/] is done" in printed
+
+
+def test_deploy_test_without_a_uuid_runs_the_deployment_named_after_the_project(
+    amp: _FakeAmp,
+):
+    deploy_main.DeployCommand().test_deployment(None, {}, 600)
+
+    assert [request.url.raw_path for request in amp.requests] == [
+        b"/crewai_plus/api/v1/crew/by-name/my%20crew/kickoff",
+        f"/crewai_plus/api/v1/crew/by-name/my%20crew/tasks/{KICKOFF_ID}/status".encode(),
+    ]
+    assert json.loads(amp.requests[0].content) == {"inputs": {}}
+
+
+def test_deploy_test_says_when_the_run_returned_nothing(amp: _FakeAmp, capsys):
+    amp.statuses = [_status("SUCCESS", result=None)]
+
+    deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert "It returned no result." in _printed(capsys)
+
+
+@pytest.mark.parametrize(
+    ("status", "message"),
+    [
+        (
+            _status("FAILED", status="Boom: [red]the LLM said no[/red]"),
+            f"Run {KICKOFF_ID} ended in state FAILED: Boom: [red]the LLM said no[/red]",
+        ),
+        (
+            _status("PAUSED", status="Awaiting human feedback"),
+            f"Run {KICKOFF_ID} is paused, waiting for human feedback. Answer it in AMP",
+        ),
+        (
+            _status("REVOKED", status="Execution was stopped"),
+            f"Run {KICKOFF_ID} ended in state REVOKED: Execution was stopped",
+        ),
+        (
+            _status("NOT FOUND", status="Task not found"),
+            f"Run {KICKOFF_ID} ended in state NOT FOUND: Task not found",
+        ),
+        (
+            _status("SOMETHING NEW"),
+            f"Run {KICKOFF_ID} ended in state SOMETHING NEW: no details",
+        ),
+        (
+            httpx.Response(200, text="<html>ok</html>"),
+            f"Run {KICKOFF_ID} ended in state None: no details",
+        ),
+    ],
+    ids=["failed", "paused", "revoked", "not-found", "unknown-state", "not-json"],
+)
+def test_deploy_test_exits_1_on_every_outcome_but_success(
+    amp: _FakeAmp, capsys, status: httpx.Response, message: str
+):
+    amp.statuses = [_status("RUNNING"), status]
+
+    with pytest.raises(SystemExit) as exc_info:
+        deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert exc_info.value.code == 1
+    assert message in _printed(capsys)
+    assert len(amp.status_requests) == 2
+
+
+@pytest.mark.parametrize(
+    ("answer", "message"),
+    [
+        (
+            httpx.Response(
+                422,
+                json={
+                    "error": "deployment_is_not_ready",
+                    "message": "The deployment is not ready. (Status='deploying')",
+                },
+            ),
+            "AMP did not start the run (422): The deployment is not ready. "
+            "(Status='deploying')",
+        ),
+        (
+            httpx.Response(
+                403,
+                json={
+                    "error": "forbidden",
+                    "message": "You don't have permission to run this automation.",
+                },
+            ),
+            "AMP did not start the run (403): You don't have permission to run "
+            "this automation.",
+        ),
+        (
+            httpx.Response(
+                429,
+                json={
+                    "error": "execution_limit_reached",
+                    "message": "Your organization reached its execution limit.",
+                },
+            ),
+            "AMP did not start the run (429): Your organization reached its "
+            "execution limit.",
+        ),
+        (
+            httpx.Response(404, json={"error": "deployment_not_found"}),
+            "AMP did not start the run (404): deployment_not_found",
+        ),
+        (
+            httpx.Response(502, text="<html>Bad Gateway</html>"),
+            "AMP did not start the run (502): <html>Bad Gateway</html>",
+        ),
+        (
+            httpx.Response(200, json={"task_id": "x"}),
+            'AMP answered without a kickoff_id: {"task_id":"x"}',
+        ),
+        (
+            httpx.ReadTimeout("timed out"),
+            "The request to start the run failed (ReadTimeout('timed out')). It "
+            "may have started anyway",
+        ),
+    ],
+    ids=[
+        "not-ready",
+        "no-permission",
+        "execution-limit",
+        "not-found",
+        "bad-gateway",
+        "no-kickoff-id",
+        "network-timeout",
+    ],
+)
+def test_deploy_test_exits_1_with_amps_reason_when_the_run_does_not_start(
+    amp: _FakeAmp, capsys, answer: AmpAnswer, message: str
+):
+    amp.kickoff = answer
+
+    with pytest.raises(SystemExit) as exc_info:
+        deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert exc_info.value.code == 1
+    assert message in _printed(capsys)
+    assert amp.status_requests == []
+
+
+def test_deploy_test_rides_out_a_few_failed_status_reads(amp: _FakeAmp, capsys):
+    amp.statuses = [
+        httpx.Response(503, text="Service Unavailable"),
+        httpx.ConnectError("connection refused"),
+        _status("RUNNING"),
+        httpx.Response(500, json={"error": "internal_server_error"}),
+        httpx.ReadTimeout("timed out"),
+        _status("SUCCESS", result="done"),
+    ]
+
+    deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert f"Run {KICKOFF_ID} succeeded." in _printed(capsys)
+
+
+def test_deploy_test_exits_1_after_three_failed_status_reads_in_a_row(
+    amp: _FakeAmp, capsys
+):
+    amp.statuses = [
+        httpx.Response(502, text="Bad Gateway"),
+        httpx.ConnectError("connection refused"),
+        httpx.Response(500, json={"message": "Something went wrong"}),
+    ]
+
+    with pytest.raises(SystemExit) as exc_info:
+        deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert exc_info.value.code == 1
+    assert (
+        f"Could not read run {KICKOFF_ID}'s status 3 times in a row "
+        "(last: 500: Something went wrong). It may still be running in AMP."
+    ) in _printed(capsys)
+
+
+def test_deploy_test_exits_1_at_once_when_amp_refuses_the_status(
+    amp: _FakeAmp, capsys
+):
+    amp.statuses = [httpx.Response(404, json={"message": "Deployment not found"})]
+
+    with pytest.raises(SystemExit) as exc_info:
+        deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 600)
+
+    assert exc_info.value.code == 1
+    assert "AMP refused the run's status (404: Deployment not found)" in _printed(
+        capsys
+    )
+    assert len(amp.status_requests) == 1
+
+
+def test_deploy_test_gives_up_after_its_timeout_and_names_the_run(
+    amp: _FakeAmp, capsys
+):
+    amp.statuses = [_status("RUNNING")]
+
+    with pytest.raises(SystemExit) as exc_info:
+        deploy_main.DeployCommand().test_deployment("dep-uuid", {}, 10)
+
+    assert exc_info.value.code == 1
+    assert (
+        f"Run {KICKOFF_ID} did not finish within 10 seconds. It keeps running in AMP."
+    ) in _printed(capsys)
+    # One read every 3 s on the fake clock: at 3, 6, 9 and 12 s.
+    assert len(amp.status_requests) == 4
+
+
+def test_a_run_request_must_name_its_deployment():
+    from crewai_cli.plus_api import PlusAPI
+
+    with pytest.raises(ValueError, match="Pass the deployment's uuid or name"):
+        PlusAPI("t").kickoff_crew({})

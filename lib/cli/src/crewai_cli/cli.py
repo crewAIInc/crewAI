@@ -925,6 +925,34 @@ def deply_status(uuid: str | None) -> None:
     deploy_cmd.get_crew_status(uuid=uuid)
 
 
+@deploy.command(name="test")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+@click.option(
+    "--inputs",
+    type=str,
+    default=None,
+    help='The run\'s inputs as a JSON object, e.g. \'{"topic":"AI"}\'.',
+)
+@click.option(
+    "--timeout",
+    type=click.IntRange(min=1),
+    default=600,
+    show_default=True,
+    help="Seconds to wait for the run to finish.",
+)
+def deploy_test(uuid: str | None, inputs: str | None, timeout: int) -> None:
+    """Run the deployment once and wait for its result.
+
+    Exits 0 only when the run succeeds. Each run counts as an execution of
+    your organization's plan.
+    """
+    from crewai_cli.input_prompt import parse_inputs_json
+
+    run_inputs = parse_inputs_json(inputs) or {}
+    deploy_cmd = DeployCommand()
+    deploy_cmd.test_deployment(uuid=uuid, inputs=run_inputs, timeout=timeout)
+
+
 @deploy.command(name="logs")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
 def deploy_logs(uuid: str | None) -> None:

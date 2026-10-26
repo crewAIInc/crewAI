@@ -10,6 +10,7 @@ from crewai_cli.cli import (
     deploy_logs,
     deploy_push,
     deploy_remove,
+    deploy_test,
     deply_status,
     evaluate_crew,
     flow_add_crew,
@@ -422,6 +423,57 @@ def test_deploy_status_no_uuid(command, runner):
 
     assert result.exit_code == 0
     mock_deploy.get_crew_status.assert_called_once_with(uuid=None)
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_test(command, runner):
+    mock_deploy = command.return_value
+    result = runner.invoke(
+        deploy_test, ["-u", "test-uuid", "--inputs", '{"topic": "AI"}', "--timeout", "5"]
+    )
+
+    assert result.exit_code == 0
+    mock_deploy.test_deployment.assert_called_once_with(
+        uuid="test-uuid", inputs={"topic": "AI"}, timeout=5
+    )
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_test_defaults(command, runner):
+    mock_deploy = command.return_value
+    result = runner.invoke(deploy_test)
+
+    assert result.exit_code == 0
+    mock_deploy.test_deployment.assert_called_once_with(
+        uuid=None, inputs={}, timeout=600
+    )
+
+
+@pytest.mark.parametrize(
+    ("inputs", "message"),
+    [
+        ("[1]", "Invalid --inputs JSON: expected an object."),
+        ("nope", "Invalid --inputs JSON: Expecting value"),
+    ],
+)
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_test_refuses_inputs_that_are_not_a_json_object(
+    command, runner, inputs, message
+):
+    result = runner.invoke(deploy_test, ["--inputs", inputs])
+
+    assert result.exit_code == 1
+    assert message in result.output
+    command.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_test_refuses_a_timeout_below_one_second(command, runner):
+    result = runner.invoke(deploy_test, ["--timeout", "0"])
+
+    assert result.exit_code == 2
+    assert "Invalid value for '--timeout'" in result.output
+    command.assert_not_called()
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
