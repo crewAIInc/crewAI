@@ -39,7 +39,15 @@ class _HasMethod:
     def class_method(cls) -> str:
         return "class_method"
 
-    class_body_lambda = lambda: None  # noqa: E731
+    @classmethod
+    def owner_name(cls) -> str:
+        return cls.__name__
+
+    class_body_lambda = lambda: None  # noqa: E731 - the lambda itself is under test
+
+
+class _HasMethodSub(_HasMethod):
+    pass
 
 
 class _Model(BaseModel):
@@ -62,7 +70,7 @@ class TestCallableToString:
         assert result == "builtins.print"
 
     def test_lambda_returns_none(self) -> None:
-        fn = lambda: None  # noqa: E731
+        fn = lambda: None  # noqa: E731 - the lambda itself is under test
         assert callable_to_string(fn) is None
 
     def test_closure_returns_none(self) -> None:
@@ -84,6 +92,12 @@ class TestCallableToString:
         assert (
             callable_to_string(_HasMethod.class_method)
             == f"{__name__}._HasMethod.class_method"
+        )
+
+    def test_inherited_classmethod_is_named_through_its_bound_class(self) -> None:
+        assert (
+            callable_to_string(_HasMethodSub.owner_name)
+            == f"{__name__}._HasMethodSub.owner_name"
         )
 
     def test_partial_returns_none(self) -> None:
@@ -111,8 +125,20 @@ class TestStringToCallable:
 
     @pytest.mark.parametrize(
         "fn",
-        [print, dict, module_level_function, _HasMethod.class_method],
-        ids=["builtin", "class", "module_function", "classmethod"],
+        [
+            print,
+            dict,
+            module_level_function,
+            _HasMethod.class_method,
+            _HasMethodSub.owner_name,
+        ],
+        ids=[
+            "builtin",
+            "class",
+            "module_function",
+            "classmethod",
+            "inherited_classmethod",
+        ],
     )
     def test_roundtrippable_callable_no_warning(
         self, fn: Callable[..., Any], recwarn: pytest.WarningsChecker
@@ -247,6 +273,15 @@ class TestSerializableCallableRoundTrip:
         restored = _Model.model_validate_json(m.model_dump_json())
         assert restored.cb is not None
         assert restored.cb() == "class_method"
+
+    def test_json_round_trip_inherited_classmethod_keeps_its_class(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        m = _Model(cb=_HasMethodSub.owner_name)
+        restored = _Model.model_validate_json(m.model_dump_json())
+        assert restored.cb is not None
+        assert restored.cb() == "_HasMethodSub"
 
     @pytest.mark.parametrize(
         "make_cb",

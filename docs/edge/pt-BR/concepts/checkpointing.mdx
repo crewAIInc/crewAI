@@ -59,7 +59,7 @@ Um checkpoint salva um callback como o caminho pontuado de uma função de níve
 
 Estes itens não são salvos e não rodam após uma restauração:
 
-- Lambdas, closures, métodos vinculados como `notifier.on_task_done`, objetos `functools.partial` e instâncias chamáveis. O CrewAI emite o aviso `A ... callback cannot be saved in a checkpoint` quando você atribui um deles. Uma `cache_function` de ferramenta desse tipo volta ao padrão, que permite guardar todos os resultados em cache.
+- Lambdas, closures, métodos vinculados como `notifier.on_task_done`, objetos `functools.partial` e instâncias chamáveis. O CrewAI emite o aviso `A ... callback cannot be saved in a checkpoint` quando você passa um deles para uma `Task`, um `Agent`, uma `Crew` ou uma ferramenta; definir o atributo depois não emite aviso. Uma `cache_function` de ferramenta desse tipo é restaurada como uma função que nunca guarda em cache.
 - Guardrails chamáveis. O CrewAI emite um aviso ao gravar o checkpoint. Guardrails em texto são salvos.
 - Hooks `@before_kickoff` e `@after_kickoff` em uma classe `@CrewBase`.
 

@@ -59,7 +59,7 @@ A checkpoint saves a callback as the dotted path of a module-level function, suc
 
 These are not saved and do not run after a restore:
 
-- Lambdas, closures, bound methods such as `notifier.on_task_done`, `functools.partial` objects, and callable instances. CrewAI warns `A ... callback cannot be saved in a checkpoint` when you assign one. A tool `cache_function` of this kind falls back to the default, which lets every result be cached.
+- Lambdas, closures, bound methods such as `notifier.on_task_done`, `functools.partial` objects, and callable instances. CrewAI warns `A ... callback cannot be saved in a checkpoint` when you pass one to a `Task`, `Agent`, `Crew`, or tool; setting the attribute afterwards does not warn. A tool `cache_function` of this kind is restored as one that never caches.
 - Callable guardrails. CrewAI warns when it writes the checkpoint. String guardrails are saved.
 - `@before_kickoff` and `@after_kickoff` hooks on a `@CrewBase` class.
 

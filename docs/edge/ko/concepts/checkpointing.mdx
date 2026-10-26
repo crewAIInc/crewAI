@@ -59,7 +59,7 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
 
 다음 항목은 저장되지 않으며 복원 후 실행되지 않습니다:
 
-- 람다, 클로저, `notifier.on_task_done` 같은 바운드 메서드, `functools.partial` 객체, 호출 가능한 인스턴스. 이런 콜백을 지정하면 CrewAI가 `A ... callback cannot be saved in a checkpoint` 경고를 표시합니다. 이런 종류의 도구 `cache_function`은 기본값으로 돌아가며, 기본값은 모든 결과의 캐싱을 허용합니다.
+- 람다, 클로저, `notifier.on_task_done` 같은 바운드 메서드, `functools.partial` 객체, 호출 가능한 인스턴스. 이런 콜백을 `Task`, `Agent`, `Crew` 또는 도구에 전달하면 CrewAI가 `A ... callback cannot be saved in a checkpoint` 경고를 표시합니다. 나중에 속성으로 설정하면 경고가 표시되지 않습니다. 이런 종류의 도구 `cache_function`은 아무것도 캐싱하지 않는 함수로 복원됩니다.
 - 호출 가능한 가드레일. CrewAI는 체크포인트를 기록할 때 경고합니다. 문자열 가드레일은 저장됩니다.
 - `@CrewBase` 클래스의 `@before_kickoff` 및 `@after_kickoff` 훅.
 

@@ -1083,6 +1083,12 @@ class TestCallbacksAcrossRestore:
         agent = restored.agents[0]
         assert agent.callbacks == []
         assert [tool.name for tool in agent.tools] == ["echo"]
-        assert agent.tools[0].cache_function(None, None) is True
+        # The lost cache_function may have guarded a state-changing tool.
+        assert agent.tools[0].cache_function(None, None) is False
+        # It is saved by name, so a checkpoint of the restored run keeps it closed.
+        assert (
+            json.loads(agent.tools[0].model_dump_json())["cache_function"]
+            == "crewai.tools.base_tool._never_cache_function"
+        )
         assert len(restored.kickoff().tasks_output) == 2
 

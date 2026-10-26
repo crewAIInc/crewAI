@@ -117,12 +117,19 @@ def callable_to_string(fn: Callable[..., Any]) -> str | None:
         rebuild *fn* from one: lambdas, closures, bound instance methods,
         ``functools.partial`` objects and callable instances.
     """
-    if inspect.ismethod(fn) and not inspect.isclass(fn.__self__):
-        # The path would name the class attribute, which resolves to the
-        # unbound function and fails without ``self`` when called.
-        return None
-    module = getattr(fn, "__module__", None)
-    qualname = getattr(fn, "__qualname__", None)
+    if inspect.ismethod(fn):
+        owner = fn.__self__
+        if not inspect.isclass(owner):
+            # The path would name the class attribute, which resolves to the
+            # unbound function and fails without ``self`` when called.
+            return None
+        # Name a classmethod through the class it is bound to: reached through
+        # a subclass, its own __qualname__ names the parent and rebinds there.
+        module: str | None = owner.__module__
+        qualname: str | None = f"{owner.__qualname__}.{fn.__name__}"
+    else:
+        module = getattr(fn, "__module__", None)
+        qualname = getattr(fn, "__qualname__", None)
     if module is None or qualname is None:
         return None
     if qualname.endswith("<lambda>") or "<locals>" in qualname:

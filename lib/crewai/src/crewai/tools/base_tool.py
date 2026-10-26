@@ -87,8 +87,9 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
         del data["cache_function"]
     elif "cache_function" in data and data["cache_function"] is None:
         # Saved as null when the callable had no importable path (a lambda
-        # or bound method); fall back to the field default.
-        del data["cache_function"]
+        # or bound method). It may have guarded a state-changing tool, so
+        # fail closed rather than fall back to a default that caches.
+        data["cache_function"] = _never_cache_function
     return tool_cls.model_validate(data)  # type: ignore[attr-defined]
 
 
@@ -98,6 +99,10 @@ def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
 
 
 _DEFAULT_CACHE_FUNCTION_PATH = f"{__name__}._default_cache_function"
+
+
+def _never_cache_function(_args: Any = None, _result: Any = None) -> bool:
+    return False
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
