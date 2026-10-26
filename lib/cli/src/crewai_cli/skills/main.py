@@ -420,72 +420,28 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             return None
 
 
-def _validate_tar_member(member: tarfile.TarInfo, dest: Path, dest_resolved: Path) -> None:
-    """Validate a single tar member for path traversal and unsupported types."""
-    member_path = (dest / member.name).resolve()
-    if not member_path.is_relative_to(dest_resolved):
-        raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
-    if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
-        raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
-    if member.issym() or member.islnk():
-        link_target = member.linkname
-        if os.path.isabs(link_target):
-            raise ValueError(
-                f"Blocked link target escaping destination: "
-                f"{member.name!r} -> {link_target!r}"
-            )
-        anchor = dest if member.islnk() else (dest / member.name).parent
-        resolved_target = (anchor / link_target).resolve()
-        if not resolved_target.is_relative_to(dest_resolved):
-            raise ValueError(
-                f"Blocked link target escaping destination: "
-                f"{member.name!r} -> {link_target!r}"
-            )
-
-
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
     """Path-traversal-safe extraction for Python versions without tar filters.
 
-    Extracts members in three phases (directories, files, then symlinks/
-    hardlinks) to eliminate TOCTOU races where a symlink extracted before a
-    file could redirect writes outside the destination. Symlink targets are
-    re-verified at creation time.
+    Only regular files and directories are extracted. Symlink and hardlink
+    members are refused outright: they can redirect a later member's write
+    outside ``dest`` in ways a per-member check cannot see (a member written
+    through an earlier symlink, or a hardlink that ``tarfile`` re-creates as
+    the dangling symlink it names). ``filter="data"`` handles links safely and
+    is used whenever the running Python provides it.
     """
     dest_resolved = dest.resolve()
-    members = tf.getmembers()
-
-    for member in members:
-        _validate_tar_member(member, dest, dest_resolved)
-
-    dirs = [m for m in members if m.isdir()]
-    files = [m for m in members if m.isfile()]
-    links = [m for m in members if m.issym() or m.islnk()]
-
-    for member in dirs:
-        tf.extract(member, dest, set_attrs=False)
-
-    for member in files:
-        tf.extract(member, dest, set_attrs=False)
-
-    for member in links:
-        link_path = (dest / member.name)
-        link_path.parent.mkdir(parents=True, exist_ok=True)
-        if member.issym():
-            # Re-verify target at creation time to catch filesystem changes
-            anchor = link_path.parent
-            resolved_target = (anchor / member.linkname).resolve()
-            if not resolved_target.is_relative_to(dest_resolved):
-                raise ValueError(
-                    f"Blocked link target escaping destination: "
-                    f"{member.name!r} -> {member.linkname!r}"
-                )
-            os.symlink(member.linkname, link_path)
-        else:
-            tf.extract(member, dest, set_attrs=False)
-
-    # Apply directory metadata (mtime, permissions) after all contents are written
-    for member in dirs:
-        tf.extract(member, dest)
+    for member in tf.getmembers():
+        if member.issym() or member.islnk():
+            raise ValueError(
+                f"Blocked link member {member.name!r}: installing skills that "
+                "contain links needs Python 3.10.12+, 3.11.4+, or 3.12+"
+            )
+        if not (member.isfile() or member.isdir()):
+            raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
+        if not (dest / member.name).resolve().is_relative_to(dest_resolved):
+            raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
+    tf.extractall(dest)  # noqa: S202 - every member checked above, and no links
 
 
 def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
