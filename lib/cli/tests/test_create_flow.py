@@ -59,6 +59,8 @@ def test_create_flow_scaffolds_assistant_instructions(
     create_flow("Research Flow")
 
     project_root = tmp_path / "research_flow"
+    tasks_yaml = project_root / "src" / "research_flow" / "crews" / "content_crew" / "config" / "tasks.yaml"
+    assert b"\xe2\x80\x94" in tasks_yaml.read_bytes()
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     assert agents_md.index("## Working in this project") < agents_md.index("## Reference")
     assert "Never turn off tracing or telemetry" in agents_md
