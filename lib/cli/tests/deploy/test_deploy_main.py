@@ -351,7 +351,7 @@ class TestDeployCommand(unittest.TestCase):
             output = fake_out.getvalue()
 
         assert isinstance(exc_info.value, SystemExit)
-        assert exc_info.value.code is None
+        assert exc_info.value.code == 1
         assert "CrewAI AMP did not accept your login:" in output
         # AMP's words as they are: a bracketed word is not Rich markup.
         assert "Bad credentials - User not found [admin]" in output
@@ -366,6 +366,34 @@ class TestDeployCommand(unittest.TestCase):
                 self.deploy_command._validate_response(response)
 
         assert "not_allowed" in fake_out.getvalue()
+
+    def test_validate_response_401_that_is_not_json_still_asks_for_login(self):
+        """A proxy in front of AMP can answer 401 with an HTML page."""
+        response = httpx.Response(401, content=b"<html>401 Unauthorized</html>")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError) as exc_info:
+                self.deploy_command._validate_response(response)
+            output = fake_out.getvalue()
+
+        assert exc_info.value.code == 1
+        assert "<html>401 Unauthorized</html>" in output
+        assert "Run 'crewai login' to sign in again." in output
+        assert "Failed to parse response" not in output
+
+    def test_validate_response_401_with_no_reason_prints_no_placeholder(self):
+        for response in (
+            httpx.Response(401, json={}),
+            httpx.Response(401, json={"message": ""}),
+            httpx.Response(401, content=b""),
+        ):
+            with patch("sys.stdout", new=StringIO()) as fake_out:
+                with pytest.raises(AuthenticationRequiredError):
+                    self.deploy_command._validate_response(response)
+                output = fake_out.getvalue()
+
+            assert "None" not in output
+            assert "Run 'crewai login' to sign in again." in output
 
     def test_validate_response_403_is_not_a_login_problem(self):
         response = httpx.Response(403, json={"error": "forbidden"})
