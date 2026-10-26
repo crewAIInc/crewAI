@@ -407,7 +407,8 @@ class Agent(BaseAgent):
             return v
         # Flatten ``config`` first so a ``from_repository`` set in agents.yaml is
         # seen here, and its config fields override the repository's values.
-        v = process_config(v, cls)
+        # Copy so the caller's mapping keeps its ``config`` key.
+        v = process_config(dict(v), cls)
         if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
         return v

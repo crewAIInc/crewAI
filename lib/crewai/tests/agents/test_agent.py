@@ -2486,14 +2486,9 @@ def test_agent_from_repository_in_config_precedence(
         role="Kwarg Role",
         config={"from_repository": "test_agent", "role": "Yaml Role"},
     )
-    kwarg_repository = Agent(from_repository="test_agent", config={"goal": "Yaml Goal"})
 
     assert (from_config.role, from_config.goal) == ("Yaml Role", "repo goal")
     assert (from_kwarg.role, from_kwarg.goal) == ("Kwarg Role", "repo goal")
-    assert (kwarg_repository.role, kwarg_repository.goal) == (
-        "repo role",
-        "Yaml Goal",
-    )
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
@@ -2548,6 +2543,54 @@ def test_agent_from_repository_in_config_agent_not_found(
         match="Agent test_agent does not exist, make sure the name is correct",
     ):
         Agent(config={"from_repository": "test_agent", "role": "Yaml Role"})
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_kwarg_and_config_fields_config_wins(
+    mock_get_agent, mock_get_auth_token
+):
+    """Behaviour change: config fields used to lose to the repository here."""
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(from_repository="test_agent", config={"goal": "Yaml Goal"})
+
+    assert (agent.role, agent.goal) == ("repo role", "Yaml Goal")
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_requires_login(mock_get_agent):
+    """Logged out, a config ``from_repository`` fails like the keyword form."""
+    from crewai.auth.token import AuthError
+
+    with (
+        patch("crewai_core.token_manager.TokenManager.get_token", return_value=None),
+        pytest.raises(AuthError, match="No token found, make sure you are logged in"),
+    ):
+        Agent(
+            config={
+                "from_repository": "test_agent",
+                "role": "Yaml Role",
+                "goal": "Yaml Goal",
+                "backstory": "Yaml Backstory",
+            }
+        )
+
+    mock_get_agent.assert_not_called()
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_does_not_mutate_input(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+    values = {"from_repository": "test_agent", "config": {"goal": "Yaml Goal"}}
+
+    Agent.model_validate(values)
+
+    assert values == {
+        "from_repository": "test_agent",
+        "config": {"goal": "Yaml Goal"},
+    }
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
