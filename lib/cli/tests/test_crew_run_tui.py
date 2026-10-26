@@ -1594,8 +1594,9 @@ async def _seconds_until_unsubscribed(
     app: CrewRunApp, pilot: Pilot[Any], since: float
 ) -> float:
     # Assert only a lower bound on the result: a loaded machine can make the
-    # drain timer late, never early.
-    while app._event_handlers and time.monotonic() - since < 5:
+    # drain timer seconds late, but Textual fires it at most ~0.5ms early. The
+    # 30s cap stays under the suite's --timeout=60 and costs only on failure.
+    while app._event_handlers and time.monotonic() - since < 30:
         await pilot.pause(0.01)
     return time.monotonic() - since
 
@@ -1651,7 +1652,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
-    assert waited >= 0.05
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
@@ -1678,9 +1679,10 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                 parent_event_id="manual-parent",
             )
             # No pause before the completion: the drain timer _on_crew_done
-            # armed must still be pending when it arrives. Under load a pause
-            # can last exactly the grace, and that stale timer's callback then
-            # runs after the completion but before its re-arm.
+            # armed must still be pending when it arrives. If it has already
+            # woken, its callback runs before the completion's re-arm and the
+            # app unsubscribes without a fresh grace. That is a product race,
+            # not a test artifact; remove this note once the app handles it.
             _emit_event(started_event)
 
             assert app._log_entries[0]["tool_name"] == "memory_save"
@@ -1713,7 +1715,7 @@ async def test_crew_done_waits_for_queued_memory_save_events(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
-    assert waited >= 0.05
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
