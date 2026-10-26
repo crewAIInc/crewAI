@@ -117,9 +117,13 @@ def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
     return None
 
 
-def _is_rooted_path(path: str) -> bool:
-    """Return True for POSIX/backslash-rooted, drive-qualified, or UNC paths."""
-    return path.startswith(("/", "\\")) or bool(PureWindowsPath(path).drive)
+def _path_anchor(path: str) -> int:
+    """Rank how *path* is anchored: 0 relative, 1 drive-relative (``C:x``),
+    2 rooted (``/x``, ``\\x``, ``C:\\x``, or UNC)."""
+    windows_path = PureWindowsPath(path)
+    if path.startswith(("/", "\\")) or windows_path.root:
+        return 2
+    return 1 if windows_path.drive else 0
 
 
 class Task(BaseModel):
@@ -1155,7 +1159,7 @@ Follow these guidelines:
                 )
                 # Set at the top of this method whenever output_file is.
                 template = cast(str, self._original_output_file)
-                if _is_rooted_path(output_file) and not _is_rooted_path(template):
+                if _path_anchor(output_file) > _path_anchor(template):
                     raise ValueError(
                         "Template inputs cannot make output_file an absolute path"
                     )

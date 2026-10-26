@@ -1241,6 +1241,33 @@ def test_rejected_output_file_is_not_kept_for_later_runs(injected):
     assert task.output_file == "reports/finance.txt"
 
 
+@pytest.mark.parametrize("injected", ["/Windows/Temp/pwn", "\\Windows\\Temp\\pwn"])
+def test_output_file_drive_relative_template_cannot_become_absolute(injected):
+    """A drive-relative template (C:name) is not a root the inputs may extend."""
+    task = Task(
+        description="Write {name}",
+        expected_output="A report",
+        output_file="C:{name}.txt",
+    )
+
+    with pytest.raises(
+        ValueError, match="Template inputs cannot make output_file an absolute path"
+    ):
+        task.interpolate_inputs_and_add_conversation_history({"name": injected})
+
+
+def test_output_file_drive_relative_template_accepts_relative_input():
+    task = Task(
+        description="Write {name}",
+        expected_output="A report",
+        output_file="C:{name}.txt",
+    )
+
+    task.interpolate_inputs_and_add_conversation_history({"name": "report"})
+
+    assert task.output_file == "C:report.txt"
+
+
 def test_output_file_unresolved_template_via_interpolation():
     """An input that smuggles template syntax back into the path is rejected."""
     task = Task(
