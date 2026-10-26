@@ -131,7 +131,7 @@ Not used by default; reach for these when the task calls for them. Each line end
 - MCP: `Agent(mcps=["https://.../mcp", "<connected-slug>", MCPServerStdio(...)])` (`from crewai.mcp import MCPServerStdio`). `mcp/overview`
 - A2A: `Agent(a2a=A2AClientConfig(endpoint=...))` calls a remote agent; `A2AServerConfig` exposes one (`from crewai.a2a import A2AClientConfig, A2AServerConfig`).
 - Human feedback in flows: `@human_feedback(message=..., emit=["approved", "rejected"], llm=...)` routes a step on the reply. `learn/human-feedback-in-flows`
-- Chat: `crewai chat` talks to a classic crew (its `chat_llm`, else `MODEL`; JSON crews aren't supported yet), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
+- Chat: `crewai chat` talks to a crew (its `chat_llm`, else `MODEL`), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
 - Declarative flows: `crewai create flow <name> --declarative` keeps the flow in `flow.yaml`. `concepts/cli`
 - Checkpoints: `Crew(checkpoint=True)`; resume with `kickoff(from_checkpoint=CheckpointConfig(restore_from=path))`. `concepts/checkpointing`
 - Flow conditions: `@listen(or_(a, b))`, `and_(a, b)`; `flow.plot()` draws the graph. `concepts/flows`
