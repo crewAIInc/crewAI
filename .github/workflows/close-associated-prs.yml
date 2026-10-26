@@ -24,7 +24,7 @@ jobs:
             });
             const permittedRoles = new Set(["triage", "write", "maintain", "admin"]);
 
-            if (!permittedRoles.has(collaborator.permission)) {
+            if (!permittedRoles.has(collaborator.role_name)) {
               core.info(`Skipping issue closure by ${context.payload.sender.login}: insufficient repository permission.`);
               return;
             }
