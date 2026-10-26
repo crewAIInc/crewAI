@@ -12,17 +12,19 @@ import threading
 import warnings
 from pathlib import Path
 from unittest import mock
+from uuid import UUID
 
 import click
 import httpx
 import pytest
 import tomli
 from click.testing import CliRunner
-from crewai_core.platform_apps import PLATFORM_APPS
+from crewai_core.platform_apps import PLATFORM_APP_CATEGORIES, PLATFORM_APPS
 from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli import __version__ as crewai_cli_version
 from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.utils import copy_assistant_instructions, render_template
@@ -526,7 +528,7 @@ def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     assert len(action_indices) >= 4
     # Only the common tools section is visible beyond the category rows
     assert len(labels) == 1 + 5 + len(action_indices)
-    assert any(label == "▸ CrewAI Platform  (125 applications)" for label in labels)
+    assert f"▸ CrewAI Platform  ({len(PLATFORM_APPS)} applications)" in labels
 
 
 def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
@@ -742,14 +744,8 @@ def test_platform_applications_expand_in_the_main_tool_picker(monkeypatch):
     assert json_crew._select_tools() == ["platform:github"]
     labels = picker_calls[1][1]
     assert labels[0] == "── Common tools ──"
-    assert any(
-        label == "  ▸ Google Workspace & Google Cloud  (17 applications)"
-        for label in labels
-    )
-    assert any(
-        label == "  ▸ Engineering, data & infrastructure  (11 applications)"
-        for label in labels
-    )
+    for category in PLATFORM_APP_CATEGORIES:
+        assert f"  ▸ {category.name}  ({len(category.apps)} applications)" in labels
     assert picker_calls[1][2]["initial_cursor"] == next(
         index for index, label in enumerate(labels) if "CrewAI Platform" in label
     )
@@ -1284,12 +1280,15 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
     assert dependency == get_crewai_tools_dependency()
-    assert Version("1.15.0") in Requirement(dependency).specifier
-    assert Version("2.0.0") not in Requirement(dependency).specifier
+    current = Version(crewai_cli_version)
+    assert current in Requirement(dependency).specifier
+    assert Version(f"{current.major + 1}.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
-    assert pyproject["tool"]["crewai"] == {
+    crewai_table = pyproject["tool"]["crewai"]
+    UUID(crewai_table.pop("project_id"))
+    assert crewai_table == {
         "type": "crew",
         "definition": "crew.jsonc",
     }
@@ -1493,7 +1492,8 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )
-    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+    default_model = json_crew._default_model_for_provider("anthropic")
+    assert f'"llm": "{default_model}"' in agent_template
 
 
 def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):

@@ -12,6 +12,7 @@ from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 import crewai_cli.input_prompt as input_prompt_module
 import crewai_cli.run_crew as run_crew_module
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
@@ -32,7 +33,7 @@ def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
 
     message = exc_info.value.message
     assert "CrewAI CLI is installed without the `crewai` package" in message
-    assert "uv tool install --force 'crewai[tools]>=1.15.0,<2.0.0'" in message
+    assert f"uv tool install --force '{get_crewai_tools_dependency()}'" in message
     assert "quotes are required in zsh" in message
 
 

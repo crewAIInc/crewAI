@@ -1,4 +1,6 @@
+import os
 import sys
+import tempfile
 import unittest
 from io import StringIO
 from pathlib import Path
@@ -208,6 +210,17 @@ class TestDeployCommand(unittest.TestCase):
         mock_get_project_name,
         mock_get_auth_token,
     ):
+        # Run from a locked project dir: in a dir with a pyproject.toml and no
+        # uv.lock (e.g. lib/cli), deploy runs a real `uv sync` that strips the venv.
+        project_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(project_dir.cleanup)
+        Path(project_dir.name, "pyproject.toml").write_text(
+            "[project]\nname = 'test_project'\n"
+        )
+        Path(project_dir.name, "uv.lock").write_text("# lock\n")
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(project_dir.name)
+
         self.mock_get_auth_token = mock_get_auth_token
         self.mock_get_project_name = mock_get_project_name
         self.mock_plus_api = mock_plus_api
@@ -244,7 +257,7 @@ class TestDeployCommand(unittest.TestCase):
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
-        self.mock_plus_api.assert_called_once_with(api_key="test_token")
+        self.mock_plus_api.assert_called_once_with(api_key="test_token", base_url=None)
 
     @patch("builtins.input")
     def test_confirm_zip_input_only_confirms_env_vars(self, mock_input):
