@@ -96,6 +96,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "nvidia_nim": ProviderConfig(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key_env="NVIDIA_NIM_API_KEY",
+        base_url_env="NVIDIA_NIM_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -149,6 +155,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - nvidia_nim: NVIDIA NIM (https://build.nvidia.com)
 
     Example:
         # Using provider prefix

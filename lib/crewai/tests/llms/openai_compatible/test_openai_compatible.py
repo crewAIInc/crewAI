@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_nvidia_nim_config(self):
+        """Test NVIDIA NIM provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["nvidia_nim"]
+        assert config.base_url == "https://integrate.api.nvidia.com/v1"
+        assert config.api_key_env == "NVIDIA_NIM_API_KEY"
+        assert config.base_url_env == "NVIDIA_NIM_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -177,6 +185,15 @@ class TestOpenAICompatibleCompletion:
         ):
             OpenAICompatibleCompletion(
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
+            )
+
+    def test_nvidia_nim_missing_api_key_names_env_var(self):
+        """NVIDIA NIM requires a key; the error tells the user which env var to set."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="NVIDIA_NIM_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="nvidia/nemotron-3-super-120b-a12b", provider="nvidia_nim"
             )
 
     def test_api_key_from_env(self):
@@ -360,6 +377,37 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepinfra"
             assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+
+    def test_llm_creates_openai_compatible_for_nvidia_nim(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for NVIDIA NIM."""
+        with patch.dict(os.environ, {"NVIDIA_NIM_API_KEY": "test-key"}):
+            llm = LLM(model="nvidia_nim/nvidia/nemotron-3-super-120b-a12b")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "nvidia_nim"
+            # NIM ids are publisher/model and must reach the API intact.
+            assert llm.model == "nvidia/nemotron-3-super-120b-a12b"
+            assert llm.base_url == "https://integrate.api.nvidia.com/v1"
+
+    def test_nvidia_nim_base_url_env_override(self):
+        """NVIDIA_NIM_BASE_URL redirects NVIDIA NIM to a self-hosted endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "NVIDIA_NIM_API_KEY": "test-key",
+                "NVIDIA_NIM_BASE_URL": "http://localhost:8000/v1",
+            },
+        ):
+            llm = LLM(model="nvidia_nim/nvidia/nemotron-3-super-120b-a12b")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "http://localhost:8000/v1"
+
+    def test_llm_creates_openai_compatible_for_nvidia_nim_explicit_provider(self):
+        """Explicit provider="nvidia_nim" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"NVIDIA_NIM_API_KEY": "test-key"}):
+            llm = LLM(model="nvidia/nemotron-3-super-120b-a12b", provider="nvidia_nim")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "nvidia_nim"
+            assert llm.model == "nvidia/nemotron-3-super-120b-a12b"
 
     @pytest.mark.parametrize(
         "model",
