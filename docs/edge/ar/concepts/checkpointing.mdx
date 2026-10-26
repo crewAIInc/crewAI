@@ -59,7 +59,7 @@ mode: "wide"
 
 لا تحفظ العناصر التالية ولا تعمل بعد الاستعادة:
 
-- دوال lambda، والـ closures، والدوال المرتبطة مثل `notifier.on_task_done`، وكائنات `functools.partial`، والكائنات القابلة للاستدعاء. يعرض CrewAI التحذير `A ... callback cannot be saved in a checkpoint` عند تعيين أي منها.
+- دوال lambda، والـ closures، والدوال المرتبطة مثل `notifier.on_task_done`، وكائنات `functools.partial`، والكائنات القابلة للاستدعاء. يعرض CrewAI التحذير `A ... callback cannot be saved in a checkpoint` عند تعيين أي منها. تعود دالة `cache_function` لأداة من هذا النوع إلى الدالة الافتراضية، التي تسمح بتخزين كل النتائج مؤقتا.
 - الـ guardrails القابلة للاستدعاء. يعرض CrewAI تحذيرا عند كتابة نقطة الحفظ. تحفظ الـ guardrails النصية.
 - خطافات `@before_kickoff` و`@after_kickoff` في فئة `@CrewBase`.
 

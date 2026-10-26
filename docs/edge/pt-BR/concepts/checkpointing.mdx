@@ -26,7 +26,7 @@ O checkpointing salva um snapshot do estado de execução durante uma execução
 
 ### O que é um checkpoint
 
-Um checkpoint captura o estado que o CrewAI precisa para recriar uma execução em andamento: o estado completo da crew, flow ou agente — configuração, memória e fontes de conhecimento dos agentes, progresso das tarefas, saídas intermediárias, estado interno e atributos — junto com os inputs do kickoff, o histórico de eventos até aquele ponto e um ID de linhagem que liga o checkpoint à execução de origem. Callbacks são salvos apenas como referências a funções nomeadas; veja [O que uma restauração não traz de volta](#o-que-uma-restauracao-nao-traz-de-volta).
+Um checkpoint captura o estado que o CrewAI precisa para recriar uma execução em andamento: o estado completo da crew, flow ou agente — configuração, memória e fontes de conhecimento dos agentes, progresso das tarefas, saídas intermediárias, estado interno e atributos — junto com os inputs do kickoff, o histórico de eventos até aquele ponto e um ID de linhagem que liga o checkpoint à execução de origem. Callbacks são salvos apenas como referências a funções nomeadas; veja [O que uma restauração não traz de volta](#o-que-uma-restauração-não-traz-de-volta).
 
 Restaurar reconstrói esse estado e continua. Tarefas concluídas são puladas, memória e conhecimento são reidratados, e o trabalho downstream roda contra as mesmas saídas que a execução original produziu. Fazer fork executa a mesma restauração sob uma nova linhagem, para que a nova branch e a execução original gravem checkpoints lado a lado sem sobrescrever uma a outra.
 
@@ -59,7 +59,7 @@ Um checkpoint salva um callback como o caminho pontuado de uma função de níve
 
 Estes itens não são salvos e não rodam após uma restauração:
 
-- Lambdas, closures, métodos vinculados como `notifier.on_task_done`, objetos `functools.partial` e instâncias chamáveis. O CrewAI emite o aviso `A ... callback cannot be saved in a checkpoint` quando você atribui um deles.
+- Lambdas, closures, métodos vinculados como `notifier.on_task_done`, objetos `functools.partial` e instâncias chamáveis. O CrewAI emite o aviso `A ... callback cannot be saved in a checkpoint` quando você atribui um deles. Uma `cache_function` de ferramenta desse tipo volta ao padrão, que permite guardar todos os resultados em cache.
 - Guardrails chamáveis. O CrewAI emite um aviso ao gravar o checkpoint. Guardrails em texto são salvos.
 - Hooks `@before_kickoff` e `@after_kickoff` em uma classe `@CrewBase`.
 
@@ -125,7 +125,7 @@ Este passo a passo leva cerca de 5 minutos. Você executará uma crew de duas ta
     A tarefa de pesquisa é pulada, o escritor executa contra a saída de pesquisa salva e a crew finaliza.
 
     <Note>
-    A crew retomada é construída a partir do arquivo de checkpoint, não de `crew`. Se suas tarefas usam callbacks, leia [O que uma restauração não traz de volta](#o-que-uma-restauracao-nao-traz-de-volta).
+    A crew retomada é construída a partir do arquivo de checkpoint, não de `crew`. Se suas tarefas usam callbacks, leia [O que uma restauração não traz de volta](#o-que-uma-restauração-não-traz-de-volta).
     </Note>
   </Step>
 </Steps>

@@ -31,6 +31,7 @@ from crewai.state.provider.json_provider import JsonProvider
 from crewai.state.provider.sqlite_provider import SqliteProvider
 from crewai.state.runtime import RuntimeState
 from crewai.task import Task
+from crewai.tools.base_tool import BaseTool
 
 
 
@@ -819,7 +820,7 @@ class TestCheckpointReusedExecutor:
                 tasks=[task1, task2],
                 verbose=False,
                 checkpoint=CheckpointConfig(
-                    location=d,
+                    provider=JsonProvider(location=d),
                     on_events=["task_started", "task_completed"],
                 ),
             )
@@ -897,6 +898,17 @@ class _CallbackOwner:
     def on_task_done(self, output: Any) -> None:
         _RAN_TASKS.append(f"bound:{output.description}")
 
+    def never_cache(self, _args: Any = None, _result: Any = None) -> bool:
+        return False
+
+
+class _EchoTool(BaseTool):
+    name: str = "echo"
+    description: str = "Echoes its input."
+
+    def _run(self, text: str) -> str:
+        return text
+
 
 class TestCallbacksAcrossRestore:
     """A restore builds the crew from the checkpoint file, not from the crew
@@ -927,10 +939,18 @@ class TestCallbacksAcrossRestore:
         crewai_event_bus.reset_runtime_state()
         _RAN_TASKS.clear()
 
-    def _build(self, location: Path, second_callback: Any) -> Crew:
+    def _build(
+        self, location: Path, second_callback: Any, **agent_kwargs: Any
+    ) -> Crew:
         from crewai.llm import LLM
 
-        agent = Agent(role="r", goal="g", backstory="b", llm=LLM(model="gpt-4o-mini"))
+        agent = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            llm=LLM(model="gpt-4o-mini"),
+            **agent_kwargs,
+        )
         first = Task(description="first", expected_output="x", agent=agent)
         second = Task(
             description="second",
@@ -959,8 +979,10 @@ class TestCallbacksAcrossRestore:
             restore_from=saved, location=str(tmp_path / "resumed")
         )
 
-    def _run_once(self, tmp_path: Path, second_callback: Any) -> str:
-        self._build(tmp_path / "run", second_callback).kickoff()
+    def _run_once(
+        self, tmp_path: Path, second_callback: Any, **agent_kwargs: Any
+    ) -> str:
+        self._build(tmp_path / "run", second_callback, **agent_kwargs).kickoff()
         _RAN_TASKS.clear()
         return self._first_task_checkpoint(tmp_path / "run")
 
@@ -1032,3 +1054,35 @@ class TestCallbacksAcrossRestore:
                 from_checkpoint=self._restore_config(tmp_path, saved)
             )
         assert _RAN_TASKS == []
+
+    @pytest.mark.parametrize(
+        "make_callable",
+        [
+            lambda: lambda _args=None, _result=None: False,
+            lambda: _CallbackOwner().never_cache,
+        ],
+        ids=["lambda", "bound_method"],
+    )
+    def test_unsaveable_tool_cache_function_and_agent_callback_do_not_block_restore(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        make_callable: Any,
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        with pytest.warns(UserWarning, match="dropped and will not run"):
+            saved = self._run_once(
+                tmp_path,
+                None,
+                tools=[_EchoTool(cache_function=make_callable())],
+                callbacks=[make_callable()],
+            )
+
+        restored = Crew.from_checkpoint(self._restore_config(tmp_path, saved))
+
+        agent = restored.agents[0]
+        assert agent.callbacks == []
+        assert [tool.name for tool in agent.tools] == ["echo"]
+        assert agent.tools[0].cache_function(None, None) is True
+        assert len(restored.kickoff().tasks_output) == 2
+

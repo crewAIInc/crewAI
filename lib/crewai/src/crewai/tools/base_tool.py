@@ -85,6 +85,10 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
     # The default needs no import, so restoring it must not require the opt-in.
     if data.get("cache_function") == _DEFAULT_CACHE_FUNCTION_PATH:
         del data["cache_function"]
+    elif "cache_function" in data and data["cache_function"] is None:
+        # Saved as null when the callable had no importable path (a lambda
+        # or bound method); fall back to the field default.
+        del data["cache_function"]
     return tool_cls.model_validate(data)  # type: ignore[attr-defined]
 
 
