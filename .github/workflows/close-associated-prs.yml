@@ -20,21 +20,13 @@ jobs:
               query($owner: String!, $repo: String!, $issueNumber: Int!, $cursor: String) {
                 repository(owner: $owner, name: $repo) {
                   issue(number: $issueNumber) {
-                    timelineItems(
+                    closedByPullRequestsReferences(
                       first: 100
                       after: $cursor
-                      itemTypes: [CROSS_REFERENCED_EVENT]
                     ) {
                       nodes {
-                        ... on CrossReferencedEvent {
-                          source {
-                            __typename
-                            ... on PullRequest {
-                              number
-                              state
-                            }
-                          }
-                        }
+                        number
+                        state
                       }
                       pageInfo {
                         hasNextPage
@@ -56,15 +48,17 @@ jobs:
                 issueNumber: context.payload.issue.number,
                 cursor,
               });
-              const timeline = result.repository.issue.timelineItems;
+              const pullRequestReferences = result.repository.issue.closedByPullRequestsReferences;
 
-              for (const item of timeline.nodes) {
-                if (item.source?.__typename === "PullRequest" && item.source.state === "OPEN") {
-                  pullRequests.add(item.source.number);
+              for (const pullRequest of pullRequestReferences.nodes) {
+                if (pullRequest.state === "OPEN") {
+                  pullRequests.add(pullRequest.number);
                 }
               }
 
-              cursor = timeline.pageInfo.hasNextPage ? timeline.pageInfo.endCursor : null;
+              cursor = pullRequestReferences.pageInfo.hasNextPage
+                ? pullRequestReferences.pageInfo.endCursor
+                : null;
             } while (cursor);
 
             for (const pullNumber of pullRequests) {
