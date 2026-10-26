@@ -165,6 +165,10 @@ class AuthenticationCommand:
                 console.print("\n[bold green]Welcome to CrewAI AMP![/bold green]\n")
                 return
 
+            # The provider's clock for the code started before ours did, so its
+            # `expired_token` can arrive before our deadline; it is the same timeout.
+            if token_data["error"] == "expired_token":
+                break
             if token_data["error"] not in ("authorization_pending", "slow_down"):
                 raise httpx.HTTPError(
                     token_data.get("error_description") or token_data.get("error")

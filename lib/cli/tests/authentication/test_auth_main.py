@@ -474,6 +474,30 @@ class TestAuthenticationCommand:
 
     @patch("crewai_core.auth.oauth2.httpx.post")
     @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_treats_the_providers_expired_token_as_the_timeout(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        """The provider can expire the code before our own deadline passes."""
+        mock_post.side_effect = [
+            _token_response(400, {"error": "authorization_pending"}),
+            _token_response(400, {"error": "expired_token"}),
+        ]
+
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 300}
+            )
+
+        assert exc_info.value.code == 1
+        assert fake_clock.now == 5
+        mock_console_print.assert_any_call(
+            "Timeout: the login code expired before sign-in finished. "
+            "Please try again.",
+            style="bold red",
+        )
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_poll_for_token_signs_in_after_more_than_ten_pending_polls(
         self, mock_console_print, mock_post, fake_clock
     ):

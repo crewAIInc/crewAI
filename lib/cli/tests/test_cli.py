@@ -363,13 +363,22 @@ def test_login(command, runner):
     mock_auth.login.assert_called_once()
 
 
-@mock.patch("crewai_cli.cli.AuthenticationCommand")
-def test_login_exits_non_zero_when_the_login_times_out(command, runner):
-    command.return_value.login.side_effect = SystemExit(1)
+@mock.patch("crewai_core.auth.oauth2.webbrowser.open")
+@mock.patch("crewai_core.auth.oauth2.httpx.post")
+def test_login_exits_non_zero_when_the_login_times_out(mock_post, _open, runner):
+    mock_post.return_value.json.return_value = {
+        "device_code": "test_device_code",
+        "user_code": "ABCD-EFGH",
+        "verification_uri": "https://example.com/activate",
+        "interval": 5,
+        "expires_in": 0,
+    }
 
     result = runner.invoke(login)
 
     assert result.exit_code == 1
+    assert "the login code expired before sign-in finished" in result.output
+    mock_post.assert_called_once()
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
