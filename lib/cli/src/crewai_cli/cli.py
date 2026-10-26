@@ -813,7 +813,15 @@ def eval_export_command(evaluation_id: str) -> None:
 
 @crewai.command()
 def update() -> None:
-    """Update the pyproject.toml of the Crew project to use uv."""
+    """Convert a Poetry project to uv.
+
+    Rewrites pyproject.toml for uv and keeps the original as pyproject-old.toml.
+    It does not upgrade CrewAI. To upgrade:
+
+    \b
+      CLI:     uv tool upgrade crewai
+      Project: crewai install --upgrade-package crewai --upgrade-package crewai-tools
+    """
     from crewai_cli.update_crew import update_crew
 
     update_crew()

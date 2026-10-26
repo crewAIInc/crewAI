@@ -1,15 +1,38 @@
 import os
+from pathlib import Path
 import shutil
 from typing import Any
 
+import click
 import tomli_w
 
 from crewai_cli.utils import read_toml
 
 
+_NOTHING_TO_CONVERT = """\
+Nothing to convert: `crewai update` only converts Poetry projects to uv. It does not upgrade CrewAI.
+To upgrade CrewAI:
+  CLI:     uv tool upgrade crewai
+  Project: crewai install --upgrade-package crewai --upgrade-package crewai-tools
+For a new major version, see https://docs.crewai.com/en/guides/migration/upgrading-crewai"""
+
+
 def update_crew() -> None:
-    """Update the pyproject.toml of the Crew project to use uv."""
+    """Convert the Poetry project in the current directory to uv.
+
+    Does not upgrade CrewAI. Without a ``[tool.poetry]`` table in
+    ``./pyproject.toml`` nothing is written and the upgrade commands are printed.
+    """
+    pyproject = Path("pyproject.toml")
+    if not pyproject.exists() or not read_toml(pyproject).get("tool", {}).get("poetry"):
+        click.echo(_NOTHING_TO_CONVERT)
+        return
+
     migrate_pyproject("pyproject.toml", "pyproject.toml")
+    click.echo(
+        "Converted pyproject.toml to uv; the original is saved as pyproject-old.toml. "
+        "Run `crewai install` to install the dependencies."
+    )
 
 
 def migrate_pyproject(input_file: str, output_file: str) -> None:
