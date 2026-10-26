@@ -7,9 +7,9 @@ mode: "wide"
 
 ## Overview
 
-Agent reasoning lets an agent reflect on a task and write a plan before it acts. It is now part of agent planning, which also executes the plan step by step, checks each step, and replans when a step fails.
+Agent reasoning lets an agent reflect on a task and write a plan before it acts. It is now part of agent planning, which also executes the plan step by step, checks each step, and can replan when a step fails.
 
-The `reasoning` and `max_reasoning_attempts` parameters still work but are deprecated, and the agent emits a `DeprecationWarning` when you use them. Configure planning with `planning_config` instead. See [Planning](/edge/en/concepts/planning) for the full guide.
+The `reasoning` and `max_reasoning_attempts` parameters still work but are deprecated. `reasoning=True` emits a `DeprecationWarning`, which Python's default warning filters hide, and `max_reasoning_attempts` has an effect only together with `reasoning=True`. Configure planning with `planning_config` instead. See [Planning](/edge/en/concepts/planning) for the full guide.
 
 ## Migrating from `reasoning=True`
 

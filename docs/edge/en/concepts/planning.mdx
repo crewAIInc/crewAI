@@ -10,7 +10,7 @@ mode: "wide"
 CrewAI can plan at two levels:
 
 - **Agent planning**: an agent writes a step-by-step plan for its own work, then executes and checks each step. Configure it with `Agent(planning_config=PlanningConfig(...))`.
-- **Crew planning**: before the crew runs, an `AgentPlanner` writes a plan for every task and adds it to each task description. Enable it with `Crew(planning=True)`.
+- **Crew planning**: before the crew runs, a `CrewPlanner` writes a plan for every task and adds it to each task description. Enable it with `Crew(planning=True)`.
 
 You can use either one, or both together.
 
@@ -49,11 +49,11 @@ The presence of a `PlanningConfig` turns planning on. To turn it off, leave `pla
 
 When the agent starts a task, it runs a plan-and-execute loop:
 
-1. **Plan.** The planning LLM writes a plan of at most `max_steps` steps and says whether the plan is ready.
+1. **Plan.** The planning LLM writes a plan, asked to stay within `max_steps` steps, and says whether the plan is ready.
 2. **Refine.** If the plan is not ready, the planner refines it until it is ready or `max_attempts` is reached.
 3. **Execute.** Each step becomes a todo item and runs in its own tool loop, limited by `max_step_iterations` and `step_timeout`.
 4. **Observe.** After each step, the agent checks the result. How much it checks depends on `reasoning_effort`.
-5. **Replan.** If a step fails or the plan no longer fits, the agent writes a new plan, up to `max_replans` times.
+5. **Replan.** Depending on `reasoning_effort`, a failed step or a plan that no longer fits makes the agent write a new plan, up to `max_replans` times.
 6. **Answer.** The agent builds the final answer from the step results.
 
 The plan is kept in the agent's execution state. It is not added to the task description.
@@ -67,10 +67,10 @@ Step-by-step execution needs a ready plan with structured steps, which the plann
 | Level | After each step | Cost |
 | --- | --- | --- |
 | `"low"` | A heuristic check with no extra LLM call. A failed step is marked as failed and the agent continues in order, without replanning. | Fastest |
-| `"medium"` (default) | An LLM reviews the step. The agent replans when the step failed. | Balanced |
+| `"medium"` (default) | An LLM reviews the step. If the step failed and the review says the plan no longer works, the agent replans; otherwise it marks the step as failed and continues. | Balanced |
 | `"high"` | An LLM reviews the step, then decides whether to finish early, replan, or refine the remaining steps. | Most adaptive, slowest |
 
-`observe_steps` overrides the LLM review at any level: `True` adds it to `"low"`, and `False` removes it from `"medium"` and `"high"`.
+`observe_steps` overrides the LLM review at any level: `True` adds it to `"low"`, and `False` removes it from `"medium"` and `"high"`. With `observe_steps=True`, `"low"` also replans when the review says a failed step needs a new plan.
 
 ### Configuration options
 
@@ -87,7 +87,7 @@ Step-by-step execution needs a ready plan with structured steps, which the plann
 </ParamField>
 
 <ParamField body="max_steps" type="int" default="20">
-  Maximum number of steps in a plan. Must be at least 1.
+  The step limit the planner is asked to respect. It is passed to the prompt as `{max_steps}` and is not enforced on the returned plan. Must be at least 1.
 </ParamField>
 
 <ParamField body="max_replans" type="int" default="3">
@@ -99,7 +99,7 @@ Step-by-step execution needs a ready plan with structured steps, which the plann
 </ParamField>
 
 <ParamField body="step_timeout" type="int" default="None">
-  Maximum seconds for a single step. A step that runs longer is marked as failed. `None` means no timeout.
+  Maximum seconds for a single step, checked before each LLM call in the step. When it is exceeded, the step stops and returns what it has so far. The step is not marked as failed, and an LLM or tool call already running is not interrupted. `None` means no timeout.
 </ParamField>
 
 <ParamField body="llm" type="str | BaseLLM" default="None">
@@ -147,6 +147,8 @@ researcher = Agent(
 | --- | --- |
 | `plan_prompt` | `{role}`, `{goal}`, `{backstory}`, `{description}`, `{expected_output}`, `{tools}`, `{max_steps}` |
 | `refine_prompt` | `{role}`, `{goal}`, `{backstory}`, `{current_plan}`, `{max_steps}` |
+
+If your prompts leave out `{max_steps}`, the planner is given no step limit.
 
 ```python
 from crewai import Agent, PlanningConfig
@@ -222,11 +224,11 @@ If an error occurs while the agent is planning, the error is logged and the agen
 
 ## Crew planning
 
-When crew planning is enabled, all crew information is sent to an `AgentPlanner` before the tasks run. It plans each task step by step and adds the plan to that task's description.
+When crew planning is enabled, all crew information is sent to a `CrewPlanner` before the tasks run. It plans each task step by step and adds the plan to that task's description.
 
 ### Using crew planning
 
-Add `planning=True` to your Crew. Each time the crew is kicked off, the `AgentPlanner` logs a plan like the one in the **Result** tab:
+Add `planning=True` to your Crew. Each time the crew is kicked off, the `CrewPlanner` writes a plan like the one in the **Result** tab and adds each task's part to that task's description:
 
 <CodeGroup>
 ```python Code

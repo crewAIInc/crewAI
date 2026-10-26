@@ -10,7 +10,7 @@ mode: "wide"
 O CrewAI pode planejar em dois níveis:
 
 - **Planejamento do agente**: o agente escreve um plano passo a passo para o próprio trabalho e depois executa e verifica cada passo. Configure com `Agent(planning_config=PlanningConfig(...))`.
-- **Planejamento da crew**: antes de a crew rodar, um `AgentPlanner` escreve um plano para cada tarefa e o adiciona à descrição de cada tarefa. Ative com `Crew(planning=True)`.
+- **Planejamento da crew**: antes de a crew rodar, um `CrewPlanner` escreve um plano para cada tarefa e o adiciona à descrição de cada tarefa. Ative com `Crew(planning=True)`.
 
 Você pode usar qualquer um deles, ou os dois juntos.
 
@@ -49,11 +49,11 @@ A presença de um `PlanningConfig` ativa o planejamento. Para desativá-lo, deix
 
 Quando o agente inicia uma tarefa, ele executa um ciclo de planejar e executar:
 
-1. **Planejar.** O LLM de planejamento escreve um plano com no máximo `max_steps` passos e informa se o plano está pronto.
+1. **Planejar.** O LLM de planejamento escreve um plano, com a instrução de ficar dentro de `max_steps` passos, e informa se o plano está pronto.
 2. **Refinar.** Se o plano não estiver pronto, o planejador o refina até que esteja pronto ou até atingir `max_attempts`.
 3. **Executar.** Cada passo vira um item de todo e roda no próprio loop de ferramentas, limitado por `max_step_iterations` e `step_timeout`.
 4. **Observar.** Depois de cada passo, o agente verifica o resultado. O quanto ele verifica depende de `reasoning_effort`.
-5. **Replanejar.** Se um passo falhar ou o plano deixar de servir, o agente escreve um novo plano, até `max_replans` vezes.
+5. **Replanejar.** Dependendo de `reasoning_effort`, um passo que falha ou um plano que deixa de servir faz o agente escrever um novo plano, até `max_replans` vezes.
 6. **Responder.** O agente monta a resposta final a partir dos resultados dos passos.
 
 O plano fica no estado de execução do agente. Ele não é adicionado à descrição da tarefa.
@@ -67,10 +67,10 @@ A execução passo a passo precisa de um plano pronto com passos estruturados, q
 | Nível | Depois de cada passo | Custo |
 | --- | --- | --- |
 | `"low"` | Uma verificação heurística, sem chamada extra ao LLM. Um passo que falha é marcado como falho e o agente segue em ordem, sem replanejar. | Mais rápido |
-| `"medium"` (padrão) | Um LLM revisa o passo. O agente replaneja quando o passo falhou. | Equilibrado |
+| `"medium"` (padrão) | Um LLM revisa o passo. Se o passo falhou e a revisão diz que o plano não funciona mais, o agente replaneja; caso contrário, marca o passo como falho e continua. | Equilibrado |
 | `"high"` | Um LLM revisa o passo e depois decide se termina antes, replaneja ou refina os passos restantes. | Mais adaptável, mais lento |
 
-`observe_steps` substitui a revisão por LLM em qualquer nível: `True` a adiciona ao `"low"`, e `False` a remove de `"medium"` e `"high"`.
+`observe_steps` substitui a revisão por LLM em qualquer nível: `True` a adiciona ao `"low"`, e `False` a remove de `"medium"` e `"high"`. Com `observe_steps=True`, o `"low"` também replaneja quando a revisão diz que um passo que falhou precisa de um novo plano.
 
 ### Opções de configuração
 
@@ -87,7 +87,7 @@ A execução passo a passo precisa de um plano pronto com passos estruturados, q
 </ParamField>
 
 <ParamField body="max_steps" type="int" default="20">
-  Número máximo de passos em um plano. Deve ser pelo menos 1.
+  O limite de passos que o planejador deve respeitar. Ele é passado ao prompt como `{max_steps}` e não é aplicado ao plano retornado. Deve ser pelo menos 1.
 </ParamField>
 
 <ParamField body="max_replans" type="int" default="3">
@@ -99,7 +99,7 @@ A execução passo a passo precisa de um plano pronto com passos estruturados, q
 </ParamField>
 
 <ParamField body="step_timeout" type="int" default="None">
-  Tempo máximo, em segundos, para um único passo. Um passo que demora mais é marcado como falho. `None` significa sem limite de tempo.
+  Tempo máximo, em segundos, para um único passo, verificado antes de cada chamada ao LLM no passo. Quando ele é excedido, o passo para e retorna o que tem até então. O passo não é marcado como falho, e uma chamada ao LLM ou a uma ferramenta já em andamento não é interrompida. `None` significa sem limite de tempo.
 </ParamField>
 
 <ParamField body="llm" type="str | BaseLLM" default="None">
@@ -147,6 +147,8 @@ researcher = Agent(
 | --- | --- |
 | `plan_prompt` | `{role}`, `{goal}`, `{backstory}`, `{description}`, `{expected_output}`, `{tools}`, `{max_steps}` |
 | `refine_prompt` | `{role}`, `{goal}`, `{backstory}`, `{current_plan}`, `{max_steps}` |
+
+Se seus prompts não incluírem `{max_steps}`, o planejador não recebe nenhum limite de passos.
 
 ```python
 from crewai import Agent, PlanningConfig
@@ -222,11 +224,11 @@ Se ocorrer um erro enquanto o agente planeja, o erro é registrado no log e o ag
 
 ## Planejamento da crew
 
-Quando o planejamento da crew está ativado, todas as informações da crew são enviadas para um `AgentPlanner` antes de as tarefas rodarem. Ele planeja cada tarefa passo a passo e adiciona o plano à descrição dessa tarefa.
+Quando o planejamento da crew está ativado, todas as informações da crew são enviadas para um `CrewPlanner` antes de as tarefas rodarem. Ele planeja cada tarefa passo a passo e adiciona o plano à descrição dessa tarefa.
 
 ### Usando o planejamento da crew
 
-Adicione `planning=True` à sua Crew. Sempre que a crew é iniciada, o `AgentPlanner` registra um plano como o da aba **Result**:
+Adicione `planning=True` à sua Crew. Sempre que a crew é iniciada, o `CrewPlanner` escreve um plano como o da aba **Result** e adiciona a parte de cada tarefa à descrição dessa tarefa:
 
 <CodeGroup>
 ```python Code

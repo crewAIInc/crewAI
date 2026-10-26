@@ -7,9 +7,9 @@ mode: "wide"
 
 ## Visão Geral
 
-O reasoning do agente permite que ele reflita sobre uma tarefa e escreva um plano antes de agir. Ele agora faz parte do planejamento do agente, que também executa o plano passo a passo, verifica cada passo e replaneja quando um passo falha.
+O reasoning do agente permite que ele reflita sobre uma tarefa e escreva um plano antes de agir. Ele agora faz parte do planejamento do agente, que também executa o plano passo a passo, verifica cada passo e pode replanejar quando um passo falha.
 
-Os parâmetros `reasoning` e `max_reasoning_attempts` ainda funcionam, mas estão obsoletos, e o agente emite um `DeprecationWarning` quando você os usa. Configure o planejamento com `planning_config`. Veja [Planejamento](/edge/pt-BR/concepts/planning) para o guia completo.
+Os parâmetros `reasoning` e `max_reasoning_attempts` ainda funcionam, mas estão obsoletos. `reasoning=True` emite um `DeprecationWarning`, que os filtros de aviso padrão do Python ocultam, e `max_reasoning_attempts` só tem efeito junto com `reasoning=True`. Configure o planejamento com `planning_config`. Veja [Planejamento](/edge/pt-BR/concepts/planning) para o guia completo.
 
 ## Migrando de `reasoning=True`
 

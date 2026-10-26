@@ -7,9 +7,9 @@ mode: "wide"
 
 ## 개요
 
-에이전트 reasoning은 에이전트가 행동하기 전에 작업을 되돌아보고 계획을 작성하게 합니다. 이제 이 기능은 에이전트 계획의 일부이며, 에이전트 계획은 계획을 단계별로 실행하고, 각 단계를 확인하고, 단계가 실패하면 재계획합니다.
+에이전트 reasoning은 에이전트가 행동하기 전에 작업을 되돌아보고 계획을 작성하게 합니다. 이제 이 기능은 에이전트 계획의 일부이며, 에이전트 계획은 계획을 단계별로 실행하고, 각 단계를 확인하고, 단계가 실패하면 재계획할 수 있습니다.
 
-`reasoning`과 `max_reasoning_attempts` 파라미터는 여전히 동작하지만 더 이상 권장되지 않으며, 사용하면 에이전트가 `DeprecationWarning`을 발생시킵니다. 대신 `planning_config`로 계획을 설정하세요. 전체 가이드는 [계획](/edge/ko/concepts/planning)을 참고하세요.
+`reasoning`과 `max_reasoning_attempts` 파라미터는 여전히 동작하지만 더 이상 권장되지 않습니다. `reasoning=True`는 `DeprecationWarning`을 발생시키지만 Python의 기본 경고 필터에서는 표시되지 않으며, `max_reasoning_attempts`는 `reasoning=True`와 함께 쓸 때만 효과가 있습니다. 대신 `planning_config`로 계획을 설정하세요. 전체 가이드는 [계획](/edge/ko/concepts/planning)을 참고하세요.
 
 ## `reasoning=True`에서 마이그레이션하기
 
