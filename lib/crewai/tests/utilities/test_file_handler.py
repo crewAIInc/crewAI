@@ -1,8 +1,13 @@
+import json
 import os
 import unittest
 import uuid
 
-from crewai.utilities.file_handler import JSONHandler
+from pathlib import Path
+from typing import Any
+
+import pytest
+from crewai.utilities.file_handler import FileHandler, JSONHandler
 
 
 class TestJSONHandler(unittest.TestCase):
@@ -48,3 +53,48 @@ class TestJSONHandler(unittest.TestCase):
             os.fsync(file.fileno())  # Ensure data is written to disk
 
         assert self.handler.load() == {}
+
+
+@pytest.mark.parametrize("kind", ["unsupported", "circular"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_json_log_serialization_failure_preserves_file(
+    tmp_path: Path, kind: str, existing: bool
+) -> None:
+    path = tmp_path / "logs.json"
+    handler = FileHandler(str(path))
+    original = None
+    if existing:
+        handler.log(message="first record")
+        original = path.read_bytes()
+
+    metadata: dict[str, Any] = {}
+    if kind == "circular":
+        metadata["self"] = metadata
+    else:
+        metadata["unsupported"] = object()
+
+    with pytest.raises(ValueError, match="Failed to log message"):
+        handler.log(message="failed record", metadata=metadata)
+
+    if existing:
+        assert path.read_bytes() == original
+    else:
+        assert not path.exists()
+
+    handler.log(message="next record")
+    records = json.loads(path.read_text(encoding="utf-8"))
+    expected = ["first record", "next record"] if existing else ["next record"]
+    assert [record["message"] for record in records] == expected
+
+
+def test_json_log_appends_serializable_metadata(tmp_path: Path) -> None:
+    path = tmp_path / "logs.json"
+    handler = FileHandler(str(path))
+    handler.log(message="first", metadata={"count": 1})
+    handler.log(message="second", metadata={"labels": ["a", "b"]})
+
+    records = json.loads(path.read_text(encoding="utf-8"))
+    assert [record["message"] for record in records] == ["first", "second"]
+    assert records[0]["metadata"] == {"count": 1}
+    assert records[1]["metadata"] == {"labels": ["a", "b"]}
+    assert path.read_text(encoding="utf-8").endswith("\n")
