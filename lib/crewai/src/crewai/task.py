@@ -1168,6 +1168,12 @@ Follow these guidelines:
             "agent",
             "context",
             "tools",
+            # Run artifacts of the run this task already had; a copy is
+            # built for a fresh execution, and a carried output would
+            # make a checkpointed crew's copy skip the task entirely.
+            "output",
+            "checkpoint_original_description",
+            "checkpoint_original_expected_output",
         }
 
         copied_data = self.model_dump(exclude=exclude)
