@@ -334,17 +334,16 @@ Here's how to add tools to an agent:
 
 ```python Code
 from crewai import Agent
-from crewai_tools import SerperDevTool, WikipediaTools
+from crewai_tools import SerperDevTool
 
 # Create tools
 search_tool = SerperDevTool()
-wiki_tool = WikipediaTools()
 
 # Add tools to agent
 researcher = Agent(
     role="AI Technology Researcher",
     goal="Research the latest AI developments",
-    tools=[search_tool, wiki_tool],
+    tools=[search_tool],
     verbose=True
 )
 ```

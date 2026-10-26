@@ -88,7 +88,7 @@ Na prática, agentes frequentemente usam **múltiplos tipos de capacidades junto
 
 ```python
 from crewai import Agent
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 # Um agente de pesquisa totalmente equipado
 researcher = Agent(
@@ -100,7 +100,6 @@ researcher = Agent(
     tools=[
         SerperDevTool(),         # Buscar na web
         FileReadTool(),          # Ler arquivos locais
-        CodeInterpreterTool(),   # Executar código Python para análise
     ],
     mcps=["https://data-api.example.com/sse"],  # Acessar API de dados remota
     apps=["google_sheets"],                      # Escrever no Google Sheets
