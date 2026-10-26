@@ -111,6 +111,18 @@ jobs:
             --durations=10 \
             --maxfail=3
 
+      # pytest-randomly shuffles before pytest-split slices, so every group job must
+      # share one seed; per-job seeds make the 8 groups overlap and skip about a third.
+      - name: Run CLI, core and files tests (group ${{ matrix.group }} of 8)
+        run: |
+          uv run pytest lib/cli/tests lib/crewai-core/tests lib/crewai-files/tests \
+            -vv \
+            --splits 8 \
+            --group ${{ matrix.group }} \
+            --randomly-seed=${{ github.run_id }} \
+            --durations=10 \
+            --maxfail=3
+
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true' && matrix.group == 1
