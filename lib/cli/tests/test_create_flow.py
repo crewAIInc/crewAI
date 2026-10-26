@@ -144,6 +144,7 @@ def test_scaffolded_flow_entry_points_return_none_so_uv_scripts_exit_zero(
     # `kickoff` and `run_with_trigger` are console scripts; their wrapper calls
     # sys.exit(func()), so any non-None return fails `crewai run` and
     # `crewai triggers run` after a successful run.
+    monkeypatch.setattr(sys, "argv", ["kickoff"])
     assert scaffolded_flow_main.kickoff() is None
 
     monkeypatch.setattr(sys, "argv", ["run_with_trigger", '{"topic": "Rust"}'])
