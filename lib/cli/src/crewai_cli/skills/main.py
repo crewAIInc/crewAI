@@ -28,6 +28,7 @@ class _RegistrySkill(TypedDict):
 
     handle: str
     description: str | None
+    is_public: bool
     latest_version: str | None
     virus_scanning_status: str | None
 
@@ -401,6 +402,10 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 name += f"@{skill['latest_version']}"
             scan = skill["virus_scanning_status"] or "-"
             description = " ".join((skill["description"] or "").split())
+            # AMP also lists other organizations' public skills, with no owner
+            # field, so the current-org ref above may not apply to these.
+            if skill["is_public"]:
+                description = f"(public) {description}"
             console.print(
                 f"{name}  scan: {scan}  {description}".rstrip(),
                 markup=False,

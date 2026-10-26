@@ -317,12 +317,13 @@ def _skill_row(
     description: str | None = "A skill.",
     latest_version: str | None = "1.0.0",
     scan: str | None = "passed",
+    is_public: bool = False,
 ) -> dict[str, object]:
     return {
         "handle": handle,
         "description": description,
         "license": None,
-        "is_public": False,
+        "is_public": is_public,
         "latest_version": latest_version,
         "virus_scanning_status": scan,
         "created_at": "2026-10-01T00:00:00Z",
@@ -421,6 +422,21 @@ class TestSkillSearch:
             "review-rules@1.0.0  scan: passed  Checks [bold]PRs[/bold]. Twice."
             in capsys.readouterr().out.splitlines()
         )
+
+    def test_marks_public_skills_that_may_belong_to_another_organization(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rows = [
+            _skill_row("brand-voice"),
+            _skill_row("pdf-tools", description="Reads PDFs.", is_public=True),
+            _skill_row("bare", description=None, is_public=True),
+        ]
+        self._search(skill_command, None, [_skills_page(rows, 1)])
+
+        lines = capsys.readouterr().out.splitlines()
+        assert "brand-voice@1.0.0  scan: passed  A skill." in lines
+        assert "pdf-tools@1.0.0  scan: passed  (public) Reads PDFs." in lines
+        assert "bare@1.0.0  scan: passed  (public)" in lines
 
     def test_shows_a_skill_without_version_or_description(
         self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
