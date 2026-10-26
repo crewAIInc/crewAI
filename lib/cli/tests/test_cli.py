@@ -373,6 +373,37 @@ def test_deploy_create(command, runner):
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_without_zip_keeps_the_default_source(command, runner):
+    result = runner.invoke(deploy_create, ["-y"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=False, force_zip=False
+    )
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_zip_forces_a_zip_upload(command, runner):
+    result = runner.invoke(deploy_create, ["--zip", "-y", "--skip-validate"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=True, force_zip=True
+    )
+
+
+def test_deploy_create_help_lists_zip(runner):
+    result = runner.invoke(deploy_create, ["--help"])
+
+    assert result.exit_code == 0
+    help_text = " ".join(result.output.split())
+    assert (
+        "--zip Upload the project as a ZIP even when it has a git origin remote."
+        in help_text
+    )
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
 def test_deploy_list(command, runner):
     mock_deploy = command.return_value
     result = runner.invoke(deploy_list)

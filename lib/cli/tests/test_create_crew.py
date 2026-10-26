@@ -1685,6 +1685,8 @@ def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
     assert "AMP builds from GitHub" not in agents_md
     assert "AMP builds from that remote, on GitHub or another git host" in agents_md
     assert "With no git `origin` it uploads a ZIP" in agents_md
+    assert "There's no flag to upload a ZIP" not in agents_md
+    assert "`crewai deploy create -y --zip`" in agents_md
     assert "uploads `.env` as its environment variables" in agents_md
 
 

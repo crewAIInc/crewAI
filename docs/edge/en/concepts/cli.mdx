@@ -292,6 +292,8 @@ Deploy the crew or flow to [CrewAI AMP](https://app.crewai.com).
   ```
   - Reads your local project configuration.
   - Prompts you to confirm the environment variables (like `OPENAI_API_KEY`, `SERPER_API_KEY`) found locally. These will be securely stored with the deployment on the Enterprise platform. Ensure your sensitive keys are correctly configured locally (e.g., in a `.env` file) before running this.
+  - `--zip` uploads the project as a ZIP even when it has a git `origin`, without fetching from it.
+  - Every ZIP upload, at create or push, prints the local commit it was built from and whether the working tree had uncommitted changes.
 
 ### 11. Organization Management
 

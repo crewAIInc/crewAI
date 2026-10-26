@@ -134,6 +134,16 @@ class Repository:
         except subprocess.CalledProcessError:
             return False
 
+    def head_commit(self) -> str | None:
+        """Return the short hash of HEAD, or None when there is no commit yet."""
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "--verify", "HEAD"],  # noqa: S607
+            cwd=self.path,
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+
     def create_initial_commit_if_needed(self) -> bool:
         """Create a local initial commit when the repository has no commits."""
         if self.has_commits():
