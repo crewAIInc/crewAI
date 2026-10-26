@@ -1344,7 +1344,7 @@ def test_run_crew_non_conversational_flow_without_terminal_still_runs_kickoff(
     assert "interactive terminal" not in capsys.readouterr().err
 
 
-_CONVERSATIONAL_FLOW_MODULE = "t3_headless_chat_project"
+_CONVERSATIONAL_FLOW_MODULE = "headless_chat_flow_project"
 
 
 @pytest.fixture
