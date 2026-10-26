@@ -602,6 +602,20 @@ Higher priority settings override lower ones.
   documentation](/observability/tracing).
 </Tip>
 
+<Tip>
+  CrewAI CLI handles authentication to the Tool Repository automatically when
+  adding packages to your project. Just append `crewai` before any `uv` command
+  to use it. E.g. `crewai uv add requests`. For more information, see [Tool
+  Repository](https://docs-platform.crewai.com/platform/en/guides/tool-repository) docs.
+</Tip>
+
+<Note>
+  Configuration settings are stored in `~/.config/crewai/settings.json`. Some
+  settings like organization name and UUID are read-only and managed through
+  authentication and organization commands. Tool repository related settings are
+  hidden and cannot be set directly by users.
+</Note>
+
 ### 15. Doctor
 
 Check the project's CrewAI AMP state in one command: your login, tracing, and the integrations your agents use. Run it from the project directory; it reads the project's `.env` the same way `crewai run` does.
@@ -621,17 +635,3 @@ uv run crewai doctor --app gmail --app slack
 ```
 
 The command exits with code 1 when any check fails. Checking an integration needs `crewai-tools`, so use `uv run crewai doctor` in a project that depends on `crewai[tools]`. An integration with no actions can be not connected, misspelled, or unavailable on AMP; the command cannot tell these apart.
-
-<Tip>
-  CrewAI CLI handles authentication to the Tool Repository automatically when
-  adding packages to your project. Just append `crewai` before any `uv` command
-  to use it. E.g. `crewai uv add requests`. For more information, see [Tool
-  Repository](https://docs-platform.crewai.com/platform/en/guides/tool-repository) docs.
-</Tip>
-
-<Note>
-  Configuration settings are stored in `~/.config/crewai/settings.json`. Some
-  settings like organization name and UUID are read-only and managed through
-  authentication and organization commands. Tool repository related settings are
-  hidden and cannot be set directly by users.
-</Note>

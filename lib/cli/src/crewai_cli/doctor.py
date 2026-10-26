@@ -26,6 +26,7 @@ Line = tuple[Status, str, str]
 
 TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
 INTEGRATION_TOKEN_ENV = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"  # noqa: S105 - a variable name, not a secret
+PAT_ENV = "CREWAI_USER_PAT"
 
 
 def _check_login(settings: Settings) -> tuple[Line, bool]:
@@ -61,10 +62,23 @@ def _check_login(settings: Settings) -> tuple[Line, bool]:
     ), True
 
 
+def _tracing_credential_source(
+    logged_in: bool,
+) -> Literal["pat", "integration", "login"] | None:
+    """Which credential a run sends with its traces, in the order of
+    `crewai.telemetry.tracing.grants.resolve_tracing_credential`."""
+    if os.environ.get(PAT_ENV):
+        return "pat"
+    if os.environ.get(INTEGRATION_TOKEN_ENV):
+        return "integration"
+    return "login" if logged_in else None
+
+
 def _check_tracing(env_source: str, logged_in: bool, settings: Settings) -> Line:
     env_value = os.environ.get(TRACING_ENV_VAR, "")
     enabled = is_tracing_enabled()
-    if env_value.lower() in ("true", "1", "false", "0"):
+    turned_off_by_env = env_value.lower() in ("false", "0")
+    if turned_off_by_env or env_value.lower() in ("true", "1"):
         reason = f"{TRACING_ENV_VAR}={env_value} in {env_source}"
     elif enabled:
         reason = "consent recorded on this machine"
@@ -75,16 +89,26 @@ def _check_tracing(env_source: str, logged_in: bool, settings: Settings) -> Line
 
     if not enabled:
         # Never a failure: off is the person's choice, not the agent's to flip.
+        # `traces enable` only records consent, which an env "false" overrides.
+        fix = (
+            f"setting {TRACING_ENV_VAR}=true in {env_source}"
+            if turned_off_by_env
+            else "running `crewai traces enable`"
+        )
         return (
             "warn",
             "tracing",
-            f"off ({reason}); runs send no traces. "
-            "Ask the user before running `crewai traces enable`",
+            f"off ({reason}); runs send no traces. Ask the user before {fix}",
         )
     host = PlusAPI().base_url.rstrip("/")
-    if logged_in and settings.org_uuid:
+    source = _tracing_credential_source(logged_in)
+    if source == "pat":
+        destination = f"{host} with {PAT_ENV}"
+    elif source == "integration":
+        destination = f"{host} with {INTEGRATION_TOKEN_ENV}"
+    elif source == "login" and settings.org_uuid:
         destination = f"{host}, organization {settings.org_name}"
-    elif logged_in:
+    elif source == "login":
         destination = f"{host}, no organization selected"
     else:
         destination = f"{host} without a login (anonymous)"
@@ -151,6 +175,17 @@ def _check_integrations(apps: tuple[str, ...]) -> list[Line]:
                 detail = f"AMP answered HTTP {status}"
             lines.append(("fail", check, detail))
             continue
+        except requests.JSONDecodeError:
+            # A subclass of RequestException, but the host did answer.
+            lines.append(
+                (
+                    "fail",
+                    check,
+                    "AMP answered with something that is not JSON; "
+                    "check CREWAI_PLUS_URL",
+                )
+            )
+            continue
         except requests.RequestException as error:
             lines.append(
                 ("fail", check, f"could not reach AMP ({type(error).__name__})")
@@ -174,7 +209,8 @@ def _check_integrations(apps: tuple[str, ...]) -> list[Line]:
             )
         else:
             slugs = ", ".join(action.action for action in actions)
-            lines.append(("ok", check, f"{len(actions)} actions: {slugs}"))
+            noun = "action" if len(actions) == 1 else "actions"
+            lines.append(("ok", check, f"{len(actions)} {noun}: {slugs}"))
     return lines
 
 
@@ -183,7 +219,8 @@ def doctor(apps: tuple[str, ...]) -> None:
     env_file = Path.cwd() / ".env"
     env_source = "the environment"
     if env_file.is_file():
-        if TRACING_ENV_VAR in dotenv_values(env_file):
+        # A key with no value is skipped by load_dotenv, so the shell's stands.
+        if dotenv_values(env_file).get(TRACING_ENV_VAR) is not None:
             env_source = ".env"
         load_project_env(env_file)
 

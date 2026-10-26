@@ -21,6 +21,7 @@ import requests
 
 
 TOKEN_ENV = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"
+PAT_ENV = "CREWAI_USER_PAT"
 TOKEN_MODULE = "crewai_tools.tools.crewai_platform_tools.integrations_client"
 
 
@@ -33,7 +34,7 @@ def machine(tmp_path, monkeypatch):
     project = tmp_path / "project"
     project.mkdir()
     monkeypatch.chdir(project)
-    for name in ("CREWAI_TRACING_ENABLED", TOKEN_ENV, "CREWAI_PLUS_URL"):
+    for name in ("CREWAI_TRACING_ENABLED", TOKEN_ENV, "CREWAI_PLUS_URL", PAT_ENV):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_doctor_test")
     monkeypatch.setattr(
@@ -220,8 +221,66 @@ def test_tracing_off_in_the_project_env_warns_and_does_not_fail(tmp_path, machin
     assert result.exit_code == 0, result.output
     assert lines_of(result.output)["tracing"] == (
         "warn off (CREWAI_TRACING_ENABLED=false in .env); runs send no traces. "
-        "Ask the user before running `crewai traces enable`"
+        "Ask the user before setting CREWAI_TRACING_ENABLED=true in .env"
     )
+
+
+def test_tracing_off_in_the_shell_points_at_the_environment(tmp_path, monkeypatch):
+    """`crewai traces enable` only records consent, which a false here beats."""
+    update_user_data({"trace_consent": True, "first_execution_done": True})
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "0")
+
+    result = run()
+
+    assert lines_of(result.output)["tracing"] == (
+        "warn off (CREWAI_TRACING_ENABLED=0 in the environment); runs send no "
+        "traces. Ask the user before setting CREWAI_TRACING_ENABLED=true in the "
+        "environment"
+    )
+
+
+def test_a_valueless_key_in_the_project_env_leaves_the_shell_value(
+    tmp_path, machine, monkeypatch
+):
+    (machine / ".env").write_text("CREWAI_TRACING_ENABLED\n")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+
+    result = run()
+
+    assert lines_of(result.output)["tracing"].startswith(
+        "ok on (CREWAI_TRACING_ENABLED=true in the environment)"
+    )
+
+
+def test_tracing_names_the_integration_token_a_run_would_send(tmp_path, machine):
+    """Runs send CREWAI_USER_PAT, then the integration token, then the login."""
+    (machine / ".env").write_text(
+        f"CREWAI_TRACING_ENABLED=true\n{TOKEN_ENV}=integration-token\n"
+    )
+
+    result = run()
+
+    assert lines_of(result.output)["tracing"] == (
+        "ok on (CREWAI_TRACING_ENABLED=true in .env); "
+        f"traces go to https://app.crewai.com with {TOKEN_ENV}"
+    )
+    assert "integration-token" not in result.output
+
+
+def test_tracing_names_the_pat_over_the_login(tmp_path, monkeypatch):
+    logged_in_with_org(tmp_path)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    monkeypatch.setenv(PAT_ENV, "pat-token")
+    monkeypatch.setenv(TOKEN_ENV, "integration-token")
+
+    result = run()
+
+    assert lines_of(result.output)["tracing"] == (
+        "ok on (CREWAI_TRACING_ENABLED=true in the environment); "
+        f"traces go to https://app.crewai.com with {PAT_ENV}"
+    )
+    assert "pat-token" not in result.output
+    assert "login-token" not in result.output
 
 
 def test_tracing_consent_recorded_is_on(tmp_path):
@@ -239,8 +298,9 @@ def test_tracing_declined_warns(tmp_path):
 
     result = run()
 
-    assert lines_of(result.output)["tracing"].startswith(
-        "warn off (declined on this machine)"
+    assert lines_of(result.output)["tracing"] == (
+        "warn off (declined on this machine); runs send no traces. "
+        "Ask the user before running `crewai traces enable`"
     )
 
 
@@ -320,6 +380,10 @@ def test_an_app_with_actions_lists_their_slugs(tmp_path, monkeypatch):
         (http_error(403), f"{TOKEN_ENV} is invalid or expired (HTTP 403)"),
         (http_error(500), "AMP answered HTTP 500"),
         (requests.ConnectionError("refused"), "could not reach AMP (ConnectionError)"),
+        (
+            requests.JSONDecodeError("Expecting value", "<html>login</html>", 0),
+            "AMP answered with something that is not JSON; check CREWAI_PLUS_URL",
+        ),
         (KeyError("data"), "KeyError: 'data'"),
     ],
 )
@@ -359,7 +423,7 @@ def test_each_app_gets_its_own_line(tmp_path, monkeypatch):
 
     assert result.exit_code == 1
     lines = lines_of(result.output)
-    assert lines["integration gmail"].startswith("ok 1 actions")
+    assert lines["integration gmail"] == "ok 1 action: gmail_send_email"
     assert lines["integration slack"].startswith("fail no actions matched")
 
 
@@ -416,7 +480,7 @@ def test_only_the_actions_get_is_sent_with_the_integration_token(
 
     assert result.exit_code == 0, result.output
     assert lines_of(result.output)["integration gmail"] == (
-        "ok 1 actions: gmail_send_email"
+        "ok 1 action: gmail_send_email"
     )
     assert gets == [
         (

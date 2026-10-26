@@ -52,3 +52,36 @@ def test_env_false_turns_tracing_off_despite_consent(
 
     assert user_data.is_tracing_enabled() is False
     assert should_enable_tracing() is False
+
+
+@pytest.mark.parametrize("pat", [None, "pat-token"])
+@pytest.mark.parametrize("integration", [None, "integration-token"])
+@pytest.mark.parametrize("logged_in", [True, False])
+def test_doctor_names_the_credential_a_run_sends(
+    monkeypatch: pytest.MonkeyPatch,
+    pat: str | None,
+    integration: str | None,
+    logged_in: bool,
+) -> None:
+    """`crewai doctor` cannot import crewai, so it mirrors the order in which
+    a run picks the credential its traces are sent with."""
+    from crewai.telemetry.tracing import grants
+    from crewai_cli.doctor import _tracing_credential_source
+
+    for name, value in (
+        ("CREWAI_USER_PAT", pat),
+        ("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", integration),
+    ):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+
+    def get_auth_token() -> str:
+        if logged_in:
+            return "login-token"
+        raise grants.AuthError("not logged in")
+
+    monkeypatch.setattr(grants, "get_auth_token", get_auth_token)
+
+    assert _tracing_credential_source(logged_in) == grants.tracing_credential_source()
