@@ -72,6 +72,8 @@ jobs:
           path: .test_durations_py*
           key: test-durations-py${{ matrix.python-version }}
 
+      # pytest-randomly shuffles before pytest-split slices, so every group job must
+      # share one seed; per-job seeds make the 8 groups overlap and skip about a third.
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
@@ -98,6 +100,7 @@ jobs:
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
+            --randomly-seed=${{ github.run_id }} \
             $DURATIONS_ARG \
             --durations=10 \
             --maxfail=3
@@ -108,11 +111,10 @@ jobs:
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
+            --randomly-seed=${{ github.run_id }} \
             --durations=10 \
             --maxfail=3
 
-      # pytest-randomly shuffles before pytest-split slices, so every group job must
-      # share one seed; per-job seeds make the 8 groups overlap and skip about a third.
       - name: Run CLI, core and files tests (group ${{ matrix.group }} of 8)
         run: |
           uv run pytest lib/cli/tests lib/crewai-core/tests lib/crewai-files/tests \
