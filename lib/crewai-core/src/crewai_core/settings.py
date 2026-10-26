@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 from logging import getLogger
 import os
@@ -271,8 +272,12 @@ class Settings(BaseModel):
         try:
             existing_data = _read_settings_json(self.config_path)
             if existing_data is None:
-                # Keep the invalid file so the user can recover its values.
-                backup_path = self.config_path.with_name(f"{self.config_path.name}.bak")
+                # Keep the invalid file so the user can recover its values; the
+                # timestamp keeps earlier backups from being overwritten.
+                stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+                backup_path = self.config_path.with_name(
+                    f"{self.config_path.name}.{stamp}.bak"
+                )
                 os.replace(self.config_path, backup_path)
                 logger.warning("Moved invalid settings file to %s", backup_path)
             _write_secure_json(

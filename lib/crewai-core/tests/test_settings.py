@@ -60,7 +60,19 @@ def test_corrupt_settings_file_is_reported_and_replaced_on_save(
     settings.dump()
 
     assert json.loads(config_path.read_text())["org_name"] == "new-org"
-    assert (tmp_path / "settings.json.bak").read_text() == contents
+    backups = list(tmp_path.glob("settings.json.*.bak"))
+    assert [b.read_text() for b in backups] == [contents]
+
+
+def test_each_corruption_gets_its_own_backup(tmp_path: Path) -> None:
+    """A second corrupt file does not overwrite the backup of the first."""
+    config_path = tmp_path / "settings.json"
+    for contents in ('{"org_name": "first",}', '{"org_name": "second",}'):
+        config_path.write_text(contents)
+        settings_module.Settings(config_path=config_path).dump()
+
+    backups = sorted(b.read_text() for b in tmp_path.glob("settings.json.*.bak"))
+    assert backups == ['{"org_name": "first",}', '{"org_name": "second",}']
 
 
 def test_settings_file_that_cannot_be_read_is_left_in_place(
@@ -86,4 +98,4 @@ def test_settings_file_that_cannot_be_read_is_left_in_place(
     monkeypatch.undo()
 
     assert config_path.read_text() == original
-    assert not (tmp_path / "settings.json.bak").exists()
+    assert not list(tmp_path.glob("settings.json.*.bak"))
