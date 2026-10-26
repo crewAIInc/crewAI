@@ -119,6 +119,36 @@ def test_is_dmn_mode_enabled_for_falsey_values(monkeypatch, value):
     assert utils.is_dmn_mode_enabled() is False
 
 
+def test_project_id_is_minted_into_a_crewai_project_and_read_back(tmp_path):
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\nname = "demo"\n\n[tool.crewai]\ntype = "crew"\n')
+
+    minted = utils.get_or_create_project_id(pyproject)
+
+    assert minted
+    assert f'project_id = "{minted}"' in pyproject.read_text()
+    assert utils.get_project_id(pyproject) == minted
+    assert utils.get_or_create_project_id(str(pyproject)) == minted
+
+
+def test_project_id_is_not_minted_outside_a_crewai_project(tmp_path):
+    pyproject = tmp_path / "pyproject.toml"
+    original = '[project]\nname = "not-a-crew"\n'
+    pyproject.write_text(original)
+
+    assert utils.get_or_create_project_id(pyproject) is None
+    assert utils.get_project_id(pyproject) is None
+    assert pyproject.read_text() == original
+
+
+def test_project_id_lookups_default_to_the_cwd_pyproject(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.crewai]\nproject_id = 'proj-1'\n")
+
+    assert utils.get_project_id() == "proj-1"
+    assert utils.get_or_create_project_id() == "proj-1"
+
+
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.
