@@ -628,13 +628,28 @@ To enable tracing, do any one of these:
             padding=(1, 2),
         )
 
+        repaint = self._live_can_repaint()
         if not self._streaming_live:
             self._streaming_live = Live(
-                streaming_panel, console=self.console, refresh_per_second=10
+                streaming_panel,
+                console=self.console,
+                refresh_per_second=10,
+                auto_refresh=repaint,
             )
             self._streaming_live.start()
         else:
-            self._streaming_live.update(streaming_panel, refresh=True)
+            self._streaming_live.update(streaming_panel, refresh=repaint)
+
+    def _live_can_repaint(self) -> bool:
+        # Rich treats any FORCE_COLOR value (even "0") or TTY_COMPATIBLE=1 as a
+        # terminal without checking isatty, so repaints would be appended to a
+        # redirected log. Off a TTY, Live then renders only the final panel on stop.
+        if self.console.is_jupyter:
+            return True
+        try:
+            return self.console.file.isatty()
+        except ValueError:  # closed stream at interpreter teardown; Rich does the same
+            return False
 
     def handle_llm_stream_completed(self) -> None:
         """Handle completion of LLM streaming - stop the streaming live display."""
