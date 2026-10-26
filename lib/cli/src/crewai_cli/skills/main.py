@@ -42,6 +42,14 @@ class _SkillPage(TypedDict):
     meta: _PageMeta
 
 
+def _printable(text: str) -> str:
+    """Drop control characters, such as ANSI escapes, from AMP-supplied text.
+
+    Another organization's public skill can supply this text.
+    """
+    return "".join(c for c in text if c.isprintable())
+
+
 _SKILL_MD_TEMPLATE = """\
 ---
 name: {name}
@@ -367,6 +375,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 console.print(
                     "[red]Not authorized to list skills. Run `crewai login`.[/red]"
                 )
+                # AMP also answers 401 for causes a login does not fix, such as
+                # an organization the user cannot access; its body names them.
+                console.print(response.text, markup=False)
                 raise SystemExit(1)
             if not response.is_success:
                 console.print(
@@ -374,7 +385,13 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 )
                 console.print(response.text, markup=False)
                 raise SystemExit(1)
-            body: _SkillPage = response.json()
+            try:
+                body: _SkillPage = response.json()
+            except json.JSONDecodeError:
+                # A 2xx HTML page: a wrong base URL or a proxy, not AMP.
+                console.print("[red]Failed to list skills: unexpected response[/red]")
+                console.print(response.text, markup=False)
+                raise SystemExit(1) from None
             skills.extend(body["data"])
             total_pages = body["meta"]["total_pages"]
             page += 1
@@ -386,9 +403,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             )
             return
 
-        # Plain lines, not a rich Table: a table cuts long cells to "…" when
-        # stdout is piped (80 columns), and a coding agent then copies a broken
-        # handle or ref.
+        # Plain lines, not a rich Table: a table cuts long cells to "…" at
+        # rich's 80-column fallback when no std stream is a terminal, and a
+        # coding agent then copies a broken handle or ref.
         org_uuid = Settings().org_uuid
         if org_uuid:
             console.print(
@@ -397,11 +414,11 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 soft_wrap=True,
             )
         for skill in skills:
-            name = skill["handle"]
+            name = _printable(skill["handle"])
             if skill["latest_version"]:
-                name += f"@{skill['latest_version']}"
-            scan = skill["virus_scanning_status"] or "-"
-            description = " ".join((skill["description"] or "").split())
+                name += f"@{_printable(skill['latest_version'])}"
+            scan = _printable(skill["virus_scanning_status"] or "-")
+            description = _printable(" ".join((skill["description"] or "").split()))
             # AMP also lists other organizations' public skills, with no owner
             # field, so the current-org ref above may not apply to these.
             if skill["is_public"]:
@@ -409,6 +426,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             console.print(
                 f"{name}  scan: {scan}  {description}".rstrip(),
                 markup=False,
+                emoji=False,
                 soft_wrap=True,
             )
 

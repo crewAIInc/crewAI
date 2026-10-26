@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, call, patch
 
 import httpx
 import pytest
+from rich.console import Console
 
 from crewai_cli.shared.token_manager import TokenManager
 
@@ -391,10 +392,15 @@ class TestSkillSearch:
         assert "brand-voice@1.0.0  scan: passed  A skill." in output.splitlines()
 
     def test_long_handles_and_descriptions_are_never_cut_when_piped(
-        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+        self,
+        skill_command: SkillCommand,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        # capsys is not a terminal, so rich renders at 80 columns, as it does
-        # for a coding agent reading piped output.
+        # Rich's width when no std stream is a terminal, as for a coding agent
+        # reading piped output. A fresh console, because rich reads COLUMNS
+        # once at construction: a wide terminal or COLUMNS must not hide a cut.
+        monkeypatch.setattr("crewai_cli.skills.main.console", Console(width=80))
         handle = "customer-support-escalation-triage-playbook-for-enterprise-tier"
         description = "Routes escalations by severity and account tier. " * 4
         self._search(
@@ -487,6 +493,55 @@ class TestSkillSearch:
         assert exc_info.value.code == 1
         assert "Not authorized to list skills. Run `crewai login`." in (
             capsys.readouterr().out
+        )
+
+    def test_unauthorized_shows_amp_reason(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit):
+            self._search(
+                skill_command,
+                None,
+                [
+                    httpx.Response(
+                        401, json={"message": "Unauthorized access to organization"}
+                    )
+                ],
+            )
+
+        assert "Unauthorized access to organization" in capsys.readouterr().out
+
+    def test_non_json_success_exits_1_with_the_body(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            self._search(
+                skill_command,
+                None,
+                [httpx.Response(200, text="<html>maintenance</html>")],
+            )
+
+        assert exc_info.value.code == 1
+        output = capsys.readouterr().out
+        assert "Failed to list skills: unexpected response" in output
+        assert "<html>maintenance</html>" in output
+
+    def test_strips_terminal_escapes_and_keeps_emoji_codes_literal(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        row = _skill_row(
+            "evil\x1b[2Jskill",
+            description="d :rocket: \x1b[8mhidden\x1b[0m\x07",
+            latest_version="1.0.0\x1b]0;title\x07",
+        )
+        self._search(skill_command, None, [_skills_page([row], 1)])
+
+        output = capsys.readouterr().out
+        assert "\x1b" not in output
+        assert "\x07" not in output
+        assert (
+            "evil[2Jskill@1.0.0]0;title  scan: passed  d :rocket: [8mhidden[0m"
+            in output.splitlines()
         )
 
     def test_failure_on_a_later_page_exits_1_with_amp_message(

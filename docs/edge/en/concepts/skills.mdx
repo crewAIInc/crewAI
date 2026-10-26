@@ -273,8 +273,8 @@ crewai skill search "code review"
 
 Each line shows `<handle>@<latest-version>`, the latest version's security scan
 status (`passed`, `pending` or `failed`; only a `passed` version installs) and
-the description. The first line gives the current organization's UUID in the
-reference an agent's `skills` takes, `@<org-uuid>/<handle>@<version>`;
+the description. A line above the skills gives the current organization's UUID
+in the reference an agent's `skills` takes, `@<org-uuid>/<handle>@<version>`;
 `crewai skill install` takes `@<org-uuid>/<handle>`. Set the organization first
 with `crewai org switch <org-uuid>`. A skill marked `(public)` may belong to
 another organization, whose UUID its reference needs; the list does not show it.

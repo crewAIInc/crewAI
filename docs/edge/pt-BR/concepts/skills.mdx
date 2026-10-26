@@ -234,7 +234,7 @@ crewai skill search
 crewai skill search "code review"
 ```
 
-Cada linha mostra `<handle>@<latest-version>`, o status da verificação de segurança da versão mais recente (`passed`, `pending` ou `failed`; só uma versão `passed` é instalada) e a descrição. A primeira linha traz o UUID da organização atual na referência que o `skills` de um agente aceita, `@<org-uuid>/<handle>@<version>`; o `crewai skill install` aceita `@<org-uuid>/<handle>`. Defina a organização antes com `crewai org switch <org-uuid>`. Uma skill marcada com `(public)` pode pertencer a outra organização, cujo UUID a referência dela exige; a lista não o mostra.
+Cada linha mostra `<handle>@<latest-version>`, o status da verificação de segurança da versão mais recente (`passed`, `pending` ou `failed`; só uma versão `passed` é instalada) e a descrição. Uma linha acima das skills traz o UUID da organização atual na referência que o `skills` de um agente aceita, `@<org-uuid>/<handle>@<version>`; o `crewai skill install` aceita `@<org-uuid>/<handle>`. Defina a organização antes com `crewai org switch <org-uuid>`. Uma skill marcada com `(public)` pode pertencer a outra organização, cujo UUID a referência dela exige; a lista não o mostra.
 
 ### Listar
 
