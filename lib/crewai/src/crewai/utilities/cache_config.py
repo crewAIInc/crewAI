@@ -71,14 +71,17 @@ def get_aiocache_config() -> dict[str, Any]:
             "password": conn.get("password"),
         }
         # Forward an ACL username when present (managed Valkey/Redis commonly
-        # requires it alongside the password). aiocache's RedisCache forwards
-        # unknown top-level keys to BaseCache.__init__, which rejects
-        # "username" with a TypeError; the username must reach the underlying
-        # redis ConnectionPool via connection_pool_kwargs instead.
+        # requires it alongside the password). aiocache's RedisBackend takes
+        # endpoint/port/db/password/ssl as named arguments and forwards any
+        # other top-level key to BaseCache.__init__, which rejects "username"
+        # with a TypeError; the username must reach the underlying redis
+        # ConnectionPool via connection_pool_kwargs instead.
         if conn.get("username"):
             redis_config["connection_pool_kwargs"] = {"username": conn["username"]}
         # Forward TLS for rediss:// / valkeys:// so the aiocache Redis path
-        # opens an encrypted connection instead of plaintext.
+        # opens an encrypted connection instead of plaintext. "ssl" is a named
+        # RedisBackend argument (it selects redis.SSLConnection), so it is safe
+        # at the top level, unlike "username".
         if conn.get("use_tls"):
             redis_config["ssl"] = True
         return {"default": redis_config}

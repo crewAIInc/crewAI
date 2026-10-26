@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import os
 from unittest.mock import patch
 
@@ -89,6 +90,19 @@ class TestParseCacheUrl:
 class TestGetAiocacheConfig:
     """Tests for get_aiocache_config()."""
 
+    @pytest.fixture(autouse=True)
+    def _restore_aiocache_config(self) -> Iterator[None]:
+        # Some tests install the generated config into aiocache's process-wide
+        # registry to prove it constructs; put the original back afterwards so
+        # later tests don't inherit a Redis-backed default cache.
+        from copy import deepcopy
+
+        from aiocache import caches
+
+        original = deepcopy(caches.get_config())
+        yield
+        caches.set_config(original)
+
     def test_returns_memory_cache_when_no_url(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             config = get_aiocache_config()
@@ -157,6 +171,20 @@ class TestGetAiocacheConfig:
         pool_kwargs = cache.client.connection_pool.connection_kwargs
         assert pool_kwargs.get("username") == "acluser"
         assert pool_kwargs.get("password") == "pw"
+
+    @pytest.mark.parametrize(
+        "url", ["rediss://localhost:6380/0", "rediss://acluser:pw@localhost:6380/0"]
+    )
+    def test_tls_config_constructs_ssl_connection(self, url: str) -> None:
+        # "ssl" is a named RedisBackend argument, so a top-level ssl=True must
+        # construct (not be forwarded to BaseCache) and select SSLConnection.
+        aiocache = pytest.importorskip("aiocache")
+        with patch.dict(os.environ, {"VALKEY_URL": url}, clear=True):
+            config = get_aiocache_config()
+        aiocache.caches.set_config(config)
+        cache = aiocache.caches.get("default")  # must not raise
+        pool = cache.client.connection_pool
+        assert pool.connection_class.__name__ == "SSLConnection"
 
 
 class TestParseCacheUrlUsername:
