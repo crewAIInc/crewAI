@@ -497,6 +497,55 @@ class Task(BaseModel):
                 result[key] = value
         return result
 
+    @staticmethod
+    def _validate_output_file_path(value: str, *, allow_templates: bool = False) -> str:
+        """Validate an output file path for security concerns.
+
+        Args:
+            value: The output file path to validate.
+            allow_templates: If True, permit ``{var}`` template placeholders and
+                preserve leading slashes for template paths.  When False (the
+                default), template syntax is rejected and leading slashes are
+                stripped — this is the mode used after interpolation.
+
+        Returns:
+            The validated (and potentially modified) path string.
+
+        Raises:
+            ValueError: If the path contains path traversal sequences, shell
+                expansion characters, shell special characters, or (when
+                *allow_templates* is ``False``) unresolved template variables.
+        """
+        if ".." in value:
+            raise ValueError(
+                "Path traversal attempts are not allowed in output_file paths"
+            )
+
+        if value.startswith(("~", "$")):
+            raise ValueError(
+                "Shell expansion characters are not allowed in output_file paths"
+            )
+
+        if any(char in value for char in ["|", ">", "<", "&", ";"]):
+            raise ValueError(
+                "Shell special characters are not allowed in output_file paths"
+            )
+
+        if "{" in value or "}" in value:
+            if not allow_templates:
+                raise ValueError(
+                    "Unresolved template variables are not allowed in interpolated output_file paths"
+                )
+            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
+            for var in template_vars:
+                if not var.isidentifier():
+                    raise ValueError(f"Invalid template variable name: {var}")
+            return value
+
+        if value.startswith("/"):
+            return value[1:]
+        return value
+
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
@@ -516,32 +565,7 @@ class Task(BaseModel):
         """
         if value is None:
             return None
-
-        if ".." in value:
-            raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
-            )
-
-        if value.startswith(("~", "$")):
-            raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
-            )
-
-        if any(char in value for char in ["|", ">", "<", "&", ";"]):
-            raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
-            )
-
-        if "{" in value or "}" in value:
-            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
-            for var in template_vars:
-                if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
-            return value
-
-        if value.startswith("/"):
-            return value[1:]
-        return value
+        return cls._validate_output_file_path(value, allow_templates=True)
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
@@ -1114,6 +1138,17 @@ Follow these guidelines:
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
+            # Re-validate after interpolation to prevent path traversal via
+            # caller-controlled template variables (e.g. {topic} = "../../etc").
+            try:
+                self.output_file = self._validate_output_file_path(
+                    self.output_file, allow_templates=False
+                )
+            except ValueError as e:
+                raise ValueError(
+                    f"Interpolated output_file path failed validation: {e!s}"
+                ) from e
+
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(
                 "conversation_history_instruction"
@@ -1287,6 +1322,15 @@ Follow these guidelines:
 
         try:
             resolved_path = Path(self.output_file).expanduser().resolve()
+
+            # Defense-in-depth: ensure resolved path stays within cwd to
+            # prevent path traversal even if upstream validation is bypassed.
+            cwd = Path.cwd().resolve()
+            if not resolved_path.is_relative_to(cwd):
+                raise ValueError(
+                    f"output_file path resolves outside the working directory: {resolved_path}"
+                )
+
             directory = resolved_path.parent
 
             if self.create_directory and not directory.exists():

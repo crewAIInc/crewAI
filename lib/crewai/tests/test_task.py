@@ -1153,6 +1153,68 @@ def test_output_file_validation(tmp_path):
         )
 
 
+def test_output_file_path_traversal_via_interpolation():
+    """Test that path traversal injected through template interpolation is caught.
+
+    Regression test for GHSA-hq26-r99g-pvv4: output_file was validated at
+    construction time but not after template variable interpolation, allowing
+    callers to inject '../' segments via inputs.
+    """
+    # Template passes initial validation (no '..' in the template itself)
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}/output.txt",
+    )
+
+    # Interpolation with traversal segments must be rejected
+    with pytest.raises(ValueError, match="[Pp]ath traversal"):
+        task.interpolate_inputs_and_add_conversation_history(
+            {"topic": "../../etc/cron.d"}
+        )
+
+    # Legitimate interpolation must still work
+    task2 = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}/output.txt",
+    )
+    task2.interpolate_inputs_and_add_conversation_history({"topic": "finance"})
+    assert task2.output_file == "reports/finance/output.txt"
+    assert ".." not in task2.output_file
+
+
+def test_output_file_shell_injection_via_interpolation():
+    """Test that shell special chars injected through interpolation are caught."""
+    task = Task(
+        description="Write {name}",
+        expected_output="output",
+        output_file="out/{name}.txt",
+    )
+
+    with pytest.raises(ValueError, match="[Ss]hell special characters"):
+        task.interpolate_inputs_and_add_conversation_history(
+            {"name": "foo;rm -rf /"}
+        )
+
+
+def test_save_file_rejects_path_outside_cwd(tmp_path, monkeypatch):
+    """Test that _save_file rejects resolved paths outside the working directory."""
+    # Set cwd to tmp_path so any path outside it is rejected
+    monkeypatch.chdir(tmp_path)
+
+    task = Task(
+        description="Test",
+        expected_output="Test",
+        output_file="/etc/passwd",
+    )
+    # Field validator strips leading slash, but we force it back for this test
+    task.output_file = "/etc/passwd"
+
+    with pytest.raises(ValueError, match="outside the working directory"):
+        task._save_file("malicious content")
+
+
 def test_create_directory_true():
     """Test that directories are created when create_directory=True."""
     from pathlib import Path
