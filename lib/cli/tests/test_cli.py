@@ -656,10 +656,16 @@ def _no_saved_login() -> str:
         ["triggers", "list"],
         ["tool", "install", "my-tool"],
         ["skill", "list"],
+        ["create", "tool", "my_tool"],
+        ["create", "skill", "my-skill"],
+        ["tool", "create", "my_tool"],
     ],
 )
 def test_commands_that_need_a_login_exit_1_when_logged_out(runner, args):
-    with mock.patch("crewai_cli.command.get_auth_token", _no_saved_login):
+    with (
+        runner.isolated_filesystem(),
+        mock.patch("crewai_cli.command.get_auth_token", _no_saved_login),
+    ):
         result = runner.invoke(crewai, args)
 
     assert result.exit_code == 1, result.output
