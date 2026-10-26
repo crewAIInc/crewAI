@@ -1368,6 +1368,7 @@ class Agent(BaseAgent):
             ``UserWarning`` naming the agent and its apps.
         """
         platform_tools: list[BaseTool] = []
+        cause = ""
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
@@ -1376,6 +1377,7 @@ class Agent(BaseAgent):
             platform_tools = CrewaiPlatformTools(apps=apps)
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
+            cause = f" Cause: {e!s}"
 
         if apps and not platform_tools:
             # Logger.log above is verbose-gated; without a warning a bad `apps`
@@ -1385,7 +1387,8 @@ class Agent(BaseAgent):
                 f"Agent '{self.role}' declares apps [{app_names}] but none "
                 "resolved to any tools; the agent will run without them and may "
                 "be unable to complete its goal. Check that these apps exist and "
-                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
+                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set."
+                f"{cause}",
                 UserWarning,
                 stacklevel=2,
             )
