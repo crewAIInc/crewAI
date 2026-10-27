@@ -1,0 +1,33 @@
+name: Trustabl Agent Scanner
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Minimal top-level permissions; write grants are scoped to the scan job only.
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: trustabl-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    # continue-on-error keeps this job advisory — findings are reported but
+    # CI does not go red so unrelated work is never blocked.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: trustabl/trustabl-action@973f666d20b5fbb2e6a4511bd3846e965a08c28b # v0.4.1
+        with:
+          version: v0.1.6
