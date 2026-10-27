@@ -191,6 +191,7 @@ def test_create_picker_supports_tool_skill_and_template(
     assert {option[0] for option in picker_options} == {
         "crew",
         "flow",
+        "agent",
         "tool",
         "skill",
         "template",
