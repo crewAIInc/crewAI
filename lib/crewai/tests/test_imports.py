@@ -1,5 +1,6 @@
 """Test that all public API classes are properly importable."""
 
+import importlib
 from pathlib import Path
 import sys
 
@@ -49,7 +50,7 @@ REBUILT_MODULES = [
 
 @pytest.mark.parametrize("module_name", REBUILT_MODULES)
 def test_rebuilt_module_keeps_its_own_identity(module_name):
-    import crewai  # noqa: F401 - runs the namespace rebuild
+    importlib.import_module("crewai")  # runs the namespace rebuild
 
     module = sys.modules[module_name]
 
