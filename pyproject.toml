@@ -297,8 +297,9 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # DNSPython 2.9.0 requires Python 3.11+, so Python 3.10 retains its compatible
 # transitive resolution until CrewAI drops Python 3.10 support.
 # soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; force 2.9.2+.
-# litellm <1.95.0 has GHSA-3cv6-jpf6-8222 (authenticated SSRF and provider-credential exfiltration) and
-# GHSA-g5ff-637f-6q2m (arbitrary file read in the LiteLLM proxy). The floor lives in
+# litellm <1.100.4 has GHSA-3cv6-jpf6-8222 (authenticated SSRF and provider-credential exfiltration),
+# GHSA-g5ff-637f-6q2m (arbitrary file read), and GHSA-7hp6-4w63-5g45 (LiteLLM proxy privilege escalation).
+# The floor lives in
 # lib/crewai/pyproject.toml (the crewai[litellm] extra) rather than here, since crewai declares litellm directly.
 # oauthlib <4.0.0 has GHSA-xpv3-w29h-x7cv / PYSEC-2026-4114 (PKCE code_verifier timing side channel)
 # and GHSA-hj66-6f7g-4r5v (JSONP callback injection on RevocationEndpoint). Fixed in 4.0.0.
