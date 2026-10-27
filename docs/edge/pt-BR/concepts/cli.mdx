@@ -486,7 +486,7 @@ Cada verificação imprime uma linha, `<status> <check>: <detail>`, em que o sta
 
 - `login`: se você está logado e qual organização está selecionada. Nada é enviado pela rede.
 - `tracing`: se as execuções são rastreadas, por quê (`CREWAI_TRACING_ENABLED` no `.env` ou no ambiente, ou a preferência registrada nesta máquina) e para onde os traces vão. Tracing desligado é um `warn`, nunca um `fail`: a escolha é sua.
-- `integration <selector>`: uma linha por `--app`, usando os mesmos seletores de `apps=[...]` (por exemplo `gmail` ou `gmail/send_email`). Lista as ações disponíveis com `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`, a mesma requisição somente leitura que um crew faz.
+- `integration <selector>`: uma linha por `--app`, usando os mesmos seletores de `apps=[...]` (por exemplo `gmail` ou `gmail/send_email`). Lista as ações disponíveis com `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`, a mesma requisição somente leitura que um crew faz. O token só é enviado para um AMP configurado nesta máquina (com `crewai enterprise configure`, ou um `CREWAI_PLUS_URL` definido no seu shell), via HTTPS. Se o `.env` do projeto apontar `CREWAI_PLUS_URL` para outro lugar, a verificação falha sem enviar o token.
 
 ```shell Terminal
 uv run crewai doctor --app gmail --app slack

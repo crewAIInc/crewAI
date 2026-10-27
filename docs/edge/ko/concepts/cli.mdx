@@ -463,7 +463,7 @@ crewai doctor [--app SELECTOR ...]
 
 - `login`: 로그인 여부와 선택된 조직. 네트워크로 아무것도 전송하지 않습니다.
 - `tracing`: 실행이 트레이싱되는지, 그 이유(`.env` 또는 환경의 `CREWAI_TRACING_ENABLED`, 또는 이 머신에 기록된 설정), 그리고 트레이스가 전송되는 곳. 트레이싱이 꺼져 있으면 `fail`이 아니라 `warn`입니다: 사용자의 선택이기 때문입니다.
-- `integration <selector>`: `--app`마다 한 줄이며, `apps=[...]`와 같은 셀렉터를 사용합니다(예: `gmail` 또는 `gmail/send_email`). `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`으로 사용할 수 있는 액션을 나열하며, crew가 보내는 것과 같은 읽기 전용 요청입니다.
+- `integration <selector>`: `--app`마다 한 줄이며, `apps=[...]`와 같은 셀렉터를 사용합니다(예: `gmail` 또는 `gmail/send_email`). `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`으로 사용할 수 있는 액션을 나열하며, crew가 보내는 것과 같은 읽기 전용 요청입니다. 토큰은 이 머신에 구성된 AMP(`crewai enterprise configure`로 설정했거나 셸에 설정한 `CREWAI_PLUS_URL`)로만 HTTPS를 통해 전송됩니다. 프로젝트의 `.env`가 `CREWAI_PLUS_URL`을 다른 곳으로 지정하면 토큰을 보내지 않고 검사가 실패합니다.
 
 ```shell Terminal
 uv run crewai doctor --app gmail --app slack

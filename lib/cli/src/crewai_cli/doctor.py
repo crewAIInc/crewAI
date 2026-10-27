@@ -1,7 +1,8 @@
 """`crewai doctor`: the project's CrewAI AMP state, one line per check.
 
 Every check is read-only. The only network call is the GET a crew makes for
-its `apps=[...]` actions, and only for selectors named with `--app`.
+its `apps=[...]` actions, only for selectors named with `--app`, and only to
+an AMP this machine is configured for.
 """
 
 from __future__ import annotations
@@ -13,10 +14,15 @@ import warnings
 
 import click
 from crewai_core.auth.token import AuthError, get_auth_token
-from crewai_core.plus_api import PlusAPI
+from crewai_core.plus_api import PlusAPI, restore_machine_transport
 from dotenv import dotenv_values
 
 from crewai_cli.config import Settings
+from crewai_cli.experimental.eval_crew import (
+    _encrypted,
+    _origin,
+    _trusted_amp_origins,
+)
 from crewai_cli.run_crew import load_project_env
 from crewai_cli.user_data import has_user_declined_tracing, is_tracing_enabled
 
@@ -27,6 +33,9 @@ Line = tuple[Status, str, str]
 TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
 INTEGRATION_TOKEN_ENV = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"  # noqa: S105 - a variable name, not a secret
 PAT_ENV = "CREWAI_USER_PAT"
+# What the integrations client's `requests` calls read for TLS, beyond the
+# proxy and CA variables `restore_machine_transport` already pins.
+REQUESTS_TRANSPORT_ENV = ("REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "CREWAI_FACTORY")
 
 
 def _check_login(settings: Settings) -> tuple[Line, bool]:
@@ -115,7 +124,7 @@ def _check_tracing(env_source: str, logged_in: bool, settings: Settings) -> Line
     return "ok", "tracing", f"on ({reason}); traces go to {destination}"
 
 
-def _check_integrations(apps: tuple[str, ...]) -> list[Line]:
+def _check_integrations(apps: tuple[str, ...], trusted: set[str]) -> list[Line]:
     if not apps:
         return [
             (
@@ -130,6 +139,25 @@ def _check_integrations(apps: tuple[str, ...]) -> list[Line]:
                 "fail",
                 f"integration {app}",
                 f"{INTEGRATION_TOKEN_ENV} is not set in the environment or .env",
+            )
+            for app in apps
+        ]
+    # A project's `.env` may point the check at another AMP, but the token goes
+    # only to one this machine is configured for, over an encrypted connection.
+    base_url = PlusAPI().base_url
+    origin = _origin(base_url)
+    if origin not in trusted or not _encrypted(origin):
+        why = (
+            "is not an AMP this machine is configured for"
+            if origin not in trusted
+            else "would carry the token over plain HTTP"
+        )
+        return [
+            (
+                "fail",
+                f"integration {app}",
+                f"not checked: {base_url} {why}, so {INTEGRATION_TOKEN_ENV} was "
+                "not sent; run `crewai enterprise configure <url>` to check it",
             )
             for app in apps
         ]
@@ -164,7 +192,9 @@ def _check_integrations(apps: tuple[str, ...]) -> list[Line]:
             continue
         # The same two calls `CrewaiPlatformTools` makes for `apps=[...]`.
         try:
-            actions = client_for_selector(selector).get_actions([selector])
+            actions = client_for_selector(selector, base_url=base_url).get_actions(
+                [selector]
+            )
         except requests.HTTPError as error:
             status = error.response.status_code if error.response is not None else None
             if status in (401, 403):
@@ -216,6 +246,10 @@ def _check_integrations(apps: tuple[str, ...]) -> list[Line]:
 
 def doctor(apps: tuple[str, ...]) -> None:
     """Print one `<status> <check>: <detail>` line per check; exit 1 on a fail."""
+    # Read before the project's `.env`, which must not choose where the
+    # integration token goes or how it travels there.
+    trusted = _trusted_amp_origins()
+    machine_transport = {key: os.environ.get(key) for key in REQUESTS_TRANSPORT_ENV}
     env_file = Path.cwd() / ".env"
     env_source = "the environment"
     if env_file.is_file():
@@ -223,13 +257,19 @@ def doctor(apps: tuple[str, ...]) -> None:
         if dotenv_values(env_file).get(TRACING_ENV_VAR) is not None:
             env_source = ".env"
         load_project_env(env_file)
+        restore_machine_transport(os.environ)
+        for key, value in machine_transport.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
     settings = Settings()
     login_line, logged_in = _check_login(settings)
     lines = [
         login_line,
         _check_tracing(env_source, logged_in, settings),
-        *_check_integrations(apps),
+        *_check_integrations(apps, trusted),
     ]
     for status, check, detail in lines:
         click.echo(f"{status} {check}: {detail}")

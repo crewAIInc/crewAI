@@ -326,7 +326,7 @@ crewai doctor [--app SELECTOR ...]
 
 - `login`: هل سجّلت الدخول، وما المؤسسة المحددة. لا يُرسل أي شيء عبر الشبكة.
 - `tracing`: هل تُتتبَّع عمليات التشغيل، ولماذا (`CREWAI_TRACING_ENABLED` في `.env` أو في البيئة، أو التفضيل المسجّل على هذا الجهاز)، وإلى أين تذهب التتبعات. التتبع المعطّل حالته `warn` وليس `fail` أبدًا: فهو اختيارك.
-- `integration <selector>`: سطر لكل `--app`، باستخدام المحددات نفسها في `apps=[...]` (مثل `gmail` أو `gmail/send_email`). يعرض الإجراءات المتاحة باستخدام `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`، وهو طلب القراءة نفسه الذي يرسله الطاقم.
+- `integration <selector>`: سطر لكل `--app`، باستخدام المحددات نفسها في `apps=[...]` (مثل `gmail` أو `gmail/send_email`). يعرض الإجراءات المتاحة باستخدام `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN`، وهو طلب القراءة نفسه الذي يرسله الطاقم. لا يُرسَل الرمز إلا إلى AMP مُعدّ على هذا الجهاز (عبر `crewai enterprise configure`، أو `CREWAI_PLUS_URL` مضبوط في الصدفة)، عبر HTTPS. إذا وجّه ملف `.env` الخاص بالمشروع `CREWAI_PLUS_URL` إلى أي وجهة أخرى، يفشل الفحص دون إرسال الرمز.
 
 ```shell Terminal
 uv run crewai doctor --app gmail --app slack

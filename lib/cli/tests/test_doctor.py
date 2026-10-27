@@ -443,6 +443,166 @@ def test_without_crewai_tools_an_app_fails_with_the_uv_run_hint(
     )
 
 
+# where the integration token may go
+
+
+def record_calls(monkeypatch, result) -> list[dict]:
+    """Every `client_for_selector` call: the url it was pinned to, and the
+    token and transport settings the request would read at that moment."""
+    calls: list[dict] = []
+
+    def client_for_selector(selector, *, base_url=None):
+        calls.append(
+            {
+                "base_url": base_url,
+                "token": os.environ.get(TOKEN_ENV),
+                **{
+                    name: os.environ.get(name)
+                    for name in (
+                        "HTTPS_PROXY",
+                        "REQUESTS_CA_BUNDLE",
+                        "CURL_CA_BUNDLE",
+                        "CREWAI_FACTORY",
+                    )
+                },
+            }
+        )
+        return FakeClient(result)
+
+    monkeypatch.setattr(integrations_client, "client_for_selector", client_for_selector)
+    return calls
+
+
+def test_a_project_env_amp_url_is_not_sent_the_token(tmp_path, machine, monkeypatch):
+    logged_in_with_org(tmp_path)
+    (machine / ".env").write_text(
+        f"{TOKEN_ENV}=integration-token\nCREWAI_PLUS_URL=https://amp.attacker.example\n"
+    )
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 1
+    assert calls == []
+    assert lines_of(result.output)["integration gmail"] == (
+        "fail not checked: https://amp.attacker.example is not an AMP this machine "
+        f"is configured for, so {TOKEN_ENV} was not sent; run "
+        "`crewai enterprise configure <url>` to check it"
+    )
+
+
+def test_an_amp_url_exported_in_the_shell_is_checked_there(tmp_path, monkeypatch):
+    logged_in_with_org(tmp_path)
+    monkeypatch.setenv(TOKEN_ENV, "integration-token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://amp.acme.example")
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 0, result.output
+    assert [call["base_url"] for call in calls] == ["https://amp.acme.example"]
+
+
+def test_the_configured_enterprise_url_may_be_named_by_the_project_env(
+    tmp_path, machine, monkeypatch
+):
+    log_in()
+    (tmp_path / "settings.json").write_text(
+        json.dumps(
+            {
+                "org_name": "Acme",
+                "org_uuid": "org-uuid-1",
+                "enterprise_base_url": "https://amp.acme.example",
+            }
+        )
+    )
+    (machine / ".env").write_text(
+        f"{TOKEN_ENV}=integration-token\nCREWAI_PLUS_URL=https://AMP.acme.example/\n"
+    )
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 0, result.output
+    assert [call["base_url"] for call in calls] == ["https://AMP.acme.example/"]
+
+
+def test_a_trusted_amp_over_plain_http_is_not_sent_the_token(tmp_path, monkeypatch):
+    logged_in_with_org(tmp_path)
+    monkeypatch.setenv(TOKEN_ENV, "integration-token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "http://amp.acme.example")
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 1
+    assert calls == []
+    assert lines_of(result.output)["integration gmail"] == (
+        "fail not checked: http://amp.acme.example would carry the token over "
+        f"plain HTTP, so {TOKEN_ENV} was not sent; run "
+        "`crewai enterprise configure <url>` to check it"
+    )
+
+
+@pytest.mark.parametrize(
+    "url", ["http://localhost:3000", "http://amp.localhost", "http://127.0.0.1:3000"]
+)
+def test_plain_http_to_this_machine_is_checked(tmp_path, monkeypatch, url):
+    logged_in_with_org(tmp_path)
+    monkeypatch.setenv(TOKEN_ENV, "integration-token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", url)
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 0, result.output
+    assert [call["base_url"] for call in calls] == [url]
+
+
+def test_a_project_env_cannot_choose_the_proxy_ca_or_tls_verification(
+    tmp_path, machine, monkeypatch
+):
+    logged_in_with_org(tmp_path)
+    for name in ("REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "CREWAI_FACTORY"):
+        monkeypatch.delenv(name, raising=False)
+    (machine / ".env").write_text(
+        f"{TOKEN_ENV}=from-dotenv\n"
+        "HTTPS_PROXY=http://proxy.attacker.example:8080\n"
+        "REQUESTS_CA_BUNDLE=/tmp/attacker-ca.pem\n"
+        "CURL_CA_BUNDLE=/tmp/attacker-ca.pem\n"
+        "CREWAI_FACTORY=true\n"
+    )
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 0, result.output
+    [call] = calls
+    assert call["token"] == "from-dotenv"
+    assert call["HTTPS_PROXY"] != "http://proxy.attacker.example:8080"
+    assert call["REQUESTS_CA_BUNDLE"] is None
+    assert call["CURL_CA_BUNDLE"] is None
+    assert call["CREWAI_FACTORY"] is None
+
+
+def test_the_machine_keeps_its_own_tls_settings(tmp_path, machine, monkeypatch):
+    logged_in_with_org(tmp_path)
+    monkeypatch.setenv("CREWAI_FACTORY", "true")
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", "/etc/acme-ca.pem")
+    (machine / ".env").write_text(
+        f"{TOKEN_ENV}=from-dotenv\nCREWAI_FACTORY=false\n"
+        "REQUESTS_CA_BUNDLE=/tmp/attacker-ca.pem\n"
+    )
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 0, result.output
+    [call] = calls
+    assert call["CREWAI_FACTORY"] == "true"
+    assert call["REQUESTS_CA_BUNDLE"] == "/etc/acme-ca.pem"
+
+
 # what doctor sends and writes
 
 
