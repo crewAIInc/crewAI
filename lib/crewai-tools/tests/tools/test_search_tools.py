@@ -23,6 +23,9 @@ from crewai_tools.tools.rag.rag_tool import Adapter
 import pytest
 
 
+CHROMADB_CONFIG = {"vectordb": {"provider": "chromadb", "config": {}}}
+
+
 @pytest.fixture(autouse=True)
 def allow_tmp_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     """Allow absolute paths outside CWD (e.g. /tmp/) for these search-tool tests.
@@ -44,7 +47,7 @@ def test_directory_search_tool():
         test_file = Path(temp_dir) / "test.txt"
         test_file.write_text("This is a test file for directory search")
 
-        tool = DirectorySearchTool(directory=temp_dir)
+        tool = DirectorySearchTool(directory=temp_dir, config=CHROMADB_CONFIG)
         result = tool._run(search_query="test file")
         assert "test file" in result.lower()
 
@@ -79,7 +82,7 @@ def test_txt_search_tool():
         temp_file_path = temp_file.name
 
     try:
-        tool = TXTSearchTool()
+        tool = TXTSearchTool(config=CHROMADB_CONFIG)
         tool.add(temp_file_path)
         result = tool._run(search_query="test file")
         assert "test file" in result.lower()
@@ -117,7 +120,7 @@ def test_json_search_tool():
         temp_file_path = temp_file.name
 
     try:
-        tool = JSONSearchTool()
+        tool = JSONSearchTool(config=CHROMADB_CONFIG)
         result = tool._run(search_query="test JSON", json_path=temp_file_path)
         assert "test json" in result.lower()
     finally:
@@ -143,7 +146,7 @@ def test_csv_search_tool():
         temp_file_path = temp_file.name
 
     try:
-        tool = CSVSearchTool()
+        tool = CSVSearchTool(config=CHROMADB_CONFIG)
         tool.add(temp_file_path)
         result = tool._run(search_query="test CSV")
         assert "test csv" in result.lower()
@@ -158,7 +161,7 @@ def test_mdx_search_tool():
         temp_file_path = temp_file.name
 
     try:
-        tool = MDXSearchTool()
+        tool = MDXSearchTool(config=CHROMADB_CONFIG)
         tool.add(temp_file_path)
         result = tool._run(search_query="test MDX")
         assert "test mdx" in result.lower()
