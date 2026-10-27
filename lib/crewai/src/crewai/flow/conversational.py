@@ -77,6 +77,12 @@ class ConversationConfig:
     deprecated. The built-in ``converse`` route already answers from canonical
     message history without tools; override ``converse_turn`` when a separate
     history policy is required.
+
+    Set ``trace_scope="turn"`` to finish each turn's trace automatically and
+    correlate turns by session id. The conversation remains resumable with a
+    persistence backend. When omitted, tracing keeps the existing deferred
+    session lifecycle, including ``finalize_session_traces()``. An explicit
+    ``trace_scope`` takes precedence over the legacy deferral flag.
     """
 
     system_prompt: str | None = None
@@ -88,9 +94,12 @@ class ConversationConfig:
     answer_from_history_llm: Any | None = None
     visible_agent_outputs: Sequence[str] | Literal["all"] | None = None
     defer_trace_finalization: bool = True
+    trace_scope: Literal["turn", "session"] | None = None
 
     def __post_init__(self) -> None:
-        """Warn when deprecated history-routing configuration is used."""
+        """Validate tracing scope and warn about deprecated history routing."""
+        if self.trace_scope not in (None, "turn", "session"):
+            raise ValueError("trace_scope must be 'turn', 'session', or None")
         if (
             self.answer_from_history_prompt is not None
             or self.answer_from_history_llm is not None

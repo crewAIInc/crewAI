@@ -20,7 +20,7 @@ from crewai_tools.tools.crewai_platform_tools.integrations_client import (
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
         "CREWAI_FACTORY": "false",
         "CREWAI_PLUS_URL": "https://platform.example.test/",
@@ -53,7 +53,7 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
     mock_get.side_effect = [index_response, show_response]
     connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
 
-    tools = ClipperClient().get_actions(
+    tools = ClipperClient(base_url="https://configured.example.test/").get_actions(
         [
             ApplicationSelector.from_string(f"github@{connection_id}"),
             ApplicationSelector.from_string("github/create_issue"),
@@ -83,14 +83,14 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
     }
     assert mock_get.call_args_list == [
         call(
-            "https://platform.example.test/clipper/v1/applications/github/tools",
+            "https://configured.example.test/clipper/v1/applications/github/tools",
             headers=headers,
             params={"connection_id": str(connection_id)},
             timeout=30,
             verify=True,
         ),
         call(
-            "https://platform.example.test/clipper/v1/applications/github/tools/create_issue",
+            "https://configured.example.test/clipper/v1/applications/github/tools/create_issue",
             headers=headers,
             params={},
             timeout=30,
@@ -114,7 +114,7 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
     },
 )
@@ -144,7 +144,7 @@ def test_clipper_client_preserves_discovery_ssl_behavior(
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
         "CREWAI_FACTORY": "false",
         "CREWAI_PLUS_URL": "https://platform.example.test/",
@@ -203,7 +203,7 @@ def test_clipper_client_executes_action(
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
         "CREWAI_FACTORY": "false",
         "CREWAI_PLUS_URL": "https://platform.example.test/",
@@ -265,7 +265,7 @@ def test_clipper_client_normalizes_execution_failure(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"},
     clear=True,
 )
 @patch(
@@ -296,7 +296,7 @@ def test_clipper_client_normalizes_non_json_service_failure(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"},
     clear=True,
 )
 @patch(
@@ -320,7 +320,7 @@ def test_clipper_client_discovers_without_deployment_instance_uuid(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"},
     clear=True,
 )
 @patch(
@@ -350,10 +350,7 @@ def test_clipper_client_executes_without_deployment_instance_uuid(
 
 @patch.dict(
     "os.environ",
-    {
-        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
-        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "ignored-token",
-    },
+    {"CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id"},
     clear=True,
 )
 @patch(
@@ -370,13 +367,71 @@ def test_clipper_client_requires_platform_integration_token(
         parameters={},
     )
 
-    with pytest.raises(ValueError, match="CREWAI_PLATFORM_INTEGRATION_TOKEN"):
+    with pytest.raises(ValueError, match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"):
         ClipperClient().execute_action(tool, {})
 
     mock_post.assert_not_called()
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "old_token"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_names_the_renamed_token_variable(mock_post: Mock) -> None:
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"CREWAI_PLATFORM_INTEGRATION_TOKEN is set, but CrewAI now reads the "
+        r"Enterprise Action Auth Token only from CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN\. "
+        r"Rename the variable",
+    ):
+        ClipperClient().execute_action(tool, {})
+
+    mock_post.assert_not_called()
+
+
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "new_token",
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "old_token",
+    },
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_ignores_the_old_token_when_the_new_one_is_set(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=200)
+    response.json.return_value = {"data": {"output": {}}}
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    ClipperClient().execute_action(tool, {})
+
+    assert mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer new_token"
+
+
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -418,7 +473,7 @@ def test_legacy_client_normalizes_discovered_actions(mock_get: Mock) -> None:
     assert mock_get.call_args.kwargs["params"] == {"apps": "github/create_issue"}
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -460,7 +515,7 @@ def test_legacy_client_sends_multiple_selectors_in_one_request(
     }
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -586,7 +641,7 @@ def test_application_selector_rejects_invalid_values(
         ("TRUE", False),
     ],
 )
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -610,7 +665,7 @@ def test_legacy_client_preserves_discovery_ssl_behavior(
     assert mock_get.call_args.kwargs["verify"] is verify
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
 )
@@ -651,7 +706,7 @@ def test_legacy_client_preserves_execution_request(
     assert mock_post.call_args.kwargs["allow_redirects"] is False
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
 )
@@ -691,7 +746,7 @@ def test_legacy_client_normalizes_execution_failures(
     )
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
 )

@@ -4,6 +4,206 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="23 out 2026">
+  ## v1.15.30
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.30)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir AGENTS.md para iniciar o processo de login durante a avaliação e parar após três rodadas.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.29.
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="23 out 2026">
+  ## v1.15.29
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte para kwargs compatíveis com LiteLLM.
+  - Implementar busca de aplicativos de plataforma na CLI.
+  - Destacar a busca do seletor de ações na CLI.
+  - Rastrear rotas de conversa e respostas públicas no fluxo.
+  - Selecionar organização durante o login na CLI.
+  - Adicionar roteamento offline de jev e executor de avaliação de guardrail.
+  - Executar ações de aplicativos de integração diretamente com call: tool.
+  - Promover AgentExecutor para fora do status experimental.
+  - Adicionar integração de busca vetorial do Azure DocumentDB.
+  - Adicionar carregador de texto de notebook somente leitura e carregador jsonl da biblioteca padrão.
+  - Garantir que a avaliação do crewAI mantenha todos os dados da avaliação no projeto.
+  - Permitir que a avaliação do crewAI execute o próprio crew para o veredicto a partir de um comando.
+  - Permitir que a avaliação do crewAI exporte avaliações como arquivos.
+
+  ### Correções de Bugs
+  - Corrigir a derivação do token de integração da plataforma a partir do login.
+  - Resolver problemas de registro ao preservar logs JSON em erros de serialização.
+  - Ignorar metadados de habilidade em cache que não sejam UTF-8.
+  - Corrigir ações de ferramentas para respeitar políticas de falha e obter orçamentos de uso atualizados por kickoff.
+  - Impedir que memórias privadas sem uma fonte vazem para cada recordação.
+  - Corrigir a ordem de recuperação de registros de memória no LanceDBStorage.
+  - Restaurar a descrição da tarefa quando o replanejamento falhar.
+  - Impedir que agentes repitam a mesma chamada de ferramenta.
+  - Escapar valores de escopo e id nos filtros do LanceDB.
+
+  ### Documentação
+  - Atualizar links quebrados nos exemplos do crewAI e guias de observabilidade.
+  - Corrigir links mortos na documentação de ferramentas.
+
+  ### Refatoração
+  - Refatorar a compactação de contexto para ser uma capacidade do BaseLLM.
+
+  ## Contribuidores
+
+  @Akaliup, @Arxsher, @Copilot, @D41910, @LindseyZ1205, @RaycarlLei, @Rohitkanithi, @Sakura-798, @Vidit-Ostwal, @Wilson0511, @Winoren, @abdullahajaz14, @bballhaus, @gabemilani, @iris-clawd, @joaomdmoura, @leom1919, @lorenzejay, @marcreniel, @mattatcha, @reubenjrouse, @rohitkanithi, @sandeepsnairms, @stepchanges, @subhashpolisetti, @theCyberTech, @vatsalyd
+
+</Update>
+
+<Update label="14 out 2026">
+  ## v1.15.28
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar o comando crewai eval para relatar onde um modelo parado quebrou.
+  - Usar o catálogo LiteLLM para janelas de contexto.
+
+  ### Correções de Bugs
+  - Corrigir fluxo para aprender com feedback humano retomado e preservar tipos de saída revisados.
+  - Avisar quando aplicativos não vazios resolvem para zero ferramentas de plataforma.
+  - Corrigir fluxo add-crew para encontrar corretamente o pacote a partir do pyproject.
+  - Mostrar razões para falhas de implantação e corrigir verificações de remoção de implantação e lockfile.
+  - Corrigir lista de gatilhos e tempo limite de solicitações de payload para 60 segundos.
+  - Ler o source_type do AMP durante o push de implantação para garantir que implantações ZIP usem o novo código.
+  - Decodificar arquivos JSON locais com UTF-8 BOM em rag.
+  - Permitir arquivos de entrada de imagem para OpenAI GPT-6 Sol/Luna/Astra.
+  - Emitir evento de chamada concluída para chamadas de ferramentas antropicas transmitidas.
+  - Impedir que modelos JSON-schema emitam avisos sobre campos de sombreamento de BaseModel.
+  - Preservar abortos de ferramentas nativas e identidade de cache de pós-gatilho.
+  - Atualizar o catálogo LiteLLM após a fusão do PR de aumento de versão.
+  - Reparar testes de regressão de avaliador deteriorados.
+
+  ### Documentação
+  - Consolidar melhorias na documentação do MongoDB.
+  - Corrigir orientações de implantação e ferramentas de plataforma em AGENTS.md.
+  - Corrigir importações do README para RagTool e XMLSearchTool.
+
+  ## Contributors
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
+<Update label="09 out 2026">
+  ## v1.15.27
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.27)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar XPU às opções de dispositivo do provedor OpenCLIP
+  - Adicionar deepinfra como um provedor compatível com OpenAI
+  - Registrar o motivo pelo qual uma avaliação foi interrompida antes de seu veredicto
+  - Registrar o que a aplicação de execução "Deploy" atendeu antes de uma tentativa
+  - Implementar rastreamento de custo e tempo por execução no crewai eval --models sem linhas de progresso repetidas
+
+  ### Correções de Bugs
+  - Corrigir problema onde stopSequences eram enviados para OpenAI GPT-6/GPT-5.6/gpt-oss
+  - Preservar a atribuição da fonte do carregador do GitHub
+  - Corrigir a contenção na inicialização do fluxo SQLite
+
+  ### Documentação
+  - Adicionar snapshot e changelog para v1.15.26
+
+  ## Contribuidores
+
+  @StoyanD, @ats3v, @joaomdmoura, @kimnamu, @lorenzejay, @mhbuehler, @zouyonghe
+
+</Update>
+
+<Update label="08 out 2026">
+  ## v1.15.26
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.26)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir a retenção de propriedade do rwlock quando a aquisição é interrompida.
+  - Resolver problema com URLs de origem do site de documentação que não estão sendo preservadas.
+  - Corrigir exibição de saída de tarefas em log-tasks-outputs para mostrar a saída real.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para a versão v1.15.25.
+
+  ## Contribuidores
+
+  @Velmet44, @Vidit-Ostwal, @joaomdmoura, @leilei3167, @lorenzejay, @lux-liang
+
+</Update>
+
+<Update label="07 out 2026">
+  ## v1.15.25
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.25)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Snapshot e changelog para v1.15.24
+
+  ## Contribuidores
+
+  @lorenzejay
+
+</Update>
+
+<Update label="07 out 2026">
+  ## v1.15.24
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.24)
+
+  ## O Que Mudou
+
+  ### Recursos
+  - Adicionar crewai eval para imprimir um resumo em markdown quando executado por um agente
+  - Enfileirar respostas de fundo relevantes
+  - Adicionar identidades experimentais de turno e resposta
+  - Adicionar Integrações Oracle
+  - Adicionar ciclo de vida de trabalho e executor experimentais
+  - Adicionar crewai eval --models e llm_overlay para trocar modelos, bem como funções
+
+  ### Correções de Bugs
+  - Corrigir mensagem de erro de nome de arquivo de treino na CLI
+  - Permitir que um passo de início seja re-executado nos eventos que escuta
+  - Permitir que feedback humano emita passos que expõem a revisão nas saídas
+  - Garantir que crewai eval saia com código 1, a menos que o portão tenha passado e solicitar login quando nada foi rastreado sem supervisão
+  - Relatar uso de rastreamento enviado do exportador de concessão
+  - Abordar múltiplos avisos de dependência e atualizar pacotes relevantes
+
+  ### Refatoração
+  - Mover a sumarização de mensagens para SummarizeMessages
+  - Centralizar e atualizar janelas de contexto
+
+  ## Contribuidores
+
+  @Velmet44, @Vidit-Ostwal, @dependabot[bot], @fileames, @gabemilani, @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="28 set 2026">
   ## v1.15.23
 

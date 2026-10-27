@@ -39,7 +39,7 @@ from crewai.tools.structured_tool import (
     format_description_for_llm,
 )
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
-from crewai.types.callback import SerializableCallable, _resolve_dotted_path
+from crewai.types.callback import SerializableCallable, _trusted_deserialize
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -56,31 +56,44 @@ _TOOL_TYPE_REGISTRY: dict[str, type] = {}
 _BASE_TOOL_CLS: type | None = None
 
 
+# Tool types from these packages may be imported from checkpoint data without
+# CREWAI_DESERIALIZE_CALLBACKS, so resuming in a fresh process keeps working.
+_FIRST_PARTY_TOOL_PACKAGES = ("crewai.", "crewai_tools.")
+
+
 def _resolve_tool_dict(value: dict[str, Any]) -> Any:
     """Validate a dict with ``tool_type`` into the concrete BaseTool subclass."""
     dotted = value.get("tool_type", "")
     tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
     if tool_cls is None:
-        mod_path, cls_name = dotted.rsplit(".", 1)
-        tool_cls = getattr(importlib.import_module(mod_path), cls_name)
+        if not (
+            dotted.startswith(_FIRST_PARTY_TOOL_PACKAGES) or _trusted_deserialize()
+        ):
+            raise ValueError(
+                f"Refusing to resolve tool type '{dotted}': set "
+                "CREWAI_DESERIALIZE_CALLBACKS=1 to allow. Only enable "
+                "this for trusted checkpoint data."
+            )
+        # Importing the module registers its BaseTool subclasses, so the
+        # registry lookup below rejects anything that is not a tool class.
+        importlib.import_module(dotted.rpartition(".")[0])
+        tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
+        if tool_cls is None:
+            raise ValueError(f"Tool type '{dotted}' is not a BaseTool subclass")
 
-    # Pre-resolve serialized callback strings so SerializableCallable's
-    # BeforeValidator sees a callable and skips the env-var guard.
     data = dict(value)
-    for key in ("cache_function",):
-        val = data.get(key)
-        if isinstance(val, str):
-            try:
-                data[key] = _resolve_dotted_path(val)
-            except (ValueError, ImportError):
-                data.pop(key)
-
-    return tool_cls.model_validate(data)  # type: ignore[union-attr]
+    # The default needs no import, so restoring it must not require the opt-in.
+    if data.get("cache_function") == _DEFAULT_CACHE_FUNCTION_PATH:
+        del data["cache_function"]
+    return tool_cls.model_validate(data)  # type: ignore[attr-defined]
 
 
 def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
     """Default cache function that always allows caching."""
     return True
+
+
+_DEFAULT_CACHE_FUNCTION_PATH = f"{__name__}._default_cache_function"
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
