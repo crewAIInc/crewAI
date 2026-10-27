@@ -1324,7 +1324,7 @@ class _ConversationalMixin:
                     response_model=kwargs.get("response_format")
                     or kwargs.get("response_model"),
                     verbose=False,
-                    allow_single_user=True,
+                    allow_single_user_compaction=True,
                 )
             if messages != original_messages and current_user_message:
                 messages.append({"role": "user", "content": current_user_message})
@@ -1340,7 +1340,7 @@ class _ConversationalMixin:
                     callbacks=[],
                     printer=Printer(),
                     verbose=False,
-                    allow_single_user=True,
+                    allow_single_user_compaction=True,
                 )
             if current_user_message:
                 messages.append({"role": "user", "content": current_user_message})

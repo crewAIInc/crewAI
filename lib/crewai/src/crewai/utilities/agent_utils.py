@@ -541,7 +541,7 @@ def _summarize_context_before_llm_call(
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
     *,
-    allow_single_user: bool = False,
+    allow_single_user_compaction: bool = False,
 ) -> None:
     """Compact messages after a context-window check.
 
@@ -553,7 +553,7 @@ def _summarize_context_before_llm_call(
         message for message in messages if message.get("role") != "system"
     ]
     if (
-        not allow_single_user
+        not allow_single_user_compaction
         and len(non_system_messages) == 1
         and non_system_messages[0].get("role") == "user"
     ):
@@ -643,7 +643,7 @@ def _proactively_summarize_context(
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
     *,
-    allow_single_user: bool = False,
+    allow_single_user_compaction: bool = False,
 ) -> None:
     """Try to summarize oversized context without blocking a valid LLM call."""
     try:
@@ -656,7 +656,7 @@ def _proactively_summarize_context(
                 verbose=verbose,
                 from_task=from_task,
                 from_agent=from_agent,
-                allow_single_user=allow_single_user,
+                allow_single_user_compaction=allow_single_user_compaction,
             )
     except (HookAborted, LLMCallBlockedError):
         raise
