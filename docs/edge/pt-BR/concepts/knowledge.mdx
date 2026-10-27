@@ -25,6 +25,34 @@ Para Fontes de Knowledge baseadas em arquivos, certifique-se de colocar seus arq
 Além disso, use caminhos relativos do diretório `knowledge` ao criar a fonte.
 </Tip>
 
+### Configuração do cliente de armazenamento vetorial (RAG)
+
+O CrewAI oferece uma abstração de cliente RAG neutra em relação ao provedor para armazenamentos vetoriais. O CrewAI não seleciona um provedor padrão; configure um antes de usar Knowledge ou o cliente RAG diretamente.
+
+Provedores suportados atualmente:
+- ChromaDB (opcional): `uv add "crewai[chromadb]"`
+- Qdrant: `uv add "crewai[qdrant]"`
+
+```python Code
+from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
+
+# ChromaDB
+from crewai.rag.chromadb.config import ChromaDBConfig
+set_rag_config(ChromaDBConfig())
+chromadb_client = get_rag_client()
+
+# Qdrant
+from crewai.rag.qdrant.config import QdrantConfig
+set_rag_config(QdrantConfig())
+qdrant_client = get_rag_client()
+
+# A mesma API para qualquer provedor
+client = qdrant_client  # or chromadb_client
+client.create_collection(collection_name="docs")
+
+clear_rag_config()  # optional reset
+```
+
 ### Exemplo Básico de Knowledge com String
 
 ```python Code
@@ -246,7 +274,7 @@ agent_collection_name = agent.role  # e.g., "Especialista Técnico"
 # Crew knowledge storage
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
+# With ChromaDB, both are stored in the same instance but different collections
 # Path: ~/.local/share/CrewAI/{project}/knowledge/
 #   ├── crew/                    # Crew knowledge collection
 #   ├── Especialista Técnico/    # Agent knowledge collection
@@ -406,14 +434,14 @@ Configuração de armazenamento personalizada para gerenciar como o knowledge é
 ## Transparência do Armazenamento de Knowledge
 
 <Info>
-**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena automaticamente as fontes de knowledge em diretórios específicos da plataforma usando ChromaDB para armazenamento vetorial. Entender essas localizações e padrões ajuda com implantações de produção, depuração e gerenciamento de armazenamento.
+**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena knowledge usando o provedor RAG configurado. Os locais abaixo se aplicam quando você configura o ChromaDB; outros provedores gerenciam o armazenamento de forma diferente.
 </Info>
 
 ### Onde o CrewAI Armazena Arquivos de Knowledge
 
-Por padrão, o CrewAI usa o mesmo sistema de armazenamento que a memória, armazenando knowledge em diretórios específicos da plataforma:
+Quando configurado com ChromaDB, o CrewAI armazena knowledge em diretórios específicos da plataforma:
 
-#### Localizações de Armazenamento Padrão por Plataforma
+#### Localizações de Armazenamento do ChromaDB por Plataforma
 
 **macOS:**
 ```

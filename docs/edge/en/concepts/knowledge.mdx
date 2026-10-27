@@ -27,16 +27,16 @@ Also, use relative paths from the `knowledge` directory when creating the source
 
 ### Vector store (RAG) client configuration
 
-CrewAI exposes a provider-neutral RAG client abstraction for vector stores. The default provider is ChromaDB, and Qdrant is supported as well. You can switch providers using configuration utilities.
+CrewAI exposes a provider-neutral RAG client abstraction for vector stores. CrewAI does not select a provider by default; configure one before using Knowledge or the RAG client directly.
 
 Supported today:
-- ChromaDB (default)
-- Qdrant
+- ChromaDB (optional): `uv add "crewai[chromadb]"`
+- Qdrant: `uv add "crewai[qdrant]"`
 
 ```python Code
 from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
 
-# ChromaDB (default)
+# ChromaDB
 from crewai.rag.chromadb.config import ChromaDBConfig
 set_rag_config(ChromaDBConfig())
 chromadb_client = get_rag_client()
@@ -58,7 +58,7 @@ results = client.search(collection_name="docs", query="collaborative agents", li
 clear_rag_config()  # optional reset
 ```
 
-This RAG client is separate from Knowledge’s built-in storage. Use it when you need direct vector-store control or custom retrieval pipelines.
+Knowledge uses the configured RAG provider. Use the RAG client directly when you need direct vector-store control or custom retrieval pipelines.
 
 ### Basic String Knowledge Example
 
@@ -281,7 +281,7 @@ agent_collection_name = agent.role  # e.g., "Technical Specialist"
 # Crew knowledge storage  
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
+# With ChromaDB, both are stored in the same instance but different collections
 # Path: ~/.local/share/CrewAI/{project}/knowledge/
 #   ├── crew/                    # Crew knowledge collection
 #   ├── Technical Specialist/    # Agent knowledge collection
@@ -441,14 +441,14 @@ Custom storage configuration for managing how the knowledge is stored and retrie
 ## Knowledge Storage Transparency
 
 <Info>
-**Understanding Knowledge Storage**: CrewAI automatically stores knowledge sources in platform-specific directories using ChromaDB for vector storage. Understanding these locations and defaults helps with production deployments, debugging, and storage management.
+**Understanding Knowledge Storage**: CrewAI stores knowledge with the RAG provider you configure. The locations below apply when you configure ChromaDB; other providers manage storage differently.
 </Info>
 
 ### Where CrewAI Stores Knowledge Files
 
-By default, CrewAI uses the same storage system as memory, storing knowledge in platform-specific directories:
+When configured with ChromaDB, CrewAI stores knowledge in platform-specific directories:
 
-#### Default Storage Locations by Platform
+#### ChromaDB Storage Locations by Platform
 
 **macOS:**
 ```

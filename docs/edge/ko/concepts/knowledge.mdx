@@ -25,6 +25,34 @@ Knowledge in CrewAI는 AI 에이전트가 작업 중에 외부 정보 소스에 
 또한, 소스를 생성할 때는 `knowledge` 디렉토리로부터의 상대 경로를 사용하세요.
 </Tip>
 
+### 벡터 스토어(RAG) 클라이언트 구성
+
+CrewAI는 벡터 스토어를 위한 공급자 중립적인 RAG 클라이언트 추상화를 제공합니다. CrewAI는 기본 공급자를 선택하지 않으므로 Knowledge 또는 RAG 클라이언트를 직접 사용하기 전에 공급자를 구성해야 합니다.
+
+현재 지원되는 공급자:
+- ChromaDB(선택 사항): `uv add "crewai[chromadb]"`
+- Qdrant: `uv add "crewai[qdrant]"`
+
+```python Code
+from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
+
+# ChromaDB
+from crewai.rag.chromadb.config import ChromaDBConfig
+set_rag_config(ChromaDBConfig())
+chromadb_client = get_rag_client()
+
+# Qdrant
+from crewai.rag.qdrant.config import QdrantConfig
+set_rag_config(QdrantConfig())
+qdrant_client = get_rag_client()
+
+# 모든 공급자에 동일한 API 사용
+client = qdrant_client  # or chromadb_client
+client.create_collection(collection_name="docs")
+
+clear_rag_config()  # optional reset
+```
+
 ### 기본 문자열 지식 예제
 
 ```python Code
@@ -247,7 +275,7 @@ agent_collection_name = agent.role  # e.g., "Technical Specialist"
 # Crew knowledge storage  
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
+# With ChromaDB, both are stored in the same instance but different collections
 # Path: ~/.local/share/CrewAI/{project}/knowledge/
 #   ├── crew/                    # Crew knowledge collection
 #   ├── Technical Specialist/    # Agent knowledge collection
@@ -408,14 +436,14 @@ knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 �
 ## 지식 저장 투명성
 
 <Info>
-**지식 저장 이해하기**: CrewAI는 ChromaDB를 사용하여 벡터 저장소에 지식 소스를 플랫폼별 디렉토리에 자동으로 저장합니다. 이러한 위치와 기본값을 이해하면 프로덕션 배포, 디버깅, 저장소 관리에 도움이 됩니다.
+**지식 저장 이해하기**: CrewAI는 구성한 RAG 공급자를 사용하여 지식을 저장합니다. 아래 위치는 ChromaDB를 구성한 경우에 적용되며, 다른 공급자는 저장소를 다르게 관리합니다.
 </Info>
 
 ### CrewAI가 Knowledge 파일을 저장하는 위치
 
-기본적으로 CrewAI는 memory와 동일한 저장 시스템을 사용하여, knowledge를 플랫폼별 디렉터리에 저장합니다.
+ChromaDB를 구성한 경우 CrewAI는 knowledge를 플랫폼별 디렉터리에 저장합니다.
 
-#### 플랫폼별 기본 저장 위치
+#### 플랫폼별 ChromaDB 저장 위치
 
 **macOS:**
 ```

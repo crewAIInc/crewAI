@@ -27,16 +27,16 @@ mode: "wide"
 
 ### إعداد عميل المتجه (RAG)
 
-يوفر CrewAI تجريدًا لعميل RAG محايد بالنسبة للمزود لمتاجر المتجهات. المزود الافتراضي هو ChromaDB، ويتم دعم Qdrant أيضًا. يمكنك التبديل بين المزودين باستخدام أدوات الإعداد.
+يوفر CrewAI تجريدًا لعميل RAG محايد بالنسبة للمزود لمتاجر المتجهات. لا يختار CrewAI مزودًا افتراضيًا؛ اضبط مزودًا قبل استخدام Knowledge أو عميل RAG مباشرةً.
 
 المدعوم حاليًا:
-- ChromaDB (افتراضي)
-- Qdrant
+- ChromaDB (اختياري): `uv add "crewai[chromadb]"`
+- Qdrant: `uv add "crewai[qdrant]"`
 
 ```python Code
 from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
 
-# ChromaDB (default)
+# ChromaDB
 from crewai.rag.chromadb.config import ChromaDBConfig
 set_rag_config(ChromaDBConfig())
 chromadb_client = get_rag_client()
@@ -281,7 +281,7 @@ agent_collection_name = agent.role  # e.g., "Technical Specialist"
 # Crew knowledge storage
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
+# With ChromaDB, both are stored in the same instance but different collections
 # Path: ~/.local/share/CrewAI/{project}/knowledge/
 #   ├── crew/                    # Crew knowledge collection
 #   ├── Technical Specialist/    # Agent knowledge collection
@@ -441,14 +441,14 @@ agent = Agent(
 ## شفافية تخزين المعرفة
 
 <Info>
-**فهم تخزين المعرفة**: يخزّن CrewAI مصادر المعرفة تلقائيًا في مجلدات خاصة بالمنصة باستخدام ChromaDB للتخزين المتجهي. فهم هذه المواقع والإعدادات الافتراضية يساعد في النشر في بيئة الإنتاج وتصحيح الأخطاء وإدارة التخزين.
+**فهم تخزين المعرفة**: يخزّن CrewAI المعرفة باستخدام مزود RAG الذي تضبطه. تنطبق المواقع أدناه عند ضبط ChromaDB؛ أما المزودون الآخرون فيديرون التخزين بشكل مختلف.
 </Info>
 
 ### أين يخزّن CrewAI ملفات المعرفة
 
-بشكل افتراضي، يستخدم CrewAI نفس نظام التخزين مثل الذاكرة، حيث يخزّن المعرفة في مجلدات خاصة بالمنصة:
+عند ضبط ChromaDB، يخزّن CrewAI المعرفة في مجلدات خاصة بالمنصة:
 
-#### مواقع التخزين الافتراضية حسب المنصة
+#### مواقع تخزين ChromaDB حسب المنصة
 
 **macOS:**
 ```
