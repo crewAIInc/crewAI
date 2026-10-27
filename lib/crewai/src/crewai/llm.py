@@ -100,6 +100,7 @@ if TYPE_CHECKING:
         get_supported_openai_params,
     )
     from litellm.types.utils import (
+        ChatCompletionDeltaCustomToolCall,
         ChatCompletionDeltaToolCall,
         Choices,
         Delta as LiteLLMDelta,
@@ -121,6 +122,7 @@ else:
     LiteLLMStreamingChoices = None
     get_supported_openai_params = None
     ChatCompletionDeltaToolCall = None
+    ChatCompletionDeltaCustomToolCall = None
     Function = None
     ModelResponse = None
     supports_response_schema = None
@@ -131,7 +133,7 @@ def _ensure_litellm() -> bool:
     global _litellm_loaded, LITELLM_AVAILABLE
     global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
     global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
-    global ChatCompletionDeltaToolCall, Function
+    global ChatCompletionDeltaCustomToolCall, ChatCompletionDeltaToolCall, Function
     global ModelResponse, supports_response_schema
 
     if _litellm_loaded:
@@ -144,6 +146,7 @@ def _ensure_litellm() -> bool:
             get_supported_openai_params as _get_supported_openai_params,
         )
         from litellm.types.utils import (
+            ChatCompletionDeltaCustomToolCall as _ChatCompletionDeltaCustomToolCall,
             ChatCompletionDeltaToolCall as _ChatCompletionDeltaToolCall,
             Choices as _Choices,
             Delta as _LiteLLMDelta,
@@ -164,6 +167,7 @@ def _ensure_litellm() -> bool:
         ModelResponseStream = _ModelResponseStream  # type: ignore[misc]
         LiteLLMStreamingChoices = _LiteLLMStreamingChoices  # type: ignore[misc]
         get_supported_openai_params = _get_supported_openai_params
+        ChatCompletionDeltaCustomToolCall = _ChatCompletionDeltaCustomToolCall  # type: ignore[misc]
         ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall  # type: ignore[misc]
         Function = _Function  # type: ignore[misc]
         ModelResponse = _ModelResponse  # type: ignore[misc]
@@ -1635,7 +1639,13 @@ class LLM(BaseLLM):
                             elif isinstance(delta, LiteLLMDelta):
                                 chunk_content = delta.content
 
-                            tool_calls: list[ChatCompletionDeltaToolCall] | None = None
+                            tool_calls: (
+                                list[
+                                    ChatCompletionDeltaToolCall
+                                    | ChatCompletionDeltaCustomToolCall
+                                ]
+                                | None
+                            ) = None
                             if isinstance(delta, dict):
                                 tool_calls = delta.get("tool_calls")
                             elif isinstance(delta, LiteLLMDelta):
@@ -1643,6 +1653,10 @@ class LLM(BaseLLM):
 
                             if tool_calls:
                                 for tool_call in tool_calls:
+                                    if not isinstance(
+                                        tool_call, ChatCompletionDeltaToolCall
+                                    ):
+                                        continue
                                     idx = tool_call.index
                                     if tool_call.function:
                                         if tool_call.function.name:
