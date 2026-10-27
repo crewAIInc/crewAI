@@ -51,6 +51,7 @@ def test_valid_azure_config_works(mock_create_client: Mock) -> None:
         pass
 
     config = {
+        "vectordb": {"provider": "chromadb", "config": {}},
         "embedding_model": {
             "provider": "azure",
             "config": {
