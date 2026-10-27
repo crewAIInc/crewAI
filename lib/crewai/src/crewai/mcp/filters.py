@@ -136,14 +136,16 @@ def create_dynamic_tool_filter(
     to the tool filter context (agent, server, run context).
 
     Args:
-        filter_func: Function that takes (context, tool) and returns bool.
+        filter_func: Synchronous function that takes (context, tool) and
+            returns bool. Async functions are not supported: their coroutine
+            would be truthy and keep every tool, so the resolver rejects them.
 
     Returns:
         Tool filter function that can be used with MCP server configs.
 
     Example:
         ```python
-        async def context_aware_filter(
+        def context_aware_filter(
             context: ToolFilterContext, tool: dict[str, Any]
         ) -> bool:
             # Block dangerous tools for code reviewers
