@@ -3,6 +3,7 @@ nothing sent but the GET a crew makes for its `apps=[...]` actions."""
 
 from __future__ import annotations
 
+import builtins
 from datetime import datetime, timedelta
 import json
 import os
@@ -15,6 +16,7 @@ from crewai_core.token_manager import TokenManager
 from crewai_core.user_data import update_user_data
 from crewai_tools.tools.crewai_platform_tools import integrations_client
 from crewai_tools.tools.crewai_platform_tools.integrations_client import ToolInfo
+from dotenv import load_dotenv
 import httpx
 import pytest
 import requests
@@ -601,6 +603,61 @@ def test_the_machine_keeps_its_own_tls_settings(tmp_path, machine, monkeypatch):
     [call] = calls
     assert call["CREWAI_FACTORY"] == "true"
     assert call["REQUESTS_CA_BUNDLE"] == "/etc/acme-ca.pem"
+
+
+def test_the_integrations_import_cannot_undo_the_machine_transport(
+    tmp_path, machine, monkeypatch
+):
+    """Importing crewai_tools imports crewai, whose `crewai.llm` calls
+    `load_dotenv()` and finds the project's `.env` again. Without override it
+    still puts back any key doctor removed. The real client then sends the
+    token with the verification, CA and proxy the machine chose."""
+    logged_in_with_org(tmp_path)
+    for name in ("REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "CREWAI_FACTORY"):
+        monkeypatch.delenv(name, raising=False)
+    env_file = machine / ".env"
+    env_file.write_text(
+        f"{TOKEN_ENV}=integration-token\n"
+        "HTTPS_PROXY=http://proxy.attacker.example:8080\n"
+        "REQUESTS_CA_BUNDLE=/tmp/attacker-ca.pem\n"
+        "CREWAI_FACTORY=true\n"
+    )
+    real_import = builtins.__import__
+
+    def import_that_reloads_the_env(name, *args, **kwargs):
+        if name == TOKEN_MODULE:
+            load_dotenv(env_file)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_that_reloads_the_env)
+    sent: list[dict] = []
+
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self):
+            return {"actions": {"gmail": [{"name": "gmail_send_email"}]}}
+
+    def get(url, *, headers, params, verify, **kwargs):
+        sent.append(
+            {
+                "verify": verify,
+                "HTTPS_PROXY": os.environ.get("HTTPS_PROXY"),
+                "REQUESTS_CA_BUNDLE": os.environ.get("REQUESTS_CA_BUNDLE"),
+            }
+        )
+        return Response()
+
+    monkeypatch.setattr(requests, "get", get)
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 0, result.output
+    [request] = sent
+    assert request["verify"] is True
+    assert request["REQUESTS_CA_BUNDLE"] is None
+    assert request["HTTPS_PROXY"] != "http://proxy.attacker.example:8080"
 
 
 # what doctor sends and writes

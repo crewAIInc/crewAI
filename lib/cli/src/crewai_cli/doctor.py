@@ -124,7 +124,9 @@ def _check_tracing(env_source: str, logged_in: bool, settings: Settings) -> Line
     return "ok", "tracing", f"on ({reason}); traces go to {destination}"
 
 
-def _check_integrations(apps: tuple[str, ...], trusted: set[str]) -> list[Line]:
+def _check_integrations(
+    apps: tuple[str, ...], trusted: set[str], machine_transport: dict[str, str | None]
+) -> list[Line]:
     if not apps:
         return [
             (
@@ -181,6 +183,15 @@ def _check_integrations(apps: tuple[str, ...], trusted: set[str]) -> list[Line]:
             )
             for app in apps
         ]
+    # Pinned here, after the import: importing crewai runs `load_dotenv()` in
+    # `crewai.llm`, which finds the project's `.env` again and puts back any key
+    # removed before it, so a pin made earlier would not reach the request.
+    restore_machine_transport(os.environ)
+    for key, value in machine_transport.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
 
     lines: list[Line] = []
     for app in apps:
@@ -257,19 +268,13 @@ def doctor(apps: tuple[str, ...]) -> None:
         if dotenv_values(env_file).get(TRACING_ENV_VAR) is not None:
             env_source = ".env"
         load_project_env(env_file)
-        restore_machine_transport(os.environ)
-        for key, value in machine_transport.items():
-            if value is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = value
 
     settings = Settings()
     login_line, logged_in = _check_login(settings)
     lines = [
         login_line,
         _check_tracing(env_source, logged_in, settings),
-        *_check_integrations(apps, trusted),
+        *_check_integrations(apps, trusted, machine_transport),
     ]
     for status, check, detail in lines:
         click.echo(f"{status} {check}: {detail}")
