@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_together_config(self):
+        """Test Together AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["together"]
+        assert config.base_url == "https://api.together.ai/v1"
+        assert config.api_key_env == "TOGETHER_API_KEY"
+        assert config.base_url_env == "TOGETHER_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -169,6 +177,15 @@ class TestOpenAICompatibleCompletion:
         finally:
             if original is not None:
                 os.environ[env_key] = original
+
+    def test_together_missing_api_key_names_env_var(self):
+        """Together requires a key; the error tells the user which env var to set."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="TOGETHER_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo", provider="together"
+            )
 
     def test_deepinfra_missing_api_key_names_env_var(self):
         """DeepInfra requires a key; the error tells the user which env var to set."""
@@ -409,6 +426,40 @@ class TestLLMIntegration:
     def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
         """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
+
+    def test_llm_creates_openai_compatible_for_together(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Together AI."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            llm = LLM(model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "together"
+            # Only the provider prefix is removed; the org/model id must
+            # reach the API intact.
+            assert llm.model == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+            assert llm.base_url == "https://api.together.ai/v1"
+
+    def test_together_base_url_env_override(self):
+        """TOGETHER_BASE_URL redirects Together to a proxy or private endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "TOGETHER_API_KEY": "test-key",
+                "TOGETHER_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_together_explicit_provider(self):
+        """Explicit provider="together" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            llm = LLM(
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo", provider="together"
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "together"
+            assert llm.model == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
