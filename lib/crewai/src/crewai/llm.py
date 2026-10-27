@@ -1289,11 +1289,7 @@ class LLM(BaseLLM):
             with model_call_hooks_dispatched():
                 result, completion = instructor_instance.to_pydantic_with_completion()
             structured_response = result.model_dump_json()
-            usage_info = (
-                completion.model_extra.get("usage")
-                if isinstance(completion, ModelResponseBase) and completion.model_extra
-                else None
-            )
+            usage_info = self._completion_usage(completion)
             if usage_info:
                 self._track_token_usage_internal(usage_info)
             finish_reason, response_id = self._extract_finish_reason_and_response_id(
@@ -1470,11 +1466,7 @@ class LLM(BaseLLM):
             with model_call_hooks_dispatched():
                 result, completion = instructor_instance.to_pydantic_with_completion()
             structured_response = result.model_dump_json()
-            usage_info = (
-                completion.model_extra.get("usage")
-                if isinstance(completion, ModelResponseBase) and completion.model_extra
-                else None
-            )
+            usage_info = self._completion_usage(completion)
             if usage_info:
                 self._track_token_usage_internal(usage_info)
             finish_reason, response_id = self._extract_finish_reason_and_response_id(
@@ -2186,6 +2178,17 @@ class LLM(BaseLLM):
                         ),
                     )
                     raise
+
+    @staticmethod
+    def _completion_usage(completion: Any) -> Any:
+        """Usage from a raw LiteLLM completion, read from ``model_extra``.
+
+        Avoids ``isinstance(..., ModelResponseBase)``: that name stays None
+        until ``_ensure_litellm()`` runs, which an LLM built without
+        ``__init__`` (e.g. restored) may not have done yet.
+        """
+        extra = getattr(completion, "model_extra", None)
+        return extra.get("usage") if isinstance(extra, dict) else None
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
