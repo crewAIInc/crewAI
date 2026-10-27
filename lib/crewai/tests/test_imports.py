@@ -25,6 +25,6 @@ def test_persist_is_importable_from_every_flow_path():
 
 
 def test_persist_is_in_flow_flow_star_exports():
-    import crewai.flow.flow
+    from crewai.flow import flow
 
-    assert "persist" in crewai.flow.flow.__all__
+    assert "persist" in flow.__all__
