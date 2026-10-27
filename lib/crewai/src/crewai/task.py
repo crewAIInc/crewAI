@@ -126,6 +126,17 @@ def _path_anchor(path: str) -> int:
     return 1 if windows_path.drive else 0
 
 
+class TaskCancelledError(Exception):
+    """Raised inside a task whose crew abandoned it after another task failed.
+
+    It is an ``Exception`` rather than the builtin ``CancelledError`` (a
+    ``BaseException``) on purpose: the task's own handler must see it, so a
+    started task still emits its matching ``TaskFailedEvent`` and the worker
+    thread still records the outcome on its future instead of dying with an
+    unhandled exception.
+    """
+
+
 class Task(BaseModel):
     """Class that represents a task to be executed.
 
@@ -319,6 +330,7 @@ class Task(BaseModel):
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
+    _cancellation: threading.Event = PrivateAttr(default_factory=threading.Event)
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("guardrail")
@@ -649,12 +661,35 @@ class Task(BaseModel):
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
         ctx = contextvars.copy_context()
-        threading.Thread(
+        # A reused task starts uncancelled; the flag only belongs to one run.
+        self._cancellation.clear()
+        self._thread = threading.Thread(
             daemon=True,
             target=ctx.run,
             args=(self._execute_task_async, agent, context, tools, future),
-        ).start()
+        )
+        self._thread.start()
         return future
+
+    def _request_cancellation(self) -> None:
+        """Ask this task to stop before its next unit of work.
+
+        A running thread cannot be preempted, and ``Future.cancel()`` is no help
+        either: the bare future returned by :meth:`execute_async` is never moved
+        to RUNNING by an executor, so cancelling it would succeed and then make
+        the worker thread's ``set_result()`` raise ``InvalidStateError``. The
+        task is therefore signalled instead, and checks the flag at the
+        boundaries it controls. Work already inside an agent call still runs to
+        the end of that call.
+        """
+        self._cancellation.set()
+
+    def _raise_if_cancelled(self, stage: str) -> None:
+        """Raise :class:`TaskCancelledError` if cancellation was requested."""
+        if self._cancellation.is_set():
+            raise TaskCancelledError(
+                f"Task '{self.name or self.description}' was cancelled before {stage}."
+            )
 
     def _execute_task_async(
         self,
@@ -847,6 +882,10 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        # Checked before any state or event: a task the crew abandoned before it
+        # started should leave no trace, so there is nothing to unwind here and
+        # no TaskStartedEvent that would need a matching TaskFailedEvent.
+        self._raise_if_cancelled("starting")
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
@@ -889,6 +928,12 @@ class Task(BaseModel):
                     context=context,
                     tools=tools,
                 )
+
+            # The crew may have abandoned this task while the agent call was in
+            # flight. Stop here instead of reporting a result nothing can
+            # consume: no callback, no output file, and no TaskCompletedEvent
+            # after the caller has already seen the run fail.
+            self._raise_if_cancelled("processing the agent result")
 
             self._post_agent_execution(agent)
 
@@ -1467,6 +1512,10 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
+            # Another attempt is a whole extra agent run; skip it once the crew
+            # has abandoned this task.
+            self._raise_if_cancelled(f"guardrail retry {attempt + 1}")
+
             with tool_failure_collector() as retry_failures:
                 result = agent.execute_task(
                     task=self,
