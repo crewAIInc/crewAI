@@ -2207,21 +2207,7 @@ class BedrockCompletion(BaseLLM):
 
     def _track_token_usage_internal(self, usage: TokenUsageTypeDef) -> None:  # type: ignore[override]
         """Track token usage from Bedrock response."""
-        input_tokens = usage.get("inputTokens", 0)
-        output_tokens = usage.get("outputTokens", 0)
-        total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
-        raw_cached = (
-            usage.get("cacheReadInputTokenCount")
-            or usage.get("cacheReadInputTokens")
-            or 0
-        )
-        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
-
-        self._token_usage["prompt_tokens"] += input_tokens
-        self._token_usage["completion_tokens"] += output_tokens
-        self._token_usage["total_tokens"] += total_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
+        super()._track_token_usage_internal(dict(usage))
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
