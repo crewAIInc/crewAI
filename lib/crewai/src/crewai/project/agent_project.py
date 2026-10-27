@@ -1,4 +1,4 @@
-"""Load a standalone Python, JSON, or YAML agent project."""
+"""Experimental standalone Python, JSON, or YAML agent project loading."""
 
 from __future__ import annotations
 
@@ -26,6 +26,8 @@ def load_agent_project(
     project_path: str | Path = ".", project_name: str | None = None
 ) -> Agent:
     """Load the standalone agent selected by the project's entrypoint.
+
+    Experimental: the project schema and loading API may change.
 
     ``[tool.crewai].definition`` selects a Python, JSON, or YAML file. Without
     it, the shared project resolver discovers a single supported entrypoint.

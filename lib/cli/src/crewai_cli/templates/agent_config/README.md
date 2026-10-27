@@ -1,6 +1,11 @@
 # {{package_name}}
 
-A standalone CrewAI agent defined in `{{definition}}`.
+An experimental standalone CrewAI agent defined in `{{definition}}`.
+Standalone agent project formats and CLI support may change.
+
+YAML is the default for `crewai create agent {{package_name}}`.
+Choose JSON with `crewai create agent {{package_name}} --format json`, or a Python
+agent with `crewai create agent {{package_name}} --format python`.
 
 ```text
 {{package_name}}/

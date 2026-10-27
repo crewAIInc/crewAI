@@ -191,8 +191,8 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "agent_format",
     type=click.Choice(["python", "json", "yaml"]),
     default=None,
-    show_default="python",
-    help="Agent only: definition format.",
+    show_default="yaml",
+    help="Experimental agent projects only: definition format.",
 )
 @click.option(
     "--declarative",
@@ -226,7 +226,10 @@ def create(
     output_dir: str | None = None,
     agent_format: str | None = None,
 ) -> None:
-    """Create a new crew, flow, agent, tool, skill, or template."""
+    """Create a new crew, flow, agent, tool, skill, or template.
+
+    Standalone agent support is experimental. Agents use YAML by default.
+    """
     if deprecated_skip_provider:
         warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
         skip_provider = True
@@ -246,7 +249,7 @@ def create(
                 "flow",
                 "A deterministic workflow with full control over agents and crews",
             ),
-            ("agent", "A standalone agent with tools"),
+            ("agent", "An experimental standalone agent with tools"),
             ("tool", "A custom tool for the CrewAI Tool Repository"),
             ("skill", "An agent skill with instructions and optional assets"),
             ("template", "A remote project template from the CrewAI gallery"),
@@ -312,7 +315,7 @@ def create(
             )
         from crewai_cli.create_agent import create_agent
 
-        create_agent(name, format=agent_format or "python")
+        create_agent(name, format=agent_format or "yaml")
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 

@@ -1,6 +1,10 @@
 # {{package_name}}
 
-A standalone agent with one local tool, ready to run locally or in a managed deployment.
+An experimental standalone agent with one local tool, ready to run locally or in a managed deployment.
+Standalone agent project formats and CLI support may change.
+
+Create this Python layout explicitly with `crewai create agent {{package_name}} --format python`.
+The default `crewai create agent {{package_name}}` creates a YAML definition instead.
 
 ```text
 {{package_name}}/

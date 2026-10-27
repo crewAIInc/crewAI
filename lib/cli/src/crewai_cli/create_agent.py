@@ -9,8 +9,8 @@ from crewai_cli.utils import get_or_create_project_id, normalize_package_name
 from crewai_cli.version import get_crewai_dependency_range
 
 
-def create_agent(name: str, *, format: str = "python") -> None:
-    """Create an installable standalone agent in Python, JSON, or YAML."""
+def create_agent(name: str, *, format: str = "yaml") -> None:
+    """Create an experimental standalone agent, using YAML by default."""
     if format not in {"python", "json", "yaml"}:
         raise click.BadParameter("Choose python, json, or yaml.", param_hint="format")
     package_name = normalize_package_name(name)
@@ -59,3 +59,4 @@ def create_agent(name: str, *, format: str = "python") -> None:
     Telemetry().project_created_span("agent", project_id)
     initialize_if_git_available(project_root)
     click.secho(f"Agent {package_name} created successfully!", fg="green", bold=True)
+    click.secho("Experimental: standalone agent support may change.", fg="yellow")

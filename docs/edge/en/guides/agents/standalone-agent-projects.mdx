@@ -1,0 +1,154 @@
+---
+title: "Standalone Agent Projects (Experimental)"
+description: "Create and run a standalone Agent project using YAML, JSON, or Python."
+---
+
+<Warning>
+Standalone Agent projects are experimental. The project schema and loading API may change. This preview requires matching CLI and SDK builds that include this feature; managed deployments also require a compatible Enterprise runtime. The examples do not imply support in an older installed release.
+</Warning>
+
+A standalone Agent project defines one Agent and receives its messages at kickoff time. YAML is the default scaffold. JSON and Python are explicit alternatives. You do not need a `main.py`, a Crew, a Flow, or a factory function.
+
+## Create a project
+
+```shell Terminal
+crewai create agent support_agent
+cd support_agent
+cp .env.example .env
+```
+
+Set `OPENAI_API_KEY` in `.env` for the default `openai/gpt-4o-mini` model, then install and run:
+
+```shell Terminal
+crewai install
+crewai run --inputs '{"messages":"What are the support hours?"}'
+```
+
+`crewai install` creates `uv.lock`. Commit it with the project. Keep `.env` local and use the deployment's environment settings for provider credentials.
+
+## Project structure
+
+```text
+support_agent/
+├── agent.yaml
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+The configuration project has no source package. Add a `tools/` directory only when you need custom Python tools.
+
+The generated `pyproject.toml` selects the Agent definition and packages the configuration and any local tools:
+
+```toml
+[tool.crewai]
+type = "agent"
+definition = "agent.yaml"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["agent.yaml", "tools"]
+```
+
+## Define the Agent
+
+Edit `agent.yaml`:
+
+```yaml
+role: Support assistant
+goal: Answer support questions accurately and concisely.
+backstory: >-
+  Support is available Monday to Friday, 09:00-17:00 UTC.
+  Answer hours questions using this published schedule.
+llm: openai/gpt-4o-mini
+max_iter: 5
+```
+
+These are Agent constructor fields. Supply the request through `messages` at runtime; do not add a fixed `input` field to the definition.
+
+### Choose JSON or Python
+
+```shell Terminal
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+The JSON scaffold creates `agent.json` with the same fields:
+
+```json
+{
+  "role": "Support assistant",
+  "goal": "Answer support questions accurately and concisely.",
+  "backstory": "Support is available Monday to Friday, 09:00-17:00 UTC. Answer hours questions using this published schedule.",
+  "llm": "openai/gpt-4o-mini",
+  "max_iter": 5
+}
+```
+
+The Python scaffold exports `agent = Agent(...)` from `src/python_support/agent.py`. Use it when defining the Agent requires Python logic.
+
+Both `.yml` and `.yaml` are supported. When renaming or moving a configuration, update `definition` and the wheel's `only-include` list together. Definition paths must stay inside the project root.
+
+Without an explicit `definition`, discovery accepts a single root `agent.py`, `agent.json`, `agent.yml`, or `agent.yaml`, or the conventional `src/<package>/agent.py`. Multiple discovered files produce an error; set `definition` to choose one.
+
+## Add a custom tool
+
+Create `tools/support_hours.py`:
+
+```python
+from crewai.tools import BaseTool
+
+
+class SupportHoursTool(BaseTool):
+    name: str = "support_hours"
+    description: str = "Return the published customer support hours."
+
+    def _run(self) -> str:
+        return "Support is available Monday to Friday, 09:00-17:00 UTC."
+```
+
+Add its reference to the YAML configuration; JSON uses the same string list:
+
+```yaml
+tools:
+  - custom:support_hours
+```
+
+`custom:support_hours` loads a `BaseTool` subclass from `tools/support_hours.py`. Add any tool dependencies to `pyproject.toml` and refresh the lockfile with `crewai install`. Only load trusted project code: custom tools and Python references execute Python during loading.
+
+## Pass a message history
+
+`messages` also accepts a non-empty list of role/content messages:
+
+```shell Terminal
+crewai run --inputs '{"messages":[{"role":"user","content":"Use support_hours to verify the published support hours."}]}'
+```
+
+Each kickoff creates a fresh Agent and ordinary local custom-tool instances. These projects do not automatically retain conversation history between kickoffs. Existing arbitrary Python references can resolve module-level singleton objects; their mutable state is not isolated by the loader.
+
+For programmatic use, the experimental SDK loader follows the same project selection rules:
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+result = agent.kickoff("What are the support hours?")
+print(result.raw)
+```
+
+## Validate and deploy the preview
+
+```shell Terminal
+crewai deploy validate
+```
+
+Validation loads the selected Agent without running a kickoff. It can execute project imports and initialize tools or provider clients. The normal archive pipeline includes the definition, tools, and lockfile while excluding `.env` and `.venv`.
+
+For a deployment with a compatible preview Enterprise runtime, use the existing deployment workflow described in the [CLI reference](/en/concepts/cli). The managed API accepts the same input:
+
+```json
+{"inputs": {"messages": "What are the support hours?"}}
+```
+
+The managed prototype uses the existing authenticated kickoff/status lifecycle and an internal Flow adapter for execution tracking. Chat/streaming, restore/checkpoint support, first-class Agent provisioning, and production container/release compatibility remain outside this preview's verified scope.

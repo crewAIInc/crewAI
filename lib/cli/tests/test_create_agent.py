@@ -18,7 +18,9 @@ import tomli
 @pytest.fixture
 def agent_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(crewai, ["create", "agent", "Support-Agent"])
+    result = CliRunner().invoke(
+        crewai, ["create", "agent", "Support-Agent", "--format", "python"]
+    )
     assert result.exit_code == 0, result.output
     return tmp_path / "support_agent"
 
@@ -36,6 +38,9 @@ def test_create_agent_exports_installable_agent(
     assert config["build-system"]["build-backend"] == "hatchling.build"
     assert config["project"]["dependencies"]
     assert "scripts" not in config["project"]
+    readme = (agent_project / "README.md").read_text()
+    assert "experimental" in readme
+    assert "--format python" in readme
     package = agent_project / "src" / "support_agent"
     assert not (package / "main.py").exists()
     assert not (package / "crew.py").exists()
@@ -80,7 +85,9 @@ def test_create_agent_rejects_invalid_package_name(
 def test_create_agent_preserves_existing_directory(agent_project: Path) -> None:
     source = agent_project / "src" / "support_agent" / "agent.py"
     source.write_text("original")
-    result = CliRunner().invoke(crewai, ["create", "agent", "Support-Agent"])
+    result = CliRunner().invoke(
+        crewai, ["create", "agent", "Support-Agent", "--format", "python"]
+    )
     assert result.exit_code != 0
     assert "already exists" in result.output
     assert source.read_text() == "original"
@@ -319,3 +326,47 @@ def test_config_agent_install_keeps_editable_project_install(
     )
     install_crew([])
     assert commands == [["uv", "sync"]]
+
+
+def test_create_agent_defaults_to_yaml_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(crewai, ["create", "agent", "Default-Agent"])
+    assert result.exit_code == 0, result.output
+    assert "Experimental: standalone agent support may change." in result.output
+    root = tmp_path / "default_agent"
+    config = tomli.loads((root / "pyproject.toml").read_text())
+    assert config["tool"]["crewai"]["definition"] == "agent.yaml"
+    assert (root / "agent.yaml").is_file()
+    assert not (root / "agent.json").exists()
+    assert not (root / "src").exists()
+    readme = (root / "README.md").read_text()
+    assert "experimental" in readme
+    assert "YAML is the default" in readme
+    assert "--format json" in readme
+    assert "--format python" in readme
+
+
+def test_programmatic_create_agent_defaults_to_yaml_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from crewai_cli.create_agent import create_agent
+
+    monkeypatch.chdir(tmp_path)
+    create_agent("Default-Agent")
+    root = tmp_path / "default_agent"
+    config = tomli.loads((root / "pyproject.toml").read_text())
+    assert config["tool"]["crewai"]["definition"] == "agent.yaml"
+    assert (root / "agent.yaml").is_file()
+    assert not (root / "src").exists()
+    assert (
+        "Experimental: standalone agent support may change." in capsys.readouterr().out
+    )
+
+
+def test_create_help_marks_agent_support_experimental_and_yaml_default() -> None:
+    result = CliRunner().invoke(crewai, ["create", "--help"])
+    assert result.exit_code == 0
+    assert "Standalone agent support is experimental" in result.output
+    assert "[default: (yaml)]" in result.output

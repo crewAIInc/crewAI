@@ -1,0 +1,154 @@
+---
+title: "مشاريع Agent مستقلة (تجريبية)"
+description: "إنشاء مشروع Agent مستقل وتشغيله باستخدام YAML أو JSON أو Python."
+---
+
+<Warning>
+مشاريع Agent المستقلة تجريبية. قد يتغير مخطط المشروع وواجهة API الخاصة بالتحميل. تتطلب هذه المعاينة إصدارات متوافقة من CLI وSDK تتضمن هذه الميزة؛ كما تتطلب عمليات النشر المُدارة بيئة تشغيل Enterprise متوافقة. لا تعني الأمثلة أن الميزة مدعومة في إصدار أقدم مثبت لديك.
+</Warning>
+
+يعرّف مشروع Agent المستقل Agent واحدًا ويتلقى رسائله عند استدعاء kickoff. يُنشأ المشروع افتراضيًا بصيغة YAML، ويمكن اختيار JSON أو Python صراحةً كبديل. لا تحتاج إلى `main.py` أو Crew أو Flow أو دالة factory.
+
+## إنشاء مشروع
+
+```shell Terminal
+crewai create agent support_agent
+cd support_agent
+cp .env.example .env
+```
+
+اضبط `OPENAI_API_KEY` في `.env` للنموذج الافتراضي `openai/gpt-4o-mini`، ثم ثبّت المشروع وشغّله:
+
+```shell Terminal
+crewai install
+crewai run --inputs '{"messages":"What are the support hours?"}'
+```
+
+ينشئ `crewai install` ملف `uv.lock`. أضفه إلى Git مع المشروع. احتفظ بملف `.env` محليًا واستخدم إعدادات البيئة الخاصة بالنشر لبيانات اعتماد المزوّد.
+
+## بنية المشروع
+
+```text
+support_agent/
+├── agent.yaml
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+لا يحتوي المشروع القائم على الإعدادات على حزمة شيفرة مصدرية. أضف مجلد `tools/` فقط عندما تحتاج إلى أدوات Python مخصصة.
+
+يحدد ملف `pyproject.toml` المُنشأ تعريف Agent ويضمّن الإعدادات وأي أدوات محلية في الحزمة:
+
+```toml
+[tool.crewai]
+type = "agent"
+definition = "agent.yaml"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["agent.yaml", "tools"]
+```
+
+## تعريف Agent
+
+عدّل `agent.yaml`:
+
+```yaml
+role: Support assistant
+goal: Answer support questions accurately and concisely.
+backstory: >-
+  Support is available Monday to Friday, 09:00-17:00 UTC.
+  Answer hours questions using this published schedule.
+llm: openai/gpt-4o-mini
+max_iter: 5
+```
+
+هذه حقول مُنشئ Agent. مرّر الطلب عبر `messages` وقت التشغيل؛ ولا تضف حقل `input` ثابتًا إلى التعريف.
+
+### اختيار JSON أو Python
+
+```shell Terminal
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+ينشئ قالب JSON ملف `agent.json` بالحقول نفسها:
+
+```json
+{
+  "role": "Support assistant",
+  "goal": "Answer support questions accurately and concisely.",
+  "backstory": "Support is available Monday to Friday, 09:00-17:00 UTC. Answer hours questions using this published schedule.",
+  "llm": "openai/gpt-4o-mini",
+  "max_iter": 5
+}
+```
+
+يصدّر قالب Python المتغير `agent = Agent(...)` من `src/python_support/agent.py`. استخدمه عندما يتطلب تعريف Agent منطقًا برمجيًا بلغة Python.
+
+كل من `.yml` و`.yaml` مدعوم. عند إعادة تسمية ملف الإعدادات أو نقله، حدّث `definition` وقائمة `only-include` الخاصة بملف wheel معًا. يجب أن تبقى مسارات التعريف داخل جذر المشروع.
+
+إذا لم تحدد `definition` صراحةً، يبحث النظام عن ملف واحد في الجذر باسم `agent.py` أو `agent.json` أو `agent.yml` أو `agent.yaml`، أو عن المسار المعتاد `src/<package>/agent.py`. يؤدي العثور على ملفات متعددة إلى خطأ؛ اضبط `definition` لاختيار أحدها.
+
+## إضافة أداة مخصصة
+
+أنشئ `tools/support_hours.py`:
+
+```python
+from crewai.tools import BaseTool
+
+
+class SupportHoursTool(BaseTool):
+    name: str = "support_hours"
+    description: str = "Return the published customer support hours."
+
+    def _run(self) -> str:
+        return "Support is available Monday to Friday, 09:00-17:00 UTC."
+```
+
+أضف مرجع الأداة إلى إعدادات YAML؛ ويستخدم JSON قائمة السلاسل النصية نفسها:
+
+```yaml
+tools:
+  - custom:support_hours
+```
+
+يحمّل `custom:support_hours` صنفًا مشتقًا من `BaseTool` من `tools/support_hours.py`. أضف أي اعتماديات للأداة إلى `pyproject.toml` وحدّث ملف القفل باستخدام `crewai install`. حمّل شيفرة المشاريع الموثوقة فقط: تنفذ الأدوات المخصصة ومراجع Python شيفرة Python أثناء التحميل.
+
+## تمرير سجل رسائل
+
+يقبل `messages` أيضًا قائمة غير فارغة من الرسائل التي تتضمن role/content:
+
+```shell Terminal
+crewai run --inputs '{"messages":[{"role":"user","content":"Use support_hours to verify the published support hours."}]}'
+```
+
+ينشئ كل استدعاء kickoff كائن Agent جديدًا ونسخًا جديدة من الأدوات المحلية المخصصة العادية. لا تحتفظ هذه المشاريع بسجل المحادثة تلقائيًا بين استدعاءات kickoff. قد تشير مراجع Python العامة الحالية إلى كائنات singleton على مستوى الوحدة؛ ولا يعزل المُحمّل حالتها القابلة للتغيير.
+
+للاستخدام البرمجي، يتبع مُحمّل SDK التجريبي قواعد اختيار المشروع نفسها:
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+result = agent.kickoff("What are the support hours?")
+print(result.raw)
+```
+
+## التحقق من المعاينة ونشرها
+
+```shell Terminal
+crewai deploy validate
+```
+
+يحمّل التحقق Agent المحدد دون تنفيذ kickoff. وقد ينفذ عمليات استيراد شيفرة المشروع ويهيّئ الأدوات أو عملاء المزوّدين. يتضمن مسار إنشاء الأرشيف المعتاد التعريف والأدوات وملف القفل، مع استبعاد `.env` و`.venv`.
+
+للنشر باستخدام بيئة تشغيل Enterprise متوافقة مع المعاينة، اتبع سير عمل النشر الحالي الموضح في [مرجع CLI](/ar/concepts/cli). تقبل API المُدارة المدخلات نفسها:
+
+```json
+{"inputs": {"messages": "What are the support hours?"}}
+```
+
+يستخدم النموذج الأولي المُدار دورة kickoff/status الحالية التي تتطلب المصادقة، ومحوّل Flow داخليًا لتتبع التنفيذ. لا يزال دعم المحادثة/البث، والاستعادة/نقاط التحقق، وتوفير بنية تشغيل مخصصة لـ Agent، والتوافق مع حاويات الإنتاج وإصداراته خارج النطاق الذي جرى التحقق منه في هذه المعاينة.

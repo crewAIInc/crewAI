@@ -1,0 +1,154 @@
+---
+title: "독립형 Agent 프로젝트 (실험적)"
+description: "YAML, JSON 또는 Python으로 독립형 Agent 프로젝트를 만들고 실행합니다."
+---
+
+<Warning>
+독립형 Agent 프로젝트는 실험적 기능입니다. 프로젝트 스키마와 로딩 API는 변경될 수 있습니다. 이 미리 보기를 사용하려면 해당 기능이 포함된 서로 호환되는 CLI 및 SDK 빌드가 필요하며, 관리형 배포에는 호환되는 Enterprise 런타임도 필요합니다. 이 예제가 이전에 설치한 릴리스에서도 지원된다는 의미는 아닙니다.
+</Warning>
+
+독립형 Agent 프로젝트는 하나의 Agent를 정의하고 kickoff 시점에 메시지를 받습니다. 기본 프로젝트 형식은 YAML이며, JSON과 Python은 명시적으로 선택할 수 있는 대안입니다. `main.py`, Crew, Flow 또는 팩터리 함수가 필요하지 않습니다.
+
+## 프로젝트 만들기
+
+```shell Terminal
+crewai create agent support_agent
+cd support_agent
+cp .env.example .env
+```
+
+기본 모델인 `openai/gpt-4o-mini`를 사용하도록 `.env`에 `OPENAI_API_KEY`를 설정한 다음 설치하고 실행합니다:
+
+```shell Terminal
+crewai install
+crewai run --inputs '{"messages":"What are the support hours?"}'
+```
+
+`crewai install`은 `uv.lock`을 생성합니다. 이 파일을 프로젝트와 함께 커밋하세요. `.env`는 로컬에 보관하고, 공급자 인증 정보는 배포 환경 설정에 지정하세요.
+
+## 프로젝트 구조
+
+```text
+support_agent/
+├── agent.yaml
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+설정 기반 프로젝트에는 소스 패키지가 없습니다. 사용자 지정 Python 도구가 필요할 때만 `tools/` 디렉터리를 추가하세요.
+
+생성된 `pyproject.toml`은 Agent 정의를 선택하고 설정과 로컬 도구를 패키지에 포함합니다:
+
+```toml
+[tool.crewai]
+type = "agent"
+definition = "agent.yaml"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["agent.yaml", "tools"]
+```
+
+## Agent 정의하기
+
+`agent.yaml`을 편집합니다:
+
+```yaml
+role: Support assistant
+goal: Answer support questions accurately and concisely.
+backstory: >-
+  Support is available Monday to Friday, 09:00-17:00 UTC.
+  Answer hours questions using this published schedule.
+llm: openai/gpt-4o-mini
+max_iter: 5
+```
+
+이 항목들은 Agent 생성자 필드입니다. 요청은 실행 시 `messages`로 전달하세요. 정의에 고정된 `input` 필드를 추가하지 마세요.
+
+### JSON 또는 Python 선택하기
+
+```shell Terminal
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+JSON 프로젝트 템플릿은 동일한 필드를 가진 `agent.json`을 생성합니다:
+
+```json
+{
+  "role": "Support assistant",
+  "goal": "Answer support questions accurately and concisely.",
+  "backstory": "Support is available Monday to Friday, 09:00-17:00 UTC. Answer hours questions using this published schedule.",
+  "llm": "openai/gpt-4o-mini",
+  "max_iter": 5
+}
+```
+
+Python 프로젝트 템플릿은 `src/python_support/agent.py`에서 `agent = Agent(...)`를 내보냅니다. Agent를 정의하는 데 Python 로직이 필요한 경우 사용하세요.
+
+`.yml`과 `.yaml`을 모두 지원합니다. 설정 파일의 이름이나 위치를 변경할 때는 `definition`과 wheel의 `only-include` 목록을 함께 수정하세요. 정의 경로는 프로젝트 루트 안에 있어야 합니다.
+
+`definition`을 명시하지 않으면 루트의 `agent.py`, `agent.json`, `agent.yml`, `agent.yaml` 또는 일반적인 `src/<package>/agent.py` 중 하나를 검색합니다. 여러 파일이 발견되면 오류가 발생하므로 `definition`을 설정해 하나를 선택하세요.
+
+## 사용자 지정 도구 추가하기
+
+`tools/support_hours.py`를 만듭니다:
+
+```python
+from crewai.tools import BaseTool
+
+
+class SupportHoursTool(BaseTool):
+    name: str = "support_hours"
+    description: str = "Return the published customer support hours."
+
+    def _run(self) -> str:
+        return "Support is available Monday to Friday, 09:00-17:00 UTC."
+```
+
+YAML 설정에 도구 참조를 추가합니다. JSON도 동일한 문자열 목록을 사용합니다:
+
+```yaml
+tools:
+  - custom:support_hours
+```
+
+`custom:support_hours`는 `tools/support_hours.py`에서 `BaseTool` 하위 클래스를 로드합니다. 도구에 필요한 의존성을 `pyproject.toml`에 추가하고 `crewai install`로 잠금 파일을 갱신하세요. 신뢰할 수 있는 프로젝트 코드만 로드하세요. 사용자 지정 도구와 Python 참조는 로딩 중 Python 코드를 실행합니다.
+
+## 메시지 기록 전달하기
+
+`messages`는 role/content 메시지로 구성된 비어 있지 않은 목록도 받습니다:
+
+```shell Terminal
+crewai run --inputs '{"messages":[{"role":"user","content":"Use support_hours to verify the published support hours."}]}'
+```
+
+각 kickoff는 새로운 Agent와 일반적인 로컬 사용자 지정 도구 인스턴스를 생성합니다. 이 프로젝트는 kickoff 간에 대화 기록을 자동으로 유지하지 않습니다. 기존의 임의 Python 참조는 모듈 수준의 싱글턴 객체로 해석될 수 있으며, 로더는 해당 객체의 변경 가능한 상태를 격리하지 않습니다.
+
+프로그램에서 사용할 경우, 실험적 SDK 로더도 동일한 프로젝트 선택 규칙을 따릅니다:
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+result = agent.kickoff("What are the support hours?")
+print(result.raw)
+```
+
+## 미리 보기 검증 및 배포하기
+
+```shell Terminal
+crewai deploy validate
+```
+
+검증은 kickoff를 실행하지 않고 선택한 Agent를 로드합니다. 이 과정에서 프로젝트 코드를 가져오고 도구나 공급자 클라이언트를 초기화할 수 있습니다. 일반적인 아카이브 생성 과정은 정의, 도구, 잠금 파일을 포함하고 `.env`와 `.venv`는 제외합니다.
+
+호환되는 미리 보기 Enterprise 런타임에 배포하려면 [CLI 참조](/ko/concepts/cli)에 설명된 기존 배포 절차를 사용하세요. 관리형 API는 동일한 입력을 받습니다:
+
+```json
+{"inputs": {"messages": "What are the support hours?"}}
+```
+
+관리형 프로토타입은 인증을 요구하는 기존 kickoff/status 수명 주기와 실행 추적용 내부 Flow 어댑터를 사용합니다. 채팅/스트리밍, 복원/체크포인트 지원, Agent 전용 프로비저닝, 프로덕션 컨테이너 및 릴리스 호환성은 이 미리 보기에서 검증된 범위에 포함되지 않습니다.
