@@ -2,12 +2,14 @@
 
 from unittest.mock import AsyncMock, Mock
 
+import numpy as np
 import pytest
 from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.types import BaseRecord
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import QdrantClient as SyncQdrantClient
+from qdrant_client.models import Distance, VectorParams
 
 
 @pytest.fixture
@@ -787,3 +789,171 @@ class TestQdrantClient:
             ClientMethodMismatchError, match=r"Method areset\(\) requires"
         ):
             await client.areset()
+
+
+class TestQdrantVectorSizeInference:
+    """New collections are sized to the embedding function's output dimension."""
+
+    @staticmethod
+    def _embed(dim: int):
+        return lambda text: [1.0] + [0.0] * (dim - 1)
+
+    @staticmethod
+    def _vector_params(collection_info):
+        return collection_info.config.params.vectors
+
+    def test_create_collection_infers_dimension(self):
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=self._embed(1536))
+
+        client.create_collection(collection_name="infer")
+
+        params = self._vector_params(raw.get_collection("infer"))
+        assert params.size == 1536
+        assert params.distance == Distance.COSINE
+
+    def test_get_or_create_collection_infers_dimension_and_stores_documents(self):
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=self._embed(1536))
+
+        info = client.get_or_create_collection(collection_name="infer")
+        client.add_documents(
+            collection_name="infer", documents=[BaseRecord(content="hello")]
+        )
+
+        assert self._vector_params(info).size == 1536
+        assert raw.count("infer").count == 1
+
+    def test_default_dimension_unchanged_for_384_embedder(self):
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=self._embed(384))
+
+        client.create_collection(collection_name="default")
+
+        assert self._vector_params(raw.get_collection("default")).size == 384
+
+    def test_explicit_vectors_config_wins_without_probing(self):
+        raw = SyncQdrantClient(location=":memory:")
+        embedding = Mock(return_value=[0.0] * 1536)
+        client = QdrantClient(client=raw, embedding_function=embedding)
+
+        client.create_collection(
+            collection_name="explicit",
+            vectors_config=VectorParams(size=8, distance=Distance.DOT),
+        )
+
+        params = self._vector_params(raw.get_collection("explicit"))
+        assert (params.size, params.distance) == (8, Distance.DOT)
+        embedding.assert_not_called()
+
+    def test_existing_collection_is_not_probed(self):
+        raw = SyncQdrantClient(location=":memory:")
+        raw.create_collection(
+            "existing", vectors_config=VectorParams(size=4, distance=Distance.COSINE)
+        )
+        embedding = Mock(return_value=[0.0] * 1536)
+        client = QdrantClient(client=raw, embedding_function=embedding)
+
+        info = client.get_or_create_collection(collection_name="existing")
+
+        assert self._vector_params(info).size == 4
+        embedding.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "unusable", [[], None, np.array(1.0), np.zeros((2, 3)), [[0.1, 0.2]], ["a"]]
+    )
+    def test_unusable_embedding_falls_back_to_default(self, unusable):
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=lambda text: unusable)
+
+        client.create_collection(collection_name="fallback")
+
+        assert self._vector_params(raw.get_collection("fallback")).size == 384
+
+    def test_async_embedder_with_sync_client_falls_back_to_default(self):
+        async def embed(text: str) -> list[float]:
+            return [0.0] * 1536
+
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=embed)
+
+        client.create_collection(collection_name="fallback")
+
+        assert self._vector_params(raw.get_collection("fallback")).size == 384
+
+    @pytest.mark.asyncio
+    async def test_acreate_collection_infers_dimension(self):
+        raw = AsyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=self._embed(1536))
+
+        await client.acreate_collection(collection_name="infer")
+
+        info = await raw.get_collection("infer")
+        assert self._vector_params(info).size == 1536
+
+    @pytest.mark.asyncio
+    async def test_aget_or_create_collection_infers_dimension_from_async_embedder(
+        self,
+    ):
+        async def embed(text: str) -> list[float]:
+            return [0.0] * 768
+
+        raw = AsyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=embed)
+
+        info = await client.aget_or_create_collection(collection_name="infer")
+
+        assert self._vector_params(info).size == 768
+
+    @pytest.mark.asyncio
+    async def test_acreate_collection_explicit_vectors_config_wins(self):
+        raw = AsyncQdrantClient(location=":memory:")
+        embedding = Mock(return_value=[0.0] * 1536)
+        client = QdrantClient(client=raw, embedding_function=embedding)
+
+        await client.acreate_collection(
+            collection_name="explicit",
+            vectors_config=VectorParams(size=8, distance=Distance.COSINE),
+        )
+
+        info = await raw.get_collection("explicit")
+        assert self._vector_params(info).size == 8
+        embedding.assert_not_called()
+
+    def test_numpy_embedding_infers_dimension(self):
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(
+            client=raw,
+            embedding_function=lambda text: np.zeros(1536, dtype=np.float32),
+        )
+
+        client.create_collection(collection_name="numpy")
+
+        assert self._vector_params(raw.get_collection("numpy")).size == 1536
+
+    def test_failing_probe_logs_and_falls_back_to_default(self, caplog):
+        def embed(text: str) -> list[float]:
+            raise RuntimeError("embedder offline")
+
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=embed)
+
+        with caplog.at_level("WARNING"):
+            client.create_collection(collection_name="fallback")
+
+        assert self._vector_params(raw.get_collection("fallback")).size == 384
+        assert "Could not infer the Qdrant vector size" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_afailing_probe_logs_and_falls_back_to_default(self, caplog):
+        async def embed(text: str) -> list[float]:
+            raise RuntimeError("embedder offline")
+
+        raw = AsyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=embed)
+
+        with caplog.at_level("WARNING"):
+            info = await client.aget_or_create_collection(collection_name="fallback")
+
+        assert self._vector_params(info).size == 384
+        assert "Could not infer the Qdrant vector size" in caplog.text
