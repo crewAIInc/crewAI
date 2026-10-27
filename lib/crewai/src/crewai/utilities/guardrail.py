@@ -166,6 +166,7 @@ def process_guardrail(
 
     try:
         result = guardrail(output)
+        guardrail_result = GuardrailResult.from_tuple(result)
     except HookAborted as e:
         # a deny ends the validation, so the started event above still needs a
         # terminal one before it leaves
@@ -201,8 +202,6 @@ def process_guardrail(
             ),
         )
         raise
-
-    guardrail_result = GuardrailResult.from_tuple(result)
 
     crewai_event_bus.emit(
         event_source,

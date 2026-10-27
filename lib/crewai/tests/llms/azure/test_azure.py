@@ -553,6 +553,9 @@ def test_azure_supports_stop_words():
     """
     llm = LLM(model="azure/gpt-4")
     assert llm.supports_stop_words() == True
+    # Azure names GPT-3.5 "gpt-35"; it must not match the GPT-5+ check.
+    llm = LLM(model="azure/gpt-35-turbo")
+    assert llm.supports_stop_words() == True
 
 
 def test_azure_gpt5_models_do_not_support_stop_words():
@@ -575,6 +578,10 @@ def test_azure_gpt5_models_do_not_support_stop_words():
         # GPT-5.2 series
         "azure/gpt-5.2",
         "azure/gpt-5.2-chat",
+        "azure/gpt-5.4-nano",
+        # Newer major versions
+        "azure/gpt-6",
+        "azure/gpt-6-luna",
     ]
 
     for model_name in gpt5_models:

@@ -1987,6 +1987,9 @@ def test_openai_gpt5_models_do_not_support_stop_words():
         "gpt-5.1-chat",
         "gpt-5.2",
         "gpt-5.2-chat",
+        "gpt-5.4-nano",
+        "gpt-6",
+        "gpt-6-luna",
     ]
 
     for model_name in gpt5_models:
@@ -2006,6 +2009,7 @@ def test_openai_non_gpt5_models_support_stop_words():
         "gpt-4.1",
         "gpt-4.1-mini",
         "gpt-4-turbo",
+        "gpt-3.5-turbo",
     ]
 
     for model_name in supported_models:
