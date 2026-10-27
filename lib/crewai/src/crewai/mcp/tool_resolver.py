@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+import inspect
 import sys
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -53,6 +54,23 @@ MCP_MAX_RETRIES: Final[int] = 3
 
 _mcp_schema_cache: dict[str, Any] = {}
 _cache_ttl: Final[int] = 300  # 5 minutes
+
+
+def _tool_filter_verdict(result: Any) -> bool:
+    """Return a tool filter's verdict, rejecting async filters.
+
+    An async filter returns a coroutine, which is always truthy. Using it as the
+    verdict would silently keep every tool, including the ones the filter blocks,
+    so fail closed with a clear error instead.
+    """
+    if inspect.isawaitable(result):
+        if inspect.iscoroutine(result):
+            result.close()
+        raise TypeError(
+            "MCP tool_filter must be a synchronous callable that returns a bool; "
+            "async filters are not supported."
+        )
+    return bool(result)
 
 
 class MCPToolResolver:
@@ -431,11 +449,11 @@ class MCPToolResolver:
                                 server_name=server_name,
                                 run_context=None,
                             )
-                            if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
+                            verdict = mcp_config.tool_filter(context, tool)  # type: ignore[call-arg, arg-type]
                         except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
+                            verdict = mcp_config.tool_filter(tool)  # type: ignore[call-arg, arg-type]
+                        if _tool_filter_verdict(verdict):
+                            filtered_tools.append(tool)
                     else:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools

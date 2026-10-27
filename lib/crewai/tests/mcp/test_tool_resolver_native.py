@@ -6,6 +6,7 @@ import pytest
 from crewai.agent.core import Agent
 from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.mcp.config import MCPServerHTTP, MCPServerStdio
+from crewai.mcp.filters import ToolFilterContext, create_dynamic_tool_filter
 from crewai.mcp.tool_resolver import MCPToolResolver
 
 
@@ -87,6 +88,63 @@ class TestResolveNativeEmptyTools:
             "No tools discovered from MCP server" in call.args[1]
             for call in warning_calls
         )
+
+
+class TestResolveNativeToolFilter:
+    @staticmethod
+    def _mock_client(mock_client_class):
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(
+            return_value=[
+                {"name": "read_file", "description": "Read a file"},
+                {"name": "danger_delete", "description": "Delete everything"},
+            ]
+        )
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_async_dynamic_filter_does_not_silently_allow_blocked_tools(
+        self, mock_client_class, resolver
+    ):
+        """An async filter returns a coroutine, which is always truthy.
+
+        Treating that coroutine as the filter verdict would keep every tool,
+        including the ones the filter blocks, so it must be rejected instead.
+        """
+        self._mock_client(mock_client_class)
+
+        async def block_dangerous(context: ToolFilterContext, tool: dict) -> bool:
+            return not tool["name"].startswith("danger_")
+
+        config = MCPServerHTTP(
+            url="https://mcp.example.com/api",
+            tool_filter=create_dynamic_tool_filter(block_dangerous),
+        )
+
+        # _resolve_native reports every discovery failure as a ConnectionError;
+        # the message names the misconfigured filter.
+        with pytest.raises(ConnectionError, match="tool_filter must be a synchronous"):
+            resolver._resolve_native(config)
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_sync_dynamic_filter_blocks_tools(self, mock_client_class, resolver):
+        self._mock_client(mock_client_class)
+
+        def block_dangerous(context: ToolFilterContext, tool: dict) -> bool:
+            return not tool["name"].startswith("danger_")
+
+        config = MCPServerHTTP(
+            url="https://mcp.example.com/api",
+            tool_filter=create_dynamic_tool_filter(block_dangerous),
+        )
+
+        tools, _ = resolver._resolve_native(config)
+
+        assert [tool.name.rsplit("_", 1)[-1] for tool in tools] == ["file"]
+        assert not any("danger_delete" in tool.name for tool in tools)
 
 
 class TestResolveNativeRuntimeError:
