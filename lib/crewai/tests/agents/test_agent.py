@@ -1928,7 +1928,7 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
 
 @pytest.mark.vcr()
-def test_agent_with_knowledge_sources_generate_search_query():
+def test_agent_with_knowledge_sources_generate_search_query(chromadb_rag_config):
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
