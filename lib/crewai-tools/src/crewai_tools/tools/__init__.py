@@ -6,6 +6,10 @@ from crewai_tools.tools.azure_documentdb_vector_search_tool import (
     AzureDocumentDBVectorSearchConfig,
     AzureDocumentDBVectorSearchTool,
 )
+from crewai_tools.tools.botsrated_tool.botsrated_tool import (
+    BotsRatedCheckTool,
+    BotsRatedPreflightTool,
+)
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
 from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
     BraveLLMContextTool,
@@ -229,6 +233,8 @@ __all__ = [
     "AzureDocumentDBToolSchema",
     "AzureDocumentDBVectorSearchConfig",
     "AzureDocumentDBVectorSearchTool",
+    "BotsRatedCheckTool",
+    "BotsRatedPreflightTool",
     "BraveImageSearchTool",
     "BraveLLMContextTool",
     "BraveLocalPOIsDescriptionTool",
