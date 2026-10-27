@@ -729,6 +729,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
     assert_event_count(
         mock_emit=mock_emit,
+        expected_completed_tool_call=1,
         expected_stream_chunk=9,
         expected_completed_llm_call=0,
         expected_final_chunk_result='{"location":"New York, NY"}',

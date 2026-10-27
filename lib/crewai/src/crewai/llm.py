@@ -1044,6 +1044,16 @@ class LLM(BaseLLM):
                     if tool_arg.function.name
                 ]
                 if tool_calls_list:
+                    self._handle_emit_call_events(
+                        response=tool_calls_list,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=self._usage_to_dict(usage_info),
+                        finish_reason=stream_finish_reason,
+                        response_id=stream_response_id,
+                    )
                     return tool_calls_list
 
             finish_reason, response_id_last = (
@@ -1277,15 +1287,27 @@ class LLM(BaseLLM):
                 llm=self,
             )
             with model_call_hooks_dispatched():
-                result = instructor_instance.to_pydantic()
+                result, completion = instructor_instance.to_pydantic_with_completion()
             structured_response = result.model_dump_json()
+            usage_info = (
+                completion.model_extra.get("usage")
+                if isinstance(completion, ModelResponseBase) and completion.model_extra
+                else None
+            )
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+            finish_reason, response_id = self._extract_finish_reason_and_response_id(
+                completion
+            )
             self._handle_emit_call_events(
                 response=structured_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
-                usage=None,
+                usage=self._usage_to_dict(usage_info),
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return structured_response
 
@@ -1360,6 +1382,16 @@ class LLM(BaseLLM):
         tool_calls = response_message.tool_calls or []
 
         if tool_calls and not available_functions:
+            self._handle_emit_call_events(
+                response=tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
             return tool_calls
 
         if not tool_calls and text_response:
@@ -1436,15 +1468,27 @@ class LLM(BaseLLM):
                 llm=self,
             )
             with model_call_hooks_dispatched():
-                result = instructor_instance.to_pydantic()
+                result, completion = instructor_instance.to_pydantic_with_completion()
             structured_response = result.model_dump_json()
+            usage_info = (
+                completion.model_extra.get("usage")
+                if isinstance(completion, ModelResponseBase) and completion.model_extra
+                else None
+            )
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+            finish_reason, response_id = self._extract_finish_reason_and_response_id(
+                completion
+            )
             self._handle_emit_call_events(
                 response=structured_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
-                usage=None,
+                usage=self._usage_to_dict(usage_info),
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return structured_response
 
@@ -1516,6 +1560,16 @@ class LLM(BaseLLM):
         tool_calls = response_message.tool_calls or []
 
         if tool_calls and not available_functions:
+            self._handle_emit_call_events(
+                response=tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
             return tool_calls
 
         if not tool_calls and text_response:
@@ -1711,6 +1765,16 @@ class LLM(BaseLLM):
                         if result is not None:
                             return result
                     else:
+                        self._handle_emit_call_events(
+                            response=tool_calls_list,
+                            call_type=LLMCallType.TOOL_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params.get("messages"),
+                            usage=self._usage_to_dict(usage_info),
+                            finish_reason=stream_finish_reason,
+                            response_id=stream_response_id,
+                        )
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
