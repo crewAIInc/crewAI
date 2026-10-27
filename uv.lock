@@ -1464,7 +1464,6 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "appdirs" },
     { name = "cel-python" },
-    { name = "chromadb" },
     { name = "click" },
     { name = "crewai-cli" },
     { name = "crewai-core" },
@@ -1515,6 +1514,9 @@ azure-ai-inference = [
 bedrock = [
     { name = "aiobotocore" },
     { name = "boto3" },
+]
+chromadb = [
+    { name = "chromadb" },
 ]
 docling = [
     { name = "docling" },
@@ -1572,7 +1574,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'aws'", specifier = "~=1.43.46" },
     { name = "boto3", marker = "extra == 'bedrock'", specifier = "~=1.43.46" },
     { name = "cel-python", specifier = ">=0.5.0,<0.6" },
-    { name = "chromadb", specifier = "~=1.5.9" },
+    { name = "chromadb", marker = "extra == 'chromadb'", specifier = "~=1.5.9" },
     { name = "click", specifier = ">=8.1.7,<9" },
     { name = "crewai-cli", editable = "lib/cli" },
     { name = "crewai-core", editable = "lib/crewai-core" },
@@ -1617,7 +1619,7 @@ requires-dist = [
     { name = "tomli-w", specifier = "~=1.1.0" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "chromadb", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"

@@ -24,7 +24,6 @@ dependencies = [
     "opentelemetry-sdk>=1.45.1,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
     # Data Handling
-    "chromadb~=1.5.9",
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
@@ -57,6 +56,9 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 
 [project.optional-dependencies]
+chromadb = [
+    "chromadb~=1.5.9",
+]
 tools = [
     "crewai-tools==1.15.30",
 ]
