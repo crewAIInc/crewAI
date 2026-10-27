@@ -2,7 +2,9 @@
 
 record_ids must intersect with the other filters (older_than, categories,
 metadata_filter), matching QdrantEdgeStorage's semantics, instead of being
-ignored by the filtered paths.
+ignored by the filtered paths. The scoped cases also pin down the WHERE-clause
+parenthesization: the scope predicate is an OR group, so an unparenthesized
+join let its root-scope branch escape the other filters.
 """
 
 from datetime import datetime, timedelta
@@ -85,3 +87,58 @@ def test_record_ids_with_metadata_filter_only_deletes_requested(
     assert deleted == 1
     remaining = storage.search(first.embedding, limit=10)
     assert [record.id for record, _ in remaining] == ["second"]
+
+
+def test_record_ids_with_scope_prefix_and_older_than_keeps_other_records(
+    storage: LanceDBStorage,
+) -> None:
+    """record_ids and older_than must also constrain the root-scope branch.
+
+    The scope predicate is an OR group (``... OR scope = '/'``) and AND binds
+    tighter than OR, so joining the conditions unparenthesized produced
+    ``(id IN (...) AND scope LIKE '/proj%') OR (scope = '/' AND created_at <
+    t)``: a scoped delete naming one id also removed every root-scope record
+    older than the threshold, and skipped the age check for the named ids
+    inside the prefix.
+    """
+    in_old = _record("in-old", scope="/proj/a")
+    in_old.created_at = datetime.utcnow() - timedelta(days=30)
+    in_new = _record("in-new", scope="/proj/b")
+    root_old = _record("root-old", scope="/")
+    root_old.created_at = datetime.utcnow() - timedelta(days=30)
+    storage.save([in_old, in_new, root_old])
+
+    deleted = storage.delete(
+        record_ids=[in_old.id, in_new.id],
+        scope_prefix="/proj",
+        older_than=datetime.utcnow() - timedelta(days=1),
+    )
+
+    assert deleted == 1
+    remaining = storage.search(in_old.embedding, limit=10)
+    assert sorted(record.id for record, _ in remaining) == ["in-new", "root-old"]
+
+
+def test_scope_prefix_with_older_than_honours_the_age_filter(
+    storage: LanceDBStorage,
+) -> None:
+    """The same precedence defect, reachable without record_ids at all.
+
+    Unparenthesized, the age filter only applied to the ``scope = '/'`` branch,
+    so a scoped delete removed every record under the prefix however new it
+    was. Pre-existing rather than introduced here, and fixed by the same
+    parenthesization.
+    """
+    old = _record("old", scope="/proj/a")
+    old.created_at = datetime.utcnow() - timedelta(days=30)
+    fresh = _record("fresh", scope="/proj/b")
+    storage.save([old, fresh])
+
+    deleted = storage.delete(
+        scope_prefix="/proj",
+        older_than=datetime.utcnow() - timedelta(days=1),
+    )
+
+    assert deleted == 1
+    remaining = storage.search(old.embedding, limit=10)
+    assert [record.id for record, _ in remaining] == ["fresh"]

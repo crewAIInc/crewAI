@@ -483,7 +483,11 @@ class LanceDBStorage:
                 before = int(self._table.count_rows())
                 self._do_write("delete", "id != ''")
                 return before - int(self._table.count_rows())
-            where_expr = " AND ".join(conditions)
+            # Parenthesize each condition: the scope predicate is an OR group,
+            # and AND binds tighter than OR, so joining bare conditions would
+            # let its `scope = '/'` branch escape the record_ids and older_than
+            # restrictions and over-delete.
+            where_expr = " AND ".join(f"({c})" for c in conditions)
             before = int(self._table.count_rows())
             self._do_write("delete", where_expr)
             return before - int(self._table.count_rows())
