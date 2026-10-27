@@ -11,9 +11,12 @@ from unittest import mock
 from click.testing import CliRunner
 import pytest
 
+import crewai_cli
 from crewai_cli.cli import run
-import crewai_cli.run_crew as crewai_run_crew
 from crewai_cli.run_crew import (
+    _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV,
+    _CREWAI_JSON_CREW_DEFINITION_ENV,
+    _JSON_CREW_RUNNER_CODE,
     _execute_uv_script,
     _load_json_crew_for_tui,
     _missing_input_names,
@@ -243,13 +246,13 @@ def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path) 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(old_parent)
     env["CREWAI_DMN"] = "true"
-    env[crewai_run_crew._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
-        Path(crewai_run_crew.__file__).resolve().parent
+    env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
+        Path(crewai_cli.__file__).resolve().parent
     )
-    env[crewai_run_crew._CREWAI_JSON_CREW_DEFINITION_ENV] = "crew.jsonc"
+    env[_CREWAI_JSON_CREW_DEFINITION_ENV] = "crew.jsonc"
 
     subprocess.run(
-        [sys.executable, "-c", crewai_run_crew._JSON_CREW_RUNNER_CODE],
+        [sys.executable, "-c", _JSON_CREW_RUNNER_CODE],
         check=True,
         env=env,
         cwd=tmp_path,
