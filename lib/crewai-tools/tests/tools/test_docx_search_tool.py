@@ -10,6 +10,9 @@ from crewai_tools.tools.docx_search_tool.docx_search_tool import (
 )
 
 
+CHROMADB_CONFIG = {"vectordb": {"provider": "chromadb", "config": {}}}
+
+
 def test_fixed_docx_search_tool_schema() -> None:
     """FixedDOCXSearchToolSchema should only require search_query."""
     data = FixedDOCXSearchToolSchema.model_validate({"search_query": "quarterly revenue"})
@@ -42,7 +45,7 @@ def test_docx_search_tool_initialization_schemas() -> None:
     """Verify tool args_schema matches initialization mode without requiring docx in fixed mode."""
     with patch.object(DOCXSearchTool, "add"):
         # When initialized with a docx file (fixed mode), args_schema should be FixedDOCXSearchToolSchema
-        fixed_tool = DOCXSearchTool(docx="sample.docx")
+        fixed_tool = DOCXSearchTool(docx="sample.docx", config=CHROMADB_CONFIG)
         assert fixed_tool.args_schema == FixedDOCXSearchToolSchema
 
         # Validating args without docx must succeed for fixed tool
@@ -51,5 +54,5 @@ def test_docx_search_tool_initialization_schemas() -> None:
         assert not hasattr(validated, "docx")
 
         # When initialized without a docx file, args_schema should be DOCXSearchToolSchema
-        dynamic_tool = DOCXSearchTool()
+        dynamic_tool = DOCXSearchTool(config=CHROMADB_CONFIG)
         assert dynamic_tool.args_schema == DOCXSearchToolSchema
