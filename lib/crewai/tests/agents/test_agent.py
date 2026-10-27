@@ -29,6 +29,17 @@ from crewai.tools import tool
 from crewai.utilities import RPMController
 
 
+@pytest.fixture
+def chromadb_rag_config():
+    """Configure the ChromaDB backend required by knowledge integration tests."""
+    from crewai.rag.chromadb.config import ChromaDBConfig
+    from crewai.rag.config.utils import clear_rag_config, set_rag_config
+
+    set_rag_config(ChromaDBConfig())
+    yield
+    clear_rag_config()
+
+
 def test_agent_memory_true_uses_agent_llm_model():
     agent = Agent(
         role="test role",
@@ -1720,7 +1731,9 @@ def test_agent_with_knowledge_sources():
 
 
 @pytest.mark.vcr()
-def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold(
+    chromadb_rag_config,
+):
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
@@ -1768,7 +1781,9 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
 
 
 @pytest.mark.vcr()
-def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default():
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default(
+    chromadb_rag_config,
+):
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     knowledge_config = KnowledgeConfig()
@@ -2108,7 +2123,7 @@ def test_litellm_anthropic_error_handling():
 
 
 @pytest.mark.vcr()
-def test_get_knowledge_search_query():
+def test_get_knowledge_search_query(chromadb_rag_config):
     """Test that _get_knowledge_search_query calls the LLM with the correct prompts."""
     from crewai.utilities.i18n import I18N_DEFAULT
 
