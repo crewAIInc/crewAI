@@ -288,7 +288,7 @@ class TestSerializableCallableRoundTrip:
         [
             lambda: _HasMethod().method,
             lambda: functools.partial(print, "hi"),
-            lambda: _CallableInstance(),
+            _CallableInstance,
         ],
         ids=["bound_method", "partial", "callable_instance"],
     )
