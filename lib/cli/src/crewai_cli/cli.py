@@ -164,7 +164,7 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "type",
     required=False,
     default=None,
-    type=click.Choice(["crew", "flow", "tool", "skill", "template"]),
+    type=click.Choice(["crew", "flow", "agent", "tool", "skill", "template"]),
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
@@ -185,6 +185,14 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "--classic",
     is_flag=True,
     help="Use classic Python/YAML project structure instead of JSON",
+)
+@click.option(
+    "--format",
+    "agent_format",
+    type=click.Choice(["python", "json", "yaml"]),
+    default=None,
+    show_default="yaml",
+    help="Experimental agent projects only: definition format.",
 )
 @click.option(
     "--declarative",
@@ -216,8 +224,12 @@ def create(
     declarative: bool = False,
     in_project: bool = True,
     output_dir: str | None = None,
+    agent_format: str | None = None,
 ) -> None:
-    """Create a new crew, flow, tool, skill, or template."""
+    """Create a new crew, flow, agent, tool, skill, or template.
+
+    Standalone agent support is experimental. Agents use YAML by default.
+    """
     if deprecated_skip_provider:
         warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
         skip_provider = True
@@ -227,7 +239,7 @@ def create(
             raise click.UsageError(
                 "TYPE is required when CREWAI_DMN is set. "
                 "Use `crewai create <type> <name>` where type is one of: "
-                "crew, flow, tool, skill, template."
+                "crew, flow, agent, tool, skill, template."
             )
         from crewai_cli.tui_picker import pick
 
@@ -237,6 +249,7 @@ def create(
                 "flow",
                 "A deterministic workflow with full control over agents and crews",
             ),
+            ("agent", "An experimental standalone agent with tools"),
             ("tool", "A custom tool for the CrewAI Tool Repository"),
             ("skill", "An agent skill with instructions and optional assets"),
             ("template", "A remote project template from the CrewAI gallery"),
@@ -255,6 +268,8 @@ def create(
         )
     if dmn_mode and type == "crew":
         skip_provider = True
+    if agent_format is not None and type != "agent":
+        raise click.UsageError("--format can only be used with agent projects.")
     if not in_project and type != "skill":
         raise click.UsageError("--no-project can only be used with skill projects.")
     if output_dir is not None and type != "template":
@@ -293,13 +308,21 @@ def create(
             from crewai_cli.create_json_crew import create_json_crew
 
             create_json_crew(name, provider, skip_provider)
+    elif type == "agent":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with agent projects."
+            )
+        from crewai_cli.create_agent import create_agent
+
+        create_agent(name, format=agent_format or "yaml")
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
         create_flow(name, declarative=declarative)
     else:
         click.secho(
-            "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
+            "Error: Invalid type. Must be 'crew', 'flow', 'agent', 'tool', 'skill', or 'template'.",
             fg="red",
         )
 
@@ -680,16 +703,18 @@ def install(context: click.Context) -> None:
     "--inputs",
     type=str,
     default=None,
-    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
+    help=(
+        "JSON inputs for a declarative flow, JSON crew, or standalone agent. "
+        'Agents require "messages" as a string or role/content message list.'
+    ),
 )
 def run(
     trained_agents_file: str | None,
     definition: str | None,
     inputs: str | None,
 ) -> None:
-    """Run the Crew or Flow."""
-    # --inputs no longer requires --definition: with no override it resolves the
-    # configured [tool.crewai] flow, same as a bare `crewai run`.
+    """Run a Crew, Flow, or standalone Agent."""
+    # Without --definition, dispatch to the configured [tool.crewai] project.
     if trained_agents_file is not None and definition is not None:
         raise click.UsageError("--filename can only be used when running crews")
 

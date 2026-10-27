@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import unquote, urlparse
 
 from pydantic import BaseModel, ValidationError
+import yaml
 
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_class_ref
 
@@ -237,11 +238,29 @@ def _instantiate_agent_from_data(
         raise JSONProjectError(f"{source_label}: failed to load agent: {exc}") from exc
 
 
-def load_agent(source: str | Path) -> Any:
-    """Load an existing ``Agent`` from a ``.json`` / ``.jsonc`` definition file."""
+def load_agent(source: str | Path, *, project_root: str | Path | None = None) -> Any:
+    """Load an ``Agent`` from a JSON/JSONC or YAML constructor definition.
+
+    ``project_root`` anchors local Python references and custom tools. When
+    omitted, files in ``agents/`` retain their parent-project convention.
+    Definitions contain Agent fields; kickoff messages are supplied separately.
+    """
     path = Path(source)
-    defn = _expect_object(load_jsonc_file(path), path)
-    root = path.parent.parent if path.parent.name == "agents" else path.parent
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise JSONProjectError(f"{path}: invalid YAML: {exc}") from exc
+    else:
+        data = load_jsonc_file(path)
+    defn = _expect_object(data, path)
+    root = (
+        Path(project_root).resolve()
+        if project_root is not None
+        else path.parent.parent
+        if path.parent.name == "agents"
+        else path.parent
+    )
     return _instantiate_agent_from_data(defn, str(path), root)
 
 
@@ -1150,6 +1169,8 @@ def _field_errors(
     *,
     skip_unknown: bool = False,
 ) -> list[str]:
+    if any(not isinstance(key, str) for key in data):
+        return [f"{source}: constructor field names must be strings"]
     extra_allowed = extra_allowed or set()
     keys = set(data)
     runtime = sorted(keys & runtime_fields)

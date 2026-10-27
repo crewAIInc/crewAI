@@ -36,13 +36,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. إنشاء
 
-إنشاء طاقم أو تدفق جديد.
+إنشاء مشروع crew أو flow أو Agent مستقل (تجريبي) أو tool أو skill أو template.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: اختر بين "crew" أو "flow"
+- `TYPE`: `crew` أو `flow` أو `agent` (تجريبي) أو `tool` أو `skill` أو `template`
 - `NAME`: اسم الطاقم أو التدفق
 
 مثال:
@@ -53,6 +53,16 @@ crewai create flow my_new_flow
 ```
 
 افتراضيًا، ينشئ `crewai create crew` مشروعًا JSON-first يحتوي على `crew.jsonc` و `agents/*.jsonc`. استخدم `crewai create crew my_new_crew --classic` فقط إذا أردت البنية القديمة Python/YAML مع `crew.py` و `config/agents.yaml` و `config/tasks.yaml`.
+
+#### Agent مستقل (تجريبي)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+تستخدم مشاريع Agent المستقلة الملف `agent.yaml` افتراضيًا. استخدم `--format json` لتهيئة JSON أو `--format python` لتصدير Agent بلغة Python. قد يتغير عقد المشروع والتحميل التجريبي هذا، ويتطلب إصدارات معاينة متوافقة من CLI وSDK. راجع [مشاريع Agent المستقلة](/ar/guides/agents/standalone-agent-projects) للإعداد والأدوات ومدخلات التشغيل وحدود النشر.
 
 #### أسماء مستعار قديمة للأعلام (مهملة)
 
