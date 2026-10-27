@@ -63,6 +63,31 @@ def _scope_prefix_filter(prefix: str) -> str:
     return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
 
 
+def _categories_sql_filter(categories: list[str]) -> str:
+    r"""Build a predicate matching rows whose ``categories_str`` contains any
+    of ``categories``.
+
+    ``categories_str`` is ``json.dumps(record.categories)``, so a category is
+    stored exactly as ``json.dumps`` renders it, delimiting double-quotes
+    included. Deriving the pattern from ``json.dumps`` of the category itself
+    therefore matches the stored text byte for byte — including the
+    ``ensure_ascii`` escapes a non-ASCII category is stored under — and the
+    quotes make the match precise: ``"note"`` is not a substring of
+    ``["notebook"]``.
+
+    ``\``, ``%`` and ``_`` in the rendered category are escaped so they match
+    literally; only the surrounding ``%`` act as wildcards.
+    """
+    parts = []
+    for category in categories:
+        # [1:-1] drops the delimiting quotes so they can be placed literally
+        # in the pattern, keeping them outside the LIKE escaping.
+        rendered = json.dumps(str(category))[1:-1]
+        pattern = rendered.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        parts.append(f"categories_str LIKE '%\"{_sql_str(pattern)}\"%' ESCAPE '\\'")
+    return parts[0] if len(parts) == 1 else "(" + " OR ".join(parts) + ")"
+
+
 class LanceDBStorage:
     """LanceDB-backed storage for the unified memory system."""
 
@@ -408,11 +433,18 @@ class LanceDBStorage:
                 self._vector_dim, len(query_embedding)
             )
         query = self._table.search(query_embedding)
+        filters: list[str] = []
         if scope_prefix is not None and scope_prefix.strip("/"):
-            query = query.where(_scope_prefix_filter(scope_prefix.rstrip("/")))
-        results = query.limit(
-            limit * 3 if (categories or metadata_filter) else limit
-        ).to_list()
+            filters.append(_scope_prefix_filter(scope_prefix.rstrip("/")))
+        if categories:
+            # Match categories server-side so they are filtered BEFORE the ANN
+            # fetch limit; a client-side post-filter would silently miss
+            # matching records ranked below limit*3 non-matching neighbours.
+            filters.append(_categories_sql_filter(categories))
+        if filters:
+            query = query.where(" AND ".join(filters))
+        fetch_limit = limit * 3 if metadata_filter else limit
+        results = query.limit(fetch_limit).to_list()
         out: list[tuple[MemoryRecord, float]] = []
         for row in results:
             record = self._row_to_record(row)
