@@ -1,5 +1,6 @@
 """Integration tests for KnowledgeStorage RAG client migration."""
 
+from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,11 +9,21 @@ from crewai.knowledge.storage.knowledge_storage import (  # type: ignore[import-
 )
 
 
+@dataclass(frozen=True)
+class FakeRagConfig:
+    """Minimal RAG config used to verify KnowledgeStorage integration."""
+
+    provider: str = "test"
+    embedding_function: object | None = None
+
+
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
 @patch("crewai.knowledge.storage.knowledge_storage.create_client")
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_config")
 @patch("crewai.knowledge.storage.knowledge_storage.build_embedder")
 def test_knowledge_storage_uses_rag_client(
     mock_get_embedding: MagicMock,
+    mock_get_config: MagicMock,
     mock_create_client: MagicMock,
     mock_get_client: MagicMock,
 ) -> None:
@@ -20,6 +31,7 @@ def test_knowledge_storage_uses_rag_client(
     mock_client = MagicMock()
     mock_create_client.return_value = mock_client
     mock_get_client.return_value = mock_client
+    mock_get_config.return_value = FakeRagConfig()
     mock_client.search.return_value = [
         {"content": "test content", "score": 0.9, "metadata": {"source": "test"}}
     ]
@@ -121,14 +133,21 @@ def test_search_error_handling(mock_get_client: MagicMock) -> None:
 
 
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+@patch("crewai.knowledge.storage.knowledge_storage.create_client")
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_config")
 @patch("crewai.knowledge.storage.knowledge_storage.build_embedder")
 def test_embedding_configuration_flow(
-    mock_get_embedding: MagicMock, mock_get_client: MagicMock
+    mock_get_embedding: MagicMock,
+    mock_get_config: MagicMock,
+    mock_create_client: MagicMock,
+    mock_get_client: MagicMock,
 ) -> None:
     """Test that embedding configuration flows properly to RAG client."""
     mock_embedding_func = MagicMock()
     mock_get_embedding.return_value = mock_embedding_func
     mock_get_client.return_value = MagicMock()
+    mock_get_config.return_value = FakeRagConfig()
+    mock_create_client.return_value = MagicMock()
 
     embedder_config = {
         "provider": "sentence-transformer",

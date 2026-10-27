@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from typing import Annotated, Any, Literal, cast
 
+from crewai.rag.config.optional_imports.base import missing_provider_error
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import ProviderSpec
@@ -24,7 +25,6 @@ from crewai_tools.tools.rag.types import (
     AddDocumentParams,
     ContentItem,
     RagToolConfig,
-    VectorDbConfig,
 )
 
 
@@ -191,15 +191,13 @@ class RagTool(BaseTool):
     def _parse_config(self, config: RagToolConfig) -> Any:
         """Normalize the RagToolConfig into a provider-specific config object.
 
-        Defaults to 'chromadb' with no extra provider config if none is supplied.
+        Uses the configured global provider when no vector database is supplied.
         """
-        if not config:
-            return self._create_provider_config("chromadb", {}, None)
+        if "vectordb" not in config:
+            return None
 
-        vectordb_cfg = cast(VectorDbConfig, config.get("vectordb", {}))
-        provider: Literal["chromadb", "qdrant"] = vectordb_cfg.get(
-            "provider", "chromadb"
-        )
+        vectordb_cfg = config["vectordb"]
+        provider: Literal["chromadb", "qdrant"] = vectordb_cfg["provider"]
         provider_config: dict[str, Any] = vectordb_cfg.get("config", {})
 
         supported = ("chromadb", "qdrant")
@@ -228,7 +226,10 @@ class RagTool(BaseTool):
     ) -> Any:
         """Instantiate provider config with optional embedding_function injected."""
         if provider == "chromadb":
-            from crewai.rag.chromadb.config import ChromaDBConfig
+            try:
+                from crewai.rag.chromadb.config import ChromaDBConfig
+            except ImportError as exc:
+                raise missing_provider_error("chromadb") from exc
 
             kwargs = dict(provider_config)
             if embedding_function is not None:

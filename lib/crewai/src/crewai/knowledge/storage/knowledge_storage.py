@@ -1,15 +1,13 @@
+from dataclasses import replace
 import logging
 import traceback
 from typing import Any, cast
-import warnings
 
 from pydantic import Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
-from crewai.rag.config.utils import get_rag_client
+from crewai.rag.config.utils import get_rag_client, get_rag_config
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
@@ -36,18 +34,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     @model_validator(mode="after")
     def _init_client(self) -> Self:
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*'model_fields'.*is deprecated.*",
-            module=r"^chromadb(\.|$)",
-        )
-
         if self.embedder:
             embedding_function = build_embedder(self.embedder)  # type: ignore[arg-type]
-            config = ChromaDBConfig(
-                embedding_function=cast(
-                    ChromaEmbeddingFunctionWrapper, embedding_function
-                )
+            config = replace(
+                get_rag_config(), embedding_function=cast(Any, embedding_function)
             )
             self._client = create_client(config)
         return self

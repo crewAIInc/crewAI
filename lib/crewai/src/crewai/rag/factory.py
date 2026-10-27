@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import cast
 
+from crewai.rag.config.optional_imports.base import missing_provider_error
 from crewai.rag.config.optional_imports.protocols import (
     ChromaFactoryModule,
     QdrantFactoryModule,
@@ -56,13 +57,16 @@ def create_client(config: RagConfigType) -> BaseClient:
         return factory(config)
 
     if config.provider == "chromadb":
-        chromadb_mod = cast(
-            ChromaFactoryModule,
-            require(
-                "crewai.rag.chromadb.factory",
-                purpose="The 'chromadb' provider",
-            ),
-        )
+        try:
+            chromadb_mod = cast(
+                ChromaFactoryModule,
+                require(
+                    "crewai.rag.chromadb.factory",
+                    purpose="The 'chromadb' provider",
+                ),
+            )
+        except ImportError as exc:
+            raise missing_provider_error("chromadb") from exc
         return chromadb_mod.create_client(config)
 
     if config.provider == "qdrant":

@@ -4,14 +4,9 @@ from contextvars import ContextVar
 
 from pydantic import BaseModel, Field
 
-from crewai.rag.config.constants import (
-    DEFAULT_RAG_CONFIG_CLASS,
-    DEFAULT_RAG_CONFIG_PATH,
-)
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.factory import create_client
-from crewai.utilities.import_utils import require
 
 
 class RagContext(BaseModel):
@@ -45,11 +40,10 @@ def get_rag_config() -> RagConfigType:
     """
     context = _rag_context.get()
     if context is None:
-        module = require(DEFAULT_RAG_CONFIG_PATH, purpose="RAG configuration")
-        config_class = getattr(module, DEFAULT_RAG_CONFIG_CLASS)
-        default_config = config_class()
-        set_rag_config(default_config)
-        context = _rag_context.get()
+        raise RuntimeError(
+            "RAG provider is not configured. Set one with `set_rag_config(...)`. "
+            "To use ChromaDB, install `crewai[chromadb]` first."
+        )
 
     if context is None or context.config is None:
         raise ValueError(

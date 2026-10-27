@@ -215,6 +215,7 @@ def test_rag_tool_with_azure_config_without_env_vars(
 
         # Configuration with explicit Azure credentials - should work without env vars
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "azure",
                 "config": {
@@ -256,6 +257,7 @@ def test_rag_tool_with_openai_config_without_env_vars(
             pass
 
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "openai",
                 "config": {

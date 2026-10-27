@@ -33,3 +33,16 @@ def test_create_client_unsupported_provider():
 
     with pytest.raises(ValueError, match="Unsupported provider: unsupported"):
         create_client(mock_config)
+
+
+def test_create_client_chromadb_missing_dependency_shows_extra():
+    """Test that missing ChromaDB provides the CrewAI extra to install."""
+    mock_config = Mock()
+    mock_config.provider = "chromadb"
+
+    with patch("crewai.rag.factory.require", side_effect=ImportError):
+        with pytest.raises(
+            RuntimeError,
+            match=r"Install the extra: `uv add 'crewai\[chromadb\]'`",
+        ):
+            create_client(mock_config)
