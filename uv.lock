@@ -1950,7 +1950,7 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'singlestore'", specifier = ">=2.0.40" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.35" },
     { name = "stagehand", marker = "extra == 'stagehand'", specifier = ">=0.4.1" },
-    { name = "tavily-python", marker = "extra == 'tavily-python'", specifier = "~=0.7.14" },
+    { name = "tavily-python", marker = "extra == 'tavily-python'", specifier = "~=0.7.24" },
     { name = "tiktoken", specifier = ">=0.8.0,<0.13" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version >= '3.11' and extra == 'xml'", specifier = ">=0.24.0" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version < '3.11' and extra == 'xml'", specifier = ">=0.17.2" },
