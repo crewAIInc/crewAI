@@ -170,6 +170,10 @@ class TavilySearchTool(BaseTool):
 
     @model_validator(mode="after")
     def validate_search_options(self) -> Self:
+        if (
+            self.start_date is not None or self.end_date is not None
+        ) and "days" in self.model_fields_set:
+            raise ValueError("days cannot be combined with start_date or end_date")
         if self.include_domains_mode is not None and not self.include_domains:
             raise ValueError("include_domains_mode requires include_domains")
         if self.filter_by_language and not self.language:
@@ -270,7 +274,11 @@ class TavilySearchTool(BaseTool):
             search_depth=self.search_depth,
             topic=self.topic,
             time_range=self.time_range,
-            days=self.days,
+            days=(
+                None
+                if self.start_date is not None or self.end_date is not None
+                else self.days
+            ),
             max_results=self.max_results,
             include_domains=self.include_domains,
             exclude_domains=self.exclude_domains,
@@ -323,7 +331,11 @@ class TavilySearchTool(BaseTool):
             search_depth=self.search_depth,
             topic=self.topic,
             time_range=self.time_range,
-            days=self.days,
+            days=(
+                None
+                if self.start_date is not None or self.end_date is not None
+                else self.days
+            ),
             max_results=self.max_results,
             include_domains=self.include_domains,
             exclude_domains=self.exclude_domains,

@@ -77,7 +77,7 @@ Pass only `query` (required, str) to `run`, `arun`, or the agent tool call. Conf
 - `search_depth` (Literal["basic", "advanced", "fast", "ultra-fast"], optional): The depth of the search. Defaults to `"basic"`.
 - `topic` (Literal["general", "news", "finance"], optional): The topic to focus the search on. Defaults to `"general"`.
 - `time_range` (Literal["day", "week", "month", "year", "d", "w", "m", "y"], optional): The time range for the search. Defaults to `None`.
-- `days` (int, optional): The number of days to search back. Relevant if `time_range` is not set. Defaults to `7`.
+- `days` (int, optional): The number of days to search back. Relevant if `time_range` is not set. Defaults to `7`. The implicit default is omitted when `start_date` or `end_date` is configured; explicitly setting `days` together with either date bound raises a validation error.
 - `max_results` (int, optional): The maximum number of search results to return. Defaults to `5`.
 - `include_domains` (Sequence[str], optional): A list of domains to restrict the search to, unless `include_domains_mode="prefer"`. Defaults to `None`.
 - `exclude_domains` (Sequence[str], optional): A list of domains to exclude from the search. Defaults to `None`.

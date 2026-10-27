@@ -120,12 +120,11 @@ async def test_sync_async_requests_and_responses(
     sync_post, async_post = stub_transport(tool, monkeypatch)
     sync_result = json.loads(tool.run(**arguments))
     async_result = json.loads(await tool.arun(**arguments))
-    assert json.loads(sync_post.call_args.kwargs["data"]) == defaults | (
-        options if configured else {}
-    )
-    assert json.loads(async_post.call_args.kwargs["content"]) == defaults | (
-        options if configured else {}
-    )
+    expected_request = defaults | (options if configured else {})
+    if tool_class is TavilySearchTool and configured:
+        expected_request.pop("days")
+    assert json.loads(sync_post.call_args.kwargs["data"]) == expected_request
+    assert json.loads(async_post.call_args.kwargs["content"]) == expected_request
     assert sync_post.call_args.kwargs["timeout"] == 60
     assert async_post.call_args.kwargs["timeout"] == 60
     expected = deepcopy(RESPONSE)
@@ -135,6 +134,75 @@ async def test_sync_async_requests_and_responses(
     assert tool.client.session.headers["X-Client-Name"] == "crewai"
     assert tool.async_client._client.headers["X-Client-Name"] == "crewai"
     await tool.async_client._client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "date_options",
+    [
+        {"start_date": "2026-01-01"},
+        {"end_date": "2026-10-01"},
+        {"start_date": "2026-01-01", "end_date": "2026-10-01"},
+    ],
+)
+async def test_search_date_window_omits_implicit_days(
+    monkeypatch: pytest.MonkeyPatch, date_options: dict[str, str]
+) -> None:
+    tool = TavilySearchTool(api_key="offline-test", **date_options)
+    sync_post, async_post = stub_transport(tool, monkeypatch)
+
+    def service_response(**kwargs: Any) -> Mock:
+        body = json.loads(kwargs.get("data", kwargs.get("content")))
+        if "days" in body:
+            response = Mock(status_code=400)
+            response.json.return_value = {
+                "detail": {
+                    "error": "When days is set, start_date or end_date cannot be set"
+                }
+            }
+            return response
+        response = Mock(status_code=200)
+        response.json.return_value = deepcopy(RESPONSE)
+        return response
+
+    sync_post.side_effect = lambda *_args, **kwargs: service_response(**kwargs)
+    async_post.side_effect = lambda *_args, **kwargs: service_response(**kwargs)
+    try:
+        assert json.loads(tool.run(query="test query"))["results"]
+        assert json.loads(await tool.arun(query="test query"))["results"]
+        for post, field in [(sync_post, "data"), (async_post, "content")]:
+            body = json.loads(post.call_args.kwargs[field])
+            assert "days" not in body
+            assert date_options.items() <= body.items()
+        assert tool.days == 7
+    finally:
+        await tool.async_client._client.aclose()
+
+
+@pytest.mark.parametrize("days", [3, 7])
+@pytest.mark.parametrize("date_field", ["start_date", "end_date"])
+def test_search_rejects_explicit_days_with_date_bound(
+    days: int, date_field: str
+) -> None:
+    with pytest.raises(ValidationError, match="days cannot be combined"):
+        TavilySearchTool(
+            api_key="offline-test", days=days, **{date_field: "2026-01-01"}
+        )
+
+
+@pytest.mark.asyncio
+async def test_search_explicit_days_without_date_bounds_preserved(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tool = TavilySearchTool(api_key="offline-test", days=3, topic="news")
+    sync_post, async_post = stub_transport(tool, monkeypatch)
+    try:
+        tool.run(query="test query")
+        await tool.arun(query="test query")
+        assert json.loads(sync_post.call_args.kwargs["data"])["days"] == 3
+        assert json.loads(async_post.call_args.kwargs["content"])["days"] == 3
+    finally:
+        await tool.async_client._client.aclose()
 
 
 @pytest.mark.asyncio
