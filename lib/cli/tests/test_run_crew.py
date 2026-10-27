@@ -1331,3 +1331,145 @@ def test_the_three_names_for_the_eval_token_are_one() -> None:
         == crew_run_tui._AWAITING_EVAL_ENV
         == eval_handshake.AWAITING_ENV
     )
+
+
+def test_execute_uv_script_propagates_child_exit_code(monkeypatch, capsys):
+    """When a child uv script returns non-zero, _execute_uv_script must exit with that code."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate a subprocess raising CalledProcessError."""
+        raise subprocess.CalledProcessError(
+            42, command, output="Script crashed with code 42"
+        )
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 42
+    err_output = capsys.readouterr().err
+    assert "An error occurred while running the crew" in err_output
+    assert "Script crashed with code 42" in err_output
+
+
+def test_execute_uv_script_exits_code_1_on_unexpected_exception(monkeypatch, capsys):
+    """When subprocess invocation fails abruptly (e.g. uv missing), exit with 1."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate a subprocess launch error."""
+        raise FileNotFoundError("uv executable not found")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 1
+    assert "An unexpected error occurred: uv executable not found" in capsys.readouterr().err
+
+
+def test_execute_uv_script_success_completes_without_exit(monkeypatch):
+    """Successful execution completes cleanly without raising SystemExit."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    called = []
+
+    def fake_subprocess_run(command, **kwargs):
+        """Record successful command invocation."""
+        called.append(command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+    assert called == [["uv", "run", "run_crew"]]
+
+
+@pytest.mark.parametrize(
+    ("returncode", "expected_status"),
+    [
+        (0, 0),
+        (1, 1),
+        (42, 42),
+        (-9, 137),  # SIGKILL -> 128 + 9
+        (-15, 143),  # SIGTERM -> 128 + 15
+        (-2, 130),  # SIGINT -> 128 + 2
+    ],
+)
+def test_exit_code_from_process_error_normalizes_signals(
+    returncode: int, expected_status: int
+):
+    """Subprocess signal terminations (negative return codes) normalize to 128 + signum."""
+    error = subprocess.CalledProcessError(returncode, ["uv", "run", "run_crew"])
+    assert run_crew_module._exit_code_from_process_error(error) == expected_status
+
+
+def test_execute_uv_script_normalizes_signal_termination(monkeypatch):
+    """When a child uv script is terminated by a signal, exit code maps to 128 + signum."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate a subprocess terminated by SIGKILL (-9)."""
+        raise subprocess.CalledProcessError(-9, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 137
+
+
+def test_execute_uv_script_formats_error_for_flow_entity(monkeypatch, capsys):
+    """Verify entity_type='flow' formats 'running the flow' in error diagnostics."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate a flow kickoff script failure."""
+        raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("kickoff", entity_type="flow")
+
+    assert exc_info.value.code == 1
+    assert "An error occurred while running the flow" in capsys.readouterr().err
+
+
+def test_execute_uv_script_propagates_exit_code_even_if_read_toml_fails(monkeypatch):
+    """Failure reading pyproject.toml in _handle_run_error must not block exit code propagation."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+
+    def failing_read_toml():
+        """Simulate an unreadable or corrupt pyproject.toml."""
+        raise OSError("Permission denied: pyproject.toml")
+
+    monkeypatch.setattr(run_crew_module, "read_toml", failing_read_toml)
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate child process failure."""
+        raise subprocess.CalledProcessError(42, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 42
