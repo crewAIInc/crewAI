@@ -122,7 +122,9 @@ Apply the same decorator to a method inside a `@CrewBase` class to scope the
 hook to that crew only:
 
 ```python
-from crewai.hooks import on, InterceptionPoint
+from crewai import Crew, Process
+from crewai.hooks import on, HookAborted, InterceptionPoint
+from crewai.project import CrewBase, crew
 
 @CrewBase
 class MyProjCrew:
