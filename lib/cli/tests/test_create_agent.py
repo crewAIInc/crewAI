@@ -143,7 +143,7 @@ def test_agent_deploy_validation_requires_agent_module(
     monkeypatch.setattr(DeployValidator, "_check_module_imports", lambda self: None)
     validator = DeployValidator(agent_project)
     validator.run()
-    assert any(result.code == "missing_agent_py" for result in validator.errors)
+    assert any(result.code == "invalid_agent_definition" for result in validator.errors)
 
 
 def test_agent_deploy_validation_loads_project_dotenv_in_subprocess(
@@ -181,3 +181,141 @@ def test_agent_deploy_validation_loads_project_dotenv_in_subprocess(
     assert validator.ok, validator.results
     assert "OPENAI_API_KEY" not in os.environ
     assert "MANAGED_AGENT_VALIDATION_ENV" not in os.environ
+
+
+@pytest.mark.parametrize("format", ["json", "yaml"])
+def test_create_config_agent_loads_and_archives_without_source_package(
+    format: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai.project import load_agent_project
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder-key")
+    result = CliRunner().invoke(
+        crewai, ["create", "agent", "Config-Agent", "--format", format]
+    )
+    assert result.exit_code == 0, result.output
+    root = tmp_path / "config_agent"
+    config = tomli.loads((root / "pyproject.toml").read_text())
+    definition = f"agent.{format}"
+    assert config["tool"]["crewai"]["definition"] == definition
+    assert config["tool"]["hatch"]["build"]["targets"]["wheel"]["only-include"] == [
+        definition,
+        "tools",
+    ]
+    assert not (root / "src").exists()
+    assert load_agent_project(root).role == "Support assistant"
+    archive = create_project_zip("config_agent", project_dir=root)
+    try:
+        with zipfile.ZipFile(archive) as project_zip:
+            assert definition in project_zip.namelist()
+            assert not any(name.startswith("src/") for name in project_zip.namelist())
+    finally:
+        archive.unlink()
+
+
+@pytest.mark.parametrize("format", ["json", "yaml"])
+def test_config_agent_runs_same_loader_and_preserves_inputs(
+    format: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import json
+
+    from crewai import Agent
+    from crewai_cli.create_agent import create_agent
+    from crewai_cli.run_crew import _run_agent
+
+    monkeypatch.chdir(tmp_path)
+    create_agent("config_agent", format=format)
+    monkeypatch.chdir(tmp_path / "config_agent")
+    (Path.cwd() / ".env").write_text("OPENAI_API_KEY=test-placeholder-key\n")
+    messages = [{"role": "user", "content": "What are support hours?"}]
+    received = []
+
+    async def kickoff(self: Agent, **kwargs: Any) -> Any:
+        from types import SimpleNamespace
+
+        assert self.role == "Support assistant"
+        received.append(kwargs["messages"])
+        return SimpleNamespace(raw="finished")
+
+    monkeypatch.setattr(Agent, "kickoff_async", kickoff)
+    _run_agent(json.dumps({"messages": messages}))
+    assert received == [messages]
+    assert capsys.readouterr().out.endswith("finished\n")
+
+
+@pytest.mark.parametrize("suffix", ["json", "yml", "yaml"])
+def test_config_agent_validates_without_package_directory(
+    suffix: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    from crewai_cli.create_agent import create_agent
+
+    monkeypatch.chdir(tmp_path)
+    create_agent("config_agent", format="json")
+    root = tmp_path / "config_agent"
+    config_path = root / "pyproject.toml"
+    config_path.write_text(
+        config_path.read_text().replace("agent.json", f"agent.{suffix}")
+    )
+    definition = root / f"agent.{suffix}"
+    if suffix != "json":
+        (root / "agent.json").rename(definition)
+        definition.write_text(
+            "role: Support assistant\ngoal: Help users\nbackstory: A helpful support agent\nllm: openai/gpt-4o-mini\n"
+        )
+    else:
+        assert json.loads(definition.read_text())["role"] == "Support assistant"
+    (root / ".env").write_text("OPENAI_API_KEY=test-placeholder-key\n")
+    (root / "uv.lock").write_text("# installed test environment")
+    subprocess_run = subprocess.run
+
+    def run_in_test_environment(
+        command: list[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[str]:
+        if "-c" in command:
+            return subprocess_run(
+                [sys.executable, *command[command.index("-c") :]], **kwargs
+            )
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(
+        "crewai_cli.deploy.validate.subprocess.run", run_in_test_environment
+    )
+    validator = DeployValidator(root)
+    validator.run()
+    assert validator.ok, validator.results
+    assert not (root / "src").exists()
+
+
+def test_create_format_option_rejects_non_agent_projects() -> None:
+    result = CliRunner().invoke(
+        crewai, ["create", "flow", "example", "--format", "json"]
+    )
+    assert result.exit_code == 2
+    assert "--format can only be used with agent projects" in result.output
+
+
+def test_config_agent_install_keeps_editable_project_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai_cli.create_agent import create_agent
+    from crewai_cli.install_crew import install_crew
+
+    monkeypatch.chdir(tmp_path)
+    create_agent("config_agent", format="json")
+    monkeypatch.chdir(tmp_path / "config_agent")
+    commands = []
+    monkeypatch.setattr(
+        "crewai_cli.install_crew.subprocess.run",
+        lambda command, **kwargs: commands.append(command),
+    )
+    monkeypatch.setattr(
+        "crewai_cli.install_crew.build_env_with_all_tool_credentials", dict
+    )
+    install_crew([])
+    assert commands == [["uv", "sync"]]

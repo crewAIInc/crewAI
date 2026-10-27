@@ -9,8 +9,10 @@ from crewai_cli.utils import get_or_create_project_id, normalize_package_name
 from crewai_cli.version import get_crewai_dependency_range
 
 
-def create_agent(name: str) -> None:
-    """Create an installable project exporting one standalone Agent."""
+def create_agent(name: str, *, format: str = "python") -> None:
+    """Create an installable standalone agent in Python, JSON, or YAML."""
+    if format not in {"python", "json", "yaml"}:
+        raise click.BadParameter("Choose python, json, or yaml.", param_hint="format")
     package_name = normalize_package_name(name)
     if not package_name.isidentifier() or keyword.iskeyword(package_name):
         raise click.BadParameter(
@@ -20,17 +22,34 @@ def create_agent(name: str) -> None:
     if project_root.exists():
         raise click.ClickException(f"Folder {package_name} already exists.")
 
-    templates_dir = Path(__file__).parent / "templates" / "agent"
-    for template in templates_dir.rglob("*"):
+    template_root = Path(__file__).parent / "templates"
+    templates_dir = template_root / ("agent" if format == "python" else "agent_config")
+    templates = list(templates_dir.rglob("*"))
+    if format != "python":
+        templates.extend(
+            template_root / "agent" / name for name in (".env.example", ".gitignore")
+        )
+    for template in templates:
         if not template.is_file() or template.suffix in {".pyc", ".pyo"}:
             continue
-        relative = template.relative_to(templates_dir)
+        relative = (
+            template.relative_to(templates_dir)
+            if template.is_relative_to(templates_dir)
+            else Path(template.name)
+        )
+        if (
+            format != "python"
+            and relative.name in {"agent.json", "agent.yaml"}
+            and relative.suffix != f".{format}"
+        ):
+            continue
         destination = project_root / str(relative).replace(
             "{{package_name}}", package_name
         )
         destination.parent.mkdir(parents=True, exist_ok=True)
         content = template.read_text(encoding="utf-8")
         content = content.replace("{{package_name}}", package_name)
+        content = content.replace("{{definition}}", f"agent.{format}")
         content = content.replace(
             "{{crewai_dependency}}", f"crewai{get_crewai_dependency_range()}"
         )

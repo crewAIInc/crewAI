@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import reduce
+import keyword
 import os
 from pathlib import Path, PureWindowsPath
 import re
@@ -154,6 +155,65 @@ def resolve_project_definition_path(definition: str, project_root: Path | str) -
         )
 
     return resolved_candidate
+
+
+def resolve_agent_project_entrypoint(
+    project_root: str | Path = ".", project_name: str | None = None
+) -> Path:
+    """Resolve one project-local Python, JSON, or YAML standalone agent.
+
+    An explicit ``[tool.crewai].definition`` takes precedence. Otherwise load
+    ``src/<package>/agent.py`` or a root ``agent.py``, ``agent.json``,
+    ``agent.yml``, or ``agent.yaml``. Multiple candidates require an explicit
+    definition so local and managed execution select the same agent.
+    """
+    root = Path(project_root).resolve()
+    config_path = root / "pyproject.toml"
+    config = read_toml(config_path) if config_path.is_file() else {}
+    supported_suffixes = {".py", ".json", ".yml", ".yaml"}
+    definition = configured_project_definition(
+        "agent", pyproject_data=config, project_root=root
+    )
+    if definition is not None:
+        if definition.suffix.lower() not in supported_suffixes:
+            raise ProjectDefinitionError(
+                "Agent definition must be a .py, .json, .yml, or .yaml file."
+            )
+        return definition
+
+    if project_name is None:
+        project_name = (config.get("project") or {}).get("name")
+    candidates = [root / f"agent{suffix}" for suffix in sorted(supported_suffixes)]
+    if project_name is not None:
+        if (
+            not isinstance(project_name, str)
+            or "/" in project_name
+            or "\\" in project_name
+        ):
+            raise ProjectDefinitionError(
+                "Agent project_name must be a Python package name."
+            )
+        project_name = normalize_package_name(project_name)
+        if not project_name.isidentifier() or keyword.iskeyword(project_name):
+            raise ProjectDefinitionError(
+                "Agent project_name must be a Python package name."
+            )
+        candidates.append(root / "src" / project_name / "agent.py")
+    matches = [path for path in candidates if path.is_file()]
+    if not matches:
+        raise ProjectDefinitionError(
+            "No agent definition found. Create agent.py, agent.json, agent.yml, "
+            "agent.yaml, or src/<package>/agent.py."
+        )
+    if len(matches) != 1:
+        paths = ", ".join(str(path.relative_to(root)) for path in matches)
+        raise ProjectDefinitionError(
+            f"Multiple agent definitions found: {paths}. "
+            "Set [tool.crewai] definition to choose one."
+        )
+    return resolve_project_definition_path(
+        definition=str(matches[0].relative_to(root)), project_root=root
+    )
 
 
 def _get_nested_value(data: dict[str, Any], keys: list[str]) -> Any:

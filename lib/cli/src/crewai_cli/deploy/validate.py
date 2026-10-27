@@ -44,6 +44,7 @@ from crewai_core.project import (
     get_crewai_project_config,
     get_crewai_project_type,
     read_toml,
+    resolve_agent_project_entrypoint,
 )
 from rich.console import Console
 from rich.markup import escape
@@ -312,13 +313,23 @@ class DeployValidator:
 
         self._check_lockfile()
 
+        if self._is_agent:
+            if not self._check_agent_entrypoint():
+                return self.results
+            package_dir = self.project_root / "src" / (self._package_name or "")
+            if package_dir.is_dir():
+                self._package_dir = package_dir
+            self._check_hatch_wheel_target()
+            self._check_module_imports()
+            self._check_env_vars()
+            self._check_version_vs_lockfile()
+            return self.results
+
         if not self._check_package_dir():
             self._check_hatch_wheel_target()
             return self.results
 
-        if self._is_agent:
-            self._check_agent_entrypoint()
-        elif self._is_flow:
+        if self._is_flow:
             self._check_flow_entrypoint()
         else:
             self._check_crew_entrypoint()
@@ -691,17 +702,22 @@ class DeployValidator:
         self._package_dir = package_dir
         return True
 
-    def _check_agent_entrypoint(self) -> None:
-        if self._package_dir is None:
-            return
-        agent_py = self._package_dir / "agent.py"
-        if not agent_py.is_file():
+    def _check_agent_entrypoint(self) -> bool:
+        try:
+            resolve_agent_project_entrypoint(self.project_root)
+        except (ProjectDefinitionError, OSError) as exc:
             self._add(
                 Severity.ERROR,
-                "missing_agent_py",
-                f"Cannot find {agent_py.relative_to(self.project_root)}",
-                hint="Create agent.py exporting `agent = Agent(...)`.",
+                "invalid_agent_definition",
+                "Cannot resolve the standalone agent definition",
+                detail=str(exc),
+                hint=(
+                    "Set [tool.crewai] definition to one project-local .py, "
+                    ".json, .yml, or .yaml file."
+                ),
             )
+            return False
+        return True
 
     def _check_crew_entrypoint(self) -> None:
         if self._package_dir is None:

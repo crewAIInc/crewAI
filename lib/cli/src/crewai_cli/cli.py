@@ -187,6 +187,14 @@ def uv(uv_args: tuple[str, ...]) -> None:
     help="Use classic Python/YAML project structure instead of JSON",
 )
 @click.option(
+    "--format",
+    "agent_format",
+    type=click.Choice(["python", "json", "yaml"]),
+    default=None,
+    show_default="python",
+    help="Agent only: definition format.",
+)
+@click.option(
     "--declarative",
     is_flag=True,
     help="Create a declarative Flow project instead of a Python Flow project",
@@ -216,6 +224,7 @@ def create(
     declarative: bool = False,
     in_project: bool = True,
     output_dir: str | None = None,
+    agent_format: str | None = None,
 ) -> None:
     """Create a new crew, flow, agent, tool, skill, or template."""
     if deprecated_skip_provider:
@@ -256,6 +265,8 @@ def create(
         )
     if dmn_mode and type == "crew":
         skip_provider = True
+    if agent_format is not None and type != "agent":
+        raise click.UsageError("--format can only be used with agent projects.")
     if not in_project and type != "skill":
         raise click.UsageError("--no-project can only be used with skill projects.")
     if output_dir is not None and type != "template":
@@ -301,7 +312,7 @@ def create(
             )
         from crewai_cli.create_agent import create_agent
 
-        create_agent(name)
+        create_agent(name, format=agent_format or "python")
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
