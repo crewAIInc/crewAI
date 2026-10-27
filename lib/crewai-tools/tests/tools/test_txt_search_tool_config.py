@@ -21,6 +21,7 @@ def test_txt_search_tool_with_azure_config_without_env_vars(
         return_value=mock_embedding_func,
     ):
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "azure",
                 "config": {
@@ -59,6 +60,7 @@ def test_txt_search_tool_with_openai_config_without_env_vars(
         return_value=mock_embedding_func,
     ):
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "openai",
                 "config": {
@@ -89,6 +91,7 @@ def test_txt_search_tool_with_cohere_config(mock_create_client: Mock) -> None:
         return_value=mock_embedding_func,
     ):
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "cohere",
                 "config": {

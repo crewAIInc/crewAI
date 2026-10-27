@@ -30,6 +30,7 @@ def test_pdf_search_tool_with_azure_config_without_env_vars(
     ):
         # This is the exact config format from the bug report
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "azure",
                 "config": {
@@ -68,6 +69,7 @@ def test_pdf_search_tool_with_openai_config_without_env_vars(
         return_value=mock_embedding_func,
     ):
         config = {
+            "vectordb": {"provider": "chromadb", "config": {}},
             "embedding_model": {
                 "provider": "openai",
                 "config": {
