@@ -20,7 +20,7 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -662,6 +662,31 @@ class TestKickoffFromCheckpoint:
         )
         assert mock_restored.checkpoint.restore_from is None
         assert result == "flow_result"
+
+    def test_plain_flow_restored_from_checkpoint_returns_recorded_output(
+        self,
+    ) -> None:
+        # `crewai checkpoint resume` restores a flow as a plain Flow, which has
+        # no start methods; kickoff must still return the recorded output.
+        class TwoStepFlow(Flow):
+            @start()
+            def first(self) -> str:
+                return "one"
+
+            @listen(first)
+            def second(self) -> str:
+                return "two"
+
+        flow = TwoStepFlow()
+        flow.kickoff()
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            restored = Flow.from_checkpoint(CheckpointConfig(restore_from=loc))
+
+        assert type(restored) is Flow
+        assert restored.kickoff() == "two"
 
 
 
