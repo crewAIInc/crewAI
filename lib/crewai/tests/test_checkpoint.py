@@ -850,3 +850,33 @@ class TestCustomLLMCheckpointRestore:
         assert isinstance(llm, BaseLLM)
         assert not inspect.isabstract(type(llm))
         assert llm.model == "stub"
+
+
+class TestCrewCheckpointTaskTemplates:
+    """A restored crew keeps each task's uninterpolated templates.
+
+    Resuming re-interpolates the description and expected output from the
+    saved originals, so each must be saved from its own field.
+    """
+
+    def test_restore_keeps_original_expected_output(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task = Task(
+            description="Research {topic}",
+            expected_output="A summary of {topic}",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+        task.interpolate_inputs_and_add_conversation_history({"topic": "AI"})
+
+        state = RuntimeState(root=[crew])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            restored = Crew.from_checkpoint(CheckpointConfig(restore_from=loc))
+
+        restored_task = restored.tasks[0]
+        expected_template = "A summary of {topic}"
+        assert restored_task.checkpoint_original_description == "Research {topic}"
+        assert restored_task.checkpoint_original_expected_output == expected_template
+        assert restored_task._original_expected_output == expected_template

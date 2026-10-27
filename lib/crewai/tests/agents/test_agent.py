@@ -2628,6 +2628,47 @@ def test_get_platform_tools_warns_when_token_is_missing(monkeypatch, capsys):
     assert "No Enterprise Action Auth Token found" in capsys.readouterr().out
 
 
+def test_get_platform_tools_warning_names_the_renamed_token(monkeypatch):
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "old-token")
+    agent = Agent(role="Old Token Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(
+        UserWarning,
+        match=r"Cause: CREWAI_PLATFORM_INTEGRATION_TOKEN is set, but CrewAI now "
+        r"reads the Enterprise Action Auth Token only from "
+        r"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warning_includes_the_resolution_error(monkeypatch):
+    def fail(apps):
+        raise RuntimeError("integrations API returned 503")
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", fail)
+    agent = Agent(role="Failing Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(
+        UserWarning, match=r"Cause: integrations API returned 503$"
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warning_has_no_cause_without_an_error(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Empty Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(UserWarning, match="none resolved to any tools") as caught:
+        agent.get_platform_tools(agent.apps)
+
+    assert "Cause:" not in str(caught[0].message)
+
+
 def test_get_platform_tools_quiet_when_tools_resolve(monkeypatch):
     @tool
     def platform_tool() -> str:

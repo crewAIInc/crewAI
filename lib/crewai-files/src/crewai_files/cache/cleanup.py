@@ -362,7 +362,8 @@ async def acleanup_provider_files(
 
     if delete_all_from_provider:
         try:
-            files = uploader.list_files()
+            # list_files() hits the provider API synchronously; keep it off the loop.
+            files = await asyncio.to_thread(uploader.list_files)
             tasks = []
             for file_info in files:
                 fid = file_info.get("id") or file_info.get("name")
