@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import reduce
 import os
 from pathlib import Path, PureWindowsPath
+import re
 import shutil
 import sys
 import tempfile
@@ -25,6 +26,12 @@ console = Console()
 
 class ProjectDefinitionError(ValueError):
     """Invalid ``[tool.crewai].definition`` project configuration."""
+
+
+def normalize_package_name(project_name: str) -> str:
+    """Normalize a project name into its scaffolded Python package name."""
+    folder = project_name.replace(" ", "_").replace("-", "_").lower()
+    return re.sub(r"[^a-zA-Z0-9_]", "", folder)
 
 
 def read_toml(file_path: str | Path = "pyproject.toml") -> dict[str, Any]:

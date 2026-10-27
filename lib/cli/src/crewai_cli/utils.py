@@ -14,6 +14,7 @@ from crewai_core.project import (
     get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
+    normalize_package_name as normalize_package_name,
     parse_toml as parse_toml,
     read_toml as read_toml,
 )
@@ -68,12 +69,6 @@ def warn_deprecated(
 
 console = Console()
 _TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
-
-
-def normalize_package_name(project_name: str) -> str:
-    """Normalize a project name into its scaffolded Python package name."""
-    folder = project_name.replace(" ", "_").replace("-", "_").lower()
-    return re.sub(r"[^a-zA-Z0-9_]", "", folder)
 
 
 def is_dmn_mode_enabled() -> bool:

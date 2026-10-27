@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import AbstractContextManager, nullcontext
 import json
 import os
@@ -38,6 +39,7 @@ _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
 _CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
 _CREWAI_JSON_CREW_DEFINITION_ENV = "CREWAI_JSON_CREW_DEFINITION"
 _CREWAI_JSON_CREW_INPUTS_ENV = "CREWAI_JSON_CREW_INPUTS"
+_CREWAI_AGENT_INPUTS_ENV = "CREWAI_AGENT_INPUTS"
 _FULL_CREWAI_INSTALL_MESSAGE = f"""\
 CrewAI CLI is installed without the `crewai` package required to run crews.
 
@@ -108,7 +110,10 @@ if crew_inputs := os.getenv("CREWAI_JSON_CREW_INPUTS"):
     kwargs["inputs"] = crew_inputs
 
 try:
-    module._run_json_crew(**kwargs)
+    if agent_inputs := os.getenv("CREWAI_AGENT_INPUTS"):
+        module._run_agent(inputs=agent_inputs)
+    else:
+        module._run_json_crew(**kwargs)
 except module.click.ClickException as exc:
     exc.show()
     raise SystemExit(exc.exit_code)
@@ -748,7 +753,7 @@ def run_crew(
     definition: str | None = None,
     inputs: str | None = None,
 ) -> None:
-    """Run the crew or flow.
+    """Run the crew, flow, or standalone agent.
 
     Args:
         trained_agents_file: Optional path to a trained-agents pickle produced
@@ -756,9 +761,10 @@ def run_crew(
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
             file instead of the default ``trained_agents_data.pkl``.
         definition: Optional path to a declarative Flow definition.
-        inputs: Optional JSON object of runtime inputs for a declarative flow
-            or declarative (JSON) crew. Layered over the definition's own
-            defaults; missing required values are prompted for interactively.
+        inputs: Optional JSON object of runtime inputs for an agent, declarative
+            flow or declarative (JSON) crew. Agent projects require ``messages``.
+            Declarative inputs layer over defaults and prompt for missing values
+            interactively.
     """
     # --definition is a pure override: run that flow directly.
     if definition is not None:
@@ -803,11 +809,77 @@ def run_crew(
         )
         return
 
+    if project_type == "agent":
+        if trained_agents_file is not None:
+            raise click.UsageError("--filename can only be used when running crews")
+        _run_agent_project(inputs)
+        return
+
     _reject_inputs_for_non_flow(inputs)
     _run_classic_crew_project(
         pyproject_data=pyproject_data,
         trained_agents_file=trained_agents_file,
     )
+
+
+def _agent_messages(inputs: str | None) -> Any:
+    provided = parse_inputs_json(inputs) or {}
+    if set(provided) - {"messages"}:
+        raise click.UsageError("Agent inputs only support 'messages'")
+    messages = provided.get("messages")
+    if isinstance(messages, str) and messages.strip():
+        return messages
+    if (
+        isinstance(messages, list)
+        and messages
+        and all(
+            isinstance(message, dict)
+            and message.get("role") in ("system", "user", "assistant", "tool")
+            and "content" in message
+            and (
+                message.get("content") is None
+                or isinstance(message.get("content"), str)
+                or (
+                    isinstance(message.get("content"), list)
+                    and all(isinstance(part, dict) for part in message["content"])
+                )
+            )
+            for message in messages
+        )
+    ):
+        return messages
+    raise click.UsageError(
+        'Agent projects require --inputs {"messages":"Your request"} '
+        "or a non-empty messages history"
+    )
+
+
+def _run_agent_project(inputs: str | None) -> None:
+    _agent_messages(inputs)
+    _install_json_crew_dependencies_if_needed()
+    command = _json_crew_run_command()
+    env = build_env_with_all_tool_credentials()
+    env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(Path(__file__).resolve().parent)
+    env[_CREWAI_AGENT_INPUTS_ENV] = inputs or "{}"
+    if local_source := _find_local_crewai_source_dir():
+        env[_CREWAI_RUNNER_SOURCE_DIR_ENV] = str(local_source)
+    try:
+        subprocess.run(command, check=True, env=env)  # noqa: S603
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(exc.returncode) from exc
+
+
+def _run_agent(inputs: str) -> None:
+    messages = _agent_messages(inputs)
+    load_project_env(Path.cwd() / ".env")
+    try:
+        from crewai.project import load_agent_project
+
+        agent = load_agent_project()
+        result = asyncio.run(agent.kickoff_async(messages=messages))
+    except Exception as exc:
+        raise click.ClickException(f"Agent run failed: {exc}") from exc
+    click.echo(result.raw)
 
 
 def _reject_inputs_for_non_flow(inputs: str | None) -> None:
