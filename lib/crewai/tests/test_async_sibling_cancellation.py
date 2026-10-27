@@ -3,7 +3,8 @@
 When one async task (or one crew in a for-each run) fails, the remaining
 in-flight siblings used to be abandoned — never cancelled, never awaited —
 and kept running in the background after the caller had already received
-the error.
+the error. The same applies when a *later* iteration fails before the batch
+is ever drained, e.g. a task with no agent raising during preparation.
 """
 
 import asyncio
@@ -14,7 +15,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
-from crewai.crews.utils import run_for_each_async
+from crewai.crews.utils import prepare_task_execution, run_for_each_async
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
@@ -68,6 +69,64 @@ async def test_async_task_failure_cancels_sibling_tasks(researcher: Agent):
     assert b_cancelled.is_set(), "sibling task B should have been cancelled"
     assert not b_finished.is_set(), (
         "sibling task B should not have completed in the background"
+    )
+    assert not _leftover_tasks(), f"leaked background tasks: {_leftover_tasks()}"
+
+
+@pytest.mark.asyncio
+async def test_later_iteration_failure_cancels_pending_async_tasks(
+    researcher: Agent,
+):
+    """A failure in a later iteration must cancel tasks already started.
+
+    Draining only happens once the run reaches it, so anything raising earlier
+    in a later iteration leaves the already-``create_task``'d siblings running.
+    ``prepare_task_execution`` is one such site — it raises ``ValueError`` when
+    no agent is available for the task. For a sequential crew that particular
+    error is pre-empted by Crew's ``missing_agent_in_task`` validator, so the
+    failure is injected at that call site instead; the handler sits at loop
+    level, so it covers every raise site in an iteration rather than just one.
+
+    Nothing awaits between ``create_task`` and the raise, so the sibling's
+    coroutine has not entered its body yet — the loop only runs it once the
+    caller resumes, which is why the assertions observe it from outside (it
+    neither completes nor stays scheduled) instead of from a handler in it.
+    """
+    a_finished = asyncio.Event()
+
+    task_a = Task(
+        description="A", expected_output="x", agent=researcher, async_execution=True
+    )
+    task_b = Task(description="B", expected_output="x", agent=researcher)
+
+    crew = Crew(agents=[researcher], tasks=[task_a, task_b])
+
+    async def fake_aexecute_sync(self: Task, *_args: Any, **_kwargs: Any) -> TaskOutput:
+        await asyncio.sleep(0.05)
+        a_finished.set()
+        return TaskOutput(description="A", raw="a", agent="researcher")
+
+    real_prepare = prepare_task_execution
+    calls = {"count": 0}
+
+    def prepare_failing_on_later_iteration(*args: Any, **kwargs: Any) -> Any:
+        calls["count"] += 1
+        if calls["count"] > 1:
+            raise ValueError(f"No agent available for task: {task_b.description}")
+        return real_prepare(*args, **kwargs)
+
+    with (
+        patch.object(Task, "aexecute_sync", fake_aexecute_sync),
+        patch("crewai.crew.prepare_task_execution", prepare_failing_on_later_iteration),
+    ):
+        with pytest.raises(ValueError, match="No agent available for task"):
+            await crew.akickoff()
+        # Resume the loop the way a real caller does after catching: anything
+        # still scheduled now runs.
+        await asyncio.sleep(0.3)
+
+    assert not a_finished.is_set(), (
+        "task A ran to completion in the background after akickoff raised"
     )
     assert not _leftover_tasks(), f"leaked background tasks: {_leftover_tasks()}"
 
