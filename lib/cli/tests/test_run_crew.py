@@ -1267,7 +1267,7 @@ def _patch_conversational_flow_project(monkeypatch) -> list[str]:
     )
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
-        lambda: object(),
+        object,
     )
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
