@@ -442,8 +442,16 @@ class LanceDBStorage:
             return 0
         with store_lock(self._lock_name):
             if record_ids and not (categories or metadata_filter):
+                # Deleting by ID still has to stay inside scope_prefix. Without
+                # the scope condition, a caller confined to one subtree (e.g.
+                # Memory.forget() with a root_scope) can delete records that
+                # live anywhere in the table.
+                where = _id_in_filter(record_ids)
+                if scope_prefix is not None and scope_prefix.strip("/"):
+                    scope_cond = _scope_prefix_filter(scope_prefix.rstrip("/"))
+                    where = f"({where}) AND ({scope_cond})"
                 before = int(self._table.count_rows())
-                self._do_write("delete", _id_in_filter(record_ids))
+                self._do_write("delete", where)
                 return before - int(self._table.count_rows())
             if categories or metadata_filter:
                 rows = self._scan_rows(scope_prefix)
