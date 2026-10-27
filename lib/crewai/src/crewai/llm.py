@@ -198,6 +198,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "groq",
 ]
 
 
@@ -223,6 +224,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "groq": "groq",
 }
 
 
@@ -455,6 +457,10 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "groq":
+            # Groq's OpenAI-compatible endpoint serves several model families
+            return True
+
         return False
 
     @classmethod
@@ -680,6 +686,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "groq",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
