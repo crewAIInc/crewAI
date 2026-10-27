@@ -151,14 +151,15 @@ oxylabs = [
 ]
 azure-documentdb = [
     "azure-identity>=1.17.0,<2",
-    "pymongo>=4.18.2",
+    "pymongo>=4.18.3",
 ]
 mongodb = [
     # <4.18.1 has GHSA-8fvv-fgr5-f8ch (GridFS delete treats a mapping id as a
     # query). <4.18.2 has GHSA-qx36-8mw2-4r3x, GHSA-v4x9-3549-crwv, and
     # GHSA-vp6j-j7w5-5xjj. Declared here, not only as a uv override, so
     # consumers installing crewai-tools[mongodb] get this floor.
-    "pymongo>=4.18.2"
+    # <4.18.3 also has GHSA-98qm-wvgf-w4cf (BSON Regex out-of-bounds read).
+    "pymongo>=4.18.3"
 ]
 oracledb = [
     "oracledb>=2.2.0"
