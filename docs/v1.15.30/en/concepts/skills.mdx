@@ -131,7 +131,7 @@ agent = Agent(
 The most common real-world pattern. The skill provides *how* to approach the work; tools provide *what* the agent can do:
 
 ```python
-from crewai_tools import SerperDevTool, FileReadTool
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
 
 analyst = Agent(
     role="Security Analyst",
@@ -141,6 +141,7 @@ analyst = Agent(
     tools=[
         SerperDevTool(),                  # Research known vulnerabilities
         FileReadTool(),                   # Read config files
+        CodeInterpreterTool(),            # Run analysis scripts
     ],
 )
 ```
