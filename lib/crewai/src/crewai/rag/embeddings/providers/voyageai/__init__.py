@@ -1,11 +1,9 @@
 """VoyageAI embedding providers."""
 
+from crewai.rag.embeddings.providers._lazy import load_provider
 from crewai.rag.embeddings.providers.voyageai.types import (
     VoyageAIProviderConfig,
     VoyageAIProviderSpec,
-)
-from crewai.rag.embeddings.providers.voyageai.voyageai_provider import (
-    VoyageAIProvider,
 )
 
 
@@ -14,3 +12,7 @@ __all__ = [
     "VoyageAIProviderConfig",
     "VoyageAIProviderSpec",
 ]
+
+
+def __getattr__(name: str) -> object:
+    return load_provider(name, {"VoyageAIProvider": f"{__name__}.voyageai_provider"})

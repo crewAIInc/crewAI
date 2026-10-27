@@ -1,19 +1,11 @@
 """Google embedding providers."""
 
-from crewai.rag.embeddings.providers.google.genai_vertex_embedding import (
-    GoogleGenAIVertexEmbeddingFunction,
-)
-from crewai.rag.embeddings.providers.google.generative_ai import (
-    GenerativeAiProvider,
-)
+from crewai.rag.embeddings.providers._lazy import load_provider
 from crewai.rag.embeddings.providers.google.types import (
     GenerativeAiProviderConfig,
     GenerativeAiProviderSpec,
     VertexAIProviderConfig,
     VertexAIProviderSpec,
-)
-from crewai.rag.embeddings.providers.google.vertex import (
-    VertexAIProvider,
 )
 
 
@@ -26,3 +18,14 @@ __all__ = [
     "VertexAIProviderConfig",
     "VertexAIProviderSpec",
 ]
+
+
+def __getattr__(name: str) -> object:
+    return load_provider(
+        name,
+        {
+            "GenerativeAiProvider": f"{__name__}.generative_ai",
+            "GoogleGenAIVertexEmbeddingFunction": f"{__name__}.genai_vertex_embedding",
+            "VertexAIProvider": f"{__name__}.vertex",
+        },
+    )

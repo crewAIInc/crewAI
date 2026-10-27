@@ -1,8 +1,6 @@
 """HuggingFace embedding providers."""
 
-from crewai.rag.embeddings.providers.huggingface.huggingface_provider import (
-    HuggingFaceProvider,
-)
+from crewai.rag.embeddings.providers._lazy import load_provider
 from crewai.rag.embeddings.providers.huggingface.types import (
     HuggingFaceProviderConfig,
     HuggingFaceProviderSpec,
@@ -14,3 +12,9 @@ __all__ = [
     "HuggingFaceProviderConfig",
     "HuggingFaceProviderSpec",
 ]
+
+
+def __getattr__(name: str) -> object:
+    return load_provider(
+        name, {"HuggingFaceProvider": f"{__name__}.huggingface_provider"}
+    )
