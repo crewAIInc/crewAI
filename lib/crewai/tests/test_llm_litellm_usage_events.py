@@ -17,17 +17,12 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from litellm import ModelResponse
-from litellm.types.utils import (
-    ChatCompletionDeltaToolCall,
-    Function,
-    ModelResponseStream,
-)
 from pydantic import BaseModel
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
 from crewai.llm import LLM
+
 
 USAGE = {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18}
 TOOLS = [
@@ -66,7 +61,9 @@ def _completed_event(mock_emit) -> LLMCallCompletedEvent:
     return matches[0]
 
 
-def _tool_call_response(name: str, arguments: str) -> ModelResponse:
+def _tool_call_response(name: str, arguments: str) -> Any:
+    from litellm import ModelResponse
+
     return ModelResponse(
         id="chatcmpl-tools-1",
         choices=[
@@ -90,6 +87,12 @@ def _tool_call_response(name: str, arguments: str) -> ModelResponse:
 
 
 def _tool_call_stream() -> list[Any]:
+    from litellm.types.utils import (
+        ChatCompletionDeltaToolCall,
+        Function,
+        ModelResponseStream,
+    )
+
     return [
         {
             "id": "chatcmpl-stream-tools",
