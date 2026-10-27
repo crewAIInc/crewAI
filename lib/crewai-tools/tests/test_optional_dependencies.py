@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -29,6 +30,28 @@ def temp_project():
 
 def run_command(cmd, cwd):
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+
+
+def test_rag_data_types_import_without_chromadb():
+    code = """
+import importlib.abc
+import sys
+
+
+class BlockChromaDB(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "chromadb" or fullname.startswith("chromadb."):
+            raise ModuleNotFoundError(fullname)
+        return None
+
+
+sys.meta_path.insert(0, BlockChromaDB())
+from crewai_tools.rag.data_types import DataType
+assert DataType
+"""
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.skip(reason="Test takes too long in GitHub Actions (>30s timeout) due to dependency installation")
