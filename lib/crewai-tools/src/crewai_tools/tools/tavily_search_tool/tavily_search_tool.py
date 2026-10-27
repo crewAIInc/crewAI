@@ -5,7 +5,8 @@ from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 
 load_dotenv()
@@ -65,14 +66,14 @@ class TavilySearchTool(BaseTool):
         default=None,
         description="Optional proxies to use for the Tavily API requests.",
     )
-    search_depth: Literal["basic", "advanced"] = Field(
+    search_depth: Literal["basic", "advanced", "fast", "ultra-fast"] = Field(
         default="basic", description="The depth of the search."
     )
     topic: Literal["general", "news", "finance"] = Field(
         default="general", description="The topic to focus the search on."
     )
-    time_range: Literal["day", "week", "month", "year"] | None = Field(
-        default=None, description="The time range for the search."
+    time_range: Literal["day", "week", "month", "year", "d", "w", "m", "y"] | None = (
+        Field(default=None, description="The time range for the search.")
     )
     days: int = Field(default=7, description="The number of days to search back.")
     max_results: int = Field(
@@ -87,14 +88,69 @@ class TavilySearchTool(BaseTool):
     include_answer: bool | Literal["basic", "advanced"] = Field(
         default=False, description="Whether to include a direct answer to the query."
     )
-    include_raw_content: bool = Field(
+    include_raw_content: bool | Literal["markdown", "text"] = Field(
         default=False,
         description="Whether to include the raw content of the search results.",
     )
     include_images: bool = Field(
         default=False, description="Whether to include images in the search results."
     )
-    timeout: int = Field(
+    chunks_per_source: int | None = Field(
+        default=None,
+        ge=1,
+        le=3,
+        description="Maximum content chunks per source; unavailable for ultra-fast search.",
+    )
+    include_domains_mode: Literal["restrict", "prefer"] | None = Field(
+        default=None,
+        description="Restrict results to include_domains or prefer them. Requires include_domains.",
+    )
+    start_date: str | None = Field(
+        default=None, description="Earliest result date, in YYYY-MM-DD format."
+    )
+    end_date: str | None = Field(
+        default=None, description="Latest result date, in YYYY-MM-DD format."
+    )
+    country: str | None = Field(
+        default=None, description="Country to boost for general-topic searches."
+    )
+    language: str | None = Field(
+        default=None, description="Language to boost, as a code or English name."
+    )
+    filter_by_language: bool | None = Field(
+        default=None,
+        description="Filter results to language instead of only boosting them.",
+    )
+    auto_parameters: bool | None = Field(
+        default=None,
+        description="Automatically configure unspecified search parameters. Explicit tool settings take precedence.",
+    )
+    exact_match: bool | None = Field(
+        default=None, description="Require exact quoted phrases in the query."
+    )
+    safe_search: bool | None = Field(
+        default=None,
+        description="Filter unsafe content; unavailable for fast and ultra-fast search.",
+    )
+    include_image_descriptions: bool | None = Field(
+        default=None,
+        description="Include descriptions for images when include_images is enabled.",
+    )
+    include_favicon: bool | None = Field(
+        default=None, description="Include a favicon URL for each result."
+    )
+    include_usage: bool | None = Field(
+        default=None, description="Include credit usage in the response."
+    )
+    include_published_date: bool | None = Field(
+        default=None,
+        description="Include each result's publication date (beta, best effort).",
+    )
+    filter_by_published_date: bool | None = Field(
+        default=None,
+        description="Remove undated results when a date filter is active (beta).",
+    )
+    timeout: float = Field(
         default=60, description="The timeout for the search request in seconds."
     )
     max_content_length_per_result: int = Field(
@@ -112,7 +168,51 @@ class TavilySearchTool(BaseTool):
         ]
     )
 
-    def __init__(self, **kwargs: Any):
+    @model_validator(mode="after")
+    def validate_search_options(self) -> Self:
+        if (
+            self.start_date is not None or self.end_date is not None
+        ) and "days" in self.model_fields_set:
+            raise ValueError("days cannot be combined with start_date or end_date")
+        if self.include_domains_mode is not None and not self.include_domains:
+            raise ValueError("include_domains_mode requires include_domains")
+        if self.filter_by_language and not self.language:
+            raise ValueError("filter_by_language requires language")
+        if self.chunks_per_source is not None and self.search_depth == "ultra-fast":
+            raise ValueError("chunks_per_source is unavailable for ultra-fast search")
+        if self.safe_search and self.search_depth in {"fast", "ultra-fast"}:
+            raise ValueError(
+                "safe_search is unavailable for fast and ultra-fast search"
+            )
+        if self.country is not None and self.topic != "general":
+            raise ValueError("country is only available for the general topic")
+        return self
+
+    def _optional_search_params(self) -> dict[str, Any]:
+        """Keep unconfigured options out of requests, preserving explicit False."""
+        return {
+            name: value
+            for name in (
+                "chunks_per_source",
+                "include_domains_mode",
+                "start_date",
+                "end_date",
+                "country",
+                "language",
+                "filter_by_language",
+                "auto_parameters",
+                "exact_match",
+                "safe_search",
+                "include_image_descriptions",
+                "include_favicon",
+                "include_usage",
+                "include_published_date",
+                "filter_by_published_date",
+            )
+            if (value := getattr(self, name)) is not None
+        }
+
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if TAVILY_AVAILABLE:
             self.client = TavilyClient(
@@ -174,7 +274,11 @@ class TavilySearchTool(BaseTool):
             search_depth=self.search_depth,
             topic=self.topic,
             time_range=self.time_range,
-            days=self.days,
+            days=(
+                None
+                if self.start_date is not None or self.end_date is not None
+                else self.days
+            ),
             max_results=self.max_results,
             include_domains=self.include_domains,
             exclude_domains=self.exclude_domains,
@@ -182,6 +286,7 @@ class TavilySearchTool(BaseTool):
             include_raw_content=self.include_raw_content,
             include_images=self.include_images,
             timeout=self.timeout,
+            **self._optional_search_params(),
         )
 
         if (
@@ -226,7 +331,11 @@ class TavilySearchTool(BaseTool):
             search_depth=self.search_depth,
             topic=self.topic,
             time_range=self.time_range,
-            days=self.days,
+            days=(
+                None
+                if self.start_date is not None or self.end_date is not None
+                else self.days
+            ),
             max_results=self.max_results,
             include_domains=self.include_domains,
             exclude_domains=self.exclude_domains,
@@ -234,6 +343,7 @@ class TavilySearchTool(BaseTool):
             include_raw_content=self.include_raw_content,
             include_images=self.include_images,
             timeout=self.timeout,
+            **self._optional_search_params(),
         )
 
         if (
