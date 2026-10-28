@@ -366,11 +366,10 @@ class SnowflakeCompletion(OpenAICompletion):
         return params
 
     def supports_function_calling(self) -> bool:
-        catalog_support = self._catalog_supports_function_calling()
-        if catalog_support is not None:
-            return catalog_support
         model = self.model.lower()
-        return model.startswith(("openai-", "claude-", "anthropic."))
+        return self._supports_function_calling_or(
+            model.startswith(("openai-", "claude-", "anthropic."))
+        )
 
     def supports_multimodal(self) -> bool:
         model = self.model.lower()

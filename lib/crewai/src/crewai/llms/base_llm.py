@@ -15,7 +15,7 @@ from functools import wraps
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeGuard, cast
 import uuid
 
 from pydantic import (
@@ -322,6 +322,26 @@ class BaseLLM(BaseModel, ABC):
         """Return the catalog's function-calling capability when it is explicit."""
         value = (self.catalog_entry or {}).get("supports_function_calling")
         return value if isinstance(value, bool) else None
+
+    def _supports_function_calling_or(self, default: bool) -> bool:
+        """Return the catalog's function-calling capability, else ``default``."""
+        catalog_support = self._catalog_supports_function_calling()
+        return default if catalog_support is None else catalog_support
+
+    def _tools_allowed(
+        self, tools: list[dict[str, Any]] | None
+    ) -> TypeGuard[list[dict[str, Any]]]:
+        """Return whether ``tools`` may be sent, warning when they are dropped."""
+        if not tools:
+            return False
+        if self.supports_function_calling():  # type: ignore[attr-defined]
+            return True
+        logger.warning(
+            "Ignoring %d tool(s): model '%s' does not support function calling.",
+            len(tools),
+            self.model,
+        )
+        return False
 
     @model_validator(mode="before")
     @classmethod
