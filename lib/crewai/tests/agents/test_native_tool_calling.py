@@ -290,7 +290,7 @@ class TestOpenAINativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="gpt-5-nano", temperature=1),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         task = Task(
             description=_parallel_prompt(),
@@ -314,7 +314,7 @@ class TestOpenAINativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="gpt-4o-mini"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         result = agent.kickoff(_parallel_prompt())
         assert result is not None
@@ -358,7 +358,7 @@ class TestOpenAINativeToolCalling:
                 tools=parallel_tools,
                 llm=LLM(model="gpt-5-nano", temperature=1),
                 verbose=False,
-                max_iter=3,
+                max_iter=10,
             )
             task = Task(
                 description=_parallel_prompt(),
@@ -424,7 +424,7 @@ class TestOpenAINativeToolCalling:
                 tools=parallel_tools,
                 llm=LLM(model="gpt-5-nano", temperature=1),
                 verbose=False,
-                max_iter=3,
+                max_iter=10,
             )
             result = agent.kickoff(_parallel_prompt())
 
@@ -526,7 +526,7 @@ class TestAnthropicNativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="anthropic/claude-sonnet-4-6"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         task = Task(
             description=_parallel_prompt(),
@@ -549,7 +549,7 @@ class TestAnthropicNativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="anthropic/claude-sonnet-4-6"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         result = agent.kickoff(_parallel_prompt())
         assert result is not None
@@ -637,7 +637,7 @@ class TestGeminiNativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="gemini/gemini-2.5-flash"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         task = Task(
             description=_parallel_prompt(),
@@ -660,7 +660,7 @@ class TestGeminiNativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="gemini/gemini-2.5-flash"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         result = agent.kickoff(_parallel_prompt())
         assert result is not None
@@ -758,7 +758,7 @@ class TestAzureNativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="azure/gpt-5-nano"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         task = Task(
             description=_parallel_prompt(),
@@ -781,7 +781,7 @@ class TestAzureNativeToolCalling:
             tools=parallel_tools,
             llm=LLM(model="azure/gpt-5-nano"),
             verbose=False,
-            max_iter=3,
+            max_iter=10,
         )
         result = agent.kickoff(_parallel_prompt())
         assert result is not None

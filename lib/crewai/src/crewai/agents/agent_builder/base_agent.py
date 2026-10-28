@@ -203,7 +203,8 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task. Each
             tool call counts as one iteration, including each of several
-            parallel tool calls.
+            parallel tool calls. With planning, plan steps are limited by
+            ``planning_config.max_step_iterations`` instead.
         agent_executor: The executor running this agent. Defaults to AgentExecutor.
         i18n (I18N): Internationalization settings.
         llm (Any): Language model that will run the agent.

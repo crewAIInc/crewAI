@@ -68,6 +68,8 @@ class LLMCallHookContext:
 
 `AgentExecutor` is imported from `crewai.agents`. `CrewAgentExecutor` and the `crewai.experimental.agent_executor` import path have been removed.
 
+`iterations` is the count that `max_iter` limits. Each tool call adds one, so after a turn with three parallel tool calls it has advanced by three.
+
 The context also exposes `request_human_input(prompt, default_message)`, which
 pauses live console updates and collects input from the terminal — useful for
 approval gates.

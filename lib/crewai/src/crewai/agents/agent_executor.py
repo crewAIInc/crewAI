@@ -1977,7 +1977,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ]
         # Every tool call counts toward max_iter; increment_and_continue counts
         # this step's first one. Calls past the remaining budget are not run.
-        budget = self.max_iter - self.state.iterations
+        # Clamped because a negative slice bound would run all but the last few.
+        budget = max(self.max_iter - self.state.iterations, 0)
         runnable_tool_calls = [tool_call for tool_call, _ in runnable[:budget]]
         not_run_tool_calls = [info for _, info in runnable[budget:]]
         self.state.iterations += max(len(runnable_tool_calls) - 1, 0)

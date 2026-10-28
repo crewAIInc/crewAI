@@ -129,6 +129,7 @@ agent = Agent(
 - `llm` accepts either a string model name (resolved via the configured provider) or an `LLM` object for fine-grained control.
 - `verbose` is a plain `bool`. Passing an integer no longer toggles log levels.
 - `max_iter` defaults have shifted between releases. If your agent silently stops looping after the first tool call, set `max_iter` explicitly.
+- With native tool calling, each tool call now counts toward `max_iter`, including each call in a parallel batch. Earlier releases counted a whole batch as one iteration. Calls past the limit are not run, and the agent is asked for its final answer. If your agent now stops earlier than before, raise `max_iter`.
 
 ### `Crew` parameters
 

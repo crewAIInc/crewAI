@@ -66,6 +66,8 @@ class LLMCallHookContext:
 
 يُستورَد `AgentExecutor` من `crewai.agents`. تمت إزالة `CrewAgentExecutor` ومسار الاستيراد `crewai.experimental.agent_executor`.
 
+`iterations` هو العدّاد الذي يحدّه `max_iter`. كل استدعاء أداة يضيف واحدًا، لذا بعد دورة بها ثلاثة استدعاءات أدوات متوازية يكون قد تقدّم بثلاثة.
+
 ### تعديل الرسائل
 
 **مهم:** قم دائماً بتعديل الرسائل في مكانها:

@@ -66,6 +66,8 @@ class LLMCallHookContext:
 
 `AgentExecutor`는 `crewai.agents`에서 가져옵니다. `CrewAgentExecutor`와 `crewai.experimental.agent_executor` 가져오기 경로는 제거되었습니다.
 
+`iterations`는 `max_iter`가 제한하는 횟수입니다. 도구 호출마다 1씩 늘어나므로, 병렬 도구 호출 세 개가 있는 턴 뒤에는 3만큼 늘어납니다.
+
 ### 메시지 수정
 
 **중요:** 항상 메시지를 제자리에서 수정하세요:

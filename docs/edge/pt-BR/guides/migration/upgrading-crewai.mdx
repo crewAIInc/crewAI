@@ -129,6 +129,7 @@ agent = Agent(
 - `llm` aceita tanto um nome de modelo como string (resolvido pelo provedor configurado) quanto um objeto `LLM` para controle granular.
 - `verbose` é um `bool` puro. Passar um inteiro não alterna mais níveis de log.
 - Os defaults de `max_iter` mudaram entre releases. Se seu agente para silenciosamente de iterar após a primeira chamada de tool, defina `max_iter` explicitamente.
+- Com tool calling nativo, cada chamada de tool agora conta para `max_iter`, incluindo cada chamada de um lote paralelo. Releases anteriores contavam um lote inteiro como uma iteração. Chamadas além do limite não são executadas, e o agente é solicitado a dar sua resposta final. Se seu agente agora para mais cedo do que antes, aumente `max_iter`.
 
 ### Parâmetros de `Crew`
 

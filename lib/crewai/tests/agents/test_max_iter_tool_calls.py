@@ -35,14 +35,25 @@ class LookupTool(BaseTool):
         return f"value:{term}"
 
 
+class SubmitTool(BaseTool):
+    name: str = "submit"
+    description: str = "Submit the final answer."
+    result_as_answer: bool = True
+
+    def _run(self, term: str = "default") -> str:
+        return f"submitted:{term}"
+
+
 class ScriptedLLM(BaseLLM):
     """Answers each turn from a script; the forced final answer gets its own reply.
 
     A script entry that is an int is a batch of that many ``lookup`` tool calls;
-    a string is a final answer.
+    a list is a batch calling those tools by name; a string is a final answer.
     """
 
-    def __init__(self, script: list[int | str], native: bool = True) -> None:
+    def __init__(
+        self, script: list[int | list[str] | str], native: bool = True
+    ) -> None:
         super().__init__(model="offline")
         self.script = list(script)
         self.native = native
@@ -60,7 +71,8 @@ class ScriptedLLM(BaseLLM):
         if isinstance(step, str):
             return step
         self.batch_number += 1
-        terms = [f"{self.batch_number}.{i}" for i in range(step)]
+        names = ["lookup"] * step if isinstance(step, int) else step
+        terms = [f"{self.batch_number}.{i}" for i in range(len(names))]
         if not self.native:
             return (
                 "Thought: I need to look this up\n"
@@ -72,11 +84,11 @@ class ScriptedLLM(BaseLLM):
                 "id": f"call_{term}",
                 "type": "function",
                 "function": {
-                    "name": "lookup",
+                    "name": name,
                     "arguments": json.dumps({"term": term}),
                 },
             }
-            for term in terms
+            for name, term in zip(names, terms, strict=True)
         ]
 
     async def acall(self, messages: Any, **kwargs: Any) -> Any:
@@ -93,13 +105,19 @@ def clean_hooks():
     clear_all_llm_call_hooks()
 
 
-def _run(llm: ScriptedLLM, tool: BaseTool, max_iter: int, async_entry: bool) -> str:
+def _run(
+    llm: ScriptedLLM,
+    tool: BaseTool,
+    max_iter: int,
+    async_entry: bool,
+    extra_tools: list[BaseTool] | None = None,
+) -> str:
     agent = Agent(
         role="Investigator",
         goal="Look up values",
         backstory="Looks things up.",
         llm=llm,
-        tools=[tool],
+        tools=[tool, *(extra_tools or [])],
         max_iter=max_iter,
         max_retry_limit=0,
         verbose=False,
@@ -234,3 +252,30 @@ def test_crew_task_counts_parallel_tool_calls(lookup):
 
     assert result.raw == "Forced answer"
     assert sorted(lookup.calls) == ["1.0", "1.1", "1.2"]
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+def test_result_as_answer_call_within_the_budget_still_ends_the_run(
+    async_entry, lookup
+):
+    llm = ScriptedLLM([["lookup", "submit", "lookup"], "Never reached"])
+
+    result = _run(llm, lookup, 3, async_entry, extra_tools=[SubmitTool()])
+
+    assert result == "submitted:1.1"
+    assert lookup.calls == ["1.0"]
+    assert len(llm.turns) == 1
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+def test_result_as_answer_call_past_the_budget_is_not_run(async_entry, lookup):
+    # The limit is hard: a submit call past it is not run, the same as a submit
+    # made in a later turn once max_iter is used up. The answer is then forced.
+    llm = ScriptedLLM([["lookup", "lookup", "submit"], "Never reached"])
+
+    result = _run(llm, lookup, 2, async_entry, extra_tools=[SubmitTool()])
+
+    assert result == "Forced answer"
+    assert sorted(lookup.calls) == ["1.0", "1.1"]
+    assert _tool_messages(llm.turns[-1])["call_1.2"].startswith(NOT_RUN)
+    assert len(llm.turns) == 2

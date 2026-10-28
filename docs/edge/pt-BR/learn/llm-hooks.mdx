@@ -66,6 +66,8 @@ class LLMCallHookContext:
 
 `AgentExecutor` é importado de `crewai.agents`. `CrewAgentExecutor` e o caminho de importação `crewai.experimental.agent_executor` foram removidos.
 
+`iterations` é a contagem limitada por `max_iter`. Cada chamada de ferramenta soma um, então depois de um turno com três chamadas de ferramenta em paralelo ela avança três.
+
 ### Modificando Mensagens
 
 **Importante:** Sempre modifique mensagens in-place:
