@@ -35,9 +35,18 @@ class AzureFoundryAnthropicCompletion(AnthropicCompletion):
 
     def _get_client_params(self, include_http_client: bool = True) -> dict[str, Any]:
         # Resolved here, not at construction, so the LLM can be built before
-        # the endpoint is configured; a ValueError defers to the first call.
+        # the endpoint and key are configured; a ValueError defers to the first
+        # call. Setting api_key first keeps the parent from falling back to
+        # ANTHROPIC_API_KEY, which belongs to api.anthropic.com, not Azure.
         if self.base_url is None:
             self.base_url = self._base_url_from_endpoint()
+        if self.api_key is None:
+            self.api_key = os.getenv("AZURE_API_KEY")
+            if self.api_key is None:
+                raise ValueError(
+                    "AZURE_API_KEY is required for Claude on Foundry. Set it "
+                    "or pass api_key=."
+                )
         return super()._get_client_params(include_http_client)
 
     def _base_url_from_endpoint(self) -> str:
