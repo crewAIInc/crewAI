@@ -300,11 +300,13 @@ class AnthropicCompletion(BaseLLM):
         data["is_claude_3"] = "claude-3" in data.get("model", "").lower()
         if data.get("max_tokens") is None:
             data["max_tokens"] = _default_max_tokens_for_model(data["model"])
-        # Normalize tool_search
+        # Normalize tool_search: True means "default variant"; False and None
+        # disable it. Dicts (e.g. from YAML agent configs) and config instances
+        # are coerced/validated by the field itself instead of being dropped.
         ts = data.get("tool_search")
         if ts is True:
             data["tool_search"] = AnthropicToolSearchConfig()
-        elif ts is not None and not isinstance(ts, AnthropicToolSearchConfig):
+        elif ts is False:
             data["tool_search"] = None
         return data
 
