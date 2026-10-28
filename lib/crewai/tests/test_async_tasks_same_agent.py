@@ -110,8 +110,10 @@ def _text(messages: Any) -> str:
     return "\n".join(str(message.get("content", "")) for message in messages)
 
 
-def _agent(llm: _StubLLM, role: str = "Worker") -> Agent:
-    return Agent(role=role, goal="Answer briefly.", backstory="Brief.", llm=llm)
+def _agent(llm: _StubLLM, role: str = "Worker", **kwargs: Any) -> Agent:
+    return Agent(
+        role=role, goal="Answer briefly.", backstory="Brief.", llm=llm, **kwargs
+    )
 
 
 def _async_tasks(agent: Agent, count: int) -> list[Task]:
@@ -129,16 +131,16 @@ def _async_tasks(agent: Agent, count: int) -> list[Task]:
     return tasks
 
 
-def _record_executors(monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    """Record the id of the executor each task execution runs on."""
-    seen: list[int] = []
+def _record_executors(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
+    """Record the executor each task execution runs on."""
+    seen: list[Any] = []
     lock = threading.Lock()
     original = Agent._active_executor
 
     def record(self: Agent) -> Any:
         executor = original(self)
         with lock:
-            seen.append(id(executor))
+            seen.append(executor)
         return executor
 
     monkeypatch.setattr(Agent, "_active_executor", record)
@@ -181,7 +183,7 @@ def test_async_tasks_do_not_reuse_one_executor(
     run(Crew(agents=[agent], tasks=_async_tasks(agent, 2)))
 
     # two async tasks plus one sync task, each with a distinct executor
-    assert len(set(seen)) == len(seen) == 3
+    assert len({id(executor) for executor in seen}) == 3
 
 
 @both_paths
@@ -208,6 +210,64 @@ def test_async_task_runs_with_its_own_tools(run: Runner) -> None:
 
 
 @both_paths
+def test_async_task_keeps_its_own_messages(run: Runner) -> None:
+    """An async task's output carries the messages of its own executor."""
+    agent = _agent(_StubLLM())
+    tasks = [
+        Task(
+            description="say async",
+            expected_output="one word",
+            agent=agent,
+            async_execution=True,
+        ),
+        Task(description="say sync", expected_output="one word", agent=agent),
+    ]
+
+    result = run(Crew(agents=[agent], tasks=tasks))
+
+    assert all(output.messages for output in result.tasks_output)
+
+
+@both_paths
+def test_concurrent_async_tasks_do_not_share_messages(run: Runner) -> None:
+    """Siblings on one agent each keep their own messages, not each other's."""
+    llm = _StubLLM(overlap=2)
+    agent = _agent(llm)
+    tasks = [
+        Task(
+            description=f"say {word}",
+            expected_output="one word",
+            agent=agent,
+            async_execution=True,
+        )
+        for word in ("alpha", "beta")
+    ]
+    tasks.append(Task(description="say done", expected_output="one word", agent=agent))
+
+    result = run(Crew(agents=[agent], tasks=tasks))
+
+    first, second = result.tasks_output[0], result.tasks_output[1]
+    assert any("alpha" in _text(message["content"]) for message in first.messages)
+    assert not any("beta" in _text(message["content"]) for message in first.messages)
+    assert any("beta" in _text(message["content"]) for message in second.messages)
+    assert not any("alpha" in _text(message["content"]) for message in second.messages)
+
+
+@both_paths
+def test_async_executor_follows_the_agent_compaction_flag(
+    run: Runner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An async task's executor carries the agent's compaction setting."""
+    seen = _record_executors(monkeypatch)
+    agent = _agent(_StubLLM(), use_better_compaction=False)
+
+    run(Crew(agents=[agent], tasks=_async_tasks(agent, 2)))
+
+    assert seen
+    assert all(executor.use_better_compaction is False for executor in seen)
+
+
+@both_paths
 def test_sequential_tasks_still_reuse_the_agent_executor(
     run: Runner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -221,5 +281,4 @@ def test_sequential_tasks_still_reuse_the_agent_executor(
 
     run(Crew(agents=[agent], tasks=tasks))
 
-    assert len(seen) == 2
-    assert set(seen) == {id(agent.agent_executor)}
+    assert {id(executor) for executor in seen} == {id(agent.agent_executor)}

@@ -157,6 +157,11 @@ _dedicated_executor: contextvars.ContextVar[Any | None] = contextvars.ContextVar
 )
 
 
+_dedicated_last_messages: contextvars.ContextVar[list[LLMMessage] | None] = (
+    contextvars.ContextVar("crewai_dedicated_last_messages", default=None)
+)
+
+
 def _is_resuming_agent_executor(
     executor: AgentExecutor | None,
 ) -> TypeIs[AgentExecutor]:
@@ -1078,7 +1083,7 @@ class Agent(BaseAgent):
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
 
-    def _active_executor(self) -> CrewAgentExecutor | AgentExecutor | None:
+    def _active_executor(self) -> AgentExecutor | None:
         """Return the executor for the current execution.
 
         Async tasks bind their own executor to the running thread so siblings
@@ -1315,8 +1320,6 @@ class Agent(BaseAgent):
             self.agent_executor = self._build_executor(
                 task, parsed_tools, raw_tools, prompt, stop_words, rpm_limit_fn
             )
-            if isinstance(self.agent_executor, AgentExecutor):
-                self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def _build_executor(
         self,
@@ -1326,11 +1329,11 @@ class Agent(BaseAgent):
         prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
         rpm_limit_fn: Any,
-    ) -> CrewAgentExecutor | AgentExecutor:
+    ) -> AgentExecutor:
         """Construct a new executor for this agent without storing it."""
         if not isinstance(self.llm, BaseLLM):
             raise RuntimeError("LLM must be resolved before creating agent executor.")
-        return self.executor_class(
+        executor = self.executor_class(
             llm=self.llm,
             task=task,
             agent=self,
@@ -1354,6 +1357,9 @@ class Agent(BaseAgent):
             if task
             else None,
         )
+        if isinstance(executor, AgentExecutor):
+            executor.use_better_compaction = self.use_better_compaction
+        return executor
 
     def _update_executor_parameters(
         self,
@@ -1567,6 +1573,17 @@ class Agent(BaseAgent):
         """Set the agent's security fingerprint."""
         self.security_config.fingerprint = fingerprint
 
+    def _store_last_messages(self, messages: list[LLMMessage]) -> None:
+        """Record the messages of the execution that just finished.
+
+        An async task keeps them in the context running it, so siblings
+        sharing this agent cannot overwrite each other.
+        """
+        if _dedicated_executor.get() is not None:
+            _dedicated_last_messages.set(messages)
+        else:
+            self._last_messages = messages
+
     @property
     def last_messages(self) -> list[LLMMessage]:
         """Get messages from the last task execution.
@@ -1574,6 +1591,9 @@ class Agent(BaseAgent):
         Returns:
             List of LLM messages from the most recent task execution.
         """
+        dedicated = _dedicated_last_messages.get()
+        if dedicated is not None:
+            return dedicated
         return self._last_messages
 
     def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:
