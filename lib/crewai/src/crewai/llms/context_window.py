@@ -18,7 +18,7 @@ import re
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from crewai.llms.model_catalog import (
-    _CATALOG,
+    CATALOG,
     bare_model_name,
     catalog_provider_prefixes,
 )
@@ -88,25 +88,25 @@ def context_windows_from_catalog(
 
 
 _CATALOG_PROVIDER_PREFIXES: Final[frozenset[str]] = catalog_provider_prefixes()
-LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(_CATALOG)
+LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(CATALOG)
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
-    _CATALOG, providers=_OPENAI_PROVIDERS
+    CATALOG, providers=_OPENAI_PROVIDERS
 )
 AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
-    _CATALOG, providers=_AZURE_PROVIDERS
+    CATALOG, providers=_AZURE_PROVIDERS
 )
 AZURE_OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **OPENAI_CONTEXT_WINDOWS,
     **AZURE_CONTEXT_WINDOWS,
 }
 ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
-    _CATALOG, providers=_ANTHROPIC_PROVIDERS
+    CATALOG, providers=_ANTHROPIC_PROVIDERS
 )
 GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
-    _CATALOG, providers=_GEMINI_PROVIDERS
+    CATALOG, providers=_GEMINI_PROVIDERS
 )
 BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
-    _CATALOG, providers=_BEDROCK_PROVIDERS
+    CATALOG, providers=_BEDROCK_PROVIDERS
 )
 
 
