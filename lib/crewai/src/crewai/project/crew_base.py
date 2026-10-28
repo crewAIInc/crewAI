@@ -790,6 +790,9 @@ def _resolve_task_callback(
 def _run_task_callbacks(callbacks: list[Callable[..., Any]]) -> Callable[..., Any]:
     """Run every task callback with the same task output.
 
+    Callbacks run in config order. When one returns an awaitable, the rest run
+    only after it is awaited, so Task receives the coroutine to schedule.
+
     Args:
         callbacks: Callbacks named by one task, in config order.
 
@@ -797,11 +800,29 @@ def _run_task_callbacks(callbacks: list[Callable[..., Any]]) -> Callable[..., An
         A single callback Task can store.
     """
 
-    def run_all(output: Any) -> None:
-        for fn in callbacks:
-            fn(output)
+    def run_all(output: Any) -> Any:
+        for index, fn in enumerate(callbacks):
+            result = fn(output)
+            if inspect.isawaitable(result):
+                return _await_remaining_callbacks(
+                    result, callbacks[index + 1 :], output
+                )
+        return None
 
     return run_all
+
+
+async def _await_remaining_callbacks(
+    pending: Any,
+    remaining: list[Callable[..., Any]],
+    output: Any,
+) -> None:
+    """Await one callback result, then run the rest in config order."""
+    await pending
+    for fn in remaining:
+        result = fn(output)
+        if inspect.isawaitable(result):
+            await result
 
 
 def _map_task_variables(

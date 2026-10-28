@@ -1,5 +1,6 @@
 """Test callback decorator with TaskOutput arguments."""
 
+import asyncio
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -225,3 +226,59 @@ def test_yaml_callbacks_list_runs_every_named_callback(tmp_path: Path) -> None:
     assert task.callback is not None
     task.callback(output)
     assert crew.seen == [output, output]
+
+
+async def _async_named_callback(seen: list[str], name: str) -> None:
+    await asyncio.sleep(0)
+    seen.append(name)
+
+
+def test_yaml_callbacks_list_awaits_async_callback_in_order(tmp_path: Path) -> None:
+    """A composite callback awaits an async member before running the next one."""
+
+    @CrewBase
+    class AsyncCrew:
+        """Crew mixing an async factory callback with a direct one."""
+
+        agents_config = str(tmp_path / "agents.yaml")
+        tasks_config = str(tmp_path / "tasks.yaml")
+
+        def __init__(self) -> None:
+            self.seen: list[str] = []
+
+        @callback
+        def on_async(self) -> Callable[[TaskOutput], object]:
+            def inner(output: TaskOutput) -> object:
+                return _async_named_callback(self.seen, "async")
+
+            return inner
+
+        @callback
+        def on_sync(self, output: TaskOutput) -> None:
+            self.seen.append("sync")
+
+        @task
+        def write(self) -> Task:
+            return Task(config=self.tasks_config["write"])
+
+    (tmp_path / "agents.yaml").write_text(
+        "writer:\n  role: Writer\n  goal: Write\n  backstory: Writes\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tasks.yaml").write_text(
+        "write:\n  description: d\n  expected_output: e\n"
+        "  callbacks:\n    - on_async\n    - on_sync\n",
+        encoding="utf-8",
+    )
+
+    crew = AsyncCrew()
+    task_instance = crew.write()
+    output = _sample_output()
+
+    assert crew.seen == []
+    assert task_instance.callback is not None
+    result = task_instance.callback(output)
+    while asyncio.iscoroutine(result):
+        result = asyncio.run(result)
+
+    assert crew.seen == ["async", "sync"]
