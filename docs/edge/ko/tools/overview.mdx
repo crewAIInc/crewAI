@@ -43,7 +43,7 @@ CrewAI는 에이전트의 기능을 향상시키기 위한 다양한 사전 구�
     href="/ko/tools/database-data/overview"
     color="#8B5CF6"
   >
-    SQL 데이터베이스, 벡터 스토어, 데이터 웨어하우스에 연결합니다. MySQL, PostgreSQL, Snowflake, Qdrant, Weaviate를 쿼리할 수 있습니다.
+    데이터베이스, 벡터 스토어, 데이터 웨어하우스에 연결합니다. MySQL, PostgreSQL, MongoDB, Snowflake, Qdrant, Weaviate를 쿼리할 수 있습니다.
   </Card>
 
   <Card
@@ -87,7 +87,7 @@ CrewAI는 에이전트의 기능을 향상시키기 위한 다양한 사전 구�
 
 특정 도구가 필요하신가요? 인기 있는 옵션들을 소개합니다:
 
-<CardGroup cols={3}>
+<CardGroup cols={2}>
   <Card title="RAG Tool" icon="image" href="/ko/tools/ai-ml/ragtool">
     검색 기반 생성(Retrieval-Augmented Generation) 구현
   </Card>
@@ -97,6 +97,9 @@ CrewAI는 에이전트의 기능을 향상시키기 위한 다양한 사전 구�
   <Card title="File Read" icon="file" href="/ko/tools/file-document/filereadtool">
     모든 파일 유형 읽기
   </Card>
+  <Card title="Directory Read" icon="folder-open" href="/ko/tools/file-document/directoryreadtool">
+    디렉터리 내용 목록 조회 및 읽기
+  </Card>
   <Card title="Scrape Website" icon="globe" href="/ko/tools/web-scraping/scrapewebsitetool">
     웹 콘텐츠 추출
   </Card>
@@ -105,6 +108,9 @@ CrewAI는 에이전트의 기능을 향상시키기 위한 다양한 사전 구�
   </Card>
   <Card title="S3 Reader" icon="cloud" href="/ko/tools/cloud-storage/s3readertool">
     AWS S3 파일 액세스
+  </Card>
+  <Card title="MongoDB Vector Search" icon="database" href="/ko/tools/database-data/mongodbvectorsearchtool">
+    MongoDB에서 벡터 유사도 쿼리 실행
   </Card>
 </CardGroup>
 

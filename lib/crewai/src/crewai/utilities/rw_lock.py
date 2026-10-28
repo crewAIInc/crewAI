@@ -48,8 +48,8 @@ class RWLock:
         Yields:
             None
         """
+        self.r_acquire()
         try:
-            self.r_acquire()
             yield
         finally:
             self.r_release()
@@ -74,8 +74,8 @@ class RWLock:
         Yields:
             None
         """
+        self.w_acquire()
         try:
-            self.w_acquire()
             yield
         finally:
             self.w_release()

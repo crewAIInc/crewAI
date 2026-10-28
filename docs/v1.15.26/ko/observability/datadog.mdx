@@ -1,0 +1,109 @@
+---
+title: Datadog 통합
+description: Datadog을 CrewAI와 통합하여 LLM Observability 트레이스들을 Datadog에 제출하는 방법을 알아보세요.
+icon: dog
+mode: "wide"
+---
+
+# Datadog을 CrewAI와 통합하기
+
+이 가이드에서는 Datadog 자동 계측을 사용하여 **Datadog**을 **CrewAI**와 통합하는 방법을 보여드립니다. 이 가이드가 끝나면 LLM Observability 트레이스를 Datadog에 제출하고 CrewAI 에이전트 실행을 Datadog LLM Observability의 에이전트 실행 보기에서 볼 수 있게 됩니다.
+
+## Datadog LLM Observability란 무엇인가요?
+
+[Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/)는 AI 엔지니어, 데이터 과학자, 애플리케이션 개발자가 LLM 애플리케이션을 신속하게 개발, 평가, 모니터링할 수 있도록 도와줍니다. 구조화된 실험, AI 에이전트 전반의 엔드투엔드 추적, 평가를 통해 결과물 품질, 성능, 비용, 전반적인 위험을 확실하게 개선할 수 있습니다.
+
+## 시작하기
+
+### 설치 종속성
+
+```shell
+pip install ddtrace crewai crewai-tools
+```
+
+### 환경 변수 설정하기
+
+Datadog API 키가 없는 경우, [계정 만들기](https://www.datadoghq.com/) 및 [API 키 받기](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys)를 할 수 있습니다.
+
+또한 다음 환경 변수에 ML 애플리케이션 이름을 지정해야 합니다. ML 애플리케이션은 특정 LLM 기반 애플리케이션과 관련된 LLM Observability 트레이스의 그룹입니다. ML 애플리케이션 이름 제한에 대한 자세한 내용은 [ML 애플리케이션 이름 지정 가이드라인](https://docs.datadoghq.com/llm_observability/instrumentation/sdk?tab=python#application-naming-guidelines)을 참조하세요.
+
+```shell
+export DD_API_KEY=<YOUR_DD_API_KEY>
+export DD_SITE=<YOUR_DD_SITE>
+export DD_LLMOBS_ENABLED=true
+export DD_LLMOBS_ML_APP=<YOUR_ML_APP_NAME>
+export DD_LLMOBS_AGENTLESS_ENABLED=true
+export DD_APM_TRACING_ENABLED=false
+```
+
+또한 LLM 공급자 API 키를 설정합니다.
+
+```shell
+export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+export ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
+export GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+...
+```
+
+### 크루AI 에이전트 애플리케이션 생성하기
+
+```python
+# crewai_agent.py
+from crewai import Agent, Task, Crew
+
+from crewai_tools import (
+    WebsiteSearchTool
+)
+
+web_rag_tool = WebsiteSearchTool()
+
+writer = Agent(
+    role="작가",
+    goal="시를 통해 어린이들이 수학을 흥미롭고 이해하기 쉽게 설명합니다",
+    backstory="당신은 하이쿠를 쓰는 전문가이지만 수학은 전혀 모릅니다.",
+    tools=[web_rag_tool],
+)
+
+task = Task(
+    description=("{곱셈}이란 무엇인가요?"),
+    expected_output=("답을 포함하는 하이쿠를 작성하세요."),
+    agent=writer
+)
+
+crew = Crew(
+    agents=[writer],
+    tasks=[task],
+    share_crew=False
+)
+
+output = crew.kickoff(dict(곱셈="2 * 2"))
+```
+
+### Datadog 자동 계측을 사용하여 애플리케이션 실행하기
+
+[환경 변수](#환경-변수-설정하기)를 설정하면 이제 Datadog 자동 계측을 통해 애플리케이션을 실행할 수 있습니다.
+
+```shell
+ddtrace-run python crewai_agent.py
+```
+
+### Datadog에서 트레이스 추적하기
+
+애플리케이션을 실행한 후 왼쪽 상단 드롭다운에서 선택한 ML 애플리케이션 이름을 선택하면 [Datadog LLM Observability의 트레이스 보기](https://app.datadoghq.com/llm/traces)에서 트레이스들을 확인할 수 있습니다.
+
+트레이스를 클릭하면 사용된 총 토큰, LLM 호출 수, 사용된 모델, 예상 비용 등 트레이스에 대한 세부 정보가 표시됩니다. 특정 스팬(span)을 클릭하면 이러한 세부 정보의 범위가 좁혀지고 관련 입력, 출력 및 메타데이터가 표시됩니다.
+
+<Frame>
+<img src="/images/datadog-llm-observability-1.png" alt="Datadog LLM 옵저버빌리티 추적 보기" />
+</Frame>
+
+또한, 트레이스의 제어 및 데이터 흐름을 보여주는 트레이스의 실행 그래프 보기를 볼 수 있으며, 이는 더 큰 에이전트로 확장하여 LLM 호출, 도구 호출 및 에이전트 상호 작용 간의 핸드오프와 관계를 보여줍니다.
+
+<Frame>
+<img src="/images/datadog-llm-observability-2.png" alt="Datadog LLM Observability 에이전트 실행 흐름 보기" />
+</Frame>
+
+## 참조
+
+- [Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/)
+- [Datadog LLM 옵저버빌리티 크루AI 자동 계측](https://docs.datadoghq.com/llm_observability/instrumentation/auto_instrumentation?tab=python#crew-ai)

@@ -12,6 +12,8 @@ from typing import Any
 import warnings
 
 import click
+from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
 from crewai_core.platform_apps import (
     PLATFORM_APPLICATION_CATALOG,
     PLATFORM_APP_CATEGORIES,
@@ -19,13 +21,18 @@ from crewai_core.platform_apps import (
     PLATFORM_APP_TOOLS,
     PLATFORM_APP_TOOL_COUNTS,
 )
+from crewai_core.settings import Settings
 from crewai_core.telemetry import Telemetry
+import httpx
 from rich.console import Console
 from rich.text import Text
 
+from crewai_cli.authentication.main import AuthenticationCommand
+from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     copy_assistant_instructions,
@@ -110,6 +117,10 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
 }
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
+
+
+class _NoOrganizationSelectedError(RuntimeError):
+    """Raised when the saved CLI login has no active organization."""
 
 
 # ── Common tools for picker ────────────────────────────────────
@@ -415,6 +426,7 @@ def _select_tools() -> list[str]:
         separator_indices: set[int] = set()
         action_indices: set[int] = set()
         action_by_index: dict[int, tuple[str, str]] = {}
+        collapsed_indices: set[int] = set()
         preselected: set[int] = set()
         initial_cursor: int | None = None
 
@@ -457,12 +469,13 @@ def _select_tools() -> list[str]:
                         item_label="applications",
                     )
                 )
-                if is_expanded:
-                    for name, description in apps:
-                        if name in selected:
-                            preselected.add(len(labels))
-                        tool_by_index[len(labels)] = name
-                        labels.append("    " + _tool_label(name, description))
+                for name, description in apps:
+                    if name in selected:
+                        preselected.add(len(labels))
+                    tool_by_index[len(labels)] = name
+                    labels.append("    " + _tool_label(name, description))
+                    if not is_expanded:
+                        collapsed_indices.add(len(labels) - 1)
 
         for category, category_tools in categories:
             row = len(labels)
@@ -488,6 +501,9 @@ def _select_tools() -> list[str]:
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
+            searchable=expanded == "CrewAI Platform",
+            collapsed_indices=collapsed_indices,
+            search_title="SEARCH APPLICATIONS",
         )
         first_render = False
 
@@ -543,13 +559,20 @@ def _select_platform_actions(selected_tools: list[str]) -> list[str]:
     ]
 
     for app in platform_apps:
+        app_tools = PLATFORM_APP_TOOLS[app]
+        default_slugs = set(PLATFORM_APP_DEFAULT_TOOLS[app])
         action_indices = pick_many(
             f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
-            [f"{item.display_name} ({item.slug})" for item in PLATFORM_APP_TOOLS[app]],
+            [f"{item.display_name} ({item.slug})" for item in app_tools],
+            searchable=True,
+            preselected={
+                index
+                for index, item in enumerate(app_tools)
+                if item.slug in default_slugs
+            },
         )
         platform_actions.extend(
-            f"platform:{app}/{PLATFORM_APP_TOOLS[app][index].slug}"
-            for index in action_indices
+            f"platform:{app}/{app_tools[index].slug}" for index in action_indices
         )
 
     return non_platform_tools + platform_actions
@@ -1023,45 +1046,88 @@ def _platform_app_name(app: str) -> str:
     return PLATFORM_APP_DISPLAY_NAMES.get(app, app.replace("_", " ").title())
 
 
-def _prompt_platform_token() -> str:
-    """Explain how to prompt for an AMP Enterprise Action Auth Token."""
-    click.secho(
-        "  To use CrewAI Platform tools, you need a CrewAI Platform Enterprise Action Auth Token.",
-        fg="yellow",
+def _get_logged_in_platform_token() -> str:
+    """Fetch the selected organization's integration token from the saved login."""
+    login_token = get_auth_token()
+    settings = Settings()
+    organization_id = settings.org_uuid
+    if not organization_id:
+        raise _NoOrganizationSelectedError("No CrewAI organization is selected")
+    api = PlusAPI(
+        api_key=login_token,
+        organization_id=organization_id,
+        base_url=settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL,
     )
-    click.secho(
-        "  Get your token from CrewAI AMP: https://app.crewai.com "
-        "→ Settings → Account → Integration Token.",
-        fg="cyan",
-    )
-    return str(
-        click.prompt(
-            click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
-            hide_input=False,
-            prompt_suffix=click.style(" > ", fg="bright_white"),
+    return api.get_integration_token()
+
+
+def _get_platform_token_from_login() -> str:
+    """Fetch an integration token, asking the user to log in when necessary."""
+    try:
+        return _get_logged_in_platform_token()
+    except AuthError:
+        click.secho(
+            "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
         )
-    ).strip()
+        AuthenticationCommand().login()
+    except httpx.HTTPStatusError as error:
+        status_code = getattr(error.response, "status_code", None)
+        if status_code == 403:
+            raise click.ClickException(
+                "Your account does not have access to the selected CrewAI organization. "
+                "Select another organization or ask an administrator for access."
+            ) from error
+        if status_code != 401:
+            raise
+        click.secho(
+            "  Your CrewAI login has expired; sign in again to configure integrations.",
+            fg="cyan",
+        )
+        AuthenticationCommand().login()
+    except _NoOrganizationSelectedError:
+        click.secho(
+            "  Select a CrewAI organization to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand()._select_organization()
+
+    try:
+        return _get_logged_in_platform_token()
+    except _NoOrganizationSelectedError as error:
+        raise click.ClickException(
+            "A CrewAI organization must be selected to configure integrations."
+        ) from error
 
 
 def _check_platform_app(
-    app: str, application_selector: Any, client_for_selector: Any
+    app: str,
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
 ) -> tuple[Any | None, Exception | None]:
     """Check one AMP application with the synchronous platform client."""
     try:
         selector = application_selector.from_string(app)
-        return client_for_selector(selector).get_actions([selector]), None
+        client = client_for_selector(selector, base_url=base_url)
+        return client.get_actions([selector]), None
     except Exception as error:
         return None, error
 
 
 async def _check_platform_apps_concurrently(
-    apps: list[str], application_selector: Any, client_for_selector: Any
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
 ) -> list[tuple[Any | None, Exception | None]]:
     """Run independent AMP application checks concurrently."""
     return await asyncio.gather(
         *(
             asyncio.to_thread(
-                _check_platform_app, app, application_selector, client_for_selector
+                _check_platform_app,
+                app,
+                application_selector,
+                client_for_selector,
+                base_url,
             )
             for app in apps
         )
@@ -1080,7 +1146,7 @@ def _report_platform_app_validation(
         status_code = getattr(getattr(error, "response", None), "status_code", None)
         if status_code in {401, 403}:
             click.secho(
-                "  ✘ CrewAI Platform Integration token is invalid or expired",
+                "  ✘ Enterprise Action Auth Token is invalid or expired",
                 fg="red",
             )
             return True
@@ -1106,7 +1172,10 @@ def _report_platform_app_validation(
 
 
 def _validate_platform_apps(
-    apps: list[str], application_selector: Any, client_for_selector: Any
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
 ) -> tuple[list[str], bool]:
     """Check selected AMP applications concurrently when no event loop is running."""
     failed: list[str] = []
@@ -1123,7 +1192,7 @@ def _validate_platform_apps(
         )
         results = asyncio.run(
             _check_platform_apps_concurrently(
-                apps, application_selector, client_for_selector
+                apps, application_selector, client_for_selector, base_url
             )
         )
         for app, (actions, error) in zip(apps, results, strict=True):
@@ -1134,12 +1203,12 @@ def _validate_platform_apps(
             app_name = _platform_app_name(app)
             click.echo()
             click.secho(
-                "  Checking CrewAI Platform Integration token and "
+                "  Checking Enterprise Action Auth Token and "
                 f"{app_name} integration on AMP...",
                 fg="cyan",
             )
             actions, error = _check_platform_app(
-                app, application_selector, client_for_selector
+                app, application_selector, client_for_selector, base_url
             )
             if _report_platform_app_validation(app, actions, error, failed):
                 return failed, True
@@ -1147,42 +1216,33 @@ def _validate_platform_apps(
 
 
 def _show_platform_validation_guidance(
-    failed_apps: list[str], token_invalid: bool
+    failed_apps: list[str], token_invalid: bool, base_url: str
 ) -> None:
     """Tell the user what to fix before revalidating AMP integrations."""
     click.echo()
     if token_invalid:
         click.secho(
-            "  Check your CrewAI Platform Integration token in AMP.",
+            "  Your CrewAI login could not validate the Enterprise Action Auth Token.",
             fg="yellow",
         )
         return
 
     failed_app_names = [_platform_app_name(app) for app in failed_apps]
     click.secho(
-        "  Check the "
+        "  Connect the "
         f"{', '.join(failed_app_names)} integration"
-        f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
-        "Platform Integration token in AMP.",
+        f"{'s' if len(failed_app_names) != 1 else ''} in CrewAI AMP:",
         fg="yellow",
     )
+    click.secho(f"  {base_url.rstrip('/')}", fg="cyan")
 
 
-def _prompt_platform_revalidation_token() -> str:
-    """Prompt for an optional replacement token before the next validation pass."""
+def _confirm_platform_revalidation() -> bool:
+    """Ask whether to retry integration validation after AMP is updated."""
     click.echo()
-    return str(
-        click.prompt(
-            click.style(
-                "  Press Enter to revalidate, or enter a replacement token",
-                fg="cyan",
-            ),
-            default="",
-            show_default=False,
-            hide_input=False,
-            prompt_suffix=click.style(" > ", fg="bright_white"),
-        )
-    ).strip()
+    return click.confirm(
+        click.style("  Revalidate integrations?", fg="cyan"), default=True
+    )
 
 
 def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
@@ -1209,52 +1269,41 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         ) from error
 
     click.secho(
-        "  Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN...",
+        "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",
         fg="cyan",
     )
-    token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
+    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "")
     credential_location: str | None = None
     if token:
-        credential_location = "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable"
+        credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
+    else:
+        token = _get_platform_token_from_login()
+        credential_location = "crewai login"
 
     while True:
-        if not token:
-            click.secho(
-                "  No CREWAI_PLATFORM_INTEGRATION_TOKEN found; prompting for one.",
-                fg="yellow",
-            )
-            token = _prompt_platform_token()
-            if token:
-                credential_location = "interactive prompt"
-        if not token:
-            click.secho(
-                "  A CrewAI Platform Integration token is required to validate "
-                "the selected integrations.",
-                fg="yellow",
-            )
-            continue
-
         _success(
-            f"Platform Integration token found via {credential_location}", dim=True
+            f"Enterprise Action Auth Token found via {credential_location}", dim=True
         )
-        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        settings = Settings()
+        base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
         failed_apps, token_invalid = _validate_platform_apps(
-            apps, ApplicationSelector, client_for_selector
+            apps,
+            ApplicationSelector,
+            client_for_selector,
+            base_url,
         )
         if not failed_apps and not token_invalid:
-            _success("CrewAI Platform integration token set", bold=True)
+            _success("Enterprise Action Auth Token set", bold=True)
             _success(
                 "CrewAI Platform integrations connected: "
                 f"{', '.join(_platform_app_name(app) for app in apps)}"
             )
             return token
 
-        _show_platform_validation_guidance(failed_apps, token_invalid)
-        replacement_token = _prompt_platform_revalidation_token()
-        if replacement_token:
-            token = replacement_token
-            credential_location = "interactive replacement prompt"
-            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+        _show_platform_validation_guidance(failed_apps, token_invalid, base_url)
+        if not _confirm_platform_revalidation():
+            raise click.Abort()
 
 
 # ── Main ────────────────────────────────────────────────────────
@@ -1322,11 +1371,11 @@ def create_json_crew(
     copy_assistant_instructions(folder_path)
 
     if platform_token:
-        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
         env_vars = load_env_vars(folder_path)
-        env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        env_vars["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
         write_env_file(folder_path, env_vars)
-        _success("CrewAI Platform integration token saved to .env")
+        _success("Enterprise Action Auth Token saved to .env")
 
     for agent in agents:
         _write_jsonc(

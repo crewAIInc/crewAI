@@ -9,9 +9,7 @@ from typing import Any, Literal
 
 import click
 from crewai_core.project import (
-    get_or_create_project_id as get_or_create_project_id,
     get_project_description as get_project_description,
-    get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
     parse_toml as parse_toml,
@@ -66,6 +64,25 @@ def warn_deprecated(
     )
 
 
+# run_crew's JSON runner loads this module inside the project's environment, whose
+# crewai-core may predate these functions (added in 1.15.11), so import on call.
+# Remove once the runner stops loading this CLI against a project's own crewai-core.
+def get_or_create_project_id(
+    pyproject_path: str | Path = "pyproject.toml",
+) -> str | None:
+    """Return the project's id, minting and persisting one if absent."""
+    from crewai_core.project import get_or_create_project_id as _get_or_create
+
+    return _get_or_create(pyproject_path)
+
+
+def get_project_id(pyproject_path: str | Path = "pyproject.toml") -> str | None:
+    """Return ``[tool.crewai].project_id`` if the project has one."""
+    from crewai_core.project import get_project_id as _get_project_id
+
+    return _get_project_id(pyproject_path)
+
+
 console = Console()
 _TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
 
@@ -106,9 +123,37 @@ def copy_assistant_imports(destination: Path) -> None:
         shutil.copy2(_TEMPLATES_DIR / name, destination / name)
 
 
-def copy_assistant_instructions(destination: Path) -> None:
-    """Copy ``AGENTS.md`` and the files that import it into a project."""
-    shutil.copy2(_TEMPLATES_DIR / "AGENTS.md", destination / "AGENTS.md")
+# Lines that open and close guidance only a crew or flow project can follow —
+# `crewai eval` grades a traced `crewai run`, which a tool project has none of.
+EVALUATION_START = "<!-- crewai-eval:start -->"
+EVALUATION_END = "<!-- crewai-eval:end -->"
+
+
+def _assistant_instructions(text: str, *, evaluation: bool) -> str:
+    """AGENTS.md with its evaluation blocks kept (markers dropped) or removed."""
+    lines: list[str] = []
+    inside = False
+    for line in text.splitlines(keepends=True):
+        marker = line.strip()
+        if marker == EVALUATION_START:
+            inside = True
+        elif marker == EVALUATION_END:
+            inside = False
+        elif evaluation or not inside:
+            lines.append(line)
+    return "".join(lines)
+
+
+def copy_assistant_instructions(destination: Path, *, evaluation: bool = True) -> None:
+    """Copy ``AGENTS.md`` and the files that import it into a project.
+
+    EVALUATION: keep the `crewai eval` guidance — True for crew and flow
+    projects, False for a tool project, which has no run to evaluate.
+    """
+    text = (_TEMPLATES_DIR / "AGENTS.md").read_text(encoding="utf-8")
+    (destination / "AGENTS.md").write_text(
+        _assistant_instructions(text, evaluation=evaluation), encoding="utf-8"
+    )
     copy_assistant_imports(destination)
 
 
@@ -214,8 +259,9 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 
 
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """Writes environment variables to a .env file in the specified folder."""
+    """Writes environment variables to a gitignored .env file for local use."""
     env_file_path = folder_path / ".env"
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
+            # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")
