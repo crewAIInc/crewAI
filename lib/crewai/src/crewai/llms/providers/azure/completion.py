@@ -1438,10 +1438,16 @@ class AzureCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+        Azure's established vision model names are recognized first, followed
+        by LiteLLM's catalog for newer model IDs.
 
         Returns:
             True if the model supports images.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
-        return any(self.model.lower().startswith(m) for m in vision_models)
+        if any(self.model.lower().startswith(m) for m in vision_models):
+            return True
+        return self.get_model_capability("supports_vision", providers=["azure"]) is True

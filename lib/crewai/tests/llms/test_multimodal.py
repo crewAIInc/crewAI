@@ -182,6 +182,11 @@ class TestOpenAIMultimodal:
         llm = LLM(model="openai/gpt-3.5-turbo")
         assert llm.supports_multimodal() is False
 
+    def test_supports_vision_override_applies_to_every_provider(self) -> None:
+        llm = LLM(model="openai/gpt-3.5-turbo", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
     def test_format_multimodal_content_image(self) -> None:
         """Test OpenAI uses image_url format."""
         llm = LLM(model="openai/gpt-4o")
@@ -241,19 +246,29 @@ class TestAzureMultimodal:
         with patch.dict(os.environ, env_vars):
             yield
 
-    def test_supports_multimodal_gpt4o(self) -> None:
-        """Test Azure GPT-4o supports multimodal."""
-        llm = LLM(model="azure/gpt-4o")
+    def test_supports_multimodal_gpt41(self) -> None:
+        """Test Azure GPT-4.1 supports multimodal from the catalog."""
+        llm = LLM(model="azure/gpt-4.1")
         assert llm.supports_multimodal() is True
 
-    def test_supports_multimodal_gpt4_turbo(self) -> None:
-        """Test Azure GPT-4 Turbo supports multimodal."""
-        llm = LLM(model="azure/gpt-4-turbo")
+    def test_supports_multimodal_gpt5(self) -> None:
+        """Test Azure GPT-5 supports multimodal from the catalog."""
+        llm = LLM(model="azure/gpt-5")
         assert llm.supports_multimodal() is True
 
     def test_does_not_support_gpt35(self) -> None:
         """Test Azure GPT-3.5 does not support multimodal."""
         llm = LLM(model="azure/gpt-35-turbo")
+        assert llm.supports_multimodal() is False
+
+    def test_supports_vision_override_allows_custom_deployment_name(self) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
+    def test_supports_vision_override_rejects_known_vision_model(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", supports_vision=False)
+
         assert llm.supports_multimodal() is False
 
     def test_format_multimodal_content_image(self) -> None:
@@ -356,6 +371,54 @@ class TestBaseLLMMultimodal:
 
         llm = TestLLM(model="test")
         assert llm.supports_multimodal() is False
+
+    def test_model_capability_uses_provider_catalog_entry(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="gpt-4.1", provider="azure")
+        assert (
+            llm.get_model_capability("supports_vision", providers=["azure"])
+            is True
+        )
+
+    def test_model_capability_without_provider_uses_exact_model_key(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="azure/gpt-4.1")
+        assert llm.get_model_capability("supports_vision") is True
+
+    def test_model_capability_checks_multiple_provider_catalog_entries(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="claude-sonnet-4-6")
+        assert (
+            llm.get_model_capability(
+                "supports_vision", providers=["azure", "azure_ai"]
+            )
+            is True
+        )
+
+    def test_model_capability_does_not_guess_deployment_names(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="vision-production", provider="azure")
+        assert llm.get_model_capability("supports_vision") is None
 
     def test_base_format_text_content(self) -> None:
         """Test base text formatting uses OpenAI/Anthropic style."""
