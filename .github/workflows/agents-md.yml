@@ -1,7 +1,8 @@
 name: AGENTS.md
 
-# The AGENTS.md that `crewai create` ships is tested in lib/cli/tests, which the main
-# test workflow doesn't run. The guards run whenever the file, its tests, the eval, or the
+# The AGENTS.md that `crewai create` ships is tested in lib/cli/tests. The main test
+# workflow skips PRs that change only .md files, docs, or workflows, and never runs
+# lib/devtools/tests, so these guards run whenever the file, its tests, the eval, or the
 # docs pages it links change. The eval itself is agents-md-eval.yml.
 on:
   pull_request:

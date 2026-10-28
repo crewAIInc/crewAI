@@ -53,7 +53,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.30"
+__version__ = "1.15.32"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
@@ -130,9 +130,15 @@ try:
         "ToolResult": _ToolResult,
     }
 
+    # Dunders are left out: copying base_agent's `__name__`/`__spec__`/`__file__`
+    # onto the modules below made their import errors name base_agent.
     _resolve_namespace = {
         **_full_namespace,
-        **sys.modules[_BaseAgent.__module__].__dict__,
+        **{
+            name: value
+            for name, value in sys.modules[_BaseAgent.__module__].__dict__.items()
+            if not (name.startswith("__") and name.endswith("__"))
+        },
     }
 
     import crewai.state.runtime as _runtime_state_mod
