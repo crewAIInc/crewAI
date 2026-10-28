@@ -311,9 +311,9 @@ class TestAzureMultimodal:
     @pytest.mark.parametrize(
         "model", ["azure/claude-sonnet-4-6", "azure/azure_ai/claude-sonnet-4-6"]
     )
-    def test_claude_deployment_not_inferred_without_override(self, model: str) -> None:
-        """Claude on Azure speaks the Anthropic protocol, so it is not inferred."""
-        assert LLM(model=model).supports_multimodal() is False
+    def test_azure_ai_catalog_model_supports_multimodal(self, model: str) -> None:
+        """Azure consults the Azure AI catalog entries for model capabilities."""
+        assert LLM(model=model).supports_multimodal() is True
 
     def test_claude_deployment_accepted_with_override(self) -> None:
         llm = LLM(model="azure/claude-sonnet-4-6", supports_vision=True)

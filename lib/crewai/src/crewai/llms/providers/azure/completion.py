@@ -1439,7 +1439,7 @@ class AzureCompletion(BaseLLM):
         """Check if the model supports multimodal inputs.
 
         Azure's established vision model names are recognized first, followed
-        by LiteLLM's catalog for newer model IDs.
+        by LiteLLM's Azure and Azure AI catalog entries for newer model IDs.
 
         Returns:
             True if the model supports images.
@@ -1450,7 +1450,12 @@ class AzureCompletion(BaseLLM):
         vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
         if any(self.model.lower().startswith(m) for m in vision_models):
             return True
-        return self.get_model_capability("supports_vision", providers=["azure"]) is True
+        return (
+            self.get_model_capability(
+                "supports_vision", providers=["azure", "azure_ai"]
+            )
+            is True
+        )
 
     def _process_message_files(
         self, messages: list[LLMMessage], *, api: str | None = None
