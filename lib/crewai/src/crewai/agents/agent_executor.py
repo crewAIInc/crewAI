@@ -1865,6 +1865,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ):
             return answer
 
+        enforce_rpm_limit(self.request_within_rpm_limit)
         try:
             structured = get_llm_response(
                 llm=self.llm,

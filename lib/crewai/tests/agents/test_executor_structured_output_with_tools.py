@@ -6,6 +6,7 @@ import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ from crewai.events import crewai_event_bus
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool
+from crewai.utilities.rpm_controller import RPMController
 
 QUOTE = "The export job nightly-sync failed with code E_LOCK_42."
 PROSE = "## Findings\n\nThe nightly export failed because of a lock."
@@ -132,7 +134,9 @@ def _flush_events():
     crewai_event_bus.flush()
 
 
-def _agent(llm: ScriptedLLM, tools: list[BaseTool] | None = None) -> Agent:
+def _agent(
+    llm: ScriptedLLM, tools: list[BaseTool] | None = None, max_rpm: int | None = None
+) -> Agent:
     return Agent(
         role="Support investigator",
         goal="Find the failing job",
@@ -140,14 +144,18 @@ def _agent(llm: ScriptedLLM, tools: list[BaseTool] | None = None) -> Agent:
         llm=llm,
         tools=[LogSearchTool()] if tools is None else tools,
         max_retry_limit=0,
+        max_rpm=max_rpm,
         verbose=False,
     )
 
 
 def _run_crew(
-    llm: ScriptedLLM, mode: str, tools: list[BaseTool] | None = None
+    llm: ScriptedLLM,
+    mode: str,
+    tools: list[BaseTool] | None = None,
+    max_rpm: int | None = None,
 ) -> Any:
-    agent = _agent(llm, tools)
+    agent = _agent(llm, tools, max_rpm)
     task = Task(
         description="Why did the nightly export fail?",
         expected_output="The failing job, quoted exactly",
@@ -199,6 +207,26 @@ def test_prose_final_answer_is_requested_again_in_the_response_model(
     assert schema_call.messages == final_answer_call.messages
     assert QUOTE in json.dumps(schema_call.messages)
     assert PROSE not in json.dumps(schema_call.messages)
+
+
+@pytest.mark.parametrize("native", [True, False], ids=["native", "react"])
+@pytest.mark.parametrize("mode", MODES)
+def test_schema_request_waits_for_the_agent_rpm_limit(mode: str, native: bool) -> None:
+    llm = ScriptedLLM(final_answer=PROSE, native=native)
+    waited_after_calls: list[int] = []
+
+    with patch.object(
+        RPMController,
+        "_wait_for_next_minute",
+        lambda self: waited_after_calls.append(len(llm.calls)),
+    ):
+        result = _run_crew(llm, mode, max_rpm=2)
+
+    assert result.pydantic == EXACT
+    assert len(llm.schema_calls) == 1
+    # The tool call and the text answer use the minute's two requests, so the
+    # schema request is the one that has to wait.
+    assert waited_after_calls == [2]
 
 
 @pytest.mark.parametrize("native", [True, False], ids=["native", "react"])
