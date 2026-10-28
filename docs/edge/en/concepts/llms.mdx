@@ -1506,6 +1506,8 @@ llm = LLM(
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
+
+    If a provider's key is missing, or is still the `YOUR_API_KEY` placeholder that `crewai create flow` writes to `.env`, crewAI raises `MissingAPIKeyError` naming the variable to set. Add the key to your project's `.env` and run `crewai run` again. The error is a `ValueError` subclass, importable from `crewai.llms.base_llm`.
   </Tab>
   <Tab title="Model Names">
     <Check>

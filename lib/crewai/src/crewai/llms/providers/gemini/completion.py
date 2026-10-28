@@ -11,7 +11,13 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -130,7 +136,7 @@ class GeminiCompletion(BaseLLM):
         if self._client is None:
             # Re-read env vars so a deferred build can pick up credentials
             # that weren't set at instantiation time.
-            if not self.api_key:
+            if not _without_placeholder(self.api_key):
                 self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
                     "GEMINI_API_KEY"
                 )
@@ -246,7 +252,7 @@ class GeminiCompletion(BaseLLM):
         if self.client_params:
             client_params.update(self.client_params)
 
-        has_api_key = bool(self.api_key)
+        has_api_key = bool(_without_placeholder(self.api_key))
         has_project = bool(self.project)
 
         if has_api_key and has_project:
@@ -285,17 +291,21 @@ class GeminiCompletion(BaseLLM):
             client_params.pop("location", None)
 
         else:
+            missing_key = MissingAPIKeyError(
+                "GEMINI_API_KEY",
+                self.model,
+                alternative="For Vertex AI with Application Default Credentials "
+                "instead, set GOOGLE_CLOUD_PROJECT and run "
+                "`gcloud auth application-default login`.",
+            )
+            if self.api_key:
+                # Only the placeholder gets here; the SDK would read it from the
+                # environment again and fail later at the API.
+                raise missing_key
             try:
                 return genai.Client(**client_params)
             except Exception as e:
-                raise ValueError(
-                    "Authentication required. Provide one of:\n"
-                    "  1. API key via GOOGLE_API_KEY or GEMINI_API_KEY environment variable\n"
-                    "     (use_vertexai=True is optional for Vertex AI with API key)\n"
-                    "  2. For Vertex AI with ADC: Set GOOGLE_CLOUD_PROJECT and run:\n"
-                    "     gcloud auth application-default login\n"
-                    "  3. Pass api_key parameter directly to LLM constructor\n"
-                ) from e
+                raise missing_key from e
         return genai.Client(**client_params)
 
     def _get_client_params(self) -> dict[str, Any]:

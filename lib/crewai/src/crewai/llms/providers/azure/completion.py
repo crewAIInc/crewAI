@@ -47,6 +47,8 @@ try:
     from crewai.llms.base_llm import (
         BaseLLM,
         LLMCallBlockedError,
+        MissingAPIKeyError,
+        _without_placeholder,
         call_stream_override,
         llm_call_context,
     )
@@ -283,8 +285,9 @@ class AzureCompletion(BaseLLM):
         # Re-read env vars so that a deferred build can pick up credentials
         # that weren't set at instantiation time (e.g. LLM constructed at
         # module import before deployment env vars were injected).
+        self.api_key = _without_placeholder(self.api_key)
         if not self.api_key:
-            self.api_key = os.getenv("AZURE_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("AZURE_API_KEY"))
         if not self.endpoint:
             endpoint = (
                 os.getenv("AZURE_ENDPOINT")
@@ -340,10 +343,11 @@ class AzureCompletion(BaseLLM):
         try:
             from azure.identity import DefaultAzureCredential
         except ImportError:
-            raise ValueError(
-                "Azure API key is required when azure-identity is not "
-                "installed. Set AZURE_API_KEY, or install azure-identity "
-                'for keyless auth: uv add "crewai[azure-ai-inference]"'
+            raise MissingAPIKeyError(
+                "AZURE_API_KEY",
+                self.model,
+                alternative="For keyless auth instead, install azure-identity: "
+                'uv add "crewai[azure-ai-inference]"',
             ) from None
 
         return DefaultAzureCredential()

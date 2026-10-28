@@ -938,6 +938,8 @@ Saiba como obter o máximo da configuração do seu LLM:
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
+
+    Se a chave de um provedor estiver ausente, ou ainda for o placeholder `YOUR_API_KEY` que o `crewai create flow` grava no `.env`, o crewAI lança `MissingAPIKeyError` indicando a variável a ser definida. Adicione a chave ao `.env` do seu projeto e execute `crewai run` novamente. O erro é uma subclasse de `ValueError` e pode ser importado de `crewai.llms.base_llm`.
   </Tab>
   <Tab title="Nomes dos Modelos">
     <Check>
