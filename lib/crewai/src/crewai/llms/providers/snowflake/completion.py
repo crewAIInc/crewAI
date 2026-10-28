@@ -367,7 +367,7 @@ class SnowflakeCompletion(OpenAICompletion):
 
     def supports_function_calling(self) -> bool:
         model = self.model.lower()
-        return self._catalog_supports_function_calling(
+        return self._resolve_supports_function_calling(
             model.startswith(("openai-", "claude-", "anthropic."))
         )
 
