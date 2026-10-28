@@ -670,6 +670,8 @@ Neste exemplo:
 
 Utilizando `output_pydantic` ou `output_json`, você garante que suas tarefas produzam saídas em um formato estruturado e consistente, facilitando o processamento e uso dos dados na sua aplicação ou entre múltiplas tarefas.
 
+Quando o agente da tarefa tem ferramentas, o modelo não recebe o schema enquanto ainda pode chamá-las. Assim que ele dá a resposta final, o CrewAI verifica se ela segue o modelo. Se não seguir, o CrewAI pede mais uma vez, na mesma conversa, com o schema e sem ferramentas, para que os valores exatos dos resultados das ferramentas cheguem à saída estruturada. Uma resposta que já segue o modelo não custa nenhuma chamada extra. O mesmo vale para `Agent.kickoff(response_format=...)`.
+
 ## Integrando Ferramentas com Tarefas
 
 Utilize ferramentas do [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) e [LangChain Tools](https://python.langchain.com/docs/integrations/tools) para ampliar o desempenho das tarefas e aprimorar a interação dos agentes.

@@ -491,7 +491,8 @@ class TestAgentExecutor:
             result = executor.call_llm_and_parse()
 
         assert result == "parsed"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        loop_call = get_llm_response_mock.call_args_list[0]
+        assert loop_call.kwargs["response_model"] is None
 
     def test_call_llm_and_parse_summarizes_before_the_model_call(
         self, mock_dependencies
@@ -550,7 +551,38 @@ class TestAgentExecutor:
             result = executor.call_llm_native_tools()
 
         assert result == "native_finished"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        loop_call = get_llm_response_mock.call_args_list[0]
+        assert loop_call.kwargs["response_model"] is None
+
+    @pytest.mark.parametrize("native", [True, False], ids=["native", "react"])
+    def test_todo_step_answer_is_not_requested_in_the_response_model(
+        self, mock_dependencies, native
+    ):
+        """A step result is not the task's answer, so it keeps its text."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor._openai_tools = [{"type": "function", "function": {"name": "lookup"}}]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Look it up", status="running")]
+        )
+
+        with patch(
+            "crewai.agents.agent_executor.get_llm_response",
+            return_value="step done" if native else "Final Answer: step done",
+        ) as get_llm_response_mock:
+            if native:
+                assert executor.call_llm_native_tools() == "todo_satisfied"
+            else:
+                assert executor.call_llm_and_parse() == "parsed"
+                assert executor.route_by_answer_type() == "todo_satisfied"
+
+        assert get_llm_response_mock.call_count == 1
+        assert executor.state.current_answer.output == "step done"
 
     def test_call_llm_native_tools_falls_back_when_provider_rejects_tools(
         self, mock_dependencies
