@@ -14,11 +14,14 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 import concurrent.futures
 import contextvars
-from importlib.resources import files
-import json
 import re
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from crewai.llms.model_catalog import (
+    _CATALOG,
+    bare_model_name,
+    catalog_provider_prefixes,
+)
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -38,7 +41,6 @@ DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 MESSAGE_SPLIT_BUDGET_RATIO: Final[float] = 0.75
 
-_CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
 _AZURE_PROVIDERS: Final[frozenset[str]] = frozenset({"azure", "azure_ai"})
 _ANTHROPIC_PROVIDERS: Final[frozenset[str]] = frozenset({"anthropic"})
@@ -46,39 +48,6 @@ _GEMINI_PROVIDERS: Final[frozenset[str]] = frozenset(
     {"gemini", "vertex_ai-language-models"}
 )
 _BEDROCK_PROVIDERS: Final[frozenset[str]] = frozenset({"bedrock", "bedrock_converse"})
-_REGION_PREFIXES: Final[tuple[str, ...]] = (
-    "us-gov.",
-    "global.",
-    "apac.",
-    "us.",
-    "eu.",
-    "au.",
-    "jp.",
-)
-_VENDOR_PREFIXES: Final[tuple[str, ...]] = (
-    "anthropic.",
-    "amazon.",
-    "meta.",
-    "google.",
-    "openai.",
-    "mistral.",
-    "cohere.",
-    "deepseek.",
-    "qwen.",
-    "ai21.",
-    "nvidia.",
-    "moonshotai.",
-    "moonshot.",
-    "xai.",
-    "zai.",
-    "writer.",
-    "twelvelabs.",
-    "minimax.",
-)
-_DATE_IN_MODEL_ID: Final[re.Pattern[str]] = re.compile(
-    r"-\d{4}-\d{2}-\d{2}|-\d{8}|@\d{8}"
-)
-_TRAILING_VERSION: Final[re.Pattern[str]] = re.compile(r"(?P<body>.+)-v\d+$")
 
 
 def context_windows_from_catalog(
@@ -118,31 +87,7 @@ def context_windows_from_catalog(
     return {**aliases, **exact}
 
 
-def _load_catalog() -> dict[str, Any]:
-    resource = files("crewai.llms").joinpath("litellm_catalog", _CATALOG_FILENAME)
-    catalog = json.loads(resource.read_text(encoding="utf-8"))
-    if not isinstance(catalog, dict):
-        raise ValueError("LiteLLM context catalog must be a JSON object")
-    return catalog
-
-
-def _catalog_provider_prefixes(catalog: Mapping[str, Any]) -> frozenset[str]:
-    """Return provider prefixes that catalog keys actually use."""
-    prefixes: set[str] = set()
-    for name, props in catalog.items():
-        if not isinstance(props, dict):
-            continue
-        provider = props.get("litellm_provider")
-        if not isinstance(provider, str):
-            continue
-        prefix, separator, remainder = name.partition("/")
-        if separator and remainder and prefix == provider:
-            prefixes.add(prefix.lower())
-    return frozenset(prefixes)
-
-
-_CATALOG = _load_catalog()
-_CATALOG_PROVIDER_PREFIXES: Final[frozenset[str]] = _catalog_provider_prefixes(_CATALOG)
+_CATALOG_PROVIDER_PREFIXES: Final[frozenset[str]] = catalog_provider_prefixes()
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(_CATALOG)
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
     _CATALOG, providers=_OPENAI_PROVIDERS
@@ -163,36 +108,6 @@ GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
 BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
     _CATALOG, providers=_BEDROCK_PROVIDERS
 )
-
-
-def bare_model_name(name: str) -> str:
-    """Return the model family without provider, region, date, or version suffix.
-
-    ``us.anthropic.claude-sonnet-4-5-20250929-v1:0`` and
-    ``us.anthropic.claude-sonnet-4-5-v1:0`` both become ``claude-sonnet-4-5``.
-    A trailing ``-vN`` is removed only when a model family remains, so
-    ``claude-v2`` stays intact.
-    """
-    if "/" in name:
-        name = name.rsplit("/", 1)[-1]
-    for prefix in _REGION_PREFIXES:
-        if name.startswith(prefix):
-            name = name[len(prefix) :]
-            break
-    for prefix in _VENDOR_PREFIXES:
-        if name.startswith(prefix):
-            name = name[len(prefix) :]
-            break
-    name = _DATE_IN_MODEL_ID.sub("", name)
-    while True:
-        stem, separator, segment = name.rpartition(":")
-        if not separator or not segment:
-            break
-        name = stem
-    version = _TRAILING_VERSION.fullmatch(name)
-    if version is not None and "-" in version.group("body"):
-        name = version.group("body")
-    return name
 
 
 def _bare_lookup_name(name: str) -> str:
