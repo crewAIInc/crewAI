@@ -85,6 +85,7 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
     CrewTestStartedEvent,
@@ -118,6 +119,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_failure import ToolFailurePolicy
@@ -1045,10 +1047,11 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
+            execution_token = begin_execution(tracing=self.tracing)
             inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
@@ -1069,6 +1072,10 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
@@ -1262,10 +1269,11 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
+            execution_token = begin_execution(tracing=self.tracing)
             inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
@@ -1286,6 +1294,10 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
@@ -1522,7 +1534,11 @@ class Crew(FlowTrackable, BaseModel):
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
-            if manager.tools is not None and len(manager.tools) > 0:
+            # Delegation tools are the crew's own: a manager built from
+            # manager_llm keeps them on the next kickoff, copy() or train().
+            if manager.tools is not None and any(
+                not isinstance(tool, BaseAgentTool) for tool in manager.tools
+            ):
                 self._logger.log(
                     "warning",
                     "Manager agent should not have tools",
@@ -1857,7 +1873,9 @@ class Crew(FlowTrackable, BaseModel):
         self, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
         if self.manager_agent:
-            if task.agent:
+            # A previous run leaves the manager assigned to the task; that is
+            # not a worker to delegate to.
+            if task.agent and task.agent is not self.manager_agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
                 tools = self._inject_delegation_tools(
@@ -2031,6 +2049,63 @@ class Crew(FlowTrackable, BaseModel):
             None,
         )
 
+    def _validate_replay_tasks(
+        self, stored_outputs: list[Any], start_index: int
+    ) -> None:
+        """Ensure stored outputs still correspond to the tasks that will receive them."""
+        if len(self.tasks) <= start_index:
+            raise ValueError(
+                "Cannot replay because the current crew does not match the stored task outputs."
+            )
+
+        stored_prefix = stored_outputs[: start_index + 1]
+        stored_task_keys = [
+            stored_output.get("task_key") for stored_output in stored_prefix
+        ]
+        current_task_keys = [task.key for task in self.tasks[: start_index + 1]]
+        if all(stored_task_keys):
+            if len(set(stored_task_keys)) != len(stored_task_keys) or len(
+                set(current_task_keys)
+            ) != len(current_task_keys):
+                raise ValueError(
+                    "Cannot replay because the stored task identities are ambiguous."
+                )
+            if stored_task_keys != current_task_keys:
+                raise ValueError(
+                    "Cannot replay because the current crew does not match the stored task outputs."
+                )
+            return
+
+        stored_identities = [
+            (
+                stored_output["output"].get("description"),
+                stored_output.get("expected_output"),
+            )
+            for stored_output in stored_prefix
+        ]
+        current_identities = [
+            (task.description, task.expected_output)
+            for task in self.tasks[: start_index + 1]
+        ]
+        if len(set(stored_identities)) != len(stored_identities) or len(
+            set(current_identities)
+        ) != len(current_identities):
+            raise ValueError(
+                "Cannot replay because the stored task identities are ambiguous."
+            )
+
+        for index, stored_output in enumerate(stored_prefix):
+            task = self.tasks[index]
+            output = stored_output["output"]
+            stored_expected_output = stored_output.get("expected_output")
+            if task.description != output.get("description") or (
+                stored_expected_output is not None
+                and task.expected_output != stored_expected_output
+            ):
+                raise ValueError(
+                    "Cannot replay because the current crew does not match the stored task outputs."
+                )
+
     def replay(self, task_id: str, inputs: dict[str, Any] | None = None) -> CrewOutput:
         """Replay the crew execution from a specific task."""
         stored_outputs = self._task_output_handler.load()
@@ -2042,6 +2117,8 @@ class Crew(FlowTrackable, BaseModel):
         if start_index is None:
             raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
 
+        self._validate_replay_tasks(stored_outputs, start_index)
+
         replay_inputs = (
             inputs if inputs is not None else stored_outputs[start_index]["inputs"]
         )
@@ -2049,6 +2126,22 @@ class Crew(FlowTrackable, BaseModel):
 
         if replay_inputs:
             self._interpolate_inputs(replay_inputs)
+
+        # Mirror prepare_kickoff: replay's execution tail emits
+        # CrewKickoffCompletedEvent(started_event_id=self._kickoff_event_id),
+        # so a start event must scope it — otherwise the bus warns about an
+        # unpaired ending event and the completion points at the original
+        # kickoff's start id.
+        started_event = CrewKickoffStartedEvent(
+            crew_name=self.name, inputs=replay_inputs
+        )
+        self._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(self, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: S110
+                pass
 
         if self.process == Process.hierarchical:
             self._create_manager_agent()
@@ -2069,7 +2162,21 @@ class Crew(FlowTrackable, BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        return self._execute_tasks(self.tasks, start_index, True)
+        try:
+            return self._execute_tasks(self.tasks, start_index, True)
+        except Exception as e:
+            # Mirror kickoff()'s failure terminal: the start event above is
+            # scope-starting, so a failed replay must close its own scope or
+            # the leaked frame parents every later event in this context.
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
+            )
+            raise
 
     def query_knowledge(
         self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
@@ -2136,6 +2243,13 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            # Checkpoint resume pointers describe the run the copy came
+            # from; carried over they would make the copy resume that run
+            # instead of executing (every task skipped, checkpointed
+            # inputs shadowing the new ones).
+            "checkpoint_kickoff_event_id",
+            "checkpoint_inputs",
+            "checkpoint_train",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
@@ -2237,20 +2351,23 @@ class Crew(FlowTrackable, BaseModel):
 
         Uses concurrent.futures for concurrent execution.
         """
+        # Emit the start event before setup: crew_test_failed is
+        # scope-ending, so a failure during create_llm must find its opener
+        # already on the stack instead of popping the caller's scope.
+        crewai_event_bus.emit(
+            self,
+            CrewTestStartedEvent(
+                crew_name=self.name,
+                n_iterations=n_iterations,
+                eval_llm=eval_llm,
+                inputs=inputs,
+            ),
+        )
         try:
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
 
-            crewai_event_bus.emit(
-                self,
-                CrewTestStartedEvent(
-                    crew_name=self.name,
-                    n_iterations=n_iterations,
-                    eval_llm=llm_instance,
-                    inputs=inputs,
-                ),
-            )
             test_crew = self.copy()
 
             evaluator = CrewEvaluator(test_crew, llm_instance)

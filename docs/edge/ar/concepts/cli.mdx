@@ -196,16 +196,20 @@ def crew(self) -> Crew:
   ```shell Terminal
   crewai deploy create
   ```
+  - يرفع `--zip` المشروع كملف ZIP حتى عندما يكون له `origin` في git، دون الجلب منه.
+  - عندما يكون المشروع مستودع git يحتوي على commit واحد على الأقل، فإن كل رفع ZIP، عند الإنشاء أو الدفع، يعرض الـ commit المحلي الذي بُني منه، وما إذا كان مجلد المشروع يحتوي على تغييرات غير مُثبَّتة.
 
 - **نشر الطاقم**:
   ```shell Terminal
   crewai deploy push
   ```
+  يحافظ الدفع على المصدر المستخدم عند الإنشاء. إضافة `origin` لاحقًا لا تحوّل نشر ZIP إلى git.
 
 - **حالة النشر**:
   ```shell Terminal
   crewai deploy status
   ```
+  يجلب هذا أحدث حالة لآخر محاولة نشر (مثل `Building Images for Crew` و`Deploy Enqueued` و`Online`). إذا فشل النشر، يعرض أيضًا الخطأ وإصلاحًا مقترحًا.
 
 - **سجلات النشر**:
   ```shell Terminal
@@ -286,6 +290,7 @@ crewai traces [COMMAND]
    ```shell Terminal
    crewai traces enable
    ```
+   - يحدّث موجه التشغيل الأول (`Would you like to view your execution traces?`) هذا التفضيل أيضاً
 
 <Note>
 **لتفعيل التتبع**، استخدم أيًا من هذه الطرق:

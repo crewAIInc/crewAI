@@ -8,9 +8,25 @@ import json
 import os
 import re
 import sqlite3
-from typing import Any
+from typing import Any, Literal
 
 import click
+
+
+def _record_checkpoint_usage(
+    action: Literal[
+        "list", "info", "resume", "diff", "prune", "tui", "tui_resume", "tui_fork"
+    ],
+) -> None:
+    """Count a CLI action without recording checkpoint data or blocking execution."""
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(f"cli_usage:checkpoint_{action}")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
 
 
 _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
@@ -223,14 +239,14 @@ def _entity_summary(entities: list[dict[str, Any]]) -> str:
 
 
 def _list_json(location: str) -> list[dict[str, Any]]:
-    pattern = os.path.join(location, "**", "*.json")
+    pattern = os.path.join(glob.escape(location), "**", "*.json")
     results = []
     for path in sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
     ):
         name = os.path.basename(path)
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 raw = f.read()
             meta = _parse_checkpoint_json(raw, source=name)
             meta["name"] = name
@@ -244,14 +260,14 @@ def _list_json(location: str) -> list[dict[str, Any]]:
 
 
 def _info_json_latest(location: str) -> dict[str, Any] | None:
-    pattern = os.path.join(location, "**", "*.json")
+    pattern = os.path.join(glob.escape(location), "**", "*.json")
     files = sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
     )
     if not files:
         return None
     path = files[0]
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         raw = f.read()
     meta = _parse_checkpoint_json(raw, source=os.path.basename(path))
     meta["name"] = os.path.basename(path)
@@ -262,7 +278,7 @@ def _info_json_latest(location: str) -> dict[str, Any] | None:
 
 
 def _info_json_file(path: str) -> dict[str, Any]:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         raw = f.read()
     meta = _parse_checkpoint_json(raw, source=os.path.basename(path))
     meta["name"] = os.path.basename(path)
@@ -440,7 +456,7 @@ def _resolve_checkpoint(
             from crewai.state.provider.json_provider import JsonProvider
 
             _json_provider: JsonProvider = JsonProvider()
-            pattern: str = os.path.join(location, "**", "*.json")
+            pattern: str = os.path.join(glob.escape(location), "**", "*.json")
             all_files: list[str] = glob.glob(pattern, recursive=True)
             matches: list[str] = [
                 f for f in all_files if checkpoint_id in _json_provider.extract_id(f)
@@ -631,7 +647,7 @@ def _parse_duration(value: str) -> timedelta:
 
 
 def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -> int:
-    pattern: str = os.path.join(location, "**", "*.json")
+    pattern: str = os.path.join(glob.escape(location), "**", "*.json")
     files: list[str] = sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
     )
@@ -696,6 +712,7 @@ def prune_checkpoints(
         return
 
     duration: timedelta | None = _parse_duration(older_than) if older_than else None
+    _record_checkpoint_usage("prune")
 
     deleted: int
     if _is_sqlite(location):
@@ -708,7 +725,7 @@ def prune_checkpoints(
     elif os.path.isdir(location):
         if dry_run:
             files: list[str] = glob.glob(
-                os.path.join(location, "**", "*.json"), recursive=True
+                os.path.join(glob.escape(location), "**", "*.json"), recursive=True
             )
             click.echo(f"Would prune from {len(files)} checkpoint(s) in {location}")
             return

@@ -23,11 +23,11 @@ class ApplicationSelector:
 
     app: str
     action: str | None
-    connection_id: UUID | None
+    connection_id: UUID | str | None
 
     @classmethod
     def from_string(cls, value: str) -> ApplicationSelector:
-        """Parse the ``application[/action][@connection_uuid]`` syntax.
+        """Parse the ``application[/action][@connection_uuid|private]`` syntax.
 
         Raises:
             ValueError: If the selector does not follow the supported syntax.
@@ -40,6 +40,7 @@ class ApplicationSelector:
                 "connection ID must be the last segment"
             )
 
+        connection_id: UUID | str | None
         app_and_action, connection_separator, connection_id = value.partition("@")
         app, action_separator, action = app_and_action.partition("/")
 
@@ -56,20 +57,23 @@ class ApplicationSelector:
                 f"Invalid application selector {value!r}: connection ID cannot be empty"
             )
 
-        parsed_connection_id = None
         if connection_id:
+            is_alias = connection_id.isascii() and connection_id.isalpha()
             try:
-                parsed_connection_id = UUID(connection_id)
+                if not is_alias:
+                    connection_id = UUID(connection_id)
             except ValueError as error:
                 raise ValueError(
                     f"Invalid application selector {value!r}: "
-                    "connection ID must be a valid UUID"
+                    "connection ID must be a valid UUID or a valid alias (e.g. private)"
                 ) from error
+        else:
+            connection_id = None
 
         return cls(
             app=app,
             action=action if action_separator else None,
-            connection_id=parsed_connection_id,
+            connection_id=connection_id,
         )
 
 
@@ -79,7 +83,7 @@ class ToolInfo:
 
     app: str
     action: str
-    connection_id: UUID | None
+    connection_id: UUID | str | None
     description: str
     parameters: dict[str, Any]
 
@@ -128,9 +132,12 @@ class ClipperClient:
 
     _RESOURCE = "/clipper/v1"
 
+    def __init__(self, *, base_url: str | None = None) -> None:
+        self._base_url = base_url
+
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         base_url = f"{plus_api.base_url.rstrip('/')}{self._RESOURCE}"
         headers = self._headers()
         tool_infos: list[ToolInfo] = []
@@ -173,7 +180,7 @@ class ClipperClient:
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         payload: dict[str, Any] = {"arguments": arguments}
         if tool.connection_id is not None:
             payload["connection_id"] = str(tool.connection_id)
@@ -226,9 +233,12 @@ class ClipperClient:
 class LegacyClient:
     """Use the existing CrewAI platform integrations API."""
 
+    def __init__(self, *, base_url: str | None = None) -> None:
+        self._base_url = base_url
+
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         apps = [
             f"{selector.app}/{selector.action}"
             if selector.action is not None
@@ -275,7 +285,7 @@ class LegacyClient:
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         response = requests.post(
             url=(
                 f"{plus_api.base_url.rstrip('/')}{plus_api.INTEGRATIONS_RESOURCE}"
@@ -310,8 +320,10 @@ class LegacyClient:
         return ToolExecutionSuccess(output=data)
 
 
-def client_for_selector(selector: ApplicationSelector) -> IntegrationsClient:
+def client_for_selector(
+    selector: ApplicationSelector, *, base_url: str | None = None
+) -> IntegrationsClient:
     """Select the integrations client for an application selector."""
     if selector.connection_id is not None:
-        return ClipperClient()
-    return LegacyClient()
+        return ClipperClient(base_url=base_url)
+    return LegacyClient(base_url=base_url)

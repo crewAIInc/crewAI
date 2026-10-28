@@ -1,0 +1,47 @@
+---
+title: خطافات قبل وبعد الانطلاق
+description: تعلم كيفية استخدام خطافات قبل وبعد الانطلاق في CrewAI
+mode: "wide"
+---
+
+يوفر CrewAI خطافات تتيح لك تنفيذ كود قبل وبعد انطلاق Crew. هذه الخطافات مفيدة لمعالجة المدخلات مسبقًا أو معالجة النتائج لاحقًا.
+
+## خطاف قبل الانطلاق
+
+يُنفَّذ خطاف قبل الانطلاق قبل أن يبدأ Crew مهامه. يتلقى قاموس المدخلات ويمكنه تعديله قبل تمريره إلى Crew. يمكنك استخدام هذا الخطاف لإعداد بيئتك أو تحميل البيانات اللازمة أو معالجة المدخلات مسبقًا.
+
+```python
+from crewai import CrewBase
+from crewai.project import before_kickoff
+
+@CrewBase
+class MyCrew:
+    @before_kickoff
+    def prepare_data(self, inputs):
+        inputs['processed'] = True
+        return inputs
+```
+
+## خطاف بعد الانطلاق
+
+يُنفَّذ خطاف بعد الانطلاق بعد إتمام Crew مهامه. يتلقى كائن النتيجة الذي يحتوي على مخرجات تنفيذ Crew. هذا الخطاف مثالي لمعالجة النتائج لاحقًا مثل التسجيل أو تحويل البيانات أو التحليل الإضافي.
+
+```python
+from crewai import CrewBase
+from crewai.project import after_kickoff
+
+@CrewBase
+class MyCrew:
+    @after_kickoff
+    def log_results(self, result):
+        print("Crew execution completed with result:", result)
+        return result
+```
+
+## استخدام كلا الخطافين
+
+يمكن استخدام كلا الخطافين معًا لتوفير عملية إعداد وتفكيك شاملة لتنفيذ Crew. وهما مفيدان بشكل خاص في الحفاظ على بنية كود نظيفة من خلال فصل المسؤوليات وتعزيز نمطية تنفيذات CrewAI.
+
+## الخلاصة
+
+توفر خطافات قبل وبعد الانطلاق في CrewAI طرقًا قوية للتفاعل مع دورة حياة تنفيذ Crew. من خلال فهم واستخدام هذه الخطافات، يمكنك تعزيز متانة ومرونة Agents الذكاء الاصطناعي بشكل كبير.

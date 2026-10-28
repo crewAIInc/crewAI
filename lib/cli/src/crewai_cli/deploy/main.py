@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -5,15 +6,20 @@ from urllib.parse import quote
 import webbrowser
 
 from crewai_core.plus_api import CreateCrewPayload
-from crewai_core.telemetry import DeploySource
+from crewai_core.telemetry import DeployFailureReason, DeploySource
+import httpx
 from rich.console import Console
 
 from crewai_cli import git
 from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai_cli.deploy.archive import create_project_zip
+from crewai_cli.deploy.archive import ArchiveError, create_project_zip
 from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
-from crewai_cli.utils import fetch_and_json_env_file, get_project_name
+from crewai_cli.utils import (
+    fetch_and_json_env_file,
+    get_project_id,
+    get_project_name,
+)
 
 
 console = Console()
@@ -77,6 +83,53 @@ def _display_git_remote_help() -> None:
     )
 
 
+def _display_zip_source(repository: git.Repository | None) -> None:
+    """Say which local commit a ZIP is built from.
+
+    AMP keeps no commit for a ZIP deployment, so this line is the only record of it.
+    """
+    if repository is None:
+        return
+    commit = repository.head_commit()
+    if commit is None:
+        return
+    changed = repository.has_changes_under_path()
+    if changed is None:
+        console.print(
+            f"ZIP built from commit {commit} (could not check for uncommitted changes)."
+        )
+    elif changed:
+        console.print(
+            f"ZIP built from commit {commit} (working tree has uncommitted changes)."
+        )
+    else:
+        console.print(f"ZIP built from commit {commit}.")
+
+
+# AMP's `source_type` for a deployment's code, and whether a push updates it by
+# uploading a ZIP. A Studio install is an archive too (AMP sets it as a ZIP crew).
+_ZIP_SOURCE_TYPES = {"zip": True, "studio": True, "github": False, "any_git": False}
+
+
+def _zip_deployment_flag(status: dict[str, Any] | None) -> bool | None:
+    """Whether AMP holds this deployment's code as a ZIP, or None when the status
+    does not say.
+
+    AMP's status sends `source_type` ("zip", "studio", "github", "any_git");
+    `zip_deployment`, a boolean, is read first when present. Without either the
+    caller falls back to the local origin remote — which is wrong for a ZIP
+    deployment whose project has since gained a remote: it redeploys the ZIP AMP
+    already holds instead of the code being pushed.
+    """
+    if not status:
+        return None
+    value = status.get("zip_deployment")
+    if isinstance(value, bool):
+        return value
+    source = status.get("source_type")
+    return _ZIP_SOURCE_TYPES.get(source) if isinstance(source, str) else None
+
+
 def _env_summary(env_vars: dict[str, str]) -> str:
     """Return a compact description of environment variables for prompts."""
     if not env_vars:
@@ -116,6 +169,80 @@ def _deployment_page_url(base_url: str, json_response: dict[str, Any]) -> str | 
     return (
         f"{base_url.rstrip('/')}/crewai_plus/deployments/{quote(identifier, safe='')}"
     )
+
+
+def _creation_failure_reason(exc: BaseException) -> DeployFailureReason:
+    """Classify an exception raised while requesting a deployment, for telemetry.
+
+    Archive failures are recognised by type (``ArchiveError``), not by base
+    class: the git helpers raise plain ``ValueError`` too, and those are not
+    ZIP problems.
+    """
+    if isinstance(exc, (KeyboardInterrupt, EOFError)):
+        return "user_declined"
+    if isinstance(exc, httpx.HTTPError):
+        return "network_error"
+    if isinstance(exc, ArchiveError):
+        return "zip_error"
+    return "unexpected"
+
+
+def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | None:
+    """Classify a create response that cannot become a created deployment.
+
+    Status first, so a gateway's HTML error page counts as the API class it is;
+    then the body, which must be a JSON object carrying ``uuid`` and ``status``
+    for the success path to use. A 2xx that is not JSON (a proxy page) and a
+    2xx JSON body that is not a creation (a contract change) are kept apart.
+    ``None`` means the response is a creation.
+    """
+    if response.status_code >= 500:
+        return "api_5xx"
+    if not response.is_success:
+        return "api_4xx"
+    try:
+        payload = response.json()
+    except (json.JSONDecodeError, ValueError):
+        return "invalid_json"
+    if (
+        not isinstance(payload, dict)
+        or not payload.get("uuid")
+        or "status" not in payload
+    ):
+        return "invalid_creation_response"
+    return None
+
+
+def _refuse_on_running_comparison(response: httpx.Response) -> None:
+    """AMP held the push back because a models comparison is running on the
+    deployment (a redeploy would stop it and lose its runs): say so in AMP's
+    own sentence, which names `--force`, and exit 1 — nothing was deployed.
+
+    AMP names the refusal in `code`; its `error` carries the sentence, which is
+    what a CLI without this function prints. An AMP from before that change
+    named it in `error` and is still recognised."""
+    if response.status_code != 409:
+        return
+    try:
+        body = response.json()
+    except ValueError:
+        return
+    if not isinstance(body, dict) or "comparison_running" not in (
+        body.get("code"),
+        body.get("error"),
+    ):
+        return
+    # AMP's words, printed as they are: Rich markup in them (a bracketed
+    # word, a stray closing tag) must neither vanish nor raise.
+    console.print(
+        str(
+            body.get("message") or "A models comparison is running on this deployment."
+        ),
+        style="bold yellow",
+        markup=False,
+    )
+    console.print("Nothing was deployed.")
+    raise SystemExit(1)
 
 
 def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
@@ -180,6 +307,22 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
         self.project_name = get_project_name(require=True)
+        # Sent with every create and push, so AMP knows which project a
+        # deployment runs — `crewai eval --models` finds the deployment by it.
+        # Read, never minted: a deploy does not rewrite pyproject.toml.
+        self.project_id = get_project_id()
+        # `crewai deploy push --force`: go ahead even while a models
+        # comparison runs on the deployment (`deploy` sets it per push).
+        self._force = False
+
+    def _project(self) -> dict[str, str]:
+        """`project_id=` for a create or push request, when the project has one."""
+        return {"project_id": self.project_id} if self.project_id else {}
+
+    def _push(self) -> dict[str, Any]:
+        """A push request's options: `project_id=` as `_project`, and
+        `force=True` when the push was asked to go ahead whatever runs."""
+        return {**self._project(), **({"force": True} if self._force else {})}
 
     def _standard_no_param_error_message(self) -> None:
         """
@@ -291,6 +434,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         uuid: str | None = None,
         skip_validate: bool = False,
         source: DeploySource = "cli",
+        force: bool = False,
     ) -> None:
         """
         Deploy a crew using either UUID or project name.
@@ -299,7 +443,10 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
             source (DeploySource): Where the deployment was initiated from.
+            force (bool): Redeploy even while a models comparison runs on the
+                deployment, which stops it (AMP refuses otherwise).
         """
+        self._force = force
         if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid, source=source)
@@ -307,29 +454,102 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         repository = self._prepare_git_repository()
         remote_repo_url = repository.origin_url() if repository else None
 
+        status = self._deployment_status(uuid, self.project_name)
+        if status is not None and self._can_deploy_from_amp(
+            uuid, self.project_name, status
+        ):
+            response = self._deploy_from_amp_source(
+                uuid, self.project_name, repository, status
+            )
+        else:
+            response = self._deploy_from_local_source(
+                uuid, self.project_name, repository, remote_repo_url
+            )
+            if response is None:
+                self._standard_no_param_error_message()
+                return
+
+        _refuse_on_running_comparison(response)
+        self._validate_response(response)
+        self._display_deployment_info(response.json())
+
+    def _deployment_status(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+    ) -> dict[str, Any] | None:
+        """Fetch deployment status without failing the command."""
+        try:
+            if uuid:
+                response = self.plus_api_client.crew_status_by_uuid(uuid)
+            elif project_name:
+                response = self.plus_api_client.crew_status_by_name(project_name)
+            else:
+                return None
+            if not response.is_success:
+                return None
+            payload = response.json()
+        except Exception:
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def _can_deploy_from_amp(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        status: dict[str, Any] | None,
+    ) -> bool:
+        """Return True when AMP's status says how it holds the code."""
+        zip_deployment = _zip_deployment_flag(status)
+        if zip_deployment is None:
+            return False
+        if zip_deployment:
+            return bool(uuid or (status and status.get("uuid")))
+        return bool(uuid or project_name)
+
+    def _deploy_from_amp_source(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        repository: git.Repository | None,
+        status: dict[str, Any],
+    ) -> Any:
+        """Deploy the way AMP holds the code: a ZIP upload, or a redeploy of its git source."""
+        if _zip_deployment_flag(status):
+            deployment_uuid = uuid or str(status["uuid"])
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(deployment_uuid, repository, env_vars)
+        if uuid:
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._push())
+        if not project_name:
+            raise ValueError("project_name is required to deploy by name")
+        return self.plus_api_client.deploy_by_name(project_name, **self._push())
+
+    def _deploy_from_local_source(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        repository: git.Repository | None,
+        remote_repo_url: str | None,
+    ) -> Any | None:
+        """Deploy using local origin, as before AMP zip_deployment existed."""
         if remote_repo_url and uuid:
-            response = self.plus_api_client.deploy_by_uuid(uuid)
-        elif remote_repo_url and self.project_name:
-            response = self.plus_api_client.deploy_by_name(self.project_name)
-        elif uuid:
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._push())
+        if remote_repo_url and project_name:
+            return self.plus_api_client.deploy_by_name(project_name, **self._push())
+        if uuid:
             _display_git_remote_help()
             env_vars = fetch_and_json_env_file()
-            response = self._update_crew_from_zip(uuid, repository, env_vars)
-        elif self.project_name:
+            return self._update_crew_from_zip(uuid, repository, env_vars)
+        if project_name:
             _display_git_remote_help()
-            deployment_uuid = self._deployment_uuid_by_name()
             env_vars = fetch_and_json_env_file()
-            response = self._update_crew_from_zip(
-                deployment_uuid,
+            return self._update_crew_from_zip(
+                self._deployment_uuid_by_name(),
                 repository,
                 env_vars,
             )
-        else:
-            self._standard_no_param_error_message()
-            return
-
-        self._validate_response(response)
-        self._display_deployment_info(response.json())
+        return None
 
     def _deployment_uuid_by_name(self) -> str:
         """Resolve the current project's deployment UUID by project name."""
@@ -349,6 +569,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         confirm: bool = False,
         skip_validate: bool = False,
         source: DeploySource = "cli",
+        *,
+        force_zip: bool = False,
     ) -> None:
         """
         Create a new crew deployment.
@@ -357,37 +579,76 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
             source (DeploySource): Where the deployment was initiated from.
+            force_zip (bool): Upload the project as a ZIP even when it has a git
+                origin remote, without fetching from that remote.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
-        env_vars = fetch_and_json_env_file()
-        repository = self._prepare_git_repository()
-        remote_repo_url = repository.origin_url() if repository else None
+        try:
+            response = self._request_crew_creation(confirm, force_zip=force_zip)
+        except BaseException as exc:
+            # Report and re-raise unchanged: the CLI and the run TUI already
+            # decide how each failure is shown, this only explains the gap
+            # between attempts and successes.
+            self._telemetry.crew_deployment_failed_span(
+                _creation_failure_reason(exc), source=source
+            )
+            raise
 
-        if remote_repo_url:
-            self._confirm_input(env_vars, remote_repo_url, confirm)
-            payload = self._create_payload(env_vars, remote_repo_url)
-            response = self.plus_api_client.create_crew(payload)
-        else:
-            _display_git_remote_help()
-            response = self._create_crew_from_zip(env_vars, repository, confirm)
+        failure_reason = _response_failure_reason(response)
+        if failure_reason is not None:
+            self._telemetry.crew_deployment_failed_span(
+                failure_reason, source=source, status_code=response.status_code
+            )
+            # Prints the API's own details and exits for every non-2xx and for
+            # a body that is not JSON. Only a 2xx that parsed but is not a
+            # creation payload gets past it.
+            self._validate_response(response)
+            console.print(
+                "Unexpected response from the Enterprise API: no deployment uuid was returned.",
+                style="bold red",
+            )
+            raise SystemExit(1)
 
-        self._validate_response(response)
         json_response = response.json()
-        # After _validate_response, not before: it raises SystemExit on a failed
-        # create, so the span cannot fire for a deployment that was not made. This
-        # is the first point at which the uuid exists -- the pre-flight span at the
-        # top of this method counts the attempt and cannot carry it.
-        created_uuid = json_response.get("uuid")
+        # Only here, after the response has been classified as a creation: this
+        # is the first point at which the uuid exists -- the pre-flight span at
+        # the top of this method counts the attempt and cannot carry it.
         self._telemetry.crew_deployment_created_span(
-            uuid=str(created_uuid) if created_uuid else None, source=source
+            uuid=str(json_response["uuid"]), source=source
         )
         self._display_creation_success(json_response)
 
-    def _prepare_git_repository(self) -> git.Repository | None:
-        """Prepare Git for deploy while preserving remote deploy when possible."""
+    def _request_crew_creation(
+        self, confirm: bool, *, force_zip: bool = False
+    ) -> httpx.Response:
+        """Ask the Enterprise API to create the deployment, from git or from a ZIP."""
+        env_vars = fetch_and_json_env_file()
+        repository = self._prepare_git_repository(fetch_origin=not force_zip)
+
+        if force_zip:
+            console.print("Deploying from a ZIP upload (--zip).", style="yellow")
+            return self._create_crew_from_zip(env_vars, repository, confirm)
+
+        remote_repo_url = repository.origin_url() if repository else None
+        if remote_repo_url:
+            self._confirm_input(env_vars, remote_repo_url, confirm)
+            payload = self._create_payload(env_vars, remote_repo_url)
+            return self.plus_api_client.create_crew(payload)
+
+        _display_git_remote_help()
+        return self._create_crew_from_zip(env_vars, repository, confirm)
+
+    def _prepare_git_repository(
+        self, *, fetch_origin: bool = True
+    ) -> git.Repository | None:
+        """Prepare Git for deploy while preserving remote deploy when possible.
+
+        With ``fetch_origin=False`` an origin remote is ignored: nothing is
+        fetched, so a ZIP deploy never waits on the network or a credentials prompt.
+        """
         try:
             repository = git.Repository(fetch=False)
         except ValueError as exc:
@@ -415,8 +676,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             _display_git_repository_help()
             return repository
 
-        remote_repo_url = repository.origin_url()
-        if remote_repo_url:
+        if fetch_origin and repository.origin_url():
             try:
                 repository.fetch()
             except ValueError as fetch_error:
@@ -464,7 +724,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         env_vars: dict[str, str],
         repository: git.Repository | None,
         confirm: bool,
-    ) -> Any:
+    ) -> httpx.Response:
         """Create a deployment by uploading a project ZIP archive."""
         if not self.project_name:
             raise ValueError("project_name is required to create a ZIP deployment")
@@ -472,12 +732,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("Preparing project ZIP...", style="bold blue")
         zip_file_path = create_project_zip(self.project_name, repository=repository)
         try:
+            _display_zip_source(repository)
             self._confirm_zip_input(env_vars, confirm)
             console.print("Uploading project ZIP...", style="bold blue")
             return self.plus_api_client.create_crew_from_zip(
                 zip_file_path,
                 name=self.project_name,
                 env=env_vars,
+                **self._project(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
@@ -495,11 +757,13 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("Preparing project ZIP...", style="bold blue")
         zip_file_path = create_project_zip(self.project_name, repository=repository)
         try:
+            _display_zip_source(repository)
             console.print("Uploading project ZIP...", style="bold blue")
             return self.plus_api_client.update_crew_from_zip(
                 uuid,
                 zip_file_path,
                 env=env_vars,
+                **self._push(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
@@ -543,13 +807,16 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         if not self.project_name:
             raise ValueError("project_name is required to create a deployment payload")
-        return {
+        payload: CreateCrewPayload = {
             "deploy": {
                 "name": self.project_name,
                 "repo_clone_url": remote_repo_url,
                 "env": env_vars,
             }
         }
+        if self.project_id:
+            payload["project_id"] = self.project_id
+        return payload
 
     def _display_creation_success(self, json_response: dict[str, Any]) -> None:
         """
@@ -629,6 +896,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         console.print(f"Name:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")
+        # AMP sets these only while the deployment is failed. They carry raw git
+        # and build output, so print them without Rich markup.
+        error_message = status_data.get("error_message")
+        if error_message:
+            console.print(f"Error:\t {error_message}", style="red", markup=False)
+        suggested_fix = status_data.get("error_suggested_fix")
+        if suggested_fix:
+            console.print(f"Fix:\t {suggested_fix}", markup=False)
 
     def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
         """
@@ -670,11 +945,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._standard_no_param_error_message()
             return
 
+        crew = uuid or self.project_name
         if response.status_code == 204:
-            console.print(
-                f"Crew '{self.project_name}' removed successfully.", style="green"
-            )
+            console.print(f"Crew '{crew}' removed successfully.", style="green")
         else:
-            console.print(
-                f"Failed to remove crew '{self.project_name}'", style="bold red"
-            )
+            console.print(f"Failed to remove crew '{crew}'", style="bold red")
+            self._validate_response(response)

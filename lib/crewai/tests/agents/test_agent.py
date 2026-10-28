@@ -6,11 +6,11 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 import warnings
 
-from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.agents.parser import AgentFinish
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -700,9 +700,8 @@ def test_agent_step_callback():
         callback.assert_called()
 
 
-@pytest.mark.vcr()
-@pytest.mark.skip(reason="result_as_answer feature not yet implemented in native tool calling path")
-def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
+def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
+    """Use a native tool result as the Crew's final answer without another LLM call."""
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -710,13 +709,16 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
         description: str = "Get a random greeting back"
 
         def _run(self) -> str:
+            """Return a deterministic greeting for the integration test."""
             return "Howdy!"
 
+    llm = LLM(model="gpt-4o-mini")
     agent1 = Agent(
         role="Data Scientist",
         goal="Product amazing resports on AI",
         backstory="You work with data and AI",
         tools=[MyCustomTool(result_as_answer=True)],
+        llm=llm,
     )
 
     essay = Task(
@@ -727,8 +729,18 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
 
-    result = crew.kickoff()
+    tool_call = {
+        "id": "call_greeting",
+        "function": {"name": "get_greetings", "arguments": "{}"},
+    }
+    with patch(
+        "crewai.agents.agent_executor.get_llm_response",
+        return_value=[tool_call],
+    ) as mock_llm_response:
+        result = crew.kickoff()
+
     assert result.raw == "Howdy!"
+    mock_llm_response.assert_called_once()
 
 
 def test_agent_definition_based_on_dict():
@@ -746,61 +758,6 @@ def test_agent_definition_based_on_dict():
     assert agent.backstory == "test backstory"
     assert agent.verbose is True
     assert agent.tools == []
-
-
-@pytest.mark.vcr()
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_agent_human_input():
-    from crewai.core.providers.human_input import SyncHumanInputProvider
-
-    # Agent configuration
-    config = {
-        "role": "test role",
-        "goal": "test goal",
-        "backstory": "test backstory",
-        "executor_class": CrewAgentExecutor,
-    }
-
-    agent = Agent(**config)
-
-    # Task configuration with human input enabled
-    task = Task(
-        agent=agent,
-        description="Say the word: Hi",
-        expected_output="The word: Hi",
-        human_input=True,
-    )
-
-    # Side effect function for _prompt_input to simulate multiple feedback iterations
-    feedback_responses = iter(
-        [
-            "Don't say hi, say Hello instead!",
-            "",
-        ]
-    )
-
-    def prompt_input_side_effect(*args, **kwargs):
-        return next(feedback_responses)
-
-    # Patch both _prompt_input on provider and _invoke_loop to avoid real API/network calls.
-    with (
-        patch.object(
-            SyncHumanInputProvider,
-            "_prompt_input",
-            side_effect=prompt_input_side_effect,
-        ) as mock_prompt_input,
-        patch.object(
-            CrewAgentExecutor,
-            "_invoke_loop",
-            return_value=AgentFinish(output="Hello", thought="", text=""),
-        ),
-    ):
-        output = agent.execute_task(task)
-
-        # Assertions to ensure the agent behaves correctly.
-        # It should have requested feedback twice.
-        assert mock_prompt_input.call_count == 2
-        assert output.strip().lower() == "hello"
 
 
 def test_agent_default_executor_human_input():
@@ -937,6 +894,20 @@ def test_using_system_prompt():
     assert agent.agent_executor.prompt.get("system")
 
 
+def test_agent_passes_better_compaction_setting_to_executor():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        use_better_compaction=False,
+    )
+
+    agent.create_agent_executor()
+
+    assert agent.agent_executor is not None
+    assert agent.agent_executor.use_better_compaction is False
+
+
 def test_system_and_prompt_template():
     agent = Agent(
         role="{topic} specialist",
@@ -977,7 +948,7 @@ Thought:<|eot_id|>
 
 """
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     with patch.object(AgentExecutor, "_format_prompt") as mock_format_prompt:
         mock_format_prompt.return_value = expected_prompt
@@ -1306,7 +1277,7 @@ def test_agent_max_retry_limit():
 
     agent.create_agent_executor(task=task)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     error_message = "Error happening while sending prompt to model."
     with patch.object(
@@ -1456,7 +1427,7 @@ def test_handle_context_length_exceeds_limit():
     respect_context_window = True
     callbacks = []
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize:
+    with patch.object(llm, "summarize_messages") as mock_summarize:
         mock_summarize.side_effect = ValueError("Context length limit exceeded")
 
         # Directly call handle_context_length with our parameters
@@ -1485,7 +1456,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
 
     agent.create_agent_executor(task=task)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     with patch.object(
         AgentExecutor, "invoke", wraps=agent.agent_executor.invoke
@@ -2104,60 +2075,6 @@ def test_litellm_auth_error_handling():
     mock_llm_call.assert_called_once()
 
 
-def test_crew_agent_executor_litellm_auth_error():
-    """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
-    from crewai.agents.tools_handler import ToolsHandler
-    from litellm.exceptions import AuthenticationError
-
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        llm=LLM(model="gpt-4", api_key="invalid_api_key", is_litellm=True),
-    )
-    task = Task(
-        description="Test task",
-        expected_output="Test output",
-        agent=agent,
-    )
-
-    executor = CrewAgentExecutor(
-        agent=agent,
-        task=task,
-        llm=agent.llm,
-        crew=None,
-        prompt={"system": "You are a test agent", "user": "Execute the task: {input}"},
-        max_iter=5,
-        tools=[],
-        tools_names="",
-        stop_words=[],
-        tools_description="",
-        tools_handler=ToolsHandler(),
-    )
-
-    with (
-        patch.object(LLM, "call") as mock_llm_call,
-        pytest.raises(AuthenticationError) as exc_info,
-    ):
-        mock_llm_call.side_effect = AuthenticationError(
-            message="Invalid API key", llm_provider="openai", model="gpt-4"
-        )
-        executor.invoke(
-            {
-                "input": "test input",
-                "tool_names": "",
-                "tools": "",
-            }
-        )
-
-    mock_llm_call.assert_called_once()
-
-    assert exc_info.type is AuthenticationError
-    assert "Invalid API key".lower() in exc_info.value.message.lower()
-    assert exc_info.value.llm_provider == "openai"
-    assert exc_info.value.model == "gpt-4"
-
-
 def test_litellm_anthropic_error_handling():
     """Test that AnthropicError from LiteLLM is handled correctly and not retried."""
     from litellm.llms.anthropic.common_utils import AnthropicError
@@ -2520,6 +2437,182 @@ def test_agent_from_repository_without_org_set(
         style="yellow",
     )
 
+
+def _repository_response(status_code: int = 200) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    response.text = "Agent not found"
+    response.json.return_value = {
+        "role": "repo role",
+        "goal": "repo goal",
+        "backstory": "repo backstory",
+        "max_iter": 7,
+        "tools": [
+            {"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}
+        ],
+    }
+    return response
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config(mock_get_agent, mock_get_auth_token):
+    """agents.yaml reaches Agent as ``config=``, so the key must work there too."""
+    from crewai_tools import SerperDevTool
+
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(config={"from_repository": "test_agent"})
+
+    mock_get_agent.assert_called_once_with("test_agent")
+    assert agent.from_repository == "test_agent"
+    assert agent.role == "repo role"
+    assert agent.goal == "repo goal"
+    assert agent.backstory == "repo backstory"
+    assert agent.max_iter == 7
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_precedence(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+
+    from_config = Agent(
+        config={"from_repository": "test_agent", "role": "Yaml Role"}
+    )
+    from_kwarg = Agent(
+        role="Kwarg Role",
+        config={"from_repository": "test_agent", "role": "Yaml Role"},
+    )
+
+    assert (from_config.role, from_config.goal) == ("Yaml Role", "repo goal")
+    assert (from_kwarg.role, from_kwarg.goal) == ("Kwarg Role", "repo goal")
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_kwarg_wins_over_config_repository(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(
+        from_repository="kwarg_agent", config={"from_repository": "yaml_agent"}
+    )
+
+    mock_get_agent.assert_called_once_with("kwarg_agent")
+    assert agent.from_repository == "kwarg_agent"
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_with_local_fields_still_fetches(
+    mock_get_agent, mock_get_auth_token
+):
+    """With role/goal/backstory set locally the repository used to be skipped
+    silently, dropping its tools and settings."""
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(
+        config={
+            "from_repository": "test_agent",
+            "role": "Yaml Role",
+            "goal": "Yaml Goal",
+            "backstory": "Yaml Backstory",
+        }
+    )
+
+    mock_get_agent.assert_called_once_with("test_agent")
+    assert (agent.role, agent.goal, agent.backstory) == (
+        "Yaml Role",
+        "Yaml Goal",
+        "Yaml Backstory",
+    )
+    assert agent.max_iter == 7
+    assert len(agent.tools) == 1
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_agent_not_found(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response(status_code=404)
+
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent does not exist, make sure the name is correct",
+    ):
+        Agent(config={"from_repository": "test_agent", "role": "Yaml Role"})
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_kwarg_and_config_fields_config_wins(
+    mock_get_agent, mock_get_auth_token
+):
+    """Behaviour change: config fields used to lose to the repository here."""
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(from_repository="test_agent", config={"goal": "Yaml Goal"})
+
+    assert (agent.role, agent.goal) == ("repo role", "Yaml Goal")
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_requires_login(mock_get_agent):
+    """Logged out, a config ``from_repository`` fails like the keyword form."""
+    from crewai.auth.token import AuthError
+
+    with (
+        patch("crewai_core.token_manager.TokenManager.get_token", return_value=None),
+        pytest.raises(AuthError, match="No token found, make sure you are logged in"),
+    ):
+        Agent(
+            config={
+                "from_repository": "test_agent",
+                "role": "Yaml Role",
+                "goal": "Yaml Goal",
+                "backstory": "Yaml Backstory",
+            }
+        )
+
+    mock_get_agent.assert_not_called()
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_does_not_mutate_input(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+    values = {"from_repository": "test_agent", "config": {"goal": "Yaml Goal"}}
+
+    Agent.model_validate(values)
+
+    assert values == {
+        "from_repository": "test_agent",
+        "config": {"goal": "Yaml Goal"},
+    }
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_config_without_from_repository_does_not_fetch(mock_get_agent):
+    agent = Agent(
+        config={
+            "role": "Yaml Role",
+            "goal": "Yaml Goal",
+            "backstory": "Yaml Backstory",
+        },
+        goal="Kwarg Goal",
+    )
+
+    mock_get_agent.assert_not_called()
+    assert agent.from_repository is None
+    assert (agent.role, agent.goal, agent.backstory) == (
+        "Yaml Role",
+        "Kwarg Goal",
+        "Yaml Backstory",
+    )
+
+
 def test_agent_apps_consolidated_functionality():
     agent = Agent(
         role="Platform Agent",
@@ -2650,6 +2743,137 @@ def test_agent_without_apps_no_platform_tools():
     assert tools == []
 
 
+def test_get_platform_tools_warns_when_apps_resolve_to_zero_tools(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(
+        role="Empty Apps Agent",
+        goal="Use apps",
+        backstory="b",
+        apps=["gmail", "slack"],
+    )
+
+    with pytest.warns(
+        UserWarning,
+        # The apps validator dedupes through a set, so either order is possible.
+        match=r"Agent 'Empty Apps Agent' declares apps \[(gmail, slack|slack, gmail)\] "
+        r"but none resolved to any tools",
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warns_when_no_action_matches_a_selector(monkeypatch):
+    # Runs the real CrewaiPlatformTools factory (it returns a plain list) against an
+    # integrations API that knows no action by this name.
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+    response = MagicMock()
+    response.json.return_value = {"actions": {}}
+    agent = Agent(
+        role="Slack Agent", goal="g", backstory="b", apps=["slack/send-message"]
+    )
+
+    with (
+        patch(
+            "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get",
+            return_value=response,
+        ) as get,
+        pytest.warns(
+            UserWarning,
+            match=r"Agent 'Slack Agent' declares apps \[slack/send-message\]",
+        ),
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+    assert get.call_args.kwargs["params"] == {"apps": "slack/send-message"}
+
+
+def test_get_platform_tools_warns_when_token_is_missing(monkeypatch, capsys):
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    agent = Agent(
+        role="No Token Agent", goal="g", backstory="b", apps=["gmail"], verbose=True
+    )
+
+    with pytest.warns(
+        UserWarning, match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set"
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+    assert "No Enterprise Action Auth Token found" in capsys.readouterr().out
+
+
+def test_get_platform_tools_warning_names_the_renamed_token(monkeypatch):
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "old-token")
+    agent = Agent(role="Old Token Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(
+        UserWarning,
+        match=r"Cause: CREWAI_PLATFORM_INTEGRATION_TOKEN is set, but CrewAI now "
+        r"reads the Enterprise Action Auth Token only from "
+        r"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warning_includes_the_resolution_error(monkeypatch):
+    def fail(apps):
+        raise RuntimeError("integrations API returned 503")
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", fail)
+    agent = Agent(role="Failing Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(
+        UserWarning, match=r"Cause: integrations API returned 503$"
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warning_has_no_cause_without_an_error(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Empty Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(UserWarning, match="none resolved to any tools") as caught:
+        agent.get_platform_tools(agent.apps)
+
+    assert "Cause:" not in str(caught[0].message)
+
+
+def test_get_platform_tools_quiet_when_tools_resolve(monkeypatch):
+    @tool
+    def platform_tool() -> str:
+        """A resolved platform tool."""
+        return "ok"
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [platform_tool])
+    agent = Agent(role="A", goal="g", backstory="b", apps=["gmail"])
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == [platform_tool]
+    assert not any("resolved to any tools" in str(w.message) for w in caught)
+
+
+def test_crew_prepare_tools_warns_on_empty_apps(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Crew Agent", goal="g", backstory="b", apps=["gmail"])
+    task = Task(description="d", expected_output="o", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.warns(
+        UserWarning, match=r"Agent 'Crew Agent' declares apps \[gmail\]"
+    ):
+        crew._prepare_tools(agent, task, [])
+
+
 def test_agent_mcps_accepts_slug_with_specific_tool():
     """Agent(mcps=["notion#get_page"]) must pass validation (_SLUG_RE)."""
     agent = Agent(
@@ -2723,25 +2947,9 @@ class TestSharedLLMStopWords:
     """
 
     @staticmethod
-    def _make_executor(llm: LLM, stop_words: list[str]) -> CrewAgentExecutor:
-        """Build a CrewAgentExecutor with minimal deps."""
-        from crewai.agents.tools_handler import ToolsHandler
-
-        agent = Agent(role="r", goal="g", backstory="b")
-        task = Task(description="d", expected_output="o", agent=agent)
-        return CrewAgentExecutor(
-            agent=agent,
-            task=task,
-            llm=llm,
-            crew=None,
-            prompt={"prompt": "p {input} {tool_names} {tools}"},
-            max_iter=5,
-            tools=[],
-            tools_names="",
-            stop_words=stop_words,
-            tools_description="",
-            tools_handler=ToolsHandler(),
-        )
+    def _make_executor(llm: LLM, stop_words: list[str]) -> AgentExecutor:
+        """Build an AgentExecutor carrying only the fields this test reads."""
+        return AgentExecutor.model_construct(llm=llm, stop_words=stop_words)
 
     def test_executor_init_does_not_mutate_shared_llm(self) -> None:
         """Constructing executors must not touch the shared LLM's stop list."""
@@ -2817,7 +3025,7 @@ class TestSharedLLMStopWords:
         exec_a = self._make_executor(shared, stop_words=["StopA:"])
         exec_b = self._make_executor(shared, stop_words=["StopB:"])
 
-        async def run(executor: CrewAgentExecutor, expected: str) -> set[str]:
+        async def run(executor: AgentExecutor, expected: str) -> set[str]:
             with _llm_stop_words_applied(shared, executor):
                 await asyncio.sleep(0)
                 seen = set(shared.stop_sequences)
@@ -2877,3 +3085,4 @@ class TestSharedLLMStopWords:
 
         assert seen == [{"Original:", "Observation:"}]
         assert shared.stop == ["Original:"]
+

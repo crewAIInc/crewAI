@@ -43,6 +43,7 @@ class TaskOutputStorageHandler:
         if log.get("was_replayed", False):
             replayed = {
                 "task_id": str(log["task"].id),
+                "task_key": log["task"].key,
                 "expected_output": log["task"].expected_output,
                 "output": log["output"],
                 "was_replayed": log["was_replayed"],

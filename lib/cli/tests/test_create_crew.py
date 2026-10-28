@@ -1,19 +1,33 @@
+import ast
+import asyncio
+import builtins
 import keyword
+import itertools
+import os
+import re
+import shlex
 import shutil
 import tempfile
+import threading
+import warnings
 from pathlib import Path
 from unittest import mock
+from uuid import UUID
 
+import click
+import httpx
 import pytest
 import tomli
 from click.testing import CliRunner
+from crewai_core.platform_apps import PLATFORM_APP_CATEGORIES, PLATFORM_APPS
 from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli import __version__ as crewai_cli_version
 from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
-from crewai_cli.utils import render_template
+from crewai_cli.utils import copy_assistant_instructions, render_template
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -465,18 +479,33 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
 
     tools = json_crew._select_tools()
 
-    assert tools == ["SerperDevTool", "DirectoryReadTool"]
+    assert tools == ["SerperDevTool", "FileReadTool"]
     assert len(picker_calls) == 1
     labels = picker_calls[0][1]
     assert 0 in picker_calls[0][2]["separator_indices"]
     assert labels[0] == "── Common tools ──"
     assert labels[1].strip().endswith("SerperDevTool")
     assert labels[2].strip().endswith("ScrapeWebsiteTool")
-    assert labels[3].strip().endswith("DirectoryReadTool")
-    assert labels[4].strip().endswith("FileReadTool")
-    assert labels[5].strip().endswith("FileWriterTool")
+    assert labels[3].strip().endswith("FileReadTool")
+    assert labels[4].startswith("Gmail Integration")
+    assert labels[4].endswith("Platform: GmailIntegration (66 tools)")
+    assert labels[5].startswith("WhatsApp Integration")
+    assert labels[5].endswith("Platform: WhatsAppIntegration (58 tools)")
     assert labels[1].index("Google search") < labels[1].index("SerperDevTool")
     assert "More tools" not in labels
+
+
+def test_platform_action_picker_is_searchable(monkeypatch):
+    picker_calls: list[dict[str, object]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append(kwargs)
+        return []
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_platform_actions(["platform:github"]) == []
+    assert picker_calls[0]["searchable"] is True
 
 
 def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
@@ -499,6 +528,7 @@ def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     assert len(action_indices) >= 4
     # Only the common tools section is visible beyond the category rows
     assert len(labels) == 1 + 5 + len(action_indices)
+    assert f"▸ CrewAI Platform  ({len(PLATFORM_APPS)} applications)" in labels
 
 
 def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
@@ -579,15 +609,26 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
     expanded_labels: list[str] = []
 
+    categories = [
+        "Search & Research",
+        "Web Scraping",
+        "File & Document",
+        "Code & Data",
+        "Cloud & Storage",
+        "Sandbox & Automation",
+        "AI & Vision",
+    ]
+
     def pick_many(title: str, labels: list[str], **kwargs):
         picker_calls.append((title, labels, kwargs))
         expanded_labels.extend(labels)
-        action_indices = sorted(kwargs["action_indices"])
         call_num = len(picker_calls)
-        if call_num <= len(action_indices):
-            # Expand the n-th category (indices shift between renders, so
-            # recompute from this render's action rows)
-            return [], action_indices[call_num - 1]
+        if call_num <= len(categories):
+            category = categories[call_num - 1]
+            category_row = next(
+                idx for idx, label in enumerate(labels) if category in label
+            )
+            return [], category_row
         return [], None
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
@@ -618,6 +659,507 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
         "ScrapegraphScrapeToolSchema",
         "SnowflakeConfig",
     }.isdisjoint(tool_names)
+
+
+def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
+    picker_calls = 0
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        nonlocal picker_calls
+        picker_calls += 1
+        if picker_calls == 1:
+            platform_row = next(
+                idx for idx, label in enumerate(labels) if "CrewAI Platform" in label
+            )
+            return [], platform_row
+
+        if picker_calls == 2:
+            engineering = next(
+                idx
+                for idx, label in enumerate(labels)
+                if "Engineering, data & infrastructure" in label
+            )
+            return [], engineering
+
+        if picker_calls == 3:
+            github = next(
+                idx
+                for idx, label in enumerate(labels)
+                if label.strip().startswith("GitHub Integration")
+            )
+            return [github], None
+
+        create_repository = next(
+            idx
+            for idx, label in enumerate(labels)
+            if label == "Create repository (create_repository)"
+        )
+        return [create_repository]
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+    monkeypatch.setattr(
+        json_crew, "_prompt_text", lambda label, **kwargs: label.lower()
+    )
+    monkeypatch.setattr(json_crew, "_select_model", lambda: "openai/gpt-5.5")
+    monkeypatch.setattr(json_crew, "_confirm", lambda *_args, **_kwargs: False)
+
+    agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
+
+    assert agent is not None
+    assert agent["tools"] == ["platform:github/create_repository"]
+    assert (
+        '"tools": ["platform:github/create_repository"]'
+        in json_crew._agent_to_jsonc(agent)
+    )
+
+
+def test_platform_applications_expand_in_the_main_tool_picker(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append((title, labels, kwargs))
+        if len(picker_calls) == 1:
+            platform = next(
+                index
+                for index, label in enumerate(labels)
+                if "CrewAI Platform" in label
+            )
+            return [], platform
+        if len(picker_calls) == 2:
+            group = next(
+                index
+                for index, label in enumerate(labels)
+                if "Engineering, data & infrastructure" in label
+            )
+            return [], group
+        github = next(
+            index
+            for index, label in enumerate(labels)
+            if label.strip().startswith("GitHub Integration")
+        )
+        return [github], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_tools() == ["platform:github"]
+    labels = picker_calls[1][1]
+    assert labels[0] == "── Common tools ──"
+    for category in PLATFORM_APP_CATEGORIES:
+        assert f"  ▸ {category.name}  ({len(category.apps)} applications)" in labels
+    assert picker_calls[1][2]["initial_cursor"] == next(
+        index for index, label in enumerate(labels) if "CrewAI Platform" in label
+    )
+    assert picker_calls[1][2]["searchable"] is True
+    github_index = next(
+        index
+        for index, label in enumerate(labels)
+        if label.strip().startswith("GitHub Integration")
+    )
+    assert github_index in picker_calls[1][2]["collapsed_indices"]
+    assert all(title != "Platform applications (space to toggle, enter to return):" for title, *_ in picker_calls)
+
+
+def test_json_wizard_platform_catalog_contains_every_supported_app():
+    platform_category = next(
+        tools
+        for category, tools in json_crew._TOOL_CATEGORIES
+        if category == "CrewAI Platform"
+    )
+
+    assert [name for name, _description in platform_category] == [
+        f"platform:{app}" for app in PLATFORM_APPS
+    ]
+
+
+def test_platform_validation_deduplicates_actions_by_application() -> None:
+    apps = json_crew._platform_apps_from_agents(
+        [
+            {
+                "tools": [
+                    "platform:github/create_repository",
+                    "platform:github/get_repository_content",
+                    "platform:gmail/send_email",
+                ]
+            },
+            {"tools": ["platform:github/list_repository_issues"]},
+        ]
+    )
+
+    assert apps == ["github", "gmail"]
+
+
+def test_platform_revalidation_requires_confirmation(monkeypatch) -> None:
+    confirm_options: list[dict[str, object]] = []
+
+    def confirm(_label: str, **kwargs: object) -> bool:
+        confirm_options.append(kwargs)
+        return True
+
+    monkeypatch.setattr(json_crew.click, "confirm", confirm)
+
+    assert json_crew._confirm_platform_revalidation()
+    assert confirm_options == [{"default": True}]
+
+
+def test_platform_validation_guidance_links_to_amp(capsys) -> None:
+    json_crew._show_platform_validation_guidance(
+        ["whatsapp"], False, "https://app.crewai.com/"
+    )
+
+    output = capsys.readouterr().out
+    assert "Connect the WhatsApp integration in CrewAI AMP" in output
+    assert "https://app.crewai.com" in output
+
+
+def test_get_logged_in_platform_token_uses_saved_login_and_organization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = mock.Mock()
+    client.get_integration_token.return_value = "integration-token"
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://fake.crewai.com")
+    monkeypatch.setattr(
+        json_crew,
+        "Settings",
+        lambda: mock.Mock(
+            org_uuid="organization-id",
+            enterprise_base_url="https://app.crewai.com",
+        ),
+    )
+    plus_api = mock.Mock(return_value=client)
+    monkeypatch.setattr(json_crew, "PlusAPI", plus_api)
+
+    assert json_crew._get_logged_in_platform_token() == "integration-token"
+
+    plus_api.assert_called_once_with(
+        api_key="login-token",
+        organization_id="organization-id",
+        base_url="https://app.crewai.com",
+    )
+    client.get_integration_token.assert_called_once_with()
+
+
+def test_get_logged_in_platform_token_requires_selected_organization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setattr(json_crew, "Settings", lambda: mock.Mock(org_uuid=None))
+
+    with pytest.raises(RuntimeError, match="No CrewAI organization is selected"):
+        json_crew._get_logged_in_platform_token()
+
+
+def test_get_platform_token_from_login_signs_in_then_retries(monkeypatch) -> None:
+    tokens = iter([json_crew.AuthError("No token found"), "integration-token"])
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(
+        json_crew,
+        "_get_logged_in_platform_token",
+        get_token,
+    )
+
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command.login.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_stops_when_the_login_times_out(
+    monkeypatch,
+) -> None:
+    """A timed-out login exits cleanly instead of retrying into an AuthError."""
+    attempts: list[bool] = []
+
+    def get_token() -> str:
+        attempts.append(True)
+        raise json_crew.AuthError("No token found")
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    authentication_command.login.side_effect = SystemExit(1)
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        json_crew._get_platform_token_from_login()
+
+    assert exc_info.value.code == 1
+    assert attempts == [True]
+
+
+def test_get_platform_token_from_login_reauthenticates_an_expired_login(
+    monkeypatch,
+) -> None:
+    response = mock.Mock(status_code=401)
+    tokens = iter(
+        [
+            httpx.HTTPStatusError(
+                "Unauthorized", request=mock.Mock(), response=response
+            ),
+            "integration-token",
+        ]
+    )
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command.login.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_reports_forbidden_organization(monkeypatch) -> None:
+    response = mock.Mock(status_code=403)
+    error = httpx.HTTPStatusError("Forbidden", request=mock.Mock(), response=response)
+    monkeypatch.setattr(
+        json_crew,
+        "_get_logged_in_platform_token",
+        mock.Mock(side_effect=error),
+    )
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(click.ClickException, match="does not have access"):
+        json_crew._get_platform_token_from_login()
+
+    authentication_command.login.assert_not_called()
+
+
+def test_get_platform_token_from_login_selects_missing_organization(monkeypatch) -> None:
+    tokens = iter(
+        [json_crew._NoOrganizationSelectedError(), "integration-token"]
+    )
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command._select_organization.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_requires_organization_selection(monkeypatch) -> None:
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setattr(json_crew, "Settings", lambda: mock.Mock(org_uuid=None))
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(
+        click.ClickException,
+        match="A CrewAI organization must be selected",
+    ):
+        json_crew._get_platform_token_from_login()
+
+    authentication_command._select_organization.assert_called_once_with()
+
+
+def test_platform_auth_suppresses_warnings_only_while_importing_tools(
+    monkeypatch, capsys
+):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_with_warning(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            warnings.warn("optional dependency import warning", UserWarning)
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_with_warning)
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+    get_token = mock.Mock()
+    monkeypatch.setattr(json_crew, "_get_platform_token_from_login", get_token)
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
+        warnings.warn("warning after import", UserWarning)
+
+    assert [str(warning.message) for warning in caught_warnings] == [
+        "warning after import"
+    ]
+    output = capsys.readouterr().out
+    assert "Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN" in output
+    assert (
+        "Enterprise Action Auth Token found via "
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable" in output
+    )
+    get_token.assert_not_called()
+
+
+def test_platform_auth_fetches_token_from_login_when_env_is_missing(monkeypatch) -> None:
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_integrations(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_integrations)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    get_token = mock.Mock(return_value="login-token")
+    monkeypatch.setattr(json_crew, "_get_platform_token_from_login", get_token)
+
+    assert json_crew._setup_platform_auth([{"tools": ["platform:github"]}]) == "login-token"
+
+    get_token.assert_called_once_with()
+    assert os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] == "login-token"
+
+
+def test_platform_validation_checks_apps_concurrently():
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    barrier = threading.Barrier(2)
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            barrier.wait(timeout=1)
+            return [object()]
+
+    results = asyncio.run(
+        json_crew._check_platform_apps_concurrently(
+            ["github", "gmail"],
+            FakeApplicationSelector,
+            lambda _selector, **_kwargs: FakeClient(),
+        )
+    )
+
+    assert all(actions and error is None for actions, error in results)
+
+
+def test_platform_validation_announces_concurrent_apps_together(capsys):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            return [object()]
+
+    failed_apps, token_invalid = json_crew._validate_platform_apps(
+        ["github", "gmail", "google_calendar"],
+        FakeApplicationSelector,
+        lambda _selector, **_kwargs: FakeClient(),
+    )
+
+    output = capsys.readouterr().out
+    assert (failed_apps, token_invalid) == ([], False)
+    assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
+    assert "Checking Enterprise Action Auth Token and GitHub" not in output
+
+
+def test_platform_validation_passes_configured_amp_url_to_client_factory() -> None:
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    received_base_urls: list[str | None] = []
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            return [object()]
+
+    def client_factory(_selector, *, base_url=None):
+        received_base_urls.append(base_url)
+        return FakeClient()
+
+    assert json_crew._validate_platform_apps(
+        ["github"],
+        FakeApplicationSelector,
+        client_factory,
+        "https://app.crewai.com",
+    ) == ([], False)
+    assert received_base_urls == ["https://app.crewai.com"]
+
+
+def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    checked_apps: list[str] = []
+
+    class FakeClient:
+        def __init__(self, app: str):
+            self.app = app
+
+        def get_actions(self, _selectors):
+            checked_apps.append(self.app)
+            return [object()]
+
+    monkeypatch.setattr(json_crew.asyncio, "get_running_loop", object)
+
+    failed_apps, token_invalid = json_crew._validate_platform_apps(
+        ["github", "gmail"],
+        FakeApplicationSelector,
+        lambda app, **_kwargs: FakeClient(app),
+    )
+
+    assert (failed_apps, token_invalid) == ([], False)
+    assert checked_apps == ["github", "gmail"]
+    output = capsys.readouterr().out
+    assert "Checking Enterprise Action Auth Token and GitHub integration" in output
+    assert "Checking Enterprise Action Auth Token and Gmail integration" in output
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
@@ -762,12 +1304,15 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
     assert dependency == get_crewai_tools_dependency()
-    assert Version("1.15.0") in Requirement(dependency).specifier
-    assert Version("2.0.0") not in Requirement(dependency).specifier
+    current = Version(crewai_cli_version)
+    assert current in Requirement(dependency).specifier
+    assert Version(f"{current.major + 1}.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
-    assert pyproject["tool"]["crewai"] == {
+    crewai_table = pyproject["tool"]["crewai"]
+    UUID(crewai_table.pop("project_id"))
+    assert crewai_table == {
         "type": "crew",
         "definition": "crew.jsonc",
     }
@@ -840,6 +1385,44 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         agent_template
     )
     assert '"knowledge_sources": []' in agent_template
+
+
+def test_json_create_saves_platform_token_to_env_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: (
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-5.5",
+                    "tools": ["platform:github"],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    )
+    monkeypatch.setattr(json_crew, "_setup_platform_auth", lambda _agents: "token")
+
+    json_crew.create_json_crew("Platform Crew", skip_provider=True)
+
+    env_file = tmp_path / "platform_crew" / ".env"
+    assert "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN=token" in env_file.read_text()
 
 
 def test_json_crew_uses_template_files():
@@ -933,4 +1516,366 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )
-    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+    default_model = json_crew._default_model_for_provider("anthropic")
+    assert f'"llm": "{default_model}"' in agent_template
+
+
+def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    project_root = tmp_path / "my_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert agents_md.index("## Working in this project") < agents_md.index("## Reference")
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in cursor_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    [keep_on] = [
+        line
+        for line in agents_md.splitlines()
+        if line.startswith("Never turn off tracing or telemetry")
+    ]
+    assert "to silence errors, speed things up or tidy the setup" in keep_on
+    assert "check DNS and proxy settings" in keep_on
+    assert "it's their decision" in keep_on
+    assert "free" not in agents_md.lower()
+    assert "pricing" not in agents_md.lower()
+
+
+def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with mock.patch(
+        "crewai_cli.create_json_crew._wizard_agents_and_tasks",
+        return_value=(
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-4o",
+                    "tools": [],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    ):
+        json_crew.create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+
+    project_root = tmp_path / "json_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "## Working in this project" in agents_md
+    assert "### Check every change: evaluate" in agents_md
+    assert "crewai-eval:" not in agents_md
+    assert "crew.jsonc" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in cursor_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "is done when a traced run passes `crewai eval`, not when the code runs" in agents_md
+    assert "prints a markdown brief of what failed and the change to make" in agents_md
+    assert "It exits 0 only when the goal gate passed" in agents_md
+    assert "`crewai eval --models " in agents_md
+    assert "crewai-eval:" not in agents_md  # the markers never reach a project
+
+
+def test_scaffolded_agents_md_evaluates_logged_out_without_skipping_the_login(
+    tmp_path, monkeypatch
+):
+    """Logged out, agents evaluate right away and still start the login; measured 10-19,
+    "don't wait on a login" alone made agents stop offering to log in."""
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "`crewai eval`, logged in or out, with or without a terminal" in agents_md
+    assert "start the login hand-off" in agents_md
+    assert "evaluate without waiting for it" in agents_md
+    assert "Stop when the goal gate passes or after three rounds" in agents_md
+    assert "report the first and latest grades with both report links" in agents_md
+
+
+def _cli_args(line: str) -> list[str]:
+    """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
+    words = shlex.split(line.split("#", 1)[0])[1:]
+    return ["value" if "<" in word else word for word in words]
+
+
+def _parse_cli_args(args: list[str]) -> None:
+    """Parse ARGS against the real CLI without running the command."""
+    command: click.Command = crewai
+    name = "crewai"
+    # A group can run without a subcommand, options and all (`crewai eval --models …`,
+    # beside `crewai eval export ID`).
+    while isinstance(command, click.Group) and args and not args[0].startswith("-"):
+        name, *args = args
+        subcommand = command.get_command(click.Context(command), name)
+        assert subcommand is not None, f"unknown command {name!r}"
+        command = subcommand
+    command.make_context(name, args)
+
+
+def test_agents_md_command_parser_accepts_a_group_run_without_a_subcommand():
+    _parse_cli_args(_cli_args("crewai eval"))
+    _parse_cli_args(_cli_args('crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"'))
+
+
+def test_agents_md_command_parser_rejects_a_group_that_needs_a_subcommand():
+    with pytest.raises(click.UsageError):
+        _parse_cli_args(_cli_args("crewai deploy"))
+
+
+def test_parse_cli_args_rejects_a_positional_deployment_id():
+    with pytest.raises(click.UsageError, match="unexpected extra argument"):
+        _parse_cli_args(_cli_args("crewai deploy remove <id>"))
+
+
+def _documented_commands(agents_md: str) -> list[str]:
+    """Every inline `crewai …` command in AGENTS.md, one per `a|b` alternative."""
+    commands = []
+    for span in re.findall(r"`(crewai [^`]+)`", agents_md):
+        words = shlex.split(span)
+        alternatives = [word.split("|") if "|" in word and "<" not in word else [word] for word in words]
+        for choice in itertools.product(*alternatives):
+            commands.append(" ".join(choice))
+    return commands
+
+
+def test_scaffolded_agents_md_commands_parse_against_the_cli(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    commands = _documented_commands(agents_md)
+
+    for documented in (
+        "crewai deploy remove -u <uuid>",
+        "crewai deploy create -y",
+        "crewai org list",
+        "crewai org switch <uuid>",
+        "crewai eval",
+    ):
+        assert documented in commands, documented
+    for command in commands:
+        try:
+            _parse_cli_args(_cli_args(command))
+        except click.MissingParameter:
+            pass  # named without its arguments in prose, e.g. "the old `crewai tool create` style"
+
+
+def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Code is in a GitHub repository" not in agents_md
+    # `crewai deploy create` sends any `origin` URL; AMP builds from GitHub or another git host.
+    assert "AMP builds from GitHub" not in agents_md
+    assert "AMP builds from that remote, on GitHub or another git host" in agents_md
+    assert "With no git `origin` it uploads a ZIP" in agents_md
+    assert "There's no flag to upload a ZIP" not in agents_md
+    assert "`crewai deploy create -y --zip`" in agents_md
+    assert "uploads `.env` as its environment variables" in agents_md
+
+
+def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    # PLATFORM_APPS lists the apps, but some of its action names resolve to no tool.
+    assert "source of truth" not in agents_md
+    assert "copy selectors from those; a selector must load at least one tool" in agents_md
+    assert "`CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` in `.env`" in agents_md
+    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" not in agents_md
+    assert "`app[/action][@connection]`" in agents_md
+    assert "`apps: [slack/send_message]` in YAML" in agents_md
+
+
+@pytest.mark.parametrize("evaluation", [True, False])
+def test_agents_md_numbered_lists_have_no_gaps(tmp_path, evaluation):
+    # The evaluation blocks are cut from tool projects; what remains must still read in order.
+    copy_assistant_instructions(tmp_path, evaluation=evaluation)
+
+    agents_md = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    numbers: list[int] = []
+    for line in [*agents_md.splitlines(), ""]:
+        item = re.match(r"(\d+)\. ", line)
+        if item:
+            numbers.append(int(item.group(1)))
+        elif not line.startswith((" ", "\t")):  # an indented line continues the item
+            assert numbers == list(range(1, len(numbers) + 1)), numbers
+            numbers = []
+    assert not re.search(r"^### \d", agents_md, re.M)
+    assert ("crewai eval" in agents_md) is evaluation
+
+
+# Guards for the AGENTS.md every crew and flow project receives: references nobody
+# meant to delete, a size budget, and code and links that work. Whether an edit makes
+# coding agents better or worse is measured separately, with models in the loop.
+
+# Every capability the file must at least name. Removing one is a deliberate edit
+# here, in the same diff, so a reviewer sees it.
+AGENTS_MD_REFERENCES = {
+    # Core API: models outside the Claude family don't know these without the file.
+    "classic crew class": r"@CrewBase",
+    "task context": r"context=",
+    "crew output": r"CrewOutput",
+    "custom tools": r"BaseTool",
+    "flow decorators": r"@start\(\)",
+    "flow state": r"Flow\[",
+    "flow router": r"@router",
+    # Facts V6 lost to today's file until they were put back.
+    "context window": r"respect_context_window",
+    "current date": r"inject_date",
+    "human review of a task": r"human_input",
+    "LiteLLM for other providers": r"crewai\[litellm\]",
+    "test targets before writes": r"test (channel|target)",
+    # The features telemetry counts most, named the way telemetry counts them.
+    "interception hooks": r"InterceptionPoint",
+    "agent planning": r"PlanningConfig",
+    "OpenAI Responses API": r'api="responses"',
+    "answering human feedback through AMP": r"human_feedback_requests",
+    "workflow: trace and evaluate every change": r"traced run passes `crewai eval`",
+    "workflow: ask before deploying": r"Ask before the first `crewai deploy create`",
+    "flow memory": r"self\.remember",
+    "AMP integrations": r"CrewaiPlatformTools",
+    "AMP skills": r"skills:",
+    "tool failure policy": r"tool_failure_policy",
+    "guardrails": r"guardrail",
+    "structured output": r"output_pydantic|response_format",
+    "knowledge sources": r"knowledge_sources",
+    "hierarchical process": r"Process\.hierarchical|manager_llm",
+    "delegation": r"allow_delegation",
+    "planning": r"planning_config",
+    "async and batch kickoff": r"kickoff_async|akickoff|kickoff_for_each",
+    "streaming": r"stream=True",
+    "event listeners": r"BaseEventListener",
+    "lifecycle hooks": r"@before_kickoff|@after_kickoff",
+    "MCP": r"mcps=",
+    "human feedback in flows": r"@human_feedback",
+    "conversational flows": r"conversational",
+    "declarative flows": r"--declarative|declarative flow",
+    "checkpointing": r"checkpoint",
+    "flow conditions": r"or_\(|and_\(",
+    "crewai_tools catalog": r"crewai_tools|crewai-tools",
+    "A2A": r"A2AClientConfig",
+    "file inputs": r"input_files",
+}
+
+# Always-loaded tokens (characters / 4). Raise it on purpose, with the eval's results.
+AGENTS_MD_TOKEN_BUDGET = 5_000
+
+DOCS = Path(__file__).resolve().parents[3] / "docs"
+
+# Patterns for text the file once carried that is wrong on main. Naming a
+# deprecated option to say what replaces it is allowed.
+AGENTS_MD_NEVER = (
+    r"CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
+    r"from crewai\.flow\.flow import persist",  # ImportError on crewai<=1.15.30; use crewai.flow
+    r"(?<!replaces `)reasoning=True",  # deprecated for planning_config
+    r"multimodal=True",  # deprecated: pass files natively
+    r"allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone
+)
+
+
+@pytest.fixture
+def shipped_agents_md(tmp_path) -> str:
+    copy_assistant_instructions(tmp_path, evaluation=True)
+    return (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("feature", sorted(AGENTS_MD_REFERENCES))
+def test_agents_md_references_the_feature(shipped_agents_md, feature):
+    assert re.search(AGENTS_MD_REFERENCES[feature], shipped_agents_md), (
+        f"AGENTS.md no longer references {feature}; if that is intended, "
+        "remove it from AGENTS_MD_REFERENCES in the same change"
+    )
+
+
+def test_agents_md_stays_within_its_token_budget(shipped_agents_md):
+    tokens = len(shipped_agents_md) // 4
+    assert tokens <= AGENTS_MD_TOKEN_BUDGET, (
+        f"AGENTS.md is ~{tokens} tokens, over the {AGENTS_MD_TOKEN_BUDGET} budget"
+    )
+
+
+@pytest.mark.parametrize("text", AGENTS_MD_NEVER)
+def test_agents_md_never_teaches_what_main_removed(shipped_agents_md, text):
+    match = re.search(text, shipped_agents_md)
+    assert match is None, f"AGENTS.md teaches {match.group(0)!r}, which is wrong on main"
+
+
+def test_agents_md_never_list_still_catches_advice():
+    assert re.search(AGENTS_MD_NEVER[2], "Agent(role=..., reasoning=True)")
+    assert not re.search(AGENTS_MD_NEVER[2], "it replaces `reasoning=True`")
+
+
+def test_agents_md_imports_resolve(shipped_agents_md):
+    imports = re.findall(r"`((?:from|import) crewai[\w.]*(?: import [\w, ]+)?)`", shipped_agents_md)
+    imports += [
+        line
+        for block in re.findall(r"```python\n(.*?)```", shipped_agents_md, re.S)
+        for line in block.splitlines()
+        if re.match(r"(from|import) crewai", line)
+    ]
+    assert imports, "AGENTS.md shows no crewai import to check"
+    for statement in imports:
+        exec(statement, {})  # noqa: S102 - our own template's import lines
+
+
+def test_agents_md_python_examples_compile(shipped_agents_md):
+    for block in re.findall(r"```python\n(.*?)```", shipped_agents_md, re.S):
+        ast.parse(block)
+
+
+def test_agents_md_docs_paths_exist(shipped_agents_md):
+    # Index lines end with a docs path relative to https://docs.crewai.com/en/.
+    links = re.findall(
+        r"`([a-z]+(?:/[a-z0-9-]+)+)(?:#([a-z0-9-]+))?`\s*$", shipped_agents_md, re.M
+    )
+    assert links, "AGENTS.md links no docs pages to check"
+    nav = (DOCS / "docs.json").read_text(encoding="utf-8")
+    for page, anchor in links:
+        assert f'"edge/en/{page}"' in nav, f"{page} is not in the docs nav"
+        if anchor:
+            mdx = (DOCS / "edge/en" / f"{page}.mdx").read_text(encoding="utf-8")
+            headings = re.findall(r"^#+ (.+)$", mdx, re.M)
+            slugs = {re.sub(r"[^a-z0-9]+", "-", h.lower()).strip("-") for h in headings}
+            assert anchor in slugs, f"{page} has no #{anchor} heading"

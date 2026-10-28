@@ -2,22 +2,40 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
+import warnings
 
 import click
+from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
+from crewai_core.platform_apps import (
+    PLATFORM_APPLICATION_CATALOG,
+    PLATFORM_APP_CATEGORIES,
+    PLATFORM_APP_DISPLAY_NAMES,
+    PLATFORM_APP_TOOLS,
+    PLATFORM_APP_TOOL_COUNTS,
+)
+from crewai_core.settings import Settings
 from crewai_core.telemetry import Telemetry
+import httpx
 from rich.console import Console
 from rich.text import Text
 
+from crewai_cli.authentication.main import AuthenticationCommand
+from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
+    copy_assistant_instructions,
     enable_prompt_line_editing,
     get_or_create_project_id,
     is_dmn_mode_enabled,
@@ -72,6 +90,7 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
     ],
     "gemini": [
+        ("gemini-3.8-flash", "Gemini 3.8 Flash"),
         ("gemini-3.5-flash", "Gemini 3.5 Flash"),
         ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
         ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
@@ -100,9 +119,23 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
 
+class _NoOrganizationSelectedError(RuntimeError):
+    """Raised when the saved CLI login has no active organization."""
+
+
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
+    (
+        "CrewAI Platform",
+        [
+            (
+                f"platform:{application.slug}",
+                f"{application.display_name} Integration",
+            )
+            for application in PLATFORM_APPLICATION_CATALOG
+        ],
+    ),
     (
         "Search & Research",
         [
@@ -227,9 +260,9 @@ _FLAT_TOOLS: list[tuple[str, str]] = [
 _COMMON_TOOL_ORDER = [
     "SerperDevTool",
     "ScrapeWebsiteTool",
-    "DirectoryReadTool",
     "FileReadTool",
-    "FileWriterTool",
+    "platform:gmail",
+    "platform:whatsapp",
 ]
 
 _ANSI_SEQUENCE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -304,6 +337,13 @@ def _show_interpolation_hint(kind: str) -> None:
 
 
 def _tool_label(name: str, description: str) -> str:
+    if name.startswith("platform:"):
+        app_name = description.removesuffix(" Integration").replace(" ", "")
+        tool_count = PLATFORM_APP_TOOL_COUNTS.get(name.removeprefix("platform:"), 0)
+        return (
+            f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration "
+            f"({tool_count} tools)"
+        )
     return f"{description:<48s} {name}"
 
 
@@ -312,12 +352,20 @@ def _tool_category_label(category: str) -> str:
 
 
 def _category_row_label(
-    category: str, tools: list[tuple[str, str]], selected: set[str], expanded: bool
+    category: str,
+    tools: list[tuple[str, str]],
+    selected: set[str],
+    expanded: bool,
+    *,
+    item_label: str | None = None,
 ) -> str:
     """Render an accordion category row with tool/selection counts."""
     marker = "▾" if expanded else "▸"
     sel_count = sum(1 for name, _desc in tools if name in selected)
-    suffix = f"{len(tools)} tools"
+    item_label = item_label or (
+        "applications" if category == "CrewAI Platform" else "tools"
+    )
+    suffix = f"{len(tools)} {item_label}"
     if sel_count:
         suffix += f", {sel_count} selected"
     return f"{marker} {category}  ({suffix})"
@@ -338,8 +386,26 @@ def _select_tools() -> list[str]:
     ]
     common_tool_names = {name for name, _desc in common_tools}
 
+    platform_tools = next(
+        tools for category, tools in _TOOL_CATEGORIES if category == "CrewAI Platform"
+    )
+    platform_groups = [
+        (
+            category.name,
+            [
+                (
+                    f"platform:{app}",
+                    f"{PLATFORM_APP_DISPLAY_NAMES[app]} Integration",
+                )
+                for app in category.apps
+            ],
+        )
+        for category in PLATFORM_APP_CATEGORIES
+    ]
     categories: list[tuple[str, list[tuple[str, str]]]] = []
     for category, category_tools in _TOOL_CATEGORIES:
+        if category == "CrewAI Platform":
+            continue
         remaining_tools = [
             (name, desc)
             for name, desc in category_tools
@@ -350,14 +416,17 @@ def _select_tools() -> list[str]:
 
     selected: set[str] = set()
     expanded: str | None = None
+    expanded_platform_group: str | None = None
     focus_category: str | None = None
+    first_render = True
 
     while True:
         labels: list[str] = []
         tool_by_index: dict[int, str] = {}
         separator_indices: set[int] = set()
         action_indices: set[int] = set()
-        category_by_index: dict[int, str] = {}
+        action_by_index: dict[int, tuple[str, str]] = {}
+        collapsed_indices: set[int] = set()
         preselected: set[int] = set()
         initial_cursor: int | None = None
 
@@ -369,10 +438,49 @@ def _select_tools() -> list[str]:
             tool_by_index[len(labels)] = name
             labels.append(_tool_label(name, desc))
 
+        platform_row = len(labels)
+        action_indices.add(platform_row)
+        action_by_index[platform_row] = ("category", "CrewAI Platform")
+        if focus_category == "CrewAI Platform":
+            initial_cursor = platform_row
+        labels.append(
+            _category_row_label(
+                "CrewAI Platform",
+                platform_tools,
+                selected,
+                expanded == "CrewAI Platform",
+            )
+        )
+        if expanded == "CrewAI Platform":
+            for group, apps in platform_groups:
+                row = len(labels)
+                action_indices.add(row)
+                action_by_index[row] = ("platform_group", group)
+                is_expanded = group == expanded_platform_group
+                if group == focus_category:
+                    initial_cursor = row
+                labels.append(
+                    "  "
+                    + _category_row_label(
+                        group,
+                        apps,
+                        selected,
+                        is_expanded,
+                        item_label="applications",
+                    )
+                )
+                for name, description in apps:
+                    if name in selected:
+                        preselected.add(len(labels))
+                    tool_by_index[len(labels)] = name
+                    labels.append("    " + _tool_label(name, description))
+                    if not is_expanded:
+                        collapsed_indices.add(len(labels) - 1)
+
         for category, category_tools in categories:
             row = len(labels)
             action_indices.add(row)
-            category_by_index[row] = category
+            action_by_index[row] = ("category", category)
             is_expanded = category == expanded
             if category == focus_category:
                 initial_cursor = row
@@ -387,13 +495,17 @@ def _select_tools() -> list[str]:
                     labels.append(_tool_label(name, desc))
 
         indices, action = pick_many(
-            "Tools (space to toggle, enter to confirm):",
+            "Tools (space to toggle, enter to confirm):" if first_render else "",
             labels,
             action_indices=action_indices,
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
+            searchable=expanded == "CrewAI Platform",
+            collapsed_indices=collapsed_indices,
+            search_title="SEARCH APPLICATIONS",
         )
+        first_render = False
 
         # Carry over toggles made on this screen; tools not visible in this
         # render keep their previous state.
@@ -403,14 +515,67 @@ def _select_tools() -> list[str]:
 
         if action is None:
             break
-        toggled = category_by_index.get(action)
-        focus_category = toggled
-        expanded = None if toggled == expanded else toggled
+        action_type, category = action_by_index[action]
+        if action_type == "platform_group":
+            focus_category = category
+            expanded_platform_group = (
+                None if category == expanded_platform_group else category
+            )
+            continue
 
-    ordered = [name for name, _desc in common_tools] + [
-        name for _cat, cat_tools in categories for name, _desc in cat_tools
-    ]
+        focus_category = category
+        if category == "CrewAI Platform":
+            expanded = None if category == expanded else category
+            expanded_platform_group = None
+        else:
+            expanded = None if category == expanded else category
+            expanded_platform_group = None
+
+    ordered = (
+        [name for name, _desc in common_tools]
+        + [
+            f"platform:{app}"
+            for category in PLATFORM_APP_CATEGORIES
+            for app in category.apps
+            if f"platform:{app}" not in common_tool_names
+        ]
+        + [name for _cat, cat_tools in categories for name, _desc in cat_tools]
+    )
     return [name for name in ordered if name in selected]
+
+
+def _select_platform_actions(selected_tools: list[str]) -> list[str]:
+    """Replace selected Platform applications with the chosen actions for an agent."""
+    platform_apps = [
+        tool.removeprefix("platform:")
+        for tool in selected_tools
+        if tool.startswith("platform:") and "/" not in tool
+    ]
+    non_platform_tools = [
+        tool for tool in selected_tools if not tool.startswith("platform:")
+    ]
+    platform_actions = [
+        tool for tool in selected_tools if tool.startswith("platform:") and "/" in tool
+    ]
+
+    for app in platform_apps:
+        app_tools = PLATFORM_APP_TOOLS[app]
+        default_slugs = set(PLATFORM_APP_DEFAULT_TOOLS[app])
+        action_indices = pick_many(
+            f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
+            [f"{item.display_name} ({item.slug})" for item in app_tools],
+            searchable=True,
+            preselected={
+                index
+                for index, item in enumerate(app_tools)
+                if item.slug in default_slugs
+            },
+        )
+        platform_actions.extend(
+            f"platform:{app}/{app_tools[index].slug}" for index in action_indices
+        )
+
+    return non_platform_tools + platform_actions
 
 
 def _wizard_agent(
@@ -461,7 +626,7 @@ def _wizard_agent(
     else:
         llm = _select_model()
 
-    tools = _select_tools()
+    tools = _select_platform_actions(_select_tools())
     if tools:
         _success(f"{len(tools)} tool{'s' if len(tools) != 1 else ''}")
     else:
@@ -864,6 +1029,283 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
         click.secho("  API keys and model saved to .env file", fg="green")
 
 
+def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
+    """Return unique platform application slugs selected across all agents."""
+    apps: list[str] = []
+    for agent in agents:
+        for tool in agent.get("tools", []):
+            if isinstance(tool, str) and tool.startswith("platform:"):
+                app = tool.removeprefix("platform:").split("/", maxsplit=1)[0]
+                if app and app not in apps:
+                    apps.append(app)
+    return apps
+
+
+def _platform_app_name(app: str) -> str:
+    """Return the display name for a platform application slug."""
+    return PLATFORM_APP_DISPLAY_NAMES.get(app, app.replace("_", " ").title())
+
+
+def _get_logged_in_platform_token() -> str:
+    """Fetch the selected organization's integration token from the saved login."""
+    login_token = get_auth_token()
+    settings = Settings()
+    organization_id = settings.org_uuid
+    if not organization_id:
+        raise _NoOrganizationSelectedError("No CrewAI organization is selected")
+    api = PlusAPI(
+        api_key=login_token,
+        organization_id=organization_id,
+        base_url=settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL,
+    )
+    return api.get_integration_token()
+
+
+def _get_platform_token_from_login() -> str:
+    """Fetch an integration token, asking the user to log in when necessary."""
+    try:
+        return _get_logged_in_platform_token()
+    except AuthError:
+        click.secho(
+            "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand().login()
+    except httpx.HTTPStatusError as error:
+        status_code = getattr(error.response, "status_code", None)
+        if status_code == 403:
+            raise click.ClickException(
+                "Your account does not have access to the selected CrewAI organization. "
+                "Select another organization or ask an administrator for access."
+            ) from error
+        if status_code != 401:
+            raise
+        click.secho(
+            "  Your CrewAI login has expired; sign in again to configure integrations.",
+            fg="cyan",
+        )
+        AuthenticationCommand().login()
+    except _NoOrganizationSelectedError:
+        click.secho(
+            "  Select a CrewAI organization to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand()._select_organization()
+
+    try:
+        return _get_logged_in_platform_token()
+    except _NoOrganizationSelectedError as error:
+        raise click.ClickException(
+            "A CrewAI organization must be selected to configure integrations."
+        ) from error
+
+
+def _check_platform_app(
+    app: str,
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
+) -> tuple[Any | None, Exception | None]:
+    """Check one AMP application with the synchronous platform client."""
+    try:
+        selector = application_selector.from_string(app)
+        client = client_for_selector(selector, base_url=base_url)
+        return client.get_actions([selector]), None
+    except Exception as error:
+        return None, error
+
+
+async def _check_platform_apps_concurrently(
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
+) -> list[tuple[Any | None, Exception | None]]:
+    """Run independent AMP application checks concurrently."""
+    return await asyncio.gather(
+        *(
+            asyncio.to_thread(
+                _check_platform_app,
+                app,
+                application_selector,
+                client_for_selector,
+                base_url,
+            )
+            for app in apps
+        )
+    )
+
+
+def _report_platform_app_validation(
+    app: str,
+    actions: Any | None,
+    error: Exception | None,
+    failed: list[str],
+) -> bool:
+    """Print one AMP application validation result and return token validity."""
+    app_name = _platform_app_name(app)
+    if error is not None:
+        status_code = getattr(getattr(error, "response", None), "status_code", None)
+        if status_code in {401, 403}:
+            click.secho(
+                "  ✘ Enterprise Action Auth Token is invalid or expired",
+                fg="red",
+            )
+            return True
+        click.secho(
+            f"  ✘ {app_name} integration could not be validated: {error}",
+            fg="red",
+        )
+        failed.append(app)
+        return False
+
+    if not actions:
+        click.secho(
+            f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+            fg="red",
+        )
+        failed.append(app)
+    else:
+        click.secho(
+            f"  ✔ {app_name} integration is connected on CrewAI Platform",
+            fg="green",
+        )
+    return False
+
+
+def _validate_platform_apps(
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
+) -> tuple[list[str], bool]:
+    """Check selected AMP applications concurrently when no event loop is running."""
+    failed: list[str] = []
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        app_names = [_platform_app_name(app) for app in apps]
+        click.echo()
+        click.secho(
+            "  Checking "
+            f"{', '.join(app_names)} integration{'s' if len(app_names) != 1 else ''} "
+            "together on AMP...",
+            fg="cyan",
+        )
+        results = asyncio.run(
+            _check_platform_apps_concurrently(
+                apps, application_selector, client_for_selector, base_url
+            )
+        )
+        for app, (actions, error) in zip(apps, results, strict=True):
+            if _report_platform_app_validation(app, actions, error, failed):
+                return failed, True
+    else:
+        for app in apps:
+            app_name = _platform_app_name(app)
+            click.echo()
+            click.secho(
+                "  Checking Enterprise Action Auth Token and "
+                f"{app_name} integration on AMP...",
+                fg="cyan",
+            )
+            actions, error = _check_platform_app(
+                app, application_selector, client_for_selector, base_url
+            )
+            if _report_platform_app_validation(app, actions, error, failed):
+                return failed, True
+    return failed, False
+
+
+def _show_platform_validation_guidance(
+    failed_apps: list[str], token_invalid: bool, base_url: str
+) -> None:
+    """Tell the user what to fix before revalidating AMP integrations."""
+    click.echo()
+    if token_invalid:
+        click.secho(
+            "  Your CrewAI login could not validate the Enterprise Action Auth Token.",
+            fg="yellow",
+        )
+        return
+
+    failed_app_names = [_platform_app_name(app) for app in failed_apps]
+    click.secho(
+        "  Connect the "
+        f"{', '.join(failed_app_names)} integration"
+        f"{'s' if len(failed_app_names) != 1 else ''} in CrewAI AMP:",
+        fg="yellow",
+    )
+    click.secho(f"  {base_url.rstrip('/')}", fg="cyan")
+
+
+def _confirm_platform_revalidation() -> bool:
+    """Ask whether to retry integration validation after AMP is updated."""
+    click.echo()
+    return click.confirm(
+        click.style("  Revalidate integrations?", fg="cyan"), default=True
+    )
+
+
+def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
+    """Get and validate AMP authentication for selected platform applications."""
+    apps = _platform_apps_from_agents(agents)
+    if not apps:
+        return None
+
+    click.echo()
+    try:
+        # Importing crewai_tools currently initializes optional tool SDKs. Keep
+        # their import-time warnings out of the interactive token setup flow.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+                ApplicationSelector,
+                client_for_selector,
+            )
+    except ImportError as error:
+        raise click.ClickException(
+            "Platform tools require the 'crewai-tools' package. "
+            "Install it with `uv add crewai-tools` or "
+            "`pip install 'crewai[tools]'`."
+        ) from error
+
+    click.secho(
+        "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",
+        fg="cyan",
+    )
+    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "")
+    credential_location: str | None = None
+    if token:
+        credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
+    else:
+        token = _get_platform_token_from_login()
+        credential_location = "crewai login"
+
+    while True:
+        _success(
+            f"Enterprise Action Auth Token found via {credential_location}", dim=True
+        )
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        settings = Settings()
+        base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+        failed_apps, token_invalid = _validate_platform_apps(
+            apps,
+            ApplicationSelector,
+            client_for_selector,
+            base_url,
+        )
+        if not failed_apps and not token_invalid:
+            _success("Enterprise Action Auth Token set", bold=True)
+            _success(
+                "CrewAI Platform integrations connected: "
+                f"{', '.join(_platform_app_name(app) for app in apps)}"
+            )
+            return token
+
+        _show_platform_validation_guidance(failed_apps, token_invalid, base_url)
+        if not _confirm_platform_revalidation():
+            raise click.Abort()
+
+
 # ── Main ────────────────────────────────────────────────────────
 
 
@@ -916,12 +1358,24 @@ def create_json_crew(
             default_llm=default_llm,
         )
 
-    # Create directories
+    # Authenticate only after the full wizard is complete, but before any
+    # project files are created. The returned token is then persisted below.
+    platform_token = _setup_platform_auth(agents) if not dmn_mode else None
+
+    # Create directories only after platform authentication succeeds.
     folder_path.mkdir(parents=True)
     (folder_path / "agents").mkdir()
     (folder_path / "tools").mkdir()
     (folder_path / "skills").mkdir()
     (folder_path / "knowledge").mkdir()
+    copy_assistant_instructions(folder_path)
+
+    if platform_token:
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        env_vars = load_env_vars(folder_path)
+        env_vars["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        write_env_file(folder_path, env_vars)
+        _success("Enterprise Action Auth Token saved to .env")
 
     for agent in agents:
         _write_jsonc(

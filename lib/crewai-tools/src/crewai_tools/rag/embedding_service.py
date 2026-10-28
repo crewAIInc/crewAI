@@ -62,7 +62,7 @@ class EmbeddingService:
     def __init__(
         self,
         provider: str = "openai",
-        model: str = "text-embedding-3-small",
+        model: str | None = None,
         api_key: str | None = None,
         **kwargs: Any,
     ):
@@ -71,10 +71,16 @@ class EmbeddingService:
 
         Args:
             provider: The embedding provider to use
-            model: The model name
+            model: The model name (if not provided, uses provider default)
             api_key: API key (if not provided, will look for environment variables)
             **kwargs: Additional configuration options
         """
+        if model is None:
+            if provider == "openrouter":
+                model = "openai/text-embedding-3-small"
+            else:
+                model = "text-embedding-3-small"
+
         self.config = EmbeddingConfig(
             provider=provider,
             model=model,
@@ -98,6 +104,7 @@ class EmbeddingService:
             "jina": "JINA_API_KEY",
             "ollama": None,  # Ollama typically runs locally without API key
             "openai": "OPENAI_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
             "roboflow": "ROBOFLOW_API_KEY",
             "voyageai": "VOYAGE_API_KEY",
             "watsonx": "WATSONX_API_KEY",
@@ -139,6 +146,12 @@ class EmbeddingService:
 
         # Provider-specific configuration mapping
         if self.config.provider == "openai":
+            base_config["config"] = {
+                "api_key": self.config.api_key,
+                "model_name": self.config.model,
+                **self.config.extra_config,
+            }
+        elif self.config.provider == "openrouter":
             base_config["config"] = {
                 "api_key": self.config.api_key,
                 "model_name": self.config.model,
@@ -371,6 +384,7 @@ class EmbeddingService:
             "onnx",
             "openai",
             "openclip",
+            "openrouter",
             "roboflow",
             "sentence-transformer",
             "text2vec",
@@ -387,6 +401,16 @@ class EmbeddingService:
     ) -> EmbeddingService:
         """Create an OpenAI embedding service."""
         return cls(provider="openai", model=model, api_key=api_key, **kwargs)
+
+    @classmethod
+    def create_openrouter_service(
+        cls,
+        model: str = "openai/text-embedding-3-small",
+        api_key: str | None = None,
+        **kwargs: Any,
+    ) -> EmbeddingService:
+        """Create an OpenRouter embedding service."""
+        return cls(provider="openrouter", model=model, api_key=api_key, **kwargs)
 
     @classmethod
     def create_voyage_service(

@@ -14,6 +14,10 @@ identical tool calls followed by a final answer, mirroring the EPD-180
 clean-room repro.
 """
 
+import json
+from types import SimpleNamespace
+
+import httpx
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel, Field
 
@@ -80,22 +84,36 @@ def make_scripted_llm():
         def __init__(self):
             self.n = 0
 
+        @property
+        def with_raw_response(self):
+            """The provider reads the raw body to spot upstream errors that a
+            gateway reported inside an HTTP 200."""
+            return self
+
         def create(self, **params):
             choice = scripted[min(self.n, len(scripted) - 1)]
             self.n += 1
-            return ChatCompletion.model_validate(
-                {
-                    "id": f"chatcmpl-fake-{self.n}",
-                    "object": "chat.completion",
-                    "created": 1,
-                    "model": params.get("model", "gpt-4o"),
-                    "choices": [choice],
-                    "usage": {
-                        "prompt_tokens": 10,
-                        "completion_tokens": 5,
-                        "total_tokens": 15,
-                    },
-                }
+            payload = {
+                "id": f"chatcmpl-fake-{self.n}",
+                "object": "chat.completion",
+                "created": 1,
+                "model": params.get("model", "gpt-4o"),
+                "choices": [choice],
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 5,
+                    "total_tokens": 15,
+                },
+            }
+            return SimpleNamespace(
+                text=json.dumps(payload),
+                parse=lambda: ChatCompletion.model_validate(payload),
+                http_response=httpx.Response(
+                    200,
+                    request=httpx.Request(
+                        "POST", "https://api.openai.com/v1/chat/completions"
+                    ),
+                ),
             )
 
     class FakeClient:

@@ -1,3 +1,4 @@
+from contextlib import closing
 import json
 import logging
 import os
@@ -32,21 +33,22 @@ class KickoffTaskOutputsSQLiteStorage:
         """Initialize the SQLite database and create the latest_kickoff_task_outputs table.
 
         This method sets up the database schema for storing task outputs. It creates
-        a table with columns for task_id, expected_output, output (as JSON),
-        task_index, inputs (as JSON), was_replayed flag, and timestamp.
+        a table with columns for task_id, task_key, expected_output, output (as
+        JSON), task_index, inputs (as JSON), was_replayed flag, and timestamp.
 
         Raises:
             DatabaseOperationError: If database initialization fails due to SQLite errors.
         """
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("PRAGMA journal_mode=WAL")
                     cursor = conn.cursor()
                     cursor.execute(
                         """
                         CREATE TABLE IF NOT EXISTS latest_kickoff_task_outputs (
                             task_id TEXT PRIMARY KEY,
+                            task_key TEXT,
                             expected_output TEXT,
                             output JSON,
                             task_index INTEGER,
@@ -56,6 +58,16 @@ class KickoffTaskOutputsSQLiteStorage:
                         )
                     """
                     )
+                    columns = {
+                        row[1]
+                        for row in cursor.execute(
+                            "PRAGMA table_info(latest_kickoff_task_outputs)"
+                        )
+                    }
+                    if "task_key" not in columns:
+                        cursor.execute(
+                            "ALTER TABLE latest_kickoff_task_outputs ADD COLUMN task_key TEXT"
+                        )
 
                     conn.commit()
         except sqlite3.Error as e:
@@ -86,17 +98,18 @@ class KickoffTaskOutputsSQLiteStorage:
         inputs = inputs or {}
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("BEGIN TRANSACTION")
                     cursor = conn.cursor()
                     cursor.execute(
                         """
                     INSERT OR REPLACE INTO latest_kickoff_task_outputs
-                    (task_id, expected_output, output, task_index, inputs, was_replayed)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (task_id, task_key, expected_output, output, task_index, inputs, was_replayed)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                         (
                             str(task.id),
+                            task.key,
                             task.expected_output,
                             json.dumps(output, cls=CrewJSONEncoder),
                             task_index,
@@ -130,7 +143,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("BEGIN TRANSACTION")
                     cursor = conn.cursor()
 
@@ -171,10 +184,10 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If loading task outputs fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path, timeout=30) as conn:
+            with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                SELECT *
+                SELECT task_id, task_key, expected_output, output, task_index, inputs, was_replayed, timestamp
                 FROM latest_kickoff_task_outputs
                 ORDER BY task_index
                 """)
@@ -184,12 +197,13 @@ class KickoffTaskOutputsSQLiteStorage:
                 for row in rows:
                     result = {
                         "task_id": row[0],
-                        "expected_output": row[1],
-                        "output": json.loads(row[2]),
-                        "task_index": row[3],
-                        "inputs": json.loads(row[4]),
-                        "was_replayed": row[5],
-                        "timestamp": row[6],
+                        "task_key": row[1],
+                        "expected_output": row[2],
+                        "output": json.loads(row[3]),
+                        "task_index": row[4],
+                        "inputs": json.loads(row[5]),
+                        "was_replayed": row[6],
+                        "timestamp": row[7],
                     }
                     results.append(result)
 
@@ -211,7 +225,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("BEGIN TRANSACTION")
                     cursor = conn.cursor()
                     cursor.execute("DELETE FROM latest_kickoff_task_outputs")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
 
@@ -246,6 +247,15 @@ class AzureCompletion(BaseLLM):
             delegate_kwargs["additional_params"] = self.additional_params
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate input tokens until Azure offers a count endpoint."""
+        return super().get_input_tokens_count(messages, tools, response_model)
 
     def _get_responses_base_url(self) -> str:
         """Construct the base URL for the Azure OpenAI Responses API.
@@ -998,19 +1008,25 @@ class AzureCompletion(BaseLLM):
 
             if choice.delta and choice.delta.tool_calls:
                 for idx, tool_call in enumerate(choice.delta.tool_calls):
-                    if idx not in tool_calls:
-                        tool_calls[idx] = {
+                    tool_index = tool_call.get("index")
+                    if tool_index is None:
+                        tool_index = idx
+
+                    if tool_index not in tool_calls:
+                        tool_calls[tool_index] = {
                             "id": tool_call.id,
                             "name": "",
                             "arguments": "",
                         }
-                    elif tool_call.id and not tool_calls[idx]["id"]:
-                        tool_calls[idx]["id"] = tool_call.id
+                    elif tool_call.id and not tool_calls[tool_index]["id"]:
+                        tool_calls[tool_index]["id"] = tool_call.id
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[idx]["name"] = tool_call.function.name
+                        tool_calls[tool_index]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[idx]["arguments"] += tool_call.function.arguments
+                        tool_calls[tool_index]["arguments"] += (
+                            tool_call.function.arguments
+                        )
 
                     self._emit_stream_chunk_event(
                         chunk=tool_call.function.arguments
@@ -1019,13 +1035,13 @@ class AzureCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_call={
-                            "id": tool_calls[idx]["id"],
+                            "id": tool_calls[tool_index]["id"],
                             "function": {
-                                "name": tool_calls[idx]["name"],
-                                "arguments": tool_calls[idx]["arguments"],
+                                "name": tool_calls[tool_index]["name"],
+                                "arguments": tool_calls[tool_index]["arguments"],
                             },
                             "type": "function",
-                            "index": idx,
+                            "index": tool_index,
                         },
                         call_type=LLMCallType.TOOL_CALL,
                         response_id=response_id,
@@ -1285,7 +1301,7 @@ class AzureCompletion(BaseLLM):
         """
         model_lower = self.model.lower() if self.model else ""
 
-        if "gpt-5" in model_lower:
+        if re.search(r"gpt-[5-9](?!\d)", model_lower):
             return False
 
         o_series_models = ["o1", "o3", "o4", "o1-mini", "o3-mini", "o4-mini"]
@@ -1302,36 +1318,17 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            AZURE_OPENAI_CONTEXT_WINDOWS,
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        # Longest prefix first. Always insert new keys in that order so
-        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
-        context_windows = {
-            "text-embedding": 8191,
-            "gpt-3.5-turbo": 16385,
-            "gpt-5.4-mini": 200000,
-            "gpt-35-turbo": 16385,
-            "gpt-4o-mini": 128000,
-            "gpt-4-turbo": 128000,
-            "gpt-5.6": 1050000,
-            "gpt-4o": 128000,
-            "gpt-4": 8192,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            AZURE_OPENAI_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""

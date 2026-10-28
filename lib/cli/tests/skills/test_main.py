@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import tempfile
 import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from crewai_cli.shared.token_manager import TokenManager
+
+
+if TYPE_CHECKING:
+    from crewai_cli.skills.main import SkillCommand
 
 
 @contextmanager
@@ -171,6 +178,31 @@ class TestSkillPublish:
             # Skills are always org-scoped; there is no public visibility.
             assert call_kwargs.kwargs["is_public"] is False
 
+    def test_publish_unauthorized_shows_amps_reason_and_asks_for_login(
+        self, skill_command, capsys
+    ):
+        from crewai_cli.command import AuthenticationRequiredError
+
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock(
+                return_value=httpx.Response(
+                    401, json={"error": "bad_credentials", "message": "Bad credentials"}
+                )
+            )
+            with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
+                mock_settings_cls.return_value.org_name = "acme"
+                mock_settings_cls.return_value.enterprise_base_url = None
+
+                with pytest.raises(AuthenticationRequiredError):
+                    skill_command.publish(org="acme")
+
+        output = capsys.readouterr().out
+        assert "Bad credentials" in output
+        assert "Run 'crewai login' to sign in again." in output
+
     def test_publish_blocked_when_git_not_synced(self, skill_command):
         with in_temp_dir():
             Path("SKILL.md").write_text(
@@ -257,6 +289,36 @@ class TestSkillPublish:
 
 
 class TestSkillListCached:
+    @pytest.mark.parametrize("metadata", [b"\xff\xfe", b"{invalid json"])
+    def test_list_cached_skips_unreadable_metadata(
+        self,
+        skill_command: SkillCommand,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        metadata: bytes,
+    ) -> None:
+        cache_root = tmp_path / ".crewai" / "skills" / "acme"
+        broken = cache_root / "a-broken"
+        healthy = cache_root / "z-healthy"
+        broken.mkdir(parents=True)
+        healthy.mkdir()
+        (broken / ".crewai_meta.json").write_bytes(metadata)
+        (healthy / ".crewai_meta.json").write_text(
+            json.dumps({"org": "acme", "name": "z-healthy", "version": "1.0.0"}),
+            encoding="utf-8",
+        )
+
+        with (
+            in_temp_dir(),
+            patch("crewai_cli.skills.main.Path.home", return_value=tmp_path),
+        ):
+            skill_command.list_cached()
+
+        output = capsys.readouterr().out
+        assert "@acme/z-healthy" in output
+        assert "skipping malformed cache entry" in output
+        assert (broken / ".crewai_meta.json").read_bytes() == metadata
+
     def test_list_cached_empty(self, skill_command, capsys):
         with in_temp_dir():
             skill_command.list_cached()

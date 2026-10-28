@@ -199,6 +199,11 @@ class TestRetryBehaviour:
             def create(self, **kwargs):
                 raise tools_effort_error()
 
+            @property
+            def with_raw_response(self):
+                """The provider reads the raw body to spot 200-wrapped errors."""
+                return self
+
         monkeypatch.setattr(
             llm,
             "_get_sync_client",

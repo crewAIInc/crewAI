@@ -9,9 +9,6 @@ from crewai_tools.tools.rag.rag_tool import RagTool
 class FixedDOCXSearchToolSchema(BaseModel):
     """Input for DOCXSearchTool."""
 
-    docx: str | None = Field(
-        ..., description="File path or URL of a DOCX file to be searched"
-    )
     search_query: str = Field(
         ...,
         description="Mandatory search query you want to use to search the DOCX's content",
@@ -21,10 +18,7 @@ class FixedDOCXSearchToolSchema(BaseModel):
 class DOCXSearchToolSchema(FixedDOCXSearchToolSchema):
     """Input for DOCXSearchTool."""
 
-    search_query: str = Field(
-        ...,
-        description="Mandatory search query you want to use to search the DOCX's content",
-    )
+    docx: str = Field(..., description="File path or URL of a DOCX file to be searched")
 
 
 class DOCXSearchTool(RagTool):

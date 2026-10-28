@@ -11,12 +11,16 @@ import logging
 from pathlib import Path, PureWindowsPath
 import re
 import sys
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import unquote, urlparse
 
 from pydantic import BaseModel, ValidationError
 
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_class_ref
+
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
 
 
 logger = logging.getLogger(__name__)
@@ -1812,6 +1816,13 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
     tools: list[Any] = []
     for tool_def in tool_defs:
         if isinstance(tool_def, dict):
+            tool_type = tool_def.get("tool_type")
+            if isinstance(tool_type, str):
+                # Project files are trusted, so import the class here, which
+                # registers it; BaseTool then hydrates the dict without the
+                # CREWAI_DESERIALIZE_CALLBACKS gate meant for checkpoint data.
+                module, _, name = tool_type.rpartition(".")
+                _resolve_tool_class(f"{module}:{name}")
             tools.append(tool_def)
             continue
         if not isinstance(tool_def, str):
@@ -1819,6 +1830,9 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
                 f"Tool definitions must be strings or objects, got {type(tool_def).__name__}"
             )
         if not tool_def:
+            continue
+        if tool_def.startswith("platform:"):
+            tools.extend(_resolve_platform_tools(tool_def.removeprefix("platform:")))
             continue
         if tool_def.startswith("custom:"):
             tools.append(_resolve_custom_tool(tool_def[7:], project_root=project_root))
@@ -1847,13 +1861,36 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
     return tools
 
 
-def _instantiate_tool_import_ref(ref: str) -> Any:
+def _resolve_platform_tools(selector: str) -> list[Any]:
+    """Materialize an AMP application selector into CrewAI tools."""
+    if not selector:
+        raise JSONProjectError(
+            "Invalid platform tool reference 'platform:': expected "
+            "'platform:<application>'"
+        )
+
+    try:
+        from crewai_tools import CrewaiPlatformTools
+    except ImportError as e:
+        raise JSONProjectError(
+            "Platform tools require the 'crewai-tools' package. "
+            "Install CrewAI with the tools extra."
+        ) from e
+
+    try:
+        return CrewaiPlatformTools(apps=[selector])
+    except Exception as e:
+        raise JSONProjectError(
+            f"Failed to initialize platform tool 'platform:{selector}': {e}"
+        ) from e
+
+
+def _resolve_tool_class(ref: str) -> type[BaseTool]:
     from crewai.tools import BaseTool
 
     try:
-        tool_cls = cast(
-            Callable[[], BaseTool],
-            resolve_class_ref(ref, field="tool", base_class=BaseTool),
+        return cast(
+            type[BaseTool], resolve_class_ref(ref, field="tool", base_class=BaseTool)
         )
     except InvalidRefError as e:
         message = str(e)
@@ -1865,6 +1902,10 @@ def _instantiate_tool_import_ref(ref: str) -> Any:
         raise JSONProjectError(
             f"invalid tool ref {ref!r}; expected a BaseTool class"
         ) from e
+
+
+def _instantiate_tool_import_ref(ref: str) -> Any:
+    tool_cls = cast("Callable[[], BaseTool]", _resolve_tool_class(ref))
     try:
         return tool_cls()
     except Exception as e:
@@ -1990,19 +2031,25 @@ def _tool_definition_errors(
                 f"got {type(tool_def).__name__}"
             )
             continue
-        if not tool_def.startswith("custom:"):
+        if tool_def.startswith("platform:"):
+            if not tool_def.removeprefix("platform:"):
+                errors.append(
+                    f"{source}: invalid platform tool reference 'platform:': "
+                    "expected 'platform:<application>'"
+                )
             continue
-        try:
-            tool_file = _custom_tool_file(tool_def[7:], project_root)
-        except JSONProjectError as exc:
-            errors.append(f"{source}: {exc}")
-            continue
-        if not tool_file.exists():
-            errors.append(
-                f"{source}: custom tool '{tool_def}' not found: expected "
-                f"{tool_file}. Create the file with a BaseTool subclass, or "
-                f"remove the tool from your crew JSON."
-            )
+        if tool_def.startswith("custom:"):
+            try:
+                tool_file = _custom_tool_file(tool_def[7:], project_root)
+            except JSONProjectError as exc:
+                errors.append(f"{source}: {exc}")
+                continue
+            if not tool_file.exists():
+                errors.append(
+                    f"{source}: custom tool '{tool_def}' not found: expected "
+                    f"{tool_file}. Create the file with a BaseTool subclass, or "
+                    f"remove the tool from your crew JSON."
+                )
     return errors
 
 

@@ -13,6 +13,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai_cli.checkpoint_cli import (
+    _info_json_file,
+    _info_json_latest,
+    _list_json,
     _parse_checkpoint_json,
     _parse_duration,
     _prune_json,
@@ -23,6 +26,7 @@ from crewai_cli.checkpoint_cli import (
     prune_checkpoints,
     resume_checkpoint,
 )
+from crewai.state.provider.json_provider import JsonProvider
 
 
 def _make_checkpoint_data(
@@ -165,6 +169,24 @@ class TestResolveCheckpoint:
             _write_json_checkpoint(d)
             assert _resolve_checkpoint(d, "nonexistent") is None
 
+    def test_json_location_with_glob_characters(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            location = os.path.join(d, "runs[1]")
+            path = _write_json_checkpoint(
+                location, name="20260101T000000_aaaa1111_p-none.json"
+            )
+            # As a glob pattern, "runs[1]" matches this directory instead
+            _write_json_checkpoint(
+                os.path.join(d, "runs1"), name="20260102T000000_bbbb2222_p-none.json"
+            )
+            assert [item["path"] for item in _list_json(location)] == [path]
+            meta = _resolve_checkpoint(location, None)
+            assert meta is not None
+            assert meta["path"] == path
+            meta = _resolve_checkpoint(location, "aaaa1111")
+            assert meta is not None
+            assert meta["path"] == path
+
     def test_sqlite_latest(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             db_path = os.path.join(d, "test.db")
@@ -196,6 +218,46 @@ class TestResolveCheckpoint:
 
     def test_nonexistent(self) -> None:
         assert _resolve_checkpoint("/nonexistent/path", None) is None
+
+
+class TestNonAsciiJsonCheckpoint:
+    """JSON checkpoints are UTF-8 on disk; the CLI readers must decode them as such.
+
+    ``JsonProvider`` writes checkpoints with ``encoding="utf-8"`` and the runtime
+    serialises non-ASCII text verbatim, so readers that rely on the platform
+    default encoding break on Windows (cp1252) for any non-ASCII checkpoint.
+    """
+
+    # "Đ" (U+0110) encodes to 0xC4 0x90; 0x90 is undefined in cp1252, so a
+    # locale-dependent read fails loudly instead of silently producing mojibake.
+    _NAME = "Đội ngũ phân tích"
+
+    def _write_checkpoint(self, base_dir: str) -> str:
+        """Write a UTF-8 checkpoint whose entity name is non-ASCII, as the runtime does."""
+        data = json.loads(_make_checkpoint_data(name=self._NAME))
+        raw = json.dumps(data, ensure_ascii=False)
+        return JsonProvider().checkpoint(raw, base_dir, branch="main")
+
+    def test_info_json_file_reads_utf8(self, tmp_path: Any) -> None:
+        """``_info_json_file`` decodes a non-ASCII checkpoint on any platform."""
+        path = self._write_checkpoint(str(tmp_path))
+        meta = _info_json_file(path)
+        assert meta["entities"][0]["name"] == self._NAME
+
+    def test_info_json_latest_reads_utf8(self, tmp_path: Any) -> None:
+        """``_info_json_latest`` decodes the newest non-ASCII checkpoint."""
+        self._write_checkpoint(str(tmp_path))
+        meta = _info_json_latest(str(tmp_path))
+        assert meta is not None
+        assert meta["entities"][0]["name"] == self._NAME
+
+    def test_list_json_reads_utf8(self, tmp_path: Any) -> None:
+        """``_list_json`` lists a non-ASCII checkpoint with its real size and entities."""
+        self._write_checkpoint(str(tmp_path))
+        results = _list_json(str(tmp_path))
+        assert len(results) == 1
+        assert results[0]["size"] > 0
+        assert results[0]["entities"][0]["name"] == self._NAME
 
 
 class TestTaskListFromMeta:
@@ -310,6 +372,28 @@ class TestPruneJson:
             os.utime(path, (0, 0))
             _prune_json(d, keep=None, older_than=timedelta(days=1))
             assert not os.path.exists(os.path.join(d, "feature"))
+
+    def test_location_with_glob_characters(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            location = os.path.join(d, "runs[1]")
+            path = _write_json_checkpoint(
+                location, name="20260101T000000_aaaa1111_p-none.json"
+            )
+            # As a glob pattern, "runs[1]" matches this directory instead
+            others = [
+                _write_json_checkpoint(
+                    os.path.join(d, "runs1"),
+                    name=f"2026010{i + 2}T000000_bbbb{i}222_p-none.json",
+                )
+                for i in range(2)
+            ]
+            prune_checkpoints(location, keep=0, older_than=None, dry_run=True)
+            assert "Would prune from 1 checkpoint(s)" in capsys.readouterr().out
+            assert _prune_json(location, keep=0, older_than=None) == 1
+            assert not os.path.exists(path)
+            assert all(os.path.exists(other) for other in others)
 
 
 class TestPruneSqlite:

@@ -11,7 +11,7 @@ mode: "wide"
 
 ## Criar um Projeto com o CLI
 
-Use o CLI do CrewAI para criar a estrutura de um projeto, e o `AGENTS.md` será automaticamente adicionado na raiz.
+Use o CLI do CrewAI para criar a estrutura de um projeto. O `AGENTS.md` é adicionado na raiz, junto com um `CLAUDE.md` e um `GEMINI.md` que o importam, para que o Claude Code e o Gemini CLI leiam a mesma orientação que todos os outros assistentes.
 
 ```bash
 # Crew
@@ -32,23 +32,27 @@ O Codex pode ser guiado por arquivos `AGENTS.md` colocados no seu repositório. 
 
 ### Claude Code
 
-O Claude Code armazena a memória do projeto em `CLAUDE.md`. Você pode inicializá-lo com `/init` e editá-lo usando `/memory`. O Claude Code também suporta importações dentro do `CLAUDE.md`, então você pode adicionar uma única linha como `@AGENTS.md` para incluir as instruções compartilhadas sem duplicá-las.
+O Claude Code lê o `CLAUDE.md` e ignora o `AGENTS.md`. Projetos gerados pelo CLI já incluem um `CLAUDE.md` cuja única instrução é a linha de importação `@AGENTS.md`, para que a orientação compartilhada seja carregada sem duplicação. Adicione notas específicas do Claude abaixo dessa linha e mantenha as convenções compartilhadas no `AGENTS.md`.
 
-Você pode simplesmente usar:
+Para um projeto criado antes de o `CLAUDE.md` passar a ser gerado, adicione a importação você mesmo:
 
 ```bash
-mv AGENTS.md CLAUDE.md
+printf '@AGENTS.md\n' > CLAUDE.md
 ```
+
+Não renomeie o `AGENTS.md` para `CLAUDE.md`: o Codex e o Cursor leem o `AGENTS.md`, e a renomeação o esconde deles.
 
 ### Gemini CLI e Google Antigravity
 
-O Gemini CLI e o Antigravity carregam um arquivo de contexto do projeto (padrão: `GEMINI.md`) da raiz do repositório e diretórios pais. Você pode configurá-lo para ler o `AGENTS.md` em vez disso (ou além) definindo `context.fileName` nas configurações do Gemini CLI. Por exemplo, defina apenas para `AGENTS.md`, ou inclua tanto `AGENTS.md` quanto `GEMINI.md` se quiser manter o formato de cada ferramenta.
+O Gemini CLI e o Antigravity carregam um arquivo de contexto do projeto (padrão: `GEMINI.md`) da raiz do repositório e diretórios pais. Projetos gerados pelo CLI já incluem um `GEMINI.md` cuja única instrução é a linha de importação `@./AGENTS.md`, para que a orientação compartilhada seja carregada sem duplicação. Adicione notas específicas do Gemini abaixo dessa linha e mantenha as convenções compartilhadas no `AGENTS.md`.
 
-Você pode simplesmente usar:
+Para um projeto criado antes de o `GEMINI.md` passar a ser gerado, adicione a importação você mesmo:
 
 ```bash
-mv AGENTS.md GEMINI.md
+printf '@./AGENTS.md\n' > GEMINI.md
 ```
+
+Como alternativa, defina `context.fileName` nas configurações do Gemini CLI para incluir o `AGENTS.md` e o Gemini o lerá diretamente. Não renomeie o `AGENTS.md` para `GEMINI.md`: o Codex e o Cursor leem o `AGENTS.md`, e a renomeação o esconde deles.
 
 ### Cursor
 

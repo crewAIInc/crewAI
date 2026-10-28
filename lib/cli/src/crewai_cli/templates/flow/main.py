@@ -49,6 +49,7 @@ class ContentFlow(Flow[ContentState]):
         with open(output_dir / "post.md", "w") as f:
             f.write(self.state.final_post)
         print("Post saved to output/post.md")
+        return self.state.final_post
 
 
 def kickoff():
@@ -79,8 +80,8 @@ def run_with_trigger():
     content_flow = ContentFlow()
 
     try:
-        result = content_flow.kickoff({"crewai_trigger_payload": trigger_payload})
-        return result
+        # Not returned: this is a console script, and a non-None return exits 1.
+        content_flow.kickoff({"crewai_trigger_payload": trigger_payload})
     except Exception as e:
         raise Exception(f"An error occurred while running the flow with trigger: {e}")
 

@@ -33,8 +33,7 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
     This function checks if planning is enabled for the agent and, if so,
     creates a plan that gets appended to the task description.
 
-    Note: This function is used by CrewAgentExecutor (legacy path).
-    For AgentExecutor, planning is handled in AgentExecutor.generate_plan().
+    AgentExecutor handles planning in AgentExecutor.generate_plan().
 
     Args:
         agent: The agent performing the task.
@@ -74,13 +73,17 @@ def build_task_prompt_with_schema(task: Task, task_prompt: str) -> str:
 
     if (task.output_json or task.output_pydantic) and not task.response_model:
         if task.output_json:
-            schema_dict = generate_model_description(task.output_json)
+            schema_dict = generate_model_description(
+                task.output_json, strip_null_types=False
+            )
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
             task_prompt += "\n" + I18N_DEFAULT.slice(
                 "formatted_task_instructions"
             ).format(output_format=schema)
         elif task.output_pydantic:
-            schema_dict = generate_model_description(task.output_pydantic)
+            schema_dict = generate_model_description(
+                task.output_pydantic, strip_null_types=False
+            )
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
             task_prompt += "\n" + I18N_DEFAULT.slice(
                 "formatted_task_instructions"

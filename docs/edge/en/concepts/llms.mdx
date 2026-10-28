@@ -1155,6 +1155,39 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="DeepInfra">
+    CrewAI talks to DeepInfra through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    DEEPINFRA_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    DEEPINFRA_BASE_URL=https://api.deepinfra.com/v1/openai
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      DeepInfra features:
+      - Open-weight models (Llama, Qwen, DeepSeek, GLM, Mistral and more) behind one OpenAI-compatible API
+      - Tool calling, streaming and JSON schema structured outputs
+      - Per-token pricing and context length published in the model catalog
+    </Info>
+
+    Model ids are already in `org/model` form, so a full reference carries three segments,
+    for example `deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct`. See the
+    [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
+    which is public and needs no authentication, for current ids, context lengths and pricing.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
@@ -1198,7 +1231,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     ```
 
     <Tip>
-      [Click here](/en/concepts/event-listener#event-listeners) for more details
+      [Click here](/en/concepts/event-listener#creating-a-custom-event-listener) for more details
     </Tip>
   </Tab>
 
@@ -1486,6 +1519,38 @@ llm = LLM(
     # Incorrect
     llm = LLM(model="gpt-4")
     ```
+  </Tab>
+  <Tab title="Gateway Errors">
+    <Tip>
+      Gateways such as OpenRouter return `200 OK` as soon as the upstream provider accepts the request, so a provider timeout arrives in the response body instead of the status code.
+    </Tip>
+
+    CrewAI raises the same exception the upstream code would have produced as a real HTTP status, so a masked failure is caught by the retry handling you already have:
+
+    ```python
+    import openai
+    from pydantic import BaseModel
+
+    from crewai import LLM
+
+
+    class Report(BaseModel):
+        summary: str
+
+
+    llm = LLM(model="openrouter/z-ai/glm-5.3", response_format=Report)
+
+    try:
+        result = llm.call("Summarize the incident", response_model=Report)
+    except openai.InternalServerError as e:
+        # "z-ai/glm-5.3 via openrouter.ai returned HTTP 200 with an upstream error
+        #  and no choices: The operation was aborted (upstream code 504)"
+        print(f"Upstream provider failed, safe to retry: {e}")
+    ```
+
+    <Warning>
+      A large or deeply nested `response_model` makes upstream timeouts more likely. Treat these as transient provider failures, not as the model producing malformed structured output.
+    </Warning>
   </Tab>
   <Tab title="Context Length">
     <Tip>

@@ -6,6 +6,7 @@ import pytest
 
 from crewai.skills.loader import (
     activate_skill,
+    build_skill_catalog,
     discover_skills,
     format_skill_context,
     load_resources,
@@ -134,6 +135,22 @@ class TestLoadSkill:
             "Follow these instructions."
         ]
 
+    def test_loads_inline_skill_with_crlf(self) -> None:
+        inline_skill = (
+            "---\r\n"
+            "name: inline-skill\r\n"
+            "description: Inline guidance\r\n"
+            "---\r\n"
+            "Follow these instructions."
+        )
+
+        skills = load_skill(inline_skill)
+
+        assert [skill.name for skill in skills] == ["inline-skill"]
+        assert [skill.instructions for skill in skills] == [
+            "Follow these instructions."
+        ]
+
     def test_invalid_inline_skill_raises_parse_error(self) -> None:
         with pytest.raises(SkillParseError, match="missing closing"):
             load_skill("---\nname: inline-skill\n")
@@ -216,6 +233,22 @@ class TestLoadResources:
         skill = load_skill_metadata(skill_dir)
         full = load_resources(skill)
         assert full.disclosure_level == RESOURCES
+
+
+class TestBuildSkillCatalog:
+    """Tests for build_skill_catalog."""
+
+    def test_lists_only_skills_below_instructions_level(self, tmp_path: Path) -> None:
+        pending = load_skill_metadata(_create_skill_dir(tmp_path, "pending"))
+        activated = activate_skill(
+            load_skill_metadata(_create_skill_dir(tmp_path, "activated"))
+        )
+        full = load_resources(load_skill_metadata(_create_skill_dir(tmp_path, "full")))
+        assert activated.disclosure_level == INSTRUCTIONS
+
+        catalog = build_skill_catalog([pending, activated, full])
+
+        assert catalog == {"pending": pending}
 
 
 class TestFormatSkillContext:

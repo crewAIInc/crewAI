@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import Field, PrivateAttr
 
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.event_bus import is_replaying
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 from crewai.events.types.a2a_events import (
     A2AConversationCompletedEvent,
@@ -22,6 +23,14 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
+)
+from crewai.events.types.checkpoint_events import (
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkCompletedEvent,
+    CheckpointPrunedEvent,
+    CheckpointRestoreCompletedEvent,
+    CheckpointRestoreFailedEvent,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -999,6 +1008,41 @@ class EventListener(BaseEventListener):
             _: Any, event: MemoryRetrievalCompletedEvent
         ) -> None:
             self._telemetry.feature_usage_span("memory:retrieval")
+
+        # Replayed checkpoint events describe past operations, not new usage.
+        @crewai_event_bus.on(CheckpointCompletedEvent)
+        def on_checkpoint_save(_: Any, event: CheckpointCompletedEvent) -> None:
+            if not is_replaying():
+                self._telemetry.feature_usage_span("checkpoint:save")
+
+        @crewai_event_bus.on(CheckpointFailedEvent)
+        def on_checkpoint_save_failed(_: Any, event: CheckpointFailedEvent) -> None:
+            if not is_replaying():
+                self._telemetry.feature_usage_span("checkpoint:save_failed")
+
+        @crewai_event_bus.on(CheckpointRestoreCompletedEvent)
+        def on_checkpoint_restore(
+            _: Any, event: CheckpointRestoreCompletedEvent
+        ) -> None:
+            if not is_replaying():
+                self._telemetry.feature_usage_span("checkpoint:restore")
+
+        @crewai_event_bus.on(CheckpointRestoreFailedEvent)
+        def on_checkpoint_restore_failed(
+            _: Any, event: CheckpointRestoreFailedEvent
+        ) -> None:
+            if not is_replaying():
+                self._telemetry.feature_usage_span("checkpoint:restore_failed")
+
+        @crewai_event_bus.on(CheckpointForkCompletedEvent)
+        def on_checkpoint_fork(_: Any, event: CheckpointForkCompletedEvent) -> None:
+            if not is_replaying():
+                self._telemetry.feature_usage_span("checkpoint:fork")
+
+        @crewai_event_bus.on(CheckpointPrunedEvent)
+        def on_checkpoint_prune(_: Any, event: CheckpointPrunedEvent) -> None:
+            if not is_replaying():
+                self._telemetry.feature_usage_span("checkpoint:prune")
 
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_kickoff_hooks(_: Any, event: CrewKickoffStartedEvent) -> None:

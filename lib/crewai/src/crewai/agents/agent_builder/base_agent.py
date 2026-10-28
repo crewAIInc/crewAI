@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
+from crewai_core.platform_apps import PlatformApp
 from pydantic import (
     UUID4,
     BaseModel,
@@ -137,8 +138,7 @@ def _resolve_agent(value: Any, info: Any) -> Any:
 
 _EXECUTOR_TYPE_REGISTRY: dict[str, str] = {
     "base": "crewai.agents.agent_builder.base_agent_executor.BaseAgentExecutor",
-    "crew": "crewai.agents.crew_agent_executor.CrewAgentExecutor",
-    "experimental": "crewai.experimental.agent_executor.AgentExecutor",
+    "agent": "crewai.agents.agent_executor.AgentExecutor",
 }
 
 
@@ -180,25 +180,6 @@ _SLUG_RE: Final[re.Pattern[str]] = re.compile(
 )
 
 
-PlatformApp = Literal[
-    "asana",
-    "box",
-    "clickup",
-    "github",
-    "gmail",
-    "google_calendar",
-    "google_sheets",
-    "hubspot",
-    "jira",
-    "linear",
-    "notion",
-    "salesforce",
-    "shopify",
-    "slack",
-    "stripe",
-    "zendesk",
-]
-
 PlatformAppOrAction = PlatformApp | str
 
 
@@ -221,7 +202,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         allow_delegation (bool): Allow delegation of tasks to agents.
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
-        agent_executor: An instance of the CrewAgentExecutor class.
+        agent_executor: The executor running this agent. Defaults to AgentExecutor.
         i18n (I18N): Internationalization settings.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
@@ -319,7 +300,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         PlainSerializer(
             _serialize_executor_ref, return_type=dict | None, when_used="json"
         ),
-    ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    ] = Field(
+        default=None,
+        description="Executor running this agent. Defaults to AgentExecutor.",
+    )
     i18n: I18N = Field(
         default_factory=get_i18n,
         description="Internationalization settings.",
@@ -520,6 +504,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     @classmethod
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
+
+    @field_validator("callbacks", mode="before")
+    @classmethod
+    def _drop_unresolvable_callbacks(cls, value: Any) -> Any:
+        # A checkpoint saves a callback it cannot name (e.g. a lambda) as null.
+        if isinstance(value, list):
+            return [v for v in value if v is not None]
+        return value
 
     @field_validator("tools")
     @classmethod
@@ -738,7 +730,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "actions",
         }
 
-        existing_llm = shallow_copy(self.llm)
+        existing_llm = shallow_copy(self._llm_for_copy())
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         existing_knowledge_sources = None
@@ -780,6 +772,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
         )
+
+    def _llm_for_copy(self) -> Any:
+        """The llm a copy is built with; ``Agent`` overrides it for ``llm_overlay``."""
+        return self.llm
 
     def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
