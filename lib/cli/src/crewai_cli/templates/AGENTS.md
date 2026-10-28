@@ -17,7 +17,7 @@ Ask the user first only before actions with outside effects: creating a deployme
 1. **Pull and update.** If the repo has a remote, `git pull --ff-only`. Compare the project's crewai (`uv run python -c "import crewai; print(crewai.__version__)"`) with the latest release (`https://pypi.org/pypi/crewai/json`, `info.version`). If it's behind:
    - Project: `uv lock --upgrade-package crewai --upgrade-package crewai-tools && uv sync`. If `pyproject.toml` excludes a new major version, read the [changelog](https://docs.crewai.com/en/changelog) first and tell the user.
    - CLI: `uv tool install crewai --upgrade`. (`crewai update` is something else: it migrates old Poetry projects to uv.)
-2. **Check the login.** Run `crewai org list` and read its output. It exits 0 even when logged out; "Please sign up/login" means logged out.
+2. **Check the login.** Run `crewai org list`. Logged out, it prints "Please sign up/login" and exits 1.
    - To log in, run `crewai login` in the background and tell the user to confirm the code it prints in their browser. Then run `crewai org list` again.
    - Deployments, traces and evaluations go to the active organization (`crewai org current`; change it with `crewai org switch <uuid>`).
 3. **Check `.env`** in the project root: the LLM provider's key, `CREWAI_TRACING_ENABLED=true`, and, when agents use AMP integrations, `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` (the Enterprise Action Auth Token from AMP's settings, in the project's organization). The user pastes tokens into `.env` themselves, never into the chat.
@@ -131,7 +131,7 @@ Not used by default; reach for these when the task calls for them. Each line end
 - MCP: `Agent(mcps=["https://.../mcp", "<connected-slug>", MCPServerStdio(...)])` (`from crewai.mcp import MCPServerStdio`). `mcp/overview`
 - A2A: `Agent(a2a=A2AClientConfig(endpoint=...))` calls a remote agent; `A2AServerConfig` exposes one (`from crewai.a2a import A2AClientConfig, A2AServerConfig`).
 - Human feedback in flows: `@human_feedback(message=..., emit=["approved", "rejected"], llm=...)` routes a step on the reply. `learn/human-feedback-in-flows`
-- Chat: `crewai chat` talks to a classic crew (its `chat_llm`, else `MODEL`; JSON crews aren't supported yet), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
+- Chat: `crewai chat` talks to a crew (its `chat_llm`, else `MODEL`), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
 - Declarative flows: `crewai create flow <name> --declarative` keeps the flow in `flow.yaml`. `concepts/cli`
 - Checkpoints: `Crew(checkpoint=True)`; resume with `kickoff(from_checkpoint=CheckpointConfig(restore_from=path))`. `concepts/checkpointing`
 - Flow conditions: `@listen(or_(a, b))`, `and_(a, b)`; `flow.plot()` draws the graph. `concepts/flows`

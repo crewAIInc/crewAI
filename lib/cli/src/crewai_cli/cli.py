@@ -813,7 +813,15 @@ def eval_export_command(evaluation_id: str) -> None:
 
 @crewai.command()
 def update() -> None:
-    """Update the pyproject.toml of the Crew project to use uv."""
+    """Convert a Poetry project to uv.
+
+    Rewrites pyproject.toml for uv and keeps the original as pyproject-old.toml.
+    It does not upgrade CrewAI. To upgrade:
+
+    \b
+      CLI:     uv tool upgrade crewai
+      Project: crewai install --upgrade-package crewai --upgrade-package crewai-tools
+    """
     from crewai_cli.update_crew import update_crew
 
     update_crew()
@@ -1378,7 +1386,7 @@ def traces_status() -> None:
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="white")
 
-    env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
+    env_enabled = os.getenv("CREWAI_TRACING_ENABLED") or "not set"
     table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
 
     trace_consent = user_data.get("trace_consent")

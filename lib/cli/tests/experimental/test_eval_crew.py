@@ -3878,3 +3878,54 @@ def test_a_marker_in_the_payload_never_marks_a_save_that_was_not_whole(project, 
     amp.statuses = [_verdict_of(EVALUATION_ID)]
     eval_module.eval_crew(run_id="named-run")
     assert amp.calls.count(("export", EVALUATION_ID)) == 2  # tried again
+
+
+@pytest.mark.parametrize(
+    "env_value,consented,already_on",
+    [
+        (None, True, True),
+        ("true", False, True),
+        (None, False, False),
+        # An explicit "no" in the environment beats a consent given once, as
+        # it does when the crew runs.
+        ("false", True, False),
+    ],
+)
+def test_tracing_already_on_follows_the_run_gate(
+    tmp_path, monkeypatch, env_value, consented, already_on
+):
+    from crewai_core.user_data import update_user_data
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_eval_tracing_on")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    if consented:
+        update_user_data({"trace_consent": True, "first_execution_done": True})
+    if env_value is not None:
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", env_value)
+
+    assert eval_module.tracing_already_on() is already_on
+
+
+def test_tracing_already_on_lets_the_project_env_beat_a_shell_false(
+    tmp_path, monkeypatch
+):
+    """The run loads `.env` over the shell, so `.env` true with a shell false
+    is traced: nobody is asked to turn on what is already on."""
+    from crewai_core.user_data import update_user_data
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_eval_tracing_env")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    update_user_data({"trace_consent": True, "first_execution_done": True})
+    (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+
+    assert eval_module.tracing_turned_off() is False
+    assert eval_module.tracing_already_on() is True
