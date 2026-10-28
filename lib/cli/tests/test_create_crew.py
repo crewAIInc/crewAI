@@ -1782,7 +1782,7 @@ DOCS = Path(__file__).resolve().parents[3] / "docs"
 # deprecated option to say what replaces it is allowed.
 AGENTS_MD_NEVER = (
     r"CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
-    r"from crewai\.flow\.flow import persist",  # raises ImportError; persist lives in crewai.flow
+    r"from crewai\.flow\.flow import persist",  # ImportError on crewai<=1.15.30; use crewai.flow
     r"(?<!replaces `)reasoning=True",  # deprecated for planning_config
     r"multimodal=True",  # deprecated: pass files natively
     r"allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone
