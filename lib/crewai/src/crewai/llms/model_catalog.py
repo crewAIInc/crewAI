@@ -73,16 +73,7 @@ def bare_model_name(name: str) -> str:
         if name.startswith(prefix):
             name = name[len(prefix) :]
             break
-    name = _DATE_IN_MODEL_ID.sub("", name)
-    while True:
-        stem, separator, segment = name.rpartition(":")
-        if not separator or not segment:
-            break
-        name = stem
-    version = _TRAILING_VERSION.fullmatch(name)
-    if version is not None and "-" in version.group("body"):
-        name = version.group("body")
-    return name
+    return _deployment_model_name(_DATE_IN_MODEL_ID.sub("", name))
 
 
 def _deployment_model_name(name: str) -> str:
@@ -144,11 +135,11 @@ def _index_catalog(
     )
 
 
-_CATALOG = _load_catalog()
-_CATALOG_ENTRIES, _EXACT_ENTRIES, _NORMALIZED_ENTRIES = _index_catalog(_CATALOG)
+CATALOG = _load_catalog()
+_CATALOG_ENTRIES, _EXACT_ENTRIES, _NORMALIZED_ENTRIES = _index_catalog(CATALOG)
 
 
-def catalog_provider_prefixes(catalog: Mapping[str, Any] = _CATALOG) -> frozenset[str]:
+def catalog_provider_prefixes(catalog: Mapping[str, Any] = CATALOG) -> frozenset[str]:
     """Return provider prefixes that catalog keys actually use."""
     prefixes: set[str] = set()
     for name, props in catalog.items():
