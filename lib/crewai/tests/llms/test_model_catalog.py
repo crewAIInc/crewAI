@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from typing import Any
 
 import pytest
@@ -21,6 +22,11 @@ def synthetic_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(model_catalog, "_NORMALIZED_ENTRIES", normalized)
 
 
+=======
+from crewai.llms.model_catalog import find_model_catalog_entry
+
+
+>>>>>>> 56af6bbe3 (feat(llm): add provider-aware catalog lookup)
 def test_lookup_returns_the_catalog_entry_for_an_explicit_provider() -> None:
     entry = find_model_catalog_entry("gpt-4o", provider="openai")
 
@@ -79,6 +85,7 @@ def test_lookup_keeps_an_exact_bedrock_deployment_id() -> None:
     assert entry["max_input_tokens"] == 200_000
 
 
+<<<<<<< HEAD
 @pytest.mark.usefixtures("synthetic_catalog")
 def test_lookup_leaves_an_ambiguous_normalized_match_unresolved() -> None:
     assert find_model_catalog_entry("acme-3", provider="acme") is None
@@ -104,6 +111,10 @@ def test_lookup_matches_an_unknown_provider_case_insensitively() -> None:
 def test_lookup_returns_none_for_an_empty_model() -> None:
     assert find_model_catalog_entry("") is None
     assert find_model_catalog_entry("", provider="openai") is None
+=======
+def test_lookup_leaves_an_ambiguous_normalized_match_unresolved() -> None:
+    assert find_model_catalog_entry("claude-sonnet-4-6", provider="bedrock") is None
+>>>>>>> 56af6bbe3 (feat(llm): add provider-aware catalog lookup)
 
 
 def test_lookup_without_provider_only_accepts_an_exact_catalog_key() -> None:

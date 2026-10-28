@@ -14,12 +14,19 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 import concurrent.futures
 import contextvars
+<<<<<<< HEAD
 import logging
+=======
+>>>>>>> 56af6bbe3 (feat(llm): add provider-aware catalog lookup)
 import re
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from crewai.llms.model_catalog import (
+<<<<<<< HEAD
     CATALOG,
+=======
+    _CATALOG,
+>>>>>>> 56af6bbe3 (feat(llm): add provider-aware catalog lookup)
     bare_model_name,
     catalog_provider_prefixes,
 )
@@ -42,9 +49,12 @@ DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 MESSAGE_SPLIT_BUDGET_RATIO: Final[float] = 0.75
 
+<<<<<<< HEAD
 logger = logging.getLogger(__name__)
 _fallback_warned_models: set[str] = set()
 
+=======
+>>>>>>> 56af6bbe3 (feat(llm): add provider-aware catalog lookup)
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
 _AZURE_PROVIDERS: Final[frozenset[str]] = frozenset({"azure", "azure_ai"})
 _ANTHROPIC_PROVIDERS: Final[frozenset[str]] = frozenset({"anthropic"})
@@ -92,7 +102,11 @@ def context_windows_from_catalog(
 
 
 _CATALOG_PROVIDER_PREFIXES: Final[frozenset[str]] = catalog_provider_prefixes()
+<<<<<<< HEAD
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(CATALOG)
+=======
+LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(_CATALOG)
+>>>>>>> 56af6bbe3 (feat(llm): add provider-aware catalog lookup)
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
     CATALOG, providers=_OPENAI_PROVIDERS
 )
