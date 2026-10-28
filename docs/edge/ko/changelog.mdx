@@ -87,7 +87,7 @@ mode: "wide"
   ## 변경 사항
 
   ### 주요 변경 사항
-  - `CrewAgentExecutor` 제거. 이제 `executor_class=CrewAgentExecutor`는 "CrewAgentExecutor has been removed" 오류로 실패하며, `crewai.agents.crew_agent_executor` 및 `crewai.experimental.AgentExecutor` import 경로는 더 이상 존재하지 않습니다. `AgentExecutor`는 `crewai.agents.agent_executor`에서 import하세요.
+  - `CrewAgentExecutor` 제거. 이제 `executor_class=CrewAgentExecutor`는 "CrewAgentExecutor has been removed" 오류로 실패하며, 다음 import 경로는 더 이상 존재하지 않습니다: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, `crewai.experimental.agent_executor` 모듈, `crewai.experimental.AgentExecutor`, `crewai.experimental.CrewAgentExecutorFlow`. `AgentExecutor`는 `crewai.agents`에서 import하세요.
   - 모든 에이전트의 실행 방식 변경: 너무 큰 도구 결과는 임시 파일로 미뤄지고, 대화는 컨텍스트 윈도우를 넘기 전에 요약되며, 동일한 도구 호출이 다섯 번째로 반복되면 작업이 중단됩니다. 각 변경 사항과 제어 방법은 [이전 릴리스에서 에이전트 업그레이드](/ko/concepts/agents#이전-릴리스에서-에이전트-업그레이드)를 참고하세요.
 
   ### 기능

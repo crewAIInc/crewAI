@@ -87,7 +87,7 @@ mode: "wide"
   ## What's Changed
 
   ### Breaking Changes
-  - Remove `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` now fails with "CrewAgentExecutor has been removed", and the `crewai.agents.crew_agent_executor` and `crewai.experimental.AgentExecutor` import paths are gone. Import `AgentExecutor` from `crewai.agents.agent_executor`.
+  - Remove `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` now fails with "CrewAgentExecutor has been removed", and these import paths are gone: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, the `crewai.experimental.agent_executor` module, `crewai.experimental.AgentExecutor`, and `crewai.experimental.CrewAgentExecutorFlow`. Import `AgentExecutor` from `crewai.agents`.
   - Change how every agent runs: oversized tool results are deferred to temporary files, the conversation is summarized before it overflows the context window, and the fifth identical tool call stops the task. See [Upgrading Agents from Earlier Releases](/en/concepts/agents#upgrading-agents-from-earlier-releases) for each change and how it is controlled.
 
   ### Features

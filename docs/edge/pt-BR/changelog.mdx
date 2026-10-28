@@ -87,7 +87,7 @@ mode: "wide"
   ## O que Mudou
 
   ### Mudanças Quebradoras
-  - Remover `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` agora falha com "CrewAgentExecutor has been removed", e os caminhos de importação `crewai.agents.crew_agent_executor` e `crewai.experimental.AgentExecutor` deixaram de existir. Importe `AgentExecutor` de `crewai.agents.agent_executor`.
+  - Remover `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` agora falha com "CrewAgentExecutor has been removed", e estes caminhos de importação deixaram de existir: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, o módulo `crewai.experimental.agent_executor`, `crewai.experimental.AgentExecutor` e `crewai.experimental.CrewAgentExecutorFlow`. Importe `AgentExecutor` de `crewai.agents`.
   - Mudar a forma como todo agente é executado: resultados de ferramentas grandes demais são adiados para arquivos temporários, a conversa é resumida antes de estourar a janela de contexto, e a quinta chamada idêntica a uma ferramenta interrompe a tarefa. Veja [Atualizando Agentes de Versões Anteriores](/pt-BR/concepts/agents#atualizando-agentes-de-versões-anteriores) para cada mudança e como ela é controlada.
 
   ### Funcionalidades

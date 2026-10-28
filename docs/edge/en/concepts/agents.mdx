@@ -645,24 +645,24 @@ asyncio.run(main())
 ```
 
 <Note>
-  The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler
-  execution flow while preserving all of the agent's configuration (role, goal,
-  backstory, tools, etc.).
+  The `kickoff()` method runs the agent on the same `AgentExecutor` that agents
+  in a crew use, without a task or crew, and keeps all of the agent's
+  configuration (role, goal, backstory, tools, etc.).
 </Note>
 
 ## Upgrading Agents from Earlier Releases
 
-Release 1.15.29 removed `CrewAgentExecutor` and changed how every agent handles large tool results, long conversations, and repeated tool calls. These changes apply to agents in a crew, in a Flow, and called with `kickoff()`. If you are moving from 1.15.28 or earlier, check each one below.
+Release 1.15.29 removed `CrewAgentExecutor` and changed how every agent handles large tool results, long conversations, and repeated tool calls. These changes apply to agents in a crew, in a Flow, and called with `kickoff()`. The exception is the plan steps of an agent that [plans](/en/concepts/planning): their tool results are not deferred, their conversation is not summarized, and the repeated-call count restarts for each step. If you are moving from 1.15.28 or earlier, check each one below.
 
 ### `CrewAgentExecutor` Is Removed
 
 `AgentExecutor` is the only agent executor. It has been the default since 1.14.5, so an agent that never set `executor_class` already ran on it.
 
 - `executor_class=CrewAgentExecutor`, or the string `"CrewAgentExecutor"` in a config file, fails validation with `CrewAgentExecutor has been removed. Use crewai.agents.agent_executor.AgentExecutor.` Remove the setting.
-- The `crewai.agents.crew_agent_executor` module and the `crewai.experimental.AgentExecutor` import are gone. Import the executor from its stable module:
+- These import paths are gone: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, the `crewai.experimental.agent_executor` module, `crewai.experimental.AgentExecutor`, and `crewai.experimental.CrewAgentExecutorFlow`. Import the executor from `crewai.agents`:
 
 ```python Code
-from crewai.agents.agent_executor import AgentExecutor
+from crewai.agents import AgentExecutor
 ```
 
 There is no setting that restores the old executor.
@@ -691,19 +691,19 @@ agent = Agent(
 
 With `respect_context_window=True` (the default), the agent now measures every request before sending it. When the request is larger than the model's context window, CrewAI summarizes the earlier conversation first, instead of waiting for the provider to reject the request. A summary can lose details such as exact quotes.
 
-Set `respect_context_window=False` to turn summarization off. A request that is too long then stops the run with a context-length error.
+Set `respect_context_window=False` to turn summarization off. A request that is too long then stops the run with `SystemExit("Context length exceeded and user opted not to summarize...")`. `SystemExit` is not an `Exception` subclass, so an `except Exception` block does not catch it.
 
 ### Repeated Tool Calls Stop the Task
 
 When an agent calls the same tool with the same arguments and gets the same result five times in one run, CrewAI stops the task with `ToolExecutionFailedError` and a message that the agent `called '<tool>' with the same arguments 5 times and got the same result each time`.
 
-- The count covers the whole run, not only consecutive calls, and it includes results answered from the tool cache.
+- The count covers the whole task or `kickoff()` call, not only consecutive calls, and it includes results answered from the tool cache.
 - The stop happens whatever `tool_failure_policy` is set, and `max_retry_limit` does not retry it.
 - The limit of five is fixed. There is no setting to change or disable it.
 
 ### How the Context Window Size Is Chosen
 
-Deferral and summarization are both measured against the context window CrewAI uses for the model: 85% of the window listed in its bundled LiteLLM model catalog. A model missing from the catalog falls back to a provider default. For OpenAI, OpenAI-compatible (such as OpenRouter), and LiteLLM-routed models that default is 8,192 tokens, so both features start far earlier than the model's real window warrants. To see the size CrewAI uses, call `get_context_window_size()` on the LLM:
+Deferral and summarization are both measured against the context window CrewAI uses for the model: 85% of the window listed in its bundled LiteLLM model catalog. A model missing from the catalog falls back to a provider default. For OpenAI, Azure, Bedrock, OpenAI-compatible (such as OpenRouter), and LiteLLM-routed models that default is 8,192 tokens, so CrewAI uses 6,963 after the 85% ratio, and both features start far earlier than the model's real window warrants. A custom `BaseLLM` subclass that does not override `get_context_window_size()` uses 4,096. To see the size CrewAI uses, call `get_context_window_size()` on the LLM. The LLM is built as it would be for a run, so the provider's API key must be set:
 
 ```python Code
 from crewai import LLM

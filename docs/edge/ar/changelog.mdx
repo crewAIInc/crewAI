@@ -87,7 +87,7 @@ mode: "wide"
   ## ما الذي تغير
 
   ### تغييرات كسرية
-  - إزالة `CrewAgentExecutor`. أصبح `executor_class=CrewAgentExecutor` يفشل الآن بالرسالة "CrewAgentExecutor has been removed"، ولم يعد مسارا الاستيراد `crewai.agents.crew_agent_executor` و`crewai.experimental.AgentExecutor` موجودين. استورد `AgentExecutor` من `crewai.agents.agent_executor`.
+  - إزالة `CrewAgentExecutor`. أصبح `executor_class=CrewAgentExecutor` يفشل الآن بالرسالة "CrewAgentExecutor has been removed"، ولم تعد مسارات الاستيراد هذه موجودة: `crewai.agents.crew_agent_executor`، و`crewai.agents.CrewAgentExecutor`، والوحدة `crewai.experimental.agent_executor`، و`crewai.experimental.AgentExecutor`، و`crewai.experimental.CrewAgentExecutorFlow`. استورد `AgentExecutor` من `crewai.agents`.
   - تغيير طريقة تشغيل كل وكيل: تُؤجَّل نتائج الأدوات الكبيرة جدًا إلى ملفات مؤقتة، وتُلخَّص المحادثة قبل أن تتجاوز نافذة السياق، وتُوقف المهمة عند الاستدعاء المتطابق الخامس للأداة نفسها. راجع [ترقية الوكلاء من الإصدارات السابقة](/ar/concepts/agents#ترقية-الوكلاء-من-الإصدارات-السابقة) لمعرفة كل تغيير وكيفية التحكم فيه.
 
   ### الميزات
