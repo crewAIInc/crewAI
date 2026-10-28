@@ -123,9 +123,7 @@ def _tool_call_index(
         # Some providers stream a call ID first and its function name next.
         # Without an index or ID on the name chunk, continue the latest unnamed call.
         for existing_index in reversed(tool_calls):
-            if tool_calls[existing_index].get("id") and not tool_calls[
-                existing_index
-            ].get("name"):
+            if not tool_calls[existing_index].get("name"):
                 return existing_index
         return max(tool_calls, default=-1) + 1
 
