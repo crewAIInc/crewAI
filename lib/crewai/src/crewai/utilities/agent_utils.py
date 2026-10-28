@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Sequence
 import concurrent.futures
 import contextlib
 import contextvars
@@ -33,7 +33,12 @@ from crewai.events.types.llm_events import (
     ContextWindowSummarizationStartedEvent,
 )
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
+from crewai.llms.base_llm import (
+    BaseLLM,
+    EmptyLLMResponseError,
+    LLMCallBlockedError,
+    call_stop_override,
+)
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -396,6 +401,9 @@ def handle_max_iterations_exceeded(
 
     Returns:
         AgentFinish with the final answer after exceeding max iterations.
+
+    Raises:
+        EmptyLLMResponseError: If the answer and its single retry were empty.
     """
     if verbose:
         printer.print(
@@ -409,18 +417,12 @@ def handle_max_iterations_exceeded(
         format_message_for_llm(I18N_DEFAULT.errors("force_final_answer"), role="user")
     )
 
-    answer = llm.call(
-        messages,
-        callbacks=callbacks,
+    answer = _call_llm_retrying_empty(
+        llm,
+        lambda: llm.call(messages, callbacks=callbacks),
+        printer,
+        verbose=verbose,
     )
-
-    if answer is None or answer == "":
-        if verbose:
-            printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-        raise ValueError("Invalid response from LLM call - None or empty.")
 
     formatted = format_answer(answer=answer)
 
@@ -501,37 +503,64 @@ def _prepare_llm_call(
         yield executor_context.messages
 
 
-def _validate_and_finalize_llm_response(
-    answer: Any,
-    executor_context: AgentExecutor | LiteAgent | None,
+def _report_empty_llm_answer(
+    printer: Printer, verbose: bool, *, retrying: bool
+) -> None:
+    if not verbose:
+        return
+    if retrying:
+        printer.print(
+            content="Received an empty response from the LLM. Retrying once.",
+            color="yellow",
+        )
+    else:
+        printer.print(
+            content="Received None or empty response from LLM call.",
+            color="red",
+        )
+
+
+def _call_llm_retrying_empty(
+    llm: LLM | BaseLLM,
+    call: Callable[[], Any],
     printer: Printer,
-    verbose: bool = True,
-) -> str | BaseModel | Any:
-    """Shared post-call logic: validate response and run after hooks.
+    verbose: bool,
+) -> Any:
+    """Make an LLM call, repeating it once if the answer came back empty.
 
-    Args:
-        answer: The raw LLM response.
-        executor_context: Optional executor context for hook invocation.
-        printer: Printer instance for output.
-        verbose: Whether to print output.
-
-    Returns:
-        The potentially modified response.
+    An answer is empty when it is falsy (``None``, ``""``, no tool calls) or
+    the call raised :class:`EmptyLLMResponseError` (LiteLLM streaming).
 
     Raises:
-        ValueError: If the response is None or empty.
+        EmptyLLMResponseError: If the retry was empty too.
     """
-    if not answer:
-        if verbose:
-            printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-        raise ValueError("Invalid response from LLM call - None or empty.")
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=True)
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=False)
+    raise EmptyLLMResponseError(llm.model)
 
-    return _setup_after_llm_call_hooks(
-        executor_context, answer, printer, verbose=verbose
-    )
+
+async def _acall_llm_retrying_empty(
+    llm: LLM | BaseLLM,
+    call: Callable[[], Awaitable[Any]],
+    printer: Printer,
+    verbose: bool,
+) -> Any:
+    """Async counterpart of :func:`_call_llm_retrying_empty`."""
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := await call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=True)
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := await call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=False)
+    raise EmptyLLMResponseError(llm.model)
 
 
 def _summarize_context_before_llm_call(
@@ -703,7 +732,7 @@ def get_llm_response(
 
     Raises:
         Exception: If an error occurs.
-        ValueError: If the response is None or empty.
+        EmptyLLMResponseError: If the answer and its single retry were empty.
     """
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
@@ -720,18 +749,23 @@ def get_llm_response(
                 from_task=from_task,
                 from_agent=from_agent,
             )
-        answer = llm.call(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        answer = _call_llm_retrying_empty(
+            llm,
+            lambda: llm.call(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            ),
+            printer,
+            verbose=verbose,
         )
 
-    return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
     )
 
 
@@ -769,7 +803,7 @@ async def aget_llm_response(
 
     Raises:
         Exception: If an error occurs.
-        ValueError: If the response is None or empty.
+        EmptyLLMResponseError: If the answer and its single retry were empty.
     """
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
@@ -787,18 +821,23 @@ async def aget_llm_response(
                 from_task=from_task,
                 from_agent=from_agent,
             )
-        answer = await llm.acall(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        answer = await _acall_llm_retrying_empty(
+            llm,
+            lambda: llm.acall(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            ),
+            printer,
+            verbose=verbose,
         )
 
-    return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
     )
 
 

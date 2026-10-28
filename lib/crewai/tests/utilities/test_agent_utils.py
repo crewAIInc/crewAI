@@ -1286,7 +1286,7 @@ class TestHandleMaxIterationsExceeded:
         llm = MagicMock()
         llm.call.return_value = reply
 
-        with pytest.raises(ValueError, match="Invalid response from LLM call - None or empty."):
+        with pytest.raises(ValueError, match="The provider returned no content for model"):
             handle_max_iterations_exceeded(
                 printer=MagicMock(), messages=_native_tool_history(), llm=llm, callbacks=[], verbose=False
             )

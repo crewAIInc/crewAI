@@ -997,6 +997,30 @@ Saiba como obter o máximo da configuração do seu LLM:
       Um `response_model` grande ou profundamente aninhado aumenta a chance de timeouts upstream. Trate esses casos como falhas transitórias do provedor, e não como o modelo produzindo saída estruturada malformada.
     </Warning>
   </Tab>
+  <Tab title="Respostas Vazias">
+    <Tip>
+      Uma resposta vazia pode ser transitória, por isso o agente reenvia a mesma requisição uma vez antes de falhar.
+    </Tip>
+
+    Se o modelo novamente não retornar conteúdo nem chamadas de ferramenta, o agente lança `EmptyLLMResponseError`. Ela é subclasse de `ValueError`, então os handlers `except ValueError` existentes continuam a capturá-la:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
+  </Tab>
   <Tab title="Comprimento do Contexto">
     <Tip>
       Use modelos de contexto expandido para tarefas extensas
