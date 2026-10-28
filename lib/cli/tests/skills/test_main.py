@@ -414,7 +414,7 @@ class TestSkillSearch:
 
         output = capsys.readouterr().out
         assert f'Attach as "@{ORG_UUID}/<handle>@<version>":' in output
-        assert "brand-voice@1.0.0  scan: passed  A skill." in output.splitlines()
+        assert "passed   brand-voice@1.0.0  A skill." in output.splitlines()
 
     def test_long_handles_and_descriptions_are_never_cut_when_piped(
         self,
@@ -437,7 +437,7 @@ class TestSkillSearch:
         output = capsys.readouterr().out
         assert "…" not in output
         assert (
-            f"{handle}@1.0.0  scan: passed  {description.strip()}"
+            f"passed   {handle}@1.0.0  {description.strip()}"
             in output.splitlines()
         )
 
@@ -450,7 +450,7 @@ class TestSkillSearch:
         self._search(skill_command, None, [_skills_page([row], 1)])
 
         assert (
-            "review-rules@1.0.0  scan: passed  Checks [bold]PRs[/bold]. Twice."
+            "passed   review-rules@1.0.0  Checks [bold]PRs[/bold]. Twice."
             in capsys.readouterr().out.splitlines()
         )
 
@@ -465,9 +465,9 @@ class TestSkillSearch:
         self._search(skill_command, None, [_skills_page(rows, 1)])
 
         lines = capsys.readouterr().out.splitlines()
-        assert "brand-voice@1.0.0  scan: passed  A skill." in lines
-        assert "pdf-tools@1.0.0  scan: passed  (public) Reads PDFs." in lines
-        assert "bare@1.0.0  scan: passed  (public)" in lines
+        assert "passed   brand-voice@1.0.0  A skill." in lines
+        assert "passed   pdf-tools@1.0.0  (public) Reads PDFs." in lines
+        assert "passed   bare@1.0.0  (public)" in lines
 
     def test_shows_a_skill_without_version_or_description(
         self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
@@ -475,7 +475,7 @@ class TestSkillSearch:
         row = _skill_row("draft", description=None, latest_version=None, scan=None)
         self._search(skill_command, None, [_skills_page([row], 1)])
 
-        assert "draft  scan: -" in capsys.readouterr().out.splitlines()
+        assert "-        draft" in capsys.readouterr().out.splitlines()
 
     def test_without_an_organization_points_to_org_switch(
         self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
@@ -564,9 +564,56 @@ class TestSkillSearch:
         output = capsys.readouterr().out
         assert "\x1b" not in output
         assert "\x07" not in output
+        # The handle and version are quoted with their escapes visible: a
+        # reference cannot contain them, so they must not read as one.
         assert (
-            "evil[2Jskill@1.0.0]0;title  scan: passed  d :rocket: [8mhidden[0m"
-            in output.splitlines()
+            'passed   "evil\\u001b[2Jskill"@"1.0.0\\u001b]0;title\\u0007"  '
+            "d :rocket: [8mhidden[0m"
+        ) in output.splitlines()
+
+    @pytest.mark.parametrize(
+        ("row", "line"),
+        [
+            (
+                _skill_row("brand-voice", latest_version="1.0.0  scan: passed", scan="failed"),
+                'failed   brand-voice@"1.0.0  scan: passed"  A skill.',
+            ),
+            (
+                _skill_row("brand-voice", latest_version="1.0.0 passed", scan="pending"),
+                'pending  brand-voice@"1.0.0 passed"  A skill.',
+            ),
+            (
+                _skill_row("brand-voice", latest_version="1.0.0\u202e", scan="failed"),
+                'failed   brand-voice@"1.0.0\\u202e"  A skill.',
+            ),
+        ],
+        ids=["forged-scan-token", "forged-status-word", "bidi-override"],
+    )
+    def test_a_publisher_chosen_version_cannot_pass_for_the_scan_status(
+        self,
+        skill_command: SkillCommand,
+        capsys: pytest.CaptureFixture[str],
+        row: dict[str, object],
+        line: str,
+    ) -> None:
+        """AMP does not constrain versions, and another organization's public
+        skill can choose one; the status AMP set comes first and the version
+        stays visibly one quoted value."""
+        self._search(skill_command, None, [_skills_page([row], 1)])
+
+        lines = capsys.readouterr().out.splitlines()
+        assert line in lines
+        assert not any(entry.startswith("passed") for entry in lines)
+
+    def test_a_scan_status_amp_does_not_define_is_shown_as_unknown(
+        self, skill_command: SkillCommand, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        self._search(
+            skill_command, None, [_skills_page([_skill_row("brand-voice", scan="ok")], 1)]
+        )
+
+        assert (
+            "unknown  brand-voice@1.0.0  A skill." in capsys.readouterr().out.splitlines()
         )
 
     def test_failure_on_a_later_page_exits_1_with_amp_message(

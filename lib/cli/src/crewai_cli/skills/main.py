@@ -7,6 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import tarfile
 from typing import TypedDict
 import zipfile
@@ -40,6 +41,19 @@ class _PageMeta(TypedDict):
 class _SkillPage(TypedDict):
     data: list[_RegistrySkill]
     meta: _PageMeta
+
+
+_SCAN_STATUSES = frozenset({"passed", "pending", "failed"})
+_REF_TOKEN_RE = re.compile(r"[A-Za-z0-9._+-]+")
+
+
+def _ref_token(text: str) -> str:
+    """A handle or version as a reference spells it, else JSON-quoted.
+
+    AMP does not constrain versions, so a publisher's "1.0.0  scan: passed"
+    stays visibly one quoted value instead of reading as a scan result.
+    """
+    return text if _REF_TOKEN_RE.fullmatch(text) else json.dumps(text)
 
 
 def _printable(text: str) -> str:
@@ -414,17 +428,25 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 soft_wrap=True,
             )
         for skill in skills:
-            name = _printable(skill["handle"])
+            name = _ref_token(skill["handle"])
             if skill["latest_version"]:
-                name += f"@{_printable(skill['latest_version'])}"
-            scan = _printable(skill["virus_scanning_status"] or "-")
+                name += f"@{_ref_token(skill['latest_version'])}"
+            # First on the line, and only AMP's own values, so no publisher
+            # text comes before it. None: the skill has no version yet.
+            status = skill["virus_scanning_status"]
+            if status is None:
+                scan = "-"
+            elif status in _SCAN_STATUSES:
+                scan = status
+            else:
+                scan = "unknown"
             description = _printable(" ".join((skill["description"] or "").split()))
             # AMP also lists other organizations' public skills, with no owner
             # field, so the current-org ref above may not apply to these.
             if skill["is_public"]:
                 description = f"(public) {description}"
             console.print(
-                f"{name}  scan: {scan}  {description}".rstrip(),
+                f"{scan:<7}  {name}  {description}".rstrip(),
                 markup=False,
                 emoji=False,
                 soft_wrap=True,
