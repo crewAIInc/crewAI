@@ -1870,6 +1870,75 @@ def test_tool_result_equality_ignores_the_raw_result() -> None:
     assert ToolResult("2").raw_result == "2"
 
 
+def test_tool_result_keeps_an_explicit_none_raw_result() -> None:
+    from crewai.tools.tool_types import ToolResult
+
+    assert ToolResult("None", raw_result=None).raw_result is None
+
+
+class NoneTool(BaseTool):
+    """A side-effect tool: it does its work and returns nothing."""
+
+    name: str = "echo"
+    description: str = "Record the input."
+
+    def _run(self, text: str) -> Any:
+        return None
+
+
+def test_none_result_streak_survives_format_reminders_on_text_tools() -> None:
+    """A tool returning ``None`` is still caught when ToolUsage appends reminders.
+
+    Without a tools handler ToolUsage reruns the identical call instead of
+    answering with its own repeat notice, so the streak sees every result.
+    """
+    from crewai.agents.parser import AgentAction
+    from crewai.tools.tool_failure import tool_failure_collector
+    from crewai.utilities.agent_utils import (
+        check_repeated_tool_call,
+        repeated_tool_call_limit_reached,
+    )
+    from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+    agent = Agent(role="Looper", goal="g", backstory="b")
+    task = Task(description="echo", expected_output="x", agent=agent)
+    tool = NoneTool().to_structured_tool()
+    counts: dict[int, int] = {}
+    shown: list[str] = []
+    notes: list[str] = []
+
+    with tool_failure_collector() as records:
+        for _ in range(MAX_REPEATED_TOOL_CALLS):
+            executed = execute_tool_and_check_finality(
+                agent_action=AgentAction(
+                    thought="t",
+                    tool="echo",
+                    tool_input='{"text": "hi"}',
+                    text='Action: echo\nAction Input: {"text": "hi"}',
+                ),
+                tools=[tool],
+                agent=agent,
+                task=task,
+            )
+            assert executed.raw_result is None
+            shown.append(executed.result)
+            notes.append(
+                check_repeated_tool_call(
+                    counts,
+                    tool_name="echo",
+                    tool_args={"text": "hi"},
+                    result=executed.raw_result,
+                    agent=agent,
+                    task=task,
+                )
+            )
+
+    assert len(set(shown)) > 1, "expected a format reminder on some results"
+    assert REPEAT_WARNING in notes[MAX_REPEATED_TOOL_CALLS - 2]
+    assert repeated_tool_call_limit_reached(counts)
+    assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+
 class TestRepeatedToolCallHelper:
     """The streak: consecutive identical calls with identical results."""
 
