@@ -194,7 +194,10 @@ def test_percent_underscore_and_backslash_in_scope_names_match_literally(
     assert {r.id for r in storage.list_records("/metrics/100%")} == {"pct", "pct-child"}
     assert _search_ids(storage, "/a_b") == {"underscore"}
     assert storage.count("/a_b") == 1
-    assert _search_ids(storage, "/share\\") == {"backslash"}
+    # Scope prefixes match whole path components: ``/share\`` must not match
+    # the sibling-named ``/share\docs`` (only the scope itself or children
+    # joined by ``/``), consistent with the Qdrant backend's ancestors filter.
+    assert _search_ids(storage, "/share\\docs") == {"backslash"}
 
     deleted = storage.delete(scope_prefix="/a_b")
     assert deleted == 1
