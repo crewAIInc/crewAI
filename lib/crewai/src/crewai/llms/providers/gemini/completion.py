@@ -546,7 +546,7 @@ class GeminiCompletion(BaseLLM):
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
 
-        if tools and self.supports_tools:
+        if tools and self.supports_function_calling():
             gemini_tools = self._convert_tools_for_interference(tools)
 
             if response_model:
@@ -1433,6 +1433,9 @@ class GeminiCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
+        catalog_support = self._catalog_supports_function_calling()
+        if catalog_support is not None:
+            return catalog_support
         return self.supports_tools
 
     def supports_stop_words(self) -> bool:

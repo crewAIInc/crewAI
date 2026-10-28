@@ -2999,6 +2999,9 @@ class OpenAICompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
+        catalog_support = self._catalog_supports_function_calling()
+        if catalog_support is not None:
+            return catalog_support
         return not self.is_o1_model
 
     def supports_stop_words(self) -> bool:

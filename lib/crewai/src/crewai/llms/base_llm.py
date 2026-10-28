@@ -318,6 +318,11 @@ class BaseLLM(BaseModel, ABC):
             self._catalog_entry_resolved = True
         return self._catalog_entry
 
+    def _catalog_supports_function_calling(self) -> bool | None:
+        """Return the catalog's function-calling capability when it is explicit."""
+        value = (self.catalog_entry or {}).get("supports_function_calling")
+        return value if isinstance(value, bool) else None
+
     @model_validator(mode="before")
     @classmethod
     def _validate_init_fields(cls, data: Any) -> Any:

@@ -379,7 +379,7 @@ class BedrockCompletion(BaseLLM):
         if system_message:
             converse_input["system"] = [{"text": system_message}]
 
-        if tools:
+        if tools and self.supports_function_calling():
             converse_input["toolConfig"] = {
                 "tools": self._format_tools_for_converse(tools)
             }
@@ -490,7 +490,7 @@ class BedrockCompletion(BaseLLM):
                     )
 
                 # Bedrock requires toolConfig when messages contain toolUse/toolResult
-                if tools:
+                if tools and self.supports_function_calling():
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
                             "Sequence[ToolTypeDef]",
@@ -633,7 +633,7 @@ class BedrockCompletion(BaseLLM):
                     )
 
                 # Bedrock requires toolConfig when messages contain toolUse/toolResult
-                if tools:
+                if tools and self.supports_function_calling():
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
                             "Sequence[ToolTypeDef]",
@@ -2225,6 +2225,9 @@ class BedrockCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
+        catalog_support = self._catalog_supports_function_calling()
+        if catalog_support is not None:
+            return catalog_support
         return self.supports_tools
 
     def supports_stop_words(self) -> bool:
