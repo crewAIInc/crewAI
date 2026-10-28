@@ -1,0 +1,44 @@
+---
+title: Reasoning
+description: "Agent reasoning is now agent planning. Learn how to move from reasoning=True to planning_config."
+icon: brain
+mode: "wide"
+---
+
+## Overview
+
+Agent reasoning lets an agent reflect on a task and write a plan before it acts. It is now part of agent planning, which also executes the plan step by step, checks each step, and can replan when a step fails.
+
+The `reasoning` and `max_reasoning_attempts` parameters still work but are deprecated. `reasoning=True` emits a `DeprecationWarning`, which Python's default warning filters hide, and `max_reasoning_attempts` has an effect only together with `reasoning=True`. Configure planning with `planning_config` instead. See [Planning](/edge/en/concepts/planning) for the full guide.
+
+## Migrating from `reasoning=True`
+
+Replace `reasoning=True` with `planning_config=PlanningConfig()`, and move `max_reasoning_attempts` to `PlanningConfig(max_attempts=...)`:
+
+```python
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    planning_config=PlanningConfig(max_attempts=3),
+)
+```
+
+| Deprecated | Replacement |
+| --- | --- |
+| `reasoning=True` | `planning_config=PlanningConfig()` |
+| `reasoning=True, max_reasoning_attempts=3` | `planning_config=PlanningConfig(max_attempts=3)` |
+
+These replacements keep the same behavior: medium reasoning effort, and refinement until the plan is ready or `max_attempts` is reached. With no `max_attempts`, the planner keeps refining until it marks the plan ready, so setting a limit is recommended.
+
+<Warning>
+`planning=True` is not the same as `reasoning=True`. It uses `PlanningConfig(reasoning_effort="low", max_attempts=1)`: one planning attempt and no LLM review after each step. Use it when you want cheaper planning, not as a drop-in replacement.
+</Warning>
+
+## How it works
+
+The plan is kept in the agent's execution state and is not added to the task description. Each step of the plan runs as its own todo item, and the agent checks the result before it moves on. If planning fails, the agent runs the task without a plan.
+
+For reasoning effort levels, step limits, a separate planning LLM, custom prompts, and planning with `Agent.kickoff()`, see [Planning](/edge/en/concepts/planning).
