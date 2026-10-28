@@ -1,4 +1,23 @@
+from typing import Any
+
+import pytest
+
+from crewai.llms import model_catalog
 from crewai.llms.model_catalog import find_model_catalog_entry
+
+
+@pytest.fixture
+def synthetic_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    catalog: dict[str, Any] = {
+        "acme-1": {"litellm_provider": "acme", "max_input_tokens": 10},
+        "acme/acme-2": {"litellm_provider": "acme", "tags": ["a"]},
+        "acme-3-20250101": {"litellm_provider": "acme"},
+        "acme-3-20250202": {"litellm_provider": "acme"},
+    }
+    entries, exact, normalized = model_catalog._index_catalog(catalog)
+    monkeypatch.setattr(model_catalog, "_CATALOG_ENTRIES", entries)
+    monkeypatch.setattr(model_catalog, "_EXACT_ENTRIES", exact)
+    monkeypatch.setattr(model_catalog, "_NORMALIZED_ENTRIES", normalized)
 
 
 def test_lookup_returns_the_catalog_entry_for_an_explicit_provider() -> None:
@@ -59,8 +78,23 @@ def test_lookup_keeps_an_exact_bedrock_deployment_id() -> None:
     assert entry["max_input_tokens"] == 200_000
 
 
+@pytest.mark.usefixtures("synthetic_catalog")
 def test_lookup_leaves_an_ambiguous_normalized_match_unresolved() -> None:
-    assert find_model_catalog_entry("claude-sonnet-4-6", provider="bedrock") is None
+    assert find_model_catalog_entry("acme-3", provider="acme") is None
+    assert find_model_catalog_entry("acme-3-20250101", provider="acme") is not None
+
+
+@pytest.mark.usefixtures("synthetic_catalog")
+def test_lookup_matches_an_unknown_provider_case_insensitively() -> None:
+    entry = find_model_catalog_entry("acme-1", provider="ACME")
+
+    assert entry is not None
+    assert entry["max_input_tokens"] == 10
+
+
+def test_lookup_returns_none_for_an_empty_model() -> None:
+    assert find_model_catalog_entry("") is None
+    assert find_model_catalog_entry("", provider="openai") is None
 
 
 def test_lookup_without_provider_only_accepts_an_exact_catalog_key() -> None:
