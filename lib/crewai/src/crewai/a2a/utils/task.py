@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 from collections.abc import Callable, Coroutine
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 import json
 import logging
@@ -503,6 +503,21 @@ async def cancel(
     return None
 
 
+def _parse_status_timestamp(value: str | None) -> datetime:
+    """Parse a task status timestamp as an aware datetime for safe comparisons.
+
+    Tasks without a timestamp sort as the oldest instant; naive timestamps
+    are assumed to be UTC. Mixing naive and aware values would otherwise
+    raise TypeError during sorting or filtering.
+    """
+    if value is None:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    ts = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts
+
+
 def list_tasks(
     tasks: list[A2ATask],
     context_id: str | None = None,
@@ -536,24 +551,21 @@ def list_tasks(
         - total_count: Total number of tasks matching filters (before pagination).
     """
     filtered: list[A2ATask] = []
+    if status_timestamp_after is not None and status_timestamp_after.tzinfo is None:
+        status_timestamp_after = status_timestamp_after.replace(tzinfo=timezone.utc)
     for task in tasks:
         if context_id and task.context_id != context_id:
             continue
         if status and task.status.state != status:
             continue
         if status_timestamp_after and task.status.timestamp:
-            ts = datetime.fromisoformat(task.status.timestamp.replace("Z", "+00:00"))
-            if ts <= status_timestamp_after:
+            if _parse_status_timestamp(task.status.timestamp) <= status_timestamp_after:
                 continue
         filtered.append(task)
 
-    def get_timestamp(t: A2ATask) -> datetime:
-        """Extract timestamp from task status for sorting."""
-        if t.status.timestamp is None:
-            return datetime.min
-        return datetime.fromisoformat(t.status.timestamp.replace("Z", "+00:00"))
-
-    filtered.sort(key=get_timestamp, reverse=True)
+    filtered.sort(
+        key=lambda t: _parse_status_timestamp(t.status.timestamp), reverse=True
+    )
     total = len(filtered)
 
     start = 0
