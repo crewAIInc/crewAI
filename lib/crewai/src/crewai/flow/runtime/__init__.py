@@ -1396,7 +1396,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "Use 'await flow.resume_async(feedback)' instead."
             )
 
-        return asyncio.run(self.resume_async(feedback))
+        # Like kickoff, own the scope in the caller's context as well as the
+        # async task: asyncio.run() cannot clear ContextVars in its caller.
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
+        try:
+            return asyncio.run(self.resume_async(feedback))
+        finally:
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def resume_async(self, feedback: str = "") -> Any:
         """Async version of resume.
@@ -1436,6 +1442,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # fired in the original kickoff, so a failure here still owes the
         # paired EXECUTION_END (unless the body already dispatched it).
         hook_state = {"end_dispatched": False}
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             execution_token = self._begin_trace_execution(
                 self._pending_feedback_context.execution_uuid,
@@ -1464,6 +1471,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
             self._end_trace_execution(execution_token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
