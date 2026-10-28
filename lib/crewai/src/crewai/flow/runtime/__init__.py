@@ -344,6 +344,12 @@ def _serialize_input_provider(value: Any) -> str | None:
 
 _INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
 
+# Serializes the first build of each Flow class's definition: building walks
+# the class ``__dict__``, and caching the result adds to it, so two threads
+# building at once can see "dictionary changed size during iteration".
+# Reentrant because a build can resolve a parent Flow's definition.
+_FLOW_DEFINITION_LOCK = threading.RLock()
+
 
 def _serialize_initial_state(value: Any) -> Any:
     """Make ``initial_state`` safe for JSON checkpoint serialization.
@@ -540,8 +546,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """Return the static Flow Definition built from this Flow class."""
         flow_definition = cls.__dict__.get("_flow_definition")
         if flow_definition is None:
-            flow_definition = build_flow_definition(cls)
-            cls._flow_definition = flow_definition
+            with _FLOW_DEFINITION_LOCK:
+                flow_definition = cls.__dict__.get("_flow_definition")
+                if flow_definition is None:
+                    flow_definition = build_flow_definition(cls)
+                    cls._flow_definition = flow_definition
         return flow_definition
 
     @classmethod
