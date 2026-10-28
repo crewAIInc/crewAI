@@ -225,6 +225,16 @@ def _tool_use_input(block: _AnthropicToolUseBlock) -> dict[str, Any]:
     )
 
 
+def _tools_named_in_history(messages: list[LLMMessage]) -> list[dict[str, Any]]:
+    """Return an open-schema definition for each tool the history's tool_use blocks name."""
+    names: dict[str, None] = {}
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            names.update(dict.fromkeys(map(_tool_use_name, _tool_use_blocks(content))))
+    return [{"name": name, "input_schema": {"type": "object"}} for name in names]
+
+
 class AnthropicThinkingConfig(BaseModel):
     type: Literal["enabled", "disabled"]
     budget_tokens: int | None = None
@@ -669,6 +679,12 @@ class AnthropicCompletion(BaseLLM):
             # Claude models (Sonnet 5.5, Opus 5.5, Fable 5.1, Mythos 5.1).
             if available_functions and len(regular_tools) == 1:
                 params["tool_choice"] = {"type": "auto"}
+        elif history_tools := _tools_named_in_history(messages):
+            # Anthropic rejects tool_use/tool_result blocks in a request that
+            # defines no tools (a final-answer or schema request after tool
+            # calls). Declare the tools the history used and forbid calling them.
+            params["tools"] = history_tools
+            params["tool_choice"] = {"type": "none"}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
