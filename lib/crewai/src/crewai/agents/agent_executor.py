@@ -145,6 +145,11 @@ if TYPE_CHECKING:
 
 _RouteT = TypeVar("_RouteT", bound=str)
 
+_TOOL_CALL_NOT_RUN_AT_MAX_ITER = (
+    "Not run: the iteration limit (max_iter) was reached before this tool call. "
+    "Give your final answer using the results you already have."
+)
+
 
 class AgentExecutorState(BaseModel):
     """Structured state for agent executor flow.
@@ -1920,7 +1925,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Execute native tool calls in a batch.
 
         Processes all tools from pending_tool_calls, executes them,
-        and appends results to the conversation history.
+        and appends results to the conversation history. Each executed call
+        counts toward max_iter; calls past the remaining budget are not run
+        and are answered with a note that the iteration limit was reached.
 
         Returns:
             "native_tool_completed" normally, or "tool_result_is_final" if
@@ -1963,11 +1970,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
             self.state.messages.append(assistant_message)
 
-        runnable_tool_calls = [
-            tool_call
+        runnable = [
+            (tool_call, info)
             for tool_call in pending_tool_calls
-            if extract_tool_call_info(tool_call) is not None
+            if (info := extract_tool_call_info(tool_call)) is not None
         ]
+        # Every tool call counts toward max_iter; increment_and_continue counts
+        # this step's first one. Calls past the remaining budget are not run.
+        budget = self.max_iter - self.state.iterations
+        runnable_tool_calls = [tool_call for tool_call, _ in runnable[:budget]]
+        not_run_tool_calls = [info for _, info in runnable[budget:]]
+        self.state.iterations += max(len(runnable_tool_calls) - 1, 0)
         should_parallelize = self._should_parallelize_native_tool_calls(
             runnable_tool_calls
         )
@@ -2048,8 +2061,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     self.state.is_finished = True
                     return "tool_result_is_final"
 
-            return "native_tool_completed"
-
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
@@ -2079,6 +2090,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 )
                 self.state.is_finished = True
                 return "tool_result_is_final"
+
+        for call_id, func_name, _ in not_run_tool_calls:
+            self.state.messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "name": func_name,
+                    "content": _TOOL_CALL_NOT_RUN_AT_MAX_ITER,
+                }
+            )
 
         return "native_tool_completed"
 

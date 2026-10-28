@@ -1034,7 +1034,7 @@ class TestMaxUsageCountWithNativeToolCalling:
             tools=[tool],
             llm=LLM(model="gpt-5-nano"),
             verbose=False,
-            max_iter=5,
+            max_iter=10,  # The cassette makes 6 tool calls; each counts.
         )
 
         task = Task(
@@ -1061,7 +1061,7 @@ class TestMaxUsageCountWithNativeToolCalling:
             tools=[tool],
             llm=LLM(model="gpt-5-nano"),
             verbose=False,
-            max_iter=5,
+            max_iter=10,  # The cassette makes 9 tool calls; each counts.
         )
 
         # Request more tool calls than the max_usage_count allows

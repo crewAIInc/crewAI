@@ -201,7 +201,9 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         max_rpm (int | None): Maximum number of requests per minute for the agent execution.
         allow_delegation (bool): Allow delegation of tasks to agents.
         tools (list[Any] | None): Tools at the agent's disposal.
-        max_iter (int): Maximum iterations for an agent to execute a task.
+        max_iter (int): Maximum iterations for an agent to execute a task. Each
+            tool call counts as one iteration, including each of several
+            parallel tool calls.
         agent_executor: The executor running this agent. Defaults to AgentExecutor.
         i18n (I18N): Internationalization settings.
         llm (Any): Language model that will run the agent.
