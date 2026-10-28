@@ -7,7 +7,6 @@ from collections.abc import Mapping
 from importlib.resources import files
 import json
 import re
-from types import MappingProxyType
 from typing import Any, Final
 
 
@@ -108,30 +107,27 @@ def _entry_model_names(name: str, provider: str) -> tuple[str, ...]:
 def _index_catalog(
     catalog: Mapping[str, Any],
 ) -> tuple[
-    Mapping[str, Mapping[str, Any]],
-    Mapping[tuple[str, str], tuple[Mapping[str, Any], ...]],
-    Mapping[tuple[str, str], tuple[Mapping[str, Any], ...]],
+    dict[str, dict[str, Any]],
+    dict[tuple[str, str], tuple[dict[str, Any], ...]],
+    dict[tuple[str, str], tuple[dict[str, Any], ...]],
 ]:
-    entries: dict[str, Mapping[str, Any]] = {}
-    exact: defaultdict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(list)
-    normalized: defaultdict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(
-        list
-    )
+    entries: dict[str, dict[str, Any]] = {}
+    exact: defaultdict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    normalized: defaultdict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for name, props in catalog.items():
         if not isinstance(props, dict):
             continue
         provider = props.get("litellm_provider")
         if not isinstance(provider, str):
             continue
-        entry = MappingProxyType(props)
-        entries[name] = entry
+        entries[name] = props
         for model in _entry_model_names(name, provider):
-            exact[provider, model].append(entry)
-            normalized[provider, bare_model_name(model)].append(entry)
+            exact[provider, model].append(props)
+            normalized[provider, bare_model_name(model)].append(props)
     return (
-        MappingProxyType(entries),
-        MappingProxyType({key: tuple(value) for key, value in exact.items()}),
-        MappingProxyType({key: tuple(value) for key, value in normalized.items()}),
+        entries,
+        {key: tuple(value) for key, value in exact.items()},
+        {key: tuple(value) for key, value in normalized.items()},
     )
 
 
@@ -139,10 +135,10 @@ CATALOG = _load_catalog()
 _CATALOG_ENTRIES, _EXACT_ENTRIES, _NORMALIZED_ENTRIES = _index_catalog(CATALOG)
 
 
-def catalog_provider_prefixes(catalog: Mapping[str, Any] = CATALOG) -> frozenset[str]:
+def catalog_provider_prefixes() -> frozenset[str]:
     """Return provider prefixes that catalog keys actually use."""
     prefixes: set[str] = set()
-    for name, props in catalog.items():
+    for name, props in CATALOG.items():
         if not isinstance(props, dict):
             continue
         provider = props.get("litellm_provider")
@@ -156,8 +152,10 @@ def catalog_provider_prefixes(catalog: Mapping[str, Any] = CATALOG) -> frozenset
 
 def find_model_catalog_entry(
     model: str, provider: str | None = None
-) -> Mapping[str, Any] | None:
-    """Return the unmodified LiteLLM entry for an unambiguous model lookup.
+) -> dict[str, Any] | None:
+    """Return the LiteLLM entry for an unambiguous model lookup.
+
+    The entry is shared catalog data; callers must treat it as read-only.
 
     With no provider, only a literal catalog key can match. With a provider,
     exact provider/model matches take precedence over provider-scoped normalized
@@ -168,7 +166,8 @@ def find_model_catalog_entry(
     if provider is None:
         return direct
 
-    providers = _PROVIDER_EQUIVALENTS.get(provider.lower(), frozenset({provider}))
+    provider = provider.lower()
+    providers = _PROVIDER_EQUIVALENTS.get(provider, frozenset({provider}))
     if direct is not None and direct.get("litellm_provider") in providers:
         return direct
 
