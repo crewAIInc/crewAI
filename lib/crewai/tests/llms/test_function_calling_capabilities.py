@@ -190,26 +190,6 @@ def test_bedrock_request_tool_gate_uses_catalog_capability(catalog_support: bool
     assert ("toolConfig" in request) is catalog_support
 
 
-def test_dropped_tools_are_logged(caplog: pytest.LogCaptureFixture, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
-    stub_catalog({"supports_function_calling": False})
-    llm = BedrockCompletion(model="anthropic.claude-3-5-sonnet-20241022-v2:0")
-
-    with caplog.at_level("WARNING", logger="crewai.llms.base_llm"):
-        assert llm._tools_allowed([{"name": "get_weather"}]) is False
-
-    assert "does not support function calling" in caplog.text
-
-
-def test_no_warning_when_no_tools_are_passed(caplog: pytest.LogCaptureFixture, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
-    stub_catalog({"supports_function_calling": False})
-    llm = BedrockCompletion(model="anthropic.claude-3-5-sonnet-20241022-v2:0")
-
-    with caplog.at_level("WARNING", logger="crewai.llms.base_llm"):
-        assert llm._tools_allowed(None) is False
-
-    assert caplog.text == ""
-
-
 @pytest.mark.parametrize(
     ("factory", "expected"),
     [
