@@ -2566,6 +2566,10 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
+        catalog_support = self._catalog_supports_function_calling()
+        if catalog_support is not None:
+            return catalog_support
+
         if not _ensure_litellm():
             # When litellm is not available, assume function calling is supported
             # (all modern models support it)
