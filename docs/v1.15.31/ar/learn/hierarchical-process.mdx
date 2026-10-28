@@ -1,0 +1,76 @@
+---
+title: العملية الهرمية
+description: دليل شامل لفهم وتطبيق العملية الهرمية ضمن مشاريع CrewAI.
+icon: sitemap
+mode: "wide"
+---
+
+## مقدمة
+
+تقدم العملية الهرمية في CrewAI نهجًا منظمًا لإدارة المهام، محاكاةً للتسلسلات الهرمية التنظيمية التقليدية للتفويض والتنفيذ الفعّال للمهام.
+
+<Tip>
+    صُممت العملية الهرمية للاستفادة من نماذج متقدمة مثل GPT-4، مما يحسّن استخدام الرموز المميزة مع التعامل مع المهام المعقدة بكفاءة أكبر.
+</Tip>
+
+## نظرة عامة على العملية الهرمية
+
+افتراضيًا، تُدار المهام في CrewAI من خلال عملية متسلسلة. لكن اعتماد نهج هرمي يتيح تسلسلاً واضحًا في إدارة المهام، حيث يقوم Agent 'مدير' بتنسيق سير العمل وتفويض المهام والتحقق من النتائج.
+
+### الميزات الرئيسية
+
+- **تفويض المهام**: Agent مدير يوزّع المهام بين أعضاء Crew بناءً على أدوارهم وقدراتهم.
+- **التحقق من النتائج**: يقيّم المدير النتائج لضمان استيفائها للمعايير المطلوبة.
+- **سير عمل فعّال**: يحاكي الهياكل المؤسسية مقدمًا نهجًا منظمًا لإدارة المهام.
+
+## تنفيذ العملية الهرمية
+
+```python Code
+from crewai import Crew, Process, Agent
+
+researcher = Agent(
+    role='Researcher',
+    goal='Conduct in-depth analysis',
+    backstory='Experienced data analyst with a knack for uncovering hidden trends.',
+)
+writer = Agent(
+    role='Writer',
+    goal='Create engaging content',
+    backstory='Creative writer passionate about storytelling in technical domains.',
+)
+
+project_crew = Crew(
+    tasks=[...],
+    agents=[researcher, writer],
+    manager_llm="gpt-4o",
+    process=Process.hierarchical,
+    planning=True,
+)
+```
+
+### استخدام Agent مدير مخصص
+
+```python
+manager = Agent(
+    role="Project Manager",
+    goal="Efficiently manage the crew and ensure high-quality task completion",
+    backstory="You're an experienced project manager...",
+    allow_delegation=True,
+)
+
+project_crew = Crew(
+    tasks=[...],
+    agents=[researcher, writer],
+    manager_agent=manager,
+    process=Process.hierarchical,
+    planning=True,
+)
+```
+
+<Tip>
+    لمزيد من التفاصيل حول إنشاء وتخصيص Agent مدير، اطلع على [توثيق Agent المدير المخصص](/ar/learn/custom-manager-agent).
+</Tip>
+
+## الخلاصة
+
+اعتماد العملية الهرمية في CrewAI مع التهيئات الصحيحة وفهم قدرات النظام يسهّل نهجًا منظمًا وفعّالاً لإدارة المشاريع. استفد من الميزات المتقدمة والتخصيصات لتكييف سير العمل لاحتياجاتك المحددة.

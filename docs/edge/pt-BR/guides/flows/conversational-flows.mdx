@@ -293,6 +293,7 @@ Decorador de classe que anexa os defaults de chat por classe.
 |-------|--------|-----------|
 | `system_prompt` | `slices.conversational_system_prompt` (i18n) | System message usado pelo `converse_turn` embutido. Passe `""` para desativar totalmente. |
 | `llm` | `None` | LLM de conversa (usado pelo `converse_turn` e como fallback do router). |
+| `respect_context_window` | `True` | Compacta automaticamente as requisições de chat e roteamento embutidas perto do limite de contexto do modelo e tenta novamente uma vez após um erro de limite de contexto. Defina `False` para desativar. |
 | `router` | `None` | Sobrescritas opcionais de `RouterConfig`. Com listeners customizados e um LLM que possa ser resolvido, o roteamento é habilitado automaticamente mesmo quando este campo é omitido. |
 | `answer_from_history_prompt` | padrão do framework | **Descontinuado.** Use o system prompt de `converse` ou sobrescreva `converse_turn()`. |
 | `answer_from_history_llm` | `None` | **Descontinuado.** Use `llm`; `converse` já recebe o histórico canônico. |
@@ -314,6 +315,8 @@ Decorador de classe que anexa os defaults de chat por classe.
 Sem rotas customizadas, os turnos caem em `converse`. Com rotas customizadas e um LLM de conversa/router, o framework sintetiza um `RouterConfig` padrão; forneça um explicitamente apenas para customizar seu prompt, lista de rotas, descrições ou comportamento de fallback. Definir `default_intents` usa o caminho legado de pré-classificação.
 
 Se nenhum LLM de conversa estiver configurado, o `converse_turn` embutido retorna um placeholder de configuração em vez de gerar uma resposta.
+
+Para modelos `BaseLLM`, as chamadas embutidas de `converse`, `answer_from_history` e do router reutilizam o sumarizador de contexto compartilhado. A compactação preserva as mensagens de system, repete a mensagem mais recente do usuário literalmente após o resumo e mantém `state.messages` intacto para exibição e persistência; cada turno monta sua própria requisição ao modelo e pode resumir novamente. Os resumos internos não são transmitidos como texto da resposta, e os eventos existentes de sumarização de contexto informam o progresso. Objetos customizados que implementam apenas `call()` mantêm seu comportamento atual. A pré-classificação legada com `intents=` / `default_intents` e os handlers de rotas customizadas mantêm seu próprio tratamento de contexto.
 
 ### `RouterConfig` e o catálogo de rotas auto-gerado
 
