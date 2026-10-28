@@ -758,9 +758,12 @@ class BaseLLM(BaseModel, ABC):
         """
         from crewai.llms.context_window import _CATALOG
 
-        names: tuple[str, ...] = (self.model,)
+        models = dict.fromkeys((self.model, self.model.lower()))
+        names: tuple[str, ...] = tuple(models)
         if providers is not None:
-            names += tuple(f"{provider}/{self.model}" for provider in providers)
+            names += tuple(
+                f"{provider}/{model}" for provider in providers for model in models
+            )
 
         for name in names:
             properties = _CATALOG.get(name)
