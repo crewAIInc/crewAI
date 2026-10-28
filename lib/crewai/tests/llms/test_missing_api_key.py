@@ -211,6 +211,119 @@ def test_gemini_placeholder_still_allows_vertex_adc() -> None:
     assert "api_key" not in client.call_args.kwargs
 
 
+@pytest.mark.parametrize("via_llm", [False, True], ids=["native", "LLM"])
+@pytest.mark.parametrize(
+    ("explicit", "env"),
+    [
+        (None, {"GOOGLE_API_KEY": PLACEHOLDER, "GEMINI_API_KEY": "sk-real-key"}),
+        (PLACEHOLDER, {"GOOGLE_API_KEY": "sk-real-key"}),
+        (PLACEHOLDER, {"GOOGLE_API_KEY": PLACEHOLDER, "GEMINI_API_KEY": "sk-real-key"}),
+    ],
+    ids=["google-placeholder", "explicit-placeholder", "both-placeholders"],
+)
+def test_gemini_placeholder_does_not_hide_a_real_key(
+    explicit: str | None, env: dict[str, str], via_llm: bool
+) -> None:
+    provider = LAZY_PROVIDERS[2]
+    kwargs = {"api_key": explicit} if explicit else {}
+    with provider_env(provider, **env):
+        llm = build(provider, via_llm, **kwargs)
+        assert llm._get_sync_client() is not None
+
+    assert llm.api_key == "sk-real-key"
+
+
+def test_gemini_reports_other_client_errors_as_themselves() -> None:
+    """Only the SDK's missing-key failure becomes ``MissingAPIKeyError``."""
+    provider = LAZY_PROVIDERS[2]
+    with provider_env(provider):
+        llm = GeminiCompletion(
+            model="gemini-2.0-flash", client_params={"http_options": {"bogus": 1}}
+        )
+        with pytest.raises(ValueError, match="(?i)http_?options") as exc_info:
+            llm.call("Say hi")
+
+    assert not isinstance(exc_info.value, MissingAPIKeyError)
+
+
+class TestAzureResponses:
+    """``api="responses"`` delegates to an OpenAI client, which has its own key lookup."""
+
+    ENDPOINT = "https://test.openai.azure.com"
+
+    def build(self, via_llm: bool, **kwargs: Any) -> AzureCompletion:
+        if via_llm:
+            llm = LLM(model="azure/gpt-4o", api="responses", **kwargs)
+            assert isinstance(llm, AzureCompletion)
+            return llm
+        return AzureCompletion(model="gpt-4o", api="responses", **kwargs)
+
+    @pytest.mark.parametrize("via_llm", [False, True], ids=["native", "LLM"])
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("stream", [False, True], ids=["no-stream", "stream"])
+    @pytest.mark.parametrize("env", [{}, {"AZURE_API_KEY": PLACEHOLDER}])
+    def test_missing_or_placeholder_key_names_azure(
+        self, env: dict[str, str], via_llm: bool, mode: str, stream: bool
+    ) -> None:
+        with patch.dict(os.environ, {"AZURE_ENDPOINT": self.ENDPOINT, **env}, clear=True):
+            llm = self.build(via_llm, stream=stream)
+            with pytest.raises(MissingAPIKeyError) as exc_info:
+                invoke(llm, mode)
+
+        assert exc_info.value.env_var == "AZURE_API_KEY"
+        assert exc_info.value.model == "gpt-4o"
+
+    def test_message_does_not_offer_keyless_auth(self) -> None:
+        """azure-identity cannot authenticate the OpenAI delegate, so do not suggest it."""
+        with patch.dict(os.environ, {"AZURE_ENDPOINT": self.ENDPOINT}, clear=True):
+            with pytest.raises(MissingAPIKeyError) as exc_info:
+                self.build(via_llm=False).call("Say hi")
+
+        assert "azure-identity" not in str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        ("explicit", "env"),
+        [
+            (None, {"AZURE_API_KEY": "sk-azure-key"}),
+            (PLACEHOLDER, {"AZURE_API_KEY": "sk-azure-key"}),
+            ("sk-azure-key", {"OPENAI_API_KEY": "sk-openai-key"}),
+        ],
+        ids=["env", "explicit-placeholder", "explicit-over-openai"],
+    )
+    def test_delegate_gets_the_azure_key(
+        self, explicit: str | None, env: dict[str, str]
+    ) -> None:
+        kwargs = {"api_key": explicit} if explicit else {}
+        with patch.dict(os.environ, {"AZURE_ENDPOINT": self.ENDPOINT, **env}, clear=True):
+            llm = self.build(via_llm=True, **kwargs)
+            delegate = llm._get_responses_delegate()
+            assert delegate._get_sync_client() is not None
+
+        assert delegate.api_key == "sk-azure-key"
+
+    def test_openai_key_fallback_is_unchanged(self) -> None:
+        """Without an Azure key the delegate still reads OPENAI_API_KEY, as before."""
+        env = {
+            "AZURE_ENDPOINT": self.ENDPOINT,
+            "AZURE_API_KEY": PLACEHOLDER,
+            "OPENAI_API_KEY": "sk-openai-key",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            delegate = self.build(via_llm=True)._get_responses_delegate()
+            assert delegate._get_sync_client() is not None
+
+        assert delegate.api_key == "sk-openai-key"
+
+    def test_key_set_after_construction_is_picked_up(self) -> None:
+        with patch.dict(os.environ, {"AZURE_ENDPOINT": self.ENDPOINT}, clear=True):
+            llm = self.build(via_llm=True)
+        env = {"AZURE_ENDPOINT": self.ENDPOINT, "AZURE_API_KEY": "sk-azure-key"}
+        with patch.dict(os.environ, env, clear=True):
+            delegate = llm._get_responses_delegate()
+
+        assert delegate.api_key == "sk-azure-key"
+
+
 def test_task_failure_reports_missing_key_as_its_type() -> None:
     """Telemetry records the task's ``error_type``, so the class name is the signal."""
     failed: list[TaskFailedEvent] = []

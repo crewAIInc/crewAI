@@ -202,6 +202,19 @@ class AzureCompletion(BaseLLM):
 
         base_url = self._get_responses_base_url()
 
+        self.api_key = (
+            _without_placeholder(self.api_key)
+            or _without_placeholder(os.getenv("AZURE_API_KEY"))
+            or None
+        )
+        if self.api_key is None and not _without_placeholder(
+            os.getenv("OPENAI_API_KEY")
+        ):
+            # The delegate is a plain OpenAI client, so azure-identity cannot
+            # authenticate it. Without a key it reads OPENAI_API_KEY, kept for
+            # existing setups; when that is unset too, name the Azure variable.
+            raise MissingAPIKeyError("AZURE_API_KEY", self.model)
+
         delegate_kwargs: dict[str, Any] = {
             "model": self.model,
             "api_key": self.api_key,
@@ -249,6 +262,11 @@ class AzureCompletion(BaseLLM):
             delegate_kwargs["additional_params"] = self.additional_params
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
+
+    def _get_responses_delegate(self) -> Any:
+        if self._responses_delegate is None:
+            self._init_responses_delegate()
+        return self._responses_delegate
 
     def get_input_tokens_count(
         self,
@@ -513,10 +531,9 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            with call_stream_override(
-                self._responses_delegate, bool(self._effective_stream())
-            ):
-                return self._responses_delegate.call(
+            delegate = self._get_responses_delegate()
+            with call_stream_override(delegate, bool(self._effective_stream())):
+                return delegate.call(
                     messages=messages,
                     tools=tools,
                     callbacks=callbacks,
@@ -595,10 +612,9 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            with call_stream_override(
-                self._responses_delegate, bool(self._effective_stream())
-            ):
-                return await self._responses_delegate.acall(
+            delegate = self._get_responses_delegate()
+            with call_stream_override(delegate, bool(self._effective_stream())):
+                return await delegate.acall(
                     messages=messages,
                     tools=tools,
                     callbacks=callbacks,

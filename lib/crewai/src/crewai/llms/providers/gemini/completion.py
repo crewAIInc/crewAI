@@ -41,6 +41,22 @@ except ImportError:
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
 
+def _resolve_api_key(api_key: str | None) -> str | None:
+    """Pick ``api_key``, then ``GOOGLE_API_KEY``, then ``GEMINI_API_KEY``.
+
+    The placeholder is skipped so a leftover one cannot hide a real key further
+    down. It is returned only when nothing real is set, so ``_initialize_client``
+    can report it instead of letting the SDK read it from the environment.
+    """
+    candidates = [
+        key
+        for key in (api_key, os.getenv("GOOGLE_API_KEY"), os.getenv("GEMINI_API_KEY"))
+        if key
+    ]
+    real = [key for key in candidates if _without_placeholder(key)]
+    return next(iter(real or candidates), None)
+
+
 class GeminiCompletion(BaseLLM):
     """Google Gemini native completion implementation.
 
@@ -86,11 +102,7 @@ class GeminiCompletion(BaseLLM):
             seqs = [seqs]
         data["stop"] = seqs
 
-        data["api_key"] = (
-            data.get("api_key")
-            or os.getenv("GOOGLE_API_KEY")
-            or os.getenv("GEMINI_API_KEY")
-        )
+        data["api_key"] = _resolve_api_key(data.get("api_key"))
         data["project"] = data.get("project") or os.getenv("GOOGLE_CLOUD_PROJECT")
         data["location"] = (
             data.get("location") or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
@@ -136,10 +148,7 @@ class GeminiCompletion(BaseLLM):
         if self._client is None:
             # Re-read env vars so a deferred build can pick up credentials
             # that weren't set at instantiation time.
-            if not _without_placeholder(self.api_key):
-                self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
-                    "GEMINI_API_KEY"
-                )
+            self.api_key = _resolve_api_key(self.api_key)
             if not self.project:
                 self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
             self._client = self._initialize_client(self.use_vertexai)
@@ -304,7 +313,11 @@ class GeminiCompletion(BaseLLM):
                 raise missing_key
             try:
                 return genai.Client(**client_params)
-            except Exception as e:
+            except ValueError as e:
+                # The SDK has no dedicated error type for a missing key. Any other
+                # ValueError (e.g. invalid http_options) is not one, so keep it.
+                if not str(e).startswith("No API key was provided"):
+                    raise
                 raise missing_key from e
         return genai.Client(**client_params)
 
