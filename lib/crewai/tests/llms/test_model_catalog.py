@@ -13,6 +13,7 @@ def synthetic_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
         "acme/acme-2": {"litellm_provider": "acme", "tags": ["a"]},
         "acme-3-20250101": {"litellm_provider": "acme"},
         "acme-3-20250202": {"litellm_provider": "acme"},
+        "acme/acme-4-20250101": {"litellm_provider": "acme", "max_input_tokens": 4},
     }
     entries, exact, normalized = model_catalog._index_catalog(catalog)
     monkeypatch.setattr(model_catalog, "_CATALOG_ENTRIES", entries)
@@ -82,6 +83,14 @@ def test_lookup_keeps_an_exact_bedrock_deployment_id() -> None:
 def test_lookup_leaves_an_ambiguous_normalized_match_unresolved() -> None:
     assert find_model_catalog_entry("acme-3", provider="acme") is None
     assert find_model_catalog_entry("acme-3-20250101", provider="acme") is not None
+
+
+@pytest.mark.usefixtures("synthetic_catalog")
+def test_lookup_resolves_a_sole_provider_prefixed_dated_entry_by_family() -> None:
+    entry = find_model_catalog_entry("acme-4", provider="acme")
+
+    assert entry is not None
+    assert entry["max_input_tokens"] == 4
 
 
 @pytest.mark.usefixtures("synthetic_catalog")
