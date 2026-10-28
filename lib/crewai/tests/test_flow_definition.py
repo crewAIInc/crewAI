@@ -12,6 +12,7 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 import crewai.flow.dsl as flow_dsl
+import crewai.flow.dsl._utils as dsl_utils
 import crewai.flow.flow_definition as flow_definition
 import crewai.flow.visualization.builder as visualization_builder
 from crewai.flow.expressions import (
@@ -1561,3 +1562,37 @@ def test_skill_with_skips_is_shorter():
     assert "call: script" not in trimmed
     assert "call: tool" not in trimmed
     assert len(trimmed) < len(full)
+
+
+def test_build_flow_definition_survives_class_dict_insert(monkeypatch):
+    """A cache write during method collection must not abort the build.
+
+    `Flow.flow_definition` stores `_flow_definition` on the class after
+    `build_flow_definition` returns. Another thread can still be inside
+    `_iter_flow_methods`, walking that same class dict. Insert the key on
+    the first method check, which is the mutation that raises
+    `dictionary changed size during iteration` when the dict is live.
+    """
+
+    class RacingFlow(Flow):
+        @start()
+        def begin(self):
+            return "ok"
+
+    original = dsl_utils.is_flow_method
+    inserted = False
+
+    def insert_cache_key(value):
+        nonlocal inserted
+        if not inserted:
+            inserted = True
+            assert "_flow_definition" not in RacingFlow.__dict__
+            RacingFlow._flow_definition = None
+        return original(value)
+
+    monkeypatch.setattr(dsl_utils, "is_flow_method", insert_cache_key)
+
+    definition = dsl_utils.build_flow_definition(RacingFlow)
+
+    assert inserted
+    assert "begin" in definition.methods

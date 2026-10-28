@@ -438,7 +438,9 @@ def _build_method_definition(
 
 def _iter_flow_methods(flow_class: type) -> dict[str, Any]:
     methods: dict[str, Any] = {}
-    for attr_name in flow_class.__dict__:
+    # Copy the keys first. Another thread may store `_flow_definition` on this
+    # class while this loop is still walking it.
+    for attr_name in list(flow_class.__dict__):
         if attr_name.startswith("_"):
             continue
         try:
