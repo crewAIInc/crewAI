@@ -2,6 +2,7 @@ import contextvars
 from datetime import datetime, timezone
 import time
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock
 
 from crewai.events.event_bus import crewai_event_bus
@@ -46,6 +47,7 @@ from crewai_cli.crew_run_tui import (
 import httpx
 import pytest
 from rich.text import Text
+from textual.pilot import Pilot
 
 
 @pytest.fixture(autouse=True)
@@ -1588,6 +1590,17 @@ async def test_crew_done_does_not_timeout_memory_save() -> None:
     assert app._log_entries[1]["error"] == "No result received before crew completed"
 
 
+async def _seconds_until_unsubscribed(
+    app: CrewRunApp, pilot: Pilot[Any], since: float
+) -> float:
+    # Assert only a lower bound on the result: a loaded machine can make the
+    # drain timer seconds late, but Textual fires it at most ~0.5ms early. The
+    # 30s cap stays under the suite's --timeout=60 and costs only on failure.
+    while app._event_handlers and time.monotonic() - since < 30:
+        await pilot.pause(0.01)
+    return time.monotonic() - since
+
+
 @pytest.mark.asyncio
 async def test_crew_done_keeps_memory_save_subscription_until_completion(
     monkeypatch: pytest.MonkeyPatch,
@@ -1614,6 +1627,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
             assert app._log_entries[0]["status"] == "running"
             assert app._event_handlers
 
+            completed_at = time.monotonic()
             _emit_event(
                 MemorySaveCompletedEvent(
                     value="9 memories saved",
@@ -1623,10 +1637,11 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
                     started_event_id=started_event.event_id,
                 )
             )
-            await pilot.pause()
 
+            # The handler ran on the bus's thread and the app's loop has not
+            # run since: only an unsubscribe the handler made itself shows here.
             assert app._event_handlers
-            await pilot.pause(0.08)
+            waited = await _seconds_until_unsubscribed(app, pilot, completed_at)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
@@ -1637,6 +1652,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
@@ -1662,12 +1678,17 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                 source_type="unified_memory",
                 parent_event_id="manual-parent",
             )
+            # No pause before the completion: the drain timer _on_crew_done
+            # armed must still be pending when it arrives. If it has already
+            # woken, its callback runs before the completion's re-arm and the
+            # app unsubscribes without a fresh grace. That is a product race,
+            # not a test artifact; remove this note once the app handles it.
             _emit_event(started_event)
-            await pilot.pause()
 
             assert app._log_entries[0]["tool_name"] == "memory_save"
             assert app._log_entries[0]["status"] == "running"
 
+            completed_at = time.monotonic()
             _emit_event(
                 MemorySaveCompletedEvent(
                     value="9 memories saved",
@@ -1678,10 +1699,11 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                     started_event_id=started_event.event_id,
                 )
             )
-            await pilot.pause()
 
+            # The handler ran on the bus's thread and the app's loop has not
+            # run since: only an unsubscribe the handler made itself shows here.
             assert app._event_handlers
-            await pilot.pause(0.08)
+            waited = await _seconds_until_unsubscribed(app, pilot, completed_at)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
@@ -1693,6 +1715,7 @@ async def test_crew_done_waits_for_queued_memory_save_events(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio

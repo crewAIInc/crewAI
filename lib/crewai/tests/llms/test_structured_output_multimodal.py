@@ -34,8 +34,8 @@ def _stub_llm():
         def __init__(self, *, content, model, llm):
             captured["content"] = content
 
-        def to_pydantic(self):
-            return Answer(text="ok")
+        def to_pydantic_with_completion(self):
+            return Answer(text="ok"), None
 
     patcher = patch(
         "crewai.utilities.internal_instructor.InternalInstructor", FakeInstructor
