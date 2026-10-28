@@ -1,9 +1,9 @@
 import logging
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import Field
+from pydantic import BeforeValidator, Field
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 class BaseAgentTool(BaseTool):
     """Base class for agent-related tools"""
 
-    agents: list[BaseAgent] = Field(description="List of available agents")
+    agents: list[Annotated[BaseAgent, BeforeValidator(_resolve_agent)]] = Field(
+        description="List of available agents"
+    )
 
     def sanitize_agent_name(self, name: str) -> str:
         """

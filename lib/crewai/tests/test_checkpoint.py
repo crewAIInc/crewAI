@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 from contextlib import closing
 import json
@@ -9,18 +10,20 @@ import os
 import sqlite3
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.process import Process
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -31,6 +34,9 @@ from crewai.state.provider.json_provider import JsonProvider
 from crewai.state.provider.sqlite_provider import SqliteProvider
 from crewai.state.runtime import RuntimeState
 from crewai.task import Task
+from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.ask_question_tool import AskQuestionTool
+from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
 
 
 
@@ -880,3 +886,70 @@ class TestCrewCheckpointTaskTemplates:
         assert restored_task.checkpoint_original_description == "Research {topic}"
         assert restored_task.checkpoint_original_expected_output == expected_template
         assert restored_task._original_expected_output == expected_template
+
+
+class TestDelegationToolCheckpointRestore:
+    """Delegation tools serialize the coworker agents they can delegate to.
+
+    Restoring them must pass the checkpoint context down to those agents, or
+    their saved ids are rejected as user-set.
+    """
+
+    @pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+    def test_hierarchical_crew_resumes_from_checkpoint(self, async_entry: bool) -> None:
+        writer = Agent(role="Writer", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task = Task(description="d", expected_output="e")
+        crew = Crew(
+            agents=[writer],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_llm=_FinalAnswerLLM(),
+            verbose=False,
+        )
+        crew.kickoff()
+        state = RuntimeState(root=[crew])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            cfg = CheckpointConfig(restore_from=state.checkpoint(d))
+            result = (
+                asyncio.run(crew.akickoff(from_checkpoint=cfg))
+                if async_entry
+                else crew.kickoff(from_checkpoint=cfg)
+            )
+
+        assert result.raw == "done."
+
+    def test_agent_with_delegation_tools_restores(self) -> None:
+        writer = Agent(role="Writer", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        editor = Agent(
+            role="Editor",
+            goal="g",
+            backstory="b",
+            llm=_FinalAnswerLLM(),
+            tools=AgentTools(agents=[writer]).tools(),
+        )
+        task = Task(description="d", expected_output="e", agent=editor)
+        crew = Crew(agents=[writer, editor], tasks=[task], verbose=False)
+
+        raw = RuntimeState(root=[crew]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+
+        tools = restored.root[0].agents[1].tools
+        assert [type(t) for t in tools] == [DelegateWorkTool, AskQuestionTool]
+        for tool in tools:
+            assert [a.id for a in tool.agents] == [writer.id]
+
+    def test_user_set_coworker_id_still_rejected(self) -> None:
+        coworker = {
+            "role": "Writer",
+            "goal": "g",
+            "backstory": "b",
+            "id": str(uuid.uuid4()),
+        }
+
+        with pytest.raises(ValidationError, match="not to be set by the user"):
+            DelegateWorkTool.model_validate(
+                {"agents": [coworker], "name": "n", "description": "d"}
+            )
