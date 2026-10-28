@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
 
@@ -246,6 +247,15 @@ class AzureCompletion(BaseLLM):
             delegate_kwargs["additional_params"] = self.additional_params
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate input tokens until Azure offers a count endpoint."""
+        return super().get_input_tokens_count(messages, tools, response_model)
 
     def _get_responses_base_url(self) -> str:
         """Construct the base URL for the Azure OpenAI Responses API.
@@ -1291,7 +1301,7 @@ class AzureCompletion(BaseLLM):
         """
         model_lower = self.model.lower() if self.model else ""
 
-        if "gpt-5" in model_lower:
+        if re.search(r"gpt-[5-9](?!\d)", model_lower):
             return False
 
         o_series_models = ["o1", "o3", "o4", "o1-mini", "o3-mini", "o4-mini"]

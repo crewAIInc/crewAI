@@ -22,8 +22,7 @@ from crewai.hooks.types import (
 
 
 if TYPE_CHECKING:
-    from crewai.agents.crew_agent_executor import CrewAgentExecutor
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llms.base_llm import BaseLLM
     from crewai.utilities.types import LLMMessage
@@ -38,7 +37,7 @@ class LLMCallHookContext:
     Supports both executor-based calls (agents in crews/flows) and direct LLM calls.
 
     Attributes:
-        executor: Reference to the executor (CrewAgentExecutor/LiteAgent) or None for direct calls
+        executor: Reference to the executor (AgentExecutor or LiteAgent), or None for direct calls
         messages: Direct reference to messages (mutable list).
             Can be modified in both before_llm_call and after_llm_call hooks.
             Modifications in after_llm_call hooks persist to the next iteration,
@@ -56,7 +55,7 @@ class LLMCallHookContext:
             Can be modified by returning a new string from after_llm_call hook.
     """
 
-    executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None
+    executor: AgentExecutor | LiteAgent | None
     messages: list[LLMMessage]
     agent: Any
     task: Any
@@ -67,7 +66,7 @@ class LLMCallHookContext:
 
     def __init__(
         self,
-        executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
+        executor: AgentExecutor | LiteAgent | None = None,
         response: str | None = None,
         messages: list[LLMMessage] | None = None,
         llm: BaseLLM | str | Any | None = None,  # TODO: look into
@@ -78,7 +77,7 @@ class LLMCallHookContext:
         """Initialize hook context with executor reference or direct parameters.
 
         Args:
-            executor: The CrewAgentExecutor or LiteAgent instance (None for direct LLM calls)
+            executor: The AgentExecutor or LiteAgent instance (None for direct LLM calls)
             response: Optional response string (for after_llm_call hooks)
             messages: Optional messages list (for direct LLM calls when executor is None)
             llm: Optional LLM instance (for direct LLM calls when executor is None)
@@ -93,8 +92,8 @@ class LLMCallHookContext:
             self.iterations = executor.iterations
             if hasattr(executor, "agent"):
                 self.agent = executor.agent
-                self.task = cast("CrewAgentExecutor", executor).task
-                self.crew = cast("CrewAgentExecutor", executor).crew
+                self.task = cast("AgentExecutor", executor).task
+                self.crew = cast("AgentExecutor", executor).crew
             else:
                 self.agent = (
                     executor.original_agent

@@ -4,6 +4,213 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 10월 27일">
+  ## v1.15.32
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.32)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 불안정한 테스트 실패 수정
+
+  ### 문서
+  - v1.15.31의 스냅샷 및 변경 로그 업데이트
+
+  ## 기여자
+
+  @lorenzejay
+
+</Update>
+
+<Update label="2026년 10월 27일">
+  ## v1.15.31
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.31)
+
+  ## 변경 사항
+
+  ### 기능
+  - 대화 흐름 컨텍스트 압축을 지원합니다.
+
+  ### 버그 수정
+  - 취약한 감사 종속성을 업데이트했습니다.
+  - 'stop'을 GPT-6 및 이후 모델에 전송하는 것을 중단했습니다.
+  - `acleanup_provider_files`에서 공급자 목록을 루프에서 분리하여 실행합니다.
+  - 잘못된 가드레일 결과에 대해 `LLMGuardrailCompletedEvent`를 발생시킵니다.
+  - 누락된 경우 이름이 변경된 통합 토큰을 명시합니다.
+  - 템플릿 보간을 통해 `output_file`에서 경로 탐색 문제를 수정했습니다.
+  - 역직렬화, SQL 주입 및 경로 탐색 취약점을 패치했습니다.
+  - 억제 후 구성된 로깅 수준을 복원합니다.
+  - 승무원을 복사할 때 체크포인트 재개 상태를 삭제합니다.
+  - `BedrockFileUploader`에서 주입된 `aioboto3` 세션을 존중합니다.
+  - 사용자 정의 템플릿과 함께 올바른 작업 슬라이스를 사용합니다.
+  - 인코딩 흐름 분석에서 스토리지 목록 실패에 대한 보호를 제공합니다.
+  - 모델 검증기와 함께 가드레일 결과/오류의 독점성을 강제합니다.
+  - Qdrant 엣지 검색에서 서버 측 카테고리를 필터링합니다.
+
+  ### 문서
+  - CLI 개념 문서에서 CrewAI AMP 링크에 HTTPS를 사용합니다.
+  - 번역된 페이지에서 영어 슬러그를 가리키는 내부 앵커 링크를 수정했습니다.
+  - 문서 예제에서 `CrewBase` 가져오기를 수정했습니다.
+
+  ## 기여자
+
+  @Kiko0301, @Trenyx, @Velmet44, @Vidit-Ostwal, @Wilson0511, @gabemilani, @iris-clawd, @joaomdmoura, @lakers-abing, @leom1919, @lester076, @lorenzejay, @subhashpolisetti
+
+</Update>
+
+<Update label="2026년 10월 23일">
+  ## v1.15.30
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.30)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - AGENTS.md를 수정하여 평가 중 로그인 프로세스를 시작하고 세 번의 라운드 후에 중지하도록 함.
+
+  ### 문서
+  - v1.15.29의 스냅샷 및 변경 로그 업데이트.
+
+  ## 기여자
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="2026년 10월 23일">
+  ## v1.15.29
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
+
+  ## 변경 사항
+
+  ### 기능
+  - LiteLLM 호환 kwargs 지원 추가.
+  - CLI에서 플랫폼 애플리케이션 검색 구현.
+  - CLI에서 액션 선택기 검색 강조.
+  - 흐름에서 대화 경로 및 공개 답변 추적.
+  - CLI에서 로그인 시 조직 선택.
+  - 오프라인 jev 라우팅 및 가드레일 평가 실행기 추가.
+  - call: tool로 통합 앱 액션을 직접 실행.
+  - AgentExecutor를 실험적 상태에서 승격.
+  - Azure DocumentDB 벡터 검색 통합 추가.
+  - 읽기 전용 노트북 텍스트 로더 및 표준 라이브러리 jsonl 로더 추가.
+  - crewAI 평가가 프로젝트 내의 평가 전체 데이터를 유지하도록 보장.
+  - crewAI 평가가 한 명령으로 판결을 위해 크루 자체를 실행할 수 있도록 활성화.
+  - crewAI 평가가 평가를 파일로 내보낼 수 있도록 허용.
+
+  ### 버그 수정
+  - 로그인에서 플랫폼 통합 토큰 파생 문제 수정.
+  - 직렬화 오류 시 JSON 로그를 보존하여 로깅 문제 해결.
+  - 비 UTF-8 캐시된 스킬 메타데이터 건너뛰기.
+  - 도구 액션이 실패 정책을 준수하고 각 시작 시 신선한 사용 예산을 가져오도록 수정.
+  - 출처 없이 개인 메모리가 모든 회상에 누출되지 않도록 방지.
+  - LanceDBStorage에서 메모리 기록 검색 순서 수정.
+  - 재계획 실패 시 작업 설명 복원.
+  - 에이전트가 동일한 도구 호출을 반복하지 않도록 중지.
+  - LanceDB 필터에서 범위 및 ID 값을 이스케이프.
+
+  ### 문서
+  - crewAI 예제 및 관측 가이드의 끊어진 링크 업데이트.
+  - 도구 문서의 죽은 링크 수정.
+
+  ### 리팩토링
+  - 컨텍스트 압축을 BaseLLM 기능으로 리팩토링.
+
+  ## 기여자
+
+  @Akaliup, @Arxsher, @Copilot, @D41910, @LindseyZ1205, @RaycarlLei, @Rohitkanithi, @Sakura-798, @Vidit-Ostwal, @Wilson0511, @Winoren, @abdullahajaz14, @bballhaus, @gabemilani, @iris-clawd, @joaomdmoura, @leom1919, @lorenzejay, @marcreniel, @mattatcha, @reubenjrouse, @rohitkanithi, @sandeepsnairms, @stepchanges, @subhashpolisetti, @theCyberTech, @vatsalyd
+
+</Update>
+
+<Update label="2026년 10월 14일">
+  ## v1.15.28
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## 변경 사항
+
+  ### 기능
+  - 중단된 모델이 어디에서 오류가 발생했는지 보고하기 위해 crewai eval 명령 추가.
+  - 컨텍스트 창을 위해 LiteLLM 카탈로그 사용.
+
+  ### 버그 수정
+  - 재개된 인간 피드백으로부터 학습하고 검토된 출력 유형을 보존하는 흐름 수정.
+  - 비어 있지 않은 앱이 0 플랫폼 도구로 해결될 때 경고.
+  - pyproject에서 패키지를 올바르게 찾도록 add-crew 흐름 수정.
+  - 배포 실패 사유 표시 및 배포 제거 및 lockfile 검사를 수정.
+  - 트리거 목록 및 페이로드 요청의 타임아웃을 60초로 수정.
+  - ZIP 배포가 새 코드를 사용하도록 배포 푸시 중 AMP의 source_type 읽기.
+  - rag에서 UTF-8 BOM으로 로컬 JSON 파일 디코딩.
+  - OpenAI GPT-6 Sol/Luna/Astra에 대한 이미지 input_files 허용.
+  - 스트리밍된 인류 도구 호출에 대한 호출 완료 이벤트 발생.
+  - JSON-schema 모델이 BaseModel 그림자 필드에 대해 경고하지 않도록 중지.
+  - 네이티브 도구 중단 및 후속 후크 캐시 ID 보존.
+  - 버전 증가 PR 병합 후 LiteLLM 카탈로그 새로 고침.
+  - 손상된 평가자 회귀 테스트 복구.
+
+  ### 문서
+  - MongoDB 문서의 개선 사항 통합.
+  - AGENTS.md에서 배포 및 플랫폼 도구 안내 수정.
+  - RagTool 및 XMLSearchTool에 대한 README 가져오기 수정.
+
+  ## 기여자
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
+<Update label="2026년 10월 9일">
+  ## v1.15.27
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.27)
+
+  ## 변경 사항
+
+  ### 기능
+  - OpenCLIP 제공 장치 옵션에 XPU 추가
+  - OpenAI 호환 제공자로 deepinfra 추가
+  - 평가가 판결 전에 중단된 이유 기록
+  - 실행 앱의 배포가 시도 전에 충족한 조건 기록
+  - crewai eval --models에서 반복된 진행 라인 없이 실행당 비용 및 시간 추적 구현
+
+  ### 버그 수정
+  - stopSequences가 OpenAI GPT-6/GPT-5.6/gpt-oss로 전송되는 문제 수정
+  - GitHub 로더 소스 출처 보존
+  - SQLite 흐름 초기화 경합 문제 수정
+
+  ### 문서
+  - v1.15.26에 대한 스냅샷 및 변경 로그 추가
+
+  ## 기여자
+
+  @StoyanD, @ats3v, @joaomdmoura, @kimnamu, @lorenzejay, @mhbuehler, @zouyonghe
+
+</Update>
+
+<Update label="2026년 10월 8일">
+  ## v1.15.26
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.26)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 획득이 중단될 때 rwlock의 소유권 유지 문제 수정.
+  - 문서 사이트 소스 URL이 보존되지 않는 문제 해결.
+  - log-tasks-outputs에서 실제 출력을 표시하도록 작업 출력 표시 수정.
+
+  ### 문서
+  - 버전 v1.15.25에 대한 스냅샷 및 변경 로그 업데이트.
+
+  ## 기여자
+
+  @Velmet44, @Vidit-Ostwal, @joaomdmoura, @leilei3167, @lorenzejay, @lux-liang
+
+</Update>
+
 <Update label="2026년 10월 7일">
   ## v1.15.25
 

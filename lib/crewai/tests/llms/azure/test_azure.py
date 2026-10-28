@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llms.context_window import AZURE_CONTEXT_WINDOWS, CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -553,6 +553,9 @@ def test_azure_supports_stop_words():
     """
     llm = LLM(model="azure/gpt-4")
     assert llm.supports_stop_words() == True
+    # Azure names GPT-3.5 "gpt-35"; it must not match the GPT-5+ check.
+    llm = LLM(model="azure/gpt-35-turbo")
+    assert llm.supports_stop_words() == True
 
 
 def test_azure_gpt5_models_do_not_support_stop_words():
@@ -575,6 +578,10 @@ def test_azure_gpt5_models_do_not_support_stop_words():
         # GPT-5.2 series
         "azure/gpt-5.2",
         "azure/gpt-5.2-chat",
+        "azure/gpt-5.4-nano",
+        # Newer major versions
+        "azure/gpt-6",
+        "azure/gpt-6-luna",
     ]
 
     for model_name in gpt5_models:
@@ -645,24 +652,24 @@ def test_azure_context_window_size():
     """
     Test that Azure models return correct context window sizes
     """
-    usable = int(128_000 * CONTEXT_WINDOW_USAGE_RATIO)
-
     llm_gpt4 = LLM(model="azure/gpt-4")
-    assert llm_gpt4.get_context_window_size() == usable
+    assert llm_gpt4.get_context_window_size() == int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
     llm_gpt4o = LLM(model="azure/gpt-4o")
-    assert llm_gpt4o.get_context_window_size() == usable
+    assert llm_gpt4o.get_context_window_size() == int(
+        128_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 @pytest.mark.parametrize(
     ("model", "context_window"),
     [
-        ("azure/gpt-6-astra", 1_050_000),
-        ("azure/gpt-chat-latest", 400_000),
+        ("azure/gpt-6-astra", 922_000),
+        ("azure/gpt-chat-latest", AZURE_CONTEXT_WINDOWS["azure/gpt-chat-latest"]),
         ("azure/gpt-oss-120b", 131_072),
         ("azure/codex-mini", 200_000),
         ("azure/computer-use-preview", 8192),
-        ("azure/gpt-4", 128_000),
+        ("azure/gpt-4", 8192),
     ],
 )
 def test_azure_specific_models_use_official_context_windows(
@@ -686,12 +693,12 @@ def test_azure_specific_models_use_official_context_windows(
 def test_azure_gpt56_family_uses_official_context_window(model: str) -> None:
     """Azure must not fall back to the 8k default for GPT-5.6 deployments."""
     llm = LLM(model=model)
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_azure_gpt54_mini_keeps_its_window() -> None:
     llm = LLM(model="azure/gpt-5.4-mini")
-    assert llm.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_azure_message_formatting():

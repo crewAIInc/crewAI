@@ -120,6 +120,34 @@ class TestFindCheckpoint:
 
 
 class TestPrune:
+    @pytest.mark.parametrize(
+        ("directory", "branch"),
+        [("checkpoints[1]", "main"), ("checkpoints", "run[1]"), ("checkpoints", "fork/run[1]")],
+    )
+    @pytest.mark.parametrize("max_keep", [0, 1])
+    def test_prune_treats_directory_and_branch_as_literal_paths(
+        self, tmp_path: Path, directory: str, branch: str, max_keep: int
+    ) -> None:
+        provider = JsonProvider()
+        location = str(tmp_path / directory)
+        paths = []
+        for i in range(2):
+            path = Path(provider.checkpoint("{}", location, branch=branch))
+            os.utime(path, (i + 1, i + 1))
+            paths.append(path)
+        # As a glob pattern, "[1]" matches "1", so this path must not be pruned
+        other_path = Path(
+            provider.checkpoint(
+                "{}",
+                str(tmp_path / directory.replace("[1]", "1")),
+                branch=branch.replace("[1]", "1"),
+            )
+        )
+
+        assert provider.prune(location, max_keep=max_keep, branch=branch) == 2 - max_keep
+        assert [path for path in paths if path.exists()] == (paths[-1:] if max_keep else [])
+        assert other_path.exists()
+
     def test_prune_keeps_newest(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             branch_dir = os.path.join(d, "main")
@@ -822,3 +850,33 @@ class TestCustomLLMCheckpointRestore:
         assert isinstance(llm, BaseLLM)
         assert not inspect.isabstract(type(llm))
         assert llm.model == "stub"
+
+
+class TestCrewCheckpointTaskTemplates:
+    """A restored crew keeps each task's uninterpolated templates.
+
+    Resuming re-interpolates the description and expected output from the
+    saved originals, so each must be saved from its own field.
+    """
+
+    def test_restore_keeps_original_expected_output(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task = Task(
+            description="Research {topic}",
+            expected_output="A summary of {topic}",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+        task.interpolate_inputs_and_add_conversation_history({"topic": "AI"})
+
+        state = RuntimeState(root=[crew])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            restored = Crew.from_checkpoint(CheckpointConfig(restore_from=loc))
+
+        restored_task = restored.tasks[0]
+        expected_template = "A summary of {topic}"
+        assert restored_task.checkpoint_original_description == "Research {topic}"
+        assert restored_task.checkpoint_original_expected_output == expected_template
+        assert restored_task._original_expected_output == expected_template
