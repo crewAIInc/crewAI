@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, TypedDict
 
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
 _I18N = I18N_DEFAULT
+
+logger = logging.getLogger(__name__)
 
 
 class ConverterError(Exception):
@@ -355,6 +358,19 @@ def handle_partial_json(
     )
 
 
+def _warn_conversion_failed(
+    converter: Converter, model: type[BaseModel], error: ConverterError
+) -> None:
+    # Logged whatever `verbose` is. Class names only: the error message can
+    # quote the model's output.
+    logger.warning(
+        "%s could not convert the output to %s (%s); keeping the raw output.",
+        type(converter).__name__,
+        model.__name__,
+        type(error.__cause__ or error).__name__,
+    )
+
+
 def convert_with_instructions(
     result: str,
     model: type[BaseModel],
@@ -406,6 +422,7 @@ def convert_with_instructions(
         exported_result = e
 
     if isinstance(exported_result, ConverterError):
+        _warn_conversion_failed(converter, model, exported_result)
         if agent and getattr(agent, "verbose", True):
             PRINTER.print(
                 content=f"Failed to convert result to model: {exported_result}",
@@ -551,6 +568,7 @@ async def async_convert_with_instructions(
         exported_result = e
 
     if isinstance(exported_result, ConverterError):
+        _warn_conversion_failed(converter, model, exported_result)
         if agent and getattr(agent, "verbose", True):
             PRINTER.print(
                 content=f"Failed to convert result to model: {exported_result}",

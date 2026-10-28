@@ -1262,6 +1262,38 @@ def test_task_keeps_only_the_raw_answer_when_refit_fails(
     assert output.pydantic is None
     assert output.json_dict is None
     assert str(output) == OFF_SCHEMA_ANSWER
+    if output_json:
+        assert output.json is None
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize(
+    ("output_json", "cause"),
+    [(False, "ValidationError"), (True, "ConverterError")],
+    ids=["pydantic", "json"],
+)
+def test_convert_to_model_logs_a_failed_refit_without_verbose(
+    use_async: bool,
+    output_json: bool,
+    cause: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    agent = _agent(_ScriptedLLM(OFF_SCHEMA_ANSWER))
+    assert agent.verbose is False
+    model_kwargs: dict[str, type[BaseModel] | None] = {
+        "output_pydantic": None if output_json else OpenQuestions,
+        "output_json": OpenQuestions if output_json else None,
+    }
+
+    with caplog.at_level("WARNING", logger="crewai.utilities.converter"):
+        output = _convert(use_async, OFF_SCHEMA_ANSWER, agent=agent, **model_kwargs)
+
+    assert output == OFF_SCHEMA_ANSWER
+    assert [r.getMessage() for r in caplog.records] == [
+        f"Converter could not convert the output to OpenQuestions ({cause}); "
+        "keeping the raw output."
+    ]
+    assert "Which region?" not in caplog.text
 
 
 class _FunctionCallingLLM(_ScriptedLLM):
