@@ -7,7 +7,7 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
@@ -43,6 +43,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.model_catalog import find_model_catalog_entry
 from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
@@ -306,6 +307,16 @@ class BaseLLM(BaseModel, ABC):
             "cache_creation_tokens": 0,
         }
     )
+    _catalog_entry: Mapping[str, Any] | None = PrivateAttr(default=None)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Resolve this LLM's catalog entry once after its provider is known."""
+        self._catalog_entry = find_model_catalog_entry(self.model, self.provider)
+
+    @property
+    def catalog_entry(self) -> Mapping[str, Any] | None:
+        """Return the resolved LiteLLM catalog entry, when one is unambiguous."""
+        return self._catalog_entry
 
     @model_validator(mode="before")
     @classmethod

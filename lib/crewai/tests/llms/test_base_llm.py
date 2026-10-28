@@ -72,3 +72,16 @@ def test_apply_stop_words_keeps_empty_content_empty() -> None:
 
     assert llm._apply_stop_words("") == ""
 
+
+def test_catalog_entry_uses_the_llms_effective_provider() -> None:
+    llm = StubLLM(model="gpt-4o", provider="azure")
+
+    assert llm.catalog_entry is not None
+    assert llm.catalog_entry["litellm_provider"] == "azure"
+
+
+def test_catalog_entry_is_none_when_the_model_is_not_in_the_catalog() -> None:
+    llm = StubLLM(model="not-in-the-catalog", provider="openai")
+
+    assert llm.catalog_entry is None
+
