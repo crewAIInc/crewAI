@@ -1,6 +1,5 @@
 """Test Agent creation and execution basic functionality."""
 
-import asyncio
 from io import StringIO
 import json
 import threading
@@ -11,6 +10,8 @@ import re
 import sys
 from typing import Any, cast
 from unittest.mock import ANY, MagicMock, call, patch
+
+import asyncio
 
 from crewai.agent import Agent
 from crewai.agents import CacheHandler
@@ -3207,6 +3208,72 @@ def test_replay_emits_paired_kickoff_events(researcher, writer):
     # (see _create_crew_output), so the pairing is correct exactly when the id
     # left behind points at the replay's own start event.
     assert crew._kickoff_event_id == replay_starts[-1].event_id
+
+
+def test_replay_does_not_redispatch_execution_end_hook(researcher, writer):
+    """replay() must not dispatch a second EXECUTION_END for one START.
+
+    prepare_kickoff resets the pairing flags and dispatches EXECUTION_START;
+    replay() skips it, but its execution tail (_create_crew_output) dispatches
+    EXECUTION_END unconditionally, so every replay fires the END hooks again —
+    a second END with no matching START. That violates the exactly-once-per-
+    START invariant that _dispatch_execution_end_failure enforces on the
+    failure path.
+    """
+    from crewai.hooks.dispatch import InterceptionPoint, on, unregister
+
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    dispatches: list[str] = []
+
+    @on(InterceptionPoint.EXECUTION_START)
+    def on_start(ctx):
+        dispatches.append("start")
+
+    @on(InterceptionPoint.EXECUTION_END)
+    def on_end(ctx):
+        dispatches.append("end")
+
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = [
+                TaskOutput(
+                    description=task.description,
+                    raw="Mocked output",
+                    agent="Researcher",
+                    json_dict=None,
+                    output_format=OutputFormat.RAW,
+                    pydantic=None,
+                    summary="Mocked output",
+                    messages=[],
+                )
+                for task in [list_ideas, write, write]
+            ]
+
+            crew.kickoff()
+            crew.replay(str(write.id))
+    finally:
+        unregister(InterceptionPoint.EXECUTION_START, on_start)
+        unregister(InterceptionPoint.EXECUTION_END, on_end)
+
+    assert dispatches.count("start") == 1
+    assert dispatches.count("end") == 1
 
 
 def test_replay_failure_emits_kickoff_failed_event(researcher, writer):
