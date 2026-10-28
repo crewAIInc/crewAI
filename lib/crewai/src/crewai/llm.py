@@ -2714,6 +2714,7 @@ class LLM(BaseLLM):
                 "stream",
                 "stop",
                 "prefer_upload",
+                "supports_vision",
             ]
         }
 
@@ -2741,6 +2742,7 @@ class LLM(BaseLLM):
             stream=self.stream,
             stop=self.stop,
             prefer_upload=self.prefer_upload,
+            supports_vision=self.supports_vision,
             **filtered_params,
         )
 
@@ -2777,6 +2779,7 @@ class LLM(BaseLLM):
                 "stream",
                 "stop",
                 "prefer_upload",
+                "supports_vision",
             ]
         }
 
@@ -2810,6 +2813,7 @@ class LLM(BaseLLM):
             stream=self.stream,
             stop=copy.deepcopy(self.stop, memo) if self.stop else None,
             prefer_upload=self.prefer_upload,
+            supports_vision=self.supports_vision,
             **filtered_params,
         )
 

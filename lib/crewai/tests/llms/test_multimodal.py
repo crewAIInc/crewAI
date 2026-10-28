@@ -1,6 +1,7 @@
 """Unit tests for LLM multimodal functionality across all providers."""
 
 import base64
+import copy
 import os
 from unittest.mock import patch
 
@@ -61,6 +62,18 @@ class TestLiteLLMMultimodal:
     These tests use `is_litellm=True` to ensure the litellm wrapper is used
     instead of native providers.
     """
+
+    def test_supports_vision_override_survives_copy(self) -> None:
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True, supports_vision=True)
+
+        assert copy.copy(llm).supports_multimodal() is True
+        assert copy.deepcopy(llm).supports_multimodal() is True
+
+    def test_supports_vision_false_override_survives_copy(self) -> None:
+        llm = LLM(model="gpt-4o", is_litellm=True, supports_vision=False)
+
+        assert copy.copy(llm).supports_multimodal() is False
+        assert copy.deepcopy(llm).supports_multimodal() is False
 
     def test_supports_multimodal_gpt4o(self) -> None:
         """Test GPT-4o model supports multimodal."""
@@ -267,6 +280,87 @@ class TestAzureMultimodal:
         llm = LLM(model=model)
         assert llm.supports_multimodal() is False
 
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("azure/gpt-4.1-2025-04-14", True),
+            ("azure/gpt-4o-2024-08-06", True),
+            ("azure/gpt-5-mini", True),
+            ("azure/o3-mini-2025-01-31", False),
+            ("azure/o1-mini-2024-09-12", False),
+            ("azure/gpt-35-turbo-0613", False),
+        ],
+    )
+    def test_versioned_deployment_names(self, model: str, expected: bool) -> None:
+        assert LLM(model=model).supports_multimodal() is expected
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("azure/GPT-4.1", True),
+            ("azure/GPT-5", True),
+            ("azure/GPT-4o", True),
+            ("azure/O3-MINI", False),
+        ],
+    )
+    def test_deployment_names_are_case_insensitive(
+        self, model: str, expected: bool
+    ) -> None:
+        assert LLM(model=model).supports_multimodal() is expected
+
+    @pytest.mark.parametrize(
+        "model", ["azure/claude-sonnet-4-6", "azure/azure_ai/claude-sonnet-4-6"]
+    )
+    def test_claude_deployment_not_inferred_without_override(self, model: str) -> None:
+        """Claude on Azure speaks the Anthropic protocol, so it is not inferred."""
+        assert LLM(model=model).supports_multimodal() is False
+
+    def test_claude_deployment_accepted_with_override(self) -> None:
+        llm = LLM(model="azure/claude-sonnet-4-6", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
+    def test_double_provider_prefix_still_resolves(self) -> None:
+        assert LLM(model="azure/azure/gpt-4.1").supports_multimodal() is True
+
+    @pytest.mark.parametrize("model", ["azure/ ", "azure///", "azure/azure/"])
+    def test_unusual_model_names_do_not_raise(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
+
+    def test_supports_vision_override_rejects_legacy_vision_name(self) -> None:
+        llm = LLM(model="azure/gpt-4o", supports_vision=False)
+
+        assert llm.supports_multimodal() is False
+
+    def test_supports_vision_override_allows_text_only_model(self) -> None:
+        llm = LLM(model="azure/o1-mini", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [("azure/gpt-4.1", True), ("azure/gpt-35-turbo", False)],
+    )
+    def test_supports_vision_none_matches_unset(self, model: str, expected: bool) -> None:
+        explicit = LLM(model=model, supports_vision=None)
+
+        assert explicit.supports_multimodal() is LLM(model=model).supports_multimodal()
+        assert explicit.supports_multimodal() is expected
+
+    @pytest.mark.parametrize("override", [True, False])
+    def test_supports_vision_override_survives_copy(self, override: bool) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=override)
+
+        assert copy.copy(llm).supports_multimodal() is override
+        assert copy.deepcopy(llm).supports_multimodal() is override
+
+    def test_supports_vision_override_from_config_dict(self) -> None:
+        from crewai.utilities.llm_utils import create_llm
+
+        llm = create_llm({"model": "azure/vision-production", "supports_vision": True})
+
+        assert llm.supports_multimodal() is True
+
     def test_supports_vision_override_allows_custom_deployment_name(self) -> None:
         llm = LLM(model="azure/vision-production", supports_vision=True)
 
@@ -444,6 +538,27 @@ class TestBaseLLMMultimodal:
             )
             is True
         )
+
+    def test_model_capability_lookup_is_case_insensitive(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="GPT-4.1", provider="azure")
+        assert llm.get_model_capability("supports_vision", providers=["azure"]) is True
+
+    @pytest.mark.parametrize("model", [" ", "///", "a/b/c"])
+    def test_model_capability_unusual_names_return_none(self, model: str) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model=model, provider="azure")
+        assert llm.get_model_capability("supports_vision", providers=["azure"]) is None
 
     def test_model_capability_does_not_guess_deployment_names(self) -> None:
         from crewai.llms.base_llm import BaseLLM
