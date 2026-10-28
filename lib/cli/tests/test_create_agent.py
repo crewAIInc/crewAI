@@ -232,7 +232,7 @@ def test_config_agent_runs_same_loader_and_preserves_inputs(
 
     from crewai import Agent
     from crewai_cli.create_agent import create_agent
-    from crewai_cli.run_crew import _run_agent
+    from crewai_cli.run_agent import run_agent
 
     monkeypatch.chdir(tmp_path)
     create_agent("config_agent", format=format)
@@ -249,7 +249,7 @@ def test_config_agent_runs_same_loader_and_preserves_inputs(
         return SimpleNamespace(raw="finished")
 
     monkeypatch.setattr(Agent, "kickoff_async", kickoff)
-    _run_agent(json.dumps({"messages": messages}))
+    run_agent(json.dumps({"messages": messages}))
     assert received == [messages]
     assert capsys.readouterr().out.endswith("finished\n")
 
