@@ -32,6 +32,7 @@ Line = tuple[Status, str, str]
 
 TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
 INTEGRATION_TOKEN_ENV = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"  # noqa: S105 - a variable name, not a secret
+LEGACY_INTEGRATION_TOKEN_ENV = "CREWAI_PLATFORM_INTEGRATION_TOKEN"  # noqa: S105 - a variable name, not a secret
 PAT_ENV = "CREWAI_USER_PAT"
 # What the integrations client's `requests` calls read for TLS, beyond the
 # proxy and CA variables `restore_machine_transport` already pins.
@@ -136,14 +137,16 @@ def _check_integrations(
             )
         ]
     if not os.environ.get(INTEGRATION_TOKEN_ENV):
-        return [
-            (
-                "fail",
-                f"integration {app}",
-                f"{INTEGRATION_TOKEN_ENV} is not set in the environment or .env",
-            )
-            for app in apps
-        ]
+        # Projects created before #7990 still set the old name, which crews no
+        # longer read; say so, as the integrations client does. Remove in 2.0.
+        missing = (
+            f"{LEGACY_INTEGRATION_TOKEN_ENV} is set, but CrewAI now reads the "
+            f"token only from {INTEGRATION_TOKEN_ENV}; rename the variable in "
+            "your .env, the value stays the same"
+            if os.environ.get(LEGACY_INTEGRATION_TOKEN_ENV)
+            else f"{INTEGRATION_TOKEN_ENV} is not set in the environment or .env"
+        )
+        return [("fail", f"integration {app}", missing) for app in apps]
     # A project's `.env` may point the check at another AMP, but the token goes
     # only to one this machine is configured for, over an encrypted connection.
     base_url = PlusAPI().base_url

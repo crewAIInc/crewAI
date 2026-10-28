@@ -340,6 +340,27 @@ def test_an_app_without_the_integration_token_fails(tmp_path, monkeypatch):
     )
 
 
+def test_the_pre_rename_token_name_is_named_as_the_problem(
+    tmp_path, machine, monkeypatch
+):
+    """A project from before the rename sets only the old variable, which a
+    crew no longer reads: doctor says to rename it, as the crew's error does."""
+    logged_in_with_org(tmp_path)
+    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    (machine / ".env").write_text("CREWAI_PLATFORM_INTEGRATION_TOKEN=old-name\n")
+    calls = record_calls(monkeypatch, actions("gmail", "gmail_send_email"))
+
+    result = run("--app", "gmail")
+
+    assert result.exit_code == 1
+    assert calls == []
+    assert lines_of(result.output)["integration gmail"] == (
+        "fail CREWAI_PLATFORM_INTEGRATION_TOKEN is set, but CrewAI now reads the "
+        f"token only from {TOKEN_ENV}; rename the variable in your .env, the "
+        "value stays the same"
+    )
+
+
 def test_the_integration_token_is_read_from_the_project_env(
     tmp_path, machine, monkeypatch
 ):
