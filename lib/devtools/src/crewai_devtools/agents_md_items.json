@@ -1840,10 +1840,13 @@
  },
  {
   "id": "C-058",
-  "item": "There's no way to force a ZIP deploy when an origin exists; create from a copy without one (until A5).",
+  "item": "`crewai deploy create --zip` uploads a ZIP even when an origin exists.",
   "q": "My repo has a GitHub origin, but I want AMP to deploy an uploaded copy of the code instead. Can I?",
   "key": [
-   "(copy|without (an? )?(git )?origin|no (such )?(flag|option)|can'?t|cannot|isn'?t)"
+   "deploy create\\b.*--zip"
+  ],
+  "trap": [
+   "copy (of the (project|repo(sitory)?) )?without (an? )?(git )?(`)?origin"
   ]
  },
  {

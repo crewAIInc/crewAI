@@ -363,6 +363,24 @@ def test_login(command, runner):
     mock_auth.login.assert_called_once()
 
 
+@mock.patch("crewai_core.auth.oauth2.webbrowser.open")
+@mock.patch("crewai_core.auth.oauth2.httpx.post")
+def test_login_exits_non_zero_when_the_login_times_out(mock_post, _open, runner):
+    mock_post.return_value.json.return_value = {
+        "device_code": "test_device_code",
+        "user_code": "ABCD-EFGH",
+        "verification_uri": "https://example.com/activate",
+        "interval": 5,
+        "expires_in": 0,
+    }
+
+    result = runner.invoke(login)
+
+    assert result.exit_code == 1
+    assert "the login code expired before sign-in finished" in result.output
+    mock_post.assert_called_once()
+
+
 @mock.patch("crewai_cli.cli.DeployCommand")
 def test_deploy_create(command, runner):
     mock_deploy = command.return_value
@@ -370,6 +388,37 @@ def test_deploy_create(command, runner):
 
     assert result.exit_code == 0
     mock_deploy.create_crew.assert_called_once()
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_without_zip_keeps_the_default_source(command, runner):
+    result = runner.invoke(deploy_create, ["-y"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=False, force_zip=False
+    )
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_zip_forces_a_zip_upload(command, runner):
+    result = runner.invoke(deploy_create, ["--zip", "-y", "--skip-validate"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=True, force_zip=True
+    )
+
+
+def test_deploy_create_help_lists_zip(runner):
+    result = runner.invoke(deploy_create, ["--help"])
+
+    assert result.exit_code == 0
+    help_text = " ".join(result.output.split())
+    assert (
+        "--zip Upload the project as a ZIP even when it has a git origin remote."
+        in help_text
+    )
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
