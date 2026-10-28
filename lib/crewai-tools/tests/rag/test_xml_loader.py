@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 
+from bs4 import NavigableString
 from crewai_tools.rag.base_loader import LoaderResult
 from crewai_tools.rag.loaders.webpage_loader import WebPageLoader
 from crewai_tools.rag.source_content import SourceContent
@@ -17,7 +18,7 @@ class TestWebPageLoader:
 
     def setup_mock_soup(self, text, title=None, script_style_elements=None):
         soup = Mock()
-        soup.get_text.return_value = text
+        soup.contents = [NavigableString(text)]
         soup.title = Mock(string=title) if title is not None else None
         soup.return_value = script_style_elements or []
         return soup
