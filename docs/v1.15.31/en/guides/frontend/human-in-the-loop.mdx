@@ -1,0 +1,191 @@
+---
+title: Human-in-the-Loop
+description: Pause your CrewAI agent mid-run to collect a user decision, then resume the agent with their answer.
+icon: user-check
+mode: "wide"
+---
+
+## Put the user in the loop
+
+Some steps should not happen without a human saying yes. Human-in-the-loop pauses the agent mid-run, renders an interactive component in the frontend, and waits. The user makes a choice; the agent resumes with that choice and continues.
+
+The mechanism is a tool the frontend registers. When the model calls it, the run halts at that tool call until the user responds. Nothing happens automatically: the agent stays parked until `respond()` hands control back.
+
+In the example below, the agent proposes a list of task steps. The user enables or disables each step and confirms. The agent then continues, respecting exactly what the user approved.
+
+<Note>
+This pattern works with Flows. It relies on the Flow's chat loop re-entering after `respond()`: the returned value comes back as a tool result, and the agent's next turn acts on it.
+</Note>
+
+## Build it
+
+<Steps>
+
+<Step title="Bind the frontend actions into the model's tools">
+
+In your Flow, add the frontend-registered actions to the model's tool list with `*self.state.copilotkit.actions`. Those actions are the tools your frontend registered (via `useHumanInTheLoop`). Binding them lets the model call them; the run pauses at that tool call until the user responds.
+
+```python
+# human_in_the_loop_flow.py
+from crewai.flow.flow import Flow, start, router, listen
+from litellm import acompletion
+from ag_ui_crewai.sdk import copilotkit_stream, CopilotKitState
+
+
+class HumanInTheLoopFlow(Flow[CopilotKitState]):
+    @start()
+    @listen("route_follow_up")
+    async def start_flow(self):
+        pass
+
+    @router(start_flow)
+    async def chat(self):
+        system_prompt = (
+            "You perform tasks for the user. When asked to do a task, call the "
+            "tool the frontend provides so the user can approve or adjust the steps "
+            "before you continue."
+        )
+
+        response = await copilotkit_stream(
+            await acompletion(
+                model="openai/gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    *self.state.messages,
+                ],
+                tools=[*self.state.copilotkit.actions],  # tools registered by the frontend
+                parallel_tool_calls=False,
+                stream=True,
+            )
+        )
+
+        message = response.choices[0].message
+        self.state.messages.append(message)
+        return "route_end"
+
+    @listen("route_end")
+    async def end(self):
+        pass
+```
+
+`CopilotKitState` carries the frontend-registered actions on `self.state.copilotkit.actions`. When the model calls one, the run pauses there. After the user responds, the returned value lands in `self.state.messages` as the tool result, and the Flow loops back through `chat` so the model can act on the decision.
+
+</Step>
+
+<Step title="Serve the Flow over AG-UI">
+
+Expose the Flow from your FastAPI server with `add_crewai_flow_fastapi_endpoint`, the same way as every other agent. See [Frontend Overview](/edge/en/guides/frontend/overview) for the full server, runtime, and provider setup.
+
+```python
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_flow_fastapi_endpoint
+from my_agents.human_in_the_loop_flow import HumanInTheLoopFlow
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_flow_fastapi_endpoint(
+    app=app,
+    flow=HumanInTheLoopFlow(),
+    path="/human_in_the_loop",
+)
+```
+
+</Step>
+
+<Step title="Register the interactive tool on the frontend">
+
+`useHumanInTheLoop` registers the tool the agent pauses on and gives you a `render` function to draw the interactive UI. When the agent calls the tool, your component appears; when the user acts, you call `respond()` to resume the agent.
+
+```tsx
+"use client";
+import { useHumanInTheLoop } from "@copilotkit/react-core/v2";
+import { z } from "zod";
+
+useHumanInTheLoop({
+  agentId: "human_in_the_loop",
+  name: "generate_task_steps",
+  parameters: z.object({
+    steps: z.array(
+      z.object({
+        description: z.string(),
+        status: z.enum(["enabled", "disabled", "executing"]),
+      })
+    ),
+  }),
+  render: ({ args, respond, status }) => (
+    <StepReview
+      steps={args.steps ?? []}
+      // `status === "executing"` means the agent is waiting for the user
+      waiting={status === "executing"}
+      onConfirm={(chosen) => respond?.(chosen)}
+    />
+  ),
+});
+```
+
+The `render` function receives:
+
+- **`args`** — the tool arguments the model produced (here, the proposed `steps`). These stream in as the model generates them.
+- **`status`** — the tool call's lifecycle. While it is `"executing"`, the agent is paused and waiting on the human.
+- **`respond(value)`** — resumes the agent with the user's decision. The agent's next turn sees the returned value and acts on it.
+
+</Step>
+
+<Step title="Let the user decide, then respond">
+
+Your component reads `args.steps`, lets the user toggle each one, and calls `respond()` with the final selection. That value is what the agent continues with.
+
+```tsx
+function StepReview({ steps, waiting, onConfirm }) {
+  const [choices, setChoices] = useState(steps);
+
+  const toggle = (i) =>
+    setChoices((prev) =>
+      prev.map((s, idx) =>
+        idx === i
+          ? { ...s, status: s.status === "enabled" ? "disabled" : "enabled" }
+          : s
+      )
+    );
+
+  return (
+    <div>
+      {choices.map((step, i) => (
+        <label key={i}>
+          <input
+            type="checkbox"
+            checked={step.status === "enabled"}
+            disabled={!waiting}
+            onChange={() => toggle(i)}
+          />
+          {step.description}
+        </label>
+      ))}
+      <button disabled={!waiting} onClick={() => onConfirm(choices)}>
+        Confirm
+      </button>
+    </div>
+  );
+}
+```
+
+Once the user clicks Confirm, `respond()` fires, the run resumes, and the Flow's `chat` step runs again with the user's choices in the message history.
+
+</Step>
+
+</Steps>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
+    Let the agent call functions that run in the browser.
+  </Card>
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
+    Keep agent state and your app UI in two-way sync.
+  </Card>
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
+    Render live agent state as custom components.
+  </Card>
+</CardGroup>

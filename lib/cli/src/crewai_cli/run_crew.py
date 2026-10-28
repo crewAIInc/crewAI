@@ -525,6 +525,7 @@ DeployButtonEvent = Literal[
     "deploy_stopped:login_still_required",
     "deploy_stopped:login_abandoned",
     "deploy_stopped:login_failed",
+    "deploy_stopped:login_timed_out",
 ]
 
 
@@ -613,6 +614,9 @@ def _chain_deploy() -> None:
             AuthenticationCommand().login()
         except KeyboardInterrupt:
             _record_deploy_button("deploy_stopped:login_abandoned")
+            raise
+        except SystemExit:
+            _record_deploy_button("deploy_stopped:login_timed_out")
             raise
         except Exception:
             _record_deploy_button("deploy_stopped:login_failed")
@@ -845,20 +849,36 @@ def _run_flow_project(
         run_declarative_flow_in_project_env(definition=definition, inputs=inputs)
         return
 
-    # No configured declarative flow definition to resolve inputs against.
     if inputs is not None:
-        raise click.UsageError(
-            "--inputs requires a declarative flow definition "
-            "([tool.crewai].definition) or --definition"
+        from crewai_cli.kickoff_flow import _kickoff_flow_with_inputs
+        from crewai_cli.run_declarative_flow import (
+            _execute_declarative_flow_command,
+            _has_project_file,
+            is_declarative_flow_project_env,
         )
 
+        # Validate before starting the project env, so bad JSON fails here.
+        provided = parse_inputs_json(inputs)
+        if is_declarative_flow_project_env() or not _has_project_file():
+            _kickoff_flow_with_inputs(provided or {})
+        else:
+            # Re-run inside the project env, as a declarative flow does, so the
+            # flow imports with the project's dependencies.
+            _execute_declarative_flow_command(
+                ["uv", "run", "crewai", "run", "--inputs", inputs]
+            )
+        return
+
     from crewai_cli.kickoff_flow import (
+        _exit_without_chat_terminal,
         _load_conversational_flow_from_kickoff_script,
         _run_conversational_flow_tui,
     )
 
     flow = _load_conversational_flow_from_kickoff_script()
     if flow is not None:
+        if not is_interactive():
+            _exit_without_chat_terminal()
         _run_conversational_flow_tui(flow)
         return
 

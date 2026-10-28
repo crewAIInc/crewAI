@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine != 's390x'",
@@ -21,13 +21,13 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
-msgpack = "2026-10-26T00:00:00Z"
-langsmith = "2026-06-20T00:00:00Z"
-oauthlib = "2026-09-29T00:00:00Z"
 certifi = "2026-10-21T00:00:00Z"
-uv = "2026-10-21T00:00:00Z"
-pypdf = "2026-10-22T00:00:00Z"
+langsmith = "2026-06-20T00:00:00Z"
+msgpack = "2026-10-26T00:00:00Z"
+oauthlib = "2026-09-29T00:00:00Z"
 pydantic-settings = "2026-06-20T00:00:00Z"
+pypdf = "2026-10-22T00:00:00Z"
+uv = "2026-10-21T00:00:00Z"
 
 [manifest]
 members = [
@@ -41,7 +41,7 @@ members = [
 overrides = [
     { name = "aiohttp", specifier = ">=3.14.4" },
     { name = "anyio", specifier = ">=4.14.2" },
-    { name = "authlib", specifier = ">=1.9.0" },
+    { name = "authlib", specifier = ">=1.9.1" },
     { name = "certifi", specifier = ">=2026.10.18" },
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.0" },
@@ -1890,7 +1890,7 @@ tavily-python = [
 ]
 weaviate-client = [
     { name = "weaviate-client", version = "4.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (python_full_version >= '3.13' and platform_machine != 's390x')" },
-    { name = "weaviate-client", version = "4.21.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.13') or (python_full_version >= '3.11' and platform_machine == 's390x')" },
+    { name = "weaviate-client", version = "4.21.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.13') or (python_full_version >= '3.13' and platform_machine == 's390x')" },
 ]
 xml = [
     { name = "nltk" },
@@ -4661,15 +4661,15 @@ version = "3.10.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "cycler" },
     { name = "fonttools" },
     { name = "kiwisolver" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "packaging" },
     { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pillow", version = "13.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "pillow", version = "13.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "pyparsing" },
     { name = "python-dateutil" },
 ]
@@ -4839,7 +4839,7 @@ version = "0.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0e/4a/c27b42ed9b1c7d13d9ba8b6905dece787d6259152f2309338aed29b2447b/ml_dtypes-0.5.4.tar.gz", hash = "sha256:8ab06a50fb9bf9666dd0fe5dfb4676fa2b0ac0f31ecff72a6c3af8e22c063453", size = 692314, upload-time = "2025-11-17T22:32:31.031Z" }
 wheels = [
@@ -5850,9 +5850,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ml-dtypes" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "protobuf" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/04/19/8ea73a64b368b75fe339771a20a02bc61ea1f551484c9e3d9d0bfbd0450f/onnx-1.22.0.tar.gz", hash = "sha256:ef40c0aaf0b643857ea9306fc7eddce17eaf9fb0407e4801f1fc5758443a38e0", size = 12024721, upload-time = "2026-06-15T12:50:05.354Z" }
