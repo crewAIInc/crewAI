@@ -688,6 +688,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
+        output_assigned = False
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
@@ -795,6 +796,7 @@ class Task(BaseModel):
             task_output = cast(TaskOutput, post_step_ctx.payload)
 
             self.output = task_output
+            output_assigned = True
             self.end_time = datetime.datetime.now()
 
             if self.callback:
@@ -831,6 +833,8 @@ class Task(BaseModel):
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
+            if output_assigned:
+                self.output = None
             crewai_event_bus.emit(
                 self,
                 TaskFailedEvent(error=str(e), error_type=type(e), task=self),
@@ -847,6 +851,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        output_assigned = False
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
@@ -954,6 +959,7 @@ class Task(BaseModel):
             task_output = cast(TaskOutput, post_step_ctx.payload)
 
             self.output = task_output
+            output_assigned = True
             self.end_time = datetime.datetime.now()
 
             if self.callback:
@@ -990,6 +996,8 @@ class Task(BaseModel):
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
+            if output_assigned:
+                self.output = None
             crewai_event_bus.emit(
                 self,
                 TaskFailedEvent(error=str(e), error_type=type(e), task=self),

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import inspect
 from contextlib import closing
 import json
 import os
 import sqlite3
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -19,6 +22,14 @@ from pydantic import BaseModel
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
+from crewai.crews.utils import prepare_task_execution
+from crewai.crews.crew_output import CrewOutput
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.task_events import (
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskStartedEvent,
+)
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
@@ -32,6 +43,7 @@ from crewai.state.provider.sqlite_provider import SqliteProvider
 from crewai.state.runtime import RuntimeState
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
+from crewai.tasks.task_output import TaskOutput
 
 
 
@@ -828,6 +840,322 @@ class TestCheckpointReusedExecutor:
 
         assert len(result.tasks_output) == 2
         assert result.tasks_output[1].raw
+
+
+def _record_task_started(
+    state: RuntimeState, task: Task, sequence: int | None
+) -> TaskStartedEvent:
+    event = TaskStartedEvent(
+        context=None,
+        task_id=str(task.id),
+        emission_sequence=sequence,
+    )
+    state.event_record.add(event)
+    return event
+
+
+def _record_task_completed(
+    state: RuntimeState, task: Task, output: TaskOutput, started_event_id: str, sequence: int
+) -> None:
+    state.event_record.add(
+        TaskCompletedEvent(
+            output=output,
+            task_id=str(task.id),
+            started_event_id=started_event_id,
+            emission_sequence=sequence,
+        )
+    )
+
+
+def _record_task_failed(
+    state: RuntimeState, task: Task, started_event_id: str, sequence: int
+) -> None:
+    state.event_record.add(
+        TaskFailedEvent(
+            error="failed",
+            task_id=str(task.id),
+            started_event_id=started_event_id,
+            emission_sequence=sequence,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    ("history", "reusable"),
+    [
+        ("missing", False),
+        ("started", False),
+        ("missing_sequence", False),
+        ("duplicate_sequence", False),
+        ("completed", True),
+        ("failed_then_completed", True),
+        ("completed_then_started", False),
+        ("completed_then_failed", False),
+    ],
+)
+def test_restore_requires_latest_task_completion_evidence(
+    history: str, reusable: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+    task = Task(description="d", expected_output="e", agent=agent)
+    output = TaskOutput(
+        description=task.description,
+        expected_output=task.expected_output,
+        raw="saved result",
+        agent=agent.role,
+    )
+    task.output = output
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        checkpoint_kickoff_event_id="kickoff-event",
+    )
+    state = RuntimeState(root=[crew])
+
+    if history in {
+        "started",
+        "missing_sequence",
+        "duplicate_sequence",
+        "completed",
+        "failed_then_completed",
+        "completed_then_started",
+        "completed_then_failed",
+    }:
+        first_start = _record_task_started(
+            state,
+            task,
+            None if history == "missing_sequence" else 1,
+        )
+        if history == "failed_then_completed":
+            _record_task_failed(state, task, first_start.event_id, 2)
+            _record_task_completed(state, task, output, first_start.event_id, 3)
+        elif history == "duplicate_sequence":
+            _record_task_completed(state, task, output, first_start.event_id, 1)
+        elif history == "missing_sequence":
+            _record_task_completed(state, task, output, first_start.event_id, 2)
+        elif history != "started":
+            _record_task_completed(state, task, output, first_start.event_id, 2)
+        if history == "completed_then_started":
+            _record_task_started(state, task, 3)
+        elif history == "completed_then_failed":
+            second_start = _record_task_started(state, task, 3)
+            _record_task_failed(state, task, second_start.event_id, 4)
+
+    monkeypatch.setattr(crewai_event_bus, "_runtime_state", state)
+    monkeypatch.setattr(Crew, "_restore_event_scope", lambda _self: None)
+
+    crew._restore_runtime()
+
+    assert (task.output is output) is reusable
+    assert crew._get_execution_start_index([task]) == (1 if reusable else 0)
+
+
+def test_checkpoint_without_event_history_does_not_reuse_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+    task = Task(description="d", expected_output="e", agent=agent)
+    task.output = TaskOutput(
+        description=task.description,
+        expected_output=task.expected_output,
+        raw="saved result",
+        agent=agent.role,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        checkpoint_kickoff_event_id="kickoff-event",
+    )
+    state = RuntimeState(root=[crew])
+
+    monkeypatch.setattr(crewai_event_bus, "_runtime_state", state)
+    monkeypatch.setattr(Crew, "_restore_event_scope", lambda _self: None)
+
+    crew._restore_runtime()
+
+    assert task.output is None
+    assert crew._get_execution_start_index(crew.tasks) == 0
+
+
+def test_output_log_replay_keeps_its_existing_output_collection() -> None:
+    agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+    task = Task(description="d", expected_output="e", agent=agent)
+    output = TaskOutput(
+        description=task.description,
+        expected_output=task.expected_output,
+        raw="stored result",
+        agent=agent.role,
+    )
+    task.output = output
+    crew = Crew(agents=[agent], tasks=[task])
+
+    execution, task_outputs, last_sync_output = prepare_task_execution(
+        crew,
+        task,
+        task_index=0,
+        start_index=1,
+        task_outputs=[],
+        last_sync_output=None,
+    )
+
+    assert execution.should_skip
+    assert task_outputs == [output]
+    assert last_sync_output is output
+
+
+def test_intermediate_snapshot_does_not_prove_task_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+    callback_entered = threading.Event()
+    finish_callback = threading.Event()
+
+    def failing_callback(_output: TaskOutput) -> None:
+        callback_entered.set()
+        if not finish_callback.wait(timeout=10):
+            raise TimeoutError("callback synchronization timed out")
+        raise RuntimeError("callback failed")
+
+    task = Task(
+        description="d",
+        expected_output="e",
+        agent=agent,
+        callback=failing_callback,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        checkpoint_kickoff_event_id="kickoff-event",
+    )
+    state = RuntimeState(root=[crew])
+    monkeypatch.setattr(crewai_event_bus, "_runtime_state", state)
+    monkeypatch.setattr(
+        Agent, "execute_task", lambda *_args, **_kwargs: "intermediate result"
+    )
+
+    def record_event_without_task_reference(source: Any, event: Any) -> None:
+        if getattr(event, "task", None) is task:
+            event.task = None
+        crewai_event_bus._prepare_event(source, event)
+
+    monkeypatch.setattr(
+        crewai_event_bus, "emit", record_event_without_task_reference
+    )
+
+    failures: list[Exception] = []
+
+    def execute_task() -> None:
+        try:
+            task.execute_sync(agent=agent)
+        except Exception as error:
+            failures.append(error)
+
+    worker_context = contextvars.copy_context()
+    worker = threading.Thread(target=worker_context.run, args=(execute_task,))
+    worker.start()
+    try:
+        assert callback_entered.wait(timeout=10)
+        snapshot = json.loads(state.model_dump_json())
+        saved_crew = snapshot["entities"][0]
+        saved_task = next(
+            saved_task
+            for saved_task in saved_crew["tasks"]
+            if saved_task["id"] == str(task.id)
+        )
+        saved_lifecycle = [
+            node["event"]
+            for node in snapshot["event_record"]["nodes"].values()
+            if node["event"].get("task_id") == str(task.id)
+        ]
+
+        assert saved_task["output"]["raw"] == "intermediate result"
+        assert [event["type"] for event in saved_lifecycle] == ["task_started"]
+        assert crew._get_execution_start_index([task]) == 0
+    finally:
+        finish_callback.set()
+        worker.join(timeout=10)
+
+    assert not worker.is_alive()
+    assert len(failures) == 1
+    assert isinstance(failures[0], RuntimeError)
+    assert task.output is None
+
+
+@pytest.mark.parametrize("native_async", [False, True], ids=["sync", "native-async"])
+def test_replay_reuses_only_proven_completed_task_output(
+    native_async: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+    first = Task(description="first", expected_output="x", agent=agent)
+    first_output = TaskOutput(
+        description=first.description,
+        expected_output=first.expected_output,
+        raw="completed result",
+        agent=agent.role,
+    )
+    first.output = first_output
+    second = Task(
+        description="second",
+        expected_output="y",
+        agent=agent,
+        context=[first],
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[first, second],
+        checkpoint_kickoff_event_id="kickoff-event",
+    )
+    state = RuntimeState(root=[crew])
+    started = _record_task_started(state, first, 1)
+    _record_task_completed(state, first, first_output, started.event_id, 2)
+
+    monkeypatch.setattr(crewai_event_bus, "_runtime_state", state)
+    monkeypatch.setattr(Crew, "_restore_event_scope", lambda _self: None)
+    def create_crew_output(
+        _crew: Crew, outputs: list[TaskOutput]
+    ) -> CrewOutput:
+        return CrewOutput(raw=outputs[-1].raw, tasks_output=outputs)
+
+    monkeypatch.setattr(Crew, "_create_crew_output", create_crew_output)
+    crew._restore_runtime()
+
+    calls: list[tuple[Task, str | None]] = []
+    second_output = TaskOutput(
+        description=second.description,
+        expected_output=second.expected_output,
+        raw="new result",
+        agent=agent.role,
+    )
+
+    if native_async:
+        async def execute_async(
+            task: Task,
+            agent: BaseAgent | None = None,
+            context: str | None = None,
+            tools: list[Any] | None = None,
+        ) -> TaskOutput:
+            calls.append((task, context))
+            return second_output
+
+        monkeypatch.setattr(Task, "aexecute_sync", execute_async)
+        outputs = asyncio.run(crew._aexecute_tasks(crew.tasks, was_replayed=True))
+    else:
+        def execute_sync(
+            task: Task,
+            agent: BaseAgent | None = None,
+            context: str | None = None,
+            tools: list[Any] | None = None,
+        ) -> TaskOutput:
+            calls.append((task, context))
+            return second_output
+
+        monkeypatch.setattr(Task, "execute_sync", execute_sync)
+        outputs = crew._execute_tasks(crew.tasks, was_replayed=True)
+
+    assert [task for task, _ in calls] == [second]
+    assert calls[0][1] is not None
+    assert "completed result" in calls[0][1]
+    assert outputs.tasks_output == [first_output, second_output]
 
 
 class TestCustomLLMCheckpointRestore:

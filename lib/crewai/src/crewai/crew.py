@@ -484,6 +484,10 @@ class Crew(FlowTrackable, BaseModel):
         """Re-create runtime objects after restoring from a checkpoint."""
         from crewai.events.event_bus import crewai_event_bus
 
+        for task in self.tasks:
+            if task.output is not None and not self._has_reusable_task_output(task):
+                task.output = None
+
         started_task_ids: set[str] = set()
         state = crewai_event_bus._runtime_state
         if state is not None:
@@ -494,7 +498,10 @@ class Crew(FlowTrackable, BaseModel):
         is_hierarchical = self.process == Process.hierarchical
         resuming_task_agent_roles: set[str] = set()
         for task in self.tasks:
-            if task.output is not None or str(task.id) not in started_task_ids:
+            if (
+                self._has_reusable_task_output(task)
+                or str(task.id) not in started_task_ids
+            ):
                 continue
             executing_agent = self.manager_agent if is_hierarchical else task.agent
             if executing_agent is not None:
@@ -522,7 +529,10 @@ class Crew(FlowTrackable, BaseModel):
                 for agent in candidate_agents:
                     if agent.role == task.agent.role:
                         task.agent = agent
-                        if agent.agent_executor is not None and task.output is None:
+                        if (
+                            agent.agent_executor is not None
+                            and not self._has_reusable_task_output(task)
+                        ):
                             agent.agent_executor.task = task
                         break
         for task in self.tasks:
@@ -541,6 +551,81 @@ class Crew(FlowTrackable, BaseModel):
 
         self._rebind_memory_views()
         self._restore_event_scope()
+
+    def _has_reusable_task_output(self, task: Task) -> bool:
+        """Return whether checkpoint history proves this task output completed.
+
+        Output alone is not enough: a checkpoint may capture it after assignment
+        but before callbacks and output-file writes finish. Require the latest
+        recorded task lifecycle event to be a completion linked to the latest
+        recorded start for the same task. A resumed executor may emit a completion
+        after a prior failure while reusing that start scope, so terminal events
+        between the start and completion must link to the same start. Incomplete
+        or ambiguous history fails closed so replay can execute the task again.
+        """
+        if task.output is None:
+            return False
+
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            return False
+
+        task_id = str(task.id)
+        lifecycle_events: list[tuple[int, Any]] = []
+        for node in state.event_record.all_nodes():
+            event = node.event
+            if event.task_id != task_id or event.type not in {
+                "task_started",
+                "task_completed",
+                "task_failed",
+            }:
+                continue
+
+            sequence = event.emission_sequence
+            if (
+                state.event_record.get(event.event_id) is not node
+                or not isinstance(sequence, int)
+                or isinstance(sequence, bool)
+                or sequence <= 0
+            ):
+                return False
+            lifecycle_events.append((sequence, event))
+
+        if not lifecycle_events:
+            return False
+
+        lifecycle_events.sort(key=lambda item: item[0])
+        if any(
+            lifecycle_events[index - 1][0] == lifecycle_events[index][0]
+            for index in range(1, len(lifecycle_events))
+        ):
+            return False
+
+        latest_sequence, latest_event = lifecycle_events[-1]
+        if latest_event.type != "task_completed" or not latest_event.started_event_id:
+            return False
+
+        linked_start = next(
+            (
+                event
+                for sequence, event in reversed(lifecycle_events[:-1])
+                if sequence < latest_sequence and event.type == "task_started"
+            ),
+            None,
+        )
+        if (
+            linked_start is None
+            or linked_start.event_id != latest_event.started_event_id
+        ):
+            return False
+
+        return all(
+            event.started_event_id == linked_start.event_id
+            for sequence, event in lifecycle_events
+            if linked_start.emission_sequence is not None
+            and linked_start.emission_sequence < sequence < latest_sequence
+            and event.type in {"task_completed", "task_failed"}
+        )
 
     def _rebind_memory_views(self) -> None:
         """Reattach a live ``Memory`` to restored ``MemoryScope``/``MemorySlice`` views.
@@ -1570,7 +1655,7 @@ class Crew(FlowTrackable, BaseModel):
         if self.checkpoint_kickoff_event_id is None:
             return None
         for i, task in enumerate(tasks):
-            if task.output is None:
+            if not self._has_reusable_task_output(task):
                 return i
         return len(tasks) if tasks else None
 
