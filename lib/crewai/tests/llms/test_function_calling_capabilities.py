@@ -19,9 +19,17 @@ from crewai.llms.providers.openai_compatible.completion import (
 from crewai.llms.providers.snowflake.completion import SnowflakeCompletion
 
 
-def _set_catalog_entry(llm: Any, entry: dict[str, Any] | None) -> None:
-    llm._catalog_entry = entry
-    llm._catalog_entry_resolved = True
+@pytest.fixture
+def stub_catalog(monkeypatch: pytest.MonkeyPatch) -> Callable[[dict[str, Any] | None], None]:
+    """Make every LLM created afterwards resolve ``entry`` as its catalog entry."""
+
+    def stub(entry: dict[str, Any] | None) -> None:
+        monkeypatch.setattr(
+            "crewai.llms.base_llm.find_model_catalog_entry",
+            lambda model, provider=None: entry,
+        )
+
+    return stub
 
 
 @pytest.mark.parametrize(
@@ -41,20 +49,7 @@ def _set_catalog_entry(llm: Any, entry: dict[str, Any] | None) -> None:
         ),
         (lambda: AzureCompletion(model="deepseek-chat"), False),
         (lambda: AzureCompletion(model="gpt-4"), True),
-        (
-            lambda: AnthropicCompletion(
-                model="claude-3-5-sonnet-20241022", supports_tools=False
-            ),
-            False,
-        ),
         (lambda: AnthropicCompletion(model="claude-3-5-sonnet-20241022"), True),
-        (
-            lambda: BedrockCompletion(
-                model="anthropic.claude-3-5-sonnet-20241022-v2:0",
-                supports_tools=False,
-            ),
-            False,
-        ),
         (
             lambda: BedrockCompletion(
                 model="anthropic.claude-3-5-sonnet-20241022-v2:0"
@@ -78,23 +73,45 @@ def _set_catalog_entry(llm: Any, entry: dict[str, Any] | None) -> None:
     ],
 )
 def test_function_calling_catalog_boolean_overrides_provider_fallback(
-    factory: Callable[[], Any], expected_fallback: bool
+    factory: Callable[[], Any],
+    expected_fallback: bool,
+    stub_catalog: Callable[[dict[str, Any] | None], None],
 ) -> None:
-    llm = factory()
-    _set_catalog_entry(llm, None)
+    stub_catalog(None)
+    assert factory().supports_function_calling() is expected_fallback
 
-    assert llm.supports_function_calling() is expected_fallback
+    stub_catalog({"supports_function_calling": True})
+    assert factory().supports_function_calling() is True
 
-    _set_catalog_entry(llm, {"supports_function_calling": True})
-    assert llm.supports_function_calling() is True
-
-    _set_catalog_entry(llm, {"supports_function_calling": False})
-    assert llm.supports_function_calling() is False
+    stub_catalog({"supports_function_calling": False})
+    assert factory().supports_function_calling() is False
 
 
-def test_litellm_function_calling_falls_back_when_catalog_field_is_missing() -> None:
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: AnthropicCompletion(
+            model="claude-3-5-sonnet-20241022", supports_tools=False
+        ),
+        lambda: BedrockCompletion(
+            model="anthropic.claude-3-5-sonnet-20241022-v2:0", supports_tools=False
+        ),
+    ],
+)
+def test_explicit_supports_tools_false_overrides_catalog(
+    factory: Callable[[], Any],
+    stub_catalog: Callable[[dict[str, Any] | None], None],
+) -> None:
+    stub_catalog(None)
+    assert factory().supports_function_calling() is False
+
+    stub_catalog({"supports_function_calling": True})
+    assert factory().supports_function_calling() is False
+
+
+def test_litellm_function_calling_falls_back_when_catalog_field_is_missing(stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({})
     llm = OpenAICompletion(model="custom-model", api_key="test-key")
-    _set_catalog_entry(llm, {})
     llm._get_custom_llm_provider = lambda: "openai"
 
     fallback = SimpleNamespace(
@@ -108,11 +125,9 @@ def test_litellm_function_calling_falls_back_when_catalog_field_is_missing() -> 
 
 
 @pytest.mark.parametrize("catalog_support", [True, False])
-def test_litellm_catalog_function_calling_boolean_is_authoritative(
-    catalog_support: bool,
-) -> None:
+def test_litellm_catalog_function_calling_boolean_is_authoritative(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({"supports_function_calling": catalog_support})
     llm = OpenAICompletion(model="custom-model", api_key="test-key")
-    _set_catalog_entry(llm, {"supports_function_calling": catalog_support})
     llm._get_custom_llm_provider = lambda: "openai"
 
     fallback = SimpleNamespace(utils=SimpleNamespace(supports_function_calling=None))
@@ -126,11 +141,9 @@ def test_litellm_catalog_function_calling_boolean_is_authoritative(
 
 
 @pytest.mark.parametrize("catalog_support", [True, False])
-def test_anthropic_request_tool_gate_uses_catalog_capability(
-    catalog_support: bool,
-) -> None:
+def test_anthropic_request_tool_gate_uses_catalog_capability(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({"supports_function_calling": catalog_support})
     llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
-    _set_catalog_entry(llm, {"supports_function_calling": catalog_support})
 
     params = llm._prepare_completion_params(
         [{"role": "user", "content": "hello"}],
@@ -141,11 +154,9 @@ def test_anthropic_request_tool_gate_uses_catalog_capability(
 
 
 @pytest.mark.parametrize("catalog_support", [True, False])
-def test_gemini_request_tool_gate_uses_catalog_capability(
-    catalog_support: bool,
-) -> None:
+def test_gemini_request_tool_gate_uses_catalog_capability(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({"supports_function_calling": catalog_support})
     llm = GeminiCompletion(model="gemini-1.0-pro")
-    _set_catalog_entry(llm, {"supports_function_calling": catalog_support})
 
     config = llm._prepare_generation_config(
         tools=[{"name": "get_weather", "parameters": {"type": "object"}}]
@@ -155,11 +166,9 @@ def test_gemini_request_tool_gate_uses_catalog_capability(
 
 
 @pytest.mark.parametrize("catalog_support", [True, False])
-def test_bedrock_request_tool_gate_uses_catalog_capability(
-    catalog_support: bool,
-) -> None:
+def test_bedrock_request_tool_gate_uses_catalog_capability(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({"supports_function_calling": catalog_support})
     llm = BedrockCompletion(model="anthropic.claude-3-5-sonnet-20241022-v2:0")
-    _set_catalog_entry(llm, {"supports_function_calling": catalog_support})
     llm._client = MagicMock()
     llm._client.converse.return_value = {
         "output": {"message": {"role": "assistant", "content": [{"text": "ok"}]}},
@@ -179,3 +188,106 @@ def test_bedrock_request_tool_gate_uses_catalog_capability(
 
     request = llm._client.converse.call_args.kwargs
     assert ("toolConfig" in request) is catalog_support
+
+
+def test_dropped_tools_are_logged(caplog: pytest.LogCaptureFixture, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({"supports_function_calling": False})
+    llm = BedrockCompletion(model="anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with caplog.at_level("WARNING", logger="crewai.llms.base_llm"):
+        assert llm._tools_allowed([{"name": "get_weather"}]) is False
+
+    assert "does not support function calling" in caplog.text
+
+
+def test_no_warning_when_no_tools_are_passed(caplog: pytest.LogCaptureFixture, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
+    stub_catalog({"supports_function_calling": False})
+    llm = BedrockCompletion(model="anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with caplog.at_level("WARNING", logger="crewai.llms.base_llm"):
+        assert llm._tools_allowed(None) is False
+
+    assert caplog.text == ""
+
+
+@pytest.mark.parametrize(
+    ("factory", "expected"),
+    [
+        (
+            lambda: OpenAICompletion(
+                model="gpt-4o", provider="openai", api_key="test-key"
+            ),
+            True,
+        ),
+        (
+            lambda: OpenAICompletion(
+                model="gpt-5-chat", provider="openai", api_key="test-key"
+            ),
+            False,
+        ),
+        (lambda: AzureCompletion(model="gpt-4o", provider="azure"), True),
+        (
+            lambda: AnthropicCompletion(
+                model="claude-sonnet-4-5", provider="anthropic"
+            ),
+            True,
+        ),
+        (
+            lambda: BedrockCompletion(
+                model="us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                provider="bedrock",
+            ),
+            True,
+        ),
+        (
+            lambda: GeminiCompletion(model="gemini-2.5-flash", provider="gemini"),
+            True,
+        ),
+    ],
+)
+def test_catalog_entry_resolves_through_the_real_lookup(
+    factory: Callable[[], Any], expected: bool
+) -> None:
+    llm = factory()
+
+    assert llm.catalog_entry is not None
+    assert llm.catalog_entry["supports_function_calling"] is expected
+    assert llm.supports_function_calling() is expected
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_class", "expected_provider"),
+    [
+        ("azure/gpt-4o", AzureCompletion, "azure"),
+        ("anthropic/claude-sonnet-4-5", AnthropicCompletion, "anthropic"),
+        (
+            "bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+            BedrockCompletion,
+            "bedrock",
+        ),
+    ],
+)
+def test_llm_factory_resolves_the_catalog_under_the_routed_provider(
+    monkeypatch: pytest.MonkeyPatch,
+    model: str,
+    expected_class: type,
+    expected_provider: str,
+) -> None:
+    for key in (
+        "AZURE_API_KEY",
+        "AZURE_ENDPOINT",
+        "ANTHROPIC_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ):
+        monkeypatch.setenv(
+            key, "https://example.openai.azure.com" if key == "AZURE_ENDPOINT" else "x"
+        )
+
+    llm = LLM(model=model)
+
+    assert isinstance(llm, expected_class)
+    assert llm.provider == expected_provider
+    assert llm.catalog_entry is not None
+    assert llm.catalog_entry["litellm_provider"].startswith(expected_provider)
