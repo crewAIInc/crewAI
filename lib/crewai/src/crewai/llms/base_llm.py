@@ -236,6 +236,13 @@ class BaseLLM(BaseModel, ABC):
     api_key: str | None = None
     base_url: str | None = None
     provider: str = Field(default="openai")
+    supports_tools: bool | None = Field(
+        default=None,
+        description=(
+            "Explicitly enable or disable tool use. When None, the model's "
+            "LiteLLM catalog entry decides, falling back to the provider default."
+        ),
+    )
     prefer_upload: bool = False
     is_litellm: bool = False
     stop: list[str] = Field(
@@ -318,8 +325,10 @@ class BaseLLM(BaseModel, ABC):
             self._catalog_entry_resolved = True
         return self._catalog_entry
 
-    def _catalog_supports_function_calling(self, default: bool) -> bool:
-        """Return the catalog's explicit function-calling capability, else ``default``."""
+    def _resolve_supports_function_calling(self, default: bool) -> bool:
+        """Resolve function calling: explicit setting, then catalog, then ``default``."""
+        if self.supports_tools is not None:
+            return self.supports_tools
         value = (self.catalog_entry or {}).get("supports_function_calling")
         return value if isinstance(value, bool) else default
 

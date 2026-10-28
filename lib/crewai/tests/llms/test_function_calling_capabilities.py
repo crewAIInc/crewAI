@@ -88,25 +88,52 @@ def test_function_calling_catalog_boolean_overrides_provider_fallback(
 
 
 @pytest.mark.parametrize(
-    "factory",
+    "build",
     [
-        lambda: AnthropicCompletion(
-            model="claude-3-5-sonnet-20241022", supports_tools=False
+        lambda **kw: AnthropicCompletion(model="claude-3-5-sonnet-20241022", **kw),
+        lambda **kw: BedrockCompletion(
+            model="anthropic.claude-3-5-sonnet-20241022-v2:0", **kw
         ),
-        lambda: BedrockCompletion(
-            model="anthropic.claude-3-5-sonnet-20241022-v2:0", supports_tools=False
-        ),
+        lambda **kw: GeminiCompletion(model="gemini-1.5-pro", **kw),
+        lambda **kw: OpenAICompletion(model="gpt-4o", api_key="test-key", **kw),
+        lambda **kw: AzureCompletion(model="gpt-4o", **kw),
     ],
 )
-def test_explicit_supports_tools_false_overrides_catalog(
-    factory: Callable[[], Any],
+@pytest.mark.parametrize("explicit", [True, False])
+@pytest.mark.parametrize("catalog_support", [True, False, None])
+def test_explicit_supports_tools_wins_over_catalog(
+    build: Callable[..., Any],
+    explicit: bool,
+    catalog_support: bool | None,
     stub_catalog: Callable[[dict[str, Any] | None], None],
 ) -> None:
-    stub_catalog(None)
-    assert factory().supports_function_calling() is False
+    stub_catalog(
+        None
+        if catalog_support is None
+        else {"supports_function_calling": catalog_support}
+    )
 
-    stub_catalog({"supports_function_calling": True})
-    assert factory().supports_function_calling() is False
+    assert build(supports_tools=explicit).supports_function_calling() is explicit
+
+
+def test_unset_supports_tools_defers_to_the_catalog(
+    stub_catalog: Callable[[dict[str, Any] | None], None],
+) -> None:
+    stub_catalog({"supports_function_calling": False})
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
+
+    assert llm.supports_tools is None
+    assert llm.supports_function_calling() is False
+
+
+def test_litellm_path_honors_explicit_supports_tools(
+    stub_catalog: Callable[[dict[str, Any] | None], None],
+) -> None:
+    stub_catalog({"supports_function_calling": False})
+    llm = OpenAICompletion(model="custom-model", api_key="k", supports_tools=True)
+
+    assert LLM.supports_function_calling(llm) is True
 
 
 def test_litellm_function_calling_falls_back_when_catalog_field_is_missing(stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:

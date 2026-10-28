@@ -2538,6 +2538,9 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
+        if self.supports_tools is not None:
+            return self.supports_tools
+
         catalog_support = (self.catalog_entry or {}).get("supports_function_calling")
         if isinstance(catalog_support, bool):
             return catalog_support

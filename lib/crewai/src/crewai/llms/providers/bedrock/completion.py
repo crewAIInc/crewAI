@@ -263,7 +263,6 @@ class BedrockCompletion(BaseLLM):
     interceptor: BaseInterceptor[Any, Any] | None = None
     response_format: type[BaseModel] | None = None
     is_claude_model: bool = False
-    supports_tools: bool = True
     supports_streaming: bool = True
     model_id: str = ""
 
@@ -2225,7 +2224,7 @@ class BedrockCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self.supports_tools and self._catalog_supports_function_calling(True)
+        return self._resolve_supports_function_calling(True)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words.

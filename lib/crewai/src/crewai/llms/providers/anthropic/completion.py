@@ -266,7 +266,6 @@ class AnthropicCompletion(BaseLLM):
     response_format: JsonResponseFormat | type[BaseModel] | None = None
     tool_search: AnthropicToolSearchConfig | None = None
     is_claude_3: bool = False
-    supports_tools: bool = True
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
@@ -2068,7 +2067,7 @@ class AnthropicCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self.supports_tools and self._catalog_supports_function_calling(True)
+        return self._resolve_supports_function_calling(True)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
