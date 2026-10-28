@@ -33,6 +33,11 @@ class AzureFoundryAnthropicCompletion(AnthropicCompletion):
             )
         return data
 
+    def _multimodal_formatter_name(self) -> str:
+        # Anthropic content blocks, with Foundry's own file constraints; the
+        # provider stays "azure".
+        return "azure_foundry_anthropic"
+
     def _get_client_params(self, include_http_client: bool = True) -> dict[str, Any]:
         # Resolved here, not at construction, so the LLM can be built before
         # the endpoint and key are configured; a ValueError defers to the first

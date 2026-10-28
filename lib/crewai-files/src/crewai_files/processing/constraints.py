@@ -19,6 +19,7 @@ ProviderName = Literal[
     "gemini",
     "bedrock",
     "azure",
+    "azure_foundry_anthropic",
 ]
 
 DEFAULT_IMAGE_FORMATS: tuple[ImageMimeType, ...] = (
@@ -304,6 +305,18 @@ AZURE_CONSTRAINTS = ProviderConstraints(
     supports_url_references=True,
 )
 
+# Claude on Azure Foundry takes Anthropic's content blocks. Files are inlined:
+# the Files API exists on Foundry only for "Hosted on Anthropic" deployments,
+# and crewai's uploader targets api.anthropic.com with ANTHROPIC_API_KEY.
+# URL sources are not documented for Foundry. Image and PDF limits are
+# Anthropic's until Foundry publishes its own.
+AZURE_FOUNDRY_ANTHROPIC_CONSTRAINTS = ProviderConstraints(
+    name="azure_foundry_anthropic",
+    image=ANTHROPIC_CONSTRAINTS.image,
+    pdf=ANTHROPIC_CONSTRAINTS.pdf,
+    supports_file_upload=False,
+    supports_url_references=False,
+)
 
 _PROVIDER_CONSTRAINTS_MAP: dict[str, ProviderConstraints] = {
     "anthropic": ANTHROPIC_CONSTRAINTS,
@@ -312,6 +325,7 @@ _PROVIDER_CONSTRAINTS_MAP: dict[str, ProviderConstraints] = {
     "gemini": GEMINI_CONSTRAINTS,
     "bedrock": BEDROCK_CONSTRAINTS,
     "azure": AZURE_CONSTRAINTS,
+    "azure_foundry_anthropic": AZURE_FOUNDRY_ANTHROPIC_CONSTRAINTS,
     "claude": ANTHROPIC_CONSTRAINTS,
     "gpt": OPENAI_CONSTRAINTS,
     "google": GEMINI_CONSTRAINTS,
