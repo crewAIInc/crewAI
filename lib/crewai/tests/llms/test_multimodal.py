@@ -261,6 +261,12 @@ class TestAzureMultimodal:
         llm = LLM(model="azure/gpt-35-turbo")
         assert llm.supports_multimodal() is False
 
+    @pytest.mark.parametrize("model", ["azure/o1-mini", "azure/o3-mini"])
+    def test_does_not_support_text_only_reasoning_models(self, model: str) -> None:
+        """Text-only o-series models stay rejected even though o1/o3 are vision."""
+        llm = LLM(model=model)
+        assert llm.supports_multimodal() is False
+
     def test_supports_vision_override_allows_custom_deployment_name(self) -> None:
         llm = LLM(model="azure/vision-production", supports_vision=True)
 
@@ -270,6 +276,35 @@ class TestAzureMultimodal:
         llm = LLM(model="azure/gpt-4.1", supports_vision=False)
 
         assert llm.supports_multimodal() is False
+
+    def test_files_accepted_when_override_enables_custom_deployment(self) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=True)
+        messages = [
+            {"role": "user", "content": "Describe", "files": {"chart": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "image_url"
+
+    @pytest.mark.parametrize("model", ["azure/o1-mini", "azure/o3-mini"])
+    def test_files_rejected_for_text_only_models(self, model: str) -> None:
+        llm = LLM(model=model)
+        messages = [
+            {"role": "user", "content": "Describe", "files": {"chart": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        with pytest.raises(ValueError, match="does not support multimodal input"):
+            llm._process_message_files(messages)
+
+    def test_files_rejected_when_override_disables_vision_model(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", supports_vision=False)
+        messages = [
+            {"role": "user", "content": "Describe", "files": {"chart": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        with pytest.raises(ValueError, match="does not support multimodal input"):
+            llm._process_message_files(messages)
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Azure uses same format as OpenAI."""
