@@ -86,6 +86,10 @@ mode: "wide"
 
   ## O que Mudou
 
+  ### Mudanças Quebradoras
+  - Remover `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` agora falha com "CrewAgentExecutor has been removed", e os caminhos de importação `crewai.agents.crew_agent_executor` e `crewai.experimental.AgentExecutor` deixaram de existir. Importe `AgentExecutor` de `crewai.agents.agent_executor`.
+  - Mudar a forma como todo agente é executado: resultados de ferramentas grandes demais são adiados para arquivos temporários, a conversa é resumida antes de estourar a janela de contexto, e a quinta chamada idêntica a uma ferramenta interrompe a tarefa. Veja [Atualizando Agentes de Versões Anteriores](/pt-BR/concepts/agents#atualizando-agentes-de-versões-anteriores) para cada mudança e como ela é controlada.
+
   ### Funcionalidades
   - Adicionar suporte para kwargs compatíveis com LiteLLM.
   - Implementar busca de aplicativos de plataforma na CLI.
