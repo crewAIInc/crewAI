@@ -2257,6 +2257,9 @@ class BedrockCompletion(BaseLLM):
         Returns:
             True if the model supports images.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         model_lower = self.model.lower()
         vision_models = (
             "anthropic.claude-3",
@@ -2276,7 +2279,11 @@ class BedrockCompletion(BaseLLM):
             "us.anthropic.claude-opus-4",
             "us.anthropic.claude-haiku-4",
         )
-        return any(model_lower.startswith(m) for m in vision_models)
+        if any(model_lower.startswith(m) for m in vision_models):
+            return True
+        return (
+            self.get_model_capability("supports_vision", providers=["bedrock"]) is True
+        )
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.

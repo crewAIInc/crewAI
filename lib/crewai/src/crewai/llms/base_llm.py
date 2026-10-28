@@ -236,6 +236,7 @@ class BaseLLM(BaseModel, ABC):
     base_url: str | None = None
     provider: str = Field(default="openai")
     prefer_upload: bool = False
+    supports_vision: bool | None = None
     is_litellm: bool = False
     stop: list[str] = Field(
         default_factory=list,
@@ -657,6 +658,42 @@ class BaseLLM(BaseModel, ABC):
             True if the LLM supports images, PDFs, audio, or video.
         """
         return False
+
+    def _supports_vision_override(self) -> bool | None:
+        """Return the user-configured multimodal capability, if provided."""
+        return self.supports_vision
+
+    def get_model_capability(
+        self, capability: str, providers: list[str] | None = None
+    ) -> bool | None:
+        """Return a boolean LiteLLM capability for this exact provider model.
+
+        When providers are supplied, native providers receive the
+        deployment/model portion without its provider prefix, so look up both
+        that name and LiteLLM's ``provider/model`` keys. Without providers,
+        only the model key is checked. Unknown Azure deployment names
+        deliberately return ``None`` because they cannot be inferred from the
+        catalog.
+        """
+        from crewai.llms.context_window import _CATALOG
+
+        names: tuple[str, ...] = (self.model,)
+        if providers is not None:
+            names += tuple(f"{provider}/{self.model}" for provider in providers)
+
+        for name in names:
+            properties = _CATALOG.get(name)
+            if not isinstance(properties, dict):
+                continue
+            if (
+                providers is not None
+                and properties.get("litellm_provider") not in providers
+            ):
+                continue
+            value = properties.get(capability)
+            if isinstance(value, bool):
+                return value
+        return None
 
     def _multimodal_formatter_name(self) -> str:
         # Content-block schema key for crewai_files. Identity stays on self.provider.
