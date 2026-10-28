@@ -82,9 +82,16 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
             raise ValueError(f"Tool type '{dotted}' is not a BaseTool subclass")
 
     data = dict(value)
-    # The default needs no import, so restoring it must not require the opt-in.
-    if data.get("cache_function") == _DEFAULT_CACHE_FUNCTION_PATH:
-        del data["cache_function"]
+    saved = data.get("cache_function")
+    if "cache_function" in data and saved is None:
+        # Saved as null when the callable had no importable path (a lambda
+        # or bound method). It may have guarded a state-changing tool, so
+        # fail closed rather than fall back to a default that caches.
+        data["cache_function"] = _never_cache_function
+    elif isinstance(saved, str) and saved in _BUILTIN_CACHE_FUNCTIONS:
+        # crewAI's own cache functions need no import, so restoring them must
+        # not require the opt-in.
+        data["cache_function"] = _BUILTIN_CACHE_FUNCTIONS[saved]
     return tool_cls.model_validate(data)  # type: ignore[attr-defined]
 
 
@@ -93,7 +100,14 @@ def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
     return True
 
 
-_DEFAULT_CACHE_FUNCTION_PATH = f"{__name__}._default_cache_function"
+def _never_cache_function(_args: Any = None, _result: Any = None) -> bool:
+    return False
+
+
+_BUILTIN_CACHE_FUNCTIONS: dict[str, Callable[..., bool]] = {
+    f"{__name__}.{function.__name__}": function
+    for function in (_default_cache_function, _never_cache_function)
+}
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
