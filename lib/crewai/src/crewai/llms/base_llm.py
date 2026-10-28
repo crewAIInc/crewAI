@@ -308,14 +308,14 @@ class BaseLLM(BaseModel, ABC):
         }
     )
     _catalog_entry: Mapping[str, Any] | None = PrivateAttr(default=None)
-
-    def model_post_init(self, __context: Any) -> None:
-        """Resolve this LLM's catalog entry once after its provider is known."""
-        self._catalog_entry = find_model_catalog_entry(self.model, self.provider)
+    _catalog_entry_resolved: bool = PrivateAttr(default=False)
 
     @property
     def catalog_entry(self) -> Mapping[str, Any] | None:
         """Return the resolved LiteLLM catalog entry, when one is unambiguous."""
+        if not self._catalog_entry_resolved:
+            self._catalog_entry = find_model_catalog_entry(self.model, self.provider)
+            self._catalog_entry_resolved = True
         return self._catalog_entry
 
     @model_validator(mode="before")
