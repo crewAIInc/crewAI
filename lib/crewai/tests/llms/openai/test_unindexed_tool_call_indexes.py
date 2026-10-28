@@ -50,3 +50,10 @@ def test_name_without_id_starts_new_slot_when_no_call_is_pending() -> None:
     }
 
     assert _tool_call_index(None, None, "get_weather", calls) == 1
+
+def test_name_without_id_completes_argument_only_pending_call() -> None:
+    calls: dict[int, dict[str, object]] = {
+        0: {"id": None, "name": None, "arguments": '{"city":'}
+    }
+
+    assert _tool_call_index(None, None, "get_weather", calls) == 0
