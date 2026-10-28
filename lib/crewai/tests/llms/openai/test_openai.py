@@ -2392,6 +2392,59 @@ def test_openai_streaming_returns_tool_calls_without_available_functions():
     assert result[0]["type"] == "function"
 
 
+def test_openai_streaming_runs_tool_called_with_empty_arguments():
+    """Test that streaming runs a zero-argument tool whose arguments stream as "".
+
+    The non-streaming path runs the same tool call with {}; streaming used to
+    skip it and return "".
+    """
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    mock_chunk_1 = MagicMock()
+    mock_chunk_1.choices = [MagicMock()]
+    mock_chunk_1.choices[0].delta = MagicMock()
+    mock_chunk_1.choices[0].delta.content = None
+    mock_chunk_1.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_1.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_1.choices[0].delta.tool_calls[0].id = "call_abc123"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.name = "get_time"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.arguments = ""
+    mock_chunk_1.choices[0].finish_reason = None
+    mock_chunk_1.usage = None
+    mock_chunk_1.id = "chatcmpl-1"
+
+    mock_chunk_2 = MagicMock()
+    mock_chunk_2.choices = [MagicMock()]
+    mock_chunk_2.choices[0].delta = MagicMock()
+    mock_chunk_2.choices[0].delta.content = None
+    mock_chunk_2.choices[0].delta.tool_calls = None
+    mock_chunk_2.choices[0].finish_reason = "tool_calls"
+    mock_chunk_2.usage = None
+    mock_chunk_2.id = "chatcmpl-1"
+
+    get_time = MagicMock(return_value="12:00")
+
+    with patch.object(
+        llm._client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2])
+    ):
+        result = llm.call(
+            messages=[{"role": "user", "content": "What time is it?"}],
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "get_time",
+                    "description": "Get the current time",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            }],
+            available_functions={"get_time": get_time},
+        )
+
+    assert result == "12:00"
+    get_time.assert_called_once_with()
+
+
 def test_openai_responses_api_reasoning_tokens_extraction():
     """Test that reasoning_tokens are extracted from Responses API responses."""
     llm = LLM(model="openai/gpt-4o")
