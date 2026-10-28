@@ -97,4 +97,8 @@ def test_catalog_entry_survives_a_model_post_init_override() -> None:
 def test_catalog_entry_is_resolved_once() -> None:
     llm = StubLLM(model="gpt-4o", provider="openai")
 
-    assert llm.catalog_entry is llm.catalog_entry
+    first = llm.catalog_entry
+    second = llm.catalog_entry
+
+    assert first is not None
+    assert first is second

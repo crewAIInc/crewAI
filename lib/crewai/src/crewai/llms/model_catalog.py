@@ -121,9 +121,12 @@ def _index_catalog(
         if not isinstance(provider, str):
             continue
         entries[name] = props
-        for model in _entry_model_names(name, provider):
+        models = _entry_model_names(name, provider)
+        for model in models:
             exact[provider, model].append(props)
-            normalized[provider, bare_model_name(model)].append(props)
+        # ``provider/model`` and ``model`` normalize to one name; index it once.
+        for model in dict.fromkeys(bare_model_name(model) for model in models):
+            normalized[provider, model].append(props)
     return (
         entries,
         {key: tuple(value) for key, value in exact.items()},
