@@ -680,7 +680,7 @@ def install(context: click.Context) -> None:
     "--inputs",
     type=str,
     default=None,
-    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
+    help='JSON object of inputs for a flow or a JSON crew, e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
