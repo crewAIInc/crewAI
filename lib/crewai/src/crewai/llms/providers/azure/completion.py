@@ -222,6 +222,7 @@ class AzureCompletion(BaseLLM):
             "api": "responses",
             "provider": "openai",
             "stream": self.stream,
+            "supports_vision": self.supports_vision,
         }
 
         if self.temperature is not None:

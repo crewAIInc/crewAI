@@ -446,6 +446,32 @@ class TestAzureMultimodal:
 
         assert result[0]["content"][-1]["type"] == "input_image"
 
+    @pytest.mark.parametrize("supports_vision", [True, False])
+    def test_responses_delegate_preserves_vision_override(
+        self, supports_vision: bool
+    ) -> None:
+        llm = LLM(
+            model="azure/vision-production",
+            api="responses",
+            supports_vision=supports_vision,
+        )
+
+        assert llm._responses_delegate.supports_vision is supports_vision
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Look",
+                "files": {"pic": ImageFile(source=MINIMAL_PNG)},
+            }
+        ]
+        if supports_vision:
+            result = llm._responses_delegate._process_message_files(messages)
+            assert result[0]["content"][-1]["type"] == "input_image"
+        else:
+            with pytest.raises(ValueError, match="does not support multimodal input"):
+                llm._responses_delegate._process_message_files(messages)
+
     def test_image_still_accepted_alongside_validation(self) -> None:
         llm = LLM(model="azure/gpt-4.1")
         messages = [
