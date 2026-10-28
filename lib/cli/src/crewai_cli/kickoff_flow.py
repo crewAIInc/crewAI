@@ -54,7 +54,8 @@ def _load_conversational_flow_from_kickoff_script() -> Any | None:
             and issubclass(value, Flow)
             and getattr(value, "conversational", False)
         ):
-            return value()
+            with stops_run_as("load_failed"):
+                return value()
 
     for value in vars(module).values():
         if (
@@ -110,7 +111,9 @@ def _kickoff_flow_with_inputs(inputs: dict[str, Any]) -> Any:
             "--inputs is not supported for a conversational flow; it takes "
             "messages, not inputs"
         )
-    return flows[0]().kickoff(inputs=inputs)
+    with stops_run_as("load_failed"):
+        flow = flows[0]()
+    return flow.kickoff(inputs=inputs)
 
 
 def _exit_without_chat_terminal() -> NoReturn:

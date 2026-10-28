@@ -12,6 +12,7 @@ import subprocess
 import sys
 from typing import Any, get_args
 from unittest.mock import MagicMock
+import uuid
 
 from click.testing import CliRunner, Result
 from crewai_core import telemetry as core_telemetry
@@ -19,11 +20,10 @@ import pytest
 
 from crewai_cli.cli import crewai
 import crewai_cli.run_crew as run_crew_module
-from crewai_cli.run_crew import RUN_COUNTED_ENV, RunKind, RunStopReason
 
 
-ALLOWED_EVENTS = {f"cli_usage:run_started:{kind}" for kind in get_args(RunKind)} | {
-    f"cli_usage:run_stopped:{reason}" for reason in get_args(RunStopReason)
+ALLOWED_EVENTS = {f"cli_usage:run_started:{kind}" for kind in get_args(run_crew_module.RunKind)} | {
+    f"cli_usage:run_stopped:{reason}" for reason in get_args(run_crew_module.RunStopReason)
 }
 OPT_OUT_FLAGS = ("CREWAI_DISABLE_TELEMETRY", "OTEL_SDK_DISABLED", "CREWAI_DISABLE_TRACKING")
 
@@ -107,7 +107,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("CREWAI_DMN", "true")
     # `uv run pytest` sets this, which would run declarative flows in-process.
     monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
-    monkeypatch.delenv(RUN_COUNTED_ENV, raising=False)
+    monkeypatch.delenv(run_crew_module.RUN_COUNTED_ENV, raising=False)
     monkeypatch.setattr(sys, "path", list(sys.path))
     return folder
 
@@ -213,17 +213,17 @@ def test_a_flow_re_run_in_the_project_env_is_told_it_was_counted(
 
     [(run_command, run_env), (plot_command, plot_env)] = commands
     assert run_command[:4] == ["uv", "run", "crewai", "run"]
-    assert run_env[RUN_COUNTED_ENV] == "1"
+    assert run_env[run_crew_module.RUN_COUNTED_ENV] == "1"
     # Plotting shares the re-run helper and is not a run.
     assert plot_command[:4] == ["uv", "run", "crewai", "flow"]
-    assert RUN_COUNTED_ENV not in plot_env
+    assert run_crew_module.RUN_COUNTED_ENV not in plot_env
     assert usage == [started("declarative_flow")]
 
 
 def test_the_re_run_counts_no_second_start_but_still_counts_its_stop(
     project, usage, monkeypatch
 ) -> None:
-    monkeypatch.setenv(RUN_COUNTED_ENV, "1")
+    monkeypatch.setenv(run_crew_module.RUN_COUNTED_ENV, "1")
     write(project / "flow.yaml", REQUIRED_INPUT_FLOW_YAML)
 
     result = crewai_run("--definition", "flow.yaml")
@@ -439,11 +439,73 @@ def test_a_python_flow_module_that_does_not_import(project, usage, monkeypatch) 
     assert usage == [started("flow"), stopped("load_failed")]
 
 
+@pytest.fixture
+def flow_package(project: Path, request: pytest.FixtureRequest) -> str:
+    """A Python flow project's package name, unimported again after the test."""
+    package = f"usage_flow_{uuid.uuid4().hex}"
+    write(
+        project / "pyproject.toml",
+        FLOW_PYPROJECT + f'\n[project.scripts]\nkickoff = "{package}.main:kickoff"\n',
+    )
+    write(project / "src" / package / "__init__.py", "")
+    request.addfinalizer(lambda: sys.modules.pop(f"{package}.main", None))
+    request.addfinalizer(lambda: sys.modules.pop(package, None))
+    return package
+
+
+@pytest.mark.parametrize(
+    ("class_body", "args"),
+    [
+        ("", ["--inputs", '{"topic": "AI"}']),
+        ("    conversational = True\n", []),
+    ],
+    ids=["with_inputs", "conversational"],
+)
+def test_a_python_flow_that_cannot_be_constructed(
+    project, usage, monkeypatch, flow_package, class_body, args
+) -> None:
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    write(
+        project / "src" / flow_package / "main.py",
+        "from crewai.flow.flow import Flow\n\n\n"
+        "class UsageFlow(Flow):\n"
+        f"{class_body}"
+        "    def __init__(self, **kwargs):\n"
+        "        raise RuntimeError('the flow could not be built')\n",
+    )
+
+    result = crewai_run(*args)
+
+    assert isinstance(result.exception, RuntimeError)
+    assert str(result.exception) == "the flow could not be built"
+    assert usage == [started("flow"), stopped("load_failed")]
+
+
+def test_a_python_flow_whose_kickoff_raises_counts_no_stop(
+    project, usage, monkeypatch, flow_package
+) -> None:
+    """A failure inside `kickoff()` is after kickoff; its own spans report it."""
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    write(
+        project / "src" / flow_package / "main.py",
+        "from crewai.flow.flow import Flow\n\n\n"
+        "class UsageFlow(Flow):\n"
+        "    def kickoff(self, *args, **kwargs):\n"
+        "        raise RuntimeError('the flow failed')\n",
+    )
+
+    result = crewai_run("--inputs", '{"topic": "AI"}')
+
+    assert isinstance(result.exception, RuntimeError)
+    assert str(result.exception) == "the flow failed"
+    assert usage == [started("flow")]
+
+
 def test_a_conversational_flow_without_a_terminal(project, usage, monkeypatch) -> None:
     write(project / "pyproject.toml", FLOW_PYPROJECT)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
-        lambda: object(),
+        object,
     )
 
     result = crewai_run()
