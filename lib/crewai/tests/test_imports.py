@@ -21,14 +21,6 @@ def test_crew_output_import():
     assert CrewOutput is not None
 
 
-def test_crew_base_import():
-    """Test that the legacy CrewBase import remains available from crewai."""
-    from crewai import CrewBase
-    from crewai.project import CrewBase as ProjectCrewBase
-
-    assert CrewBase is ProjectCrewBase
-
-
 def test_persist_is_importable_from_every_flow_path():
     """AGENTS.md scaffolded by 1.10.0-1.15.28 taught `crewai.flow.flow`."""
     from crewai.flow import persist as from_flow

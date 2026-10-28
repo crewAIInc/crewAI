@@ -56,7 +56,6 @@ _suppress_pydantic_deprecation_warnings()
 __version__ = "1.15.32"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
-    "CrewBase": ("crewai.project", "CrewBase"),
     "Memory": ("crewai.memory.unified_memory", "Memory"),
 }
 
@@ -196,7 +195,6 @@ __all__ = [
     "Agent",
     "BaseLLM",
     "Crew",
-    "CrewBase",
     "CrewOutput",
     "Entity",
     "ExecutionContext",
