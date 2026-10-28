@@ -170,6 +170,14 @@ def cleanup_provider_files(
                 file_id = file_info.get("id") or file_info.get("name")
                 if file_id and uploader.delete(file_id):
                     deleted += 1
+                    if cache is not None:
+                        try:
+                            while cache.remove_by_file_id(file_id, provider):
+                                pass
+                        except Exception as e:
+                            logger.warning(
+                                f"Error removing {file_id} from {provider} cache: {e}"
+                            )
         except Exception as e:
             logger.warning(f"Error listing/deleting files from {provider}: {e}")
     elif cache is not None:
@@ -365,12 +373,24 @@ async def acleanup_provider_files(
             # list_files() hits the provider API synchronously; keep it off the loop.
             files = await asyncio.to_thread(uploader.list_files)
             tasks = []
+            file_ids: list[str] = []
             for file_info in files:
                 fid = file_info.get("id") or file_info.get("name")
                 if fid:
+                    file_ids.append(fid)
                     tasks.append(delete_single(fid))
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            deleted = sum(1 for r in results if r is True)
+            deleted = sum(1 for result in results if result is True)
+            if cache is not None:
+                for file_id, result in zip(file_ids, results, strict=True):
+                    if result is True:
+                        try:
+                            while await cache.aremove_by_file_id(file_id, provider):
+                                pass
+                        except Exception as e:
+                            logger.warning(
+                                f"Error removing {file_id} from {provider} cache: {e}"
+                            )
         except Exception as e:
             logger.warning(f"Error listing/deleting files from {provider}: {e}")
     elif cache is not None:
