@@ -64,9 +64,9 @@ def normalize_input_files(
 
     for i, item in enumerate(input_files):
         if isinstance(item, BaseFile):
+            # Keep the full filename, as the other branches do. Truncating to the
+            # stem made data.json and data.txt collide and silently dropped one.
             name = item.filename or f"file_{i}"
-            if "." in name:
-                name = name.rsplit(".", 1)[0]
             result[name] = item
             continue
 
