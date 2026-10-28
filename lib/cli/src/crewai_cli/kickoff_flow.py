@@ -84,13 +84,16 @@ def _kickoff_flow_with_inputs(inputs: dict[str, Any]) -> Any:
     module = importlib.import_module(module_name)
     from crewai.flow.flow import Flow
 
-    flows = [
-        value
-        for value in vars(module).values()
-        if inspect.isclass(value)
-        and issubclass(value, Flow)
-        and value.__module__ == module.__name__
-    ]
+    # A set: one class bound under two names (`MyFlow = ContentFlow`) is one flow.
+    flows = list(
+        {
+            value
+            for value in vars(module).values()
+            if inspect.isclass(value)
+            and issubclass(value, Flow)
+            and value.__module__ == module.__name__
+        }
+    )
     if len(flows) != 1:
         found = ", ".join(sorted(flow.__name__ for flow in flows)) or "none"
         raise click.UsageError(

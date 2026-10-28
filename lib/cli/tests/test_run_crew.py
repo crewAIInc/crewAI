@@ -1338,6 +1338,33 @@ def test_run_crew_inputs_name_every_flow_when_main_defines_two(python_flow_proje
         run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
 
 
+def test_run_crew_inputs_kick_off_a_flow_bound_under_two_names(
+    python_flow_project, tmp_path
+):
+    """An alias such as `MyFlow = ContentFlow` is still one Flow class."""
+    python_flow_project(
+        """
+from pathlib import Path
+
+from crewai.flow import Flow, start
+
+class ContentFlow(Flow):
+    @start()
+    def go(self):
+        Path("topic.txt").write_text(self.state["topic"])
+
+MyFlow = ContentFlow
+
+def kickoff():
+    ContentFlow().kickoff()
+"""
+    )
+
+    run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+    assert (tmp_path / "topic.txt").read_text() == "Quantum"
+
+
 def test_run_crew_inputs_refuse_a_conversational_flow(python_flow_project):
     python_flow_project(_CONVERSATIONAL_FLOW)
 
