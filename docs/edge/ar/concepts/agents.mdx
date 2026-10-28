@@ -58,6 +58,7 @@ mode: "wide"
 | **السماح بتنفيذ الكود** _(اختياري)_   | `allow_code_execution`   | `Optional[bool]`                      | تفعيل تنفيذ الكود للوكيل. الافتراضي False.                                                   |
 | **الحد الأقصى لإعادة المحاولة** _(اختياري)_        | `max_retry_limit`        | `int`                                 | الحد الأقصى لإعادات المحاولة عند حدوث خطأ. الافتراضي 2.                                            |
 | **احترام نافذة السياق** _(اختياري)_ | `respect_context_window` | `bool`                                | إبقاء الرسائل تحت حجم نافذة السياق عبر التلخيص. الافتراضي True.                                 |
+| **استخدام ضغط أفضل** _(اختياري)_  | `use_better_compaction`  | `bool`                                | تأجيل نتائج الأدوات الكبيرة إلى قطع أثرية مؤقتة للقراءة المحدودة. الافتراضي True.                  |
 | **وضع تنفيذ الكود** _(اختياري)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | وضع تنفيذ الكود: 'safe' (باستخدام Docker) أو 'unsafe' (مباشر). الافتراضي 'safe'.                  |
 | **متعدد الوسائط** _(اختياري)_             | `multimodal`             | `bool`                                | ما إذا كان الوكيل يدعم القدرات متعددة الوسائط. الافتراضي False.                                    |
 | **حقن التاريخ** _(اختياري)_            | `inject_date`            | `bool`                                | ما إذا كان يتم حقن التاريخ الحالي تلقائيًا في أمر الوكيل. الافتراضي False.                        |
@@ -196,6 +197,7 @@ agent = Agent(
     allow_code_execution=False,
     code_execution_mode="safe",
     respect_context_window=True,
+    use_better_compaction=True,
     use_system_prompt=True,
     multimodal=False,
     inject_date=False,
@@ -265,6 +267,7 @@ analysis_agent = Agent(
 
 - `memory`: تفعيل للحفاظ على سجل المحادثة
 - `respect_context_window`: يمنع مشاكل حد الرموز
+- `use_better_compaction`: يؤجل نتائج الأدوات الكبيرة إلى قطع أثرية مؤقتة
 - `knowledge_sources`: إضافة قواعد معرفة خاصة بالمجال
 
 #### التحكم في التنفيذ
@@ -327,6 +330,51 @@ researcher = Agent(
 )
 ```
 
+## ضغط أفضل لنتائج الأدوات
+
+عندما تُرجع الأدوات حمولات كبيرة، يمكن لـ CrewAI إبقاء المحادثة خفيفة باستخدام
+`use_better_compaction`. القيمة الافتراضية هي `True`.
+
+مع `use_better_compaction=True`، إذا تجاوزت نتيجة أداة ناجحة نحو **25% من
+نافذة السياق القابلة للاستخدام للنموذج**، فإن CrewAI:
+
+1. يخزّن النتيجة الكاملة كقطعة أثرية مؤقتة
+2. يضع معاينة قصيرة ومرجع الملف في سياق الوكيل
+3. يتيح للوكيل قراءة أقسام محدودة من تلك القطعة باستخدام أداة قارئ ملفات مؤجلة
+
+```python Code
+# الافتراضي: تأجيل نتائج الأدوات الكبيرة
+agent = Agent(
+    role="Research Analyst",
+    goal="Synthesize findings from large tool outputs",
+    backstory="Expert at working with lengthy search and document results",
+    use_better_compaction=True,  # الافتراضي: True
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+عيّن `use_better_compaction=False` عندما تريد الإبقاء على كل نتيجة أداة داخل
+سجل الرسائل مباشرة (مثلًا أثناء تصحيح مخرجات الأدوات أو عندما تكون النتائج
+دائمًا صغيرة):
+
+```python Code
+agent = Agent(
+    role="Debug Agent",
+    goal="Inspect full tool payloads during development",
+    backstory="Needs complete inline tool output",
+    use_better_compaction=False,
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+<Note>
+  `use_better_compaction` منفصل عن `respect_context_window`. يحدث ضغط نتائج
+  الأدوات الكبيرة قبل دخول تلك النتائج إلى المحادثة؛ بينما يلخّص
+  `respect_context_window` السجل عندما تُتجاوز نافذة السياق الإجمالية.
+</Note>
+
 ## التفاعل المباشر مع الوكيل عبر `kickoff()`
 
 يمكن استخدام الوكلاء مباشرة بدون المرور بمهمة أو سير عمل طاقم باستخدام طريقة `kickoff()`. يوفر هذا طريقة أبسط للتفاعل مع وكيل عندما لا تحتاج إلى إمكانيات تنسيق الطاقم الكاملة.
@@ -361,6 +409,7 @@ print(result.raw)
 ### تحسين الأداء
 
 - استخدم `respect_context_window: true` لمنع مشاكل حد الرموز
+- أبقِ `use_better_compaction: true` (الافتراضي) لتأجيل نتائج الأدوات الكبيرة إلى قطع أثرية مؤقتة
 - عيّن `max_rpm` مناسبًا لتجنب تحديد المعدل
 - فعّل `cache: true` لتحسين الأداء للمهام المتكررة
 - اضبط `max_iter` و `max_retry_limit` بناءً على تعقيد المهمة
@@ -370,6 +419,7 @@ print(result.raw)
 - استفد من `knowledge_sources` للمعلومات الخاصة بالمجال
 - هيّئ `embedder` عند استخدام نماذج تضمين مخصصة
 - استخدم القوالب المخصصة للتحكم الدقيق في سلوك الوكيل
+- استخدم `use_better_compaction` للتحكم في ما إذا بقيت نتائج الأدوات الكبيرة داخل الرسائل أو قُرئت بأقسام محدودة
 
 ### التعاون بين الوكلاء
 

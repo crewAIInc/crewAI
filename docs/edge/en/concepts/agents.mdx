@@ -59,6 +59,7 @@ The Visual Agent Builder enables:
 | **Allow Code Execution** _(optional)_   | `allow_code_execution`   | `Optional[bool]`                      | Enable code execution for the agent. Default is False.                                                   |
 | **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                                 | Maximum number of retries when an error occurs. Default is 2.                                            |
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                                | Keep messages under context window size by summarizing. Default is True.                                 |
+| **Use Better Compaction** _(optional)_  | `use_better_compaction`  | `bool`                                | Defer oversized tool results to temporary artifacts for bounded reads. Default is True.                  |
 | **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                  |
 | **Multimodal** _(optional)_             | `multimodal`             | `bool`                                | Whether the agent supports multimodal capabilities. Default is False.                                    |
 | **Inject Date** _(optional)_            | `inject_date`            | `bool`                                | Whether to automatically inject the current date into the agent's prompt. Default is False.              |
@@ -155,6 +156,7 @@ agent = Agent(
     allow_code_execution=False,  # Default: False
     code_execution_mode="safe",  # Default: "safe" (options: "safe", "unsafe")
     respect_context_window=True,  # Default: True
+    use_better_compaction=True,  # Default: True
     use_system_prompt=True,  # Default: True
     multimodal=False,  # Default: False
     inject_date=False,  # Default: False
@@ -281,6 +283,7 @@ multimodal_agent = Agent(
 
 - `memory`: Enable to maintain conversation history
 - `respect_context_window`: Prevents token limit issues
+- `use_better_compaction`: Defers oversized tool results to temporary artifacts
 - `knowledge_sources`: Add domain-specific knowledge bases
 
 #### Execution Control
@@ -544,6 +547,53 @@ agent = Agent(
   rest!
 </Note>
 
+## Better Tool Result Compaction
+
+When tools return large payloads, CrewAI can keep the conversation lean with
+`use_better_compaction`. The default is `True`.
+
+With `use_better_compaction=True`, if a successful tool result exceeds roughly
+**25% of the model's usable context window**, CrewAI:
+
+1. Stores the full result as a temporary artifact
+2. Puts a short preview and file reference into the agent context
+3. Lets the agent read bounded sections of that artifact with a deferred file
+   reader tool
+
+```python Code
+# Default: defer oversized tool results
+agent = Agent(
+    role="Research Analyst",
+    goal="Synthesize findings from large tool outputs",
+    backstory="Expert at working with lengthy search and document results",
+    use_better_compaction=True,  # Default: True
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+Set `use_better_compaction=False` when you want every tool result kept inline
+in the message history (for example while debugging tool output or when results
+are always small):
+
+```python Code
+agent = Agent(
+    role="Debug Agent",
+    goal="Inspect full tool payloads during development",
+    backstory="Needs complete inline tool output",
+    use_better_compaction=False,
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+<Note>
+  `use_better_compaction` is separate from `respect_context_window`. Compaction
+  of oversized tool results happens before those results enter the conversation;
+  `respect_context_window` summarizes history when the overall context window is
+  exceeded.
+</Note>
+
 ## Direct Agent Interaction with `kickoff()`
 
 Agents can be used directly without going through a task or crew workflow using the `kickoff()` method. This provides a simpler way to interact with an agent when you don't need the full crew orchestration capabilities.
@@ -660,6 +710,7 @@ asyncio.run(main())
 ### Performance Optimization
 
 - Use `respect_context_window: true` to prevent token limit issues
+- Keep `use_better_compaction: true` (default) so oversized tool results are deferred to temporary artifacts
 - Set appropriate `max_rpm` to avoid rate limiting
 - Enable `cache: true` to improve performance for repetitive tasks
 - Adjust `max_iter` and `max_retry_limit` based on task complexity
@@ -669,6 +720,7 @@ asyncio.run(main())
 - Leverage `knowledge_sources` for domain-specific information
 - Configure `embedder` when using custom embedding models
 - Use custom templates (`system_template`, `prompt_template`, `response_template`) for fine-grained control over agent behavior
+- Use `use_better_compaction` to control whether large tool results stay inline or are read in bounded sections
 
 ### Advanced Features
 
