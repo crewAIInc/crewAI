@@ -10,6 +10,7 @@ from typing import Any, NoReturn
 import click
 
 from crewai_cli.input_prompt import is_interactive
+from crewai_cli.run_crew import record_run_stopped, stops_run_as
 
 
 def _project_script_target(script_name: str) -> str | None:
@@ -75,14 +76,16 @@ def _kickoff_flow_with_inputs(inputs: dict[str, Any]) -> Any:
     """
     target = _project_script_target("kickoff")
     if not target or ":" not in target:
+        record_run_stopped("invalid_project")
         raise click.UsageError(
             "--inputs needs a `kickoff` script in [project.scripts] that points "
             "at the module defining the flow"
         )
     module_name = target.split(":", 1)[0]
     _prepare_project_import_path()
-    module = importlib.import_module(module_name)
-    from crewai.flow.flow import Flow
+    with stops_run_as("load_failed"):
+        module = importlib.import_module(module_name)
+        from crewai.flow.flow import Flow
 
     # A set: one class bound under two names (`MyFlow = ContentFlow`) is one flow.
     flows = list(
@@ -96,11 +99,13 @@ def _kickoff_flow_with_inputs(inputs: dict[str, Any]) -> Any:
     )
     if len(flows) != 1:
         found = ", ".join(sorted(flow.__name__ for flow in flows)) or "none"
+        record_run_stopped("load_failed")
         raise click.UsageError(
             f"--inputs needs exactly one Flow class defined in {module_name}; "
             f"found: {found}"
         )
     if getattr(flows[0], "conversational", False):
+        record_run_stopped("unsupported_option")
         raise click.UsageError(
             "--inputs is not supported for a conversational flow; it takes "
             "messages, not inputs"
@@ -114,6 +119,7 @@ def _exit_without_chat_terminal() -> NoReturn:
     The chat TUI would block on a terminal that is not there. Callers check
     ``is_interactive()`` themselves, before any fallback of their own.
     """
+    record_run_stopped("no_terminal")
     click.secho(
         "  This flow is conversational, which needs an interactive terminal.\n"
         "  Drive it from Python instead: `flow.handle_turn(message, "
