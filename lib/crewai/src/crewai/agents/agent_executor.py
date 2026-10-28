@@ -111,6 +111,7 @@ from crewai.utilities.agent_utils import (
     parse_tool_call_args,
     process_llm_response,
     render_text_description_and_args,
+    repeated_tool_call_limit_reached,
     setup_native_tools,
     track_delegation_if_needed,
 )
@@ -1884,13 +1885,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             return "tool_completed"
 
-        check_repeated_tool_call(
+        tool_result.result += check_repeated_tool_call(
             self._tool_call_counts,
             tool_name=action.tool,
             tool_args=action.tool_input,
-            result=tool_result.result,
+            # Raw: ToolUsage periodically appends a format reminder to the result.
+            result=tool_result.raw_result,
             agent=self.agent,
             task=self.task,
+            crew=self.crew,
         )
         result = self._handle_agent_action(action, tool_result)
         self.state.current_answer = result
@@ -2023,6 +2026,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
                 result = self._prepare_tool_result_for_context(execution_result)
+                result += check_repeated_tool_call(
+                    self._tool_call_counts,
+                    tool_name=func_name,
+                    tool_args=execution_result.get("tool_args"),
+                    result=execution_result["result"],
+                    agent=self.agent,
+                    task=self.task,
+                    crew=self.crew,
+                )
                 original_tool = execution_result["original_tool"]
 
                 tool_message: LLMMessage = {
@@ -2054,6 +2066,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
             result = self._prepare_tool_result_for_context(execution_result)
+            # Here rather than in the worker threads, so the streak follows the
+            # order the model made the calls in, not the order they finished.
+            result += check_repeated_tool_call(
+                self._tool_call_counts,
+                tool_name=func_name,
+                tool_args=execution_result.get("tool_args"),
+                result=execution_result["result"],
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
             original_tool = execution_result["original_tool"]
 
             tool_message = {
@@ -2344,15 +2367,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 crew=self.crew,
             )
 
-        check_repeated_tool_call(
-            self._tool_call_counts,
-            tool_name=func_name,
-            tool_args=args_dict,
-            result=result,
-            agent=self.agent,
-            task=self.task,
-        )
-
         return {
             "call_id": call_id,
             "func_name": func_name,
@@ -2419,7 +2433,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         "force_final_answer", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
-        if has_reached_max_iterations(self.state.iterations, self.max_iter):
+        if has_reached_max_iterations(
+            self.state.iterations, self.max_iter
+        ) or repeated_tool_call_limit_reached(self._tool_call_counts):
             return "force_final_answer"
         if self.state.use_native_tools:
             return "continue_reasoning_native"

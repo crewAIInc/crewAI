@@ -41,10 +41,8 @@ from crewai.tools.structured_tool import (
     strip_composite_description_prefix,
 )
 from crewai.tools.tool_failure import (
-    ToolExecutionFailedError,
     ToolFailure,
     ToolFailureReason,
-    ToolFailureRecord,
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
@@ -67,6 +65,7 @@ if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
+    from crewai.crew import Crew
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -1941,42 +1940,67 @@ def check_repeated_tool_call(
     result: Any,
     agent: BaseAgent | LiteAgent | None = None,
     task: Task | None = None,
-) -> None:
-    """Stop a run that keeps repeating an identical tool call.
+    crew: Crew | None = None,
+) -> str:
+    """Track a streak of identical tool calls and warn the agent before it is stopped.
+
+    A call extends the streak only when its tool, arguments and result all match
+    the previous call; anything else starts a new one. One call before
+    MAX_REPEATED_TOOL_CALLS the agent gets a warning. At the limit the stop is
+    reported as a ``REPEATED_CALL`` failure under the tool failure policy, and
+    the caller ends its loop once :func:`repeated_tool_call_limit_reached`.
 
     Args:
-        counts: Per-run tally of seen (tool, args, result) keys. Updated in place.
+        counts: The current streak, keyed by (tool, args, result). Updated in place.
         tool_name: Name of the tool that was called.
         tool_args: Arguments the tool was called with.
         result: What the tool returned.
-        agent: The calling agent, named in the error.
-        task: The task in flight, named in the error.
+        agent: The calling agent, named in the failure.
+        task: The task in flight, named in the failure.
+        crew: The crew in flight, consulted for the failure policy.
+
+    Returns:
+        Text to append to the result the agent sees, or "" when there is none.
 
     Raises:
-        ToolExecutionFailedError: On the MAX_REPEATED_TOOL_CALLS-th identical call.
+        ToolExecutionFailedError: At the limit, under ``ToolFailurePolicy.RAISE``.
     """
     key = hash(
         json.dumps([tool_name, tool_args, str(result)], sort_keys=True, default=str)
     )
-    counts[key] = counts.get(key, 0) + 1
-    if counts[key] < MAX_REPEATED_TOOL_CALLS:
-        return
+    if key not in counts:
+        # Only the current streak is kept, so any other call resets it.
+        counts.clear()
+    counts[key] = streak = counts.get(key, 0) + 1
 
-    role = getattr(agent, "role", None)
-    raise ToolExecutionFailedError(
-        ToolFailureRecord(
-            tool_name=tool_name,
-            failure=ToolFailure(
+    if streak == MAX_REPEATED_TOOL_CALLS - 1:
+        return (
+            f"\n\nYou have called '{tool_name}' with the same arguments {streak} "
+            "times in a row and got the same result. Calling it again will not "
+            "change it: use what you have and give your final answer."
+        )
+    if streak == MAX_REPEATED_TOOL_CALLS:
+        # Agent and task scope only: the loop is the agent's, not a fault of
+        # the tool, so a tool-level policy does not apply.
+        handle_tool_failure(
+            ToolFailure(
                 message=(
-                    f"Agent '{role}' called '{tool_name}' with the same "
-                    f"arguments {MAX_REPEATED_TOOL_CALLS} times and got the same "
-                    "result each time. Stopped because it is not making progress."
+                    f"Agent '{getattr(agent, 'role', None)}' called '{tool_name}' "
+                    f"with the same arguments {MAX_REPEATED_TOOL_CALLS} times in a "
+                    "row and got the same result each time. Stopped it calling "
+                    "tools so it answers with what it has."
                 ),
                 reason=ToolFailureReason.REPEATED_CALL,
             ),
+            tool_name=tool_name,
             tool_args=tool_args,
-            agent_role=role,
-            task_name=(task.name or task.description) if task else None,
-            task_id=str(task.id) if task else None,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
-    )
+    return ""
+
+
+def repeated_tool_call_limit_reached(counts: dict[int, int]) -> bool:
+    """Whether the streak tracked by :func:`check_repeated_tool_call` hit the limit."""
+    return any(streak >= MAX_REPEATED_TOOL_CALLS for streak in counts.values())

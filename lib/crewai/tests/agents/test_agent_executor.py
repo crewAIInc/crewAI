@@ -885,7 +885,7 @@ class TestStepExecutorCriticalFixes:
 
         crewai_event_bus.flush()
 
-        assert output == "2"
+        assert output.result == "2"
         assert len(started_events) >= 1
         assert len(finished_events) >= 1
         assert started_events[-1].plan_step_number == 2
@@ -914,7 +914,7 @@ class TestStepExecutorCriticalFixes:
             patch.object(
                 step_executor,
                 "_execute_text_tool_with_events",
-                return_value="2 words",
+                return_value=ToolResult(result="2 words"),
             ),
         ):
             result = step_executor._execute_text_parsed(
@@ -2426,6 +2426,7 @@ class TestMaxIterationsRouting:
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5)
         executor.max_iter = 20
+        executor._tool_call_counts = {}
 
         result = AgentExecutor.check_max_iterations(executor)
         assert result == "continue_reasoning"
@@ -2436,9 +2437,29 @@ class TestMaxIterationsRouting:
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
         executor.max_iter = 20
+        executor._tool_call_counts = {}
 
         result = AgentExecutor.check_max_iterations(executor)
         assert result == "continue_reasoning_native"
+
+    def test_repeated_tool_call_limit_routes_to_force_final_answer(self):
+        from crewai.agents.agent_executor import AgentExecutor
+        from crewai.utilities.agent_utils import (
+            MAX_REPEATED_TOOL_CALLS,
+            check_repeated_tool_call,
+        )
+
+        executor = Mock(spec=AgentExecutor)
+        executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
+        executor.max_iter = 20
+        executor._tool_call_counts = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS):
+            check_repeated_tool_call(
+                executor._tool_call_counts, tool_name="t", tool_args={}, result="r"
+            )
+
+        result = AgentExecutor.check_max_iterations(executor)
+        assert result == "force_final_answer"
 
 
 # Native Tool Call Edge Cases
