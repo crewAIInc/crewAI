@@ -466,6 +466,10 @@ what it has already gathered, as it does when `max_iter` is reached, and records
 a failure with reason `ToolFailureReason.REPEATED_CALL`. A step of a plan ends
 with the tool results it has instead.
 
+With text-based (ReAct) tool calling, CrewAI already answers an immediate repeat
+of a call with a notice to try something else, and the count starts from that
+notice, so the warning and the stop each come one call later.
+
 Only consecutive calls count: any other call, or a changed result (a polled job
 that moved on), starts the count again. The stop follows `tool_failure_policy` at
 the task, agent, and crew level: `raise` aborts with `ToolExecutionFailedError`

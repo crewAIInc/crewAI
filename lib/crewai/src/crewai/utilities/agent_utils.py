@@ -1948,7 +1948,8 @@ def check_repeated_tool_call(
     the previous call; anything else starts a new one. One call before
     MAX_REPEATED_TOOL_CALLS the agent gets a warning. At the limit the stop is
     reported as a ``REPEATED_CALL`` failure under the tool failure policy, and
-    the caller ends its loop once :func:`repeated_tool_call_limit_reached`.
+    the caller ends its loop once :func:`repeated_tool_call_limit_reached`. The
+    limit then stays reached until ``counts`` is cleared.
 
     Args:
         counts: The current streak, keyed by (tool, args, result). Updated in place.
@@ -1965,6 +1966,9 @@ def check_repeated_tool_call(
     Raises:
         ToolExecutionFailedError: At the limit, under ``ToolFailurePolicy.RAISE``.
     """
+    if repeated_tool_call_limit_reached(counts):
+        # Already stopped: another call later in the same batch must not reset it.
+        return ""
     key = hash(
         json.dumps([tool_name, tool_args, str(result)], sort_keys=True, default=str)
     )
@@ -1980,8 +1984,7 @@ def check_repeated_tool_call(
             "change it: use what you have and give your final answer."
         )
     if streak == MAX_REPEATED_TOOL_CALLS:
-        # Agent and task scope only: the loop is the agent's, not a fault of
-        # the tool, so a tool-level policy does not apply.
+        # Not tool scope: the loop is the agent's, not a fault of the tool.
         handle_tool_failure(
             ToolFailure(
                 message=(

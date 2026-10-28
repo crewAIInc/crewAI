@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -8,7 +7,7 @@ class ToolResult:
 
     result: str
     result_as_answer: bool = False
-    raw_result: Any = None
+    raw_result: object = field(default=None, compare=False)
     """What the tool produced before it was formatted for the agent. Defaults to
     ``result`` when nothing else is given."""
 

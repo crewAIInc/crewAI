@@ -1860,6 +1860,16 @@ def _tool_contents(messages: list[Any]) -> list[str]:
     return [str(m["content"]) for m in messages if m.get("role") == "tool"]
 
 
+def test_tool_result_equality_ignores_the_raw_result() -> None:
+    from crewai.tools.tool_types import ToolResult
+
+    with_raw = ToolResult("2", False, raw_result=2)
+
+    assert with_raw == ToolResult("2", False)
+    assert with_raw.raw_result == 2
+    assert ToolResult("2").raw_result == "2"
+
+
 class TestRepeatedToolCallHelper:
     """The streak: consecutive identical calls with identical results."""
 
@@ -1922,6 +1932,21 @@ class TestRepeatedToolCallHelper:
             self._call(counts, "hi", agent=agent)
 
         assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+
+    def test_the_limit_stays_reached_after_a_different_call(self) -> None:
+        """A parallel batch can hold another call after the one that hit the limit."""
+        from crewai.tools.tool_failure import tool_failure_collector
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
+
+        counts: dict[int, int] = {}
+        with tool_failure_collector() as records:
+            for _ in range(MAX_REPEATED_TOOL_CALLS):
+                self._call(counts, "hi")
+            assert self._call(counts, "other") == ""
+            assert self._call(counts, "hi") == ""
+
+        assert repeated_tool_call_limit_reached(counts)
+        assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
 
     def test_a_different_call_resets_the_streak(self) -> None:
         """Re-reading a source between other lookups is not a loop."""
@@ -1994,8 +2019,10 @@ class TestRepeatedToolCallEndsWithAnAnswer:
         result = crew.kickoff()
 
         assert result.raw == FORCED_ANSWER
-        assert llm.tool_turns < agent.max_iter
-        assert REPEAT_WARNING in str(agent.last_messages)
+        # ToolUsage answers the 2nd identical call with its own repeat notice,
+        # and the streak counts from that notice: one call later than native.
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS + 1
+        assert str(agent.last_messages).count(REPEAT_WARNING) == 1
         assert len(_repeated_call_records(result.tool_failures)) == 1
 
     @pytest.mark.asyncio
@@ -2033,6 +2060,18 @@ class TestRepeatedToolCallEndsWithAnAnswer:
         ]
         assert len(_repeated_call_records(result.tool_failures)) == 1
 
+    def test_a_streak_completed_mid_batch_still_forces_the_answer(self) -> None:
+        """The other call in the batch that hits the limit must not undo the stop."""
+        steps = [["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1) + [["hi", "other"]]
+        llm = LoopingNativeLLM(steps + [["hi"]] * 3)
+        crew, _ = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert len(_repeated_call_records(result.tool_failures)) == 1
+
     def test_different_parallel_calls_in_one_step_do_not_count(self) -> None:
         llm = LoopingNativeLLM([["a", "b"]] * (MAX_REPEATED_TOOL_CALLS + 1))
         crew, _ = _looping_crew(llm)
@@ -2054,13 +2093,15 @@ class TestRepeatedToolCallEndsWithAnAnswer:
         assert _repeated_call_records(result.tool_failures) == []
 
     def test_text_rereading_a_source_does_not_stop_the_agent(self) -> None:
-        llm = LoopingTextLLM(["source", "source", "other"] * 3)
-        crew, _ = _looping_crew(llm)
+        """Standalone, so no task format reminder makes the repeated results differ."""
+        llm = LoopingTextLLM(["source", "other"] * MAX_REPEATED_TOOL_CALLS)
+        _, agent = _looping_crew(llm)
 
-        result = crew.kickoff()
+        output = agent.kickoff("echo")
 
-        assert result.raw == OWN_ANSWER
-        assert _repeated_call_records(result.tool_failures) == []
+        assert output.raw == OWN_ANSWER
+        assert llm.tool_turns == 2 * MAX_REPEATED_TOOL_CALLS
+        assert _repeated_call_records(output.tool_failures) == []
 
     def test_raise_policy_still_stops_the_crew(self) -> None:
         llm = LoopingNativeLLM()
@@ -2138,6 +2179,16 @@ class TestRepeatedToolCallInPlanSteps:
         assert result.success
         assert "echoed: hi" in result.result
         assert REPEAT_WARNING not in result.result
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+    def test_native_step_streak_completed_mid_batch_still_ends_the_step(self) -> None:
+        steps = [["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1) + [["hi", "other"]]
+        llm = LoopingNativeLLM(steps + [["hi"]] * 3)
+
+        result, records = self._execute(llm)
+
+        assert result.success
         assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
         assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
 
