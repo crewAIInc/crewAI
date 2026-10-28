@@ -391,6 +391,71 @@ class TestAzureMultimodal:
         with pytest.raises(ValueError, match="does not support multimodal input"):
             llm._process_message_files(messages)
 
+    def test_pdf_rejected_instead_of_silently_dropped(self) -> None:
+        llm = LLM(model="azure/gpt-4.1")
+        messages = [
+            {"role": "user", "content": "Read", "files": {"doc": PDFFile(source=MINIMAL_PDF)}}
+        ]
+
+        with pytest.raises(ValueError, match="'doc' is application/pdf"):
+            llm._process_message_files(messages)
+
+    def test_text_file_rejected_instead_of_silently_dropped(self) -> None:
+        llm = LLM(model="azure/gpt-4.1")
+        messages = [
+            {
+                "role": "user",
+                "content": "Read",
+                "files": {"data": TextFile(source=b"a,b\n1,2", filename="data.csv")},
+            }
+        ]
+
+        with pytest.raises(ValueError, match="'data' is text/"):
+            llm._process_message_files(messages)
+
+    def test_pdf_rejected_even_when_override_enables_vision(self) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=True)
+        messages = [
+            {"role": "user", "content": "Read", "files": {"doc": PDFFile(source=MINIMAL_PDF)}}
+        ]
+
+        with pytest.raises(ValueError, match="accepts only"):
+            llm._process_message_files(messages)
+
+    def test_pdf_accepted_by_responses_api(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", api="responses")
+        messages = [
+            {"role": "user", "content": "Read", "files": {"doc": PDFFile(source=MINIMAL_PDF)}}
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "input_file"
+
+    def test_image_accepted_by_responses_api(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", api="responses")
+        messages = [
+            {
+                "role": "user",
+                "content": "Look",
+                "files": {"pic": ImageFile(source=MINIMAL_PNG)},
+            }
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "input_image"
+
+    def test_image_still_accepted_alongside_validation(self) -> None:
+        llm = LLM(model="azure/gpt-4.1")
+        messages = [
+            {"role": "user", "content": "Look", "files": {"pic": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "image_url"
+
     def test_files_rejected_when_override_disables_vision_model(self) -> None:
         llm = LLM(model="azure/gpt-4.1", supports_vision=False)
         messages = [
