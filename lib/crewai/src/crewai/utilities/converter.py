@@ -331,7 +331,10 @@ def handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            # With no agent there is no LLM to refit with; Converter relies on
+            # this to retry its own response. Otherwise refit it below.
+            if agent is None:
+                raise
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -390,9 +393,13 @@ def convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    exported_result = (
-        converter.to_pydantic() if not is_json_output else converter.to_json()
-    )
+    exported_result: dict[str, Any] | BaseModel | str | ConverterError
+    try:
+        exported_result = (
+            converter.to_pydantic() if not is_json_output else converter.to_json()
+        )
+    except ConverterError as e:
+        exported_result = e
 
     if isinstance(exported_result, ConverterError):
         if agent and getattr(agent, "verbose", True):
@@ -484,7 +491,10 @@ async def async_handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            # With no agent there is no LLM to refit with; Converter relies on
+            # this to retry its own response. Otherwise refit it below.
+            if agent is None:
+                raise
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -526,11 +536,15 @@ async def async_convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    exported_result = (
-        await converter.ato_pydantic()
-        if not is_json_output
-        else await converter.ato_json()
-    )
+    exported_result: dict[str, Any] | BaseModel | str | ConverterError
+    try:
+        exported_result = (
+            await converter.ato_pydantic()
+            if not is_json_output
+            else await converter.ato_json()
+        )
+    except ConverterError as e:
+        exported_result = e
 
     if isinstance(exported_result, ConverterError):
         if agent and getattr(agent, "verbose", True):
