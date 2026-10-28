@@ -1,5 +1,6 @@
 import contextvars
 from datetime import datetime, timezone
+import json
 import time
 from types import SimpleNamespace
 from typing import Any
@@ -2400,6 +2401,24 @@ def test_format_json_in_text_survives_deep_nesting() -> None:
     """The render path must contain the failure instead of losing the TUI update."""
     deep = "data: " + "[" * 4000 + "]" * 4000
     assert isinstance(_format_json_in_text(deep), str)
+
+
+def test_json_the_render_encoder_cannot_walk_is_left_as_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python 3.12's C decoder accepts nesting its indent encoder cannot walk.
+    The decoder here does that on every version, with an input `ast` cannot
+    rescue (`null`), so the render path must keep the text as it was."""
+    too_deep: list[Any] = []
+    for _ in range(100_000):
+        too_deep = [too_deep]
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._json",
+        SimpleNamespace(loads=lambda _text: too_deep, dumps=json.dumps),
+    )
+
+    assert _try_parse_structured('{"a": null}') is None
+    assert _format_json_in_text('data: {"a": null}') == 'data: {"a": null}'
 
 
 def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
