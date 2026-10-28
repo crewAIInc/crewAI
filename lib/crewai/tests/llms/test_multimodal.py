@@ -308,18 +308,6 @@ class TestAzureMultimodal:
     ) -> None:
         assert LLM(model=model).supports_multimodal() is expected
 
-    @pytest.mark.parametrize(
-        "model", ["azure/claude-sonnet-4-6", "azure/azure_ai/claude-sonnet-4-6"]
-    )
-    def test_claude_deployment_not_inferred_without_override(self, model: str) -> None:
-        """Claude on Azure speaks the Anthropic protocol, so it is not inferred."""
-        assert LLM(model=model).supports_multimodal() is False
-
-    def test_claude_deployment_accepted_with_override(self) -> None:
-        llm = LLM(model="azure/claude-sonnet-4-6", supports_vision=True)
-
-        assert llm.supports_multimodal() is True
-
     def test_double_provider_prefix_still_resolves(self) -> None:
         assert LLM(model="azure/azure/gpt-4.1").supports_multimodal() is True
 

@@ -406,6 +406,24 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         api_version="2023-05-15"
     )
     ```
+
+    **Claude no Azure Foundry:**
+
+    Os modelos Claude implantados no Microsoft Foundry usam a Messages API da Anthropic, e não o chat completions do Azure AI Inference. O CrewAI direciona automaticamente os modelos `azure/` cujo nome contém `claude` ou `anthropic` para um cliente Claude do Foundry. Os demais modelos `azure/` continuam usando o cliente Azure OpenAI / Azure AI Inference descrito acima.
+
+    ```python Code
+    llm = LLM(
+        model="azure/claude-sonnet-4-6",  # Your Foundry deployment name
+        endpoint="https://<resource-name>.services.ai.azure.com",
+        api_key="<your-api-key>",  # Or set AZURE_API_KEY
+    )
+    ```
+
+    - **Endpoint:** um host `https://<resource-name>.services.ai.azure.com`. O CrewAI envia as requisições para `https://<resource-name>.services.ai.azure.com/anthropic/v1/messages`, independentemente do caminho configurado. Para usar outro host, passe `base_url` explicitamente. Um endpoint `openai.azure.com` é rejeitado quando a primeira requisição é feita.
+    - **Modelo:** o nome da implantação (deployment) escolhido no Foundry, que pode ser diferente do ID do modelo. O nome precisa conter `claude` ou `anthropic` para ser direcionado dessa forma.
+    - **Autenticação:** uma chave de API vinda de `api_key` ou `AZURE_API_KEY`. `ANTHROPIC_API_KEY` nunca é usada. O Microsoft Entra ID ainda não é suportado, portanto modelos que aceitam apenas Entra ID, como o Claude Mythos, não podem ser usados.
+    - **Arquivos de entrada:** imagens e PDFs são enviados inline como blocos de conteúdo da Anthropic. A Files API da Anthropic não é usada.
+    - **Instalação:** `uv add "crewai[anthropic]"`
   </Accordion>
 
   <Accordion title="AWS Bedrock">

@@ -27,12 +27,15 @@ GeminiProviderType = Literal["gemini", "google"]
 AnthropicProviderType = Literal["anthropic", "claude"]
 OpenAIProviderType = Literal["openai", "gpt", "azure"]
 BedrockProviderType = Literal["bedrock", "aws"]
+# Has no uploader of its own: Claude on Azure Foundry inlines its files.
+AzureFoundryAnthropicProviderType = Literal["azure_foundry_anthropic"]
 
 ProviderType: TypeAlias = (
     GeminiProviderType
     | AnthropicProviderType
     | OpenAIProviderType
     | BedrockProviderType
+    | AzureFoundryAnthropicProviderType
 )
 
 

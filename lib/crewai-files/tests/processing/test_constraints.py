@@ -84,6 +84,20 @@ class TestPDFConstraints:
 
         assert "application/pdf" in supported_types
 
+    def test_azure_foundry_anthropic_supports_images_and_pdfs(self):
+        """Foundry Claude takes Anthropic content blocks for images and PDFs."""
+        supported_types = get_supported_content_types("azure_foundry_anthropic")
+
+        assert "image/" in supported_types
+        assert "application/pdf" in supported_types
+
+    def test_azure_foundry_anthropic_does_not_upload_files(self):
+        """Foundry has no Anthropic Files API, so files must be inlined."""
+        constraints = get_constraints_for_provider("azure_foundry_anthropic")
+
+        assert constraints is not None
+        assert constraints.supports_file_upload is False
+
     def test_azure_completions_does_not_support_pdf(self):
         """Azure chat completions retains its own file constraints."""
         supported_types = get_supported_content_types("azure", api="completions")

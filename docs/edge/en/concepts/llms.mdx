@@ -678,6 +678,24 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```bash
     uv add "crewai[azure-ai-inference]"
     ```
+
+    **Claude on Azure Foundry:**
+
+    Claude models deployed in Microsoft Foundry use Anthropic's Messages API, not Azure AI Inference chat completions. CrewAI automatically routes `azure/` models whose name contains `claude` or `anthropic` to a Foundry Claude client. Every other `azure/` model keeps using the Azure OpenAI / Azure AI Inference client described above.
+
+    ```python Code
+    llm = LLM(
+        model="azure/claude-sonnet-4-6",  # Your Foundry deployment name
+        endpoint="https://<resource-name>.services.ai.azure.com",
+        api_key="<your-api-key>",  # Or set AZURE_API_KEY
+    )
+    ```
+
+    - **Endpoint:** a `https://<resource-name>.services.ai.azure.com` host. CrewAI sends requests to `https://<resource-name>.services.ai.azure.com/anthropic/v1/messages`, whatever path is configured. To use another host, pass `base_url` explicitly. An `openai.azure.com` endpoint is rejected when the first request is made.
+    - **Model:** the deployment name you chose in Foundry, which can differ from the model ID. The name must contain `claude` or `anthropic` to be routed this way.
+    - **Authentication:** an API key from `api_key` or `AZURE_API_KEY`. `ANTHROPIC_API_KEY` is never used. Microsoft Entra ID is not supported yet, so models that accept Entra ID only, such as Claude Mythos, cannot be used.
+    - **File inputs:** images and PDFs are sent inline as Anthropic content blocks. The Anthropic Files API is not used.
+    - **Install:** `uv add "crewai[anthropic]"`
   </Accordion>
 
   <Accordion title="AWS Bedrock">

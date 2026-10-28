@@ -405,6 +405,24 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         api_version="2023-05-15"
     )
     ```
+
+    **Azure Foundry의 Claude:**
+
+    Microsoft Foundry에 배포된 Claude 모델은 Azure AI Inference의 chat completions가 아니라 Anthropic의 Messages API를 사용합니다. CrewAI는 이름에 `claude` 또는 `anthropic`이 포함된 `azure/` 모델을 Foundry Claude 클라이언트로 자동 라우팅하며, 그 외의 `azure/` 모델은 위에서 설명한 Azure OpenAI / Azure AI Inference 클라이언트를 계속 사용합니다.
+
+    ```python Code
+    llm = LLM(
+        model="azure/claude-sonnet-4-6",  # Your Foundry deployment name
+        endpoint="https://<resource-name>.services.ai.azure.com",
+        api_key="<your-api-key>",  # Or set AZURE_API_KEY
+    )
+    ```
+
+    - **엔드포인트:** `https://<resource-name>.services.ai.azure.com` 형식의 호스트입니다. 설정된 경로와 관계없이 CrewAI는 `https://<resource-name>.services.ai.azure.com/anthropic/v1/messages`로 요청을 보냅니다. 다른 호스트를 사용하려면 `base_url`을 명시적으로 전달하세요. `openai.azure.com` 엔드포인트는 첫 요청 시 거부됩니다.
+    - **모델:** Foundry에서 지정한 배포 이름이며 모델 ID와 다를 수 있습니다. 이 방식으로 라우팅되려면 이름에 `claude` 또는 `anthropic`이 포함되어야 합니다.
+    - **인증:** `api_key` 또는 `AZURE_API_KEY`의 API 키를 사용합니다. `ANTHROPIC_API_KEY`는 사용하지 않습니다. Microsoft Entra ID는 아직 지원되지 않으므로 Claude Mythos처럼 Entra ID만 허용하는 모델은 사용할 수 없습니다.
+    - **파일 입력:** 이미지와 PDF는 Anthropic 콘텐츠 블록으로 인라인 전송됩니다. Anthropic Files API는 사용하지 않습니다.
+    - **설치:** `uv add "crewai[anthropic]"`
   </Accordion>
 
   <Accordion title="AWS Bedrock">

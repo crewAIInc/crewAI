@@ -41,6 +41,8 @@ def _normalize_provider(provider: str | None) -> ProviderType:
         return "gemini"
     if "google" in provider_lower:
         return "google"
+    if provider_lower == "azure_foundry_anthropic":
+        return "azure_foundry_anthropic"
     if "anthropic" in provider_lower:
         return "anthropic"
     if "claude" in provider_lower:

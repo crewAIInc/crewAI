@@ -183,6 +183,9 @@ def _ensure_litellm() -> bool:
 
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 
+# Azure model names that Foundry serves through the Anthropic Messages API.
+_FOUNDRY_CLAUDE_MARKERS: Final[tuple[str, str]] = ("claude", "anthropic")
+
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
     "anthropic",
@@ -531,6 +534,16 @@ class LLM(BaseLLM):
         native_class = cls._get_native_provider(provider) if use_native else None
         if provider not in SUPPORTED_NATIVE_PROVIDERS:
             native_class = None
+        if (
+            native_class is not None
+            and provider in ("azure", "azure_openai")
+            and any(m in model_string.lower() for m in _FOUNDRY_CLAUDE_MARKERS)
+        ):
+            from crewai.llms.providers.azure_foundry_anthropic.completion import (
+                AzureFoundryAnthropicCompletion,
+            )
+
+            native_class = AzureFoundryAnthropicCompletion
         return _Route(provider, model_string, native_class, custom_openai_route)
 
     @classmethod

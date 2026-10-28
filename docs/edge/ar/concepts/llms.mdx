@@ -599,6 +599,24 @@ llm = LLM(
     ```bash
     uv add "crewai[azure-ai-inference]"
     ```
+
+    **Claude على Azure Foundry:**
+
+    تستخدم نماذج Claude المنشورة في Microsoft Foundry واجهة Messages API من Anthropic، وليس واجهة chat completions في Azure AI Inference. يوجّه CrewAI تلقائيًا نماذج `azure/` التي يحتوي اسمها على `claude` أو `anthropic` إلى عميل Claude الخاص بـ Foundry، بينما تستمر بقية نماذج `azure/` في استخدام عميل Azure OpenAI / Azure AI Inference الموضح أعلاه.
+
+    ```python Code
+    llm = LLM(
+        model="azure/claude-sonnet-4-6",  # Your Foundry deployment name
+        endpoint="https://<resource-name>.services.ai.azure.com",
+        api_key="<your-api-key>",  # Or set AZURE_API_KEY
+    )
+    ```
+
+    - **نقطة النهاية:** مضيف بصيغة `https://<resource-name>.services.ai.azure.com`. يرسل CrewAI الطلبات إلى `https://<resource-name>.services.ai.azure.com/anthropic/v1/messages` بغض النظر عن المسار المُعدّ. لاستخدام مضيف آخر، مرّر `base_url` صراحةً. يُرفض عنوان `openai.azure.com` عند إرسال أول طلب.
+    - **النموذج:** اسم النشر الذي اخترته في Foundry، وقد يختلف عن معرّف النموذج. يجب أن يحتوي الاسم على `claude` أو `anthropic` ليتم توجيهه بهذه الطريقة.
+    - **المصادقة:** مفتاح API من `api_key` أو `AZURE_API_KEY`. لا يُستخدم `ANTHROPIC_API_KEY` أبدًا. مصادقة Microsoft Entra ID غير مدعومة حاليًا، لذلك لا يمكن استخدام النماذج التي تقبل Entra ID فقط، مثل Claude Mythos.
+    - **ملفات الإدخال:** تُرسل الصور وملفات PDF ضمن الطلب بصيغة كتل محتوى Anthropic. لا يُستخدم Anthropic Files API.
+    - **التثبيت:** `uv add "crewai[anthropic]"`
   </Accordion>
 
   <Accordion title="AWS Bedrock">
