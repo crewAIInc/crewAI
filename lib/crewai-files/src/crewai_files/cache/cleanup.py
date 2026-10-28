@@ -67,6 +67,8 @@ def cleanup_uploaded_files(
     Args:
         cache: The upload cache to clean up.
         delete_from_provider: If True, delete files from the provider as well.
+            Files whose provider has no uploader available are left in the cache,
+            since they cannot be deleted remotely.
         providers: Optional list of providers to clean up. If None, cleans all.
 
     Returns:
@@ -81,8 +83,8 @@ def cleanup_uploaded_files(
             continue
         provider_uploads[provider] = cache.get_all_for_provider(provider)
 
-    if delete_from_provider:
-        for provider, uploads in provider_uploads.items():
+    for provider, uploads in provider_uploads.items():
+        if delete_from_provider:
             uploader = _uploader_or_none(provider)
             if uploader is None:
                 logger.warning(
@@ -94,7 +96,7 @@ def cleanup_uploaded_files(
                 if _safe_delete(uploader, upload.file_id, provider):
                     cleaned += 1
 
-    cache.clear()
+        _drop_provider_from_cache(cache, provider, uploads)
 
     logger.info(f"Cleaned up {cleaned} uploaded files")
     return cleaned
@@ -195,6 +197,34 @@ def _get_providers_from_cache(cache: UploadCache) -> set[ProviderType]:
     return cache.get_providers()
 
 
+def _drop_provider_from_cache(
+    cache: UploadCache, provider: ProviderType, uploads: list[CachedUpload]
+) -> None:
+    """Forget every cache entry of a single provider.
+
+    Scoping the drop to one provider keeps the other providers' entries around,
+    so cleanup of one backend never loses the bookkeeping of the others.
+    """
+    for upload in uploads:
+        cache.remove_by_file_id(upload.file_id, provider)
+
+    # get_all_for_provider skips expired entries, and those still take up a slot
+    # in the provider's key set, so sweep whatever the uploads list missed.
+    for leftover in cache.get_all_for_provider(provider):
+        cache.remove_by_file_id(leftover.file_id, provider)
+
+
+async def _adrop_provider_from_cache(
+    cache: UploadCache, provider: ProviderType, uploads: list[CachedUpload]
+) -> None:
+    """Async version of _drop_provider_from_cache."""
+    for upload in uploads:
+        await cache.aremove_by_file_id(upload.file_id, provider)
+
+    for leftover in await cache.aget_all_for_provider(provider):
+        await cache.aremove_by_file_id(leftover.file_id, provider)
+
+
 async def _asafe_delete(
     uploader: FileUploader,
     file_id: str,
@@ -233,6 +263,8 @@ async def acleanup_uploaded_files(
     Args:
         cache: The upload cache to clean up.
         delete_from_provider: If True, delete files from the provider as well.
+            Files whose provider has no uploader available are left in the cache,
+            since they cannot be deleted remotely.
         providers: Optional list of providers to clean up. If None, cleans all.
         max_concurrency: Maximum number of concurrent delete operations.
 
@@ -248,6 +280,8 @@ async def acleanup_uploaded_files(
             continue
         provider_uploads[provider] = await cache.aget_all_for_provider(provider)
 
+    tasks: list[asyncio.Task[bool]] = []
+
     if delete_from_provider:
         semaphore = asyncio.Semaphore(max_concurrency)
 
@@ -258,8 +292,8 @@ async def acleanup_uploaded_files(
                     file_uploader, cached.file_id, cached.provider
                 )
 
-        tasks: list[asyncio.Task[bool]] = []
-        for provider, uploads in provider_uploads.items():
+    for provider, uploads in provider_uploads.items():
+        if delete_from_provider:
             uploader = _uploader_or_none(provider)
             if uploader is None:
                 logger.warning(
@@ -271,10 +305,11 @@ async def acleanup_uploaded_files(
                 asyncio.create_task(delete_one(uploader, cached)) for cached in uploads
             )
 
+        await _adrop_provider_from_cache(cache, provider, uploads)
+
+    if delete_from_provider:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         cleaned = sum(1 for r in results if r is True)
-
-    await cache.aclear()
 
     logger.info(f"Cleaned up {cleaned} uploaded files")
     return cleaned
