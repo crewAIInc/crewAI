@@ -1153,6 +1153,151 @@ def test_output_file_validation(tmp_path):
         )
 
 
+def test_output_file_path_traversal_via_interpolation():
+    """Test that path traversal injected through template interpolation is caught.
+
+    Regression test for GHSA-hq26-r99g-pvv4: output_file was validated at
+    construction time but not after template variable interpolation, allowing
+    callers to inject '../' segments via inputs.
+    """
+    # Template passes initial validation (no '..' in the template itself)
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}/output.txt",
+    )
+
+    # Interpolation with traversal segments must be rejected
+    with pytest.raises(ValueError, match="[Pp]ath traversal"):
+        task.interpolate_inputs_and_add_conversation_history(
+            {"topic": "../../etc/cron.d"}
+        )
+
+    # Legitimate interpolation must still work
+    task2 = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}/output.txt",
+    )
+    task2.interpolate_inputs_and_add_conversation_history({"topic": "finance"})
+    assert task2.output_file == "reports/finance/output.txt"
+    assert ".." not in task2.output_file
+
+
+def test_output_file_shell_injection_via_interpolation():
+    """Test that shell special chars injected through interpolation are caught."""
+    task = Task(
+        description="Write {name}",
+        expected_output="output",
+        output_file="out/{name}.txt",
+    )
+
+    with pytest.raises(ValueError, match="[Ss]hell special characters"):
+        task.interpolate_inputs_and_add_conversation_history(
+            {"name": "foo;rm -rf /"}
+        )
+
+
+@pytest.mark.parametrize(
+    "injected",
+    [
+        "/etc/cron.d",
+        "//etc/cron.d",
+        "\\\\server\\share",
+        "C:\\Windows\\System32",
+    ],
+)
+def test_output_file_absolute_path_via_interpolation(injected):
+    """Inputs cannot turn a relative output_file template into an absolute path."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="{topic}/output.txt",
+    )
+
+    with pytest.raises(
+        ValueError, match="Template inputs cannot make output_file an absolute path"
+    ):
+        task.interpolate_inputs_and_add_conversation_history({"topic": injected})
+
+
+@pytest.mark.parametrize(
+    "injected", ["../../etc/cron.d", "foo;rm -rf /", "{secret}"]
+)
+def test_rejected_output_file_is_not_kept_for_later_runs(injected):
+    """A rejected interpolation must leave output_file as it was, so a later run
+    with no inputs (which skips interpolation) cannot write to the injected path."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}.txt",
+    )
+    task.interpolate_inputs_and_add_conversation_history({"topic": "finance"})
+
+    with pytest.raises(ValueError, match="failed validation"):
+        task.interpolate_inputs_and_add_conversation_history({"topic": injected})
+    task.interpolate_inputs_and_add_conversation_history({})
+
+    assert task.output_file == "reports/finance.txt"
+
+
+@pytest.mark.parametrize("injected", ["/Windows/Temp/pwn", "\\Windows\\Temp\\pwn"])
+def test_output_file_drive_relative_template_cannot_become_absolute(injected):
+    """A drive-relative template (C:name) is not a root the inputs may extend."""
+    task = Task(
+        description="Write {name}",
+        expected_output="A report",
+        output_file="C:{name}.txt",
+    )
+
+    with pytest.raises(
+        ValueError, match="Template inputs cannot make output_file an absolute path"
+    ):
+        task.interpolate_inputs_and_add_conversation_history({"name": injected})
+
+
+def test_output_file_drive_relative_template_accepts_relative_input():
+    task = Task(
+        description="Write {name}",
+        expected_output="A report",
+        output_file="C:{name}.txt",
+    )
+
+    task.interpolate_inputs_and_add_conversation_history({"name": "report"})
+
+    assert task.output_file == "C:report.txt"
+
+
+def test_output_file_unresolved_template_via_interpolation():
+    """An input that smuggles template syntax back into the path is rejected."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}.txt",
+    )
+
+    with pytest.raises(ValueError, match="Unresolved template variables"):
+        task.interpolate_inputs_and_add_conversation_history({"topic": "{secret}"})
+
+
+def test_absolute_template_output_file_saves_outside_cwd(tmp_path, monkeypatch):
+    """A developer-written absolute template keeps working outside the cwd."""
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    monkeypatch.chdir(workdir)
+    output_root = tmp_path / "outputs"
+
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file=str(output_root / "{topic}" / "report.txt"),
+    )
+    task.interpolate_inputs_and_add_conversation_history({"topic": "AI"})
+    task._save_file("report body")
+
+    assert (output_root / "AI" / "report.txt").read_text() == "report body"
+
+
 def test_create_directory_true():
     """Test that directories are created when create_directory=True."""
     from pathlib import Path

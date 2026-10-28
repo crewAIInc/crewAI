@@ -17,7 +17,7 @@ Ask the user first only before actions with outside effects: creating a deployme
 1. **Pull and update.** If the repo has a remote, `git pull --ff-only`. Compare the project's crewai (`uv run python -c "import crewai; print(crewai.__version__)"`) with the latest release (`https://pypi.org/pypi/crewai/json`, `info.version`). If it's behind:
    - Project: `uv lock --upgrade-package crewai --upgrade-package crewai-tools && uv sync`. If `pyproject.toml` excludes a new major version, read the [changelog](https://docs.crewai.com/en/changelog) first and tell the user.
    - CLI: `uv tool install crewai --upgrade`. (`crewai update` is something else: it migrates old Poetry projects to uv.)
-2. **Check the login.** Run `crewai org list` and read its output. It exits 0 even when logged out; "Please sign up/login" means logged out.
+2. **Check the login.** Run `crewai org list`. Logged out, it prints "Please sign up/login" and exits 1.
    - To log in, run `crewai login` in the background and tell the user to confirm the code it prints in their browser. Then run `crewai org list` again.
    - Deployments, traces and evaluations go to the active organization (`crewai org current`; change it with `crewai org switch <uuid>`).
 3. **Check `.env`** in the project root: the LLM provider's key, `CREWAI_TRACING_ENABLED=true`, and, when agents use AMP integrations, `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` (the Enterprise Action Auth Token from AMP's settings, in the project's organization). The user pastes tokens into `.env` themselves, never into the chat.
@@ -55,7 +55,7 @@ When the work has to run on a schedule, from a trigger, behind an API or for tea
 
 1. **Ask before the first `crewai deploy create`.** It creates a hosted service in the active organization and uploads `.env` as its environment variables. After that, ship changes with `crewai deploy push` and tell the user.
 2. **Before deploying:** it runs locally; a flow's last step returns the result (the API returns what `kickoff()` returns, so a flow that only writes a file returns nothing); `uv.lock` is committed; `crewai deploy validate` passes.
-3. **Deploy:** `crewai deploy create -y` once approved (without `-y` it waits on prompts). With no git `origin` it uploads a ZIP. With an `origin`, AMP builds from that remote, on GitHub or another git host: use an HTTPS URL. For GitHub, AMP's GitHub integration needs access to the repo. There's no flag to upload a ZIP when an `origin` exists; deploy from a copy without one.
+3. **Deploy:** `crewai deploy create -y` once approved (without `-y` it waits on prompts). With no git `origin` it uploads a ZIP. With an `origin`, AMP builds from that remote, on GitHub or another git host: use an HTTPS URL. For GitHub, AMP's GitHub integration needs access to the repo. To upload a ZIP even when an `origin` exists, use `crewai deploy create -y --zip`.
 4. **Prove it works:** `crewai deploy status` until it's online, and `crewai deploy logs` when it isn't. Then run it through its API: `POST /kickoff {"inputs": {...}}` returns a `kickoff_id`; poll `GET /status/{kickoff_id}` until `SUCCESS` or `FAILED`. The bearer token is on the deployment's Status tab in AMP and belongs to that deployment, so keep it out of `.env` and the code. Read the result, and read any side effects back. To prove the deployment runs your current code, compare `GET /inspect`'s flow definition with `YourFlow.flow_definition()` locally.
 5. **Schedules** are set in AMP on the deployment page's **Scheduling** tab; there's no CLI for them yet. Give the user the steps with the time and timezone they asked for.
 6. Deploy commands can exit 0 after a failed request; confirm with `crewai deploy status` or `crewai deploy list`. Remove a deployment with `crewai deploy remove -u <uuid>`.
@@ -131,7 +131,7 @@ Not used by default; reach for these when the task calls for them. Each line end
 - MCP: `Agent(mcps=["https://.../mcp", "<connected-slug>", MCPServerStdio(...)])` (`from crewai.mcp import MCPServerStdio`). `mcp/overview`
 - A2A: `Agent(a2a=A2AClientConfig(endpoint=...))` calls a remote agent; `A2AServerConfig` exposes one (`from crewai.a2a import A2AClientConfig, A2AServerConfig`).
 - Human feedback in flows: `@human_feedback(message=..., emit=["approved", "rejected"], llm=...)` routes a step on the reply. `learn/human-feedback-in-flows`
-- Chat: `crewai chat` talks to a classic crew (its `chat_llm`, else `MODEL`; JSON crews aren't supported yet), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
+- Chat: `crewai chat` talks to a crew (its `chat_llm`, else `MODEL`), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
 - Declarative flows: `crewai create flow <name> --declarative` keeps the flow in `flow.yaml`. `concepts/cli`
 - Checkpoints: `Crew(checkpoint=True)`; resume with `kickoff(from_checkpoint=CheckpointConfig(restore_from=path))`. `concepts/checkpointing`
 - Flow conditions: `@listen(or_(a, b))`, `and_(a, b)`; `flow.plot()` draws the graph. `concepts/flows`

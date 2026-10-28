@@ -1,7 +1,9 @@
 import contextvars
 from datetime import datetime, timezone
+import json
 import time
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock
 
 from crewai.events.event_bus import crewai_event_bus
@@ -34,7 +36,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai_cli import crew_run_tui, run_crew
-from crewai_cli.command import AuthenticationRequiredError
+from crewai_cli.authentication.token import AuthError
+from crewai_cli.command import AuthenticationRequiredError, PlusAPIMixin
 from crewai_cli.crew_run_tui import (
     _LOG_ARGS_TEXT_LIMIT,
     _LOG_RESULT_TEXT_LIMIT,
@@ -46,6 +49,7 @@ from crewai_cli.crew_run_tui import (
 import httpx
 import pytest
 from rich.text import Text
+from textual.pilot import Pilot
 
 
 @pytest.fixture(autouse=True)
@@ -1588,6 +1592,17 @@ async def test_crew_done_does_not_timeout_memory_save() -> None:
     assert app._log_entries[1]["error"] == "No result received before crew completed"
 
 
+async def _seconds_until_unsubscribed(
+    app: CrewRunApp, pilot: Pilot[Any], since: float
+) -> float:
+    # Assert only a lower bound on the result: a loaded machine can make the
+    # drain timer seconds late, but Textual fires it at most ~0.5ms early. The
+    # 30s cap stays under the suite's --timeout=60 and costs only on failure.
+    while app._event_handlers and time.monotonic() - since < 30:
+        await pilot.pause(0.01)
+    return time.monotonic() - since
+
+
 @pytest.mark.asyncio
 async def test_crew_done_keeps_memory_save_subscription_until_completion(
     monkeypatch: pytest.MonkeyPatch,
@@ -1614,6 +1629,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
             assert app._log_entries[0]["status"] == "running"
             assert app._event_handlers
 
+            completed_at = time.monotonic()
             _emit_event(
                 MemorySaveCompletedEvent(
                     value="9 memories saved",
@@ -1623,10 +1639,11 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
                     started_event_id=started_event.event_id,
                 )
             )
-            await pilot.pause()
 
+            # The handler ran on the bus's thread and the app's loop has not
+            # run since: only an unsubscribe the handler made itself shows here.
             assert app._event_handlers
-            await pilot.pause(0.08)
+            waited = await _seconds_until_unsubscribed(app, pilot, completed_at)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
@@ -1637,6 +1654,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
@@ -1662,12 +1680,17 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                 source_type="unified_memory",
                 parent_event_id="manual-parent",
             )
+            # No pause before the completion: the drain timer _on_crew_done
+            # armed must still be pending when it arrives. If it has already
+            # woken, its callback runs before the completion's re-arm and the
+            # app unsubscribes without a fresh grace. That is a product race,
+            # not a test artifact; remove this note once the app handles it.
             _emit_event(started_event)
-            await pilot.pause()
 
             assert app._log_entries[0]["tool_name"] == "memory_save"
             assert app._log_entries[0]["status"] == "running"
 
+            completed_at = time.monotonic()
             _emit_event(
                 MemorySaveCompletedEvent(
                     value="9 memories saved",
@@ -1678,10 +1701,11 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                     started_event_id=started_event.event_id,
                 )
             )
-            await pilot.pause()
 
+            # The handler ran on the bus's thread and the app's loop has not
+            # run since: only an unsubscribe the handler made itself shows here.
             assert app._event_handlers
-            await pilot.pause(0.08)
+            waited = await _seconds_until_unsubscribed(app, pilot, completed_at)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
@@ -1693,6 +1717,7 @@ async def test_crew_done_waits_for_queued_memory_save_events(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
@@ -2379,6 +2404,24 @@ def test_format_json_in_text_survives_deep_nesting() -> None:
     assert isinstance(_format_json_in_text(deep), str)
 
 
+def test_json_the_render_encoder_cannot_walk_is_left_as_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python 3.12's C decoder accepts nesting its indent encoder cannot walk.
+    The decoder here does that on every version, with an input `ast` cannot
+    rescue (`null`), so the render path must keep the text as it was."""
+    too_deep: list[Any] = []
+    for _ in range(100_000):
+        too_deep = [too_deep]
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._json",
+        SimpleNamespace(loads=lambda _text: too_deep, dumps=json.dumps),
+    )
+
+    assert _try_parse_structured('{"a": null}') is None
+    assert _format_json_in_text('data: {"a": null}') == 'data: {"a": null}'
+
+
 def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
     assert _format_json_in_text('data: {"a": 1} and [...]') == (
         "data: " + '{\n  "a": 1\n}' + " and [...]"
@@ -2467,7 +2510,11 @@ def test_still_not_logged_in_after_the_prompt_counts_why_and_says_so(
 
 @pytest.mark.parametrize(
     ("raised", "reason"),
-    [(KeyboardInterrupt(), "login_abandoned"), (httpx.HTTPError("access_denied"), "login_failed")],
+    [
+        (KeyboardInterrupt(), "login_abandoned"),
+        (httpx.HTTPError("access_denied"), "login_failed"),
+        (SystemExit(1), "login_timed_out"),
+    ],
 )
 def test_a_login_that_ends_badly_is_counted_and_still_raised(
     monkeypatch, deploy_usage, raised, reason
@@ -2502,6 +2549,106 @@ def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> 
     run_crew._chain_deploy()
 
     assert calls == ["create", "login", "create"]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+def _amp_deploy_doubles(monkeypatch, *, statuses):
+    """A deploy whose creates get these AMP statuses, through the real
+    response check, and a login that succeeds."""
+    calls: list[str] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            calls.append("create")
+            status = statuses.pop(0)
+            if status != 200:
+                PlusAPIMixin._validate_response(
+                    self,
+                    httpx.Response(
+                        status,
+                        json={"error": "bad_credentials", "message": "Bad credentials"},
+                    ),
+                )
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+    return calls
+
+
+def test_a_saved_login_amp_rejects_is_replaced_and_the_deploy_retried(
+    monkeypatch, deploy_usage
+) -> None:
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[401, 200])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == ["cli_usage:deploy_login_prompted"]
+
+
+def test_amp_rejecting_a_fresh_login_stops_after_one_login(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    """A 401 a new login cannot fix (no AMP user, not activated) must not loop."""
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[401, 401])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
+    output = capsys.readouterr().out
+    assert "Bad credentials" in output
+    assert "Deploy failed: authentication is still required." in output
+
+
+def test_a_deploy_amp_refuses_for_another_reason_does_not_ask_for_login(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[403])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create"]
+    assert deploy_usage == []
+    assert "Deploy failed" in capsys.readouterr().out
+
+
+def test_the_real_logged_out_deploy_still_prompts_a_login_then_says_so(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    """The login error now exits 1; the chained deploy still matches it by type."""
+    calls: list[str] = []
+
+    def no_saved_login() -> str:
+        raise AuthError("No token")
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", no_saved_login)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["login"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
     assert "Deploy failed: authentication is still required." in capsys.readouterr().out
 
 

@@ -525,6 +525,7 @@ DeployButtonEvent = Literal[
     "deploy_stopped:login_still_required",
     "deploy_stopped:login_abandoned",
     "deploy_stopped:login_failed",
+    "deploy_stopped:login_timed_out",
 ]
 
 
@@ -613,6 +614,9 @@ def _chain_deploy() -> None:
             AuthenticationCommand().login()
         except KeyboardInterrupt:
             _record_deploy_button("deploy_stopped:login_abandoned")
+            raise
+        except SystemExit:
+            _record_deploy_button("deploy_stopped:login_timed_out")
             raise
         except Exception:
             _record_deploy_button("deploy_stopped:login_failed")
@@ -853,12 +857,15 @@ def _run_flow_project(
         )
 
     from crewai_cli.kickoff_flow import (
+        _exit_without_chat_terminal,
         _load_conversational_flow_from_kickoff_script,
         _run_conversational_flow_tui,
     )
 
     flow = _load_conversational_flow_from_kickoff_script()
     if flow is not None:
+        if not is_interactive():
+            _exit_without_chat_terminal()
         _run_conversational_flow_tui(flow)
         return
 

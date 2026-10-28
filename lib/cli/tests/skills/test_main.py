@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from crewai_cli.shared.token_manager import TokenManager
@@ -176,6 +177,31 @@ class TestSkillPublish:
             assert call_kwargs.kwargs["version"] == "1.0.0"
             # Skills are always org-scoped; there is no public visibility.
             assert call_kwargs.kwargs["is_public"] is False
+
+    def test_publish_unauthorized_shows_amps_reason_and_asks_for_login(
+        self, skill_command, capsys
+    ):
+        from crewai_cli.command import AuthenticationRequiredError
+
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock(
+                return_value=httpx.Response(
+                    401, json={"error": "bad_credentials", "message": "Bad credentials"}
+                )
+            )
+            with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
+                mock_settings_cls.return_value.org_name = "acme"
+                mock_settings_cls.return_value.enterprise_base_url = None
+
+                with pytest.raises(AuthenticationRequiredError):
+                    skill_command.publish(org="acme")
+
+        output = capsys.readouterr().out
+        assert "Bad credentials" in output
+        assert "Run 'crewai login' to sign in again." in output
 
     def test_publish_blocked_when_git_not_synced(self, skill_command):
         with in_temp_dir():
