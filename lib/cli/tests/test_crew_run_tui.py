@@ -36,6 +36,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai_cli import crew_run_tui, run_crew
+from crewai_cli.authentication.token import AuthError
 from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.crew_run_tui import (
     _LOG_ARGS_TEXT_LIMIT,
@@ -2544,6 +2545,35 @@ def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> 
     run_crew._chain_deploy()
 
     assert calls == ["create", "login", "create"]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+def test_the_real_logged_out_deploy_still_prompts_a_login_then_says_so(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    """The login error now exits 1; the chained deploy still matches it by type."""
+    calls: list[str] = []
+
+    def no_saved_login() -> str:
+        raise AuthError("No token")
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", no_saved_login)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["login"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
     assert "Deploy failed: authentication is still required." in capsys.readouterr().out
 
 

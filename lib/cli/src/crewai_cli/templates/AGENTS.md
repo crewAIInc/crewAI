@@ -17,7 +17,7 @@ Ask the user first only before actions with outside effects: creating a deployme
 1. **Pull and update.** If the repo has a remote, `git pull --ff-only`. Compare the project's crewai (`uv run python -c "import crewai; print(crewai.__version__)"`) with the latest release (`https://pypi.org/pypi/crewai/json`, `info.version`). If it's behind:
    - Project: `uv lock --upgrade-package crewai --upgrade-package crewai-tools && uv sync`. If `pyproject.toml` excludes a new major version, read the [changelog](https://docs.crewai.com/en/changelog) first and tell the user.
    - CLI: `uv tool install crewai --upgrade`. (`crewai update` is something else: it migrates old Poetry projects to uv.)
-2. **Check the login.** Run `crewai org list` and read its output. It exits 0 even when logged out; "Please sign up/login" means logged out.
+2. **Check the login.** Run `crewai org list`. Logged out, it prints "Please sign up/login" and exits 1.
    - To log in, run `crewai login` in the background and tell the user to confirm the code it prints in their browser. Then run `crewai org list` again.
    - Deployments, traces and evaluations go to the active organization (`crewai org current`; change it with `crewai org switch <uuid>`).
 3. **Check `.env`** in the project root: the LLM provider's key, `CREWAI_TRACING_ENABLED=true`, and, when agents use AMP integrations, `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` (the Enterprise Action Auth Token from AMP's settings, in the project's organization). The user pastes tokens into `.env` themselves, never into the chat.
