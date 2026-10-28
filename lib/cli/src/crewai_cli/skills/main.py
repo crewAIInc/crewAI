@@ -7,7 +7,9 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import tarfile
+from typing import TypedDict
 import zipfile
 
 from rich.console import Console
@@ -20,6 +22,47 @@ from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 
 
 console = Console()
+
+
+class _RegistrySkill(TypedDict):
+    """A row of AMP's GET /crewai_plus/api/v1/skills (the fields shown)."""
+
+    handle: str
+    description: str | None
+    is_public: bool
+    latest_version: str | None
+    virus_scanning_status: str | None
+
+
+class _PageMeta(TypedDict):
+    total_pages: int
+
+
+class _SkillPage(TypedDict):
+    data: list[_RegistrySkill]
+    meta: _PageMeta
+
+
+_SCAN_STATUSES = frozenset({"passed", "pending", "failed"})
+_REF_TOKEN_RE = re.compile(r"[A-Za-z0-9._+-]+")
+
+
+def _ref_token(text: str) -> str:
+    """A handle or version as a reference spells it, else JSON-quoted.
+
+    AMP does not constrain versions, so a publisher's "1.0.0  scan: passed"
+    stays visibly one quoted value instead of reading as a scan result.
+    """
+    return text if _REF_TOKEN_RE.fullmatch(text) else json.dumps(text)
+
+
+def _printable(text: str) -> str:
+    """Drop control characters, such as ANSI escapes, from AMP-supplied text.
+
+    Another organization's public skill can supply this text.
+    """
+    return "".join(c for c in text if c.isprintable())
+
 
 _SKILL_MD_TEMPLATE = """\
 ---
@@ -333,6 +376,81 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                             )
 
         console.print(table)
+
+    def search(self, query: str | None) -> None:
+        """List the current organization's registry skills, filtered by QUERY."""
+        self._print_current_organization()
+
+        skills: list[_RegistrySkill] = []
+        page, total_pages = 1, 1
+        while page <= total_pages:
+            response = self.plus_api_client.list_skills(search=query, page=page)
+            if response.status_code == 401:
+                console.print(
+                    "[red]Not authorized to list skills. Run `crewai login`.[/red]"
+                )
+                # AMP also answers 401 for causes a login does not fix, such as
+                # an organization the user cannot access; its body names them.
+                console.print(response.text, markup=False)
+                raise SystemExit(1)
+            if not response.is_success:
+                console.print(
+                    f"[red]Failed to list skills: {response.status_code}[/red]"
+                )
+                console.print(response.text, markup=False)
+                raise SystemExit(1)
+            try:
+                body: _SkillPage = response.json()
+            except json.JSONDecodeError:
+                # A 2xx HTML page: a wrong base URL or a proxy, not AMP.
+                console.print("[red]Failed to list skills: unexpected response[/red]")
+                console.print(response.text, markup=False)
+                raise SystemExit(1) from None
+            skills.extend(body["data"])
+            total_pages = body["meta"]["total_pages"]
+            page += 1
+
+        if not skills:
+            console.print(
+                f"No skills match '{query}'." if query else "No skills found.",
+                markup=False,
+            )
+            return
+
+        # Plain lines, not a rich Table: a table cuts long cells to "…" at
+        # rich's 80-column fallback when no std stream is a terminal, and a
+        # coding agent then copies a broken handle or ref.
+        org_uuid = Settings().org_uuid
+        if org_uuid:
+            console.print(
+                f'Attach as "@{org_uuid}/<handle>@<version>":',
+                markup=False,
+                soft_wrap=True,
+            )
+        for skill in skills:
+            name = _ref_token(skill["handle"])
+            if skill["latest_version"]:
+                name += f"@{_ref_token(skill['latest_version'])}"
+            # First on the line, and only AMP's own values, so no publisher
+            # text comes before it. None: the skill has no version yet.
+            status = skill["virus_scanning_status"]
+            if status is None:
+                scan = "-"
+            elif status in _SCAN_STATUSES:
+                scan = status
+            else:
+                scan = "unknown"
+            description = _printable(" ".join((skill["description"] or "").split()))
+            # AMP also lists other organizations' public skills, with no owner
+            # field, so the current-org ref above may not apply to these.
+            if skill["is_public"]:
+                description = f"(public) {description}"
+            console.print(
+                f"{scan:<7}  {name}  {description}".rstrip(),
+                markup=False,
+                emoji=False,
+                soft_wrap=True,
+            )
 
     def _print_current_organization(self) -> None:
         settings = Settings()

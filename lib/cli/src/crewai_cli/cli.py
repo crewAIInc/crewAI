@@ -680,7 +680,7 @@ def install(context: click.Context) -> None:
     "--inputs",
     type=str,
     default=None,
-    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
+    help='JSON object of inputs for a flow or a JSON crew, e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
@@ -867,7 +867,13 @@ def deploy() -> None:
     is_flag=True,
     help="Skip the pre-deploy validation checks.",
 )
-def deploy_create(yes: bool, skip_validate: bool) -> None:
+@click.option(
+    "--zip",
+    "force_zip",
+    is_flag=True,
+    help="Upload the project as a ZIP even when it has a git origin remote.",
+)
+def deploy_create(yes: bool, skip_validate: bool, force_zip: bool) -> None:
     """Create a Crew deployment."""
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
@@ -875,7 +881,7 @@ def deploy_create(yes: bool, skip_validate: bool) -> None:
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
     deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew(yes, skip_validate=skip_validate)
+    deploy_cmd.create_crew(yes, skip_validate=skip_validate, force_zip=force_zip)
 
 
 @deploy.command(name="list")
@@ -1052,6 +1058,16 @@ def skill_list() -> None:
 
     skill_cmd = SkillCommand()
     skill_cmd.list_cached()
+
+
+@skill.command(name="search")
+@click.argument("query", required=False)
+def skill_search(query: str | None) -> None:
+    """List the organization's skills on AMP, optionally matching QUERY."""
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.search(query)
 
 
 @crewai.group()

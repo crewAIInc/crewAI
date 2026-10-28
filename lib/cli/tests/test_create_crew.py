@@ -874,6 +874,30 @@ def test_get_platform_token_from_login_signs_in_then_retries(monkeypatch) -> Non
     authentication_command.login.assert_called_once_with()
 
 
+def test_get_platform_token_from_login_stops_when_the_login_times_out(
+    monkeypatch,
+) -> None:
+    """A timed-out login exits cleanly instead of retrying into an AuthError."""
+    attempts: list[bool] = []
+
+    def get_token() -> str:
+        attempts.append(True)
+        raise json_crew.AuthError("No token found")
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    authentication_command.login.side_effect = SystemExit(1)
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        json_crew._get_platform_token_from_login()
+
+    assert exc_info.value.code == 1
+    assert attempts == [True]
+
+
 def test_get_platform_token_from_login_reauthenticates_an_expired_login(
     monkeypatch,
 ) -> None:
@@ -1685,6 +1709,8 @@ def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
     assert "AMP builds from GitHub" not in agents_md
     assert "AMP builds from that remote, on GitHub or another git host" in agents_md
     assert "With no git `origin` it uploads a ZIP" in agents_md
+    assert "There's no flag to upload a ZIP" not in agents_md
+    assert "`crewai deploy create -y --zip`" in agents_md
     assert "uploads `.env` as its environment variables" in agents_md
 
 

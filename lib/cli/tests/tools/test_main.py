@@ -8,7 +8,9 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.shared.token_manager import TokenManager
 from crewai_cli.tools.main import ToolCommand
 from crewai_cli.version import get_crewai_tools_dependency
@@ -430,6 +432,48 @@ def test_publish_api_error(
     assert "Request to Enterprise API failed" in output
 
     mock_publish.assert_called_once()
+
+
+@patch("crewai_cli.tools.main.git.Repository")
+@patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")
+@patch("crewai_cli.tools.main.get_project_version", return_value="1.0.0")
+@patch("crewai_cli.tools.main.get_project_description", return_value="A sample tool")
+@patch("crewai_cli.tools.main.subprocess.run")
+@patch("crewai_cli.tools.main.os.listdir", return_value=["sample-tool-1.0.0.tar.gz"])
+@patch(
+    "crewai_cli.tools.main.open",
+    new_callable=unittest.mock.mock_open,
+    read_data=b"sample tarball content",
+)
+@patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch(
+    "crewai.utilities.project_utils.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch("crewai.utilities.project_utils.extract_tools_metadata", return_value=[])
+def test_publish_unauthorized_shows_amps_reason_and_asks_for_login(
+    mock_tools_metadata,
+    mock_available_exports,
+    mock_publish,
+    mock_open,
+    mock_listdir,
+    mock_subprocess_run,
+    mock_get_project_description,
+    mock_get_project_version,
+    mock_get_project_name,
+    mock_repository,
+    capsys,
+    tool_command,
+):
+    mock_publish.return_value = httpx.Response(
+        401, json={"error": "not_allowed", "message": "Account not activated"}
+    )
+
+    with raises(AuthenticationRequiredError):
+        tool_command.publish(is_public=True)
+    output = capsys.readouterr().out
+    assert "Account not activated" in output
+    assert "Run 'crewai login' to sign in again." in output
 
 
 @patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")
