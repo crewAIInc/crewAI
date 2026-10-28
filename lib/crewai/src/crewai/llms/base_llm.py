@@ -251,7 +251,7 @@ class BaseLLM(BaseModel, ABC):
     @field_validator("context_window_size")
     @classmethod
     def _validate_context_window_size(cls, value: int | None) -> int | None:
-        # ``LLM`` stored 0 for "not set" through 1.15.30, and checkpoints written
+        # ``LLM`` stored 0 for "not set" through 1.15.32, and checkpoints written
         # by those versions carry it. Remove in 2.0.
         if value == 0:
             return None

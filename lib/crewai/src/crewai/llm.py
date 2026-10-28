@@ -52,9 +52,11 @@ from crewai.llms.constants import (
 )
 from crewai.llms.context_window import (
     AZURE_OPENAI_CONTEXT_WINDOWS,
+    CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
     OPENAI_CONTEXT_WINDOWS,
+    catalog_context_window,
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
@@ -709,6 +711,24 @@ class LLM(BaseLLM):
             litellm.drop_params = True
             self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
+        return self
+
+    @model_validator(mode="after")
+    def _drop_cached_context_window(self) -> LLM:
+        # Through 1.15.32, get_context_window_size() wrote its result (85% of
+        # the catalog or default window) back into this field, and checkpoints
+        # carry it. Read as an override it would be scaled by 85% again.
+        # Remove in 2.0.
+        if self.context_window_size is None:
+            return self
+        full = catalog_context_window(
+            self._context_window_model_name(),
+            self._context_window_sizes(),
+            extra_names=(self.model,),
+        )
+        cached = int((full or DEFAULT_CONTEXT_WINDOW_SIZE) * CONTEXT_WINDOW_USAGE_RATIO)
+        if self.context_window_size == cached:
+            self.context_window_size = None
         return self
 
     @staticmethod

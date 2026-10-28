@@ -236,6 +236,28 @@ BARE_CONTEXT_WINDOWS: Final[dict[str, int]] = bare_context_windows(
 )
 
 
+def catalog_context_window(
+    model: str, sizes: Mapping[str, int], *, extra_names: Sequence[str] = ()
+) -> int | None:
+    """Return the full catalog window for a model id, or ``None`` if unlisted.
+
+    Exact IDs are resolved in ``sizes``. A miss falls back to
+    ``BARE_CONTEXT_WINDOWS``, which is built from the full catalog rather than
+    the provider map. An unknown ``provider/model`` prefix is not reduced to
+    the bare model.
+    """
+    for name in (model, *extra_names):
+        size = sizes.get(name)
+        if size is not None:
+            return size
+
+    for name in (model, *extra_names):
+        size = BARE_CONTEXT_WINDOWS.get(_bare_lookup_name(name))
+        if size is not None:
+            return size
+    return None
+
+
 def resolve_context_window_size(
     model: str,
     sizes: Mapping[str, int],
@@ -247,24 +269,16 @@ def resolve_context_window_size(
     """Return the usable context window for a catalog model id.
 
     A ``configured`` window (the caller's ``context_window_size``) wins over
-    the catalog. Otherwise exact IDs are resolved in ``sizes``, and a miss
-    falls back to ``BARE_CONTEXT_WINDOWS``, which is built from the full
-    catalog rather than the provider map. An unknown ``provider/model`` prefix
-    is not reduced to the bare model. When nothing matches, ``default`` is
-    used and a warning is logged once per model.
+    the catalog. Otherwise the window comes from ``catalog_context_window``.
+    When nothing matches, ``default`` is used and a warning is logged once per
+    model.
     """
     if configured is not None:
         return int(configured * CONTEXT_WINDOW_USAGE_RATIO)
 
-    for name in (model, *extra_names):
-        size = sizes.get(name)
-        if size is not None:
-            return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-    for name in (model, *extra_names):
-        size = BARE_CONTEXT_WINDOWS.get(_bare_lookup_name(name))
-        if size is not None:
-            return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+    size = catalog_context_window(model, sizes, extra_names=extra_names)
+    if size is not None:
+        return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
     usable = int(default * CONTEXT_WINDOW_USAGE_RATIO)
     if model not in _fallback_warned_models:

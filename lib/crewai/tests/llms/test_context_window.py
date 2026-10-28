@@ -717,6 +717,40 @@ def test_explicit_context_window_size_survives_an_agent_checkpoint_round_trip(
     assert restored.llm.get_context_window_size() == USABLE_ONE_MILLION
 
 
+@pytest.mark.parametrize(
+    ("model", "full_window"),
+    [
+        pytest.param("gpt-4o", 128_000, id="catalog"),
+        pytest.param("anthropic/claude-haiku-4-5", 200_000, id="provider-prefixed"),
+        pytest.param(
+            "openrouter/google/gemini-4-argon",
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            id="fallback",
+        ),
+    ],
+)
+def test_checkpoint_with_a_pre_change_cached_window_restores_the_catalog_window(
+    model: str, full_window: int
+) -> None:
+    from crewai import LLM, Agent
+
+    usable = int(full_window * CONTEXT_WINDOW_USAGE_RATIO)
+    agent = Agent(
+        role="Researcher",
+        goal="Research",
+        backstory="Researches.",
+        llm=LLM(model=model, is_litellm=True),
+    )
+    checkpoint = agent.model_dump(mode="json")
+    # Through 1.15.32, get_context_window_size() cached its usable result here.
+    checkpoint["llm"]["context_window_size"] = usable
+
+    restored = Agent.model_validate(checkpoint, context={"from_checkpoint": True})
+
+    assert restored.llm.get_context_window_size() == usable
+    assert restored.llm.model_dump()["context_window_size"] is None
+
+
 def test_explicit_context_window_size_survives_to_config_dict() -> None:
     from crewai import LLM
 
