@@ -1,14 +1,18 @@
+import os
 import sys
+import tempfile
 import unittest
 from io import StringIO
 from pathlib import Path
 import subprocess
 from unittest.mock import MagicMock, Mock, patch
+import zipfile
 
 import pytest
 import json
 
 import crewai_cli.deploy.main as deploy_main
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.deploy.archive import ArchiveError
 import httpx
 from crewai_cli.deploy.validate import Severity, ValidationResult
@@ -198,6 +202,19 @@ def test_deployment_page_url_does_not_use_uuid_as_deployment_id():
     )
 
 
+def _run_from_locked_project(test: unittest.TestCase) -> None:
+    # In a dir with a pyproject.toml and no uv.lock (e.g. lib/cli), create and
+    # deploy run a real `uv sync` that strips the shared venv.
+    project_dir = tempfile.TemporaryDirectory()
+    test.addCleanup(project_dir.cleanup)
+    Path(project_dir.name, "pyproject.toml").write_text(
+        "[project]\nname = 'test_project'\n"
+    )
+    Path(project_dir.name, "uv.lock").write_text("# lock\n")
+    test.addCleanup(os.chdir, os.getcwd())
+    os.chdir(project_dir.name)
+
+
 class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.command.get_auth_token")
     @patch("crewai_cli.deploy.main.get_project_name")
@@ -208,6 +225,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_get_project_name,
         mock_get_auth_token,
     ):
+        _run_from_locked_project(self)
         self.mock_get_auth_token = mock_get_auth_token
         self.mock_get_project_name = mock_get_project_name
         self.mock_plus_api = mock_plus_api
@@ -244,7 +262,7 @@ class TestDeployCommand(unittest.TestCase):
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
-        self.mock_plus_api.assert_called_once_with(api_key="test_token")
+        self.mock_plus_api.assert_called_once_with(api_key="test_token", base_url=None)
 
     @patch("builtins.input")
     def test_confirm_zip_input_only_confirms_env_vars(self, mock_input):
@@ -318,6 +336,75 @@ class TestDeployCommand(unittest.TestCase):
             output = fake_out.getvalue()
             assert "Request to Enterprise API failed. Details:" in output
             assert "Details:\nSomething went wrong" in output
+
+    def test_validate_response_401_shows_amps_reason_and_asks_for_login(self):
+        response = httpx.Response(
+            401,
+            json={
+                "error": "bad_credentials",
+                "message": "Bad credentials - User not found [admin]",
+            },
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError) as exc_info:
+                self.deploy_command._validate_response(response)
+            output = fake_out.getvalue()
+
+        assert isinstance(exc_info.value, SystemExit)
+        assert exc_info.value.code == 1
+        assert "CrewAI AMP did not accept your login:" in output
+        # AMP's words as they are: a bracketed word is not Rich markup.
+        assert "Bad credentials - User not found [admin]" in output
+        assert "Run 'crewai login' to sign in again." in output
+        assert "Request to Enterprise API failed" not in output
+
+    def test_validate_response_401_without_message_shows_the_error_code(self):
+        response = httpx.Response(401, json={"error": "not_allowed"})
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError):
+                self.deploy_command._validate_response(response)
+
+        assert "not_allowed" in fake_out.getvalue()
+
+    def test_validate_response_401_that_is_not_json_still_asks_for_login(self):
+        """A proxy in front of AMP can answer 401 with an HTML page."""
+        response = httpx.Response(401, content=b"<html>401 Unauthorized</html>")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError) as exc_info:
+                self.deploy_command._validate_response(response)
+            output = fake_out.getvalue()
+
+        assert exc_info.value.code == 1
+        assert "<html>401 Unauthorized</html>" in output
+        assert "Run 'crewai login' to sign in again." in output
+        assert "Failed to parse response" not in output
+
+    def test_validate_response_401_with_no_reason_prints_no_placeholder(self):
+        for response in (
+            httpx.Response(401, json={}),
+            httpx.Response(401, json={"message": ""}),
+            httpx.Response(401, content=b""),
+        ):
+            with patch("sys.stdout", new=StringIO()) as fake_out:
+                with pytest.raises(AuthenticationRequiredError):
+                    self.deploy_command._validate_response(response)
+                output = fake_out.getvalue()
+
+            assert "None" not in output
+            assert "Run 'crewai login' to sign in again." in output
+
+    def test_validate_response_403_is_not_a_login_problem(self):
+        response = httpx.Response(403, json={"error": "forbidden"})
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit) as exc_info:
+                self.deploy_command._validate_response(response)
+
+        assert not isinstance(exc_info.value, AuthenticationRequiredError)
+        assert "Request to Enterprise API failed. Details:" in fake_out.getvalue()
 
     def test_standard_no_param_error_message(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -1275,6 +1362,30 @@ class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("builtins.input")
+    def test_a_create_amp_rejects_as_unauthorized_asks_for_login(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """Counted as before, then raised as the error the run app logs in on."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            401, {"error": "bad_credentials", "message": "Bad credentials"}
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(AuthenticationRequiredError):
+                    self.deploy_command.create_crew(
+                        skip_validate=True, confirm=True, source="tui"
+                    )
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_4xx", source="tui", status_code=401
+        )
+        telemetry.crew_deployment_created_span.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
     def test_a_failure_from_the_run_tui_keeps_its_source(
         self, mock_input, mock_repository, mock_fetch_env
     ):
@@ -1437,6 +1548,284 @@ class TestDeployCommand(unittest.TestCase):
             env={"ENV_VAR": "value"},
         )
         self.mock_client.create_crew.assert_not_called()
+
+    def _zip_create(
+        self,
+        mock_repository: MagicMock,
+        mock_fetch_env: MagicMock,
+        mock_create_project_zip: MagicMock,
+        *,
+        origin: str | None = "https://github.com/test/repo.git",
+        head_commit: str | None = "abc1234",
+        dirty: bool | None = False,
+    ) -> MagicMock:
+        """A repository mock, and AMP accepting a ZIP create."""
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        repository = mock_repository.return_value
+        repository.origin_url.return_value = origin
+        repository.create_initial_commit_if_needed.return_value = False
+        repository.head_commit.return_value = head_commit
+        repository.has_changes_under_path.return_value = dirty
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+        response = MagicMock()
+        response.status_code = 201
+        response.is_success = True
+        response.json.return_value = {"uuid": "zip-uuid", "status": "created"}
+        self.mock_client.create_crew_from_zip.return_value = response
+        return repository
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_with_zip_uploads_a_zip_even_when_origin_exists(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        repository = self._zip_create(
+            mock_repository, mock_fetch_env, mock_create_project_zip
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(
+                confirm=True, skip_validate=True, force_zip=True
+            )
+            output = fake_out.getvalue()
+
+        self.assertIn("Deploying from a ZIP upload (--zip).", output)
+        self.assertNotIn("No origin remote found", output)
+        self.assertIn("Deployment created successfully!", output)
+        mock_repository.assert_called_once_with(fetch=False)
+        repository.fetch.assert_not_called()
+        mock_create_project_zip.assert_called_once_with(
+            "test_project", repository=repository
+        )
+        self.mock_client.create_crew_from_zip.assert_called_once_with(
+            Path("/tmp/test_project.zip"),
+            name="test_project",
+            env={"ENV_VAR": "value"},
+        )
+        self.mock_client.create_crew.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_create_with_zip_prompts_only_for_env_vars(
+        self, mock_input, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(mock_repository, mock_fetch_env, mock_create_project_zip)
+        mock_input.return_value = ""
+
+        with patch("sys.stdout", new=StringIO()):
+            self.deploy_command.create_crew(skip_validate=True, force_zip=True)
+
+        mock_input.assert_called_once_with(
+            "Press Enter to continue with 1 env vars: ENV_VAR"
+        )
+        self.mock_client.create_crew.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_create_without_zip_still_fetches_origin_and_deploys_from_git(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            201, {"uuid": "new-uuid", "status": "created"}
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(skip_validate=True)
+            output = fake_out.getvalue()
+
+        mock_repository.return_value.fetch.assert_called_once_with()
+        self.mock_client.create_crew.assert_called_once()
+        self.mock_client.create_crew_from_zip.assert_not_called()
+        self.assertNotIn("ZIP built from commit", output)
+        prompts = [call.args[0] for call in mock_input.call_args_list]
+        self.assertTrue(any("remote repository" in prompt for prompt in prompts))
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_with_zip_and_no_git_repo_initializes_one_and_uploads(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(
+            mock_repository, mock_fetch_env, mock_create_project_zip, origin=None
+        )
+        initialized_repository = mock_repository.return_value
+        mock_repository.side_effect = ValueError("not a Git repository")
+        mock_repository.initialize.return_value = initialized_repository
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(
+                confirm=True, skip_validate=True, force_zip=True
+            )
+            output = fake_out.getvalue()
+
+        self.assertIn("Initialized a local Git repository", output)
+        self.assertIn("ZIP built from commit abc1234.", output)
+        mock_create_project_zip.assert_called_once_with(
+            "test_project", repository=initialized_repository
+        )
+        self.mock_client.create_crew_from_zip.assert_called_once()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_a_zip_create_prints_the_commit_it_was_built_from(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(
+            mock_repository, mock_fetch_env, mock_create_project_zip, origin=None
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(confirm=True, skip_validate=True)
+            output = fake_out.getvalue()
+
+        self.assertIn("No origin remote found.", output)
+        self.assertIn("ZIP built from commit abc1234.", output)
+        self.assertNotIn("uncommitted changes", output)
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_a_zip_from_a_dirty_tree_says_it_has_uncommitted_changes(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(
+            mock_repository, mock_fetch_env, mock_create_project_zip, dirty=True
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(
+                confirm=True, skip_validate=True, force_zip=True
+            )
+            output = fake_out.getvalue()
+
+        self.assertIn(
+            "ZIP built from commit abc1234 (working tree has uncommitted changes).",
+            output,
+        )
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_a_zip_from_a_repo_without_commits_prints_no_commit(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(
+            mock_repository, mock_fetch_env, mock_create_project_zip, head_commit=None
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(
+                confirm=True, skip_validate=True, force_zip=True
+            )
+            output = fake_out.getvalue()
+
+        self.assertNotIn("ZIP built from commit", output)
+        self.mock_client.create_crew_from_zip.assert_called_once()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_a_zip_without_a_usable_repository_prints_no_commit(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(mock_repository, mock_fetch_env, mock_create_project_zip)
+        mock_repository.side_effect = ValueError(
+            "Git is not installed or not found in your PATH."
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(
+                confirm=True, skip_validate=True, force_zip=True
+            )
+            output = fake_out.getvalue()
+
+        self.assertIn("Continuing with ZIP deployment.", output)
+        self.assertNotIn("ZIP built from commit", output)
+        mock_create_project_zip.assert_called_once_with("test_project", repository=None)
+        self.mock_client.create_crew_from_zip.assert_called_once()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_a_failed_archive_under_zip_reports_zip_error(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(mock_repository, mock_fetch_env, mock_create_project_zip)
+        mock_create_project_zip.side_effect = ArchiveError(
+            "No deployable project files were found."
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with pytest.raises(ArchiveError, match="No deployable project files"):
+                    self.deploy_command.create_crew(
+                        confirm=True, skip_validate=True, force_zip=True
+                    )
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "zip_error", source="cli"
+        )
+        self.mock_client.create_crew_from_zip.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_a_zip_push_prints_the_commit_it_was_built_from(
+        self, mock_display, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        self._zip_create(
+            mock_repository, mock_fetch_env, mock_create_project_zip, dirty=True
+        )
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(
+            source_type="zip"
+        )
+        push_response = MagicMock()
+        push_response.status_code = 200
+        push_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.update_crew_from_zip.return_value = push_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+            output = fake_out.getvalue()
+
+        self.assertIn(
+            "ZIP built from commit abc1234 (working tree has uncommitted changes).",
+            output,
+        )
+        self.mock_client.update_crew_from_zip.assert_called_once()
+
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_a_git_push_prints_no_commit(self, mock_display, mock_repository):
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_repository.return_value.head_commit.return_value = "abc1234"
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(
+            source_type="github"
+        )
+        push_response = MagicMock()
+        push_response.status_code = 200
+        push_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.deploy_by_uuid.return_value = push_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+            output = fake_out.getvalue()
+
+        self.assertNotIn("ZIP built from commit", output)
+        self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
 
     def test_list_crews(self):
         mock_response = MagicMock()
@@ -1643,6 +2032,7 @@ class TestDeploySendsTheProjectId(unittest.TestCase):
     @patch("crewai_cli.deploy.main.get_project_name", return_value="test_project")
     @patch("crewai_cli.command.PlusAPI")
     def setUp(self, _plus_api, _name, _project_id, _token):
+        _run_from_locked_project(self)
         self.deploy_command = deploy_main.DeployCommand()
         self.mock_client = self.deploy_command.plus_api_client
         self.mock_client.base_url = "https://app.crewai.com"
@@ -1754,3 +2144,157 @@ def test_the_project_id_is_read_from_pyproject(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(deploy_main, "get_project_name", lambda require=False: "demo")
 
     assert deploy_main.DeployCommand()._project() == {"project_id": PROJECT_ID}
+
+
+def _git(cwd: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+
+def _write_project(path: Path) -> None:
+    path.mkdir(exist_ok=True)
+    (path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (path / "uv.lock").write_text("")
+    (path / "main.py").write_text("print('committed')\n")
+
+
+def _real_zip_create(
+    monkeypatch, *, force_zip: bool
+) -> tuple[str, list[str], deploy_main.DeployCommand]:
+    """Run `deploy create` on the cwd's real repo against a fake AMP.
+
+    Returns the printed output, the uploaded ZIP's names, and the command.
+    """
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", lambda: "t")
+    monkeypatch.setattr("crewai_cli.command.PlusAPI", MagicMock())
+    monkeypatch.setattr(deploy_main, "get_project_name", lambda require=False: "demo")
+    monkeypatch.setattr(deploy_main, "fetch_and_json_env_file", lambda: {})
+    monkeypatch.setattr(
+        deploy_main.git.Repository,
+        "fetch",
+        Mock(side_effect=AssertionError("a ZIP create must not fetch origin")),
+    )
+    command = deploy_main.DeployCommand()
+    uploaded: list[str] = []
+
+    def _upload(zip_path: Path, **_: object) -> MagicMock:
+        with zipfile.ZipFile(zip_path) as archive:
+            uploaded.extend(archive.namelist())
+        response = MagicMock()
+        response.status_code = 201
+        response.is_success = True
+        response.json.return_value = {"uuid": "zip-uuid", "status": "created"}
+        return response
+
+    command.plus_api_client.create_crew_from_zip.side_effect = _upload
+
+    with (
+        patch("sys.stdout", new=StringIO()) as fake_out,
+        patch("crewai_cli.deploy.main.webbrowser.open"),
+    ):
+        command.create_crew(confirm=True, skip_validate=True, force_zip=force_zip)
+        output = fake_out.getvalue()
+    return output, uploaded, command
+
+
+def test_create_with_zip_uploads_the_working_tree_of_a_real_repo_with_an_origin(
+    monkeypatch, tmp_path: Path
+):
+    """Real git, real archive: `--zip` never fetches the (unreachable) origin,
+    and the printed commit is the local HEAD the ZIP was built from."""
+    monkeypatch.chdir(tmp_path)
+    _write_project(tmp_path)
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    _git(tmp_path, "remote", "add", "origin", "https://example.invalid/demo.git")
+    (tmp_path / "draft.py").write_text("print('not committed')\n")
+    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+
+    output, uploaded, command = _real_zip_create(monkeypatch, force_zip=True)
+
+    assert (
+        f"ZIP built from commit {head} (working tree has uncommitted changes)."
+        in output
+    )
+    assert any(name.endswith("draft.py") for name in uploaded)
+    assert any(name.endswith("main.py") for name in uploaded)
+    command.plus_api_client.create_crew.assert_not_called()
+
+
+def test_a_zip_create_still_uploads_when_git_status_fails(
+    monkeypatch, tmp_path: Path
+):
+    """A gitlink whose `.git` points nowhere breaks `git status` but not the
+    archive. The commit line is informational, so it must not abort the deploy."""
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    _git(sub, "init", "-q")
+    _git(sub, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "s")
+    sub_head = _git(sub, "rev-parse", "HEAD")
+    project = tmp_path / "proj"
+    _write_project(project)
+    monkeypatch.chdir(project)
+    _git(project, "init", "-q")
+    _git(project, "add", ".")
+    _git(project, "update-index", "--add", "--cacheinfo", f"160000,{sub_head},vendor")
+    _git(project, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    (project / "vendor").mkdir()
+    (project / "vendor" / ".git").write_text("gitdir: /nonexistent/path\n")
+    head = _git(project, "rev-parse", "--short", "HEAD")
+
+    output, uploaded, _ = _real_zip_create(monkeypatch, force_zip=False)
+
+    assert (
+        f"ZIP built from commit {head} (could not check for uncommitted changes)."
+        in output
+    )
+    assert any(name.endswith("main.py") for name in uploaded)
+
+
+def test_a_zip_with_hidden_untracked_files_is_not_reported_clean(
+    monkeypatch, tmp_path: Path
+):
+    """`status.showUntrackedFiles=no` hides files the ZIP still uploads."""
+    monkeypatch.chdir(tmp_path)
+    _write_project(tmp_path)
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    _git(tmp_path, "config", "status.showUntrackedFiles", "no")
+    (tmp_path / "new_module.py").write_text("print('untracked')\n")
+    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+
+    output, uploaded, _ = _real_zip_create(monkeypatch, force_zip=True)
+
+    assert any(name.endswith("new_module.py") for name in uploaded)
+    assert (
+        f"ZIP built from commit {head} (working tree has uncommitted changes)."
+        in output
+    )
+
+
+def test_a_change_outside_the_project_directory_leaves_the_zip_clean(
+    monkeypatch, tmp_path: Path
+):
+    """In a monorepo the ZIP holds only the project directory, so a change
+    elsewhere in the repository is not an uncommitted change in the ZIP."""
+    project = tmp_path / "proj"
+    _write_project(project)
+    (tmp_path / "other.txt").write_text("v1\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "--no-gpg-sign", "-m", "init")
+    (tmp_path / "other.txt").write_text("v2\n")
+    head = _git(tmp_path, "rev-parse", "--short", "HEAD")
+    monkeypatch.chdir(project)
+
+    output, uploaded, _ = _real_zip_create(monkeypatch, force_zip=True)
+
+    assert not any(name.endswith("other.txt") for name in uploaded)
+    assert f"ZIP built from commit {head}." in output

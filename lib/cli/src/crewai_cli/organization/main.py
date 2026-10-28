@@ -39,7 +39,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
                     "You are not logged in to any organization. Use 'crewai login' to login.",
                     style="bold red",
                 )
-                return
+                raise SystemExit(1) from e
             console.print(
                 f"Failed to retrieve organization list: {e!s}", style="bold red"
             )
@@ -61,7 +61,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
                 console.print(
                     f"Organization with id '{org_id}' not found.", style="bold red"
                 )
-                return
+                raise SystemExit(1)
 
             settings = Settings()
             settings.org_name = org["name"]
@@ -78,7 +78,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
                     "You are not logged in to any organization. Use 'crewai login' to login.",
                     style="bold red",
                 )
-                return
+                raise SystemExit(1) from e
             console.print(
                 f"Failed to retrieve organization list: {e!s}", style="bold red"
             )
@@ -105,3 +105,4 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
                 "Use 'crewai org switch <id>' to switch to an organization.",
                 style="yellow",
             )
+            raise SystemExit(1)

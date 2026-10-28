@@ -23,6 +23,7 @@ from rich.prompt import Confirm
 import tomlkit
 import yaml
 
+from crewai_devtools.agents_md_eval import agents_md_eval
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.docs_versioning import (
     InvalidVersionError,
@@ -2551,6 +2552,7 @@ cli.add_command(bump)
 cli.add_command(tag)
 cli.add_command(release)
 cli.add_command(docs_check)
+cli.add_command(agents_md_eval)
 
 
 def main() -> None:
