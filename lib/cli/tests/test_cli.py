@@ -20,9 +20,11 @@ from crewai_cli.cli import (
     reset_memories,
     run,
     test,
+    traces_status,
     train,
     version,
 )
+from crewai_core.user_data import update_user_data
 
 
 @pytest.fixture
@@ -621,6 +623,31 @@ def test_log_tasks_outputs_shows_result_not_blob(mock_load, runner):
     assert result.exit_code == 0
     assert "Output: REAL" in result.output
     assert "messages" not in result.output
+
+
+def test_traces_status_shows_disabled_when_env_false_overrides_consent(
+    runner, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_traces_status")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    update_user_data({"trace_consent": True, "first_execution_done": True})
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+
+    result = runner.invoke(traces_status)
+
+    assert result.exit_code == 0
+    assert "Enabled (user consented)" in result.output
+    assert "DISABLED" in result.output
+
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED")
+    unset = runner.invoke(traces_status)
+
+    assert "not set" in unset.output
+    assert "ENABLED" in unset.output
+    assert "DISABLED" not in unset.output
 
 
 @mock.patch("crewai_cli.task_outputs.load_task_outputs")
