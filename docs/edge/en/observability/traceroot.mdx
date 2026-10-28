@@ -1,0 +1,68 @@
+---
+title: "TraceRoot integration"
+description: "Trace CrewAI runs and OpenAI calls with the TraceRoot Python SDK."
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+[TraceRoot](https://traceroot.ai/docs/integrations/crewai) instruments CrewAI crews, agents, and tasks. Enable the OpenAI integration to capture model calls in the same trace.
+
+## Install the SDK
+
+```bash
+uv add crewai traceroot
+```
+
+## Set API keys
+
+Create a project API key in [TraceRoot Cloud](https://app.traceroot.ai), then export it alongside your OpenAI key.
+
+```bash
+export TRACEROOT_API_KEY="your-traceroot-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+The TraceRoot SDK reads the process environment. If you use a `.env` file, load it before initialization. For a self-hosted instance, also set `TRACEROOT_HOST_URL` to its URL.
+
+## Run a crew
+
+Save this example as `main.py`. Initialize the integrations before creating agents. Flush pending spans before the process exits.
+
+```python
+import traceroot
+from traceroot import Integration
+
+from crewai import Agent, Crew, Task
+
+traceroot.initialize(integrations=[Integration.CREWAI, Integration.OPENAI])
+
+writer = Agent(
+    role="Technical writer",
+    goal="Explain agent workflows clearly",
+    backstory="You write concise explanations for developers.",
+    llm="openai/gpt-4o-mini",
+    allow_delegation=False,
+)
+task = Task(
+    description="Explain how a Crew coordinates agents and tasks in three sentences.",
+    expected_output="A three-sentence explanation.",
+    agent=writer,
+)
+crew = Crew(agents=[writer], tasks=[task])
+
+try:
+    result = crew.kickoff()
+    print(result.raw)
+finally:
+    traceroot.flush()
+```
+
+```bash
+uv run python main.py
+```
+
+## Inspect the trace
+
+Open your TraceRoot project and select the trace from this run. Inspect the crew, agent, task, and model spans to compare their inputs, outputs, and duration.
+
+Trace data can include prompts and outputs. See the [Python SDK reference](https://traceroot.ai/docs/tracing/python-sdk) for configuration and other provider integrations.
