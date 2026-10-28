@@ -1328,6 +1328,7 @@ class AzureCompletion(BaseLLM):
             self.model,
             AZURE_OPENAI_CONTEXT_WINDOWS,
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
         )
 
     def _effective_max_tokens(self) -> int | float | None:

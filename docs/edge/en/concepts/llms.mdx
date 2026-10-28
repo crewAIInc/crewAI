@@ -1387,6 +1387,17 @@ Learn how to get the most out of your LLM configuration:
       3. Use chunking for large documents
       4. Monitor token usage to optimize costs
     </Info>
+
+    **Models CrewAI does not know.** CrewAI looks up each model's context window in a built-in catalog and uses 85% of it, keeping the rest as headroom. That size decides when a large tool result is saved to a file instead of being added to the conversation, and when the conversation is summarized. If the catalog does not list your model, CrewAI assumes a default window (8,192 tokens for most providers) and logs a warning that names the model. Set `context_window_size` to the model's full context window in tokens. It takes priority over the catalog for every provider, and the same 85% applies:
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/google/gemini-4-argon",
+        context_window_size=1_048_576,  # the model's full context window, in tokens
+    )
+    ```
   </Accordion>
 
   <Accordion title="Performance Optimization">

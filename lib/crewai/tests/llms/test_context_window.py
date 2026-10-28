@@ -1,5 +1,7 @@
 import asyncio
+import logging
 from unittest.mock import AsyncMock, MagicMock
+import uuid
 
 import pytest
 
@@ -433,3 +435,307 @@ def test_summary_chunking_rejects_unsplittable_oversized_content() -> None:
             ],
             max_tokens=10,
         )
+
+
+ONE_MILLION_TOKENS = 1_048_576
+USABLE_ONE_MILLION = int(ONE_MILLION_TOKENS * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def _unlisted_model() -> str:
+    """A model id the catalog does not know, unique so no earlier test warned for it."""
+    return f"gemini-4-argon-{uuid.uuid4().hex}"
+
+
+def _fallback_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "crewai.llms.context_window"
+        and record.levelno == logging.WARNING
+    ]
+
+
+def test_resolver_prefers_a_configured_window_over_the_catalog() -> None:
+    sizes = {"gpt-5.4-mini": 200_000}
+
+    result = resolve_context_window_size(
+        "gpt-5.4-mini",
+        sizes,
+        default=DEFAULT_CONTEXT_WINDOW_SIZE,
+        configured=ONE_MILLION_TOKENS,
+    )
+
+    assert result == USABLE_ONE_MILLION
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        pytest.param({"model": "openrouter/google/gemini-4-argon"}, id="openrouter"),
+        pytest.param({"model": "openai/gpt-4o"}, id="openai"),
+        pytest.param({"model": "anthropic/claude-haiku-4-5"}, id="anthropic"),
+        pytest.param({"model": "gemini/gemini-2.5-flash"}, id="gemini"),
+        pytest.param({"model": "azure/gpt-4o"}, id="azure"),
+        pytest.param(
+            {"model": "bedrock/anthropic.claude-sonnet-4-6"}, id="bedrock"
+        ),
+        pytest.param({"model": "gpt-4o", "is_litellm": True}, id="litellm"),
+    ],
+)
+def test_explicit_context_window_size_is_honored_by_every_provider(
+    kwargs: dict[str, object],
+) -> None:
+    from crewai import LLM
+
+    llm = LLM(context_window_size=ONE_MILLION_TOKENS, **kwargs)
+
+    assert llm.get_context_window_size() == USABLE_ONE_MILLION
+    assert "context_window_size" not in llm.additional_params
+
+
+def test_explicit_context_window_size_is_honored_when_building_a_native_class() -> (
+    None
+):
+    from crewai.llms.providers.openai_compatible.completion import (
+        OpenAICompatibleCompletion,
+    )
+
+    llm = OpenAICompatibleCompletion(
+        model="google/gemini-4-argon",
+        provider="openrouter",
+        context_window_size=ONE_MILLION_TOKENS,
+    )
+
+    assert llm.get_context_window_size() == USABLE_ONE_MILLION
+
+
+def test_explicit_context_window_size_is_not_sent_to_the_provider() -> None:
+    from crewai import LLM
+
+    llm = LLM(model="openai/gpt-4o", context_window_size=ONE_MILLION_TOKENS)
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "hi"}]
+    )
+
+    assert "context_window_size" not in params
+
+
+def test_custom_base_llm_honors_explicit_context_window_size() -> None:
+    from crewai.llms.base_llm import BaseLLM
+
+    class CustomLLM(BaseLLM):
+        def call(self, *args: object, **kwargs: object) -> str:
+            return "ok"
+
+    assert CustomLLM(model="custom").get_context_window_size() == 4096
+    assert (
+        CustomLLM(
+            model="custom", context_window_size=ONE_MILLION_TOKENS
+        ).get_context_window_size()
+        == USABLE_ONE_MILLION
+    )
+
+
+@pytest.mark.parametrize(
+    ("model", "raw_context_window"),
+    [
+        ("openai/gpt-4o", 128_000),
+        ("anthropic/claude-haiku-4-5", 200_000),
+        ("bedrock/amazon.nova-2-lite-v1:0", 1_000_000),
+        ("azure/gpt-4o", 128_000),
+    ],
+)
+def test_catalog_models_keep_their_window_without_a_warning(
+    model: str, raw_context_window: int, caplog: pytest.LogCaptureFixture
+) -> None:
+    from crewai import LLM
+
+    with caplog.at_level(logging.WARNING, logger="crewai.llms.context_window"):
+        size = LLM(model=model).get_context_window_size()
+
+    assert size == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)
+    assert _fallback_warnings(caplog) == []
+
+
+def test_unlisted_openrouter_model_falls_back_and_warns_once(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from crewai import LLM
+
+    model = _unlisted_model()
+
+    with caplog.at_level(logging.WARNING, logger="crewai.llms.context_window"):
+        first = LLM(model=f"openrouter/google/{model}")
+        sizes = [first.get_context_window_size(), first.get_context_window_size()]
+        LLM(model=f"openrouter/google/{model}").get_context_window_size()
+
+    assert sizes == [6963, 6963]
+    warnings = _fallback_warnings(caplog)
+    assert len(warnings) == 1
+    assert f"google/{model}" in warnings[0]
+    assert "8,192 tokens (6,963 usable)" in warnings[0]
+    assert "context_window_size=<tokens>" in warnings[0]
+
+
+@pytest.mark.parametrize(
+    ("prefix", "kwargs"),
+    [
+        pytest.param("openai/gpt-", {}, id="openai"),
+        pytest.param("anthropic/claude-", {}, id="anthropic"),
+        pytest.param("", {"is_litellm": True}, id="litellm"),
+    ],
+)
+def test_unlisted_model_warns_on_every_provider_path(
+    prefix: str, kwargs: dict[str, object], caplog: pytest.LogCaptureFixture
+) -> None:
+    from crewai import LLM
+
+    model = f"{prefix}{_unlisted_model()}"
+
+    with caplog.at_level(logging.WARNING, logger="crewai.llms.context_window"):
+        LLM(model=model, **kwargs).get_context_window_size()
+
+    warnings = _fallback_warnings(caplog)
+    assert len(warnings) == 1
+    assert model.removeprefix("openai/").removeprefix("anthropic/") in warnings[0]
+
+
+def test_each_unlisted_model_gets_its_own_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    first, second = _unlisted_model(), _unlisted_model()
+
+    with caplog.at_level(logging.WARNING, logger="crewai.llms.context_window"):
+        for model in (first, second, first):
+            resolve_context_window_size(
+                model, {}, default=DEFAULT_CONTEXT_WINDOW_SIZE
+            )
+
+    warnings = _fallback_warnings(caplog)
+    assert len(warnings) == 2
+    assert first in warnings[0]
+    assert second in warnings[1]
+
+
+def test_explicit_context_window_size_does_not_warn(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from crewai import LLM
+
+    llm = LLM(
+        model=f"openrouter/google/{_unlisted_model()}",
+        context_window_size=ONE_MILLION_TOKENS,
+    )
+
+    with caplog.at_level(logging.WARNING, logger="crewai.llms.context_window"):
+        llm.get_context_window_size()
+
+    assert _fallback_warnings(caplog) == []
+
+
+def test_explicit_context_window_size_moves_the_deferral_and_compaction_gates() -> (
+    None
+):
+    from crewai import LLM
+
+    model = f"openrouter/google/{_unlisted_model()}"
+    tool_result = "x" * 4 * 4_000  # about 4,000 tokens by the 4-chars estimate
+    fallback = LLM(model=model)
+    configured = LLM(model=model, context_window_size=ONE_MILLION_TOKENS)
+
+    assert fallback.is_tool_result_overflowing_threshold(tool_result)[0] is True
+    assert configured.is_tool_result_overflowing_threshold(tool_result)[0] is False
+    assert fallback.is_context_window_overflowing_threshold(tool_result * 2) is True
+    assert (
+        configured.is_context_window_overflowing_threshold(tool_result * 2) is False
+    )
+
+
+@pytest.mark.parametrize("value", [-1, -1_048_576])
+def test_negative_context_window_size_is_rejected(value: int) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    with pytest.raises(
+        ValueError,
+        match=f"context_window_size must be a positive number of tokens, got {value}",
+    ):
+        OpenAICompletion(model="gpt-4o", context_window_size=value)
+
+
+@pytest.mark.parametrize("value", [True, "1048576", 1.5])
+def test_non_integer_context_window_size_is_rejected(value: object) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    with pytest.raises(ValueError, match="Input should be a valid integer"):
+        OpenAICompletion(model="gpt-4o", context_window_size=value)
+
+
+def test_zero_context_window_size_from_an_older_dump_means_unset() -> None:
+    from crewai import LLM
+
+    llm = LLM(model="gpt-4o", is_litellm=True, context_window_size=0)
+
+    assert llm.context_window_size is None
+    assert llm.get_context_window_size() == int(128_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_resolved_catalog_window_is_not_written_back_into_the_field() -> None:
+    from crewai import LLM
+
+    llm = LLM(model="gpt-4o", is_litellm=True)
+    llm.get_context_window_size()
+
+    assert llm.context_window_size is None
+    assert llm.model_dump()["context_window_size"] is None
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        pytest.param({"model": "openrouter/google/gemini-4-argon"}, id="openrouter"),
+        pytest.param({"model": "anthropic/claude-haiku-4-5"}, id="anthropic"),
+        pytest.param({"model": "gpt-4o", "is_litellm": True}, id="litellm"),
+    ],
+)
+def test_explicit_context_window_size_survives_an_agent_checkpoint_round_trip(
+    kwargs: dict[str, object],
+) -> None:
+    from crewai import LLM, Agent
+
+    agent = Agent(
+        role="Researcher",
+        goal="Research",
+        backstory="Researches.",
+        llm=LLM(context_window_size=ONE_MILLION_TOKENS, **kwargs),
+    )
+
+    restored = Agent.model_validate(
+        agent.model_dump(mode="json"), context={"from_checkpoint": True}
+    )
+
+    assert restored.llm.get_context_window_size() == USABLE_ONE_MILLION
+
+
+def test_explicit_context_window_size_survives_to_config_dict() -> None:
+    from crewai import LLM
+
+    llm = LLM(model="anthropic/claude-haiku-4-5", context_window_size=ONE_MILLION_TOKENS)
+
+    rebuilt = LLM(**llm.to_config_dict())
+
+    assert rebuilt.get_context_window_size() == USABLE_ONE_MILLION
+
+
+def test_explicit_context_window_size_is_honored_from_an_llm_config_dict() -> None:
+    from crewai.utilities.llm_utils import create_llm
+
+    llm = create_llm(
+        {
+            "model": "openrouter/google/gemini-4-argon",
+            "context_window_size": ONE_MILLION_TOKENS,
+        }
+    )
+
+    assert llm is not None
+    assert llm.get_context_window_size() == USABLE_ONE_MILLION

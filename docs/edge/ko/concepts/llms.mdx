@@ -943,6 +943,17 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
       3. 큰 문서에는 청킹(chunking) 사용
       4. 비용 최적화를 위해 토큰 사용량 모니터링
     </Info>
+
+    **CrewAI가 모르는 모델.** CrewAI는 내장 카탈로그에서 각 모델의 컨텍스트 윈도우를 찾아 그중 85%를 사용하고 나머지는 여유분으로 남겨 둡니다. 이 크기에 따라 큰 도구 결과를 대화에 추가하는 대신 파일로 저장할지, 그리고 대화를 언제 요약할지가 결정됩니다. 카탈로그에 모델이 없으면 CrewAI는 기본 윈도우(대부분의 프로바이더에서 8,192 토큰)를 가정하고 모델 이름이 담긴 경고를 로그에 남깁니다. `context_window_size`를 모델의 전체 컨텍스트 윈도우(토큰 단위)로 설정하세요. 모든 프로바이더에서 카탈로그보다 우선하며, 같은 85%가 적용됩니다:
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/google/gemini-4-argon",
+        context_window_size=1_048_576,  # the model's full context window, in tokens
+    )
+    ```
   </Accordion>
 
   <Accordion title="성능 최적화">

@@ -283,7 +283,6 @@ class LLM(BaseLLM):
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
-    context_window_size: int = 0
     is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
@@ -2602,17 +2601,14 @@ class LLM(BaseLLM):
         return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
-        """Return the context window size, using 85% of the catalog limit."""
-        if self.context_window_size != 0:
-            return self.context_window_size
-
-        self.context_window_size = resolve_context_window_size(
+        """Return 85% of ``context_window_size`` or of the catalog limit."""
+        return resolve_context_window_size(
             self._context_window_model_name(),
             self._context_window_sizes(),
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
             extra_names=(self.model,),
+            configured=self.context_window_size,
         )
-        return self.context_window_size
 
     @staticmethod
     def set_callbacks(callbacks: list[Any]) -> None:

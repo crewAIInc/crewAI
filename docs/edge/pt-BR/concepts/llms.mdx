@@ -867,6 +867,17 @@ Saiba como obter o máximo da configuração do seu LLM:
       3. Utilize divisão para documentos grandes
       4. Monitore tokens para otimizar custos
     </Info>
+
+    **Modelos que o CrewAI não conhece.** O CrewAI busca a janela de contexto de cada modelo em um catálogo embutido e usa 85% dela, deixando o restante como margem. Esse tamanho decide quando um resultado grande de ferramenta é salvo em um arquivo em vez de entrar na conversa, e quando a conversa é resumida. Se o catálogo não lista o seu modelo, o CrewAI assume uma janela padrão (8.192 tokens na maioria dos provedores) e registra um aviso com o nome do modelo. Defina `context_window_size` com a janela de contexto completa do modelo, em tokens. Ela tem prioridade sobre o catálogo em todos os provedores, e os mesmos 85% se aplicam:
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/google/gemini-4-argon",
+        context_window_size=1_048_576,  # the model's full context window, in tokens
+    )
+    ```
   </Accordion>
 
   <Accordion title="Otimização de Performance">

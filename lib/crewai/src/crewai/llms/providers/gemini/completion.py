@@ -1447,7 +1447,10 @@ class GeminiCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, GEMINI_CONTEXT_WINDOWS, default=1_048_576
+            self.model,
+            GEMINI_CONTEXT_WINDOWS,
+            default=1_048_576,
+            configured=self.context_window_size,
         )
 
     def _effective_max_tokens(self) -> int | float | None:

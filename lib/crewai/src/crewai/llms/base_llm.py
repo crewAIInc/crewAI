@@ -25,6 +25,7 @@ from pydantic import (
     Field,
     PrivateAttr,
     field_serializer,
+    field_validator,
     model_validator,
 )
 from typing_extensions import TypedDict
@@ -177,6 +178,9 @@ class BaseLLM(BaseModel, ABC):
         temperature: Optional temperature setting for response generation.
         stop: A list of stop sequences that the LLM should use to stop generation.
         additional_params: Additional provider-specific parameters.
+        context_window_size: The model's full context window in tokens. When
+            set, it is used instead of CrewAI's model catalog, which matters
+            for models the catalog does not list.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
@@ -242,6 +246,20 @@ class BaseLLM(BaseModel, ABC):
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
     additional_params: dict[str, Any] = Field(default_factory=dict)
+    context_window_size: int | None = Field(default=None, strict=True)
+
+    @field_validator("context_window_size")
+    @classmethod
+    def _validate_context_window_size(cls, value: int | None) -> int | None:
+        # ``LLM`` stored 0 for "not set" through 1.15.30, and checkpoints written
+        # by those versions carry it. Remove in 2.0.
+        if value == 0:
+            return None
+        if value is not None and value < 0:
+            raise ValueError(
+                f"context_window_size must be a positive number of tokens, got {value}"
+            )
+        return value
 
     @field_serializer("response_format", when_used="json", check_fields=False)
     def _serialize_response_format(self, value: Any) -> Any:
@@ -362,6 +380,8 @@ class BaseLLM(BaseModel, ABC):
             config["base_url"] = self.base_url
         if self.stop:
             config["stop"] = self.stop
+        if self.context_window_size is not None:
+            config["context_window_size"] = self.context_window_size
 
         return config
 
@@ -646,8 +666,13 @@ class BaseLLM(BaseModel, ABC):
         """Get the context window size for the LLM.
 
         Returns:
-            The number of tokens/characters the model can handle.
+            The number of tokens/characters the model can handle: 85% of
+            ``context_window_size`` when it is set, else a fixed default.
         """
+        if self.context_window_size is not None:
+            from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
+
+            return int(self.context_window_size * CONTEXT_WINDOW_USAGE_RATIO)
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
     def supports_multimodal(self) -> bool:

@@ -2082,7 +2082,10 @@ class AnthropicCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, ANTHROPIC_CONTEXT_WINDOWS, default=200_000
+            self.model,
+            ANTHROPIC_CONTEXT_WINDOWS,
+            default=200_000,
+            configured=self.context_window_size,
         )
 
     @staticmethod
