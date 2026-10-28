@@ -503,9 +503,17 @@ class LLM(BaseLLM):
         elif explicit_provider:
             provider = explicit_provider
             use_native = True
-            model_string = model
+            # An explicit provider only pins the routing; a model string that
+            # already carries the same provider's prefix must not keep it,
+            # otherwise the prefixed name is sent to the API verbatim.
+            prefix, separator, model_part = model.partition("/")
+            canonical_prefix = PROVIDER_ALIASES.get(prefix.lower(), prefix.lower())
+            if separator and model_part and canonical_prefix == provider:
+                model_string = model_part
+            else:
+                model_string = model
             if provider == "deepinfra":
-                cls._require_deepinfra_model(model)
+                cls._require_deepinfra_model(model_string)
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 

@@ -1248,6 +1248,34 @@ def test_explicit_provider_kwarg_takes_priority():
         assert llm2.provider == "openai"
 
 
+def test_explicit_provider_strips_matching_model_prefix():
+    """provider= only pins routing; a model prefix naming the same provider is
+    stripped instead of being sent to the API verbatim."""
+    assert LLM._resolve_route("openai/gpt-4o", {"provider": "openai"}).model == "gpt-4o"
+    assert (
+        LLM._resolve_route("claude/claude-haiku-4-5", {"provider": "anthropic"}).model
+        == "claude-haiku-4-5"
+    )
+    assert (
+        LLM._resolve_route(
+            "deepinfra/meta-llama/Llama-3-8b", {"provider": "deepinfra"}
+        ).model
+        == "meta-llama/Llama-3-8b"
+    )
+
+    # An unrelated prefix (e.g. a namespaced model id) is left untouched.
+    assert LLM._resolve_route("custom/gpt-4o", {"provider": "openai"}).model == "custom/gpt-4o"
+
+    # A malformed DeepInfra id still fails validation on the stripped part.
+    with pytest.raises(ValueError, match="org/model"):
+        LLM._resolve_route("deepinfra/llama", {"provider": "deepinfra"})
+
+    # kwargs are read, never mutated.
+    kwargs = {"provider": "openai"}
+    LLM._resolve_route("openai/gpt-4o", kwargs)
+    assert kwargs == {"provider": "openai"}
+
+
 def test_resolve_route_decides_what_new_constructs():
     """`LLM._resolve_route` is `__new__`'s routing, callable without building anything."""
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
