@@ -59,6 +59,7 @@ O Construtor Visual de Agentes permite:
 | **Allow Code Execution** _(opcional)_   | `allow_code_execution`   | `Optional[bool]`                      | Ativa execução de código pelo agente. Padrão: False.                                                      |
 | **Max Retry Limit** _(opcional)_        | `max_retry_limit`        | `int`                                 | Número máximo de tentativas (retries) em caso de erro. Padrão: 2.                                         |
 | **Respect Context Window** _(opcional)_ | `respect_context_window` | `bool`                                | Mantém as mensagens dentro do tamanho da janela de contexto, resumindo quando necessário. Padrão: True.   |
+| **Use Better Compaction** _(opcional)_  | `use_better_compaction`  | `bool`                                | Adia resultados grandes de ferramentas para artefatos temporários com leituras limitadas. Padrão: True.   |
 | **Code Execution Mode** _(opcional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Modo de execução de código: 'safe' (usando Docker) ou 'unsafe' (direto). Padrão: 'safe'.                  |
 | **Multimodal** _(opcional)_             | `multimodal`             | `bool`                                | Se o agente suporta capacidades multimodais. Padrão: False.                                               |
 | **Inject Date** _(opcional)_            | `inject_date`            | `bool`                                | Se deve injetar automaticamente a data atual no prompt do agente. Padrão: False.                          |
@@ -196,6 +197,7 @@ agent = Agent(
     allow_code_execution=False,  # Padrão: False
     code_execution_mode="safe",  # Padrão: "safe" (opções: "safe", "unsafe")
     respect_context_window=True,  # Padrão: True
+    use_better_compaction=True,  # Padrão: True
     use_system_prompt=True,  # Padrão: True
     multimodal=False,  # Padrão: False
     inject_date=False,  # Padrão: False
@@ -319,6 +321,7 @@ multimodal_agent = Agent(
 
 - `memory`: Ative para manter o histórico de conversas
 - `respect_context_window`: Evita problemas com limites de tokens
+- `use_better_compaction`: Adia resultados grandes de ferramentas para artefatos temporários
 - `knowledge_sources`: Adicione bases de conhecimento específicas do domínio
 
 #### Controle de Execução
@@ -582,6 +585,53 @@ agent = Agent(
   `respect_context_window` conforme deseja e o CrewAI cuida do resto!
 </Note>
 
+## Compactação Melhorada de Resultados de Ferramentas
+
+Quando as ferramentas retornam payloads grandes, o CrewAI pode manter a
+conversa enxuta com `use_better_compaction`. O padrão é `True`.
+
+Com `use_better_compaction=True`, se um resultado bem-sucedido de ferramenta
+exceder cerca de **25% da janela de contexto utilizável do modelo**, o CrewAI:
+
+1. Armazena o resultado completo como um artefato temporário
+2. Coloca uma prévia curta e a referência do arquivo no contexto do agente
+3. Permite que o agente leia seções limitadas desse artefato com uma ferramenta
+   de leitura de arquivo diferida
+
+```python Code
+# Padrão: adiar resultados grandes de ferramentas
+agent = Agent(
+    role="Research Analyst",
+    goal="Synthesize findings from large tool outputs",
+    backstory="Expert at working with lengthy search and document results",
+    use_better_compaction=True,  # Padrão: True
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+Defina `use_better_compaction=False` quando quiser manter cada resultado de
+ferramenta inline no histórico de mensagens (por exemplo, ao depurar a saída
+da ferramenta ou quando os resultados são sempre pequenos):
+
+```python Code
+agent = Agent(
+    role="Debug Agent",
+    goal="Inspect full tool payloads during development",
+    backstory="Needs complete inline tool output",
+    use_better_compaction=False,
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+<Note>
+  `use_better_compaction` é separado de `respect_context_window`. A compactação
+  de resultados grandes de ferramentas ocorre antes de esses resultados
+  entrarem na conversa; `respect_context_window` resume o histórico quando a
+  janela de contexto geral é excedida.
+</Note>
+
 ## Considerações e Boas Práticas Importantes
 
 ### Segurança e Execução de Código
@@ -593,6 +643,7 @@ agent = Agent(
 ### Otimização de Performance
 
 - Use `respect_context_window: true` para evitar problemas com limite de tokens
+- Mantenha `use_better_compaction: true` (padrão) para adiar resultados grandes de ferramentas a artefatos temporários
 - Ajuste `max_rpm` para evitar rate limiting
 - Ative `cache: true` para melhorar performance em tarefas repetitivas
 - Ajuste `max_iter` e `max_retry_limit` conforme a complexidade da tarefa
@@ -602,6 +653,7 @@ agent = Agent(
 - Considere `knowledge_sources` para informações específicas de domínio
 - Configure `embedder` ao usar modelos de embedding personalizados
 - Use templates personalizados (`system_template`, `prompt_template`, `response_template`) para controle fino do comportamento do agente
+- Use `use_better_compaction` para controlar se resultados grandes de ferramentas ficam inline ou são lidos em seções limitadas
 
 ### Funcionalidades Avançadas
 

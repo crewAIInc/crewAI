@@ -54,6 +54,7 @@ CrewAI AOP에는 코드를 작성하지 않고도 에이전트 생성 및 구성
 | **코드 실행 허용** _(옵션)_              | `allow_code_execution`   | `Optional[bool]`              | 에이전트의 코드 실행 활성화 여부입니다. 기본값은 False입니다.                                                          |
 | **최대 재시도 횟수** _(옵션)_            | `max_retry_limit`        | `int`                         | 오류 발생 시 최대 재시도 횟수입니다. 기본값은 2입니다.                                                                 |
 | **컨텍스트 윈도우 준수** _(옵션)_         | `respect_context_window` | `bool`                        | 메시지를 컨텍스트 윈도우 크기 내로 유지하기 위하여 요약 기능을 사용합니다. 기본값은 True입니다.                         |
+| **개선된 압축 사용** _(옵션)_            | `use_better_compaction`  | `bool`                        | 과도하게 큰 도구 결과를 임시 아티팩트로 넘겨 구간 단위로 읽게 합니다. 기본값은 True입니다.                              |
 | **코드 실행 모드** _(옵션)_              | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | 코드 실행 모드: 'safe'(Docker 사용) 또는 'unsafe'(직접 실행). 기본값은 'safe'입니다.                                   |
 | **멀티모달** _(옵션)_                    | `multimodal`             | `bool`                        | 에이전트가 멀티모달 기능을 지원하는지 여부입니다. 기본값은 False입니다.                                                |
 | **날짜 자동 삽입** _(옵션)_              | `inject_date`            | `bool`                        | 에이전트 프롬프트에 현재 날짜를 자동으로 삽입할지 여부입니다. 기본값은 False입니다.                                     |
@@ -191,6 +192,7 @@ agent = Agent(
     allow_code_execution=False,  # 기본값: False
     code_execution_mode="safe",  # 기본값: "safe" (옵션: "safe", "unsafe")
     respect_context_window=True,  # 기본값: True
+    use_better_compaction=True,  # 기본값: True
     use_system_prompt=True,  # 기본값: True
     multimodal=False,  # 기본값: False
     inject_date=False,  # 기본값: False
@@ -308,6 +310,7 @@ multimodal_agent = Agent(
 #### 메모리 및 컨텍스트
 - `memory`: 대화 이력을 유지하도록 활성화합니다
 - `respect_context_window`: 토큰 제한 문제를 방지합니다
+- `use_better_compaction`: 과도하게 큰 도구 결과를 임시 아티팩트로 넘깁니다
 - `knowledge_sources`: 도메인별 지식 기반을 추가합니다
 
 #### 실행 제어
@@ -551,6 +554,52 @@ agent = Agent(
 컨텍스트 윈도우 관리 기능은 백그라운드에서 자동으로 작동합니다. 특별한 함수를 호출할 필요가 없으며, 원하는 동작에 맞게 `respect_context_window`만 설정하면 CrewAI가 나머지를 처리합니다!
 </Note>
 
+## 개선된 도구 결과 압축
+
+도구가 큰 페이로드를 반환할 때 CrewAI는 `use_better_compaction`으로 대화를
+가볍게 유지할 수 있습니다. 기본값은 `True`입니다.
+
+`use_better_compaction=True`이면, 성공한 도구 결과가 모델의 사용 가능한
+컨텍스트 윈도우의 약 **25%**를 초과할 경우 CrewAI는 다음을 수행합니다:
+
+1. 전체 결과를 임시 아티팩트로 저장합니다
+2. 짧은 미리보기와 파일 참조를 에이전트 컨텍스트에 넣습니다
+3. 지연 파일 리더 도구로 해당 아티팩트의 구간을 읽게 합니다
+
+```python Code
+# 기본값: 과도하게 큰 도구 결과를 미룸
+agent = Agent(
+    role="Research Analyst",
+    goal="Synthesize findings from large tool outputs",
+    backstory="Expert at working with lengthy search and document results",
+    use_better_compaction=True,  # 기본값: True
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+도구 결과를 메시지 이력에 인라인으로 모두 유지하려면
+`use_better_compaction=False`로 설정하세요(예: 도구 출력을 디버깅하거나
+결과가 항상 작을 때):
+
+```python Code
+agent = Agent(
+    role="Debug Agent",
+    goal="Inspect full tool payloads during development",
+    backstory="Needs complete inline tool output",
+    use_better_compaction=False,
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+```
+
+<Note>
+  `use_better_compaction`은 `respect_context_window`와 별개입니다. 과도하게 큰
+  도구 결과의 압축은 결과가 대화에 들어가기 전에 일어나며,
+  `respect_context_window`는 전체 컨텍스트 윈도우가 초과될 때 이력을
+  요약합니다.
+</Note>
+
 ## `kickoff()`을 사용한 에이전트 직접 상호작용
 
 에이전트는 `kickoff()` 메서드를 사용하여 작업(task)이나 crew 워크플로우를 거치지 않고 직접 사용할 수 있습니다. 이는 전체 crew 오케스트레이션 기능이 필요하지 않을 때 에이전트와 상호작용하는 더 간단한 방법을 제공합니다.
@@ -663,6 +712,7 @@ asyncio.run(main())
 
 ### 성능 최적화
 - `respect_context_window: true`를 사용하여 토큰 제한 문제를 방지하세요.
+- `use_better_compaction: true`(기본값)를 유지하여 과도하게 큰 도구 결과를 임시 아티팩트로 넘기세요.
 - 적절한 `max_rpm`을 설정하여 속도 제한을 피하세요.
 - 반복적인 작업의 성능 향상을 위해 `cache: true`를 활성화하세요.
 - 작업의 복잡도에 따라 `max_iter`와 `max_retry_limit`을 조정하세요.
@@ -671,6 +721,7 @@ asyncio.run(main())
 - 도메인별 정보를 위해 `knowledge_sources`를 활용하세요
 - 커스텀 임베딩 모델을 사용할 때는 `embedder`를 구성하세요
 - 에이전트 행동을 세밀하게 제어하려면 커스텀 템플릿(`system_template`, `prompt_template`, `response_template`)을 사용하세요
+- 큰 도구 결과를 인라인으로 둘지 구간 단위로 읽을지는 `use_better_compaction`으로 제어하세요
 
 ### 고급 기능
 - 복잡한 작업을 실행하기 전에 계획을 세우고 반성해야 하는 에이전트의 경우 `reasoning: true`를 활성화하세요.
