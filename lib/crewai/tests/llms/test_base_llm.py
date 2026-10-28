@@ -85,3 +85,16 @@ def test_catalog_entry_is_none_when_the_model_is_not_in_the_catalog() -> None:
 
     assert llm.catalog_entry is None
 
+
+def test_catalog_entry_survives_a_model_post_init_override() -> None:
+    class OverridingLLM(StubLLM):
+        def model_post_init(self, __context: Any) -> None:
+            pass
+
+    assert OverridingLLM(model="gpt-4o", provider="openai").catalog_entry is not None
+
+
+def test_catalog_entry_is_resolved_once() -> None:
+    llm = StubLLM(model="gpt-4o", provider="openai")
+
+    assert llm.catalog_entry is llm.catalog_entry

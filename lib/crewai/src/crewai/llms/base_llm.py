@@ -7,7 +7,7 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator, Mapping
+from collections.abc import Generator
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
@@ -307,11 +307,11 @@ class BaseLLM(BaseModel, ABC):
             "cache_creation_tokens": 0,
         }
     )
-    _catalog_entry: Mapping[str, Any] | None = PrivateAttr(default=None)
+    _catalog_entry: dict[str, Any] | None = PrivateAttr(default=None)
     _catalog_entry_resolved: bool = PrivateAttr(default=False)
 
     @property
-    def catalog_entry(self) -> Mapping[str, Any] | None:
+    def catalog_entry(self) -> dict[str, Any] | None:
         """Return the resolved LiteLLM catalog entry, when one is unambiguous."""
         if not self._catalog_entry_resolved:
             self._catalog_entry = find_model_catalog_entry(self.model, self.provider)
