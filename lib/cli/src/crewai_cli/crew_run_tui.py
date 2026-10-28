@@ -73,9 +73,18 @@ def _unescape_text(s: str) -> str:
 def _try_parse_structured(text: str) -> Any | None:
     """Try JSON first, then Python repr (single-quoted dicts/lists)."""
     try:
-        return _json.loads(text)
+        obj = _json.loads(text)
     except (ValueError, TypeError, RecursionError):
         pass
+    else:
+        # Python 3.12's C decoder accepts nesting its pure-Python indent encoder
+        # cannot walk (3.13 encodes indent in C). Reject it here, as below,
+        # instead of raising inside _tick.
+        try:
+            _json.dumps(obj, indent=2, ensure_ascii=False)
+        except RecursionError:
+            return None
+        return obj
     try:
         import ast
 

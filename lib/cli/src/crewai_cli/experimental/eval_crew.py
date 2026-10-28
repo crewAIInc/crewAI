@@ -226,9 +226,9 @@ UNTRUSTED_AMP = (
 )
 
 
-def tracing_turned_off() -> bool:
-    """Has this project said no to tracing — `CREWAI_TRACING_ENABLED` false or
-    0, in its `.env` (which wins, as the run loads it) or else the environment?"""
+def _project_tracing_value() -> str:
+    """`CREWAI_TRACING_ENABLED` as the run will see it: the project's `.env`
+    (which wins, as the run loads it) or else the environment, lowercased."""
     value: str | None = None
     with contextlib.suppress(Exception):
         env_file = Path.cwd() / ".env"
@@ -236,7 +236,13 @@ def tracing_turned_off() -> bool:
             value = dotenv_values(env_file).get(TRACING_ENV_VAR)
     if value is None:
         value = os.environ.get(TRACING_ENV_VAR)
-    return str(value or "").strip().lower() in ("false", "0")
+    return str(value or "").strip().lower()
+
+
+def tracing_turned_off() -> bool:
+    """Has this project said no to tracing — `CREWAI_TRACING_ENABLED` false or
+    0, in its `.env` (which wins, as the run loads it) or else the environment?"""
+    return _project_tracing_value() in ("false", "0")
 
 
 def turn_tracing_on() -> None:
@@ -819,6 +825,9 @@ def tracing_already_on() -> bool:
     """Did somebody turn tracing on already — `CREWAI_TRACING_ENABLED=true`, or
     the consent a person gave once? A crew that sets `tracing=True` in code is
     not seen from here."""
+    # The project's `.env` beats a shell `false` the gate below would honor.
+    if _project_tracing_value() in ("true", "1"):
+        return True
     try:
         from crewai_core.user_data import is_tracing_enabled
 

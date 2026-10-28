@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from crewai_cli.shared.token_manager import TokenManager
 from crewai_cli.tools.main import ToolCommand
+from crewai_cli.version import get_crewai_tools_dependency
 from pytest import raises
 
 
@@ -56,7 +57,7 @@ def test_create_success(mock_subprocess, capsys, tool_command):
 
         with open(os.path.join("test_tool", "pyproject.toml"), "r") as f:
             content = f.read()
-            assert '"crewai[tools]>=1.15.0,<2.0.0"' in content
+            assert f'"{get_crewai_tools_dependency()}"' in content
 
         with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
             content = f.read()
@@ -341,7 +342,9 @@ def test_publish_success(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
     "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
@@ -353,7 +356,9 @@ def test_publish_success(
 def test_publish_failure(
     mock_tools_metadata,
     mock_available_exports,
+    mock_is_synced,
     mock_publish,
+    mock_fetch,
     mock_open,
     mock_listdir,
     mock_subprocess_run,
@@ -387,7 +392,9 @@ def test_publish_failure(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
     "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
@@ -399,7 +406,9 @@ def test_publish_failure(
 def test_publish_api_error(
     mock_tools_metadata,
     mock_available_exports,
+    mock_is_synced,
     mock_publish,
+    mock_fetch,
     mock_open,
     mock_listdir,
     mock_subprocess_run,
@@ -433,6 +442,7 @@ def test_publish_api_error(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
@@ -448,6 +458,7 @@ def test_publish_metadata_extraction_failure_continues_with_warning(
     mock_available_exports,
     mock_is_synced,
     mock_publish,
+    mock_fetch,
     mock_open,
     mock_listdir,
     mock_subprocess_run,

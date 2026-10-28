@@ -140,15 +140,13 @@ def _run_conversational_declarative_flow(
         )
         raise SystemExit(1)
 
+    from crewai_cli.kickoff_flow import (
+        _exit_without_chat_terminal,
+        _run_conversational_flow_tui,
+    )
+
     if not is_interactive():
-        click.secho(
-            "  This flow is conversational, which needs an interactive terminal.\n"
-            "  Drive it from Python instead: `flow.handle_turn(message, "
-            "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
-            fg="yellow",
-            err=True,
-        )
-        raise SystemExit(1)
+        _exit_without_chat_terminal()
 
     if _flow_uses_human_feedback(flow):
         # Same reason the STEPS TUI declines these: the runtime collects feedback
@@ -157,8 +155,6 @@ def _run_conversational_declarative_flow(
         # hang. A terminal REPL can, so fall back to one.
         flow.chat()
         return
-
-    from crewai_cli.kickoff_flow import _run_conversational_flow_tui
 
     _run_conversational_flow_tui(flow, definition=definition)
 

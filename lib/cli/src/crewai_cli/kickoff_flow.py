@@ -5,9 +5,11 @@ import inspect
 from pathlib import Path
 import subprocess
 import sys
-from typing import Any
+from typing import Any, NoReturn
 
 import click
+
+from crewai_cli.input_prompt import is_interactive
 
 
 def _project_script_target(script_name: str) -> str | None:
@@ -64,6 +66,22 @@ def _load_conversational_flow_from_kickoff_script() -> Any | None:
     return None
 
 
+def _exit_without_chat_terminal() -> NoReturn:
+    """Explain how to drive a conversational flow headless, then exit 1.
+
+    The chat TUI would block on a terminal that is not there. Callers check
+    ``is_interactive()`` themselves, before any fallback of their own.
+    """
+    click.secho(
+        "  This flow is conversational, which needs an interactive terminal.\n"
+        "  Drive it from Python instead: `flow.handle_turn(message, "
+        "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
+        fg="yellow",
+        err=True,
+    )
+    raise SystemExit(1)
+
+
 def _run_conversational_flow_tui(
     flow: Any, definition: str | Path | None = None
 ) -> Any:
@@ -99,6 +117,8 @@ def kickoff_flow() -> None:
     """
     flow = _load_conversational_flow_from_kickoff_script()
     if flow is not None:
+        if not is_interactive():
+            _exit_without_chat_terminal()
         _run_conversational_flow_tui(flow)
         return
 

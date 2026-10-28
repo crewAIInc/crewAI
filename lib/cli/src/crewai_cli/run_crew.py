@@ -853,12 +853,15 @@ def _run_flow_project(
         )
 
     from crewai_cli.kickoff_flow import (
+        _exit_without_chat_terminal,
         _load_conversational_flow_from_kickoff_script,
         _run_conversational_flow_tui,
     )
 
     flow = _load_conversational_flow_from_kickoff_script()
     if flow is not None:
+        if not is_interactive():
+            _exit_without_chat_terminal()
         _run_conversational_flow_tui(flow)
         return
 
