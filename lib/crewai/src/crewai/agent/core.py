@@ -102,6 +102,7 @@ from crewai.utilities.agent_utils import (
     parse_tools,
     render_text_description_and_args,
 )
+from crewai.utilities.config import process_config
 from crewai.utilities.constants import (
     CREWAI_TRAINED_AGENTS_FILE_ENV,
     TRAINED_AGENTS_DATA_FILE,
@@ -402,7 +403,13 @@ class Agent(BaseAgent):
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
         """Merge repository agent config with provided values before validation."""
-        if v is not None and (from_repository := v.get("from_repository")):
+        if v is None:
+            return v
+        # Flatten ``config`` first so a ``from_repository`` set in agents.yaml is
+        # seen here, and its config fields override the repository's values.
+        # Copy so the caller's mapping keeps its ``config`` key.
+        v = process_config(dict(v), cls)
+        if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
         return v
 

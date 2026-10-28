@@ -42,7 +42,29 @@ class PlusAPIMixin:
 
         Args:
             response: The response from the Plus API.
+
+        Raises:
+            AuthenticationRequiredError: AMP answered 401 (exit code 1).
+            SystemExit: For any other non-2xx response or a body that is not JSON.
         """
+        if response.status_code == 401:
+            # AMP also answers 401 for a valid token whose account it does not
+            # accept (no AMP user, not activated), which a new login cannot fix:
+            # its own message is the only thing that tells the cases apart.
+            try:
+                body = response.json()
+            except ValueError:
+                # A proxy or gateway in front of AMP can answer 401 with HTML or nothing.
+                body = None
+            reason = (
+                isinstance(body, dict) and (body.get("message") or body.get("error"))
+            ) or response.content.decode("utf-8", errors="replace").strip()
+            console.print("CrewAI AMP did not accept your login:", style="bold red")
+            if reason:
+                console.print(str(reason), markup=False)
+            console.print("Run 'crewai login' to sign in again.", style="bold green")
+            raise AuthenticationRequiredError(1)
+
         try:
             json_response = response.json()
         except (json.JSONDecodeError, ValueError):

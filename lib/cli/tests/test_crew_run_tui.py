@@ -37,7 +37,7 @@ from crewai.events.types.tool_usage_events import (
 )
 from crewai_cli import crew_run_tui, run_crew
 from crewai_cli.authentication.token import AuthError
-from crewai_cli.command import AuthenticationRequiredError
+from crewai_cli.command import AuthenticationRequiredError, PlusAPIMixin
 from crewai_cli.crew_run_tui import (
     _LOG_ARGS_TEXT_LIMIT,
     _LOG_RESULT_TEXT_LIMIT,
@@ -2510,7 +2510,11 @@ def test_still_not_logged_in_after_the_prompt_counts_why_and_says_so(
 
 @pytest.mark.parametrize(
     ("raised", "reason"),
-    [(KeyboardInterrupt(), "login_abandoned"), (httpx.HTTPError("access_denied"), "login_failed")],
+    [
+        (KeyboardInterrupt(), "login_abandoned"),
+        (httpx.HTTPError("access_denied"), "login_failed"),
+        (SystemExit(1), "login_timed_out"),
+    ],
 )
 def test_a_login_that_ends_badly_is_counted_and_still_raised(
     monkeypatch, deploy_usage, raised, reason
@@ -2546,6 +2550,77 @@ def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> 
 
     assert calls == ["create", "login", "create"]
     assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+def _amp_deploy_doubles(monkeypatch, *, statuses):
+    """A deploy whose creates get these AMP statuses, through the real
+    response check, and a login that succeeds."""
+    calls: list[str] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            calls.append("create")
+            status = statuses.pop(0)
+            if status != 200:
+                PlusAPIMixin._validate_response(
+                    self,
+                    httpx.Response(
+                        status,
+                        json={"error": "bad_credentials", "message": "Bad credentials"},
+                    ),
+                )
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+    return calls
+
+
+def test_a_saved_login_amp_rejects_is_replaced_and_the_deploy_retried(
+    monkeypatch, deploy_usage
+) -> None:
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[401, 200])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == ["cli_usage:deploy_login_prompted"]
+
+
+def test_amp_rejecting_a_fresh_login_stops_after_one_login(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    """A 401 a new login cannot fix (no AMP user, not activated) must not loop."""
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[401, 401])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
+    output = capsys.readouterr().out
+    assert "Bad credentials" in output
+    assert "Deploy failed: authentication is still required." in output
+
+
+def test_a_deploy_amp_refuses_for_another_reason_does_not_ask_for_login(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[403])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create"]
+    assert deploy_usage == []
+    assert "Deploy failed" in capsys.readouterr().out
 
 
 def test_the_real_logged_out_deploy_still_prompts_a_login_then_says_so(
