@@ -1141,6 +1141,25 @@ def test_litellm_path_preserves_provider_from_model_prefix(model, expected_provi
     assert llm.model == model
 
 
+@requires_litellm_python_311
+def test_litellm_fallback_loads_without_custom_tool_call_delta_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LiteLLM releases before 1.97.0 lack ChatCompletionDeltaCustomToolCall.
+
+    The fallback only needs that type for type checking, so it must still load.
+    """
+    import litellm.types.utils
+
+    monkeypatch.delattr(litellm.types.utils, "ChatCompletionDeltaCustomToolCall")
+    monkeypatch.setattr("crewai.llm._litellm_loaded", False)
+    monkeypatch.setattr("crewai.llm.LITELLM_AVAILABLE", False)
+
+    llm = LLM(model="openai/custom-finetune-model", is_litellm=False)
+
+    assert llm.is_litellm is True
+
+
 def test_litellm_keeps_provider_but_formats_multimodal_as_openai_schema():
     llm = LLM(model="anthropic/claude-3-5-haiku-20241022", is_litellm=True)
     assert llm.provider == "anthropic"
