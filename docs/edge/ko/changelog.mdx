@@ -4,6 +4,62 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 10월 27일">
+  ## v1.15.32
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.32)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 불안정한 테스트 실패 수정
+
+  ### 문서
+  - v1.15.31의 스냅샷 및 변경 로그 업데이트
+
+  ## 기여자
+
+  @lorenzejay
+
+</Update>
+
+<Update label="2026년 10월 27일">
+  ## v1.15.31
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.31)
+
+  ## 변경 사항
+
+  ### 기능
+  - 대화 흐름 컨텍스트 압축을 지원합니다.
+
+  ### 버그 수정
+  - 취약한 감사 종속성을 업데이트했습니다.
+  - 'stop'을 GPT-6 및 이후 모델에 전송하는 것을 중단했습니다.
+  - `acleanup_provider_files`에서 공급자 목록을 루프에서 분리하여 실행합니다.
+  - 잘못된 가드레일 결과에 대해 `LLMGuardrailCompletedEvent`를 발생시킵니다.
+  - 누락된 경우 이름이 변경된 통합 토큰을 명시합니다.
+  - 템플릿 보간을 통해 `output_file`에서 경로 탐색 문제를 수정했습니다.
+  - 역직렬화, SQL 주입 및 경로 탐색 취약점을 패치했습니다.
+  - 억제 후 구성된 로깅 수준을 복원합니다.
+  - 승무원을 복사할 때 체크포인트 재개 상태를 삭제합니다.
+  - `BedrockFileUploader`에서 주입된 `aioboto3` 세션을 존중합니다.
+  - 사용자 정의 템플릿과 함께 올바른 작업 슬라이스를 사용합니다.
+  - 인코딩 흐름 분석에서 스토리지 목록 실패에 대한 보호를 제공합니다.
+  - 모델 검증기와 함께 가드레일 결과/오류의 독점성을 강제합니다.
+  - Qdrant 엣지 검색에서 서버 측 카테고리를 필터링합니다.
+
+  ### 문서
+  - CLI 개념 문서에서 CrewAI AMP 링크에 HTTPS를 사용합니다.
+  - 번역된 페이지에서 영어 슬러그를 가리키는 내부 앵커 링크를 수정했습니다.
+  - 문서 예제에서 `CrewBase` 가져오기를 수정했습니다.
+
+  ## 기여자
+
+  @Kiko0301, @Trenyx, @Velmet44, @Vidit-Ostwal, @Wilson0511, @gabemilani, @iris-clawd, @joaomdmoura, @lakers-abing, @leom1919, @lester076, @lorenzejay, @subhashpolisetti
+
+</Update>
+
 <Update label="2026년 10월 23일">
   ## v1.15.30
 

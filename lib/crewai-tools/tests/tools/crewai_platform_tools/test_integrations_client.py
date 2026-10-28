@@ -373,6 +373,64 @@ def test_clipper_client_requires_platform_integration_token(
     mock_post.assert_not_called()
 
 
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "old_token"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_names_the_renamed_token_variable(mock_post: Mock) -> None:
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"CREWAI_PLATFORM_INTEGRATION_TOKEN is set, but CrewAI now reads the "
+        r"Enterprise Action Auth Token only from CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN\. "
+        r"Rename the variable",
+    ):
+        ClipperClient().execute_action(tool, {})
+
+    mock_post.assert_not_called()
+
+
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "new_token",
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "old_token",
+    },
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_ignores_the_old_token_when_the_new_one_is_set(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=200)
+    response.json.return_value = {"data": {"output": {}}}
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    ClipperClient().execute_action(tool, {})
+
+    assert mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer new_token"
+
+
 @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
