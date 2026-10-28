@@ -16,7 +16,12 @@ from crewai_core.paths import db_storage_path
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
-from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.persistence.base import (
+    DEFAULT_HISTORY_LIMIT,
+    MAX_HISTORY_LIMIT,
+    FlowPersistence,
+    FlowStateHistoryRecord,
+)
 
 
 if TYPE_CHECKING:
@@ -25,6 +30,7 @@ if TYPE_CHECKING:
 
 _SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 _SCHEMA_RETRY_DELAY_SECONDS = 0.05
+_SQLITE_MAX_INTEGER = 2**63 - 1
 
 
 def _json_default(obj: Any) -> Any:
@@ -39,6 +45,135 @@ def _json_default(obj: Any) -> Any:
     if isinstance(obj, (date, datetime)):
         return obj.isoformat()
     return str(obj)
+
+
+def _validate_page(limit: int, offset: int) -> None:
+    """Reject pagination values that are not sane non-boolean integers."""
+    if (
+        not isinstance(limit, int)
+        or isinstance(limit, bool)
+        or not 1 <= limit <= MAX_HISTORY_LIMIT
+    ):
+        raise ValueError(
+            f"limit must be an integer between 1 and {MAX_HISTORY_LIMIT}, got {limit!r}"
+        )
+    if (
+        not isinstance(offset, int)
+        or isinstance(offset, bool)
+        or not 0 <= offset <= _SQLITE_MAX_INTEGER
+    ):
+        raise ValueError(
+            f"offset must be an integer between 0 and {_SQLITE_MAX_INTEGER}, "
+            f"got {offset!r}"
+        )
+
+
+_HISTORY_QUERY = """
+SELECT id, method_name, timestamp
+FROM flow_states
+WHERE flow_uuid = ?
+ORDER BY id ASC
+LIMIT ? OFFSET ?
+"""
+
+
+def _fetch_history(
+    conn: sqlite3.Connection, flow_uuid: str, limit: int, offset: int
+) -> list[FlowStateHistoryRecord]:
+    """Run the history query on an open connection and map rows to records.
+
+    Timestamps written by older releases are naive UTC; they are normalised to
+    aware UTC so records from one database always compare with each other.
+    """
+    rows = conn.execute(_HISTORY_QUERY, (flow_uuid, limit, offset)).fetchall()
+    records: list[FlowStateHistoryRecord] = []
+    for row_id, method_name, ts in rows:
+        timestamp = datetime.fromisoformat(ts)
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+        records.append(
+            FlowStateHistoryRecord(
+                id=row_id, method_name=method_name, timestamp=timestamp
+            )
+        )
+    return records
+
+
+def _fetch_history_uri(
+    uri: str, flow_uuid: str, limit: int, offset: int
+) -> list[FlowStateHistoryRecord]:
+    """Fetch history over a URI-opened (read-only or immutable) connection."""
+    with closing(
+        sqlite3.connect(uri, uri=True, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+    ) as conn:
+        return _fetch_history(conn, flow_uuid, limit, offset)
+
+
+def read_flow_state_history(
+    db_path: str | Path,
+    flow_uuid: str,
+    *,
+    limit: int = DEFAULT_HISTORY_LIMIT,
+    offset: int = 0,
+) -> list[FlowStateHistoryRecord]:
+    """List state snapshot metadata for a flow without modifying the database.
+
+    The database is opened read-only: no database file or table is created
+    and no schema, journal mode, or stored data is changed. This makes it safe
+    for inspection tools such as the CLI. State payloads are not loaded.
+
+    Opening a WAL-mode database read-only may create ``-wal``/``-shm`` sidecar
+    files next to it. If that fails (for example because the directory is not
+    writable) and no ``-wal`` or ``-journal`` file exists, the main file holds
+    every committed row and is read as immutable instead. If either sidecar
+    exists (committed rows may still be in the WAL, or a hot journal still
+    needs rolling back), or the failure is a lock contention, the error is
+    raised rather than returning a history that may be incomplete or include
+    uncommitted rows. An immutable read disables locking and change
+    detection, so the database must not change from the sidecar check until
+    the read completes; this implementation does not synchronise the two and
+    offers no protection against a concurrent writer in that window.
+
+    Args:
+        db_path: Path to a ``SQLiteFlowPersistence`` database file.
+        flow_uuid: Unique identifier for the flow instance.
+        limit: Maximum number of records to return (1 to ``MAX_HISTORY_LIMIT``).
+        offset: Number of records to skip.
+
+    Returns:
+        Records ordered oldest first by row ID, or an empty list if the
+        database file, table, or flow does not exist.
+
+    Raises:
+        ValueError: If ``limit`` or ``offset`` is out of range.
+        sqlite3.OperationalError: If the database cannot be opened read-only.
+    """
+    _validate_page(limit, offset)
+    path = Path(db_path)
+    if not path.exists():
+        return []
+
+    resolved = path.resolve()
+    base_uri = resolved.as_uri()
+    try:
+        try:
+            return _fetch_history_uri(f"{base_uri}?mode=ro", flow_uuid, limit, offset)
+        except sqlite3.OperationalError as exc:
+            message = str(exc).lower()
+            if (
+                "no such table" in message
+                or "locked" in message
+                or Path(f"{resolved}-wal").exists()
+                or Path(f"{resolved}-journal").exists()
+            ):
+                raise
+            return _fetch_history_uri(
+                f"{base_uri}?immutable=1", flow_uuid, limit, offset
+            )
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc).lower():
+            return []
+        raise
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -245,6 +380,39 @@ class SQLiteFlowPersistence(FlowPersistence):
             result = json.loads(row[0])
             return result if isinstance(result, dict) else None
         return None
+
+    def list_state_history(
+        self,
+        flow_uuid: str,
+        *,
+        limit: int = DEFAULT_HISTORY_LIMIT,
+        offset: int = 0,
+    ) -> list[FlowStateHistoryRecord]:
+        """List metadata for every persisted state snapshot of a flow.
+
+        Uses the same connection settings as :meth:`load_state`. To inspect a
+        database without constructing a persistence instance (and so without
+        initializing its schema), use :func:`read_flow_state_history`.
+
+        Args:
+            flow_uuid: Unique identifier for the flow instance.
+            limit: Maximum number of records to return (1 to ``MAX_HISTORY_LIMIT``).
+            offset: Number of records to skip.
+
+        Returns:
+            Records ordered oldest first by row ID.
+
+        Raises:
+            ValueError: If ``limit`` or ``offset`` is out of range.
+        """
+        _validate_page(limit, offset)
+        with (
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
+        ):
+            return _fetch_history(conn, flow_uuid, limit, offset)
 
     def save_pending_feedback(
         self,
