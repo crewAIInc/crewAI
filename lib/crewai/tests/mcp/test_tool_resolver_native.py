@@ -97,3 +97,32 @@ class TestResolveNativeRuntimeError:
 
         with pytest.raises(ConnectionError, match="Failed to get native MCP tools"):
             resolver._resolve_native(http_config)
+
+class TestResolveNativeAsyncToolFilter:
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_async_tool_filter_is_awaited(self, mock_client_class, resolver):
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(
+            return_value=[
+                {"name": "read_file", "description": "Read a file"},
+                {"name": "danger_delete", "description": "Delete everything"},
+            ]
+        )
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        async def block_dangerous(_context, tool: dict) -> bool:
+            return not tool["name"].startswith("danger_")
+
+        config = MCPServerHTTP(
+            url="https://mcp.example.com/api",
+            tool_filter=block_dangerous,
+        )
+
+        tools, _ = resolver._resolve_native(config)
+        names = [tool.name for tool in tools]
+
+        assert "danger_delete" not in names
+        assert any("read_file" in name for name in names)

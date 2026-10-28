@@ -11,6 +11,7 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+import inspect
 import contextvars
 import sys
 import time
@@ -330,6 +331,27 @@ class MCPToolResolver:
             raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
         return transport, server_name
 
+
+    @staticmethod
+    def _coerce_filter_verdict(result: Any) -> bool:
+        """Normalize a tool_filter return value, awaiting async filters.
+
+        ``create_dynamic_tool_filter`` documents ``async def`` filters. Calling
+        one without awaiting leaves a truthy coroutine, so every tool passes.
+        """
+        if inspect.isawaitable(result):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                result = asyncio.run(result)  # type: ignore[arg-type]
+            else:
+                import concurrent.futures
+
+                ctx = contextvars.copy_context()
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    result = executor.submit(ctx.run, asyncio.run, result).result()
+        return bool(result)
+
     def _resolve_native(
         self, mcp_config: MCPServerConfig, server_reference: str | None = None
     ) -> tuple[list[BaseTool], list[Any]]:
@@ -429,11 +451,11 @@ class MCPToolResolver:
                                 server_name=server_name,
                                 run_context=None,
                             )
-                            if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
+                            keep = mcp_config.tool_filter(context, tool)  # type: ignore[call-arg, arg-type]
                         except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
+                            keep = mcp_config.tool_filter(tool)  # type: ignore[call-arg, arg-type]
+                        if self._coerce_filter_verdict(keep):
+                            filtered_tools.append(tool)
                     else:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
