@@ -177,6 +177,7 @@ def test_get_llm_response_summarizes_before_the_model_call() -> None:
         respect_context_window=True,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.is_context_window_overflowing_threshold.return_value = True
@@ -212,6 +213,7 @@ def test_get_llm_response_preserves_a_single_pending_user_request() -> None:
         respect_context_window=True,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.is_context_window_overflowing_threshold.return_value = True
@@ -251,6 +253,7 @@ def test_get_llm_response_continues_when_proactive_compaction_fails(
         respect_context_window=True,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.call.return_value = "response"
@@ -292,6 +295,7 @@ def test_get_llm_response_propagates_explicit_proactive_compaction_blocks(
         respect_context_window=True,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.is_context_window_overflowing_threshold.side_effect = error
@@ -316,6 +320,7 @@ def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> 
         respect_context_window=False,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.call.return_value = "response"
@@ -347,6 +352,7 @@ async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
         respect_context_window=True,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.is_context_window_overflowing_threshold.return_value = True
@@ -381,6 +387,7 @@ async def test_aget_llm_response_offloads_proactive_compaction() -> None:
         respect_context_window=True,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.is_context_window_overflowing_threshold.return_value = False
@@ -416,6 +423,7 @@ async def test_aget_llm_response_skips_preflight_when_context_respect_is_disable
         respect_context_window=False,
         before_llm_call_hooks=[],
         after_llm_call_hooks=[],
+        request_within_rpm_limit=None,
     )
     llm = MagicMock()
     llm.acall = AsyncMock(return_value="response")

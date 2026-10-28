@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from collections.abc import AsyncIterator, Iterator
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
@@ -148,6 +150,116 @@ def test_other_errors_are_not_retried() -> None:
 
 
 
+class CountingLimiter:
+    """An RPM limiter callback that records each admitted request."""
+
+    def __init__(self) -> None:
+        self.admitted = 0
+
+    def __call__(self) -> bool:
+        self.admitted += 1
+        return True
+
+
+def _executor(limiter: CountingLimiter) -> SimpleNamespace:
+    return SimpleNamespace(
+        messages=[{"role": "user", "content": "hi"}],
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+        request_within_rpm_limit=limiter,
+    )
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize(
+    ("replies", "admitted"),
+    [(("answer",), 0), (("", "answer"), 1), (("", ""), 1)],
+    ids=["no-retry", "retry", "retry-then-raise"],
+)
+def test_retry_is_admitted_by_the_rpm_limiter(
+    replies: tuple[Any, ...], admitted: int, use_async: bool
+) -> None:
+    # The caller admits the first request; only the retry is admitted here.
+    limiter = CountingLimiter()
+    llm = ScriptedLLM(*replies)
+    kwargs: dict[str, Any] = {
+        "llm": llm,
+        "messages": [],
+        "callbacks": [],
+        "printer": Printer(),
+        "executor_context": _executor(limiter),
+        "verbose": False,
+    }
+
+    with contextlib.suppress(EmptyLLMResponseError):
+        if use_async:
+            asyncio.run(aget_llm_response(**kwargs))
+        else:
+            get_llm_response(**kwargs)
+
+    assert limiter.admitted == admitted
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize(
+    ("max_rpm", "replies", "minute_waits"),
+    [(1, ("", FINAL), 1), (2, ("", FINAL), 0), (1, (FINAL,), 0)],
+    ids=["retry-over-limit", "retry-within-limit", "no-retry"],
+)
+def test_agent_max_rpm_counts_both_physical_attempts(
+    max_rpm: int, replies: tuple[Any, ...], minute_waits: int, use_async: bool
+) -> None:
+    llm = ScriptedLLM(*replies)
+    agent = _agent(llm, max_rpm=max_rpm)
+
+    with patch("crewai.utilities.rpm_controller.time") as clock:
+        result = _kickoff(agent, use_async)
+
+    assert result.raw == "hello"
+    assert llm.calls == len(replies)
+    assert clock.sleep.call_count == minute_waits
+
+
+def test_lite_agent_retry_is_admitted_by_the_rpm_limiter() -> None:
+    limiter = CountingLimiter()
+    llm = ScriptedLLM("", FINAL)
+    agent = LiteAgent(
+        role="Tester",
+        goal="Answer",
+        backstory="Tests",
+        llm=llm,
+        request_within_rpm_limit=limiter,
+    )
+
+    assert agent.kickoff("Say hello").raw == "hello"
+    assert llm.calls == 2
+    assert limiter.admitted == 2
+
+
+@pytest.mark.parametrize(
+    ("replies", "admitted"),
+    [(("Final Answer: 42",), 1), (("", "Final Answer: 42"), 2)],
+    ids=["no-retry", "retry"],
+)
+def test_max_iterations_answer_is_admitted_by_the_rpm_limiter(
+    replies: tuple[Any, ...], admitted: int
+) -> None:
+    limiter = CountingLimiter()
+    llm = ScriptedLLM(*replies)
+
+    result = handle_max_iterations_exceeded(
+        printer=Printer(),
+        messages=[],
+        llm=llm,
+        callbacks=[],
+        verbose=False,
+        request_within_rpm_limit=limiter,
+    )
+
+    assert result.output == "42"
+    assert limiter.admitted == admitted
+
+
 def test_max_iterations_answer_is_retried_once() -> None:
     llm = ScriptedLLM("", "Final Answer: 42")
 
@@ -268,7 +380,9 @@ def test_litellm_empty_then_text_retries_once_with_events_per_call(
 
 
 
-def _agent(llm: BaseLLM, tools: list[BaseTool] | None = None) -> Agent:
+def _agent(
+    llm: BaseLLM, tools: list[BaseTool] | None = None, max_rpm: int | None = None
+) -> Agent:
     return Agent(
         role="Tester",
         goal="Answer",
@@ -276,6 +390,7 @@ def _agent(llm: BaseLLM, tools: list[BaseTool] | None = None) -> Agent:
         llm=llm,
         tools=tools or [],
         max_retry_limit=0,
+        max_rpm=max_rpm,
         verbose=False,
     )
 
@@ -389,3 +504,35 @@ def test_lite_agent_raises_typed_error_after_two_empty_answers() -> None:
         agent.kickoff("Say hello")
 
     assert llm.calls == 2
+
+
+def test_lite_agent_forced_final_answer_is_admitted_by_the_rpm_limiter() -> None:
+    limiter = CountingLimiter()
+    llm = ScriptedLLM("", FINAL)
+    agent = LiteAgent(
+        role="Tester",
+        goal="Answer",
+        backstory="Tests",
+        llm=llm,
+        max_iterations=0,
+        request_within_rpm_limit=limiter,
+    )
+
+    assert agent.kickoff("Say hello").raw == "hello"
+    assert llm.calls == 2
+    assert limiter.admitted == 2
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_agent_forced_final_answer_counts_against_max_rpm(use_async: bool) -> None:
+    action = 'Thought: look\nAction: lookup\nAction Input: {"term": "x"}'
+    llm = ScriptedLLM(action, "", FINAL)
+    agent = _agent(llm, [LookupTool(calls=[])], max_rpm=2)
+    agent.max_iter = 1
+
+    with patch("crewai.utilities.rpm_controller.time") as clock:
+        result = _kickoff(agent, use_async)
+
+    assert result.raw == "hello"
+    assert llm.calls == 3
+    assert clock.sleep.call_count == 1
