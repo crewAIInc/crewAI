@@ -981,6 +981,12 @@ uv run kickoff
 
 O flow será executado, e você verá a saída no console.
 
+Para executar o flow com outros inputs, passe-os como um objeto JSON. O `crewai run` inicia o flow com eles, da mesma forma que um flow implantado é iniciado, e eles definem os campos de estado correspondentes:
+
+```bash
+crewai run --inputs '{"topic": "Quantum Computing"}'
+```
+
 ## Plotando Flows
 
 Visualizar seus fluxos de trabalho de IA proporciona insights valiosos sobre a estrutura e os caminhos de execução dos flows. O CrewAI oferece uma ferramenta de visualização poderosa que permite gerar plots interativos dos flows, facilitando o entendimento e a otimização dos workflows de IA.
