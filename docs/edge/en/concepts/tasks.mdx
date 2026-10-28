@@ -745,7 +745,7 @@ In this example:
 
 By using output_pydantic or output_json, you ensure that your tasks produce outputs in a consistent and structured format, making it easier to process and utilize the data within your application or across multiple tasks.
 
-When the task's agent has tools, the model is not given the schema while it can still call tools. Once it gives its final answer, CrewAI checks that answer against the model. If it does not fit, CrewAI asks once more, over the same conversation, with the schema and without tools, so exact values from tool results reach the structured output. An answer that already fits costs no extra call. The same applies to `Agent.kickoff(response_format=...)`.
+When the task's agent has tools, its requests carry no enforced response schema while tools are offered; the schema reaches the model only in the prompt. Once the agent gives its final answer, CrewAI checks that answer against the model. If it does not fit, CrewAI asks once more, over the same conversation, with the schema and without tools, so exact values from tool results reach the structured output. The task's `raw` output is then that answer as JSON, and a custom `converter_cls` is not used. With streaming on, the stream carries the text answer and then the structured one. An answer that already fits costs no extra call, and if the extra request fails, the text answer is kept and converted as before. The same applies to `Agent.kickoff(response_format=...)`.
 
 ## Integrating Tools with Tasks
 

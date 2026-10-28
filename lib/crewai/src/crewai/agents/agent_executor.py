@@ -1877,13 +1877,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 executor_context=self,
                 verbose=self.agent.verbose,
             )
-        # Providers raise ValueError (or pydantic's ValidationError) when the
-        # reply does not fit the schema, and get_llm_response does for an empty
-        # reply. The free-text answer is still converted afterwards, as before.
-        except ValueError as e:
+        except HookAborted:
+            raise
+        # The run already has its answer, so no failure of this optional request
+        # may fail it: a reply that does not fit the schema, or a provider that
+        # rejects the request shape, keeps the text answer, which is converted
+        # afterwards as before. The provider logs and emits the failure itself.
+        except Exception as e:
             if self.agent.verbose:
                 PRINTER.print(
-                    content=f"Structured final answer failed ({e}), keeping the text answer",
+                    content=f"Structured final answer failed ({type(e).__name__}: {e}), keeping the text answer",
                     color="yellow",
                 )
             return answer

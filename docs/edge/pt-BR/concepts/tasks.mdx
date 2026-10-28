@@ -670,7 +670,7 @@ Neste exemplo:
 
 Utilizando `output_pydantic` ou `output_json`, você garante que suas tarefas produzam saídas em um formato estruturado e consistente, facilitando o processamento e uso dos dados na sua aplicação ou entre múltiplas tarefas.
 
-Quando o agente da tarefa tem ferramentas, o modelo não recebe o schema enquanto ainda pode chamá-las. Assim que ele dá a resposta final, o CrewAI verifica se ela segue o modelo. Se não seguir, o CrewAI pede mais uma vez, na mesma conversa, com o schema e sem ferramentas, para que os valores exatos dos resultados das ferramentas cheguem à saída estruturada. Uma resposta que já segue o modelo não custa nenhuma chamada extra. O mesmo vale para `Agent.kickoff(response_format=...)`.
+Quando o agente da tarefa tem ferramentas, suas requisições não carregam um schema de resposta imposto enquanto as ferramentas são oferecidas; o schema chega ao modelo apenas no texto do prompt. Assim que o agente dá a resposta final, o CrewAI verifica se ela segue o modelo. Se não seguir, o CrewAI pede mais uma vez, na mesma conversa, com o schema e sem ferramentas, para que os valores exatos dos resultados das ferramentas cheguem à saída estruturada. A saída `raw` da tarefa passa então a ser essa resposta em JSON, e um `converter_cls` personalizado não é usado. Com streaming ativado, o stream traz a resposta em texto e depois a estruturada. Uma resposta que já segue o modelo não custa nenhuma chamada extra e, se a requisição extra falhar, a resposta em texto é mantida e convertida como antes. O mesmo vale para `Agent.kickoff(response_format=...)`.
 
 ## Integrando Ferramentas com Tarefas
 

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from crewai import Agent, Crew, Task
 from crewai.events import crewai_event_bus
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool
 
@@ -243,6 +244,79 @@ def test_text_answer_is_kept_when_the_schema_request_gives_no_instance(
     assert llm.schema_calls[0].tools is None
 
 
+class ProviderBadRequest(Exception):
+    """Stands in for a provider SDK's HTTP 400, which is not a ValueError."""
+
+
+class RejectsToolHistoryLLM(ScriptedLLM):
+    """Rejects a schema request carrying tool history and no tools, as Anthropic does."""
+
+    def call(
+        self,
+        messages: Any,
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        reply = super().call(
+            messages, tools=tools, response_model=response_model, **kwargs
+        )
+        if (
+            response_model is not None
+            and tools is None
+            and any(message.get("role") == "tool" for message in messages)
+        ):
+            raise ProviderBadRequest(
+                "Requests which include tool_use or tool_result blocks must define tools."
+            )
+        return reply
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_provider_error_on_the_schema_request_keeps_the_task_answer(
+    mode: str,
+) -> None:
+    llm = RejectsToolHistoryLLM(final_answer=PROSE)
+
+    result = _run_crew(llm, mode)
+
+    assert len(llm.schema_calls) == 1
+    # The output converter still fits the text answer, as it does without tools.
+    assert result.raw == PROSE
+    assert result.pydantic == EXACT
+
+
+def test_provider_error_on_the_schema_request_keeps_the_kickoff_answer() -> None:
+    llm = ScriptedLLM(
+        final_answer=PROSE,
+        structured_reply=ProviderBadRequest("json_schema response_format unsupported"),
+    )
+
+    result = _agent(llm).kickoff(
+        "Why did the nightly export fail?", response_format=Findings
+    )
+
+    assert result.raw == PROSE
+    assert len(llm.schema_calls) == 1
+
+
+class AbortsSchemaRequestLLM(ScriptedLLM):
+    """A hook denies the agent's schema request; the converter's would succeed."""
+
+    def call(self, messages: Any, **kwargs: Any) -> Any:
+        reply = super().call(messages, **kwargs)
+        if kwargs.get("response_model") is not None and kwargs.get("from_agent"):
+            raise HookAborted("policy denied", source="test-policy")
+        return reply
+
+
+def test_hook_abort_on_the_schema_request_is_not_swallowed() -> None:
+    llm = AbortsSchemaRequestLLM(final_answer=PROSE)
+
+    with pytest.raises(HookAborted, match="policy denied"):
+        _agent(llm).kickoff("Why did the nightly export fail?", response_format=Findings)
+
+
 def test_kickoff_response_format_gets_the_structured_answer() -> None:
     llm = ScriptedLLM(final_answer=PROSE)
 
@@ -271,3 +345,36 @@ def test_agent_without_tools_still_gets_the_schema_on_its_only_call() -> None:
     assert result.pydantic == EXACT
     assert len(llm.calls) == 1
     assert llm.calls[0].response_model is Findings
+
+
+class ChunkingLLM(ScriptedLLM):
+    """Streams each text or structured reply as one chunk, as a provider would."""
+
+    def call(self, messages: Any, **kwargs: Any) -> Any:
+        reply = super().call(messages, **kwargs)
+        if self.stream and kwargs.get("from_agent") is not None:
+            text = reply.model_dump_json() if isinstance(reply, BaseModel) else reply
+            if isinstance(text, str):
+                self._emit_stream_chunk_event(
+                    text,
+                    from_task=kwargs.get("from_task"),
+                    from_agent=kwargs.get("from_agent"),
+                )
+        return reply
+
+
+def test_stream_carries_the_text_answer_then_the_structured_one() -> None:
+    llm = ChunkingLLM(final_answer=PROSE)
+    agent = _agent(llm)
+    task = Task(
+        description="Why did the nightly export fail?",
+        expected_output="The failing job, quoted exactly",
+        output_pydantic=Findings,
+        agent=agent,
+    )
+    streaming = Crew(agents=[agent], tasks=[task], stream=True, verbose=False).kickoff()
+
+    chunks = [chunk.content for chunk in streaming]
+
+    assert chunks == [PROSE, EXACT.model_dump_json()]
+    assert streaming.result.pydantic == EXACT
