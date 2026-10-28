@@ -104,6 +104,23 @@ There are different places in CrewAI code where you can specify the model to use
   </Tab>
 </Tabs>
 
+### Override vision capability detection
+
+CrewAI determines whether an LLM supports vision and other multimodal file inputs from provider-specific checks and its bundled model capability data. Set `supports_vision` only when you need to override that decision, such as when an Azure deployment uses a custom name that CrewAI cannot identify.
+
+`supports_vision` defaults to `None`, which lets CrewAI infer support. Set it to `True` to allow multimodal file inputs, or `False` to reject them. An explicit value always overrides CrewAI's detected capability.
+
+```python
+from crewai import LLM
+
+llm = LLM(
+    model="azure/vision-production",  # Custom Azure deployment name
+    supports_vision=True,
+)
+```
+
+This setting controls CrewAI's capability validation; it does not change the provider endpoint, request protocol, or which file types the provider accepts.
+
 <Info>
   CrewAI provides native SDK integrations for OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, and Snowflake Cortex — no extra install needed beyond the provider-specific extras (e.g. `uv add "crewai[openai]"`).
 

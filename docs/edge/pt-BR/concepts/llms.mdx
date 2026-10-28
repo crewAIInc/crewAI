@@ -97,6 +97,23 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
   </Tab>
 </Tabs>
 
+### Substituir a detecção de capacidade de visão
+
+O CrewAI determina se um LLM oferece suporte a visão e a outras entradas de arquivos multimodais usando verificações específicas do provedor e dados de capacidade de modelo incluídos. Defina `supports_vision` apenas quando precisar substituir essa decisão, por exemplo, quando uma implantação do Azure usa um nome personalizado que o CrewAI não consegue identificar.
+
+`supports_vision` tem como padrão `None`, permitindo que o CrewAI infira o suporte. Defina como `True` para permitir entradas de arquivos multimodais ou como `False` para rejeitá-las. Um valor explícito sempre substitui a capacidade detectada pelo CrewAI.
+
+```python
+from crewai import LLM
+
+llm = LLM(
+    model="azure/vision-production",  # Nome de implantação personalizada do Azure
+    supports_vision=True,
+)
+```
+
+Essa configuração controla a validação de capacidade do CrewAI; ela não altera o endpoint do provedor, o protocolo da solicitação nem os tipos de arquivo aceitos pelo provedor.
+
 <Info>
   O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock e Snowflake Cortex — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
 
