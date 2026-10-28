@@ -874,6 +874,30 @@ def test_get_platform_token_from_login_signs_in_then_retries(monkeypatch) -> Non
     authentication_command.login.assert_called_once_with()
 
 
+def test_get_platform_token_from_login_stops_when_the_login_times_out(
+    monkeypatch,
+) -> None:
+    """A timed-out login exits cleanly instead of retrying into an AuthError."""
+    attempts: list[bool] = []
+
+    def get_token() -> str:
+        attempts.append(True)
+        raise json_crew.AuthError("No token found")
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    authentication_command.login.side_effect = SystemExit(1)
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        json_crew._get_platform_token_from_login()
+
+    assert exc_info.value.code == 1
+    assert attempts == [True]
+
+
 def test_get_platform_token_from_login_reauthenticates_an_expired_login(
     monkeypatch,
 ) -> None:

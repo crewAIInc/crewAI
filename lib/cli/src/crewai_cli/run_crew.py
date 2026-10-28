@@ -525,6 +525,7 @@ DeployButtonEvent = Literal[
     "deploy_stopped:login_still_required",
     "deploy_stopped:login_abandoned",
     "deploy_stopped:login_failed",
+    "deploy_stopped:login_timed_out",
 ]
 
 
@@ -613,6 +614,9 @@ def _chain_deploy() -> None:
             AuthenticationCommand().login()
         except KeyboardInterrupt:
             _record_deploy_button("deploy_stopped:login_abandoned")
+            raise
+        except SystemExit:
+            _record_deploy_button("deploy_stopped:login_timed_out")
             raise
         except Exception:
             _record_deploy_button("deploy_stopped:login_failed")

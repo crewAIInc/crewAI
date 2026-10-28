@@ -2510,7 +2510,11 @@ def test_still_not_logged_in_after_the_prompt_counts_why_and_says_so(
 
 @pytest.mark.parametrize(
     ("raised", "reason"),
-    [(KeyboardInterrupt(), "login_abandoned"), (httpx.HTTPError("access_denied"), "login_failed")],
+    [
+        (KeyboardInterrupt(), "login_abandoned"),
+        (httpx.HTTPError("access_denied"), "login_failed"),
+        (SystemExit(1), "login_timed_out"),
+    ],
 )
 def test_a_login_that_ends_badly_is_counted_and_still_raised(
     monkeypatch, deploy_usage, raised, reason
