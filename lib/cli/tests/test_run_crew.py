@@ -1218,6 +1218,144 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
     assert calls == [("kickoff", {"entity_type": "flow"})]
 
 
+@pytest.fixture
+def python_flow_project(tmp_path, monkeypatch):
+    """Write a Python flow project whose `kickoff` script lives in `main.py`,
+    and run from it inside its env (as `uv run crewai run` would)."""
+    package = f"inputs_probe_{tmp_path.name.replace('-', '_')}"
+
+    def write(main_py: str, *, kickoff_script: bool = True) -> Path:
+        scripts = f'[project.scripts]\nkickoff = "{package}.main:kickoff"\n'
+        (tmp_path / "pyproject.toml").write_text(
+            f'[project]\nname = "{package}"\n'
+            + (scripts if kickoff_script else "")
+            + '[tool.crewai]\ntype = "flow"\n'
+        )
+        source = tmp_path / "src" / package
+        source.mkdir(parents=True)
+        (source / "__init__.py").write_text("")
+        (source / "main.py").write_text(main_py)
+        return tmp_path
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    yield write
+    for name in [m for m in sys.modules if m.split(".")[0] == package]:
+        del sys.modules[name]
+
+
+_TWO_FLOWS = """
+from crewai.flow import Flow, start
+
+class FirstFlow(Flow):
+    @start()
+    def go(self):
+        return "first"
+
+class SecondFlow(Flow):
+    @start()
+    def go(self):
+        return "second"
+
+def kickoff():
+    FirstFlow().kickoff()
+"""
+
+_CONVERSATIONAL_FLOW = """
+from crewai.flow import Flow
+
+class ChatFlow(Flow):
+    conversational = True
+
+def kickoff():
+    ChatFlow().kickoff()
+"""
+
+
+def test_run_crew_reruns_python_flow_inputs_inside_the_project_env(
+    tmp_path, monkeypatch
+):
+    """Outside the project env, `--inputs` re-runs `crewai run` there, as a
+    declarative flow does, so the flow imports with the project's dependencies."""
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo"\n')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
+    monkeypatch.setattr(
+        run_crew_module, "read_toml", lambda: {"tool": {"crewai": {"type": "flow"}}}
+    )
+    commands = []
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.subprocess.run",
+        lambda command, **kwargs: commands.append(command),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *a, **k: pytest.fail("ran the kickoff script instead of the flow"),
+    )
+
+    run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+    assert commands == [
+        ["uv", "run", "crewai", "run", "--inputs", '{"topic": "Quantum"}']
+    ]
+
+
+@pytest.mark.parametrize(
+    ("inputs", "message"),
+    [
+        ("{bad", "Invalid --inputs JSON: Expecting property name"),
+        ("[1]", "Invalid --inputs JSON: expected an object."),
+    ],
+)
+def test_run_crew_rejects_bad_python_flow_inputs_before_running(
+    monkeypatch, capsys, inputs, message
+):
+    monkeypatch.setattr(
+        run_crew_module, "read_toml", lambda: {"tool": {"crewai": {"type": "flow"}}}
+    )
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.subprocess.run",
+        lambda *a, **k: pytest.fail("started the project env for invalid inputs"),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module.run_crew(inputs=inputs)
+
+    assert exc_info.value.code == 1
+    assert message in capsys.readouterr().err
+
+
+def test_run_crew_inputs_name_every_flow_when_main_defines_two(python_flow_project):
+    python_flow_project(_TWO_FLOWS)
+
+    with pytest.raises(
+        click.UsageError,
+        match=r"exactly one Flow class defined in inputs_probe_\w+\.main; "
+        r"found: FirstFlow, SecondFlow",
+    ):
+        run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+
+def test_run_crew_inputs_refuse_a_conversational_flow(python_flow_project):
+    python_flow_project(_CONVERSATIONAL_FLOW)
+
+    with pytest.raises(
+        click.UsageError, match="not supported for a conversational flow"
+    ):
+        run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+
+def test_run_crew_inputs_need_a_kickoff_script(python_flow_project):
+    python_flow_project(_TWO_FLOWS, kickoff_script=False)
+
+    with pytest.raises(
+        click.UsageError, match=r"needs a `kickoff` script in \[project\.scripts\]"
+    ):
+        run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+
 def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
     class Flow:
         pass

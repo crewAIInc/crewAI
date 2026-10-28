@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 from types import ModuleType
 
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 import pytest
 from pytest import MonkeyPatch
 import tomli
@@ -159,3 +159,99 @@ def test_scaffolded_flow_run_with_trigger_rejects_a_missing_payload(
 
     with pytest.raises(Exception, match="No trigger payload provided"):
         scaffolded_flow_main.run_with_trigger()
+
+
+def _written_post() -> str:
+    return Path("output/post.md").read_text(encoding="utf-8")
+
+
+def _run_in_project_env(
+    tmp_path: Path, monkeypatch: MonkeyPatch, *args: str
+) -> Result:
+    """`crewai run` from the scaffolded project, as `uv run crewai run` runs it."""
+    monkeypatch.chdir(tmp_path / "research_flow")
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    return CliRunner().invoke(crewai, ["run", *args])
+
+
+def test_crewai_run_inputs_kick_off_the_scaffolded_flow(
+    scaffolded_flow_main: ModuleType, tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    result = _run_in_project_env(
+        tmp_path, monkeypatch, "--inputs", '{"topic": "Quantum"}'
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _written_post() == "# Post on Quantum"
+
+
+def test_crewai_run_inputs_reach_a_flow_whose_kickoff_ignores_them(
+    scaffolded_flow_main: ModuleType, tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    """A project whose `kickoff()` was written before `--inputs` reached Python
+    flows: the flow class is kicked off directly, as AMP does, so the inputs
+    still arrive instead of the run silently using defaults."""
+    monkeypatch.setattr(
+        scaffolded_flow_main,
+        "kickoff",
+        lambda: scaffolded_flow_main.ContentFlow().kickoff(),
+    )
+
+    result = _run_in_project_env(
+        tmp_path, monkeypatch, "--inputs", '{"topic": "Quantum"}'
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _written_post() == "# Post on Quantum"
+
+
+def test_scaffolded_flow_kickoff_without_inputs_uses_default_topic(
+    scaffolded_flow_main: ModuleType, monkeypatch: MonkeyPatch
+):
+    monkeypatch.setattr(sys, "argv", ["kickoff"])
+
+    scaffolded_flow_main.kickoff()
+
+    assert _written_post() == "# Post on AI Agents"
+
+
+def test_scaffolded_flow_start_step_keeps_inputs_passed_to_flow_kickoff(
+    scaffolded_flow_main: ModuleType,
+):
+    # AMP calls `YourFlow().kickoff(inputs=...)` directly, not main.py's kickoff().
+    scaffolded_flow_main.ContentFlow().kickoff(inputs={"topic": "Robots"})
+
+    assert _written_post() == "# Post on Robots"
+
+
+def test_scaffolded_flow_run_with_trigger_uses_payload_topic(
+    scaffolded_flow_main: ModuleType, monkeypatch: MonkeyPatch
+):
+    monkeypatch.setattr(sys, "argv", ["run_with_trigger", '{"topic": "Rockets"}'])
+
+    scaffolded_flow_main.run_with_trigger()
+
+    assert _written_post() == "# Post on Rockets"
+
+
+def test_scaffolded_flow_run_with_trigger_without_topic_keeps_default(
+    scaffolded_flow_main: ModuleType, monkeypatch: MonkeyPatch
+):
+    monkeypatch.setattr(sys, "argv", ["run_with_trigger", '{"source": "slack"}'])
+
+    scaffolded_flow_main.run_with_trigger()
+
+    assert _written_post() == "# Post on AI Agents"
+
+
+def test_scaffolded_flow_docs_tell_how_to_pass_inputs(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Demo Flow")
+
+    agents_md = (tmp_path / "demo_flow" / "AGENTS.md").read_text(encoding="utf-8")
+    readme = (tmp_path / "demo_flow" / "README.md").read_text(encoding="utf-8")
+    assert "`crewai run --inputs '{\"topic\":\"...\"}'`" in agents_md
+    assert "crewai run --inputs '{\"topic\": \"Quantum Computing\"}'" in readme
+    assert "uv run kickoff '" not in agents_md + readme
