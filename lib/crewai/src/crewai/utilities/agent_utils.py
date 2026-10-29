@@ -12,6 +12,7 @@ import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
+import warnings
 
 from crewai_core.printer import ColoredText, Printer
 from crewai_core.settings import Settings
@@ -2064,6 +2065,29 @@ def check_repeated_tool_call(
             crew=crew,
         )
     return ""
+
+
+def summarize_messages(
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+    callbacks: list[TokenCalcHandler],
+    verbose: bool = True,
+) -> None:
+    """Deprecated: use ``crewai.llms.context_window.summarize_messages``.
+
+    Kept with its pre-1.15.29 argument order (``messages`` before ``llm``);
+    the replacement takes ``llm`` first.
+    """
+    warnings.warn(
+        "crewai.utilities.agent_utils.summarize_messages is deprecated. "
+        "Use crewai.llms.context_window.summarize_messages(llm, messages, "
+        "callbacks, verbose), which takes llm first.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    from crewai.llms.context_window import summarize_messages as _summarize_messages
+
+    _summarize_messages(llm, messages, callbacks, verbose)
 
 
 def repeated_tool_call_limit_reached(counts: dict[int, int]) -> bool:

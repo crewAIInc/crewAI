@@ -149,7 +149,6 @@ def _ensure_litellm() -> bool:
             get_supported_openai_params as _get_supported_openai_params,
         )
         from litellm.types.utils import (
-            ChatCompletionDeltaCustomToolCall as _ChatCompletionDeltaCustomToolCall,
             ChatCompletionDeltaToolCall as _ChatCompletionDeltaToolCall,
             Choices as _Choices,
             Delta as _LiteLLMDelta,
@@ -170,11 +169,20 @@ def _ensure_litellm() -> bool:
         ModelResponseStream = _ModelResponseStream  # type: ignore[misc]
         LiteLLMStreamingChoices = _LiteLLMStreamingChoices  # type: ignore[misc]
         get_supported_openai_params = _get_supported_openai_params
-        ChatCompletionDeltaCustomToolCall = _ChatCompletionDeltaCustomToolCall  # type: ignore[misc]
         ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall  # type: ignore[misc]
         Function = _Function  # type: ignore[misc]
         ModelResponse = _ModelResponse  # type: ignore[misc]
         supports_response_schema = _supports_response_schema
+
+        try:
+            # Added in litellm 1.100; only used in a type annotation.
+            from litellm.types.utils import (
+                ChatCompletionDeltaCustomToolCall as _ChatCompletionDeltaCustomToolCall,
+            )
+
+            ChatCompletionDeltaCustomToolCall = _ChatCompletionDeltaCustomToolCall  # type: ignore[misc]
+        except ImportError:
+            pass
 
         _litellm.suppress_debug_info = True
         LITELLM_AVAILABLE = True
