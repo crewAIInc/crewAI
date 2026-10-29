@@ -44,6 +44,56 @@ def test_persist_is_in_flow_flow_star_exports():
     assert "persist" in flow.__all__
 
 
+def test_experimental_agent_executor_attribute_still_resolves():
+    """1.15.28 and earlier taught `from crewai.experimental import AgentExecutor`."""
+    from crewai.agents.agent_executor import AgentExecutor
+    import crewai.experimental as experimental
+
+    for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
+        with pytest.warns(DeprecationWarning, match="crewai.agents.agent_executor"):
+            assert getattr(experimental, name) is AgentExecutor
+
+
+def test_experimental_agent_executor_module_still_imports():
+    from crewai.agents.agent_executor import AgentExecutor, AgentExecutorState
+
+    sys.modules.pop("crewai.experimental.agent_executor", None)
+    with pytest.warns(DeprecationWarning, match="crewai.agents.agent_executor"):
+        legacy = importlib.import_module("crewai.experimental.agent_executor")
+
+    assert legacy.AgentExecutor is AgentExecutor
+    assert legacy.AgentExecutorState is AgentExecutorState
+
+
+def test_removed_crew_agent_executor_import_names_the_replacement():
+    with pytest.raises(ImportError, match=r"crewai\.agents\.agent_executor\.AgentExecutor"):
+        from crewai.agents import CrewAgentExecutor  # noqa: F401
+
+
+def test_agent_utils_summarize_messages_keeps_its_old_argument_order(monkeypatch):
+    """The replacement takes ``llm`` first; the old helper took ``messages`` first."""
+    from crewai.llms import context_window
+    from crewai.utilities import agent_utils
+
+    seen = {}
+
+    def fake_summarize(llm, messages, callbacks, verbose):
+        seen.update(llm=llm, messages=messages, callbacks=callbacks, verbose=verbose)
+
+    monkeypatch.setattr(context_window, "summarize_messages", fake_summarize)
+    llm, messages, callbacks = object(), [{"role": "user", "content": "hi"}], []
+
+    with pytest.warns(DeprecationWarning, match="llm first"):
+        agent_utils.summarize_messages(messages, llm, callbacks)
+
+    assert seen == {
+        "llm": llm,
+        "messages": messages,
+        "callbacks": callbacks,
+        "verbose": True,
+    }
+
+
 # Modules whose namespace `crewai/__init__.py` extends with base_agent's globals
 # to resolve forward refs. base_agent itself is the source, so it is not listed.
 REBUILT_MODULES = [
