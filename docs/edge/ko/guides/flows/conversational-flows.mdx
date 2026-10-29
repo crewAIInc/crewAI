@@ -293,6 +293,7 @@ def kickoff() -> None:
 |------|--------|------|
 | `system_prompt` | i18n `slices.conversational_system_prompt` | 빌트인 `converse_turn`이 사용하는 system 메시지. 빈 문자열(`""`)을 전달하면 system 메시지를 끕니다. |
 | `llm` | `None` | 대화용 LLM (빌트인 `converse_turn`이 사용하고 router 폴백도 됨). |
+| `respect_context_window` | `True` | 모델의 컨텍스트 한도에 가까워지면 기본 챗 및 router 요청을 자동으로 압축하고, 컨텍스트 한도 오류 후 한 번 재시도합니다. `False`로 비활성화합니다. |
 | `router` | `None` | 선택적 `RouterConfig` 재정의. 커스텀 listener와 결정 가능한 LLM이 있으면 생략해도 라우팅이 자동 활성화됩니다. |
 | `answer_from_history_prompt` | 프레임워크 기본값 | **사용 중단됨.** `converse` system prompt를 사용하거나 `converse_turn()`을 재정의하세요. |
 | `answer_from_history_llm` | `None` | **사용 중단됨.** `llm`을 사용하세요. `converse`는 이미 정식 기록을 전달받습니다. |
@@ -313,6 +314,8 @@ def kickoff() -> None:
 커스텀 라우트가 없으면 턴은 `converse`로 이어집니다. 커스텀 라우트와 대화/router LLM이 있으면 프레임워크가 기본 `RouterConfig`를 합성합니다. prompt, 라우트 목록, 설명, fallback 동작을 바꿔야 할 때만 명시적으로 제공하세요. `default_intents`를 설정하면 레거시 사전 분류 경로를 사용합니다.
 
 대화 LLM을 설정하지 않으면 내장 `converse_turn`은 답변을 생성하는 대신 설정 안내 placeholder를 반환합니다.
+
+`BaseLLM` 모델에서는 기본 `converse`, `answer_from_history`, router 호출이 공통 컨텍스트 요약기를 재사용합니다. 압축은 system 메시지를 보존하고 요약 뒤에 최신 사용자 메시지를 원문 그대로 다시 추가하며, 표시 및 영속화를 위한 `state.messages`를 그대로 유지합니다. 각 턴은 자체 모델 요청을 구성하므로 다시 요약할 수 있습니다. 내부 요약은 답변 텍스트로 스트리밍되지 않으며 기존 컨텍스트 요약 이벤트로 진행 상황을 알립니다. `call()`만 구현한 사용자 정의 객체는 기존 동작을 유지합니다. 레거시 `intents=` / `default_intents` 사전 분류와 사용자 정의 라우트 핸들러는 각자의 컨텍스트 처리를 유지합니다.
 
 ### `RouterConfig`와 자동 생성되는 라우트 카탈로그
 

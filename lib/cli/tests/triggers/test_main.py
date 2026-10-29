@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import httpx
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.triggers.main import TriggersCommand
 
 
@@ -68,6 +69,21 @@ class TestTriggersCommand(unittest.TestCase):
             self.triggers_command.list_triggers()
 
         mock_console_print.assert_any_call("[bold red]Error fetching triggers: API Error[/bold red]")
+
+    def test_list_triggers_unauthorized_asks_for_login(self):
+        """Not folded into "Error fetching triggers": the login hint survives."""
+        self.mock_client.get_triggers.return_value = httpx.Response(
+            401, json={"error": "bad_credentials", "message": "Bad credentials"}
+        )
+
+        with patch("crewai_cli.command.console.print") as mock_console_print:
+            with self.assertRaises(AuthenticationRequiredError):
+                self.triggers_command.list_triggers()
+
+        mock_console_print.assert_any_call("Bad credentials", markup=False)
+        mock_console_print.assert_any_call(
+            "Run 'crewai login' to sign in again.", style="bold green"
+        )
 
     @patch("crewai_cli.triggers.main.console.print")
     def test_execute_with_trigger_invalid_format(self, mock_console_print):
