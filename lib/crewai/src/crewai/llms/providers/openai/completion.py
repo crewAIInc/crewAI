@@ -2577,7 +2577,6 @@ class OpenAICompletion(BaseLLM):
 
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
                 usage_data = self._extract_openai_token_usage(completion_chunk)
-                continue
 
             if not completion_chunk.choices:
                 continue
@@ -2862,7 +2861,6 @@ class OpenAICompletion(BaseLLM):
 
                 if hasattr(chunk, "usage") and chunk.usage:
                     usage_data = self._extract_openai_token_usage(chunk)
-                    continue
 
                 if not chunk.choices:
                     continue
@@ -2929,7 +2927,6 @@ class OpenAICompletion(BaseLLM):
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage_data = self._extract_openai_token_usage(chunk)
-                continue
 
             if not chunk.choices:
                 continue
