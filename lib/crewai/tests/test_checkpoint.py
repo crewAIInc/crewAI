@@ -21,6 +21,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.memory.encoding_flow import EncodingFlow
+from crewai.memory.recall_flow import RecallFlow
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -396,6 +398,28 @@ class TestFlowInitialStateSerialization:
             raw, context={"from_checkpoint": True}
         )
         assert restored.root[0].initial_state == {"id": "x", "foo": "bar"}
+
+    @pytest.mark.parametrize(
+        ("flow_cls", "state_title"),
+        [(RecallFlow, "RecallState"), (EncodingFlow, "EncodingState")],
+    )
+    def test_memory_flow_class_ref_serializes_and_round_trips(
+        self, flow_cls: type[Flow], state_title: str
+    ) -> None:
+        """Memory flows redeclare ``initial_state``; it must keep the JSON serializer."""
+        flow = flow_cls(storage=MagicMock(), llm=MagicMock(), embedder=MagicMock())
+
+        raw = RuntimeState(root=[flow]).model_dump_json()
+        wrapped = json.loads(raw)["entities"][0]["initial_state"]
+        assert wrapped[_INITIAL_STATE_CLASS_MARKER].get("title") == state_title
+
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+        rehydrated = restored.root[0].initial_state
+        assert isinstance(rehydrated, type)
+        assert issubclass(rehydrated, BaseModel)
+        assert "id" in rehydrated.model_fields
 
 
 
