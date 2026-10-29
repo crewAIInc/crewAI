@@ -788,6 +788,40 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Wally">
+    Wally는 OpenAI 호환 API를 제공하므로 CrewAI는 사용자 지정 `base_url`과 함께 네이티브 OpenAI 클라이언트로
+    연결합니다. LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    WALLY_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    import os
+
+    llm = LLM(
+        model="openai/glm-5.3-flash",
+        base_url="https://inference.runanywhere.ai/v1",
+        api_key=os.getenv("WALLY_API_KEY"),
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Wally 특징:
+      - 오픈 웨이트 모델(GLM, DeepSeek, Kimi, MiniMax)을 위한 빠른 추론
+      - 도구 호출, 스트리밍, JSON 스키마 구조화 출력 지원
+      - 최대 1M 토큰 컨텍스트 윈도우
+    </Info>
+
+    `openai/` 접두사는 호출을 네이티브 OpenAI 클라이언트로 라우팅하며, 그 뒤에 Wally 모델 ID가 옵니다
+    (예: `glm-5.3-flash` 또는 `deepseek-v4.1-flash`). 현재 모델, 컨텍스트 길이, 가격은
+    [Wally 가격](https://www.runwally.com/pricing)과
+    [API 문서](https://docs.runanywhere.ai/wally-cloud/api)를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
