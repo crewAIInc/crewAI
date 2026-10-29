@@ -4,6 +4,62 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="27 out 2026">
+  ## v1.15.32
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.32)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir testes intermitentes que falharam
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.31
+
+  ## Contributors
+
+  @lorenzejay
+
+</Update>
+
+<Update label="27 out 2026">
+  ## v1.15.31
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.31)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Suporte à compactação de contexto de fluxo conversacional.
+
+  ### Correções de Bugs
+  - Atualizar dependências de auditoria vulneráveis.
+  - Parar de enviar 'stop' para modelos GPT-6 e mais novos.
+  - Executar a listagem de provedores fora do loop em `acleanup_provider_files`.
+  - Emitir `LLMGuardrailCompletedEvent` para um resultado de guardrail malformado.
+  - Nomear o token de integração renomeado quando estiver ausente.
+  - Corrigir a travessia de caminho em `output_file` via interpolação de template.
+  - Corrigir vulnerabilidades de desserialização, injeção de SQL e travessia de caminho.
+  - Restaurar os níveis de log configurados após a supressão.
+  - Descartar o estado de retomar ponto de verificação ao copiar uma equipe.
+  - Honrar uma sessão `aioboto3` injetada em `BedrockFileUploader`.
+  - Usar o corte de tarefa correto com templates personalizados.
+  - Proteger contra falhas de listagem de armazenamento na análise de fluxo de codificação.
+  - Impor a exclusividade de resultado/erro de guardrail com o validador de modelo.
+  - Filtrar categorias do lado do servidor na busca de borda Qdrant.
+
+  ### Documentação
+  - Usar HTTPS para o link CrewAI AMP na documentação do conceito CLI.
+  - Corrigir links âncora internos apontando para slugs em inglês em páginas traduzidas.
+  - Corrigir importações de `CrewBase` em exemplos de documentação.
+
+  ## Contributors
+
+  @Kiko0301, @Trenyx, @Velmet44, @Vidit-Ostwal, @Wilson0511, @gabemilani, @iris-clawd, @joaomdmoura, @lakers-abing, @leom1919, @lester076, @lorenzejay, @subhashpolisetti
+
+</Update>
+
 <Update label="23 out 2026">
   ## v1.15.30
 
@@ -29,6 +85,10 @@ mode: "wide"
   [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
 
   ## O que Mudou
+
+  ### Mudanças Quebradoras
+  - Remover `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` agora falha com "CrewAgentExecutor has been removed", e estes caminhos de importação deixaram de existir: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, o módulo `crewai.experimental.agent_executor`, `crewai.experimental.AgentExecutor` e `crewai.experimental.CrewAgentExecutorFlow`. Importe `AgentExecutor` de `crewai.agents`.
+  - Mudar a forma como todo agente é executado: resultados de ferramentas grandes demais são adiados para arquivos temporários, a conversa é resumida antes de estourar a janela de contexto, e a quinta chamada idêntica a uma ferramenta interrompe a tarefa. Veja [Atualizando Agentes de Versões Anteriores](/pt-BR/concepts/agents#atualizando-agentes-de-versões-anteriores) para cada mudança e como ela é controlada.
 
   ### Funcionalidades
   - Adicionar suporte para kwargs compatíveis com LiteLLM.
