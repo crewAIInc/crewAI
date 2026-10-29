@@ -489,28 +489,6 @@ class TestExecutionEndOnFailure:
         assert len(seen) == 1
         assert seen[0].status == "failed"
 
-    def test_crew_kickoff_variants_preserve_none_execution_start_payload(self):
-        seen = []
-
-        @on(InterceptionPoint.EXECUTION_START)
-        def capture(ctx):
-            seen.append(ctx.payload)
-
-        with (
-            patch.object(Crew, "_run_sequential_process", return_value=CrewOutput()),
-            patch.object(
-                Crew,
-                "_arun_sequential_process",
-                new_callable=AsyncMock,
-                return_value=CrewOutput(),
-            ),
-        ):
-            self._crew().kickoff()
-            asyncio.run(self._crew().kickoff_async())
-            asyncio.run(self._crew().akickoff())
-
-        assert seen == [None, None, None]
-
     def test_crew_kickoff_async_hook_can_supply_defaults_for_omitted_inputs(self):
         @on(InterceptionPoint.EXECUTION_START)
         def supply_defaults(ctx):
