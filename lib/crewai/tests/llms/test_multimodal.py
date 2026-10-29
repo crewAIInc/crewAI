@@ -552,6 +552,11 @@ class TestBedrockMultimodal:
         llm = LLM(model="bedrock/openai.gpt-oss-120b-1:0")
         assert llm.supports_multimodal() is False
 
+    def test_supports_multimodal_converse_catalog_model(self) -> None:
+        """Test Bedrock consults Converse catalog entries for vision support."""
+        llm = LLM(model="bedrock/writer.palmyra-vision-7b")
+        assert llm.supports_multimodal() is True
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")

@@ -2285,7 +2285,10 @@ class BedrockCompletion(BaseLLM):
         if any(model_lower.startswith(m) for m in vision_models):
             return True
         return (
-            self.get_model_capability("supports_vision", providers=["bedrock"]) is True
+            self.get_model_capability(
+                "supports_vision", providers=["bedrock", "bedrock_converse"]
+            )
+            is True
         )
 
     def _is_nova_model(self) -> bool:
