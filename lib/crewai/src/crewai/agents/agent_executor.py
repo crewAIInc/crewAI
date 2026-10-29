@@ -388,7 +388,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{preview_suffix}\n---\n\nUse `{reader_name}` to read it in bounded sections. For a "
             f"roughly {read_target_tokens:,}-token read, request about "
             f"{recommended_line_count} lines, for example with `start_line=1` and "
-            f"`line_count={recommended_line_count}`."
+            f"`line_count={recommended_line_count}`.\n\nThe artifact is deleted when "
+            "this run ends, so do not cite its path in your final answer; include "
+            "the content you need instead."
         )
         if self.agent and self.agent.verbose:
             self._console.print(
