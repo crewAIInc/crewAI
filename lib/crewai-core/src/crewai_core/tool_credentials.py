@@ -45,11 +45,19 @@ def build_env_with_all_tool_credentials() -> dict[str, Any]:
         sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
 
         for source_config in sources.values():
-            if isinstance(source_config, dict):
-                index = source_config.get("index")
-                if index:
-                    index_env = build_env_with_tool_repository_credentials(index)
-                    env.update(index_env)
+            # uv supports marker-specific alternatives as a list of sources.
+            configs = (
+                source_config if isinstance(source_config, list) else [source_config]
+            )
+            for config in configs:
+                if isinstance(config, dict):
+                    index = config.get("index")
+                    if index:
+                        index_env = build_env_with_tool_repository_credentials(index)
+                        normalized = index.upper().replace("-", "_")
+                        for suffix in ("USERNAME", "PASSWORD"):
+                            key = f"UV_INDEX_{normalized}_{suffix}"
+                            env[key] = index_env[key]
     except Exception:  # noqa: S110
         pass
 
