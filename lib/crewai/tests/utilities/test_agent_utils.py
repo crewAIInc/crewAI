@@ -38,10 +38,11 @@ from crewai.utilities.agent_utils import (
     execute_single_native_tool_call,
     extract_tool_call_info,
     is_tool_call_list,
+    message_content_text,
     NativeToolCallResult,
     parse_tool_call_args,
 )
-from crewai.utilities.message_utils import format_message_for_llm, message_content_text
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai_core.printer import Printer
 from crewai.utilities.i18n import I18N_DEFAULT
 

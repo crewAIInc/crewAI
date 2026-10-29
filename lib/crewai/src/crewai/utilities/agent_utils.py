@@ -56,7 +56,10 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.message_utils import format_message_for_llm
+from crewai.utilities.message_utils import (
+    format_message_for_llm,
+    message_content_text as message_content_text,
+)
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -540,12 +543,23 @@ def _summarize_context_before_llm_call(
     verbose: bool,
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
+    *,
+    allow_single_user_compaction: bool = False,
 ) -> None:
-    """Compact messages after a preflight context-window check."""
+    """Compact messages after a context-window check.
+
+    Conversational callers allow a single user message because the router
+    serializes its entire context into one message. Agent callers preserve
+    their existing single-request behavior.
+    """
     non_system_messages = [
         message for message in messages if message.get("role") != "system"
     ]
-    if len(non_system_messages) == 1 and non_system_messages[0].get("role") == "user":
+    if (
+        not allow_single_user_compaction
+        and len(non_system_messages) == 1
+        and non_system_messages[0].get("role") == "user"
+    ):
         return
 
     model = getattr(llm, "model", None)
@@ -631,6 +645,8 @@ def _proactively_summarize_context(
     verbose: bool,
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
+    *,
+    allow_single_user_compaction: bool = False,
 ) -> None:
     """Try to summarize oversized context without blocking a valid LLM call."""
     try:
@@ -643,6 +659,7 @@ def _proactively_summarize_context(
                 verbose=verbose,
                 from_task=from_task,
                 from_agent=from_agent,
+                allow_single_user_compaction=allow_single_user_compaction,
             )
     except (HookAborted, LLMCallBlockedError):
         raise
