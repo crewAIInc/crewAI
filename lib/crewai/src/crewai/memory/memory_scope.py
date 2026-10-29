@@ -15,6 +15,7 @@ from crewai.memory.types import (
     ScopeInfo,
 )
 from crewai.memory.unified_memory import Memory
+from crewai.memory.utils import join_scope_paths
 
 
 def _ensure_memory_kind(value: Any) -> Any:
@@ -334,7 +335,7 @@ class MemorySlice(BaseModel):
         """List scopes across all slice roots."""
         out: list[str] = []
         for sc in self.scopes:
-            full = f"{sc.rstrip('/')}{path}" if sc != "/" else path
+            full = join_scope_paths(sc, path)
             out.extend(self._require_memory().list_scopes(full))
         return sorted(set(out))
 
@@ -346,7 +347,7 @@ class MemorySlice(BaseModel):
         newest: datetime | None = None
         children: list[str] = []
         for sc in self.scopes:
-            full = f"{sc.rstrip('/')}{path}" if sc != "/" else path
+            full = join_scope_paths(sc, path)
             inf = self._require_memory().info(full)
             total_records += inf.record_count
             all_categories.update(inf.categories)
@@ -376,7 +377,7 @@ class MemorySlice(BaseModel):
         """Categories and counts across slice scopes."""
         counts: dict[str, int] = {}
         for sc in self.scopes:
-            full = (f"{sc.rstrip('/')}{path}" if sc != "/" else path) if path else sc
+            full = join_scope_paths(sc, path)
             for k, v in self._require_memory().list_categories(full).items():
                 counts[k] = counts.get(k, 0) + v
         return counts
