@@ -310,7 +310,9 @@ class BaseTool(BaseModel, ABC):
             kwargs: The keyword arguments to validate.
 
         Returns:
-            Validated (and possibly coerced) keyword arguments.
+            Validated (and possibly coerced) keyword arguments. Optional
+            arguments the caller never set that resolve to ``None`` are omitted
+            so they are not forwarded as an explicit ``null``.
 
         Raises:
             ValueError: If validation against args_schema fails.
@@ -318,7 +320,12 @@ class BaseTool(BaseModel, ABC):
         if self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
-                return validated.model_dump()
+                provided = validated.model_fields_set
+                return {
+                    name: value
+                    for name, value in validated.model_dump().items()
+                    if name in provided or value is not None
+                }
             except Exception as e:
                 hint = build_schema_hint(self.args_schema)
                 raise ValueError(
