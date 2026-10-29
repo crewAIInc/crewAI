@@ -2190,6 +2190,14 @@ class Agent(BaseAgent):
         if guardrail_result.result is not None:
             if isinstance(guardrail_result.result, str):
                 output.raw = guardrail_result.result
+            elif isinstance(guardrail_result.result, LiteAgentOutput):
+                # A guardrail may return a whole output, most often the one it
+                # was given. Use it as the output rather than nesting it inside
+                # itself, and keep the failures recorded so far.
+                guardrail_result.result.tool_failures = merge_tool_failures(
+                    output.tool_failures, guardrail_result.result.tool_failures
+                )
+                output = guardrail_result.result
             elif isinstance(guardrail_result.result, BaseModel):
                 output.pydantic = guardrail_result.result
 
