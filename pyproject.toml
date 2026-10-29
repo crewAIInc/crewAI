@@ -304,7 +304,7 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # lib/crewai/pyproject.toml (the crewai[litellm] extra) rather than here, since crewai declares litellm directly.
 # oauthlib <4.0.0 has GHSA-xpv3-w29h-x7cv / PYSEC-2026-4114 (PKCE code_verifier timing side channel)
 # and GHSA-hj66-6f7g-4r5v (JSONP callback injection on RevocationEndpoint). Fixed in 4.0.0.
-# Transitive via chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client.
+# Also transitive via the crewai[chromadb] extra (chromadb -> kubernetes -> requests-oauthlib).
 # 4.0.0 (2026-09-28) is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.

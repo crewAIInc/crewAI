@@ -63,6 +63,23 @@ class TestRequire:
             exc_info.value
         )
 
+    def test_require_chromadb_points_at_extra(self):
+        """A missing chromadb import names the crewai extra, not the caller module."""
+        with patch("importlib.import_module") as mock_import:
+            mock_import.side_effect = ModuleNotFoundError(
+                "No module named 'chromadb'", name="chromadb"
+            )
+
+            with pytest.raises(OptionalDependencyError) as exc_info:
+                require(
+                    "crewai.rag.chromadb.config",
+                    purpose="The 'chromadb' provider",
+                )
+
+        error_msg = str(exc_info.value)
+        assert "optional dependency 'chromadb'" in error_msg
+        assert "uv add 'crewai[chromadb]'" in error_msg
+
     def test_require_extracts_package_name(self):
         """Test that require correctly extracts package name from module path."""
         with pytest.raises(OptionalDependencyError) as exc_info:

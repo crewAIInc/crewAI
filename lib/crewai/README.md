@@ -203,7 +203,13 @@ If you encounter a `PATH` warning, run:
 uv tool update-shell
 ```
 
-If you encounter the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*.
+ChromaDB is optional. Install it when you use Knowledge or a Chroma-backed RAG client:
+
+```shell
+uv add 'crewai[chromadb]'
+```
+
+If that install hits the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*.
 
 Verify the install:
 
