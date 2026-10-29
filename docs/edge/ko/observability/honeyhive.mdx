@@ -1,0 +1,130 @@
+---
+title: HoneyHive 통합
+description: OpenTelemetry 계측으로 CrewAI crew, task, 도구, agent 협업을 HoneyHive에서 추적합니다
+icon: route
+mode: "wide"
+---
+
+# HoneyHive 통합
+
+이 가이드는 CrewAI 추적을 **HoneyHive**로 보내는 방법을 보여줍니다. OpenInference 계측기가 crew 실행, agent 단계, 도구 호출, 모델 요청을 기록합니다. CrewAI 코드는 바뀌지 않습니다.
+
+> **HoneyHive란?** [HoneyHive](https://www.honeyhive.ai)는 개발부터 프로덕션까지 AI agent를 추적, 평가, 모니터링하고 개선하는 agent 관찰성 플랫폼입니다. OpenTelemetry를 기반으로 하며, 관리형 클라우드 서비스나 자체 환경에 직접 호스팅하는 방식으로 사용할 수 있습니다.
+
+전체 통합 참고 자료는 [HoneyHive CrewAI 통합 가이드](https://docs.honeyhive.ai/v2/integrations/crewai)를 참조하세요.
+
+## 시작하기
+
+CrewAI 오케스트레이션 span은 `CrewAIInstrumentor`에서 생성됩니다. 모델 span은 CrewAI가 내부적으로 호출하는 공급자 클라이언트에서 생성됩니다. 이 예제는 `openai/gpt-4o-mini`를 사용하므로 `OpenAIInstrumentor`도 함께 사용합니다. crew가 다른 공급자를 사용한다면 해당 공급자에 맞는 OpenInference 계측기를 추가하세요.
+
+### 1단계: 의존성 설치
+
+```bash
+uv add honeyhive crewai openinference-instrumentation-crewai openinference-instrumentation-openai
+```
+
+### 2단계: 환경 변수 설정
+
+HoneyHive의 **Settings > Project > API Keys** (Ingestion 탭)에서 수집용 API 키를 생성하세요. 이 키가 추적을 받을 프로젝트를 결정합니다.
+
+```bash
+export HH_INGESTION_API_KEY="your-honeyhive-ingestion-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+`HH_INGESTION_API_KEY`가 설정되지 않은 경우 tracer는 `HH_API_KEY`도 사용합니다. 자체 호스팅 또는 전용 배포 환경에서는 Ingestion 탭에 표시된 data plane URL을 `HH_API_URL`에 설정하세요.
+
+### 3단계: HoneyHive 초기화 및 CrewAI 계측
+
+먼저 tracer를 초기화한 다음, 그 tracer provider를 두 계측기에 모두 전달하세요. agent를 생성하기 전에 실행해야 합니다.
+
+```python
+from honeyhive import HoneyHiveTracer
+from openinference.instrumentation.crewai import CrewAIInstrumentor
+from openinference.instrumentation.openai import OpenAIInstrumentor
+
+# Reads HH_INGESTION_API_KEY from your environment
+tracer = HoneyHiveTracer.init()
+
+CrewAIInstrumentor().instrument(tracer_provider=tracer.provider)
+OpenAIInstrumentor().instrument(tracer_provider=tracer.provider)
+```
+
+### 4단계: CrewAI 애플리케이션 생성 및 실행
+
+이 crew에는 도구 하나를 가진 지원 agent가 있습니다. 모든 crew 실행, agent 단계, 도구 호출, 모델 요청이 HoneyHive에 span으로 표시됩니다.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.tools import tool
+
+
+@tool("OrderStatusLookup")
+def lookup_order_status(order_id: str) -> str:
+    """Look up the current status and ETA for a customer order."""
+    statuses = {
+        "ORD-1001": {"state": "shipped", "eta_days": 2},
+        "ORD-1003": {"state": "delayed", "eta_days": 8},
+    }
+    status = statuses.get(order_id.upper())
+    if not status:
+        return f"Order {order_id.upper()}: not found in the system."
+    return (
+        f"Order {order_id.upper()}: {status['state']}, "
+        f"estimated delivery in {status['eta_days']} days."
+    )
+
+
+support_agent = Agent(
+    role="Support Generalist",
+    goal="Resolve order questions using the available tools",
+    backstory=(
+        "You are a customer support generalist. Use tools for order status "
+        "questions, then reply with short, customer-friendly answers."
+    ),
+    tools=[lookup_order_status],
+    llm="openai/gpt-4o-mini",
+    verbose=False,
+)
+
+task = Task(
+    description="Check the status of order ORD-1003 and suggest next steps.",
+    expected_output="A concise, customer-facing answer.",
+    agent=support_agent,
+)
+
+crew = Crew(
+    name="support_crew",
+    agents=[support_agent],
+    tasks=[task],
+    process=Process.sequential,
+    verbose=False,
+)
+
+print(crew.kickoff())
+```
+
+### 5단계: HoneyHive에서 추적 보기
+
+[HoneyHive](https://app.us.honeyhive.ai)에서 프로젝트를 열고 **Traces** 탭으로 이동하세요. 실행은 crew, 각 agent, 각 도구 호출, 각 모델 요청에 대한 중첩된 span을 가진 하나의 세션으로 표시됩니다.
+
+## 추적되는 항목
+
+- **Crew 실행**: crew kickoff span과 여러 단계의 실행
+- **Agent 활동**: 각 task에 대한 agent 역할, 프롬프트, 출력
+- **모델 요청**: 프롬프트와 응답 내용이 포함된 LLM 호출
+- **도구 사용**: 인수와 결과가 포함된 각 CrewAI 도구 실행
+- **Flow**: `Flow.kickoff()` 실행과 각 flow 메서드 단계
+- **독립 실행 agent**: crew 밖에서 호출한 `Agent.kickoff()`
+
+`@tool` 데코레이터를 사용한 도구의 span은 `openinference-instrumentation-crewai` 1.1.11 이상이 필요합니다.
+
+## 문제 해결
+
+추적이 표시되지 않으면 `HH_INGESTION_API_KEY`(또는 `HH_API_KEY`)가 설정되어 있는지, 두 계측기 모두 `tracer_provider=tracer.provider`를 전달받는지 확인하세요. tracer provider 없이 `instrument()`를 호출하면 span이 HoneyHive 대신 기본 OpenTelemetry provider로 전송됩니다. 또한 crew가 실제로 호출하는 공급자를 계측했는지 확인하세요.
+
+## 참고 자료
+
+- [HoneyHive CrewAI 통합 가이드](https://docs.honeyhive.ai/v2/integrations/crewai)
+- [HoneyHive 추적 빠른 시작](https://docs.honeyhive.ai/v2/introduction/tracing-quickstart)
+- [CrewAI용 OpenInference 계측기](https://pypi.org/project/openinference-instrumentation-crewai/)
