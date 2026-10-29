@@ -2552,8 +2552,8 @@ class LLM(BaseLLM):
         if self.supports_tools is not None:
             return self.supports_tools
 
-        catalog_support = (self.catalog_entry or {}).get("supports_function_calling")
-        if isinstance(catalog_support, bool):
+        catalog_support = self._litellm_catalog_supports_function_calling()
+        if catalog_support is not None:
             return catalog_support
 
         if not _ensure_litellm():
