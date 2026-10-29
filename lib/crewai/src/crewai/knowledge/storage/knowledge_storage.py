@@ -17,6 +17,18 @@ from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
 
 
+def _reraise_missing_chromadb(exc: BaseException) -> None:
+    """Surface a missing ChromaDB install instead of an empty knowledge result.
+
+    ``require()`` raises ``OptionalDependencyError``, an ``ImportError``.
+    A missing provider config raises ``RuntimeError`` instead.
+    """
+    if isinstance(exc, ImportError):
+        raise exc
+    if isinstance(exc, RuntimeError) and "not installed" in str(exc):
+        raise exc
+
+
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
@@ -90,6 +102,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 score_threshold=score_threshold,
             )
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
             )
@@ -105,6 +118,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.delete_collection(collection_name=collection_name)
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
@@ -180,6 +194,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 score_threshold=score_threshold,
             )
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
             )
@@ -234,6 +249,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             await client.adelete_collection(collection_name=collection_name)
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
