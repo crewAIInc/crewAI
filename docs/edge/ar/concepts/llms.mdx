@@ -1045,6 +1045,40 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Wally">
+    يوفّر Wally واجهة API متوافقة مع OpenAI، لذا يتصل CrewAI به عبر عميل OpenAI الأصلي
+    مع `base_url` مخصص. لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    WALLY_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    import os
+
+    llm = LLM(
+        model="openai/glm-5.3-flash",
+        base_url="https://inference.runanywhere.ai/v1",
+        api_key=os.getenv("WALLY_API_KEY"),
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Wally:
+      - استدلال سريع للنماذج مفتوحة الأوزان (GLM وDeepSeek وKimi وMiniMax)
+      - استدعاء الأدوات والبث والمخرجات المنظمة بمخطط JSON
+      - نافذة سياق تصل إلى 1M token
+    </Info>
+
+    توجّه البادئة `openai/` الاستدعاء إلى عميل OpenAI الأصلي، ويليها معرّف نموذج Wally، مثل
+    `glm-5.3-flash` أو `deepseek-v4.1-flash`. راجع
+    [أسعار Wally](https://www.runwally.com/pricing)
+    و[وثائق API](https://docs.runanywhere.ai/wally-cloud/api) للحصول على النماذج الحالية وأطوال السياق والأسعار.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
