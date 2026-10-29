@@ -326,7 +326,8 @@
                           "edge/en/tools/integration/overview",
                           "edge/en/tools/integration/bedrockinvokeagenttool",
                           "edge/en/tools/integration/crewaiautomationtool",
-                          "edge/en/tools/integration/mergeagenthandlertool"
+                          "edge/en/tools/integration/mergeagenthandlertool",
+                          "edge/en/tools/integration/instantexpert"
                         ]
                       },
                       {
@@ -20071,7 +20072,8 @@
                         "pages": [
                           "edge/pt-BR/tools/integration/overview",
                           "edge/pt-BR/tools/integration/bedrockinvokeagenttool",
-                          "edge/pt-BR/tools/integration/crewaiautomationtool"
+                          "edge/pt-BR/tools/integration/crewaiautomationtool",
+                          "edge/pt-BR/tools/integration/instantexpert"
                         ]
                       },
                       {
@@ -38272,7 +38274,8 @@
                         "pages": [
                           "edge/ko/tools/integration/overview",
                           "edge/ko/tools/integration/bedrockinvokeagenttool",
-                          "edge/ko/tools/integration/crewaiautomationtool"
+                          "edge/ko/tools/integration/crewaiautomationtool",
+                          "edge/ko/tools/integration/instantexpert"
                         ]
                       },
                       {
@@ -57074,7 +57077,8 @@
                         "pages": [
                           "edge/ar/tools/integration/overview",
                           "edge/ar/tools/integration/bedrockinvokeagenttool",
-                          "edge/ar/tools/integration/crewaiautomationtool"
+                          "edge/ar/tools/integration/crewaiautomationtool",
+                          "edge/ar/tools/integration/instantexpert"
                         ]
                       },
                       {
