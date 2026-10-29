@@ -7,8 +7,6 @@ from pydantic import Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
@@ -43,6 +41,15 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         if self.embedder:
+            try:
+                from crewai.rag.chromadb.config import ChromaDBConfig
+                from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+            except ImportError as exc:
+                raise RuntimeError(
+                    "provider 'chromadb' requested but not installed. "
+                    "Install the extra: `uv add 'crewai[chromadb]'`."
+                ) from exc
+
             embedding_function = build_embedder(self.embedder)  # type: ignore[arg-type]
             config = ChromaDBConfig(
                 embedding_function=cast(

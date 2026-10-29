@@ -228,7 +228,13 @@ class RagTool(BaseTool):
     ) -> Any:
         """Instantiate provider config with optional embedding_function injected."""
         if provider == "chromadb":
-            from crewai.rag.chromadb.config import ChromaDBConfig
+            try:
+                from crewai.rag.chromadb.config import ChromaDBConfig
+            except ImportError as exc:
+                raise RuntimeError(
+                    "provider 'chromadb' requested but not installed. "
+                    "Install the extra: `uv add 'crewai[chromadb]'`."
+                ) from exc
 
             kwargs = dict(provider_config)
             if embedding_function is not None:

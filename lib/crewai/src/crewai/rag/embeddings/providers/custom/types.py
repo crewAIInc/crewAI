@@ -2,8 +2,9 @@
 
 from typing import Literal
 
-from chromadb.api.types import EmbeddingFunction
 from typing_extensions import Required, TypedDict
+
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 
 
 class CustomProviderConfig(TypedDict, total=False):
