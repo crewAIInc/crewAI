@@ -125,6 +125,22 @@ def test_agent_accepts_custom_i18n():
     assert agent_i18n.slice("role_playing") == "Lorem ipsum dolor sit amet"
 
 
+def test_agent_copy_can_be_interpolated_with_other_inputs():
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+    agent.interpolate_inputs({"topic": "AI"})
+
+    copied_agent = agent.copy()
+    copied_agent.interpolate_inputs({"topic": "ML"})
+
+    assert copied_agent.role == "ML Researcher"
+    assert copied_agent.goal == "Express hot takes on ML."
+    assert copied_agent.backstory == "You have a lot of experience with ML."
+
+
 def test_agent_copy_does_not_emit_i18n_deprecation_warning():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
