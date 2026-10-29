@@ -3197,6 +3197,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         ] = {}  # Map outcome -> HumanFeedbackResult
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
+        # Each emitted outcome keeps its own branch state: the event of the router
+        # run that emitted it and the review on its path, so a sibling chain never
+        # picks up another chain's causal parent or feedback.
+        outcome_branch: dict[str, tuple[str | None, Any]] = {}
+        wave_feedback = self.last_human_feedback
         # Methods already run per trigger, so a conditional start that also
         # listens to the same event is not run a second time below.
         ran_for_trigger: dict[str, set[FlowMethodName]] = {}
@@ -3213,6 +3218,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         while pending_triggers:
             current_trigger = next(iter(pending_triggers))
             upstream_routers = pending_triggers.pop(current_trigger)
+            branch_event_id, branch_feedback = outcome_branch.get(
+                str(current_trigger), (triggering_event_id, wave_feedback)
+            )
             routers_triggered = self._find_triggered_methods(
                 current_trigger, router_only=True
             )
@@ -3235,14 +3243,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_input = router_result_to_feedback.get(
                     str(current_trigger), current_result
                 )
+                feedback_before = self.last_human_feedback
                 (
                     router_result,
                     current_triggering_event_id,
                 ) = await self._execute_single_listener(
-                    router_name, router_input, current_triggering_event_id
+                    router_name, router_input, branch_event_id
                 )
                 if router_result is None:
                     continue
+                # A review given in this router run, else the one on its branch.
+                outcome_feedback = (
+                    self.last_human_feedback
+                    if self.last_human_feedback is not feedback_before
+                    else branch_feedback
+                )
 
                 router_result = (
                     router_result.value
@@ -3253,15 +3268,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
                 router_result_payloads[router_result_str] = (
-                    self.last_human_feedback
-                    if self.last_human_feedback is not None
-                    else router_result
+                    outcome_feedback if outcome_feedback is not None else router_result
                 )
 
-                if self.last_human_feedback is not None:
-                    router_result_to_feedback[router_result_str] = (
-                        self.last_human_feedback
-                    )
+                if outcome_feedback is not None:
+                    router_result_to_feedback[router_result_str] = outcome_feedback
+                outcome_branch[router_result_str] = (
+                    current_triggering_event_id,
+                    outcome_feedback,
+                )
                 pending_triggers[router_result_event] = (
                     pending_triggers.get(router_result_event, frozenset())
                     | upstream_routers
@@ -3287,6 +3302,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     listener_result = router_result_payloads.get(
                         str(current_trigger), result
                     )
+                    listener_event_id = (
+                        outcome_branch[str(current_trigger)][0]
+                        if idx > 0
+                        else current_triggering_event_id
+                    )
                     racing_group = self._get_racing_group_for_listeners(
                         listeners_triggered
                     )
@@ -3301,14 +3321,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             racing_members,
                             other_listeners,
                             listener_result,
-                            current_triggering_event_id,
+                            listener_event_id,
                         )
                     else:
                         tasks = [
                             self._execute_single_listener(
                                 listener_name,
                                 listener_result,
-                                current_triggering_event_id,
+                                listener_event_id,
                             )
                             for listener_name in listeners_triggered
                         ]
