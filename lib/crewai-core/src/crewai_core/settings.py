@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 from logging import getLogger
 import os
@@ -45,6 +46,28 @@ def _ensure_dir_mode(directory: Path) -> None:
             directory,
             e,
         )
+
+
+def _read_settings_json(path: Path) -> dict[str, Any] | None:
+    """Read settings from ``path``.
+
+    Returns ``{}`` if the file does not exist, and ``None`` (after logging a
+    warning) if it exists but is not a valid JSON object. Raises ``OSError``
+    if it exists but can't be read, so callers never replace a file they
+    couldn't look at.
+    """
+    if not path.is_file():
+        return {}
+    with path.open("r") as f:
+        try:
+            data = json.load(f)
+        except ValueError as e:
+            logger.warning("Ignoring invalid settings file %s: %s", path, e)
+            return None
+    if not isinstance(data, dict):
+        logger.warning("Ignoring settings file %s: expected a JSON object", path)
+        return None
+    return data
 
 
 def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
@@ -220,13 +243,11 @@ class Settings(BaseModel):
             super().__init__(config_path=Path("/dev/null"), **merged_data)
             return
 
-        file_data = {}
-        if config_path.is_file():
-            try:
-                with config_path.open("r") as f:
-                    file_data = json.load(f)
-            except Exception:
-                file_data = {}
+        try:
+            file_data = _read_settings_json(config_path) or {}
+        except OSError as e:
+            logger.warning("Could not read settings file %s: %s", config_path, e)
+            file_data = {}
 
         merged_data = {**file_data, **data}
         super().__init__(config_path=config_path, **merged_data)
@@ -249,17 +270,22 @@ class Settings(BaseModel):
             return
 
         try:
-            if self.config_path.is_file():
-                with self.config_path.open("r") as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {}
-
-            updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
-            _write_secure_json(self.config_path, updated_data)
-
-        except Exception:  # noqa: S110
-            pass
+            existing_data = _read_settings_json(self.config_path)
+            if existing_data is None:
+                # Keep the invalid file so the user can recover its values; the
+                # timestamp keeps earlier backups from being overwritten.
+                stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+                backup_path = self.config_path.with_name(
+                    f"{self.config_path.name}.{stamp}.bak"
+                )
+                os.replace(self.config_path, backup_path)
+                logger.warning("Moved invalid settings file to %s", backup_path)
+            _write_secure_json(
+                self.config_path,
+                {**(existing_data or {}), **self.model_dump(exclude_unset=True)},
+            )
+        except OSError as e:
+            logger.warning("Could not save settings to %s: %s", self.config_path, e)
 
     def _reset_user_settings(self) -> None:
         """Reset all user settings to default values."""
