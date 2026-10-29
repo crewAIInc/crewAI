@@ -9,7 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Iterable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
@@ -187,6 +187,27 @@ def _condition_satisfied(condition: FlowDefinitionCondition, events: set[str]) -
     operator, branches = _condition_branches(condition)
     combine = all if operator == "and" else any
     return combine(_condition_satisfied(branch, events) for branch in branches)
+
+
+async def _gather_cancelling_siblings(
+    coros: Iterable[Coroutine[Any, Any, Any]],
+) -> list[Any]:
+    """Run the coroutines concurrently; on failure cancel the rest, then raise.
+
+    A bare ``asyncio.gather`` propagates the first exception and leaves the
+    remaining coroutines running in the background after the flow has already
+    failed, so in-flight methods keep making LLM calls and firing events while
+    their outcomes are never retrieved.
+    """
+    tasks = [asyncio.ensure_future(coro) for coro in coros]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
 
 
 def _build_definition_state_model(
@@ -2446,7 +2467,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         self._execute_start_method(start_method)
                         for start_method in starts_to_execute
                     ]
-                    await asyncio.gather(*tasks)
+                    await _gather_cancelling_siblings(tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
                 if isinstance(e, HumanFeedbackPending):
@@ -3291,7 +3312,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             )
                             for listener_name in listeners_triggered
                         ]
-                        await asyncio.gather(*tasks)
+                        await _gather_cancelling_siblings(tasks)
 
                 if current_trigger in router_results:
                     for method_name in self._start_method_names():
