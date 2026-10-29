@@ -388,6 +388,43 @@ research_task = Task(
 )
 ```
 
+### Decision-Based Guardrails
+
+A `DecisionGuardrail` asks a decision service (for example, an adapter for the OpenAI Decisions API) one yes/no question about the task output. It accepts the output only if the returned probability meets the threshold you set. It's opt-in: you supply the adapter that answers the question, so CrewAI makes no API calls unless you add one.
+
+```python Code
+from crewai import Task
+from crewai.tasks.decision_guardrail import DecisionGuardrail, PredicateAnswer
+
+
+class MyDecider:
+    """Any object with this `predicate` method works, e.g. a Decisions API adapter."""
+
+    def predicate(self, input: str, *, name: str, instructions: str) -> PredicateAnswer | None:
+        probability = ...  # ask your decision service about `input`
+        return PredicateAnswer(name=name, probability=probability)
+
+
+summary_task = Task(
+    description="Summarize the attached article",
+    expected_output="A summary that cites its sources",
+    agent=writer_agent,
+    guardrail=DecisionGuardrail(
+        "The summary cites at least one source",
+        decider=MyDecider(),
+        threshold=0.8,
+    ),
+)
+```
+
+The decision guardrail:
+
+1. Returns `(True, output)` with the original output unchanged when the probability is at least the threshold. A probability exactly equal to the threshold passes.
+2. Returns `(False, feedback)` naming the probability and threshold otherwise, so the agent retries as with any guardrail.
+3. Fails closed: a missing answer, an answer for a different question, an invalid probability, or an error from the decider rejects the output instead of approving it.
+
+The threshold must be a number between 0 and 1. The most recent valid answer is available as `guardrail.last_answer`.
+
 ### Multiple Guardrails
 
 You can apply multiple guardrails to a task using the `guardrails` parameter. Multiple guardrails are executed sequentially, with each guardrail receiving the output from the previous one. This allows you to chain validation and transformation steps.
