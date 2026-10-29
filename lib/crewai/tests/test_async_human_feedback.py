@@ -11,9 +11,12 @@ This module tests the async/non-blocking human feedback flow, including:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+from pathlib import Path
 import tempfile
+import threading
 from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -21,7 +24,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import (
+    Flow,
+    HumanFeedbackResult,
+    and_,
+    human_feedback,
+    listen,
+    or_,
+    start,
+)
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -32,6 +43,569 @@ from crewai.flow.persistence import SQLiteFlowPersistence
 
 
 # PendingFeedbackContext Tests
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.parametrize("parallel_starts", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_parallel_feedback_preserves_sibling_and_join(
+    tmp_path: Path, async_mode: bool, parallel_starts: bool
+) -> None:
+    class PendingReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @(start() if parallel_starts else listen(begin))
+        @human_feedback(message="Approve?", provider=PendingReview())
+        def review(self) -> str:
+            return "draft"
+
+        @listen(review)
+        def record_review(self, result: HumanFeedbackResult) -> None:
+            self.state["review"] = result.feedback
+
+        @(start() if parallel_starts else listen(begin))
+        async def enrich(self) -> None:
+            await asyncio.to_thread((tmp_path / "enriched.txt").write_text, "done")
+            self.state["enriched"] = True
+
+        @listen(and_(record_review, enrich))
+        def publish(self) -> None:
+            self.state["published"] = self.state.get("published", 0) + 1
+
+        @listen(or_(record_review, enrich))
+        def audit(self) -> None:
+            self.state["audits"] = self.state.get("audits", 0) + 1
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+
+    async def run_async() -> ReviewFlow:
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        pending = await flow.kickoff_async()
+        assert isinstance(pending, HumanFeedbackPending)
+        resumed = ReviewFlow.from_pending(
+            pending.context.flow_id, persistence, suppress_flow_events=True
+        )
+        await resumed.resume_async("approved")
+        return resumed
+
+    if async_mode:
+        resumed = asyncio.run(run_async())
+    else:
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        pending = flow.kickoff()
+        assert isinstance(pending, HumanFeedbackPending)
+        resumed = ReviewFlow.from_pending(
+            pending.context.flow_id, persistence, suppress_flow_events=True
+        )
+        resumed.resume("approved")
+
+    assert {key: value for key, value in resumed.state.items() if key != "id"} == {
+        "review": "approved",
+        "enriched": True,
+        "published": 1,
+        "audits": 1,
+    }
+    assert persistence.load_pending_feedback(resumed.state["id"]) is None
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_parallel_feedback_propagates_sibling_failure(tmp_path: Path) -> None:
+    class PendingReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class FailedEnrichment(Flow):
+        @start()
+        @human_feedback(message="Approve?", provider=PendingReview())
+        def review(self) -> str:
+            return "draft"
+
+        @start()
+        async def enrich(self) -> None:
+            await asyncio.to_thread((tmp_path / "enriched.txt").write_text, "done")
+            raise ValueError("enrichment failed")
+
+    flow = FailedEnrichment(
+        persistence=SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite")),
+        suppress_flow_events=True,
+    )
+    with pytest.raises(ValueError, match="enrichment failed"):
+        flow.kickoff()
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.parametrize("parallel_starts", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_parallel_reviews_fail_before_requesting_feedback(
+    tmp_path: Path, async_mode: bool, parallel_starts: bool
+) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / f"{context.method_name}.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @(start() if parallel_starts else listen(begin))
+        @human_feedback(message="Approve first?", provider=FileReview())
+        async def first(self) -> str:
+            return "first document"
+
+        @(start() if parallel_starts else listen(begin))
+        @human_feedback(message="Approve second?", provider=FileReview())
+        async def second(self) -> str:
+            return "second document"
+
+        @listen(or_(first, second))
+        def publish(self) -> None:
+            self.state["published"] = True
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+    flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+    with pytest.raises(ValueError, match="Parallel human feedback methods"):
+        if async_mode:
+            asyncio.run(flow.kickoff_async())
+        else:
+            flow.kickoff()
+    assert list(tmp_path.glob("*.request")) == []
+    assert "published" not in flow.state
+    assert persistence.load_pending_feedback(flow.state["id"]) is None
+    with pytest.raises(ValueError, match="No pending feedback"):
+        if async_mode:
+            asyncio.run(flow.resume_async("approved"))
+        else:
+            flow.resume("approved")
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_nested_parallel_reviews_do_not_leave_a_resumable_approval(tmp_path: Path) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / f"{context.method_name}.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def first_branch(self) -> None:
+            pass
+
+        @start()
+        def second_branch(self) -> None:
+            pass
+
+        @listen(first_branch)
+        @human_feedback(message="Approve first?", provider=FileReview())
+        async def first(self) -> str:
+            return "first document"
+
+        @listen(second_branch)
+        @human_feedback(message="Approve second?", provider=FileReview())
+        async def second(self) -> str:
+            return "second document"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+    flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+    with pytest.raises(ValueError, match="Multiple parallel human feedback requests"):
+        flow.kickoff()
+    assert len(list(tmp_path.glob("*.request"))) == 2
+    assert persistence.load_pending_feedback(flow.state["id"]) is None
+    with pytest.raises(ValueError, match="No pending feedback"):
+        flow.resume("approved")
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_sequential_reviews_keep_each_reply_with_its_method(
+    tmp_path: Path, async_mode: bool
+) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / f"{context.method_name}.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(message="Approve first?", provider=FileReview())
+        def first(self) -> str:
+            return "first document"
+
+        @listen(first)
+        @human_feedback(message="Approve second?", provider=FileReview())
+        def second(self, result: HumanFeedbackResult) -> str:
+            self.state["first_reply"] = result.feedback
+            return "second document"
+
+        @listen(second)
+        def publish(self, result: HumanFeedbackResult) -> None:
+            self.state["second_reply"] = result.feedback
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+    flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+    pending = asyncio.run(flow.kickoff_async()) if async_mode else flow.kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+    assert (tmp_path / "first.request").is_file()
+    assert not (tmp_path / "second.request").exists()
+    resumed = ReviewFlow.from_pending(
+        flow.state["id"], persistence, suppress_flow_events=True
+    )
+    pending = (
+        asyncio.run(resumed.resume_async("first approved"))
+        if async_mode
+        else resumed.resume("first approved")
+    )
+    assert isinstance(pending, HumanFeedbackPending)
+    assert pending.context.method_name == "second"
+    assert (tmp_path / "second.request").is_file()
+    resumed = ReviewFlow.from_pending(
+        flow.state["id"], persistence, suppress_flow_events=True
+    )
+    if async_mode:
+        asyncio.run(resumed.resume_async("second rejected"))
+    else:
+        resumed.resume("second rejected")
+    assert resumed.state["first_reply"] == "first approved"
+    assert resumed.state["second_reply"] == "second rejected"
+    assert persistence.load_pending_feedback(flow.state["id"]) is None
+
+
+@pytest.mark.parametrize("feedback_racer", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_racing_batch_preserves_feedback_pause(
+    tmp_path: Path, feedback_racer: bool
+) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @listen(begin)
+        @human_feedback(message="Approve?", provider=FileReview())
+        def review(self) -> str:
+            return "document"
+
+        @listen(begin)
+        async def left(self) -> str:
+            if feedback_racer:
+                await asyncio.Event().wait()
+            return "left"
+
+        @listen(begin)
+        def right(self) -> str:
+            self.state["right"] = True
+            return "right"
+
+        @listen(or_(review, left) if feedback_racer else or_(left, right))
+        def choose(self) -> None:
+            self.state["chosen"] = self.state.get("chosen", 0) + 1
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+
+    async def run() -> ReviewFlow:
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        pending = await asyncio.wait_for(flow.kickoff_async(), timeout=5)
+        assert isinstance(pending, HumanFeedbackPending)
+        assert (tmp_path / "review.request").is_file()
+        assert flow.state["right"] is True
+        resumed = ReviewFlow.from_pending(
+            flow.state["id"], persistence, suppress_flow_events=True
+        )
+        await resumed.resume_async("approved")
+        return resumed
+
+    resumed = asyncio.run(run())
+    assert resumed.last_human_feedback is not None
+    assert resumed.last_human_feedback.feedback == "approved"
+    assert resumed.state["chosen"] == 1
+    assert persistence.load_pending_feedback(resumed.state["id"]) is None
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_sibling_failure_cancels_feedback_before_provider_request(tmp_path: Path) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    async def run() -> None:
+        entered = asyncio.Event()
+        release = asyncio.Event()
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(message="Approve?", provider=FileReview())
+            async def review(self) -> str:
+                entered.set()
+                await release.wait()
+                return "document"
+
+            @start()
+            async def fail(self) -> None:
+                await entered.wait()
+                raise ValueError("sibling failed")
+
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        with pytest.raises(ValueError, match="sibling failed"):
+            await flow.kickoff_async()
+        release.set()
+        await asyncio.sleep(0.05)
+        assert not (tmp_path / "review.request").exists()
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+
+    asyncio.run(run())
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_sibling_failure_drains_inflight_provider_before_returning(tmp_path: Path) -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            entered.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("provider was not released")
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(message="Approve?", provider=FileReview())
+        def review(self) -> str:
+            return "document"
+
+        @start()
+        async def fail(self) -> None:
+            assert await asyncio.to_thread(entered.wait, 5)
+            asyncio.get_running_loop().call_later(0.05, release.set)
+            raise ValueError("sibling failed")
+
+    async def run() -> None:
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        with pytest.raises(ValueError, match="sibling failed"):
+            await flow.kickoff_async()
+        assert (tmp_path / "review.request").is_file()
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+
+    asyncio.run(run())
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_completed_race_winner_does_not_resume_losing_feedback(tmp_path: Path) -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            entered.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("provider was not released")
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @listen(begin)
+        @human_feedback(message="Approve?", provider=FileReview())
+        def review(self) -> str:
+            return "document"
+
+        @listen(begin)
+        async def faster(self) -> str:
+            assert await asyncio.to_thread(entered.wait, 5)
+            return "automatic result"
+
+        @listen(or_(review, faster))
+        async def choose(self, result: HumanFeedbackResult | str) -> None:
+            self.state["chosen"] = result
+            asyncio.get_running_loop().call_later(0.05, release.set)
+
+    async def run() -> None:
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        result = await asyncio.wait_for(flow.kickoff_async(), timeout=5)
+        assert not isinstance(result, HumanFeedbackPending)
+        assert flow.state["chosen"] == "automatic result"
+        assert (tmp_path / "review.request").is_file()
+        assert flow.human_feedback_history == []
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+        with pytest.raises(ValueError, match="No pending feedback"):
+            await flow.resume_async("approve losing review")
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_losing_race_review_cannot_authorize_a_nested_review(
+    tmp_path: Path, async_mode: bool
+) -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / f"{context.method_name}.request").write_text(context.message)
+            if context.method_name == "losing_review":
+                entered.set()
+                if not release.wait(timeout=5):
+                    raise TimeoutError("provider was not released")
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @listen(begin)
+        @human_feedback(message="Approve losing branch?", provider=FileReview())
+        def losing_review(self) -> str:
+            return "losing document"
+
+        @listen(begin)
+        async def faster(self) -> str:
+            assert await asyncio.to_thread(entered.wait, 5)
+            return "automatic result"
+
+        @listen(or_(losing_review, faster))
+        async def choose(self, result: HumanFeedbackResult | str) -> None:
+            self.state["chosen"] = result
+            asyncio.get_running_loop().call_later(0.05, release.set)
+
+        @listen(begin)
+        def other_branch(self) -> None:
+            pass
+
+        @listen(other_branch)
+        @human_feedback(message="Approve other branch?", provider=FileReview())
+        def nested_review(self) -> str:
+            return "other document"
+
+        @listen(nested_review)
+        def publish(self) -> None:
+            self.state["published"] = True
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+    flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+    with pytest.raises(ValueError, match="Multiple parallel human feedback requests"):
+        if async_mode:
+            asyncio.run(flow.kickoff_async())
+        else:
+            flow.kickoff()
+    assert len(list(tmp_path.glob("*.request"))) == 2
+    assert "published" not in flow.state
+    assert persistence.load_pending_feedback(flow.state["id"]) is None
+    with pytest.raises(ValueError, match="No pending feedback"):
+        flow.resume("reply to losing branch")
+    with pytest.raises(ValueError, match="No pending feedback"):
+        asyncio.run(flow.resume_async("reply to other branch"))
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_completed_independent_races_do_not_leave_pending_feedback(tmp_path: Path) -> None:
+    entered = {name: threading.Event() for name in ("first_review", "second_review")}
+    release = {name: threading.Event() for name in entered}
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / f"{context.method_name}.request").write_text(context.message)
+            entered[context.method_name].set()
+            if not release[context.method_name].wait(timeout=5):
+                raise TimeoutError("provider was not released")
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def first_branch(self) -> None:
+            pass
+
+        @start()
+        def second_branch(self) -> None:
+            pass
+
+        @listen(first_branch)
+        @human_feedback(message="First?", provider=FileReview())
+        def first_review(self) -> str:
+            return "first document"
+
+        @listen(first_branch)
+        async def first_fast(self) -> str:
+            assert await asyncio.to_thread(entered["first_review"].wait, 5)
+            return "first automatic"
+
+        @listen(or_(first_review, first_fast))
+        async def first_choice(self, result: HumanFeedbackResult | str) -> None:
+            self.state["first"] = result
+            asyncio.get_running_loop().call_later(0.05, release["first_review"].set)
+
+        @listen(second_branch)
+        @human_feedback(message="Second?", provider=FileReview())
+        def second_review(self) -> str:
+            return "second document"
+
+        @listen(second_branch)
+        async def second_fast(self) -> str:
+            assert await asyncio.to_thread(entered["second_review"].wait, 5)
+            return "second automatic"
+
+        @listen(or_(second_review, second_fast))
+        async def second_choice(self, result: HumanFeedbackResult | str) -> None:
+            self.state["second"] = result
+            asyncio.get_running_loop().call_later(0.05, release["second_review"].set)
+
+    async def run() -> None:
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        result = await asyncio.wait_for(flow.kickoff_async(), timeout=5)
+        assert not isinstance(result, HumanFeedbackPending)
+        assert flow.state["first"] == "first automatic"
+        assert flow.state["second"] == "second automatic"
+        assert len(list(tmp_path.glob("*.request"))) == 2
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+        with pytest.raises(ValueError, match="No pending feedback"):
+            await flow.resume_async("obsolete approval")
+
+    asyncio.run(run())
 
 
 class TestPendingFeedbackContext:
