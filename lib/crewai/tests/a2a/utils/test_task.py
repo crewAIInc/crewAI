@@ -373,3 +373,171 @@ class TestExecuteAndCancelIntegration:
 
             with pytest.raises(asyncio.CancelledError):
                 await execute_task
+
+class TestValkeyExtraMissing:
+    """When VALKEY_URL is set but the optional valkey extra is not installed,
+    _ensure_task_cache must raise a clear, actionable ImportError instead of the
+    bare glide ImportError leaking from every cancellable A2A task.
+    """
+
+    def test_missing_valkey_extra_raises_clear_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        import crewai.a2a.utils.task as task_mod
+
+        monkeypatch.setenv("VALKEY_URL", "valkey://localhost:6379")
+        # Reset the one-time init guard so _ensure_task_cache runs its body.
+        monkeypatch.setattr(task_mod, "_cache_initialized", False)
+        monkeypatch.setattr(task_mod, "_task_cache", None)
+
+        real_import = builtins.__import__
+
+        def _blocked_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "crewai.memory.storage.valkey_cache" or name.endswith(
+                "valkey_cache"
+            ):
+                raise ImportError("No module named 'glide'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _blocked_import)
+
+        with pytest.raises(ImportError, match=r"crewai\[valkey\]"):
+            task_mod._ensure_task_cache()
+
+
+class _FlakyValkeyCache:
+    """Stand-in for ValkeyCache whose get() fails a set number of times."""
+
+    def __init__(self, get_failures: int, then: Any = None, delete_error: bool = False):
+        self.get_failures = get_failures
+        self.then = then
+        self.delete_error = delete_error
+        self.get_calls = 0
+
+    async def get(self, key: str) -> Any:
+        self.get_calls += 1
+        if self.get_calls <= self.get_failures:
+            raise RuntimeError("Cannot connect to Valkey. Check connection settings.")
+        return self.then
+
+    async def delete(self, key: str) -> bool:
+        if self.delete_error:
+            raise RuntimeError("Cannot connect to Valkey. Check connection settings.")
+        return True
+
+
+class TestCancelWatcherErrors:
+    """A Valkey error in the cancel watcher must never cancel a running task,
+    and a failing flag cleanup must not replace the task's outcome.
+    """
+
+    @pytest.fixture
+    def use_valkey(self, monkeypatch: pytest.MonkeyPatch) -> Any:
+        import crewai.a2a.utils.task as task_mod
+
+        def _install(fake: _FlakyValkeyCache) -> _FlakyValkeyCache:
+            monkeypatch.setattr(task_mod, "_cache_initialized", True)
+            monkeypatch.setattr(task_mod, "_task_cache", fake)
+            return fake
+
+        return _install
+
+    @pytest.mark.asyncio
+    async def test_unreachable_valkey_does_not_cancel_task(
+        self, mock_context: MagicMock, use_valkey: Any
+    ) -> None:
+        fake = use_valkey(_FlakyValkeyCache(get_failures=10_000))
+
+        @cancellable
+        async def work(context: RequestContext) -> str:
+            await asyncio.sleep(0.35)  # spans several 100ms polls
+            return "finished"
+
+        assert await work(mock_context) == "finished"
+        assert fake.get_calls >= 2  # it kept polling through the errors
+
+    @pytest.mark.asyncio
+    async def test_cancel_still_detected_after_transient_errors(
+        self, mock_context: MagicMock, use_valkey: Any
+    ) -> None:
+        use_valkey(_FlakyValkeyCache(get_failures=2, then=True))
+
+        @cancellable
+        async def slow(context: RequestContext) -> str:
+            await asyncio.sleep(5)
+            return "should not reach"
+
+        with pytest.raises(asyncio.CancelledError):
+            await slow(mock_context)
+
+    @pytest.mark.asyncio
+    async def test_error_streak_logged_once(
+        self, mock_context: MagicMock, use_valkey: Any
+    ) -> None:
+        import crewai.a2a.utils.task as task_mod
+
+        use_valkey(_FlakyValkeyCache(get_failures=10_000))
+
+        @cancellable
+        async def work(context: RequestContext) -> str:
+            await asyncio.sleep(0.35)
+            return "finished"
+
+        with patch.object(task_mod.logger, "warning") as warn:
+            await work(mock_context)
+
+        poll_warnings = [
+            c for c in warn.call_args_list if "continuing to poll" in c.args[0]
+        ]
+        assert len(poll_warnings) == 1
+
+    @pytest.mark.asyncio
+    async def test_cleanup_error_does_not_replace_result(
+        self, mock_context: MagicMock, use_valkey: Any
+    ) -> None:
+        use_valkey(_FlakyValkeyCache(get_failures=0, then=None, delete_error=True))
+
+        @cancellable
+        async def work(context: RequestContext) -> str:
+            return "finished"
+
+        assert await work(mock_context) == "finished"
+
+    @pytest.mark.asyncio
+    async def test_cleanup_error_does_not_mask_task_exception(
+        self, mock_context: MagicMock, use_valkey: Any
+    ) -> None:
+        use_valkey(_FlakyValkeyCache(get_failures=0, then=None, delete_error=True))
+
+        @cancellable
+        async def work(context: RequestContext) -> str:
+            raise ValueError("real failure")
+
+        with pytest.raises(ValueError, match="real failure"):
+            await work(mock_context)
+
+    @pytest.mark.asyncio
+    async def test_watcher_that_raises_is_not_a_cancel(
+        self, mock_context: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # aiocache Redis path: a pub/sub error outside (OSError, ConnectionError)
+        # escapes the watcher. The decorator must not read that as a cancel.
+        import crewai.a2a.utils.task as task_mod
+
+        redis_like = MagicMock()  # not a SimpleMemoryCache, so pub/sub is used
+        redis_like.client.pubsub.side_effect = RuntimeError("pubsub unavailable")
+        redis_like.delete = AsyncMock(return_value=True)
+        fake_caches = MagicMock()
+        fake_caches.get.return_value = redis_like
+        monkeypatch.setattr(task_mod, "_cache_initialized", True)
+        monkeypatch.setattr(task_mod, "_task_cache", None)
+        monkeypatch.setattr(task_mod, "caches", fake_caches)
+
+        @cancellable
+        async def work(context: RequestContext) -> str:
+            await asyncio.sleep(0.05)
+            return "finished"
+
+        assert await work(mock_context) == "finished"
