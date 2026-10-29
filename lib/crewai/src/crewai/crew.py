@@ -1377,54 +1377,68 @@ class Crew(FlowTrackable, BaseModel):
         pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
 
-        for task_index, task in enumerate(tasks):
-            exec_data, task_outputs, last_sync_output = prepare_task_execution(
-                self, task, task_index, start_index, task_outputs, last_sync_output
-            )
-            if exec_data.should_skip:
-                continue
-
-            if isinstance(task, ConditionalTask):
-                skipped_task_output = await self._ahandle_conditional_task(
-                    task, task_outputs, pending_tasks, task_index, was_replayed
+        try:
+            for task_index, task in enumerate(tasks):
+                exec_data, task_outputs, last_sync_output = prepare_task_execution(
+                    self, task, task_index, start_index, task_outputs, last_sync_output
                 )
-                if skipped_task_output:
-                    task_outputs.append(skipped_task_output)
+                if exec_data.should_skip:
                     continue
 
-            if task.async_execution:
-                context = self._get_context(
-                    task, [last_sync_output] if last_sync_output else []
-                )
-                async_task = asyncio.create_task(
-                    task.aexecute_sync(
+                if isinstance(task, ConditionalTask):
+                    skipped_task_output = await self._ahandle_conditional_task(
+                        task, task_outputs, pending_tasks, task_index, was_replayed
+                    )
+                    if skipped_task_output:
+                        task_outputs.append(skipped_task_output)
+                        continue
+
+                if task.async_execution:
+                    context = self._get_context(
+                        task, [last_sync_output] if last_sync_output else []
+                    )
+                    async_task = asyncio.create_task(
+                        task.aexecute_sync(
+                            agent=exec_data.agent,
+                            context=context,
+                            tools=exec_data.tools,
+                        )
+                    )
+                    pending_tasks.append((task, async_task, task_index))
+                else:
+                    if pending_tasks:
+                        task_outputs.extend(
+                            await self._aprocess_async_tasks(
+                                pending_tasks, was_replayed
+                            )
+                        )
+                        pending_tasks.clear()
+
+                    context = self._get_context(task, task_outputs)
+                    task_output = await task.aexecute_sync(
                         agent=exec_data.agent,
                         context=context,
                         tools=exec_data.tools,
                     )
-                )
-                pending_tasks.append((task, async_task, task_index))
-            else:
-                if pending_tasks:
-                    task_outputs.extend(
-                        await self._aprocess_async_tasks(pending_tasks, was_replayed)
+                    task_outputs.append(task_output)
+                    self._process_task_result(task, task_output)
+                    self._store_execution_log(
+                        task, task_output, task_index, was_replayed
                     )
-                    pending_tasks.clear()
 
-                context = self._get_context(task, task_outputs)
-                task_output = await task.aexecute_sync(
-                    agent=exec_data.agent,
-                    context=context,
-                    tools=exec_data.tools,
+            if pending_tasks:
+                task_outputs.extend(
+                    await self._aprocess_async_tasks(pending_tasks, was_replayed)
                 )
-                task_outputs.append(task_output)
-                self._process_task_result(task, task_output)
-                self._store_execution_log(task, task_output, task_index, was_replayed)
-
-        if pending_tasks:
-            task_outputs.extend(
-                await self._aprocess_async_tasks(pending_tasks, was_replayed)
-            )
+        except BaseException:
+            # A later iteration can raise before reaching its own drain —
+            # prepare_task_execution raises ValueError for a task with no agent,
+            # and _prepare_tools raises for a hierarchical crew without a
+            # manager, both after earlier async tasks are already create_task'd.
+            # Cancel whatever is still pending here, not only inside
+            # _aprocess_async_tasks, so those tasks stop with the run.
+            await self._acancel_pending_tasks(pending_tasks)
+            raise
 
         return self._create_crew_output(task_outputs)
 
@@ -1454,14 +1468,40 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[TaskOutput]:
         """Process pending async tasks and return their outputs."""
         task_outputs: list[TaskOutput] = []
-        for future_task, async_task, task_index in pending_tasks:
-            task_output = await async_task
-            task_outputs.append(task_output)
-            self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
-            )
+        try:
+            for future_task, async_task, task_index in pending_tasks:
+                task_output = await async_task
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+                self._store_execution_log(
+                    future_task, task_output, task_index, was_replayed
+                )
+        except BaseException:
+            # The run has failed: stop the siblings still in flight before the
+            # error reaches the caller.
+            await self._acancel_pending_tasks(pending_tasks)
+            raise
         return task_outputs
+
+    @staticmethod
+    async def _acancel_pending_tasks(
+        pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]],
+    ) -> None:
+        """Cancel the async tasks still in flight and drain them.
+
+        Called whenever a run fails while siblings are still executing, so
+        they stop instead of running on (LLM calls, events) after the caller
+        already received the error. Draining retrieves their outcomes, so
+        cancellations and errors aren't left unretrieved. Finished tasks are
+        left alone, which makes this safe to call twice for the same batch.
+        """
+        for _, orphan, _ in pending_tasks:
+            if not orphan.done():
+                orphan.cancel()
+        await asyncio.gather(
+            *(orphan for _, orphan, _ in pending_tasks),
+            return_exceptions=True,
+        )
 
     def _handle_crew_planning(self) -> None:
         """Handles the Crew planning."""
