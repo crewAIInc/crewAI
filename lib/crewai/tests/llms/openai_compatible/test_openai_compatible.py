@@ -164,7 +164,10 @@ class TestOpenAICompatibleCompletion:
         env_key = "DEEPSEEK_API_KEY"
         original = os.environ.pop(env_key, None)
         try:
-            with pytest.raises(ValueError, match="API key required"):
+            with pytest.raises(
+                ValueError,
+                match="DEEPSEEK_API_KEY is required for model 'deepseek-chat'",
+            ):
                 OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
         finally:
             if original is not None:

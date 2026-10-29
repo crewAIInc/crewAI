@@ -217,23 +217,27 @@ def listener_with_a_recording_telemetry():
     regression this test exists to catch. Verified: the failure moved between the two
     parameter cases depending only on which ran first in the process.
 
-    Both singletons and the bus are reset on the way in and out, so no handler leaks
-    into another test -- the suite runs in random order.
+    The bus is cleared and both singletons are replaced on the way in, and the
+    original singletons are put back on the way out, so no handler leaks into
+    another test -- the suite runs in random order. Leaving them None instead
+    made the next ``EventListener()`` a second listener beside the module-level
+    ``event_listener``, so tests patching that one recorded nothing.
     """
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.event_listener import EventListener
     from crewai.telemetry import Telemetry
 
-    def _reset():
+    original = (EventListener._instance, Telemetry._instance, Telemetry._lock)
+
+    def _clear_bus():
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers.clear()
             crewai_event_bus._async_handlers.clear()
-        Telemetry._instance = None
-        EventListener._instance = None
-        if hasattr(Telemetry, "_lock"):
-            Telemetry._lock = threading.Lock()
 
-    _reset()
+    _clear_bus()
+    Telemetry._instance = None
+    EventListener._instance = None
+    Telemetry._lock = threading.Lock()
     listener = EventListener()
 
     class _RecordingTelemetry:
@@ -256,7 +260,8 @@ def listener_with_a_recording_telemetry():
     listener._telemetry = recording
     yield listener, crewai_event_bus, recording
 
-    _reset()
+    _clear_bus()
+    EventListener._instance, Telemetry._instance, Telemetry._lock = original
 
 
 def _handler_for(bus, event_type):

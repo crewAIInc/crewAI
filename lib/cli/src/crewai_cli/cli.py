@@ -6,6 +6,10 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 import click
+
+# Imported first so AMP requests pin the machine's proxy and CA settings before
+# any command loads a project's .env (see crewai_core.plus_api).
+import crewai_core.plus_api  # noqa: F401
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.config import Settings
@@ -58,6 +62,12 @@ def eval_models(*args: Any, **kwargs: Any) -> Any:
     from crewai_cli.experimental.eval_crew import eval_models as _eval_models
 
     return _eval_models(*args, **kwargs)
+
+
+def eval_export(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.experimental.eval_crew import export_evaluation as _export
+
+    return _export(*args, **kwargs)
 
 
 if TYPE_CHECKING:
@@ -670,7 +680,7 @@ def install(context: click.Context) -> None:
     "--inputs",
     type=str,
     default=None,
-    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
+    help='JSON object of inputs for a flow or a JSON crew, e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
@@ -690,7 +700,7 @@ def run(
     )
 
 
-@crewai.command(name="eval")
+@crewai.group(name="eval", invoke_without_command=True)
 @click.option(
     "--run",
     "run_id",
@@ -728,23 +738,47 @@ def run(
         "project id."
     ),
 )
+@click.pass_context
 def eval_command(
-    run_id: str | None, models: str | None, deployment_id: str | None
+    ctx: click.Context,
+    run_id: str | None,
+    models: str | None,
+    deployment_id: str | None,
 ) -> None:
-    """Evaluate the last traced run through CrewAI AMP, or compare models on the
-    project's deployment (--models).
+    """Evaluate this crew through CrewAI AMP, or compare models on the project's
+    deployment (--models).
+
+    It grades the project's last traced run. When there is none, or the project
+    changed since it, it runs the crew first and grades that run: the run is
+    traced and its trace sent to CrewAI AMP, which grades it. The first time
+    tracing is turned on for the project, a person at a terminal is asked
+    first; with no terminal (a coding agent, a script) nothing is asked and the
+    command says it turned tracing on, so `crewai eval` alone takes an agent
+    from a change to its verdict. A project that turned tracing off is asked
+    at a terminal, and told how to turn it on without one.
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act
     on it directly. That is when AMP provides the brief: otherwise its link, when
-    AMP sends only that, else nothing more. It grades a run that already
-    happened: after a change, `crewai run` again, then `crewai eval`.
+    AMP sends only that, else nothing more.
 
     A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
     failed gate, no verdict, or an evaluation that could not run — so a CI job can
     gate on it. A comparison exits 0 when it finished, 1 when it failed or could
     not start.
+
+    `crewai eval export ID` downloads an evaluation's full data as files, for a
+    coding agent to dig into.
     """
+    if ctx.invoked_subcommand is not None:
+        # The subcommand does the work; an option meant for this body would
+        # otherwise be dropped without a word.
+        if run_id is not None or models is not None or deployment_id is not None:
+            raise click.UsageError(
+                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models "
+                "or --deployment; give those to `crewai eval` alone."
+            )
+        return
     if models is not None:
         if run_id is not None:
             raise click.UsageError(
@@ -760,9 +794,34 @@ def eval_command(
     eval_crew(run_id=run_id)
 
 
+@eval_command.command(name="export")
+@click.argument("evaluation_id", metavar="ID")
+def eval_export_command(evaluation_id: str) -> None:
+    """Download evaluation ID's full data into ./crewai-eval-ID/.
+
+    The report, every setup's outputs, every check with the judge's words, and
+    the traces, as files for a coding agent to dig into: start with report.md.
+    The folder gets a .gitignore of `*`, so the data is never committed by
+    accident; exporting again overwrites the files.
+
+    ID is the evaluation's UUID. It is read with your `crewai login` when there
+    is one; a run's evaluation can be exported without one. Exits 0 when the
+    files were written, 1 otherwise.
+    """
+    eval_export(evaluation_id)
+
+
 @crewai.command()
 def update() -> None:
-    """Update the pyproject.toml of the Crew project to use uv."""
+    """Convert a Poetry project to uv.
+
+    Rewrites pyproject.toml for uv and keeps the original as pyproject-old.toml.
+    It does not upgrade CrewAI. To upgrade:
+
+    \b
+      CLI:     uv tool upgrade crewai
+      Project: crewai install --upgrade-package crewai --upgrade-package crewai-tools
+    """
     from crewai_cli.update_crew import update_crew
 
     update_crew()
@@ -808,7 +867,13 @@ def deploy() -> None:
     is_flag=True,
     help="Skip the pre-deploy validation checks.",
 )
-def deploy_create(yes: bool, skip_validate: bool) -> None:
+@click.option(
+    "--zip",
+    "force_zip",
+    is_flag=True,
+    help="Upload the project as a ZIP even when it has a git origin remote.",
+)
+def deploy_create(yes: bool, skip_validate: bool, force_zip: bool) -> None:
     """Create a Crew deployment."""
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
@@ -816,7 +881,7 @@ def deploy_create(yes: bool, skip_validate: bool) -> None:
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
     deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew(yes, skip_validate=skip_validate)
+    deploy_cmd.create_crew(yes, skip_validate=skip_validate, force_zip=force_zip)
 
 
 @deploy.command(name="list")
@@ -993,6 +1058,16 @@ def skill_list() -> None:
 
     skill_cmd = SkillCommand()
     skill_cmd.list_cached()
+
+
+@skill.command(name="search")
+@click.argument("query", required=False)
+def skill_search(query: str | None) -> None:
+    """List the organization's skills on AMP, optionally matching QUERY."""
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.search(query)
 
 
 @crewai.group()
@@ -1327,7 +1402,7 @@ def traces_status() -> None:
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="white")
 
-    env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
+    env_enabled = os.getenv("CREWAI_TRACING_ENABLED") or "not set"
     table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
 
     trace_consent = user_data.get("trace_consent")
