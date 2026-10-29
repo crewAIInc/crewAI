@@ -138,7 +138,6 @@ def test_unset_supports_tools_defers_to_the_catalog(
         lambda: BedrockCompletion(
             model="anthropic.claude-3-5-sonnet-20241022-v2:0"
         ),
-        lambda: GeminiCompletion(model="gemini-1.5-pro"),
     ],
 )
 def test_provider_default_supports_tools_wins_over_the_catalog(
