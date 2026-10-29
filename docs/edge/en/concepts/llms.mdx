@@ -1188,6 +1188,40 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Wally">
+    Wally serves an OpenAI-compatible API, so CrewAI talks to it through its native OpenAI client
+    with a custom `base_url`. No LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    WALLY_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    import os
+
+    llm = LLM(
+        model="openai/glm-5.3-flash",
+        base_url="https://inference.runanywhere.ai/v1",
+        api_key=os.getenv("WALLY_API_KEY"),
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Wally features:
+      - Fast inference for open-weight models (GLM, DeepSeek, Kimi, MiniMax)
+      - Tool calling, streaming and JSON schema structured outputs
+      - Up to 1M-token context window
+    </Info>
+
+    The `openai/` prefix routes the call through the native OpenAI client, and the Wally model id
+    follows it, for example `glm-5.3-flash` or `deepseek-v4.1-flash`. See
+    [Wally pricing](https://www.runwally.com/pricing) and the
+    [API docs](https://docs.runanywhere.ai/wally-cloud/api) for current models, context lengths and pricing.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
