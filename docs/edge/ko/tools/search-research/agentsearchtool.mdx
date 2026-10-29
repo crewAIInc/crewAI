@@ -9,7 +9,7 @@ mode: "wide"
 
 | 도구 | 하는 일 | 비용 |
 | --- | --- | --- |
-| `AgentSearchTool` | 웹 검색. 제목, URL, 내용이 포함된 결과를 최대 5개 반환합니다. | 기본은 무료입니다. IP별 일일 허용량이며 API 키가 필요 없습니다. 유료 검색은 호출당 $0.005로 선택할 수 있습니다. |
+| `AgentSearchTool` | 웹 검색. 제목, URL, 내용이 포함된 결과를 호출당 최대 5개 반환합니다. | 기본은 무료입니다. IP당 하루 최대 25회이며 API 키가 필요 없습니다. 유료 검색은 호출당 $0.005로 선택할 수 있습니다. |
 | `AgentSearchExtractTool` | URL을 가져와 본문을 깨끗한 Markdown 또는 텍스트로 반환합니다. | 호출당 $0.005. |
 | `AgentSearchRenderTool` | JavaScript로 렌더링되는 페이지를 headless 브라우저에서 불러와 Markdown, 텍스트, HTML 또는 링크를 반환합니다. | 호출당 $0.005. |
 
@@ -31,7 +31,7 @@ pip install "crewai-agentsearch[paid]"
 
 ## 예제
 
-`AgentSearchTool()`에는 API 키가 필요 없습니다. 유료를 선택하기 전까지 검색은 무료 등급에 머뭅니다.
+`AgentSearchTool()`에는 API 키가 필요 없습니다. 무료 검색은 IP당 하루 최대 25회, 호출당 최대 5개 결과입니다. 유료를 선택하기 전까지 검색은 무료 등급에 머뭅니다.
 
 ```python
 from crewai import Agent, Task, Crew

@@ -9,7 +9,7 @@ The `crewai-agentsearch` package gives CrewAI agents live web search, plus tools
 
 | Tool | What it does | Cost |
 | --- | --- | --- |
-| `AgentSearchTool` | Web search. Returns up to 5 results with title, URL, and content. | Free by default: a daily per-IP allowance, no API key. Paid search is opt-in at $0.005 per call. |
+| `AgentSearchTool` | Web search. Returns up to 5 results per call, with title, URL, and content. | Free by default: up to 25 searches/day per IP, no API key. Paid search is opt-in at $0.005 per call. |
 | `AgentSearchExtractTool` | Fetches a URL and returns its main content as clean markdown or text. | $0.005 per call. |
 | `AgentSearchRenderTool` | Loads a JavaScript-rendered page in a headless browser and returns markdown, text, HTML, or links. | $0.005 per call. |
 
@@ -31,7 +31,7 @@ pip install "crewai-agentsearch[paid]"
 
 ## Example
 
-`AgentSearchTool()` needs no API key. Search stays on the free tier until you opt in.
+`AgentSearchTool()` needs no API key. Free search is up to 25 searches/day per IP and up to 5 results per call. Search stays on the free tier until you opt in.
 
 ```python
 from crewai import Agent, Task, Crew
