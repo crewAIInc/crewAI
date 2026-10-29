@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from pathlib import Path
@@ -106,7 +107,9 @@ class RAG(Adapter):
             doc_metadata["chunk_index"] = i
             documents.append(
                 Document(
-                    id=compute_sha256(chunk),
+                    id=compute_sha256(
+                        json.dumps([source_content.source_ref, doc_id, i, chunk])
+                    ),
                     content=chunk,
                     metadata=doc_metadata,
                     data_type=data_type,
