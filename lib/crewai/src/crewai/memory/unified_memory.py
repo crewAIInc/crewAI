@@ -327,11 +327,16 @@ class Memory(BaseModel):
             return future
 
     def _on_save_done(self, future: Future[Any]) -> None:
-        """Remove a completed future from the pending list and emit failure event if needed.
+        """Remove a completed future from the pending list.
 
         This callback must never raise -- it runs from the thread pool's
         internal machinery during process shutdown when executors and the
-        event bus may already be closed.
+        event bus may already be closed. Failure events are NOT emitted
+        here: the callback runs in the pool thread's own context, where the
+        event-bus scope stack is empty, so an ending event would be unpaired
+        (and, for ``remember()``, a duplicate of the caller's own failed
+        event). Both save paths emit their own paired failed event where the
+        started event was emitted.
         """
         try:
             with self._pending_lock:
@@ -339,16 +344,6 @@ class Memory(BaseModel):
                     self._pending_saves.remove(future)
                 except ValueError:
                     pass  # already removed
-            exc = future.exception()
-            if exc is not None:
-                crewai_event_bus.emit(
-                    self,
-                    MemorySaveFailedEvent(
-                        value="background save",
-                        error=str(exc),
-                        source_type="unified_memory",
-                    ),
-                )
         except Exception:  # noqa: S110
             pass  # swallow everything during shutdown
 
@@ -648,10 +643,16 @@ class Memory(BaseModel):
             # If the process is shutting down, the default executor is closed and
             # to_thread raises "cannot schedule new futures after shutdown".
             # Silently abandon the save -- the process is exiting anyway.
-            # Any other RuntimeError must propagate so the save future's
-            # done-callback reports it via MemorySaveFailedEvent.
             if "cannot schedule new futures" in str(e):
                 return []
+            self._emit_background_save_failed(contents, metadata, e)
+            raise
+        except Exception as e:
+            # The failed event pairs with the started event above: this
+            # method runs inside the copied context that pushed it, so the
+            # scope stack is correct here (the pool callback's context is
+            # not).
+            self._emit_background_save_failed(contents, metadata, e)
             raise
 
         try:
@@ -668,6 +669,31 @@ class Memory(BaseModel):
         except RuntimeError:
             pass  # event bus shut down during process exit
         return records
+
+    def _emit_background_save_failed(
+        self,
+        contents: list[str],
+        metadata: dict[str, Any] | None,
+        error: Exception,
+    ) -> None:
+        """Emit the background save's failed event (best effort).
+
+        Called in the same copied context that emitted the started event, so
+        the ending event pairs correctly. The bus may already be shut down
+        during process exit, in which case the emit is skipped.
+        """
+        try:
+            crewai_event_bus.emit(
+                self,
+                MemorySaveFailedEvent(
+                    value=f"{len(contents)} memories (background)",
+                    metadata=metadata,
+                    error=str(error),
+                    source_type="unified_memory",
+                ),
+            )
+        except RuntimeError:
+            pass  # event bus shut down during process exit
 
     def extract_memories(self, content: str) -> list[str]:
         """Extract discrete memories from a raw content blob using the LLM.

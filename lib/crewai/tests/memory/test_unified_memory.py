@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 import threading
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -1278,8 +1279,10 @@ def test_drain_writes_reports_background_save_failure_without_raising(
         embedder=mock_embedder,
     )
 
-    def fail_save() -> None:
+    def fail_batch(*args: Any, **kwargs: Any) -> None:
         raise ValueError("invalid model ID")
+
+    mem._encode_batch = fail_batch  # type: ignore[method-assign]
 
     with crewai_event_bus.scoped_handlers():
 
@@ -1288,13 +1291,12 @@ def test_drain_writes_reports_background_save_failure_without_raising(
             failures.append(event)
             failure_seen.set()
 
-        mem._submit_save(fail_save)
+        mem.remember_many(["Important fact."])
         mem.drain_writes()
 
         assert failure_seen.wait(timeout=2)
 
     assert failures
-    assert failures[0].value == "background save"
     assert failures[0].error == "invalid model ID"
 
 
