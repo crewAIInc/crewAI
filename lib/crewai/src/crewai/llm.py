@@ -38,6 +38,7 @@ from crewai.llm_overlay import overlay_model_for_model
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
+    EmptyLLMResponseError,
     JsonResponseFormat,
     LLMCallBlockedError,
     get_current_call_id,
@@ -52,9 +53,11 @@ from crewai.llms.constants import (
 )
 from crewai.llms.context_window import (
     AZURE_OPENAI_CONTEXT_WINDOWS,
+    CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
     OPENAI_CONTEXT_WINDOWS,
+    catalog_context_window,
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
@@ -283,7 +286,6 @@ class LLM(BaseLLM):
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
-    context_window_size: int = 0
     is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
@@ -712,6 +714,24 @@ class LLM(BaseLLM):
             self.set_env_callbacks()
         return self
 
+    @model_validator(mode="after")
+    def _drop_cached_context_window(self) -> LLM:
+        # Through 1.15.32, get_context_window_size() wrote its result (85% of
+        # the catalog or default window) back into this field, and checkpoints
+        # carry it. Read as an override it would be scaled by 85% again.
+        # Remove in 2.0.
+        if self.context_window_size is None:
+            return self
+        full = catalog_context_window(
+            self._context_window_model_name(),
+            self._context_window_sizes(),
+            extra_names=(self.model,),
+        )
+        cached = int((full or DEFAULT_CONTEXT_WINDOW_SIZE) * CONTEXT_WINDOW_USAGE_RATIO)
+        if self.context_window_size == cached:
+            self.context_window_size = None
+        return self
+
     @staticmethod
     def _is_anthropic_model(model: str) -> bool:
         """Determine if the model is from Anthropic provider.
@@ -839,7 +859,7 @@ class LLM(BaseLLM):
             str: The complete response text
 
         Raises:
-            Exception: If no content is received from the streaming response
+            EmptyLLMResponseError: If the stream carried no content and no tool calls.
         """
         full_response = ""
         last_chunk = None
@@ -1001,9 +1021,7 @@ class LLM(BaseLLM):
                         )
 
             if not full_response.strip() and len(accumulated_tool_args) == 0:
-                raise Exception(
-                    "No content received from streaming response. Received empty chunks or failed to extract content."
-                )
+                raise EmptyLLMResponseError(self.model)
 
             tool_calls = None
             try:
@@ -1120,7 +1138,7 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except LLMContextLengthExceededError:
+        except (LLMContextLengthExceededError, EmptyLLMResponseError):
             raise
         except Exception as e:
             error_msg = str(e)
@@ -1146,16 +1164,9 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallFailedEvent(
-                    error=str(e),
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    call_id=get_current_call_id(),
-                ),
-            )
-            raise Exception(f"Failed to get streaming response: {e!s}") from e
+            # call() emits LLMCallFailedEvent for this error; re-raise the
+            # provider's exception so its type reaches callers and telemetry.
+            raise
 
     def _handle_streaming_tool_calls(
         self,
@@ -2609,17 +2620,14 @@ class LLM(BaseLLM):
         return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
-        """Return the context window size, using 85% of the catalog limit."""
-        if self.context_window_size != 0:
-            return self.context_window_size
-
-        self.context_window_size = resolve_context_window_size(
+        """Return 85% of ``context_window_size`` or of the catalog limit."""
+        return resolve_context_window_size(
             self._context_window_model_name(),
             self._context_window_sizes(),
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
             extra_names=(self.model,),
+            configured=self.context_window_size,
         )
-        return self.context_window_size
 
     @staticmethod
     def set_callbacks(callbacks: list[Any]) -> None:

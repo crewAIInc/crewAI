@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import signal
 import sys
 import threading
 import time
@@ -22,7 +23,7 @@ from typing import Any, ClassVar
 from crewai_core.telemetry import Telemetry
 from rich.text import Text
 from textual import work
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, SuspendNotSupported
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
@@ -1555,6 +1556,7 @@ FooterKey .footer-key--key {
                 on_started=lambda started: back(self._evaluation_started, started),
                 on_status=lambda payload: back(self._evaluation_progress, payload),
                 note=lambda text: back(self._evaluation_note, text),
+                log_in=lambda: self.call_from_thread(self._log_in_for_the_evaluation),
             )
         except EvaluationStoppedError as stopped:
             reason, message = stopped.reason, str(stopped)
@@ -1575,6 +1577,37 @@ FooterKey .footer-key--key {
         self._say_what_became_of_the_evaluation(execution_id)
         record_stop(reason)
         back(self._evaluation_failed, message)
+
+    def _log_in_for_the_evaluation(self) -> bool:
+        """AMP refused the saved login: the app steps aside for `crewai login`
+        (a code to confirm in the browser, polled until it is), as `crewai eval`
+        does in a terminal, and comes back for the one retry. False when this
+        terminal cannot be handed over, and the refusal is shown as it was."""
+        from crewai_cli.experimental.eval_crew import (
+            EvaluationStoppedError,
+            log_in_again,
+        )
+
+        stopped: EvaluationStoppedError | None = None
+        try:
+            with self.suspend():
+                # The app's event loop owns SIGINT: left alone, Ctrl-C here does
+                # not reach the login, which polls on until its code expires.
+                # While the login has the terminal, Ctrl-C interrupts it.
+                previous = signal.signal(signal.SIGINT, signal.default_int_handler)
+                try:
+                    log_in_again()
+                except EvaluationStoppedError as error:
+                    # Raised after the block: Textual resumes the app only when
+                    # the block ends without an exception.
+                    stopped = error
+                finally:
+                    signal.signal(signal.SIGINT, previous)
+        except SuspendNotSupported:
+            return False
+        if stopped is not None:
+            raise stopped
+        return True
 
     def _evaluation_started(self, started: dict[str, Any]) -> None:
         if self._evaluation is None:
