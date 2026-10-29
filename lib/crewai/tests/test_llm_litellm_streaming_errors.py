@@ -26,8 +26,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 
 
-# litellm 1.100.4 (the floor set for GHSA-3cv6-jpf6-8222) imports
-# typing.NotRequired, so it cannot be imported on Python 3.10.
 litellm = pytest.importorskip("litellm")
 
 MODEL = "groq/llama-3.1-8b-instant"
