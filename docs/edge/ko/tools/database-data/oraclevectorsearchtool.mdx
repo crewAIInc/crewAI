@@ -1,0 +1,146 @@
+---
+title: "Oracle Vector Search 도구"
+description: "Oracle AI Vector Search 테이블을 검색하고 CrewAI Agent에서 Oracle이 생성한 임베딩을 사용하세요"
+icon: "database"
+mode: "wide"
+---
+
+## 개요
+
+`OracleVectorSearchTool`은 Oracle AI Vector Search를 사용하여 Oracle Database에 저장된 문서를 검색합니다. JSON 메타데이터 필터, 쿼리별 결과 제한, 최대 거리 임계값, HNSW 및 IVF 인덱스를 지원합니다.
+
+## 설치 및 사전 요구 사항
+
+AI Vector Search를 사용할 수 있는 Oracle Database 23ai 이상을 사용하세요. Oracle extra를 설치합니다:
+
+```bash
+uv add 'crewai-tools[oracledb]'
+```
+
+아래 예제를 위해 `ORACLE_DB_USERNAME`, `ORACLE_DB_SECRET`, `ORACLE_DB_DSN`을 설정하세요. 예제는 이 이름들을 명시적으로 읽습니다.
+
+예제를 실행하기 전에 Oracle Database에 임베딩 모델을 가져오고 `ORACLE_EMBEDDING_MODEL`을 모델 이름으로, `ORACLE_EMBEDDING_DIMENSIONS`를 출력 차원으로 설정하세요. `oracledb` 설치는 모델을 설치하지 않습니다. 계정에는 `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS`와 선택한 모델을 사용할 권한이 필요합니다. Oracle 제공자에 전달하는 문서는 각각 최대 4000자여야 합니다.
+
+## 기본 사용법
+
+이 예제는 Oracle Database에서 임베딩을 생성하고 테이블을 만든 뒤 문서 두 개를 삽입하고 검색합니다. 임베딩 모델과 벡터 차원은 기존 테이블에 저장된 벡터와 일치해야 합니다.
+
+```python
+import os
+
+import oracledb
+from crewai.rag.embeddings.factory import build_embedder
+from crewai_tools import (
+    OracleVectorSearchConfig,
+    OracleVectorSearchQueryConfig,
+    OracleVectorSearchTool,
+)
+
+connection = oracledb.connect(
+    user=os.environ["ORACLE_DB_USERNAME"],
+    password=os.environ["ORACLE_DB_SECRET"],
+    dsn=os.environ["ORACLE_DB_DSN"],
+)
+oracle_embedder = build_embedder({
+    "provider": "oracle",
+    "config": {
+        "conn": connection,
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+
+
+def embed_text(text: str) -> list[float]:
+    if not isinstance(text, str):
+        raise TypeError("embed_text expects a single string")
+    return oracle_embedder([text])[0].tolist()
+
+
+tool = OracleVectorSearchTool(
+    oracle_config=OracleVectorSearchConfig(
+        table_name="CREWAI_DOCS",
+        distance_strategy="COSINE",
+        limit=3,
+    ),
+    query_config=OracleVectorSearchQueryConfig(filter={"source": "docs"}),
+    client=connection,
+    embedding_function=embed_text,
+    dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
+)
+
+tool.create_table()
+tool.add_texts(
+    [
+        "CrewAI agents can search documents in Oracle Database.",
+        "Oracle AI Vector Search supports semantic similarity queries.",
+    ],
+    metadatas=[
+        {"source": "docs", "tags": ["oracle", "crewai"]},
+        {"source": "docs", "tags": ["oracle", "search"]},
+    ],
+)
+
+results = tool.run(query="How can agents search Oracle documents?")
+print(results)
+```
+
+테이블에는 `id`, `text`, `metadata`(Oracle 네이티브 `JSON`), `embedding`(`VECTOR`) 열이 필요합니다. `create_table()`은 `id VARCHAR2(64) PRIMARY KEY`, `text CLOB`, `metadata JSON`, `embedding VECTOR(dimensions, FLOAT32)`를 만듭니다. 계정에는 테이블 접근 권한과 필요한 테이블 또는 인덱스 생성 권한이 있어야 합니다.
+
+`create_table()`과 인덱스 생성은 암시적으로 커밋하는 Oracle DDL을 실행합니다. 성공한 `add_texts()` 호출은 연결을 커밋합니다. 삽입에 실패하면 배치를 savepoint로 롤백하며, 테이블이 이미 존재하는 경우 이전에 대기 중이던 작업을 보존합니다.
+
+## 메타데이터 필터와 거리
+
+`filters`에 JSON 문자열로 복합 필터를 전달하세요. `query_config` 필터와 검색 호출의 필터는 AND로 결합됩니다.
+
+```python
+import json
+
+results = tool.run(
+    query="Oracle semantic search",
+    filters=json.dumps({"tags": {"$in": ["search"]}}),
+    limit=2,
+    score_threshold=0.6,
+)
+```
+
+지원 연산자는 `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$between`, `$in`, `$nin`, `$all`, `$exists`, `$not`이며 `$and`, `$or`, `$nor`로 결합할 수 있습니다. 논리 연산자의 목록과 중첩 필터 객체는 비어 있으면 안 됩니다. `$in`, `$nin`, `$all`에는 비어 있지 않은 목록이 필요합니다. `$in`과 `$nin`은 스칼라 값 또는 배열 요소를 검사하고 `$all`은 요청한 모든 값을 요구합니다. 점은 중첩 멤버를, `[*]`는 배열 와일드카드를 나타내며 공백이 있는 멤버 이름은 자동으로 인용됩니다. 단순 스칼라 동등 비교에는 `filter_by`와 `filter_value`를 함께 전달하세요.
+
+`score_threshold`는 최대 거리입니다. `distance <= score_threshold`일 때 결과가 유지됩니다. 전략은 `COSINE`, `EUCLIDEAN`, `DOT`입니다. `DOT`은 음의 내적을 반환하므로 음수 임계값도 유효합니다. 결과 제한은 양의 정수여야 합니다. 임베딩이 null인 행은 제외됩니다.
+
+## 벡터 인덱스
+
+문서를 로드한 후 인덱스를 만드세요. 기본 유형은 HNSW이며 IVF도 선택할 수 있습니다. 데이터베이스 리소스와 권한이 선택한 유형을 지원해야 합니다.
+
+```python
+tool.create_vector_index(idx_type="HNSW", params={"accuracy": 90})
+
+# An alternative to HNSW:
+# tool.create_vector_index(index_name="CREWAI_DOCS_IVF", idx_type="IVF")
+
+print(tool.vector_index_exists(idx_type="HNSW"))
+```
+
+`index_name`을 지정하지 않으면 테이블 이름과 인덱스 유형으로 이름을 생성합니다. IVF 인덱스를 확인할 때는 `vector_index_exists(idx_type="IVF")`를 사용하세요. 스키마로 한정한 테이블 및 인덱스 이름을 지원하며 식별자의 대소문자를 유지합니다.
+
+## Oracle 연결
+
+예제는 호출자가 관리하는 연결과 [Oracle 임베딩 제공자](/edge/ko/concepts/memory)를 사용합니다. 위의 검색 및 인덱스 예제를 실행하는 동안 연결을 유지하고, 작업이 끝나면 `connection.close()`를 호출하세요.
+
+`client`는 호출자가 관리하는 `oracledb.ConnectionPool`도 받습니다. 도구는 데이터베이스 작업마다 연결을 획득합니다. 사용하는 동안 연결이나 풀을 열어 두고 완료하면 닫으세요. 도구가 연결을 생성할 때 `connection_kwargs`는 wallet 설정과 같은 추가 옵션을 `oracledb.connect()`로 전달합니다.
+
+## 설정
+
+| 인수 | 용도 |
+| --- | --- |
+| `oracle_config` | 연결 및 검색 설정. `table_name`은 필수이며 `client`를 제공하지 않으면 연결 자격 증명이 필요합니다. 다른 필드에는 `connection_kwargs`, `limit`, `score_threshold`, `distance_strategy`, `index_name`이 있습니다. |
+| `query_config` | 선택적 기본 `filter`, `limit`, `score_threshold`. 호출별 제한과 임계값은 기본값을 덮어씁니다. |
+| `client` | 기존 Oracle 연결 또는 연결 풀. |
+| `embedding_function` | 텍스트 하나를 임베딩하는 함수. 위의 Oracle 임베딩 함수를 제공하세요. |
+| `dimensions` | 테이블 생성에 사용하는 벡터 차원. Oracle 모델의 출력 차원으로 설정하세요. |
+
+## 결과와 오류
+
+`run()`은 결과 목록이 담긴 JSON 문자열을 반환합니다. 각 결과에는 `context`, `metadata`, `distance`, `score`가 포함됩니다. 현재 `score`는 원시 거리와 같으며 정규화된 유사도 점수가 아닙니다. 성공했지만 일치 항목이 없는 검색은 `"[]"`를 반환합니다. 검색 오류는 로그에 기록되고 빈 문자열(`""`)을 반환하므로 빈 문자열을 결과 없음으로 해석하기 전에 로그를 확인하세요.
