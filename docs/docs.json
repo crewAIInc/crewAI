@@ -352,6 +352,7 @@
                       "edge/en/observability/braintrust",
                       "edge/en/observability/datadog",
                       "edge/en/observability/galileo",
+                      "edge/en/observability/honeyhive",
                       "edge/en/observability/langdb",
                       "edge/en/observability/langfuse",
                       "edge/en/observability/langtrace",
