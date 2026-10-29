@@ -245,7 +245,7 @@ Compreender as saídas das tarefas é crucial para construir fluxos de trabalho 
 
 A saída de uma tarefa no framework CrewAI é encapsulada na classe `TaskOutput`. Essa classe fornece uma maneira estruturada de acessar os resultados da tarefa, incluindo vários formatos como saída bruta, JSON e modelos Pydantic.
 
-Por padrão, o `TaskOutput` incluirá apenas a saída `raw`. Um `TaskOutput` só terá as saídas `pydantic` ou `json_dict` se o objeto original da `Task` estiver configurado com `output_pydantic` ou `output_json`, respectivamente.
+Por padrão, o `TaskOutput` incluirá apenas a saída `raw`. Um `TaskOutput` só terá as saídas `pydantic` ou `json_dict` se o objeto original da `Task` estiver configurado com `output_pydantic` ou `output_json`, respectivamente. Se a saída não puder ser convertida para esse modelo, esses campos ficam `None` e apenas `raw` é preenchido.
 
 ### Atributos do Task Output
 
@@ -263,7 +263,7 @@ Por padrão, o `TaskOutput` incluirá apenas a saída `raw`. Um `TaskOutput` só
 
 | Método/Propriedade | Descrição                                                                                            |
 | :----------------- | :--------------------------------------------------------------------------------------------------- |
-| **json**           | Retorna a representação da saída da tarefa em JSON como string, se o formato de saída for JSON.      |
+| **json**           | Retorna a representação da saída da tarefa em JSON como string, se o formato de saída for JSON, ou `None` se a saída não pôde ser convertida.      |
 | **to_dict**        | Converte as saídas JSON e Pydantic para um dicionário.                                               |
 | **str**            | Retorna a representação em string da saída da tarefa, priorizando Pydantic, depois JSON, depois raw. |
 

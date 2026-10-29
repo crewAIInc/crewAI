@@ -240,7 +240,7 @@ reporting_task = Task(
 
 CrewAI 프레임워크에서 작업의 출력은 `TaskOutput` 클래스에 캡슐화되어 있습니다. 이 클래스는 작업의 결과를 구조적으로 접근할 수 있도록 해주며, raw 출력, JSON, Pydantic 모델 등 다양한 형식을 지원합니다.
 
-기본적으로 `TaskOutput`에는 `raw` 출력만 포함됩니다. 원래의 `Task` 객체가 각각 `output_pydantic` 또는 `output_json`으로 구성된 경우에만 `TaskOutput`에 `pydantic` 또는 `json_dict` 출력이 포함됩니다.
+기본적으로 `TaskOutput`에는 `raw` 출력만 포함됩니다. 원래의 `Task` 객체가 각각 `output_pydantic` 또는 `output_json`으로 구성된 경우에만 `TaskOutput`에 `pydantic` 또는 `json_dict` 출력이 포함됩니다. 출력을 해당 모델로 변환할 수 없으면 이 필드들은 `None`이고 `raw`만 설정됩니다.
 
 ### 작업 출력 속성
 
@@ -258,7 +258,7 @@ CrewAI 프레임워크에서 작업의 출력은 `TaskOutput` 클래스에 캡�
 
 | Method/Property | 설명                                                                                                |
 | :-------------- | :------------------------------------------------------------------------------------------------- |
-| **json**        | 출력 포맷이 JSON일 경우 태스크 출력의 JSON 문자열 표현을 반환합니다.                                 |
+| **json**        | 출력 포맷이 JSON일 경우 태스크 출력의 JSON 문자열 표현을 반환하며, 출력을 변환할 수 없으면 `None`을 반환합니다.                                 |
 | **to_dict**     | JSON 및 Pydantic 출력을 딕셔너리로 변환합니다.                                                      |
 | **str**         | 태스크 출력의 문자열 표현을 반환하며, Pydantic을 우선으로 하고 그 다음은 JSON, 그 다음은 raw를 사용합니다. |
 
