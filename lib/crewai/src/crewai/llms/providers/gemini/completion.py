@@ -115,8 +115,6 @@ class GeminiCompletion(BaseLLM):
 
         model = data.get("model", "gemini-2.0-flash-001")
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
-        if "supports_tools" not in data:
-            data["supports_tools"] = cls._supports_tools_by_version(model)
         data["is_gemini_2_0"] = bool(
             version_match and float(version_match.group(1)) >= 2.0
         )
