@@ -44,6 +44,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.model_catalog import find_model_catalog_entry
 from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
@@ -380,6 +381,16 @@ class BaseLLM(BaseModel, ABC):
             "cache_creation_tokens": 0,
         }
     )
+    _catalog_entry: dict[str, Any] | None = PrivateAttr(default=None)
+    _catalog_entry_resolved: bool = PrivateAttr(default=False)
+
+    @property
+    def catalog_entry(self) -> dict[str, Any] | None:
+        """Return the resolved LiteLLM catalog entry, when one is unambiguous."""
+        if not self._catalog_entry_resolved:
+            self._catalog_entry = find_model_catalog_entry(self.model, self.provider)
+            self._catalog_entry_resolved = True
+        return self._catalog_entry
 
     @model_validator(mode="before")
     @classmethod
