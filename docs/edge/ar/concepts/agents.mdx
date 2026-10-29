@@ -58,7 +58,7 @@ mode: "wide"
 | **السماح بتنفيذ الكود** _(اختياري)_   | `allow_code_execution`   | `Optional[bool]`                      | تفعيل تنفيذ الكود للوكيل. الافتراضي False.                                                   |
 | **الحد الأقصى لإعادة المحاولة** _(اختياري)_        | `max_retry_limit`        | `int`                                 | الحد الأقصى لإعادات المحاولة عند حدوث خطأ. الافتراضي 2.                                            |
 | **احترام نافذة السياق** _(اختياري)_ | `respect_context_window` | `bool`                                | إبقاء الرسائل تحت حجم نافذة السياق عبر التلخيص. الافتراضي True.                                 |
-| **استخدام ضغط أفضل** _(اختياري)_  | `use_better_compaction`  | `bool`                                | تأجيل نتائج الأدوات الكبيرة إلى قطع أثرية مؤقتة للقراءة المحدودة. الافتراضي True.                  |
+| **استخدام ضغط أفضل** _(اختياري)_ | `use_better_compaction`  | `bool`                                | تأجيل نتائج الأدوات الأصلية الكبيرة جدًا إلى ملفات مؤقتة يقرؤها الوكيل على أجزاء. الافتراضي True.     |
 | **وضع تنفيذ الكود** _(اختياري)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | وضع تنفيذ الكود: 'safe' (باستخدام Docker) أو 'unsafe' (مباشر). الافتراضي 'safe'.                  |
 | **متعدد الوسائط** _(اختياري)_             | `multimodal`             | `bool`                                | ما إذا كان الوكيل يدعم القدرات متعددة الوسائط. الافتراضي False.                                    |
 | **حقن التاريخ** _(اختياري)_            | `inject_date`            | `bool`                                | ما إذا كان يتم حقن التاريخ الحالي تلقائيًا في أمر الوكيل. الافتراضي False.                        |
@@ -197,7 +197,6 @@ agent = Agent(
     allow_code_execution=False,
     code_execution_mode="safe",
     respect_context_window=True,
-    use_better_compaction=True,
     use_system_prompt=True,
     multimodal=False,
     inject_date=False,
@@ -267,7 +266,6 @@ analysis_agent = Agent(
 
 - `memory`: تفعيل للحفاظ على سجل المحادثة
 - `respect_context_window`: يمنع مشاكل حد الرموز
-- `use_better_compaction`: يؤجل نتائج الأدوات الكبيرة إلى قطع أثرية مؤقتة
 - `knowledge_sources`: إضافة قواعد معرفة خاصة بالمجال
 
 #### التحكم في التنفيذ
@@ -330,51 +328,6 @@ researcher = Agent(
 )
 ```
 
-## ضغط أفضل لنتائج الأدوات
-
-عندما تُرجع الأدوات حمولات كبيرة، يمكن لـ CrewAI إبقاء المحادثة خفيفة باستخدام
-`use_better_compaction`. القيمة الافتراضية هي `True`.
-
-مع `use_better_compaction=True`، إذا تجاوزت نتيجة أداة ناجحة نحو **25% من
-نافذة السياق القابلة للاستخدام للنموذج**، فإن CrewAI:
-
-1. يخزّن النتيجة الكاملة كقطعة أثرية مؤقتة
-2. يضع معاينة قصيرة ومرجع الملف في سياق الوكيل
-3. يتيح للوكيل قراءة أقسام محدودة من تلك القطعة باستخدام أداة قارئ ملفات مؤجلة
-
-```python Code
-# الافتراضي: تأجيل نتائج الأدوات الكبيرة
-agent = Agent(
-    role="Research Analyst",
-    goal="Synthesize findings from large tool outputs",
-    backstory="Expert at working with lengthy search and document results",
-    use_better_compaction=True,  # الافتراضي: True
-    tools=[SerperDevTool()],
-    verbose=True,
-)
-```
-
-عيّن `use_better_compaction=False` عندما تريد الإبقاء على كل نتيجة أداة داخل
-سجل الرسائل مباشرة (مثلًا أثناء تصحيح مخرجات الأدوات أو عندما تكون النتائج
-دائمًا صغيرة):
-
-```python Code
-agent = Agent(
-    role="Debug Agent",
-    goal="Inspect full tool payloads during development",
-    backstory="Needs complete inline tool output",
-    use_better_compaction=False,
-    tools=[SerperDevTool()],
-    verbose=True,
-)
-```
-
-<Note>
-  `use_better_compaction` منفصل عن `respect_context_window`. يحدث ضغط نتائج
-  الأدوات الكبيرة قبل دخول تلك النتائج إلى المحادثة؛ بينما يلخّص
-  `respect_context_window` السجل عندما تُتجاوز نافذة السياق الإجمالية.
-</Note>
-
 ## التفاعل المباشر مع الوكيل عبر `kickoff()`
 
 يمكن استخدام الوكلاء مباشرة بدون المرور بمهمة أو سير عمل طاقم باستخدام طريقة `kickoff()`. يوفر هذا طريقة أبسط للتفاعل مع وكيل عندما لا تحتاج إلى إمكانيات تنسيق الطاقم الكاملة.
@@ -398,6 +351,68 @@ result = researcher.kickoff("What are the latest developments in language models
 print(result.raw)
 ```
 
+## ترقية الوكلاء من الإصدارات السابقة
+
+أزال الإصدار 1.15.29 `CrewAgentExecutor` وغيّر طريقة تعامل كل وكيل مع نتائج الأدوات الكبيرة والمحادثات الطويلة واستدعاءات الأدوات المتكررة. تنطبق هذه التغييرات على الوكلاء داخل crew وداخل Flow وعند استدعائهم عبر `kickoff()`. والاستثناء هو خطوات الخطة لدى الوكيل الذي [يخطّط](/ar/concepts/planning): فلا تُؤجَّل نتائج أدواتها، ولا تُلخَّص محادثتها، ويبدأ عدّ الاستدعاءات المتكررة من جديد في كل خطوة. إذا كنت تنتقل من 1.15.28 أو أقدم، فراجع كل تغيير أدناه.
+
+### إزالة `CrewAgentExecutor`
+
+`AgentExecutor` هو منفّذ الوكلاء الوحيد. وهو الافتراضي منذ 1.14.5، لذا فإن الوكيل الذي لم يضبط `executor_class` قط كان يعمل عليه بالفعل.
+
+- يفشل التحقق من `executor_class=CrewAgentExecutor`، أو من السلسلة `"CrewAgentExecutor"` في ملف إعداد، بالرسالة `CrewAgentExecutor has been removed. Use crewai.agents.agent_executor.AgentExecutor.` احذف هذا الإعداد.
+- لم تعد مسارات الاستيراد هذه موجودة: `crewai.agents.crew_agent_executor`، و`crewai.agents.CrewAgentExecutor`، والوحدة `crewai.experimental.agent_executor`، و`crewai.experimental.AgentExecutor`، و`crewai.experimental.CrewAgentExecutorFlow`. استورد المنفّذ من `crewai.agents`:
+
+```python Code
+from crewai.agents import AgentExecutor
+```
+
+لا يوجد إعداد يعيد المنفّذ القديم.
+
+### تأجيل نتائج الأدوات الكبيرة جدًا
+
+عندما يعيد استدعاء أداة أصلي نتيجة أكبر من 25% من نافذة سياق النموذج، لم يعد الوكيل يتلقى النتيجة كاملة. بل يتلقى معاينة قصيرة ومرجعًا إلى ملف مؤقت، ويقرأ الباقي على أجزاء باستخدام الأداة `Read a deferred tool result` (يراها النموذج باسم `read_a_deferred_tool_result`)، والتي يضيفها CrewAI إلى الوكيل عند الحاجة.
+
+- لا تُؤجَّل أبدًا استدعاءات الأدوات الفاشلة، ولا الأدوات التي تحمل `result_as_answer=True`، ولا استدعاءات الأدوات النصية (ReAct).
+- يُحفظ الملف في مجلد خاص داخل مجلد الملفات المؤقتة للنظام. ولا يمكن قراءته إلا أثناء التشغيل الذي أنتجه، ويُحذف عند انتهاء تلك المهمة أو استدعاء `kickoff()`.
+
+للإبقاء على نتائج الأدوات كاملة في المحادثة، عطّل التأجيل للوكيل:
+
+```python Code
+from crewai import Agent
+
+agent = Agent(
+    role="Source Reviewer",
+    goal="Quote sources exactly",
+    backstory="Checks every quote against the original text",
+    use_better_compaction=False,  # Keep whole tool results in the conversation
+)
+```
+
+### تلخيص السياق قبل أن يتجاوز الحد
+
+مع `respect_context_window=True` (الافتراضي)، أصبح الوكيل يقيس كل طلب قبل إرساله. وعندما يكون الطلب أكبر من نافذة سياق النموذج، يلخّص CrewAI المحادثة السابقة أولًا بدلًا من انتظار رفض المزوّد للطلب. وقد يفقد الملخص تفاصيل مثل الاقتباسات الحرفية.
+
+اضبط `respect_context_window=False` لتعطيل التلخيص. عندها يوقف الطلب الطويل جدًا التشغيل بـ `SystemExit("Context length exceeded and user opted not to summarize...")`. و`SystemExit` ليس صنفًا فرعيًا من `Exception`، لذا لا تلتقطه الكتلة `except Exception`.
+
+### الاستدعاءات المتكررة للأدوات توقف المهمة
+
+عندما يستدعي الوكيل الأداة نفسها بالوسائط نفسها ويحصل على النتيجة نفسها خمس مرات في تشغيل واحد، يوقف CrewAI المهمة بالخطأ `ToolExecutionFailedError` مع رسالة تفيد بأن الوكيل `called '<tool>' with the same arguments 5 times and got the same result each time`.
+
+- يشمل العدّ المهمة كلها أو استدعاء `kickoff()` كله، لا الاستدعاءات المتتالية فقط، ويشمل النتائج التي أجاب عنها التخزين المؤقت للأدوات.
+- يحدث الإيقاف أيًا كانت قيمة `tool_failure_policy`، ولا يعيد `max_retry_limit` المحاولة.
+- حد الخمس مرات ثابت. لا يوجد إعداد لتغييره أو تعطيله.
+
+### كيف يُحدَّد حجم نافذة السياق
+
+يُقاس كل من التأجيل والتلخيص مقابل نافذة السياق التي يستخدمها CrewAI للنموذج: 85% من النافذة المدرجة في كتالوج نماذج LiteLLM المضمّن في الحزمة. ويستخدم النموذج غير الموجود في الكتالوج قيمة افتراضية من المزوّد. وبالنسبة لنماذج OpenAI وAzure وBedrock والنماذج المتوافقة مع OpenAI (مثل OpenRouter) والنماذج الموجّهة عبر LiteLLM، تبلغ هذه القيمة 8,192 رمزًا، فيستخدم CrewAI القيمة 6,963 بعد تطبيق نسبة 85%، وتبدأ الميزتان أبكر بكثير مما تستدعيه النافذة الحقيقية للنموذج. ويستخدم الصنف الفرعي المخصص من `BaseLLM` الذي لا يعيد تعريف `get_context_window_size()` القيمة 4,096. لمعرفة الحجم الذي يستخدمه CrewAI، استدعِ `get_context_window_size()` على الـ LLM. يُنشأ الـ LLM كما يُنشأ عند التشغيل، لذا يجب ضبط مفتاح API الخاص بالمزوّد:
+
+```python Code
+from crewai import LLM
+
+llm = LLM(model="openrouter/your-provider/your-model")
+print(llm.get_context_window_size())
+```
+
 ## اعتبارات مهمة وأفضل الممارسات
 
 ### الأمان وتنفيذ الكود
@@ -409,7 +424,6 @@ print(result.raw)
 ### تحسين الأداء
 
 - استخدم `respect_context_window: true` لمنع مشاكل حد الرموز
-- أبقِ `use_better_compaction: true` (الافتراضي) لتأجيل نتائج الأدوات الكبيرة إلى قطع أثرية مؤقتة
 - عيّن `max_rpm` مناسبًا لتجنب تحديد المعدل
 - فعّل `cache: true` لتحسين الأداء للمهام المتكررة
 - اضبط `max_iter` و `max_retry_limit` بناءً على تعقيد المهمة
@@ -419,7 +433,6 @@ print(result.raw)
 - استفد من `knowledge_sources` للمعلومات الخاصة بالمجال
 - هيّئ `embedder` عند استخدام نماذج تضمين مخصصة
 - استخدم القوالب المخصصة للتحكم الدقيق في سلوك الوكيل
-- استخدم `use_better_compaction` للتحكم في ما إذا بقيت نتائج الأدوات الكبيرة داخل الرسائل أو قُرئت بأقسام محدودة
 
 ### التعاون بين الوكلاء
 

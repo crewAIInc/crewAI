@@ -59,7 +59,7 @@ The Visual Agent Builder enables:
 | **Allow Code Execution** _(optional)_   | `allow_code_execution`   | `Optional[bool]`                      | Enable code execution for the agent. Default is False.                                                   |
 | **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                                 | Maximum number of retries when an error occurs. Default is 2.                                            |
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                                | Keep messages under context window size by summarizing. Default is True.                                 |
-| **Use Better Compaction** _(optional)_  | `use_better_compaction`  | `bool`                                | Defer oversized tool results to temporary artifacts for bounded reads. Default is True.                  |
+| **Use Better Compaction** _(optional)_  | `use_better_compaction`  | `bool`                                | Defer oversized native tool results to temporary files the agent reads in sections. Default is True.     |
 | **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                  |
 | **Multimodal** _(optional)_             | `multimodal`             | `bool`                                | Whether the agent supports multimodal capabilities. Default is False.                                    |
 | **Inject Date** _(optional)_            | `inject_date`            | `bool`                                | Whether to automatically inject the current date into the agent's prompt. Default is False.              |
@@ -156,7 +156,6 @@ agent = Agent(
     allow_code_execution=False,  # Default: False
     code_execution_mode="safe",  # Default: "safe" (options: "safe", "unsafe")
     respect_context_window=True,  # Default: True
-    use_better_compaction=True,  # Default: True
     use_system_prompt=True,  # Default: True
     multimodal=False,  # Default: False
     inject_date=False,  # Default: False
@@ -283,7 +282,6 @@ multimodal_agent = Agent(
 
 - `memory`: Enable to maintain conversation history
 - `respect_context_window`: Prevents token limit issues
-- `use_better_compaction`: Defers oversized tool results to temporary artifacts
 - `knowledge_sources`: Add domain-specific knowledge bases
 
 #### Execution Control
@@ -547,53 +545,6 @@ agent = Agent(
   rest!
 </Note>
 
-## Better Tool Result Compaction
-
-When tools return large payloads, CrewAI can keep the conversation lean with
-`use_better_compaction`. The default is `True`.
-
-With `use_better_compaction=True`, if a successful tool result exceeds roughly
-**25% of the model's usable context window**, CrewAI:
-
-1. Stores the full result as a temporary artifact
-2. Puts a short preview and file reference into the agent context
-3. Lets the agent read bounded sections of that artifact with a deferred file
-   reader tool
-
-```python Code
-# Default: defer oversized tool results
-agent = Agent(
-    role="Research Analyst",
-    goal="Synthesize findings from large tool outputs",
-    backstory="Expert at working with lengthy search and document results",
-    use_better_compaction=True,  # Default: True
-    tools=[SerperDevTool()],
-    verbose=True,
-)
-```
-
-Set `use_better_compaction=False` when you want every tool result kept inline
-in the message history (for example while debugging tool output or when results
-are always small):
-
-```python Code
-agent = Agent(
-    role="Debug Agent",
-    goal="Inspect full tool payloads during development",
-    backstory="Needs complete inline tool output",
-    use_better_compaction=False,
-    tools=[SerperDevTool()],
-    verbose=True,
-)
-```
-
-<Note>
-  `use_better_compaction` is separate from `respect_context_window`. Compaction
-  of oversized tool results happens before those results enter the conversation;
-  `respect_context_window` summarizes history when the overall context window is
-  exceeded.
-</Note>
-
 ## Direct Agent Interaction with `kickoff()`
 
 Agents can be used directly without going through a task or crew workflow using the `kickoff()` method. This provides a simpler way to interact with an agent when you don't need the full crew orchestration capabilities.
@@ -694,10 +645,72 @@ asyncio.run(main())
 ```
 
 <Note>
-  The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler
-  execution flow while preserving all of the agent's configuration (role, goal,
-  backstory, tools, etc.).
+  The `kickoff()` method runs the agent on the same `AgentExecutor` that agents
+  in a crew use, without a task or crew, and keeps all of the agent's
+  configuration (role, goal, backstory, tools, etc.).
 </Note>
+
+## Upgrading Agents from Earlier Releases
+
+Release 1.15.29 removed `CrewAgentExecutor` and changed how every agent handles large tool results, long conversations, and repeated tool calls. These changes apply to agents in a crew, in a Flow, and called with `kickoff()`. The exception is the plan steps of an agent that [plans](/en/concepts/planning): their tool results are not deferred, their conversation is not summarized, and the repeated-call count restarts for each step. If you are moving from 1.15.28 or earlier, check each one below.
+
+### `CrewAgentExecutor` Is Removed
+
+`AgentExecutor` is the only agent executor. It has been the default since 1.14.5, so an agent that never set `executor_class` already ran on it.
+
+- `executor_class=CrewAgentExecutor`, or the string `"CrewAgentExecutor"` in a config file, fails validation with `CrewAgentExecutor has been removed. Use crewai.agents.agent_executor.AgentExecutor.` Remove the setting.
+- These import paths are gone: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, the `crewai.experimental.agent_executor` module, `crewai.experimental.AgentExecutor`, and `crewai.experimental.CrewAgentExecutorFlow`. Import the executor from `crewai.agents`:
+
+```python Code
+from crewai.agents import AgentExecutor
+```
+
+There is no setting that restores the old executor.
+
+### Oversized Tool Results Are Deferred
+
+When a native tool call returns a result larger than 25% of the model's context window, the agent no longer receives the whole result. It receives a short preview and a reference to a temporary file, and reads the rest in sections with the `Read a deferred tool result` tool (the model sees it as `read_a_deferred_tool_result`), which CrewAI adds to the agent when it is needed.
+
+- Failed tool calls, tools with `result_as_answer=True`, and text-based (ReAct) tool calls are never deferred.
+- The file lives in a private directory under the system temp directory. It can be read only during the run that produced it, and it is removed when that task or `kickoff()` call ends.
+
+To keep full tool results in the conversation, turn deferral off for the agent:
+
+```python Code
+from crewai import Agent
+
+agent = Agent(
+    role="Source Reviewer",
+    goal="Quote sources exactly",
+    backstory="Checks every quote against the original text",
+    use_better_compaction=False,  # Keep whole tool results in the conversation
+)
+```
+
+### Context Is Summarized Before It Overflows
+
+With `respect_context_window=True` (the default), the agent now measures every request before sending it. When the request is larger than the model's context window, CrewAI summarizes the earlier conversation first, instead of waiting for the provider to reject the request. A summary can lose details such as exact quotes.
+
+Set `respect_context_window=False` to turn summarization off. A request that is too long then stops the run with `SystemExit("Context length exceeded and user opted not to summarize...")`. `SystemExit` is not an `Exception` subclass, so an `except Exception` block does not catch it.
+
+### Repeated Tool Calls Stop the Task
+
+When an agent calls the same tool with the same arguments and gets the same result five times in one run, CrewAI stops the task with `ToolExecutionFailedError` and a message that the agent `called '<tool>' with the same arguments 5 times and got the same result each time`.
+
+- The count covers the whole task or `kickoff()` call, not only consecutive calls, and it includes results answered from the tool cache.
+- The stop happens whatever `tool_failure_policy` is set, and `max_retry_limit` does not retry it.
+- The limit of five is fixed. There is no setting to change or disable it.
+
+### How the Context Window Size Is Chosen
+
+Deferral and summarization are both measured against the context window CrewAI uses for the model: 85% of the window listed in its bundled LiteLLM model catalog. A model missing from the catalog falls back to a provider default. For OpenAI, Azure, Bedrock, OpenAI-compatible (such as OpenRouter), and LiteLLM-routed models that default is 8,192 tokens, so CrewAI uses 6,963 after the 85% ratio, and both features start far earlier than the model's real window warrants. A custom `BaseLLM` subclass that does not override `get_context_window_size()` uses 4,096. To see the size CrewAI uses, call `get_context_window_size()` on the LLM. The LLM is built as it would be for a run, so the provider's API key must be set:
+
+```python Code
+from crewai import LLM
+
+llm = LLM(model="openrouter/your-provider/your-model")
+print(llm.get_context_window_size())
+```
 
 ## Important Considerations and Best Practices
 
@@ -710,7 +723,6 @@ asyncio.run(main())
 ### Performance Optimization
 
 - Use `respect_context_window: true` to prevent token limit issues
-- Keep `use_better_compaction: true` (default) so oversized tool results are deferred to temporary artifacts
 - Set appropriate `max_rpm` to avoid rate limiting
 - Enable `cache: true` to improve performance for repetitive tasks
 - Adjust `max_iter` and `max_retry_limit` based on task complexity
@@ -720,7 +732,6 @@ asyncio.run(main())
 - Leverage `knowledge_sources` for domain-specific information
 - Configure `embedder` when using custom embedding models
 - Use custom templates (`system_template`, `prompt_template`, `response_template`) for fine-grained control over agent behavior
-- Use `use_better_compaction` to control whether large tool results stay inline or are read in bounded sections
 
 ### Advanced Features
 

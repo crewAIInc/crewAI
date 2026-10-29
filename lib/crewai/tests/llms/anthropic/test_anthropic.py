@@ -2228,3 +2228,186 @@ def test_max_iterations_request_ends_on_a_user_turn(history_tail):
     sent = mock_client.messages.create.call_args.kwargs["messages"]
     assert sent[-1] == {"role": "user", "content": I18N_DEFAULT.errors("force_final_answer")}
     assert result.output == "42"
+
+
+# --- Requests after tool calls that offer no tools ----------------------------
+
+_TOOL_HISTORY = [
+    {"role": "system", "content": "You are an agent."},
+    {"role": "user", "content": "Collect all the data."},
+    {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [
+            {
+                "id": "toolu_1",
+                "type": "function",
+                "function": {"name": "get_data", "arguments": "{}"},
+            },
+            {
+                "id": "toolu_2",
+                "type": "function",
+                "function": {"name": "get_data", "arguments": '{"page": 2}'},
+            },
+        ],
+    },
+    {"role": "tool", "tool_call_id": "toolu_1", "name": "get_data", "content": "a"},
+    {"role": "tool", "tool_call_id": "toolu_2", "name": "get_data", "content": "b"},
+    {"role": "user", "content": "Give your final answer."},
+]
+
+_HISTORY_TOOLS = [{"name": "get_data", "input_schema": {"type": "object"}}]
+
+
+def _assert_history_tools_declared_and_disabled(kwargs):
+    """Anthropic rejects tool_use/tool_result blocks in a request without tools."""
+    assert kwargs["tools"] == _HISTORY_TOOLS
+    assert kwargs["tool_choice"] == {"type": "none"}
+    assert kwargs["extra_body"]["output_format"]["type"] == "json_schema"
+
+
+def test_schema_request_after_tool_calls_declares_the_used_tools_sync():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create.return_value = _structured_text_response()
+    llm._client = mock_client
+
+    result = llm.call(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.create.call_args.kwargs
+    )
+
+
+@pytest.mark.asyncio
+async def test_schema_request_after_tool_calls_declares_the_used_tools_async():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create = AsyncMock(
+        return_value=_structured_text_response()
+    )
+    llm._async_client = mock_client
+
+    result = await llm.acall(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.create.call_args.kwargs
+    )
+
+
+def test_schema_request_after_tool_calls_declares_the_used_tools_sync_streaming():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5", stream=True)
+    mock_client = MagicMock()
+    mock_client.beta.messages.stream.return_value = _SyncAnthropicStream(
+        _structured_stream_events(), _structured_text_response()
+    )
+    llm._client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = llm.call(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.stream.call_args.kwargs
+    )
+
+
+@pytest.mark.asyncio
+async def test_schema_request_after_tool_calls_declares_the_used_tools_async_streaming():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5", stream=True)
+    mock_client = MagicMock()
+    mock_client.beta.messages.stream.return_value = _AsyncAnthropicStream(
+        _structured_stream_events(), _structured_text_response()
+    )
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = await llm.acall(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.stream.call_args.kwargs
+    )
+
+
+def test_text_request_after_tool_calls_declares_the_used_tools():
+    """The max-iterations final answer is the same request shape without a schema."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _final_answer_response("42")
+    llm._client = mock_client
+
+    assert llm.call(_TOOL_HISTORY) == "42"
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert kwargs["tools"] == _HISTORY_TOOLS
+    assert kwargs["tool_choice"] == {"type": "none"}
+
+
+def test_request_with_tools_keeps_the_callers_tools_after_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _final_answer_response("42")
+    llm._client = mock_client
+
+    llm.call(_TOOL_HISTORY, tools=[_WEATHER_TOOL])
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert [tool["name"] for tool in kwargs["tools"]] == ["get_weather"]
+    assert "tool_choice" not in kwargs
+
+
+def test_request_without_tool_history_declares_no_tools():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create.return_value = _structured_text_response()
+    llm._client = mock_client
+
+    llm.call("What is the answer?", response_model=_Answer)
+
+    kwargs = mock_client.beta.messages.create.call_args.kwargs
+    assert "tools" not in kwargs
+    assert "tool_choice" not in kwargs
+
+
+def test_tool_fallback_after_tool_calls_still_forces_the_structured_output_tool():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-haiku-20241022")
+    mock_response = MagicMock()
+    mock_response.content = [
+        {
+            "type": "tool_use",
+            "id": "toolu_3",
+            "name": "structured_output",
+            "input": {"answer": "42"},
+        }
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_fallback"
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    assert llm.call(_TOOL_HISTORY, response_model=_Answer) == _Answer(answer="42")
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert [tool["name"] for tool in kwargs["tools"]] == ["structured_output"]
+    assert kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}

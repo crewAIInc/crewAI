@@ -12,7 +12,9 @@ agent with no terminal gets a verdict from this one command.
 Who may evaluate what is AMP's decision: an anonymous run once without an
 account, then it needs one; a run traced while logged in for that
 organization's members; a deployment execution for members who may see its
-traces. The command sends the saved `crewai login` when there is one.
+traces. The command sends the saved `crewai login` when there is one; when
+AMP refuses it (401) and somebody is at the terminal, it starts the login once
+and asks again, as the run app's Evaluate and Deploy do.
 
 `crewai eval --models "a,b"` compares models instead: AMP finds the project's
 deployment by `[tool.crewai].project_id` (or `--deployment`), which runs once as
@@ -140,6 +142,10 @@ StopReason = Literal[
     "amp_5xx",
     "invalid_response",
     "evaluation_failed",
+    "login_abandoned",
+    "login_timed_out",
+    "login_failed",
+    "login_still_required",
     "unexpected",
 ]
 
@@ -366,12 +372,18 @@ def eval_crew(
             ),
             style="yellow",
         )
+    wait_for_spans = run_id is None and _ran_just_now(record)
     try:
-        started = _start_evaluation(
+        client, started = _start_logging_in_once(
             client,
-            execution_id,
-            wait_for_spans=run_id is None and _ran_just_now(record),
-            project_id=project_id,
+            lambda amp: _start_evaluation(
+                amp,
+                execution_id,
+                wait_for_spans=wait_for_spans,
+                project_id=project_id,
+            ),
+            trusted=trusted,
+            log_in=_log_in_at_the_terminal,
         )
     except EvaluationStoppedError as stopped:
         _stop(stopped)
@@ -557,6 +569,7 @@ def evaluate_run(
     on_started: Callable[[dict[str, Any]], None],
     on_status: Callable[[dict[str, Any]], None] | None = None,
     note: Callable[[str], None] = _note,
+    log_in: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Start the evaluation of EXECUTION_ID and wait for its verdict.
 
@@ -569,14 +582,24 @@ def evaluate_run(
     The spans of a run that just ended may still be in flight, which is the
     whole reason this is called from inside the app that ran it, so the wait
     for them is always on here.
+
+    LOG_IN is how the caller offers a new login when AMP refuses the saved one
+    (`_start_logging_in_once`); without it that refusal stops the evaluation.
     """
-    client = _amp_client(_machine_amp_origins(), note=note)
-    started = _start_evaluation(
-        client,
-        execution_id,
-        wait_for_spans=True,
+    trusted = _machine_amp_origins()
+    project_id = get_project_id()
+    client, started = _start_logging_in_once(
+        _amp_client(trusted, note=note),
+        lambda amp: _start_evaluation(
+            amp,
+            execution_id,
+            wait_for_spans=True,
+            note=note,
+            project_id=project_id,
+        ),
+        trusted=trusted,
+        log_in=log_in,
         note=note,
-        project_id=get_project_id(),
     )
     # After the start, exactly as the command counts it: `cli_usage:eval` is the
     # count of evaluations that began, and an evaluation the app runs is one.
@@ -749,6 +772,102 @@ def saved_login() -> str | None:
             "Run `crewai login` again, or `crewai eval` will not know who you are.",
             reason="login_unreadable",
         ) from error
+
+
+LOGGING_IN_AGAIN = (
+    "CrewAI AMP did not accept the saved login. Log in again, and the run is "
+    "evaluated once you have."
+)
+LOGIN_ABANDONED = (
+    "The login was cancelled, so the run was not evaluated. Run `crewai login`, "
+    "then evaluate it again."
+)
+LOGIN_TIMED_OUT = (
+    "The login code expired before sign-in finished, so the run was not evaluated. "
+    "Run `crewai login`, then evaluate it again."
+)
+LOGIN_FAILED = (
+    "The login failed ({error}), so the run was not evaluated. Run `crewai login`, "
+    "then evaluate it again."
+)
+LOGIN_STILL_REQUIRED = (
+    "CrewAI AMP still refused the login after signing in again: {refusal}"
+)
+
+
+def log_in_again() -> None:
+    """AMP refused the saved login: start `crewai login` once, as the run app's
+    Deploy does (`run_crew._chain_deploy`), so the evaluation can be tried again.
+
+    A login that does not complete stops the evaluation, with why in a word for
+    the usage count: abandoned (Ctrl-C), timed out (the code expired), failed.
+    """
+    from crewai_cli.authentication.main import AuthenticationCommand
+
+    _count_usage("cli_usage:eval_login_prompted")
+    console.print(Text(LOGGING_IN_AGAIN), style="yellow")
+    try:
+        AuthenticationCommand().login()
+    except KeyboardInterrupt as error:
+        raise EvaluationStoppedError(
+            LOGIN_ABANDONED, reason="login_abandoned"
+        ) from error
+    except SystemExit as error:
+        raise EvaluationStoppedError(
+            LOGIN_TIMED_OUT, reason="login_timed_out"
+        ) from error
+    except Exception as error:
+        raise EvaluationStoppedError(
+            LOGIN_FAILED.format(error=f"{type(error).__name__}: {error}"),
+            reason="login_failed",
+        ) from error
+
+
+def _log_in_at_the_terminal() -> bool:
+    """`crewai eval`'s login offer: only with somebody at the terminal to confirm
+    the code. With nobody there, False, and the refusal stops the command with
+    its `crewai login` sentence."""
+    if not _at_a_terminal():
+        return False
+    log_in_again()
+    return True
+
+
+def _start_logging_in_once(
+    client: PlusAPI,
+    start: Callable[[PlusAPI], dict[str, Any]],
+    *,
+    trusted: set[str],
+    log_in: Callable[[], bool] | None,
+    note: Callable[[str], None] = _note,
+) -> tuple[PlusAPI, dict[str, Any]]:
+    """START the evaluation with CLIENT, and the client it started with.
+
+    When AMP refuses the saved login (401) that went with the request, LOG_IN
+    offers a new one — False when it cannot be offered here, and the refusal
+    stops the evaluation as it always did — and the start is tried once more
+    with it. Only once: AMP also answers 401 for an account a new login cannot
+    fix, so a second refusal stops as `login_still_required`.
+    """
+    try:
+        return client, start(client)
+    except EvaluationStoppedError as stopped:
+        if (
+            stopped.reason != "amp_401"
+            or client.api_key is None
+            or log_in is None
+            or not log_in()
+        ):
+            raise
+    client = _amp_client(trusted, note=note)
+    try:
+        return client, start(client)
+    except EvaluationStoppedError as again:
+        if again.reason != "amp_401":
+            raise
+        raise EvaluationStoppedError(
+            LOGIN_STILL_REQUIRED.format(refusal=again), reason="login_still_required"
+        ) from again
 
 
 def _why_run_the_crew(
