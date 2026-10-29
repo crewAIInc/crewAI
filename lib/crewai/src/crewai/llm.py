@@ -505,10 +505,15 @@ class LLM(BaseLLM):
             use_native = True
             # An explicit provider only pins the routing; a model string that
             # already carries the same provider's prefix must not keep it,
-            # otherwise the prefixed name is sent to the API verbatim.
+            # otherwise the prefixed name is sent to the API verbatim. Both
+            # sides are canonicalized so alias spellings ("claude", "google",
+            # "aws", "azure_openai") match their canonical prefixes too.
             prefix, separator, model_part = model.partition("/")
             canonical_prefix = PROVIDER_ALIASES.get(prefix.lower(), prefix.lower())
-            if separator and model_part and canonical_prefix == provider:
+            canonical_provider = PROVIDER_ALIASES.get(
+                provider.lower(), provider.lower()
+            )
+            if separator and model_part and canonical_prefix == canonical_provider:
                 model_string = model_part
             else:
                 model_string = model

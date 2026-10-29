@@ -1276,6 +1276,45 @@ def test_explicit_provider_strips_matching_model_prefix():
     assert kwargs == {"provider": "openai"}
 
 
+def test_explicit_alias_provider_strips_canonical_prefix():
+    """An alias provider must match its canonical prefix, in both spellings.
+
+    ``provider="claude"`` is a supported native provider, so a
+    ``claude/<model>`` string has to be stripped just like
+    ``provider="anthropic"`` does; otherwise the alias path keeps the prefix
+    and the API receives a model name it rejects.
+    """
+    assert (
+        LLM._resolve_route("claude/claude-haiku-4-5", {"provider": "claude"}).model
+        == "claude-haiku-4-5"
+    )
+    assert (
+        LLM._resolve_route(
+            "anthropic/claude-haiku-4-5", {"provider": "claude"}
+        ).model
+        == "claude-haiku-4-5"
+    )
+    assert (
+        LLM._resolve_route("google/gemini-2.5-pro", {"provider": "google"}).model
+        == "gemini-2.5-pro"
+    )
+    assert LLM._resolve_route("aws/titan-text", {"provider": "aws"}).model == "titan-text"
+    assert (
+        LLM._resolve_route("azure/gpt-4o", {"provider": "azure_openai"}).model
+        == "gpt-4o"
+    )
+    assert (
+        LLM._resolve_route("gemini/gemini-2.5-pro", {"provider": "google"}).model
+        == "gemini-2.5-pro"
+    )
+
+    # A prefix naming a different provider is still left untouched.
+    assert (
+        LLM._resolve_route("openai/gpt-4o", {"provider": "claude"}).model
+        == "openai/gpt-4o"
+    )
+
+
 def test_resolve_route_decides_what_new_constructs():
     """`LLM._resolve_route` is `__new__`'s routing, callable without building anything."""
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
