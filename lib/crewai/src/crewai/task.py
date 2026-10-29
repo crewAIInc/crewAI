@@ -59,6 +59,7 @@ from crewai.tools.tool_failure import (
     merge_tool_failures,
     tool_failure_collector,
 )
+from crewai.types.usage_metrics import reset_usage_agent, set_usage_agent
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import (
@@ -691,6 +692,7 @@ class Task(BaseModel):
         """Run the core execution logic of the task asynchronously."""
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
+        usage_token = set_usage_agent(agent or self.agent)
         try:
             agent = agent or self.agent
             self.agent = agent
@@ -840,6 +842,7 @@ class Task(BaseModel):
         finally:
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
+            reset_usage_agent(usage_token)
 
     def _execute_core(
         self,
@@ -850,6 +853,7 @@ class Task(BaseModel):
         """Run the core execution logic of the task."""
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
+        usage_token = set_usage_agent(agent or self.agent)
         try:
             agent = agent or self.agent
             self.agent = agent
@@ -999,6 +1003,7 @@ class Task(BaseModel):
         finally:
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
+            reset_usage_agent(usage_token)
 
     def _post_agent_execution(self, agent: BaseAgent) -> None:
         pass
