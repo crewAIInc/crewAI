@@ -1631,6 +1631,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             llm=self.llm,
             callbacks=self.callbacks,
             verbose=self.agent.verbose,
+            request_within_rpm_limit=self.request_within_rpm_limit,
         )
 
         self.state.current_answer = formatted_answer

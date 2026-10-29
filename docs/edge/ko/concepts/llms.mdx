@@ -1073,6 +1073,30 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
       크거나 깊게 중첩된 `response_model`은 업스트림 타임아웃 가능성을 높입니다. 이를 모델이 잘못된 구조화 출력을 생성한 것으로 보지 말고, 일시적인 공급자 장애로 처리하세요.
     </Warning>
   </Tab>
+  <Tab title="빈 응답">
+    <Tip>
+      빈 응답은 일시적일 수 있으므로, 에이전트는 실패하기 전에 같은 요청을 한 번 다시 보냅니다.
+    </Tip>
+
+    모델이 다시 콘텐츠와 도구 호출 없이 응답하면 에이전트는 `EmptyLLMResponseError`를 발생시킵니다. 이 예외는 `ValueError`의 하위 클래스이므로 기존 `except ValueError` 핸들러에서도 계속 잡힙니다:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
+  </Tab>
   <Tab title="컨텍스트 길이">
     <Tip>
       대규모 작업에는 더 큰 컨텍스트 모델을 사용하세요.

@@ -1565,6 +1565,30 @@ llm = LLM(
       A large or deeply nested `response_model` makes upstream timeouts more likely. Treat these as transient provider failures, not as the model producing malformed structured output.
     </Warning>
   </Tab>
+  <Tab title="Empty Responses">
+    <Tip>
+      An empty answer can be transient, so the agent resends the same request once before failing.
+    </Tip>
+
+    If the model again returns no content and no tool calls, the agent raises `EmptyLLMResponseError`. It subclasses `ValueError`, so existing `except ValueError` handlers still catch it:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
+  </Tab>
   <Tab title="Context Length">
     <Tip>
       Use larger context models for extensive tasks

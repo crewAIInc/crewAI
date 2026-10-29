@@ -1417,6 +1417,30 @@ llm = LLM(
       إن استخدام `response_model` كبير أو متداخل بعمق يزيد احتمال انتهاء مهلة المزود. تعامل مع هذه الحالات كأعطال مؤقتة في المزود، وليس كإنتاج النموذج مخرجات منظمة تالفة.
     </Warning>
   </Tab>
+  <Tab title="الاستجابات الفارغة">
+    <Tip>
+      قد تكون الإجابة الفارغة مؤقتة، لذلك يعيد الوكيل إرسال الطلب نفسه مرة واحدة قبل الفشل.
+    </Tip>
+
+    إذا أعاد النموذج مرة أخرى استجابة بلا محتوى ولا استدعاءات أدوات، يُطلق الوكيل `EmptyLLMResponseError`. وهو صنف فرعي من `ValueError`، لذلك تظل معالجات `except ValueError` الحالية تلتقطه:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
+  </Tab>
   <Tab title="طول السياق">
     <Tip>
       استخدم نماذج سياق أكبر للمهام الواسعة

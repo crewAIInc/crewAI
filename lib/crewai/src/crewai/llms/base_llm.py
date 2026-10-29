@@ -125,6 +125,21 @@ class MissingAPIKeyError(ValueError):
         super().__init__(f"{message} {alternative}" if alternative else message)
 
 
+class EmptyLLMResponseError(ValueError):
+    """The provider returned no content and no tool calls for a model call.
+
+    A ``ValueError`` so existing ``except ValueError`` handlers keep catching it.
+    The agent loop retries an empty answer once before raising this.
+
+    Attributes:
+        model: The model that returned the empty response.
+    """
+
+    def __init__(self, model: str) -> None:
+        self.model = model
+        super().__init__(f"The provider returned no content for model '{model}'.")
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD: Final[float] = 0.25
