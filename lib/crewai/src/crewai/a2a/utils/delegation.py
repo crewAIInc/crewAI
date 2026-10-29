@@ -481,27 +481,12 @@ async def _aexecute_a2a_delegation_impl(
         a2a_agent_name = agent_card.name
 
     agent_card_dict = agent_card.model_dump(exclude_none=True)
-    crewai_event_bus.emit(
-        agent_branch,
-        A2ADelegationStartedEvent(
-            endpoint=endpoint,
-            task_description=task_description,
-            agent_id=agent_id or endpoint,
-            context_id=context_id,
-            is_multiturn=is_multiturn,
-            turn_number=turn_number,
-            a2a_agent_name=a2a_agent_name,
-            agent_card=agent_card_dict,
-            protocol_version=agent_card.protocol_version,
-            provider=agent_card_dict.get("provider"),
-            skill_id=skill_id,
-            metadata=metadata,
-            extensions=list(extensions.keys()) if extensions else None,
-            from_task=from_task,
-            from_agent=from_agent,
-        ),
-    )
 
+    # The conversation scope must wrap the delegation scope (a delegation is
+    # one turn inside a conversation): emitting the turn-1 conversation start
+    # AFTER the delegation start pushed it on top, so the delegation's
+    # terminal completed event popped the conversation scope instead of its
+    # own — every started_event_id in the chain ended up off by one.
     if turn_number == 1:
         agent_id_for_event = agent_id or endpoint
         crewai_event_bus.emit(
@@ -522,6 +507,27 @@ async def _aexecute_a2a_delegation_impl(
                 from_agent=from_agent,
             ),
         )
+
+    crewai_event_bus.emit(
+        agent_branch,
+        A2ADelegationStartedEvent(
+            endpoint=endpoint,
+            task_description=task_description,
+            agent_id=agent_id or endpoint,
+            context_id=context_id,
+            is_multiturn=is_multiturn,
+            turn_number=turn_number,
+            a2a_agent_name=a2a_agent_name,
+            agent_card=agent_card_dict,
+            protocol_version=agent_card.protocol_version,
+            provider=agent_card_dict.get("provider"),
+            skill_id=skill_id,
+            metadata=metadata,
+            extensions=list(extensions.keys()) if extensions else None,
+            from_task=from_task,
+            from_agent=from_agent,
+        ),
+    )
 
     message_parts = []
 
