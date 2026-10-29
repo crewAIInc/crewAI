@@ -1146,16 +1146,9 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallFailedEvent(
-                    error=str(e),
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    call_id=get_current_call_id(),
-                ),
-            )
-            raise Exception(f"Failed to get streaming response: {e!s}") from e
+            # call() emits LLMCallFailedEvent for this error; re-raise the
+            # provider's exception so its type reaches callers and telemetry.
+            raise
 
     def _handle_streaming_tool_calls(
         self,
