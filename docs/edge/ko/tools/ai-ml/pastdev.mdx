@@ -1,0 +1,116 @@
+---
+title: past dev
+description: AI 에이전트를 위한 메모리 API인 past dev에 CrewAI 메모리를 저장하고, 에이전트에게 Recall 및 Ingest 도구를 제공합니다.
+icon: clock-rotate-left
+mode: "wide"
+---
+
+# past dev
+
+## 설명
+
+[past dev](https://past.dev)는 AI 에이전트를 위한 메모리 API입니다. crew가 학습한
+내용을 저장하고 이후 실행에서 각 메모리의 날짜와 출처와 함께 돌려줍니다. 나중의
+진술이 이전 진술을 대체하면, past dev는 이전 진술을 대체됨으로 표시합니다.
+
+`crewai-pastdotdev` 패키지는 두 가지 방식으로 past dev를 CrewAI에 연결합니다:
+
+- **`PastDevMemory`**: `Crew` 또는 `Agent`에 `memory=`로 전달하는 `Memory`입니다.
+  저장은 past dev Ingest이고 검색은 past dev Recall입니다.
+- **`PastDevRecallTool`** 및 **`PastDevIngestTool`**: 에이전트가 필요할 때 호출하는
+  도구입니다. 모델은 쿼리 또는 콘텐츠만 제공합니다.
+
+## 설치
+
+```shell
+uv add crewai-pastdotdev
+# or
+pip install crewai-pastdotdev
+```
+
+past dev 콘솔에서 프로젝트 API 키를 만들고 설정합니다:
+
+```shell
+export PAST_API_KEY="past_sk_..."
+```
+
+past dev를 자체 클라우드에서 실행하는 경우 `PAST_API_HOST`도 설정합니다. 기본값은
+`https://api.past.dev`입니다.
+
+## 아이덴티티
+
+past dev의 모든 메모리는 하나의 아이덴티티에 속합니다. 아이덴티티는 메모리가 다루는
+사람 또는 계정의 id이며, 예를 들어 애플리케이션의 사용자 id입니다. 아이덴티티는
+모델이 아니라 여러분의 코드가 설정합니다. 도구에는 아이덴티티 인수가 없으므로,
+에이전트는 다른 사람의 메모리를 읽거나 쓸 수 없습니다. 사용자마다 메모리 또는
+도구를 하나씩 만드세요.
+
+## Crew 메모리
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_pastdotdev import PastDevMemory
+
+memory = PastDevMemory(identity="user-42")
+
+writer = Agent(
+    role="Account manager",
+    goal="Write the weekly report the way the customer wants it",
+    backstory="You know the customer well.",
+)
+report = Task(
+    description="Write this week's report for the customer.",
+    expected_output="A report in the format the customer prefers.",
+    agent=writer,
+)
+
+crew = Crew(agents=[writer], tasks=[report], memory=memory)
+crew.kickoff()
+```
+
+각 작업 전에 CrewAI는 작업 설명으로 recall을 수행하고 메모리를 에이전트의 프롬프트에
+추가합니다. 각 작업 후에는 작업과 그 결과를 저장합니다. past dev가 자체적으로
+메모리를 추출하므로, `PastDevMemory`는 저장할 때 추가 LLM 호출을 하지 않습니다.
+CrewAI가 에이전트에게 제공하는 "Search memory" 및 "Save to memory" 도구도 past dev를
+거칩니다.
+
+| 매개변수 | 기본값 | 설명 |
+| :- | :- | :- |
+| `identity` | 필수 | 모든 저장과 recall에 사용되는 아이덴티티입니다. |
+| `api_key` | `PAST_API_KEY` | 프로젝트 API 키입니다. |
+| `api_host` | `PAST_API_HOST` 또는 `https://api.past.dev` | API 호스트입니다. |
+| `audience` | 없음 | 저장되는 메모리의 오디언스 slug입니다. 없으면 메모리는 프로젝트 전체에 표시됩니다. |
+| `recall_level` | `low` | recall의 증거 예산입니다: `low`, `medium`, `high` 또는 `extra-high`. |
+| `read_only` | `False` | recall만 수행합니다. |
+
+past dev는 메모리를 자체 서버에 보관하므로, 로컬 저장소 작업(`tree()`, `info()`,
+`list_records()`, `update()`, `reset()`)은 사용할 수 없습니다.
+`forget(record_ids=[...])`는 출처 id로 데이터 포인트를 삭제합니다.
+
+## 에이전트 도구
+
+```python Code
+from crewai import Agent
+from crewai_pastdotdev import PastDevIngestTool, PastDevRecallTool
+
+agent = Agent(
+    role="Support agent",
+    goal="Help the customer with what you know about them",
+    backstory="You remember every earlier conversation.",
+    tools=[
+        PastDevRecallTool(identity="user-42"),
+        PastDevIngestTool(identity="user-42"),
+    ],
+)
+```
+
+| 도구 | 모델이 제공하는 인수 | 생성자 매개변수 |
+| :- | :- | :- |
+| `PastDevRecallTool` | `query` | `identity`, `limit`, `level`, `api_key`, `api_host` |
+| `PastDevIngestTool` | `content` | `identity`, `audience`, `label`, `metadata`, `api_key`, `api_host` |
+
+## 추가 정보
+
+- [past dev 퀵스타트](https://past.dev/docs/memory-api/quickstart)
+- [past dev API 레퍼런스](https://past.dev/docs/memory-api/api-reference)
+- [PyPI의 crewai-pastdotdev](https://pypi.org/project/crewai-pastdotdev/)
