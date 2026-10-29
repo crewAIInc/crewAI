@@ -17,6 +17,7 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
+    ValidationError,
     model_validator,
 )
 from rich.console import Console
@@ -145,6 +146,20 @@ if TYPE_CHECKING:
     from crewai.tools.tool_types import ToolResult
 
 _RouteT = TypeVar("_RouteT", bound=str)
+
+
+def _fit_response_model(model: type[BaseModel], text: str) -> BaseModel | None:
+    """Return ``text``, or the JSON object inside it, as ``model`` if it fits."""
+    stripped = text.strip()
+    candidate = (
+        stripped
+        if stripped.startswith(("{", "["))
+        else text[text.find("{") : text.rfind("}") + 1]
+    )
+    try:
+        return model.model_validate(json.loads(candidate, strict=False))
+    except (json.JSONDecodeError, ValidationError):
+        return None
 
 
 class AgentExecutorState(BaseModel):
@@ -1662,6 +1677,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             # Parse the LLM response
             formatted_answer = process_llm_response(answer, self.use_stop_words)
+            if (
+                isinstance(formatted_answer, AgentFinish)
+                and isinstance(formatted_answer.output, str)
+                and self._route_finish_with_todos("agent_finished") == "agent_finished"
+            ):
+                formatted_answer.output = self._structured_final_answer(
+                    formatted_answer.output
+                )
 
             self.state.current_answer = formatted_answer
 
@@ -1749,6 +1772,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self.state.pending_tool_calls = list(answer)
                 return "native_tool_calls"
 
+            if (
+                isinstance(answer, str)
+                and self._route_finish_with_todos("native_finished")
+                == "native_finished"
+            ):
+                answer = self._structured_final_answer(answer)
+
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
                     thought="",
@@ -1813,6 +1843,63 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if current_todo:
                 return "todo_satisfied"
         return default_route
+
+    def _structured_final_answer(self, answer: str) -> str | BaseModel:
+        """Ask once more for the response model when tools left the answer free-form.
+
+        Requests that offer tools carry no response schema, so a tool-using
+        agent's final answer is whatever text the model wrote. Repeating the
+        request over the same conversation, with the schema and without tools,
+        keeps the exact values from tool results that converting the prose
+        afterwards would lose.
+
+        Args:
+            answer: The final answer the model gave with tools available.
+
+        Returns:
+            ``answer`` when no response model applies or it already fits;
+            otherwise the structured answer, or ``answer`` if the model could
+            not produce one.
+        """
+        if (
+            self.response_model is None
+            or not self.original_tools
+            or _fit_response_model(self.response_model, answer) is not None
+        ):
+            return answer
+
+        enforce_rpm_limit(self.request_within_rpm_limit)
+        try:
+            structured = get_llm_response(
+                llm=self.llm,
+                messages=list(self.state.messages),
+                callbacks=self.callbacks,
+                printer=PRINTER,
+                from_task=self.task,
+                from_agent=self.agent,
+                response_model=self.response_model,
+                executor_context=self,
+                verbose=self.agent.verbose,
+            )
+        except HookAborted:
+            raise
+        # The run already has its answer, so no failure of this optional request
+        # may fail it: a reply that does not fit the schema, or a provider that
+        # rejects the request shape, keeps the text answer, which is converted
+        # afterwards as before. The provider logs and emits the failure itself.
+        except Exception as e:
+            if self.agent.verbose:
+                PRINTER.print(
+                    content=f"Structured final answer failed ({type(e).__name__}: {e}), keeping the text answer",
+                    color="yellow",
+                )
+            return answer
+
+        # The LiteLLM fallback returns the instance as JSON text, and a provider
+        # without structured output returns plain text, which is discarded.
+        if isinstance(structured, str):
+            structured = _fit_response_model(self.response_model, structured)
+        return structured if isinstance(structured, BaseModel) else answer
 
     @router(call_llm_and_parse)
     def route_by_answer_type(
