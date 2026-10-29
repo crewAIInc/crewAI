@@ -42,6 +42,7 @@ class ProviderConfig:
     default_headers: dict[str, str] = field(default_factory=dict)
     api_key_required: bool = True
     default_api_key: str | None = None
+    fallback_api_key_envs: tuple[str, ...] = ()
 
 
 OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
@@ -97,6 +98,27 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "zai": ProviderConfig(
+        base_url="https://api.z.ai/api/paas/v4",
+        api_key_env="ZAI_API_KEY",
+        base_url_env="ZAI_BASE_URL",
+        api_key_required=True,
+        fallback_api_key_envs=("BIGMODEL_API_KEY", "ZHIPUAI_API_KEY"),
+    ),
+    "zhipuai": ProviderConfig(
+        base_url="https://open.bigmodel.cn/api/paas/v4",
+        api_key_env="ZHIPUAI_API_KEY",
+        base_url_env="ZHIPUAI_BASE_URL",
+        api_key_required=True,
+        fallback_api_key_envs=("BIGMODEL_API_KEY", "ZAI_API_KEY"),
+    ),
+    "zhipu": ProviderConfig(
+        base_url="https://open.bigmodel.cn/api/paas/v4",
+        api_key_env="ZHIPUAI_API_KEY",
+        base_url_env="ZHIPUAI_BASE_URL",
+        api_key_required=True,
+        fallback_api_key_envs=("BIGMODEL_API_KEY", "ZAI_API_KEY"),
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -150,6 +172,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - zai: Z.ai / ZhipuAI Global (https://z.ai)
+        - zhipuai: ZhipuAI BigModel (https://open.bigmodel.cn)
+        - zhipu: Alias for zhipuai
 
     Example:
         # Using provider prefix
@@ -217,6 +242,11 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         env_key = _without_placeholder(os.getenv(config.api_key_env))
         if env_key:
             return env_key
+
+        for fallback_env in config.fallback_api_key_envs:
+            env_key = _without_placeholder(os.getenv(fallback_env))
+            if env_key:
+                return env_key
 
         if config.api_key_required:
             raise MissingAPIKeyError(config.api_key_env, model)
