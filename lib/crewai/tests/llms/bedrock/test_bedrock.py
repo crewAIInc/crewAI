@@ -582,12 +582,12 @@ def test_bedrock_model_capabilities():
     from crewai.llms.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm_claude, BedrockCompletion)
     assert llm_claude.is_claude_model == True
-    assert llm_claude.supports_function_calling() is True
+    assert llm_claude.supports_tools == True
 
     # Test other Bedrock model
     llm_titan = LLM(model="bedrock/amazon.titan-text-express-v1")
     assert isinstance(llm_titan, BedrockCompletion)
-    assert llm_titan.supports_function_calling() is True
+    assert llm_titan.supports_tools == True
 
 
 def test_bedrock_inference_config():
