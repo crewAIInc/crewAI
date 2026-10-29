@@ -31,6 +31,16 @@ Parts arrive from a model and are typed `dict[str, Any]`, so a `text` key that
 is not a string is possible. `_content_parts_text` skips those blocks rather
 than raising, and names a list with no usable text `[multimodal content]`.
 
+## Tool Support
+
+`BaseLLM.supports_tools` is a `bool | None` override, not a capability flag: it
+is `None` unless the user (or a provider default) sets it. Never gate tool use
+on the field. Call `supports_function_calling()` instead; native providers
+implement it with `_resolve_supports_function_calling(default=...)`, which
+resolves the explicit setting, then the LiteLLM catalog, then the provider
+default. The litellm fallback (`LLM`) uses `_litellm_catalog_supports_function_calling()`
+the same way before asking litellm.
+
 ## Changing Docs
 
 1. Edit MDX under `docs/edge/en/*` and reference it from `docs/docs.json` if
