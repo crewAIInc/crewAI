@@ -32,7 +32,7 @@ export HH_INGESTION_API_KEY="your-honeyhive-ingestion-key"
 export OPENAI_API_KEY="your-openai-api-key"
 ```
 
-The tracer also accepts `HH_API_KEY` when `HH_INGESTION_API_KEY` is not set. For self-hosted or dedicated deployments, set `HH_API_URL` to your HoneyHive API host.
+The tracer also accepts `HH_API_KEY` when `HH_INGESTION_API_KEY` is not set. For self-hosted or dedicated deployments, set `HH_API_URL` to the data plane URL shown on the Ingestion tab.
 
 ### Step 3: Initialize HoneyHive and Instrument CrewAI
 
@@ -117,11 +117,11 @@ Open your project in [HoneyHive](https://app.us.honeyhive.ai) and go to the **Tr
 - **Flows**: `Flow.kickoff()` runs and each flow method step
 - **Standalone agents**: `Agent.kickoff()` calls made outside a crew
 
-Tool spans require `openinference-instrumentation-crewai` 1.1.11 or later.
+Spans for `@tool`-decorated tools require `openinference-instrumentation-crewai` 1.1.11 or later.
 
 ## Troubleshooting
 
-If traces do not appear, check that `HH_INGESTION_API_KEY` is set and that both instrumentors receive `tracer_provider=tracer.provider`. Calling `instrument()` without the tracer provider sends spans to the default OpenTelemetry provider instead of HoneyHive. Also confirm that you instrumented the provider your crew actually calls.
+If traces do not appear, check that `HH_INGESTION_API_KEY` (or `HH_API_KEY`) is set and that both instrumentors receive `tracer_provider=tracer.provider`. Calling `instrument()` without the tracer provider sends spans to the default OpenTelemetry provider instead of HoneyHive. Also confirm that you instrumented the provider your crew actually calls.
 
 ## References
 
