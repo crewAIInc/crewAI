@@ -213,6 +213,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "groq",
 ]
 
 
@@ -238,6 +239,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "groq": "groq",
 }
 
 
@@ -465,6 +467,10 @@ class LLM(BaseLLM):
             # deepinfra/<org>/<model>: one slash with both parts non-empty.
             parts = model_lower.split("/")
             return len(parts) == 2 and all(parts)
+
+        if provider == "groq":
+            # Groq serves its own catalog plus org/model ids such as openai/gpt-oss-120b
+            return True
 
         if provider == "snowflake":
             return True
@@ -694,6 +700,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "groq",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
