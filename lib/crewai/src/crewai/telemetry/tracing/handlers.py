@@ -121,6 +121,7 @@ from crewai.telemetry.tracing.context import (
     get_telemetry_context,
 )
 from crewai.telemetry.tracing.providers import TelemetryProviders
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.serialization import to_serializable
 
 
@@ -2151,23 +2152,7 @@ def handle_llm_call_completed(
         ctx.active_spans.get(event.started_event_id) if event.started_event_id else None
     )
 
-    usage = event.usage or {}
-    input_tokens = next(
-        (
-            v
-            for v in (usage.get("prompt_tokens"), usage.get("input_tokens"))
-            if v is not None
-        ),
-        0,
-    )
-    output_tokens = next(
-        (
-            v
-            for v in (usage.get("completion_tokens"), usage.get("output_tokens"))
-            if v is not None
-        ),
-        0,
-    )
+    usage = UsageMetrics.from_provider_dict(event.usage)
 
     # `gen_ai.output.type` is a request-shape attribute set on the start span;
     # the completed event lacks `response_model`/`response_format` so we leave
@@ -2195,30 +2180,26 @@ def handle_llm_call_completed(
     if getattr(event, "agent_role", None):
         attrs["crewai.agent.role"] = event.agent_role
 
-    cached = usage.get("cached_prompt_tokens") or 0
-    reasoning = usage.get("reasoning_tokens") or 0
-    cache_creation = usage.get("cache_creation_tokens") or 0
-
-    if input_tokens or output_tokens:
+    if usage and (usage.prompt_tokens or usage.completion_tokens or usage.total_tokens):
         attrs.update(
             semantic_conventions.gen_ai_usage(
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cached_input_tokens=cached or None,
-                reasoning_tokens=reasoning or None,
-                cache_creation_tokens=cache_creation or None,
+                input_tokens=usage.prompt_tokens,
+                output_tokens=usage.completion_tokens,
+                cached_input_tokens=usage.cached_prompt_tokens or None,
+                reasoning_tokens=usage.reasoning_tokens or None,
+                cache_creation_tokens=usage.cache_creation_tokens or None,
             )
         )
 
         if ctx.flow_crew_usage_metrics:
             with ctx._span_lock:
                 for flow_metrics in ctx.flow_crew_usage_metrics.values():
-                    flow_metrics["total_tokens"] += input_tokens + output_tokens
-                    flow_metrics["prompt_tokens"] += input_tokens
-                    flow_metrics["completion_tokens"] += output_tokens
-                    flow_metrics["cached_prompt_tokens"] += cached
-                    flow_metrics["reasoning_tokens"] += reasoning
-                    flow_metrics["cache_creation_tokens"] += cache_creation
+                    flow_metrics["total_tokens"] += usage.total_tokens
+                    flow_metrics["prompt_tokens"] += usage.prompt_tokens
+                    flow_metrics["completion_tokens"] += usage.completion_tokens
+                    flow_metrics["cached_prompt_tokens"] += usage.cached_prompt_tokens
+                    flow_metrics["reasoning_tokens"] += usage.reasoning_tokens
+                    flow_metrics["cache_creation_tokens"] += usage.cache_creation_tokens
                     flow_metrics["successful_requests"] += 1
 
     providers.emit_log(
