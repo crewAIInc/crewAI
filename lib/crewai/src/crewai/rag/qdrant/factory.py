@@ -23,4 +23,5 @@ def create_client(config: QdrantConfig) -> QdrantClient:
         default_limit=config.limit,
         default_score_threshold=config.score_threshold,
         default_batch_size=config.batch_size,
+        default_vectors_config=config.vectors_config,
     )
