@@ -118,6 +118,7 @@ async def aexecute_tool_and_check_finality(
             agent=agent,
             task=task,
             crew=crew,
+            tool_call_id=None,
         )
 
         if run_before_tool_call_hooks(hook_context):
@@ -135,6 +136,7 @@ async def aexecute_tool_and_check_finality(
                 crew=crew,
                 tool_result=blocked_message,
                 raw_tool_result=blocked_message,
+                tool_call_id=None,
             )
             modified_result = run_after_tool_call_hooks(blocked_hook_context)
             return ToolResult(
@@ -154,6 +156,7 @@ async def aexecute_tool_and_check_finality(
             crew=crew,
             tool_result=tool_result,
             raw_tool_result=raw_tool_result,
+            tool_call_id=None,
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
@@ -282,6 +285,7 @@ def execute_tool_and_check_finality(
             agent=agent,
             task=task,
             crew=crew,
+            tool_call_id=None,
         )
 
         if run_before_tool_call_hooks(hook_context):
@@ -299,6 +303,7 @@ def execute_tool_and_check_finality(
                 crew=crew,
                 tool_result=blocked_message,
                 raw_tool_result=blocked_message,
+                tool_call_id=None,
             )
             modified_result = run_after_tool_call_hooks(blocked_hook_context)
             return ToolResult(
@@ -318,6 +323,7 @@ def execute_tool_and_check_finality(
             crew=crew,
             tool_result=tool_result,
             raw_tool_result=raw_tool_result,
+            tool_call_id=None,
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
