@@ -1208,7 +1208,7 @@ Follow these guidelines:
         self.delegations += 1
 
     def copy(  # type: ignore
-        self, agents: Sequence[BaseAgent], task_mapping: dict[str, Task]
+        self, agents: Sequence[BaseAgent], task_mapping: dict[int, Task]
     ) -> Task:
         """Creates a deep copy of the Task while preserving its original class type.
 
@@ -1238,7 +1238,10 @@ Follow these guidelines:
         cloned_context = (
             self.context
             if self.context is NOT_SPECIFIED
-            else [task_mapping[context_task.key] for context_task in self.context]
+            else [
+                task_mapping.get(id(context_task), context_task)
+                for context_task in self.context
+            ]
             if isinstance(self.context, list)
             else None
         )
