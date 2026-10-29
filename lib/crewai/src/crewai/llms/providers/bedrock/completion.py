@@ -390,10 +390,9 @@ class BedrockCompletion(BaseLLM):
             if tools_from_history:
                 converse_input["toolConfig"] = {"tools": tools_from_history}
 
-        if self.additional_model_request_fields:
-            converse_input["additionalModelRequestFields"] = (
-                self.additional_model_request_fields
-            )
+        additional_fields = self._get_additional_model_request_fields()
+        if additional_fields:
+            converse_input["additionalModelRequestFields"] = additional_fields
 
         effective_response_model = response_model or self.response_format
         if effective_response_model:
@@ -515,10 +514,9 @@ class BedrockCompletion(BaseLLM):
                     )
                     body["guardrailConfig"] = guardrail_config
 
-                if self.additional_model_request_fields:
-                    body["additionalModelRequestFields"] = (
-                        self.additional_model_request_fields
-                    )
+                additional_fields = self._get_additional_model_request_fields()
+                if additional_fields:
+                    body["additionalModelRequestFields"] = additional_fields
 
                 if self.additional_model_response_field_paths:
                     body["additionalModelResponseFieldPaths"] = (
@@ -658,10 +656,9 @@ class BedrockCompletion(BaseLLM):
                     )
                     body["guardrailConfig"] = guardrail_config
 
-                if self.additional_model_request_fields:
-                    body["additionalModelRequestFields"] = (
-                        self.additional_model_request_fields
-                    )
+                additional_fields = self._get_additional_model_request_fields()
+                if additional_fields:
+                    body["additionalModelRequestFields"] = additional_fields
 
                 if self.additional_model_response_field_paths:
                     body["additionalModelResponseFieldPaths"] = (
@@ -2157,11 +2154,21 @@ class BedrockCompletion(BaseLLM):
         if self.stop_sequences and self.supports_stop_words():
             config["stopSequences"] = self.stop_sequences
 
-        if self.is_claude_model and self.top_k is not None:
-            # top_k is supported by Claude models
-            config["topK"] = int(self.top_k)
-
         return config
+
+    def _get_additional_model_request_fields(self) -> dict[str, Any]:
+        """Get the model-specific fields sent beside inferenceConfig.
+
+        The Converse API's inferenceConfig only accepts maxTokens, temperature,
+        topP and stopSequences, so Claude's top_k has to travel here instead.
+        Fields the user passed explicitly take precedence.
+        """
+        fields: dict[str, Any] = {}
+        if self.is_claude_model and self.top_k is not None:
+            fields["top_k"] = int(self.top_k)
+        if self.additional_model_request_fields:
+            fields.update(self.additional_model_request_fields)
+        return fields
 
     @staticmethod
     def _extract_finish_reason_and_id(

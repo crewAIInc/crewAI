@@ -613,8 +613,60 @@ def test_bedrock_inference_config():
     assert config['topP'] == 0.9
     assert 'maxTokens' in config
     assert config['maxTokens'] == 1000
-    assert 'topK' in config
-    assert config['topK'] == 40
+    # inferenceConfig has no topK; Claude's top_k is a model request field.
+    assert 'topK' not in config
+    assert llm._get_additional_model_request_fields() == {'top_k': 40}
+
+
+def _converse_response():
+    return {
+        'output': {'message': {'role': 'assistant', 'content': [{'text': 'Hi'}]}},
+        'usage': {'inputTokens': 1, 'outputTokens': 1, 'totalTokens': 2},
+    }
+
+
+def test_bedrock_claude_top_k_request_passes_converse_validation():
+    """Claude's top_k must be sent where the Converse API accepts it.
+
+    botocore rejects topK inside inferenceConfig before the request is sent,
+    so the request is checked against botocore's own Converse input model.
+    """
+    from botocore.session import get_session
+    from botocore.validate import validate_parameters
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", top_k=40)
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.return_value = _converse_response()
+        llm.call("Say hello in one word")
+
+    request = mock_converse.call_args[1]
+    assert request['additionalModelRequestFields'] == {'top_k': 40}
+    assert 'topK' not in request['inferenceConfig']
+    converse_input = (
+        get_session()
+        .get_service_model('bedrock-runtime')
+        .operation_model('Converse')
+        .input_shape
+    )
+    validate_parameters(request, converse_input)
+
+
+def test_bedrock_additional_model_request_fields_override_top_k():
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        top_k=40,
+        additional_model_request_fields={'top_k': 5, 'custom_flag': True},
+    )
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.return_value = _converse_response()
+        llm.call("Say hello in one word")
+
+    assert mock_converse.call_args[1]['additionalModelRequestFields'] == {
+        'top_k': 5,
+        'custom_flag': True,
+    }
 
 
 def test_bedrock_model_detection():
