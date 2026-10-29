@@ -3102,6 +3102,9 @@ class OpenAICompletion(BaseLLM):
         Returns:
             True if the model supports images.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         vision_models = (
             "gpt-4o",
             "gpt-4.1",
@@ -3112,7 +3115,11 @@ class OpenAICompletion(BaseLLM):
             "o3",
             "o4",
         )
-        return any(self.model.lower().startswith(m) for m in vision_models)
+        if any(self.model.lower().startswith(m) for m in vision_models):
+            return True
+        return (
+            self.get_model_capability("supports_vision", providers=["openai"]) is True
+        )
 
     def get_file_uploader(self) -> Any:
         """Get an OpenAI file uploader using this LLM's clients.

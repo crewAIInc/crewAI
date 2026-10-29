@@ -2722,6 +2722,7 @@ class LLM(BaseLLM):
                 "stream",
                 "stop",
                 "prefer_upload",
+                "supports_vision",
             ]
         }
 
@@ -2749,6 +2750,7 @@ class LLM(BaseLLM):
             stream=self.stream,
             stop=self.stop,
             prefer_upload=self.prefer_upload,
+            supports_vision=self.supports_vision,
             **filtered_params,
         )
 
@@ -2785,6 +2787,7 @@ class LLM(BaseLLM):
                 "stream",
                 "stop",
                 "prefer_upload",
+                "supports_vision",
             ]
         }
 
@@ -2818,6 +2821,7 @@ class LLM(BaseLLM):
             stream=self.stream,
             stop=copy.deepcopy(self.stop, memo) if self.stop else None,
             prefer_upload=self.prefer_upload,
+            supports_vision=self.supports_vision,
             **filtered_params,
         )
 
@@ -2829,6 +2833,9 @@ class LLM(BaseLLM):
         Returns:
             True if the model likely supports images.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         vision_prefixes = (
             "gpt-4o",
             "gpt-4-turbo",
@@ -2857,12 +2864,15 @@ class LLM(BaseLLM):
 
         model_lower = self.model.lower()
 
-        if any(
+        supports_vision = not any(
             model_lower.startswith(m) or f"/{m}" in model_lower
             for m in text_only_models
-        ):
-            return False
-
-        return any(
+        ) and any(
             model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
+        )
+        if supports_vision:
+            return True
+        return (
+            self.get_model_capability("supports_vision", providers=[self.provider])
+            is True
         )
