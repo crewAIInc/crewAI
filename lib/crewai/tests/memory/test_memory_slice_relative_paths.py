@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -55,3 +56,22 @@ def test_info_stays_under_each_root(view: MemorySlice, path: str) -> None:
 def test_categories_stay_under_each_root(view: MemorySlice, path: str) -> None:
     """Relative category queries cannot read sibling-scope categories."""
     assert view.list_categories(path) == {"team-project": 1, "company-project": 1}
+
+
+def test_unanchored_slice_root_keeps_existing_records(tmp_path: Path) -> None:
+    """Joining a child path must retain a root's unanchored spelling."""
+    embedder = MagicMock(side_effect=lambda texts: [[0.1] * 4 for _ in texts])
+    memory = Memory(
+        storage=str(tmp_path / "memory"), llm=MagicMock(), embedder=embedder
+    )
+    memory.remember(
+        "Unanchored record",
+        scope="team/project/phase",
+        categories=["unanchored"],
+        importance=0.5,
+    )
+    view = MemorySlice(memory=memory, scopes=["team"])
+
+    assert view.list_scopes("project") == ["team/project/phase"]
+    assert view.list_categories("project") == {"unanchored": 1}
+    assert view.list_categories() == {"unanchored": 1}
