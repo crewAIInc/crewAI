@@ -4,6 +4,7 @@ import asyncio
 import threading
 from datetime import datetime
 from typing import Optional
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
@@ -16,6 +17,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow import HumanFeedbackResult, human_feedback
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 
 
@@ -1334,6 +1336,290 @@ def test_diamond_dependency_pattern():
     assert execution_order[-1] == "converge"
     assert execution_order.index("converge") > execution_order.index("path_a")
     assert execution_order.index("converge") > execution_order.index("path_b")
+
+
+def test_sibling_routers_each_continue_their_own_router_chain():
+    """Routers fired by the same method each hand their outcome to downstream routers."""
+    calls = []
+
+    class SiblingRouterFlow(Flow):
+        @start()
+        def begin(self):
+            calls.append("begin")
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            calls.append("first_route")
+            return "left"
+
+        @router(begin)
+        def second_route(self):
+            calls.append("second_route")
+            return "right"
+
+        @router("left")
+        def left_route(self):
+            calls.append("left_route")
+            return "left_done"
+
+        @router("right")
+        def right_route(self):
+            calls.append("right_route")
+            return "right_done"
+
+        @listen("left_done")
+        def left_listener(self):
+            calls.append("left_listener")
+
+        @listen("right_done")
+        def right_listener(self):
+            calls.append("right_listener")
+
+    SiblingRouterFlow().kickoff()
+
+    assert sorted(calls) == sorted(
+        [
+            "begin",
+            "first_route",
+            "second_route",
+            "left_route",
+            "right_route",
+            "left_listener",
+            "right_listener",
+        ]
+    )
+    assert calls.index("left_route") > calls.index("first_route")
+    assert calls.index("right_route") > calls.index("second_route")
+
+
+def test_sibling_router_outcome_continues_when_a_later_sibling_returns_none():
+    """A sibling that emits no outcome does not cancel the chain of an earlier one."""
+    calls = []
+
+    class QuietSiblingFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def emits(self):
+            calls.append("emits")
+            return "left"
+
+        @router(begin)
+        def stays_silent(self):
+            calls.append("stays_silent")
+            return None
+
+        @router("left")
+        def left_route(self):
+            calls.append("left_route")
+            return "left_done"
+
+        @listen("left_done")
+        def left_listener(self):
+            calls.append("left_listener")
+
+    QuietSiblingFlow().kickoff()
+
+    assert calls == ["emits", "stays_silent", "left_route", "left_listener"]
+
+
+def test_siblings_emitting_the_same_outcome_run_its_router_once():
+    """Two routers that emit one outcome still trigger a downstream router once."""
+    calls = []
+
+    class SharedOutcomeFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            return "shared"
+
+        @router(begin)
+        def second_route(self):
+            return "shared"
+
+        @router("shared")
+        def shared_route(self):
+            calls.append("shared_route")
+            return "done"
+
+    SharedOutcomeFlow().kickoff()
+
+    assert calls == ["shared_route"]
+
+
+def test_or_router_matched_by_two_sibling_outcomes_runs_once():
+    """An or_() router that two sibling outcomes satisfy runs once per wave."""
+    calls = []
+
+    class OrRouterFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            return "left"
+
+        @router(begin)
+        def second_route(self):
+            return "right"
+
+        @router(or_("left", "right"))
+        def merge_route(self):
+            calls.append("merge_route")
+            return "merged"
+
+        @listen("merged")
+        def merged_listener(self):
+            calls.append("merged_listener")
+
+    OrRouterFlow().kickoff()
+
+    assert calls == ["merge_route", "merged_listener"]
+
+
+def test_or_router_still_loops_on_its_own_outcome():
+    """An or_() router re-runs when its own outcome matches it again."""
+    calls = []
+
+    class LoopingRouterFlow(Flow):
+        attempts = 0
+
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(or_(begin, "retry"))
+        def attempt(self):
+            self.attempts += 1
+            calls.append(f"attempt_{self.attempts}")
+            return "retry" if self.attempts < 3 else "done"
+
+        @listen("done")
+        def finish(self):
+            calls.append("finish")
+
+    LoopingRouterFlow().kickoff()
+
+    assert calls == ["attempt_1", "attempt_2", "attempt_3", "finish"]
+
+
+def test_sibling_router_chains_keep_their_own_review_feedback():
+    """A review emitted by one sibling router is not stored for another branch."""
+    received = {}
+
+    class ReviewSiblingFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def plain_first(self):
+            return "left"
+
+        @listen(begin)
+        @human_feedback(
+            message="Review:", emit=["approved", "rejected"], llm="gpt-4o-mini"
+        )
+        def review(self):
+            return "draft"
+
+        @router(begin)
+        def plain_last(self):
+            return "right"
+
+        @router("left")
+        def left_route(self):
+            return "left_done"
+
+        @listen("left_done")
+        def left_listener(self, payload):
+            received["left_done"] = payload
+
+        @listen("right")
+        def right_listener(self, payload):
+            received["right"] = payload
+
+        @listen("approved")
+        def approved_listener(self, payload):
+            received["approved"] = payload
+
+    flow = ReviewSiblingFlow()
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="looks good"),
+        patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+    ):
+        flow.kickoff()
+
+    assert received["left_done"] == "left_done"
+    assert received["right"] == "right"
+    assert isinstance(received["approved"], HumanFeedbackResult)
+    assert received["approved"].outcome == "approved"
+
+
+def test_sibling_router_chains_keep_their_own_causal_parent():
+    """Each router and outcome listener is parented to the run that emitted its trigger."""
+    events = []
+
+    class SiblingParentFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @router(begin)
+        def first_route(self):
+            return "left"
+
+        @router(begin)
+        def second_route(self):
+            return "right"
+
+        @router("left")
+        def left_route(self):
+            return "left_done"
+
+        @router("right")
+        def right_route(self):
+            return "right_done"
+
+        @listen("left_done")
+        def left_listener(self):
+            pass
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def capture_started(source, event):
+            events.append(event)
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def capture_finished(source, event):
+            events.append(event)
+
+        SiblingParentFlow().kickoff()
+        crewai_event_bus.flush()
+
+    started = {
+        e.method_name: e for e in events if isinstance(e, MethodExecutionStartedEvent)
+    }
+    finished = {
+        e.method_name: e for e in events if isinstance(e, MethodExecutionFinishedEvent)
+    }
+
+    def parent(name):
+        return started[name].triggered_by_event_id
+
+    assert parent("first_route") == finished["begin"].event_id
+    assert parent("second_route") == finished["begin"].event_id
+    assert parent("left_route") == finished["first_route"].event_id
+    assert parent("right_route") == finished["second_route"].event_id
+    assert parent("left_listener") == finished["left_route"].event_id
 
 
 def test_router_cascade_chain():
