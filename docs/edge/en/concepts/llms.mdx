@@ -95,6 +95,7 @@ There are different places in CrewAI code where you can specify the model to use
       - `timeout`: Maximum wait time for response
       - `max_tokens`: Limits response length
       - `response_format`: Specifies output structure
+      - `supports_tools`: Explicitly enables or disables tool use. When unset, the model's LiteLLM catalog entry decides, falling back to the provider default
 
       Sampling controls such as `temperature` and `top_p`, penalty parameters,
       token-limit names, and reasoning controls are model-specific. Add them
