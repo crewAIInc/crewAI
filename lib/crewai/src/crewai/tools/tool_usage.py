@@ -37,7 +37,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.string_utils import _has_unterminated_string, sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -79,6 +79,10 @@ class ToolUsageError(Exception):
     def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
+
+
+class _TruncatedToolInputError(ToolUsageError):
+    """Input was cut off inside a string and must not be reconstructed by an LLM."""
 
 
 class ToolUsage:
@@ -890,7 +894,6 @@ class ToolUsage:
         self, tool_string: str, raise_error: bool = False
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         tool_name = self.action.tool
-        tool = self._select_tool(tool_name)
         try:
             arguments = self._validate_tool_input(self.action.tool_input)
 
@@ -904,6 +907,7 @@ class ToolUsage:
                 raise
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
+        tool = self._select_tool(tool_name)
         return ToolCalling(
             tool_name=sanitize_tool_name(tool.name),
             arguments=arguments,
@@ -915,6 +919,8 @@ class ToolUsage:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
+            except _TruncatedToolInputError as error:
+                return error
             except Exception:
                 if self.function_calling_llm:
                     return self._function_calling(tool_string)
@@ -966,6 +972,13 @@ class ToolUsage:
         except (JSONDecodeError, ValueError, TypeError):
             pass
 
+        if _has_unterminated_string(tool_input):
+            error_message = (
+                "Tool input must be a valid dictionary in JSON or Python literal format"
+            )
+            self._emit_validate_input_error(error_message)
+            raise _TruncatedToolInputError(error_message)
+
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
@@ -982,7 +995,7 @@ class ToolUsage:
             "Tool input must be a valid dictionary in JSON or Python literal format"
         )
         self._emit_validate_input_error(error_message)
-        raise Exception(error_message)
+        raise ToolUsageError(error_message)
 
     def _emit_validate_input_error(self, final_error: str) -> None:
         tool_selection_data = {
