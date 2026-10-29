@@ -832,7 +832,6 @@ class BaseLLM(BaseModel, ABC):
         call_type: LLMCallType | None = None,
         response_id: str | None = None,
     ) -> None:
-        mark_stream_chunk_emitted()
         """Emit stream chunk event.
 
         Args:
@@ -843,6 +842,7 @@ class BaseLLM(BaseModel, ABC):
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
             response_id: Unique ID for a particular LLM response, chunks have same response_id.
         """
+        mark_stream_chunk_emitted()
         crewai_event_bus.emit(
             self,
             event=LLMStreamChunkEvent(
@@ -863,7 +863,6 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> None:
-        mark_stream_chunk_emitted()
         """Emit thinking/reasoning chunk event from a thinking model.
 
         Args:
@@ -872,6 +871,7 @@ class BaseLLM(BaseModel, ABC):
             from_agent: The agent that initiated the call.
             response_id: Unique ID for a particular LLM response.
         """
+        mark_stream_chunk_emitted()
         crewai_event_bus.emit(
             self,
             event=LLMThinkingChunkEvent(
