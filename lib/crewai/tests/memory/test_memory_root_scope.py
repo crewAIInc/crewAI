@@ -303,6 +303,96 @@ class TestMemoryRootScope:
         assert len(records) == 1
         assert records[0].scope == "/agent/researcher/inner"
 
+    @pytest.mark.asyncio
+    async def test_aremember_per_call_root_scope_override(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """aremember accepts the same per-call root_scope override as remember."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/base",
+        )
+
+        record = await mem.aremember(
+            "Test content",
+            scope="/inner",
+            categories=["test"],
+            importance=0.7,
+            root_scope="/override/path",
+        )
+
+        assert record is not None
+        assert record.scope == "/override/path/inner"
+
+    @pytest.mark.asyncio
+    async def test_aremember_many_per_call_root_scope_override(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """aremember_many accepts the same per-call root_scope override as remember_many."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/default",
+        )
+
+        await mem.aremember_many(
+            ["Fact A"],
+            scope="/inner",
+            categories=["test"],
+            importance=0.7,
+            root_scope="/agent/researcher",
+        )
+        mem.drain_writes()
+
+        mem_global = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+        records = mem_global.list_records()
+        assert len(records) == 1
+        assert records[0].scope == "/agent/researcher/inner"
+
+    @pytest.mark.asyncio
+    async def test_aremember_reports_agent_role(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """aremember passes agent_role to the save event, like remember."""
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.memory_events import MemorySaveCompletedEvent
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+        roles: list[str | None] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(MemorySaveCompletedEvent)
+            def on_saved(source: object, event: MemorySaveCompletedEvent) -> None:
+                roles.append(event.agent_role)
+
+            await mem.aremember(
+                "Test content",
+                scope="/inner",
+                categories=["test"],
+                importance=0.7,
+                agent_role="Researcher",
+            )
+            crewai_event_bus.flush()
+
+        assert roles == ["Researcher"]
+
 
 class TestRootScopePathNormalization:
     """Tests for proper path normalization with root_scope."""
