@@ -785,11 +785,21 @@ class TestTerminalEventOrdering:
         listener._telemetry.task_ended.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_nested_agent_scope_cancellation_before_started_handler(
-        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    @pytest.mark.parametrize("cancelled", [True, False])
+    async def test_nested_agent_scope_failure_before_started_handler(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any], cancelled: bool
     ) -> None:
-        """A nested agent scope must not prevent task span reconciliation."""
+        """Nested cancellation and passthrough failures must both close task spans."""
         from crewai.events.types.agent_events import AgentExecutionStartedEvent
+        from crewai.tools.tool_failure import (
+            ToolExecutionFailedError, ToolFailure, ToolFailureRecord,
+        )
+
+        error = (
+            asyncio.CancelledError() if cancelled else ToolExecutionFailedError(
+                ToolFailureRecord(tool_name="failing_tool", failure=ToolFailure(message="failed"))
+            )
+        )
 
         listener, on_started, on_failed = handlers
         bus = crewai_event_bus
@@ -798,17 +808,17 @@ class TestTerminalEventOrdering:
         def delay_started(source: Any, event: TaskStartedEvent) -> None:
             pending.append((source, event))
 
-        async def cancelled(self: Agent, task: Task, **kwargs: Any) -> None:
+        async def failed(self: Agent, task: Task, **kwargs: Any) -> None:
             bus.emit(
                 self,
                 AgentExecutionStartedEvent(
                     agent=self, task=task, tools=[], task_prompt="cancelled task"
                 ),
             )
-            raise asyncio.CancelledError()
+            raise error
 
         assert await asyncio.to_thread(bus.flush, 5)
-        with bus.scoped_handlers(), patch.object(Agent, "aexecute_task", cancelled):
+        with bus.scoped_handlers(), patch.object(Agent, "aexecute_task", failed):
             bus.on(TaskStartedEvent)(delay_started)
             bus.on(TaskFailedEvent)(on_failed)
             for _ in range(20):
@@ -817,7 +827,7 @@ class TestTerminalEventOrdering:
                     expected_output="None",
                     agent=test_agent,
                 )
-                with pytest.raises(asyncio.CancelledError):
+                with pytest.raises(type(error)):
                     await task.aexecute_sync()
                 assert await asyncio.to_thread(bus.flush, 5)
                 source, started = pending.pop()

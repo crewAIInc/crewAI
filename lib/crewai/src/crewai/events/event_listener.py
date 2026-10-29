@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from asyncio import CancelledError
 from io import StringIO
 from threading import RLock
 import time
@@ -323,15 +322,8 @@ class EventListener(BaseEventListener):
                 span = self.execution_spans.pop(source, None)
                 if span:
                     self._telemetry.task_failed(span, source, event.error_type)
-                elif (
-                    not started
-                    and source._task_started_event_id is not None
-                    and (
-                        source._task_started_event_id == event.started_event_id
-                        or event.error_type is CancelledError
-                    )
-                ):
-                    # Cancellation may leave a nested agent scope on the event stack.
+                elif not started and source._task_started_event_id is not None:
+                    # A failure may leave a nested agent scope on the event stack.
                     # Use the task's own start id to reconcile its delayed handler.
                     self._terminal_task_outcomes[source._task_started_event_id] = (
                         True,
