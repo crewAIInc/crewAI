@@ -498,7 +498,8 @@ class TestAgentExecutor:
             result = executor.call_llm_and_parse()
 
         assert result == "parsed"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        loop_call = get_llm_response_mock.call_args_list[0]
+        assert loop_call.kwargs["response_model"] is None
 
     def test_call_llm_and_parse_summarizes_before_the_model_call(
         self, mock_dependencies
@@ -557,7 +558,38 @@ class TestAgentExecutor:
             result = executor.call_llm_native_tools()
 
         assert result == "native_finished"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        loop_call = get_llm_response_mock.call_args_list[0]
+        assert loop_call.kwargs["response_model"] is None
+
+    @pytest.mark.parametrize("native", [True, False], ids=["native", "react"])
+    def test_todo_step_answer_is_not_requested_in_the_response_model(
+        self, mock_dependencies, native
+    ):
+        """A step result is not the task's answer, so it keeps its text."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor._openai_tools = [{"type": "function", "function": {"name": "lookup"}}]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Look it up", status="running")]
+        )
+
+        with patch(
+            "crewai.agents.agent_executor.get_llm_response",
+            return_value="step done" if native else "Final Answer: step done",
+        ) as get_llm_response_mock:
+            if native:
+                assert executor.call_llm_native_tools() == "todo_satisfied"
+            else:
+                assert executor.call_llm_and_parse() == "parsed"
+                assert executor.route_by_answer_type() == "todo_satisfied"
+
+        assert get_llm_response_mock.call_count == 1
+        assert executor.state.current_answer.output == "step done"
 
     def test_call_llm_native_tools_falls_back_when_provider_rejects_tools(
         self, mock_dependencies
@@ -892,7 +924,7 @@ class TestStepExecutorCriticalFixes:
 
         crewai_event_bus.flush()
 
-        assert output == "2"
+        assert output.result == "2"
         assert len(started_events) >= 1
         assert len(finished_events) >= 1
         assert started_events[-1].plan_step_number == 2
@@ -921,7 +953,7 @@ class TestStepExecutorCriticalFixes:
             patch.object(
                 step_executor,
                 "_execute_text_tool_with_events",
-                return_value="2 words",
+                return_value=ToolResult(result="2 words"),
             ),
         ):
             result = step_executor._execute_text_parsed(
@@ -2433,6 +2465,7 @@ class TestMaxIterationsRouting:
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5)
         executor.max_iter = 20
+        executor._tool_call_counts = {}
 
         result = AgentExecutor.check_max_iterations(executor)
         assert result == "continue_reasoning"
@@ -2443,9 +2476,29 @@ class TestMaxIterationsRouting:
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
         executor.max_iter = 20
+        executor._tool_call_counts = {}
 
         result = AgentExecutor.check_max_iterations(executor)
         assert result == "continue_reasoning_native"
+
+    def test_repeated_tool_call_limit_routes_to_force_final_answer(self):
+        from crewai.agents.agent_executor import AgentExecutor
+        from crewai.utilities.agent_utils import (
+            MAX_REPEATED_TOOL_CALLS,
+            check_repeated_tool_call,
+        )
+
+        executor = Mock(spec=AgentExecutor)
+        executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
+        executor.max_iter = 20
+        executor._tool_call_counts = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS):
+            check_repeated_tool_call(
+                executor._tool_call_counts, tool_name="t", tool_args={}, result="r"
+            )
+
+        result = AgentExecutor.check_max_iterations(executor)
+        assert result == "force_final_answer"
 
 
 # Native Tool Call Edge Cases
