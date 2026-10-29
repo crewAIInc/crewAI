@@ -364,10 +364,20 @@ class TestLLMIntegration:
             assert llm.provider == "deepinfra"
             assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
 
+    def test_llm_explicit_deepinfra_provider_strips_matching_prefix(self):
+        """A redundant deepinfra/ prefix on the model is stripped, not sent verbatim."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}):
+            llm = LLM(
+                model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+                provider="deepinfra",
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "deepinfra"
+            assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+
     @pytest.mark.parametrize(
         "model",
         [
-            "deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
             "DeepSeek-V4-Flash-0731",
             "deepseek-ai/DeepSeek-V4-Flash-0731/",
         ],
