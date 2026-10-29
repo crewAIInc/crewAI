@@ -44,7 +44,11 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
+from crewai.llms.retry import (
+    arun_with_rate_limit_retry,
+    mark_stream_chunk_emitted,
+    run_with_rate_limit_retry,
+)
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
@@ -930,6 +934,7 @@ class BaseLLM(BaseModel, ABC):
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
             response_id: Unique ID for a particular LLM response, chunks have same response_id.
         """
+        mark_stream_chunk_emitted()
         crewai_event_bus.emit(
             self,
             event=LLMStreamChunkEvent(
@@ -958,6 +963,7 @@ class BaseLLM(BaseModel, ABC):
             from_agent: The agent that initiated the call.
             response_id: Unique ID for a particular LLM response.
         """
+        mark_stream_chunk_emitted()
         crewai_event_bus.emit(
             self,
             event=LLMThinkingChunkEvent(
