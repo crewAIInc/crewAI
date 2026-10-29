@@ -76,6 +76,8 @@ def test_user_data_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert (
         user_data.is_tracing_enabled() is True
     )  # consent alone enables (matches runtime)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    assert user_data.is_tracing_enabled() is False  # env "no" beats consent
 
 
 def test_user_data_decline_blocks(

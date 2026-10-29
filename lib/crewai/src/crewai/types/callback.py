@@ -2,8 +2,9 @@
 
 Provides a ``SerializableCallable`` type alias that enables full JSON
 round-tripping of callback fields, e.g. ``"builtins.print"`` ↔ ``print``.
-Lambdas and closures serialize to a dotted path but cannot be deserialized
-back — use module-level named functions for checkpointable callbacks.
+Lambdas, closures, bound methods, partials and callable instances serialize
+to ``None``, so they do not survive a checkpoint restore — use module-level
+named functions for checkpointable callbacks.
 """
 
 from __future__ import annotations
@@ -28,34 +29,11 @@ def _trusted_deserialize() -> bool:
     return raw.strip().lower() in _TRUSTED_DESERIALIZE_VALUES
 
 
-def _is_non_roundtrippable(fn: object) -> bool:
-    """Return ``True`` if *fn* cannot survive a serialize/deserialize round-trip.
-
-    Built-in functions, plain module-level functions, and classes produce
-    dotted paths that :func:`_resolve_dotted_path` can reliably resolve.
-    Bound methods, ``functools.partial`` objects, callable class instances,
-    lambdas, and closures all fail or silently change semantics during
-    round-tripping.
-
-    Args:
-        fn: The object to check.
-
-    Returns:
-        ``True`` if *fn* would not round-trip through JSON serialization.
-    """
-    if inspect.isbuiltin(fn) or inspect.isclass(fn):
-        return False
-    if inspect.isfunction(fn):
-        qualname = getattr(fn, "__qualname__", "")
-        return qualname.endswith("<lambda>") or "<locals>" in qualname
-    return True
-
-
 def string_to_callable(value: Any) -> Callable[..., Any]:
     """Convert a dotted path string to the callable it references.
 
     If *value* is already callable it is returned as-is, with a warning if
-    it cannot survive JSON round-tripping.  Otherwise, it is treated as
+    :func:`callable_to_string` cannot serialize it.  Otherwise, it is treated as
     ``"module.qualname"`` and resolved via :func:`_resolve_dotted_path`.
 
     Args:
@@ -68,10 +46,10 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
         ValueError: If *value* is not callable or a resolvable dotted-path string.
     """
     if callable(value):
-        if _is_non_roundtrippable(value):
+        if callable_to_string(value) is None:
             warnings.warn(
-                f"{type(value).__name__} callbacks cannot be serialized "
-                "and will prevent checkpointing. "
+                f"A {type(value).__name__} callback cannot be saved in a "
+                "checkpoint; it is dropped and will not run after a restore. "
                 "Use a module-level named function instead.",
                 UserWarning,
                 stacklevel=2,
@@ -135,17 +113,26 @@ def callable_to_string(fn: Callable[..., Any]) -> str | None:
         fn: The callable to serialize.
 
     Returns:
-        The dotted path, or ``None`` for lambdas and closures (not
-        resolvable by :func:`string_to_callable`).
+        The dotted path, or ``None`` when :func:`string_to_callable` could not
+        rebuild *fn* from one: lambdas, closures, bound instance methods,
+        ``functools.partial`` objects and callable instances.
     """
-    module = getattr(fn, "__module__", None)
-    qualname = getattr(fn, "__qualname__", None)
+    if inspect.ismethod(fn):
+        owner = fn.__self__
+        if not inspect.isclass(owner):
+            # The path would name the class attribute, which resolves to the
+            # unbound function and fails without ``self`` when called.
+            return None
+        # Name a classmethod through the class it is bound to: reached through
+        # a subclass, its own __qualname__ names the parent and rebinds there.
+        module: str | None = owner.__module__
+        qualname: str | None = f"{owner.__qualname__}.{fn.__name__}"
+    else:
+        module = getattr(fn, "__module__", None)
+        qualname = getattr(fn, "__qualname__", None)
     if module is None or qualname is None:
-        raise ValueError(
-            f"Cannot serialize {fn!r}: missing __module__ or __qualname__. "
-            "Use a module-level named function for checkpointable callbacks."
-        )
-    if "<locals>" in qualname or qualname == "<lambda>":
+        return None
+    if qualname.endswith("<lambda>") or "<locals>" in qualname:
         return None
     return f"{module}.{qualname}"
 

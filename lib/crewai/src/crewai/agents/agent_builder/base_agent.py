@@ -505,6 +505,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
 
+    @field_validator("callbacks", mode="before")
+    @classmethod
+    def _drop_unresolvable_callbacks(cls, value: Any) -> Any:
+        # A checkpoint saves a callback it cannot name (e.g. a lambda) as null.
+        if isinstance(value, list):
+            return [v for v in value if v is not None]
+        return value
+
     @field_validator("tools")
     @classmethod
     def validate_tools(cls, tools: list[Any]) -> list[BaseTool]:
