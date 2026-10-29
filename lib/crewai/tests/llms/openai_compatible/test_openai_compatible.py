@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_hostinger_router_config(self):
+        """Test Hostinger Router provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["hostinger_router"]
+        assert config.base_url == "https://router.hostinger.com/v1"
+        assert config.api_key_env == "HOSTINGER_ROUTER_API_KEY"
+        assert config.base_url_env == "HOSTINGER_ROUTER_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -181,6 +189,13 @@ class TestOpenAICompatibleCompletion:
             OpenAICompatibleCompletion(
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
             )
+
+    def test_hostinger_router_missing_api_key_names_env_var(self):
+        """Hostinger Router requires a key; the error names the env var to set."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="HOSTINGER_ROUTER_API_KEY"
+        ):
+            OpenAICompatibleCompletion(model="gpt-5-mini", provider="hostinger_router")
 
     def test_api_key_from_env(self):
         """Test API key is read from environment variable."""
@@ -412,6 +427,46 @@ class TestLLMIntegration:
     def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
         """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
+
+    @pytest.mark.parametrize(
+        "model",
+        ["gpt-5-mini", "gpt-5-mini-eu", "claude-sonnet-5", "gemini-3.5-flash"],
+    )
+    def test_llm_creates_openai_compatible_for_hostinger_router(self, model):
+        """hostinger_router/<model> routes natively and sends the bare id upstream.
+
+        Router ids carry no vendor prefix, so claude-*/gemini-* ids must stay on
+        the router instead of being picked up by the Anthropic or Gemini providers.
+        """
+        with patch.dict(os.environ, {"HOSTINGER_ROUTER_API_KEY": "test-key"}):
+            llm = LLM(model=f"hostinger_router/{model}")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "hostinger_router"
+            assert llm.model == model
+            assert llm.base_url == "https://router.hostinger.com/v1"
+
+    def test_hostinger_router_base_url_env_override(self):
+        """HOSTINGER_ROUTER_BASE_URL redirects Hostinger Router to another endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "HOSTINGER_ROUTER_API_KEY": "test-key",
+                "HOSTINGER_ROUTER_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="hostinger_router/gpt-5-mini")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_hostinger_router_explicit_provider(
+        self,
+    ):
+        """Explicit provider="hostinger_router" routes natively without the prefix."""
+        with patch.dict(os.environ, {"HOSTINGER_ROUTER_API_KEY": "test-key"}):
+            llm = LLM(model="claude-sonnet-5", provider="hostinger_router")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "hostinger_router"
+            assert llm.model == "claude-sonnet-5"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

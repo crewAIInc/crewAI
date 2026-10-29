@@ -788,6 +788,37 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Hostinger Router">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Hostinger Router에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    HOSTINGER_ROUTER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or another compatible endpoint
+    HOSTINGER_ROUTER_BASE_URL=https://router.hostinger.com/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="hostinger_router/claude-sonnet-5"
+    )
+    ```
+
+    <Info>
+      Hostinger Router 특징:
+      - 하나의 OpenAI 호환 API로 제공되는 OpenAI, Anthropic, Google, Mistral, DeepSeek, Qwen 등의 모델
+      - 도구 호출 및 스트리밍 지원
+      - 여러 모델에 대한 EU 및 US 리전 변형 (예: `gpt-5-mini-eu`)
+    </Info>
+
+    모델 ID에는 벤더 접두사가 없으므로 전체 참조는 `hostinger_router/<model>` 형식입니다.
+    예: `hostinger_router/gpt-5-mini` 또는 `hostinger_router/gemini-3.5-flash`.
+    [모델 목록](https://router.hostinger.com/v1/models)은 공개되어 있으며 인증이 필요하지 않습니다.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

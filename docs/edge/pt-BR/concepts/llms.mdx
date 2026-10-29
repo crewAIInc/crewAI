@@ -761,6 +761,37 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+
+  <Accordion title="Hostinger Router">
+    O CrewAI se comunica com o Hostinger Router pelo cliente OpenAI nativo, então não é necessário instalar o LiteLLM.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    HOSTINGER_ROUTER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or another compatible endpoint
+    HOSTINGER_ROUTER_BASE_URL=https://router.hostinger.com/v1
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="hostinger_router/claude-sonnet-5"
+    )
+    ```
+
+    <Info>
+      Recursos do Hostinger Router:
+      - Modelos da OpenAI, Anthropic, Google, Mistral, DeepSeek, Qwen e outros por trás de uma única API compatível com OpenAI
+      - Chamada de ferramentas e streaming
+      - Variantes regionais na UE e nos EUA para muitos modelos, por exemplo `gpt-5-mini-eu`
+    </Info>
+
+    Os IDs dos modelos não têm prefixo de fornecedor, então uma referência completa é `hostinger_router/<model>`,
+    por exemplo `hostinger_router/gpt-5-mini` ou `hostinger_router/gemini-3.5-flash`. A
+    [lista de modelos](https://router.hostinger.com/v1/models) é pública e não exige autenticação.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming
