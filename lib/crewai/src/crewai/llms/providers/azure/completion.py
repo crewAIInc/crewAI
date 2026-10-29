@@ -723,7 +723,7 @@ class AzureCompletion(BaseLLM):
         if stops and self.supports_stop_words():
             params["stop"] = stops
 
-        if tools and self.is_openai_model:
+        if tools and self.supports_function_calling():
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
