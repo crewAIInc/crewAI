@@ -53,7 +53,17 @@ class DeferredToolResultReader(BaseTool):
         """Read a complete artifact or a bounded line range."""
         resolved_path = self._allowed_file_paths.get(file_path)
         if resolved_path is None:
-            return "Error: This temporary tool-result artifact is not available."
+            if self._allowed_file_paths:
+                readable = ", ".join(f"`{alias}`" for alias in self._allowed_file_paths)
+                return (
+                    "Error: This temporary tool-result artifact is not available. "
+                    f"Pass one of these paths exactly as given: {readable}. "
+                    "Artifacts from earlier runs are deleted."
+                )
+            return (
+                "Error: This temporary tool-result artifact is not available. "
+                "Artifacts are deleted when the run that created them ends."
+            )
 
         start_index = max((start_line or 1) - 1, 0)
         try:
