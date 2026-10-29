@@ -16,6 +16,7 @@ import concurrent.futures
 import contextvars
 from importlib.resources import files
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -79,6 +80,9 @@ _DATE_IN_MODEL_ID: Final[re.Pattern[str]] = re.compile(
     r"-\d{4}-\d{2}-\d{2}|-\d{8}|@\d{8}"
 )
 _TRAILING_VERSION: Final[re.Pattern[str]] = re.compile(r"(?P<body>.+)-v\d+$")
+
+logger = logging.getLogger(__name__)
+_fallback_warned_models: set[str] = set()
 
 
 def context_windows_from_catalog(
@@ -232,14 +236,10 @@ BARE_CONTEXT_WINDOWS: Final[dict[str, int]] = bare_context_windows(
 )
 
 
-def resolve_context_window_size(
-    model: str,
-    sizes: Mapping[str, int],
-    *,
-    default: int,
-    extra_names: Sequence[str] = (),
-) -> int:
-    """Return the usable context window for a catalog model id.
+def catalog_context_window(
+    model: str, sizes: Mapping[str, int], *, extra_names: Sequence[str] = ()
+) -> int | None:
+    """Return the full catalog window for a model id, or ``None`` if unlisted.
 
     Exact IDs are resolved in ``sizes``. A miss falls back to
     ``BARE_CONTEXT_WINDOWS``, which is built from the full catalog rather than
@@ -249,13 +249,49 @@ def resolve_context_window_size(
     for name in (model, *extra_names):
         size = sizes.get(name)
         if size is not None:
-            return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+            return size
 
     for name in (model, *extra_names):
         size = BARE_CONTEXT_WINDOWS.get(_bare_lookup_name(name))
         if size is not None:
-            return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-    return int(default * CONTEXT_WINDOW_USAGE_RATIO)
+            return size
+    return None
+
+
+def resolve_context_window_size(
+    model: str,
+    sizes: Mapping[str, int],
+    *,
+    default: int,
+    extra_names: Sequence[str] = (),
+    configured: int | None = None,
+) -> int:
+    """Return the usable context window for a catalog model id.
+
+    A ``configured`` window (the caller's ``context_window_size``) wins over
+    the catalog. Otherwise the window comes from ``catalog_context_window``.
+    When nothing matches, ``default`` is used and a warning is logged once per
+    model.
+    """
+    if configured is not None:
+        return int(configured * CONTEXT_WINDOW_USAGE_RATIO)
+
+    size = catalog_context_window(model, sizes, extra_names=extra_names)
+    if size is not None:
+        return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+
+    usable = int(default * CONTEXT_WINDOW_USAGE_RATIO)
+    if model not in _fallback_warned_models:
+        _fallback_warned_models.add(model)
+        logger.warning(
+            "The context window of model %r is unknown, so CrewAI assumes "
+            "%s tokens (%s usable). If the model's window is different, pass "
+            "it as LLM(model=..., context_window_size=<tokens>).",
+            model,
+            f"{default:,}",
+            f"{usable:,}",
+        )
+    return usable
 
 
 def summarize_messages(
