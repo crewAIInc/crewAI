@@ -4,6 +4,131 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="27 out 2026">
+  ## v1.15.32
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.32)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir testes intermitentes que falharam
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.31
+
+  ## Contributors
+
+  @lorenzejay
+
+</Update>
+
+<Update label="27 out 2026">
+  ## v1.15.31
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.31)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Suporte à compactação de contexto de fluxo conversacional.
+
+  ### Correções de Bugs
+  - Atualizar dependências de auditoria vulneráveis.
+  - Parar de enviar 'stop' para modelos GPT-6 e mais novos.
+  - Executar a listagem de provedores fora do loop em `acleanup_provider_files`.
+  - Emitir `LLMGuardrailCompletedEvent` para um resultado de guardrail malformado.
+  - Nomear o token de integração renomeado quando estiver ausente.
+  - Corrigir a travessia de caminho em `output_file` via interpolação de template.
+  - Corrigir vulnerabilidades de desserialização, injeção de SQL e travessia de caminho.
+  - Restaurar os níveis de log configurados após a supressão.
+  - Descartar o estado de retomar ponto de verificação ao copiar uma equipe.
+  - Honrar uma sessão `aioboto3` injetada em `BedrockFileUploader`.
+  - Usar o corte de tarefa correto com templates personalizados.
+  - Proteger contra falhas de listagem de armazenamento na análise de fluxo de codificação.
+  - Impor a exclusividade de resultado/erro de guardrail com o validador de modelo.
+  - Filtrar categorias do lado do servidor na busca de borda Qdrant.
+
+  ### Documentação
+  - Usar HTTPS para o link CrewAI AMP na documentação do conceito CLI.
+  - Corrigir links âncora internos apontando para slugs em inglês em páginas traduzidas.
+  - Corrigir importações de `CrewBase` em exemplos de documentação.
+
+  ## Contributors
+
+  @Kiko0301, @Trenyx, @Velmet44, @Vidit-Ostwal, @Wilson0511, @gabemilani, @iris-clawd, @joaomdmoura, @lakers-abing, @leom1919, @lester076, @lorenzejay, @subhashpolisetti
+
+</Update>
+
+<Update label="23 out 2026">
+  ## v1.15.30
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.30)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir AGENTS.md para iniciar o processo de login durante a avaliação e parar após três rodadas.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.29.
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="23 out 2026">
+  ## v1.15.29
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
+
+  ## O que Mudou
+
+  ### Mudanças Quebradoras
+  - Remover `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` agora falha com "CrewAgentExecutor has been removed", e estes caminhos de importação deixaram de existir: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, o módulo `crewai.experimental.agent_executor`, `crewai.experimental.AgentExecutor` e `crewai.experimental.CrewAgentExecutorFlow`. Importe `AgentExecutor` de `crewai.agents`.
+  - Mudar a forma como todo agente é executado: resultados de ferramentas grandes demais são adiados para arquivos temporários, a conversa é resumida antes de estourar a janela de contexto, e a quinta chamada idêntica a uma ferramenta interrompe a tarefa. Veja [Atualizando Agentes de Versões Anteriores](/pt-BR/concepts/agents#atualizando-agentes-de-versões-anteriores) para cada mudança e como ela é controlada.
+
+  ### Funcionalidades
+  - Adicionar suporte para kwargs compatíveis com LiteLLM.
+  - Implementar busca de aplicativos de plataforma na CLI.
+  - Destacar a busca do seletor de ações na CLI.
+  - Rastrear rotas de conversa e respostas públicas no fluxo.
+  - Selecionar organização durante o login na CLI.
+  - Adicionar roteamento offline de jev e executor de avaliação de guardrail.
+  - Executar ações de aplicativos de integração diretamente com call: tool.
+  - Promover AgentExecutor para fora do status experimental.
+  - Adicionar integração de busca vetorial do Azure DocumentDB.
+  - Adicionar carregador de texto de notebook somente leitura e carregador jsonl da biblioteca padrão.
+  - Garantir que a avaliação do crewAI mantenha todos os dados da avaliação no projeto.
+  - Permitir que a avaliação do crewAI execute o próprio crew para o veredicto a partir de um comando.
+  - Permitir que a avaliação do crewAI exporte avaliações como arquivos.
+
+  ### Correções de Bugs
+  - Corrigir a derivação do token de integração da plataforma a partir do login.
+  - Resolver problemas de registro ao preservar logs JSON em erros de serialização.
+  - Ignorar metadados de habilidade em cache que não sejam UTF-8.
+  - Corrigir ações de ferramentas para respeitar políticas de falha e obter orçamentos de uso atualizados por kickoff.
+  - Impedir que memórias privadas sem uma fonte vazem para cada recordação.
+  - Corrigir a ordem de recuperação de registros de memória no LanceDBStorage.
+  - Restaurar a descrição da tarefa quando o replanejamento falhar.
+  - Impedir que agentes repitam a mesma chamada de ferramenta.
+  - Escapar valores de escopo e id nos filtros do LanceDB.
+
+  ### Documentação
+  - Atualizar links quebrados nos exemplos do crewAI e guias de observabilidade.
+  - Corrigir links mortos na documentação de ferramentas.
+
+  ### Refatoração
+  - Refatorar a compactação de contexto para ser uma capacidade do BaseLLM.
+
+  ## Contribuidores
+
+  @Akaliup, @Arxsher, @Copilot, @D41910, @LindseyZ1205, @RaycarlLei, @Rohitkanithi, @Sakura-798, @Vidit-Ostwal, @Wilson0511, @Winoren, @abdullahajaz14, @bballhaus, @gabemilani, @iris-clawd, @joaomdmoura, @leom1919, @lorenzejay, @marcreniel, @mattatcha, @reubenjrouse, @rohitkanithi, @sandeepsnairms, @stepchanges, @subhashpolisetti, @theCyberTech, @vatsalyd
+
+</Update>
+
 <Update label="14 out 2026">
   ## v1.15.28
 

@@ -3,8 +3,10 @@ from unittest import mock
 
 import pytest
 from click.testing import CliRunner
+from crewai_cli.authentication.token import AuthError
 from crewai_cli.cli import (
     create,
+    crewai,
     deploy_create,
     deploy_list,
     deploy_logs,
@@ -20,9 +22,11 @@ from crewai_cli.cli import (
     reset_memories,
     run,
     test,
+    traces_status,
     train,
     version,
 )
+from crewai_core.user_data import update_user_data
 
 
 @pytest.fixture
@@ -359,6 +363,24 @@ def test_login(command, runner):
     mock_auth.login.assert_called_once()
 
 
+@mock.patch("crewai_core.auth.oauth2.webbrowser.open")
+@mock.patch("crewai_core.auth.oauth2.httpx.post")
+def test_login_exits_non_zero_when_the_login_times_out(mock_post, _open, runner):
+    mock_post.return_value.json.return_value = {
+        "device_code": "test_device_code",
+        "user_code": "ABCD-EFGH",
+        "verification_uri": "https://example.com/activate",
+        "interval": 5,
+        "expires_in": 0,
+    }
+
+    result = runner.invoke(login)
+
+    assert result.exit_code == 1
+    assert "the login code expired before sign-in finished" in result.output
+    mock_post.assert_called_once()
+
+
 @mock.patch("crewai_cli.cli.DeployCommand")
 def test_deploy_create(command, runner):
     mock_deploy = command.return_value
@@ -366,6 +388,37 @@ def test_deploy_create(command, runner):
 
     assert result.exit_code == 0
     mock_deploy.create_crew.assert_called_once()
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_without_zip_keeps_the_default_source(command, runner):
+    result = runner.invoke(deploy_create, ["-y"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=False, force_zip=False
+    )
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_zip_forces_a_zip_upload(command, runner):
+    result = runner.invoke(deploy_create, ["--zip", "-y", "--skip-validate"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=True, force_zip=True
+    )
+
+
+def test_deploy_create_help_lists_zip(runner):
+    result = runner.invoke(deploy_create, ["--help"])
+
+    assert result.exit_code == 0
+    help_text = " ".join(result.output.split())
+    assert (
+        "--zip Upload the project as a ZIP even when it has a git origin remote."
+        in help_text
+    )
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
@@ -623,6 +676,31 @@ def test_log_tasks_outputs_shows_result_not_blob(mock_load, runner):
     assert "messages" not in result.output
 
 
+def test_traces_status_shows_disabled_when_env_false_overrides_consent(
+    runner, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_traces_status")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    update_user_data({"trace_consent": True, "first_execution_done": True})
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+
+    result = runner.invoke(traces_status)
+
+    assert result.exit_code == 0
+    assert "Enabled (user consented)" in result.output
+    assert "DISABLED" in result.output
+
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED")
+    unset = runner.invoke(traces_status)
+
+    assert "not set" in unset.output
+    assert "ENABLED" in unset.output
+    assert "DISABLED" not in unset.output
+
+
 @mock.patch("crewai_cli.task_outputs.load_task_outputs")
 def test_log_tasks_outputs_plain_output(mock_load, runner):
     mock_load.return_value = [
@@ -640,3 +718,32 @@ def test_log_tasks_outputs_plain_output(mock_load, runner):
 
     assert result.exit_code == 0
     assert "Output: REAL" in result.output
+
+
+def _no_saved_login() -> str:
+    raise AuthError("No token")
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["deploy", "list"],
+        ["deploy", "status"],
+        ["triggers", "list"],
+        ["tool", "install", "my-tool"],
+        ["skill", "list"],
+        ["create", "tool", "my_tool"],
+        ["create", "skill", "my-skill"],
+        ["tool", "create", "my_tool"],
+    ],
+)
+def test_commands_that_need_a_login_exit_1_when_logged_out(runner, args):
+    with (
+        runner.isolated_filesystem(),
+        mock.patch("crewai_cli.command.get_auth_token", _no_saved_login),
+    ):
+        result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 1, result.output
+    assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
+    assert "Run 'crewai login' to sign up/login." in result.output

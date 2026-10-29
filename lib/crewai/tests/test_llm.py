@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from time import sleep
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,12 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
+
+
+requires_litellm_python_311 = pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="LiteLLM's patched releases support these paths only on Python 3.11+.",
+)
 
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
@@ -83,6 +90,24 @@ def test_llm_call_with_message_list():
     result = llm.call(messages)
     assert isinstance(result, str)
     assert "Paris" in result
+
+
+def test_context_window_preflight_triggers_only_above_usable_limit():
+    """The proactive threshold preserves the 15% context-window headroom."""
+    llm = LLM(model="gpt-4o-mini")
+    messages = [{"role": "user", "content": "test"}]
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=850),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is False
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=851),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is True
 
 
 @pytest.mark.vcr()
@@ -234,6 +259,7 @@ def test_validate_call_params_supported():
         llm._validate_call_params()
 
 
+@requires_litellm_python_311
 def test_validate_call_params_not_supported():
     class DummyResponse(BaseModel):
         a: int
@@ -711,6 +737,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
     assert_event_count(
         mock_emit=mock_emit,
+        expected_completed_tool_call=1,
         expected_stream_chunk=9,
         expected_completed_llm_call=0,
         expected_final_chunk_result='{"location":"New York, NY"}',
@@ -972,6 +999,7 @@ def gemini_litellm_llm():
     return LLM(model="gemini/gemini-flash-latest", is_litellm=True)
 
 
+@requires_litellm_python_311
 def test_gemini_litellm_appends_user_message_when_last_is_assistant(gemini_litellm_llm):
     original_messages = [
         {"role": "user", "content": "Hi there"},
@@ -1093,6 +1121,7 @@ def test_prefixed_models_with_non_native_providers_use_litellm():
     assert llm2.provider == "together"
 
 
+@requires_litellm_python_311
 @pytest.mark.parametrize(
     ("model", "expected_provider"),
     [

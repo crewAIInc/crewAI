@@ -4,6 +4,131 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Oct 27, 2026">
+  ## v1.15.32
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.32)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix failing flaky tests
+
+  ### Documentation
+  - Update snapshot and changelog for v1.15.31
+
+  ## Contributors
+
+  @lorenzejay
+
+</Update>
+
+<Update label="Oct 27, 2026">
+  ## v1.15.31
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.31)
+
+  ## What's Changed
+
+  ### Features
+  - Support conversational flow context compaction.
+
+  ### Bug Fixes
+  - Update vulnerable audit dependencies.
+  - Stop sending 'stop' to GPT-6 and newer models.
+  - Run the provider listing off the loop in `acleanup_provider_files`.
+  - Emit `LLMGuardrailCompletedEvent` for a malformed guardrail result.
+  - Name the renamed integration token when it is missing.
+  - Fix path traversal in `output_file` via template interpolation.
+  - Patch deserialization, SQL injection, and path traversal vulnerabilities.
+  - Restore configured logging levels after suppression.
+  - Drop checkpoint resume state when copying a crew.
+  - Honor an injected `aioboto3` session in `BedrockFileUploader`.
+  - Use the right task slice with custom templates.
+  - Guard against storage listing failures in encoding flow analysis.
+  - Enforce guardrail result/error exclusivity with model validator.
+  - Filter categories server-side in Qdrant edge search.
+
+  ### Documentation
+  - Use HTTPS for CrewAI AMP link in CLI concept documentation.
+  - Fix internal anchor links pointing to English slugs on translated pages.
+  - Fix `CrewBase` imports in documentation examples.
+
+  ## Contributors
+
+  @Kiko0301, @Trenyx, @Velmet44, @Vidit-Ostwal, @Wilson0511, @gabemilani, @iris-clawd, @joaomdmoura, @lakers-abing, @leom1919, @lester076, @lorenzejay, @subhashpolisetti
+
+</Update>
+
+<Update label="Oct 23, 2026">
+  ## v1.15.30
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.30)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix AGENTS.md to start the login process while evaluating and stop after three rounds.
+
+  ### Documentation
+  - Update snapshot and changelog for v1.15.29.
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="Oct 23, 2026">
+  ## v1.15.29
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
+
+  ## What's Changed
+
+  ### Breaking Changes
+  - Remove `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` now fails with "CrewAgentExecutor has been removed", and these import paths are gone: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, the `crewai.experimental.agent_executor` module, `crewai.experimental.AgentExecutor`, and `crewai.experimental.CrewAgentExecutorFlow`. Import `AgentExecutor` from `crewai.agents`.
+  - Change how every agent runs: oversized tool results are deferred to temporary files, the conversation is summarized before it overflows the context window, and the fifth identical tool call stops the task. See [Upgrading Agents from Earlier Releases](/en/concepts/agents#upgrading-agents-from-earlier-releases) for each change and how it is controlled.
+
+  ### Features
+  - Add support for LiteLLM-compatible kwargs.
+  - Implement platform application search in CLI.
+  - Highlight action picker search in CLI.
+  - Trace conversation routes and public replies in flow.
+  - Select organization during login in CLI.
+  - Add offline jev routing and guardrail evaluation runner.
+  - Run integration app actions directly with call: tool.
+  - Promote AgentExecutor out of experimental status.
+  - Add Azure DocumentDB vector search integration.
+  - Add read-only notebook text loader and standard-library jsonl loader.
+  - Ensure crewAI eval keeps the evaluation's full data in the project.
+  - Enable crewAI eval to run the crew itself for verdict from one command.
+  - Allow crewAI eval to export evaluations as files.
+
+  ### Bug Fixes
+  - Fix platform integration token derivation from login.
+  - Resolve logging issues by preserving JSON logs on serialization errors.
+  - Skip non-UTF-8 cached skill metadata.
+  - Fix tool actions to honor failure policies and get fresh usage budgets per kickoff.
+  - Prevent private memories without a source from leaking to every recall.
+  - Fix memory record retrieval order in LanceDBStorage.
+  - Restore task description when replanning fails.
+  - Stop agents from repeating the same tool call.
+  - Escape scope and id values in LanceDB filters.
+
+  ### Documentation
+  - Update broken links in crewAI examples and observability guides.
+  - Fix dead links in tools documentation.
+
+  ### Refactoring
+  - Refactor context compaction to be a BaseLLM capability.
+
+  ## Contributors
+
+  @Akaliup, @Arxsher, @Copilot, @D41910, @LindseyZ1205, @RaycarlLei, @Rohitkanithi, @Sakura-798, @Vidit-Ostwal, @Wilson0511, @Winoren, @abdullahajaz14, @bballhaus, @gabemilani, @iris-clawd, @joaomdmoura, @leom1919, @lorenzejay, @marcreniel, @mattatcha, @reubenjrouse, @rohitkanithi, @sandeepsnairms, @stepchanges, @subhashpolisetti, @theCyberTech, @vatsalyd
+
+</Update>
+
 <Update label="Oct 14, 2026">
   ## v1.15.28
 

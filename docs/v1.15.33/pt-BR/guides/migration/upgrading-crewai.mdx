@@ -1,0 +1,190 @@
+---
+title: "Atualizando o CrewAI"
+description: "Como atualizar o CrewAI no seu projeto e adaptar-se a breaking changes entre versões."
+icon: "arrow-up-circle"
+---
+
+## Visão Geral
+
+Os lançamentos do CrewAI trazem novos recursos regularmente. Este guia mostra os passos práticos para manter sua instalação atualizada — tanto a CLI quanto o ambiente virtual do seu projeto.
+
+Se você está começando do zero, veja [Instalação](/pt-BR/installation). Se está vindo de outro framework, veja [Migrando do LangGraph](/pt-BR/guides/migration/migrating-from-langgraph).
+
+---
+
+## As Duas Coisas Que Você Pode Querer Atualizar
+
+O CrewAI vive em dois lugares na sua máquina, e cada um se atualiza de forma independente:
+
+| O quê | Como é instalado | Como atualizar |
+|---|---|---|
+| A **CLI global `crewai`** | `uv tool install crewai` | `uv tool install crewai --upgrade` |
+| O **venv do projeto** (onde seu código roda) | `crewai install` / `uv sync` | `uv add "crewai[...]>=X.Y.Z"` e depois `crewai install` |
+
+Esses dois podem — e frequentemente ficam — fora de sincronia. Rodar `crewai --version` mostra a versão da CLI. Rodar `uv pip show crewai` dentro do seu projeto mostra a versão do venv. Se forem diferentes, isso é normal; o que importa para o código em execução é a versão do venv.
+
+## Por Que `crewai install` Sozinho Não Atualiza
+
+`crewai install` é um wrapper fino em torno de `uv sync`. Ele instala exatamente o que o arquivo `uv.lock` atual diz — ele **não** muda nenhuma restrição de versão.
+
+Se seu `pyproject.toml` diz `crewai>=1.11.1` e o lock file resolveu para `1.11.1`, executar `crewai install` vai te manter em `1.11.1` para sempre, mesmo que `1.14.4` esteja disponível.
+
+Para realmente atualizar, você precisa:
+
+1. Atualizar a restrição de versão em `pyproject.toml`
+2. Re-resolver o lock file
+3. Sincronizar o venv
+
+`uv add` faz os três de uma vez só.
+
+## Como Atualizar Seu Projeto
+
+```bash
+# Aumenta a restrição e re-resolve o lock em um único comando
+uv add "crewai[tools]>=1.14.4"
+
+# Sincroniza o venv (crewai install chama uv sync por baixo dos panos)
+crewai install
+
+# Verifica
+uv pip show crewai
+# → Version: 1.14.4
+```
+
+Substitua `[tools]` por quaisquer extras que seu projeto utilize (ex.: `[tools,anthropic]`). Verifique a lista de `dependencies` do seu `pyproject.toml` se estiver em dúvida.
+
+<Note>
+  `uv add` atualiza tanto `pyproject.toml` **quanto** `uv.lock` atomicamente. Se você editar `pyproject.toml` manualmente, ainda precisa rodar `uv lock --upgrade-package crewai` para re-resolver o lock file antes que `crewai install` pegue a nova versão.
+</Note>
+
+## Atualizando a CLI Global
+
+A CLI global é separada do seu projeto. Atualize com:
+
+```bash
+uv tool install crewai --upgrade
+```
+
+Se seu shell avisar sobre o `PATH` após a atualização, recarregue-o:
+
+```bash
+uv tool update-shell
+```
+
+Isso **não** mexe no venv do seu projeto — você ainda precisa de `uv add` + `crewai install` dentro do projeto.
+
+## Verifique Se Ambos Estão em Sincronia
+
+```bash
+# Versão da CLI global
+crewai --version
+
+# Versão do venv do projeto
+uv pip show crewai | grep Version
+```
+
+Eles não precisam coincidir — mas a versão do venv do projeto é o que importa para o comportamento em runtime.
+
+<Note>
+  CrewAI requer `Python >=3.10, <3.14`. Se o `uv` foi instalado contra um interpretador mais antigo, recrie o venv do projeto com uma versão suportada do Python antes de rodar `crewai install`.
+</Note>
+
+---
+
+## Breaking Changes e Notas de Migração
+
+A maioria das atualizações requer apenas pequenos ajustes. As áreas abaixo são as que quebram silenciosamente ou com tracebacks confusos.
+
+### Caminhos de import: tools e `BaseTool`
+
+O caminho canônico para tools é `crewai.tools`. Caminhos antigos ainda aparecem em tutoriais, mas devem ser atualizados.
+
+```python
+# Antes
+from crewai_tools import BaseTool
+from crewai.agents.tools import tool
+
+# Depois
+from crewai.tools import BaseTool, tool
+```
+
+O decorador `@tool` e a subclasse `BaseTool` ambos vivem em `crewai.tools`. `AgentFinish` e outros símbolos internos do agente não fazem mais parte da superfície pública — se você os estava importando, mude para event listeners ou callbacks de `Task`.
+
+### Mudanças de parâmetros em `Agent`
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find authoritative sources on {topic}",
+    backstory="You are a careful, source-driven researcher.",
+    llm="gpt-4o-mini",   # nome do modelo como string OU um objeto LLM
+    verbose=True,        # bool, não um nível inteiro
+    max_iter=15,         # default mudou entre versões — defina explicitamente
+    allow_delegation=False,
+)
+```
+
+- `llm` aceita tanto um nome de modelo como string (resolvido pelo provedor configurado) quanto um objeto `LLM` para controle granular.
+- `verbose` é um `bool` puro. Passar um inteiro não alterna mais níveis de log.
+- Os defaults de `max_iter` mudaram entre releases. Se seu agente para silenciosamente de iterar após a primeira chamada de tool, defina `max_iter` explicitamente.
+
+### Parâmetros de `Crew`
+
+```python
+from crewai import Crew, Process
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,   # ou Process.hierarchical
+    memory=True,
+    cache=True,
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+)
+```
+
+- `process=Process.hierarchical` requer ou `manager_llm=` ou `manager_agent=`. Sem um deles, o kickoff lança erro na validação.
+- `memory=True` com um provedor de embedding não-default precisa de um dicionário `embedder` — veja [Configuração de memória e embedder](#memory-embedder-config) abaixo.
+
+### Saída estruturada de `Task`
+
+Use `output_pydantic`, `output_json` ou `output_file` para forçar o resultado de uma task em um formato tipado:
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class Article(BaseModel):
+    title: str
+    body: str
+
+write = Task(
+    description="Write an article about {topic}",
+    expected_output="A short article with a title and body",
+    agent=writer,
+    output_pydantic=Article,        # a classe, NÃO uma instância
+    output_file="output/article.md",
+)
+```
+
+`output_pydantic` recebe a **classe** em si. Passar `Article(title="", body="")` é um erro comum e falha com um erro de validação confuso.
+
+### Configuração de memória e embedder {#memory-embedder-config}
+
+Se `memory=True` e você não está usando os embeddings padrão da OpenAI, é preciso passar um `embedder`:
+
+```python
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "nomic-embed-text"},
+    },
+)
+```
+
+Defina as credenciais do provedor relevante (`OPENAI_API_KEY`, `OLLAMA_HOST`, etc.) no seu arquivo `.env`. Os caminhos de armazenamento de memória são locais ao projeto por default — apague o diretório de memória do projeto se trocar de embedder, já que dimensões diferentes não se misturam.

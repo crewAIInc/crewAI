@@ -59,6 +59,7 @@ O Construtor Visual de Agentes permite:
 | **Allow Code Execution** _(opcional)_   | `allow_code_execution`   | `Optional[bool]`                      | Ativa execução de código pelo agente. Padrão: False.                                                      |
 | **Max Retry Limit** _(opcional)_        | `max_retry_limit`        | `int`                                 | Número máximo de tentativas (retries) em caso de erro. Padrão: 2.                                         |
 | **Respect Context Window** _(opcional)_ | `respect_context_window` | `bool`                                | Mantém as mensagens dentro do tamanho da janela de contexto, resumindo quando necessário. Padrão: True.   |
+| **Use Better Compaction** _(opcional)_  | `use_better_compaction`  | `bool`                                | Adia resultados nativos de ferramentas grandes demais para arquivos temporários que o agente lê em partes. Padrão: True. |
 | **Code Execution Mode** _(opcional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Modo de execução de código: 'safe' (usando Docker) ou 'unsafe' (direto). Padrão: 'safe'.                  |
 | **Multimodal** _(opcional)_             | `multimodal`             | `bool`                                | Se o agente suporta capacidades multimodais. Padrão: False.                                               |
 | **Inject Date** _(opcional)_            | `inject_date`            | `bool`                                | Se deve injetar automaticamente a data atual no prompt do agente. Padrão: False.                          |
@@ -581,6 +582,68 @@ agent = Agent(
   segundo plano. Você não precisa chamar funções especiais – basta definir
   `respect_context_window` conforme deseja e o CrewAI cuida do resto!
 </Note>
+
+## Atualizando Agentes de Versões Anteriores
+
+A versão 1.15.29 removeu o `CrewAgentExecutor` e mudou a forma como todo agente lida com resultados grandes de ferramentas, conversas longas e chamadas repetidas de ferramentas. Essas mudanças valem para agentes em uma crew, em um Flow e chamados com `kickoff()`. A exceção são as etapas do plano de um agente que [planeja](/pt-BR/concepts/planning): seus resultados de ferramentas não são adiados, sua conversa não é resumida e a contagem de chamadas repetidas recomeça a cada etapa. Se você está migrando da 1.15.28 ou anterior, confira cada uma abaixo.
+
+### `CrewAgentExecutor` Foi Removido
+
+`AgentExecutor` é o único executor de agentes. Ele é o padrão desde a 1.14.5, então um agente que nunca definiu `executor_class` já rodava nele.
+
+- `executor_class=CrewAgentExecutor`, ou a string `"CrewAgentExecutor"` em um arquivo de configuração, falha na validação com `CrewAgentExecutor has been removed. Use crewai.agents.agent_executor.AgentExecutor.` Remova essa configuração.
+- Estes caminhos de importação deixaram de existir: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, o módulo `crewai.experimental.agent_executor`, `crewai.experimental.AgentExecutor` e `crewai.experimental.CrewAgentExecutorFlow`. Importe o executor de `crewai.agents`:
+
+```python Code
+from crewai.agents import AgentExecutor
+```
+
+Não existe configuração que restaure o executor antigo.
+
+### Resultados de Ferramentas Grandes Demais São Adiados
+
+Quando uma chamada nativa de ferramenta retorna um resultado maior que 25% da janela de contexto do modelo, o agente não recebe mais o resultado inteiro. Ele recebe uma prévia curta e uma referência a um arquivo temporário, e lê o restante em partes com a ferramenta `Read a deferred tool result` (o modelo a vê como `read_a_deferred_tool_result`), que o CrewAI adiciona ao agente quando necessário.
+
+- Chamadas de ferramenta que falharam, ferramentas com `result_as_answer=True` e chamadas de ferramenta em texto (ReAct) nunca são adiadas.
+- O arquivo fica em um diretório privado dentro do diretório temporário do sistema. Ele só pode ser lido durante a execução que o produziu e é removido quando essa tarefa ou chamada de `kickoff()` termina.
+
+Para manter os resultados completos das ferramentas na conversa, desative o adiamento no agente:
+
+```python Code
+from crewai import Agent
+
+agent = Agent(
+    role="Source Reviewer",
+    goal="Quote sources exactly",
+    backstory="Checks every quote against the original text",
+    use_better_compaction=False,  # Keep whole tool results in the conversation
+)
+```
+
+### O Contexto É Resumido Antes de Estourar
+
+Com `respect_context_window=True` (o padrão), o agente agora mede cada requisição antes de enviá-la. Quando a requisição é maior que a janela de contexto do modelo, o CrewAI resume primeiro a conversa anterior, em vez de esperar o provedor rejeitar a requisição. Um resumo pode perder detalhes como citações exatas.
+
+Defina `respect_context_window=False` para desativar o resumo. Uma requisição longa demais passa então a interromper a execução com `SystemExit("Context length exceeded and user opted not to summarize...")`. `SystemExit` não é subclasse de `Exception`, então um bloco `except Exception` não o captura.
+
+### Chamadas Repetidas de Ferramentas Interrompem a Tarefa
+
+Quando um agente chama a mesma ferramenta com os mesmos argumentos e recebe o mesmo resultado cinco vezes em uma execução, o CrewAI interrompe a tarefa com `ToolExecutionFailedError` e uma mensagem de que o agente `called '<tool>' with the same arguments 5 times and got the same result each time`.
+
+- A contagem cobre a tarefa ou a chamada de `kickoff()` inteira, não só chamadas consecutivas, e inclui resultados respondidos pelo cache de ferramentas.
+- A interrupção acontece qualquer que seja o `tool_failure_policy` definido, e o `max_retry_limit` não a repete.
+- O limite de cinco é fixo. Não há configuração para alterá-lo ou desativá-lo.
+
+### Como o Tamanho da Janela de Contexto É Escolhido
+
+O adiamento e o resumo são medidos em relação à janela de contexto que o CrewAI usa para o modelo: 85% da janela listada no catálogo de modelos LiteLLM incluído no pacote. Um modelo ausente do catálogo usa um padrão do provedor. Para modelos OpenAI, Azure, Bedrock, compatíveis com OpenAI (como OpenRouter) e roteados pelo LiteLLM, esse padrão é de 8.192 tokens, então o CrewAI usa 6.963 após a proporção de 85%, e os dois recursos começam muito antes do que a janela real do modelo justificaria. Uma subclasse personalizada de `BaseLLM` que não sobrescreve `get_context_window_size()` usa 4.096. Para ver o tamanho que o CrewAI usa, chame `get_context_window_size()` no LLM. O LLM é criado como seria em uma execução, então a chave de API do provedor precisa estar definida:
+
+```python Code
+from crewai import LLM
+
+llm = LLM(model="openrouter/your-provider/your-model")
+print(llm.get_context_window_size())
+```
 
 ## Considerações e Boas Práticas Importantes
 

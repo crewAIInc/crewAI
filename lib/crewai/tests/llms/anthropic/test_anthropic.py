@@ -1470,9 +1470,9 @@ def test_tool_search_passthrough_preserves_tool_search_type():
     assert "input_schema" in converted[1]
 
 
-def test_tool_search_single_tool_skips_search_and_forces_choice():
-    """With only 1 tool, tool_search is skipped (nothing to search) and the
-    normal forced tool_choice optimisation still applies."""
+def test_tool_search_single_tool_skips_search_and_uses_auto_choice():
+    """With only 1 tool, tool_search is skipped (nothing to search) and
+    tool_choice stays auto."""
     llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
 
     crewai_tools = [
@@ -1500,9 +1500,8 @@ def test_tool_search_single_tool_skips_search_and_forces_choice():
         available_functions={"test_tool": lambda q: "result"},
     )
 
-    # Single tool — tool_search skipped, tool_choice forced as normal
-    assert "tool_choice" in params
-    assert params["tool_choice"]["name"] == "test_tool"
+    # Single tool — tool_search skipped, model chooses whether to call it
+    assert params["tool_choice"] == {"type": "auto"}
 
     # No tool search tool should be injected
     tool_types = [t.get("type", "") for t in params["tools"]]
@@ -1511,6 +1510,39 @@ def test_tool_search_single_tool_skips_search_and_forces_choice():
 
     # No defer_loading on the single tool
     assert "defer_loading" not in params["tools"][0]
+
+
+def test_single_tool_with_available_functions_uses_auto_choice():
+    """One executable tool is offered, not forced.
+
+    Newer Claude models reject tool_choice {"type": "tool"}. Auto lets the
+    model call the tool or answer in text.
+    """
+    llm = LLM(model="anthropic/claude-sonnet-5-5")
+    tool = {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the weather for a city.",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string"}},
+                "required": ["city"],
+            },
+        },
+    }
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "What's the weather in Paris?"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages,
+        system_message,
+        [tool],
+        available_functions={"get_weather": lambda city: "sunny"},
+    )
+
+    assert params["tool_choice"] == {"type": "auto"}
+    assert [t["name"] for t in params["tools"]] == ["get_weather"]
 
 
 def test_tool_search_via_llm_class():
@@ -2196,3 +2228,186 @@ def test_max_iterations_request_ends_on_a_user_turn(history_tail):
     sent = mock_client.messages.create.call_args.kwargs["messages"]
     assert sent[-1] == {"role": "user", "content": I18N_DEFAULT.errors("force_final_answer")}
     assert result.output == "42"
+
+
+# --- Requests after tool calls that offer no tools ----------------------------
+
+_TOOL_HISTORY = [
+    {"role": "system", "content": "You are an agent."},
+    {"role": "user", "content": "Collect all the data."},
+    {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [
+            {
+                "id": "toolu_1",
+                "type": "function",
+                "function": {"name": "get_data", "arguments": "{}"},
+            },
+            {
+                "id": "toolu_2",
+                "type": "function",
+                "function": {"name": "get_data", "arguments": '{"page": 2}'},
+            },
+        ],
+    },
+    {"role": "tool", "tool_call_id": "toolu_1", "name": "get_data", "content": "a"},
+    {"role": "tool", "tool_call_id": "toolu_2", "name": "get_data", "content": "b"},
+    {"role": "user", "content": "Give your final answer."},
+]
+
+_HISTORY_TOOLS = [{"name": "get_data", "input_schema": {"type": "object"}}]
+
+
+def _assert_history_tools_declared_and_disabled(kwargs):
+    """Anthropic rejects tool_use/tool_result blocks in a request without tools."""
+    assert kwargs["tools"] == _HISTORY_TOOLS
+    assert kwargs["tool_choice"] == {"type": "none"}
+    assert kwargs["extra_body"]["output_format"]["type"] == "json_schema"
+
+
+def test_schema_request_after_tool_calls_declares_the_used_tools_sync():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create.return_value = _structured_text_response()
+    llm._client = mock_client
+
+    result = llm.call(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.create.call_args.kwargs
+    )
+
+
+@pytest.mark.asyncio
+async def test_schema_request_after_tool_calls_declares_the_used_tools_async():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create = AsyncMock(
+        return_value=_structured_text_response()
+    )
+    llm._async_client = mock_client
+
+    result = await llm.acall(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.create.call_args.kwargs
+    )
+
+
+def test_schema_request_after_tool_calls_declares_the_used_tools_sync_streaming():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5", stream=True)
+    mock_client = MagicMock()
+    mock_client.beta.messages.stream.return_value = _SyncAnthropicStream(
+        _structured_stream_events(), _structured_text_response()
+    )
+    llm._client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = llm.call(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.stream.call_args.kwargs
+    )
+
+
+@pytest.mark.asyncio
+async def test_schema_request_after_tool_calls_declares_the_used_tools_async_streaming():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5", stream=True)
+    mock_client = MagicMock()
+    mock_client.beta.messages.stream.return_value = _AsyncAnthropicStream(
+        _structured_stream_events(), _structured_text_response()
+    )
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = await llm.acall(_TOOL_HISTORY, response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    _assert_history_tools_declared_and_disabled(
+        mock_client.beta.messages.stream.call_args.kwargs
+    )
+
+
+def test_text_request_after_tool_calls_declares_the_used_tools():
+    """The max-iterations final answer is the same request shape without a schema."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _final_answer_response("42")
+    llm._client = mock_client
+
+    assert llm.call(_TOOL_HISTORY) == "42"
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert kwargs["tools"] == _HISTORY_TOOLS
+    assert kwargs["tool_choice"] == {"type": "none"}
+
+
+def test_request_with_tools_keeps_the_callers_tools_after_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _final_answer_response("42")
+    llm._client = mock_client
+
+    llm.call(_TOOL_HISTORY, tools=[_WEATHER_TOOL])
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert [tool["name"] for tool in kwargs["tools"]] == ["get_weather"]
+    assert "tool_choice" not in kwargs
+
+
+def test_request_without_tool_history_declares_no_tools():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create.return_value = _structured_text_response()
+    llm._client = mock_client
+
+    llm.call("What is the answer?", response_model=_Answer)
+
+    kwargs = mock_client.beta.messages.create.call_args.kwargs
+    assert "tools" not in kwargs
+    assert "tool_choice" not in kwargs
+
+
+def test_tool_fallback_after_tool_calls_still_forces_the_structured_output_tool():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-haiku-20241022")
+    mock_response = MagicMock()
+    mock_response.content = [
+        {
+            "type": "tool_use",
+            "id": "toolu_3",
+            "name": "structured_output",
+            "input": {"answer": "42"},
+        }
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_fallback"
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    assert llm.call(_TOOL_HISTORY, response_model=_Answer) == _Answer(answer="42")
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert [tool["name"] for tool in kwargs["tools"]] == ["structured_output"]
+    assert kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}
