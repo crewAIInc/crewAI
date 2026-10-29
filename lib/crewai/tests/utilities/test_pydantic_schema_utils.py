@@ -701,6 +701,72 @@ class TestEdgeCases:
             create_model_from_schema(schema)
 
 
+# Numeric bounds
+
+
+class TestNumericBounds:
+    @staticmethod
+    def _model(prop: dict[str, Any]) -> type[BaseModel]:
+        return create_model_from_schema(
+            {"type": "object", "properties": {"n": prop}, "required": ["n"]}
+        )
+
+    def test_numeric_exclusive_bounds(self) -> None:
+        Model = self._model(
+            {"type": "integer", "exclusiveMinimum": 0, "exclusiveMaximum": 10}
+        )
+        assert Model(n=1).n == 1
+        assert Model(n=9).n == 9
+        with pytest.raises(Exception):
+            Model(n=0)
+        with pytest.raises(Exception):
+            Model(n=10)
+
+    def test_boolean_false_exclusive_bounds_keep_inclusive_range(self) -> None:
+        """Draft 4 / OpenAPI 3.0: ``false`` leaves minimum/maximum inclusive."""
+        Model = self._model(
+            {
+                "type": "integer",
+                "minimum": -10,
+                "exclusiveMinimum": False,
+                "maximum": 100,
+                "exclusiveMaximum": False,
+            }
+        )
+        assert Model(n=-10).n == -10
+        assert Model(n=50).n == 50
+        assert Model(n=100).n == 100
+        with pytest.raises(Exception):
+            Model(n=-11)
+        with pytest.raises(Exception):
+            Model(n=101)
+
+    def test_boolean_true_exclusive_bounds_exclude_the_limits(self) -> None:
+        """Draft 4 / OpenAPI 3.0: ``true`` makes minimum/maximum exclusive."""
+        Model = self._model(
+            {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": True,
+                "maximum": 100,
+                "exclusiveMaximum": True,
+            }
+        )
+        assert Model(n=0.5).n == 0.5
+        assert Model(n=99.5).n == 99.5
+        with pytest.raises(Exception):
+            Model(n=0)
+        with pytest.raises(Exception):
+            Model(n=100)
+
+    def test_boolean_exclusive_bound_without_limit_is_ignored(self) -> None:
+        Model = self._model(
+            {"type": "integer", "exclusiveMinimum": True, "exclusiveMaximum": True}
+        )
+        assert Model(n=-5).n == -5
+        assert Model(n=5).n == 5
+
+
 # build_rich_field_description
 
 
