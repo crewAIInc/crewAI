@@ -58,8 +58,8 @@ def test_categories_stay_under_each_root(view: MemorySlice, path: str) -> None:
     assert view.list_categories(path) == {"team-project": 1, "company-project": 1}
 
 
-def test_unanchored_slice_root_keeps_existing_records(tmp_path: Path) -> None:
-    """Joining a child path must retain a root's unanchored spelling."""
+def test_unanchored_slice_root_keeps_existing_child_reads(tmp_path: Path) -> None:
+    """Both child-path spellings retain an unanchored root's records."""
     embedder = MagicMock(side_effect=lambda texts: [[0.1] * 4 for _ in texts])
     memory = Memory(
         storage=str(tmp_path / "memory"), llm=MagicMock(), embedder=embedder
@@ -72,6 +72,8 @@ def test_unanchored_slice_root_keeps_existing_records(tmp_path: Path) -> None:
     )
     view = MemorySlice(memory=memory, scopes=["team"])
 
-    assert view.list_scopes("project") == ["team/project/phase"]
-    assert view.list_categories("project") == {"unanchored": 1}
+    assert view.list_scopes() == ["team/project"]
     assert view.list_categories() == {"unanchored": 1}
+    for path in ("project", "/project"):
+        assert view.list_scopes(path) == ["team/project/phase"]
+        assert view.list_categories(path) == {"unanchored": 1}
