@@ -213,6 +213,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "nvidia_nim",
 ]
 
 
@@ -238,6 +239,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "nvidia_nim": "nvidia_nim",
 }
 
 
@@ -463,6 +465,12 @@ class LLM(BaseLLM):
         if provider == "deepinfra":
             # DeepInfra ids are exactly org/model, so a full reference is
             # deepinfra/<org>/<model>: one slash with both parts non-empty.
+            parts = model_lower.split("/")
+            return len(parts) == 2 and all(parts)
+
+        if provider == "nvidia_nim":
+            # NIM ids are publisher/model, so a full reference is
+            # nvidia_nim/<publisher>/<model>.
             parts = model_lower.split("/")
             return len(parts) == 2 and all(parts)
 
@@ -694,6 +702,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "nvidia_nim",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
