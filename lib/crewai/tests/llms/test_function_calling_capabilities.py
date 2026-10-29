@@ -49,15 +49,19 @@ def stub_catalog(monkeypatch: pytest.MonkeyPatch) -> Callable[[dict[str, Any] | 
         ),
         (lambda: AzureCompletion(model="deepseek-chat"), False),
         (lambda: AzureCompletion(model="gpt-4"), True),
-        (lambda: AnthropicCompletion(model="claude-3-5-sonnet-20241022"), True),
         (
-            lambda: BedrockCompletion(
-                model="anthropic.claude-3-5-sonnet-20241022-v2:0"
+            lambda: AnthropicCompletion(
+                model="claude-3-5-sonnet-20241022", supports_tools=None
             ),
             True,
         ),
-        (lambda: GeminiCompletion(model="gemini-1.0-pro"), False),
-        (lambda: GeminiCompletion(model="gemini-1.5-pro"), True),
+        (
+            lambda: BedrockCompletion(
+                model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+                supports_tools=None,
+            ),
+            True,
+        ),
         (
             lambda: SnowflakeCompletion(
                 model="mistral-large", api_key="test-token", account_url="example"
@@ -121,10 +125,32 @@ def test_unset_supports_tools_defers_to_the_catalog(
 ) -> None:
     stub_catalog({"supports_function_calling": False})
 
-    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
 
     assert llm.supports_tools is None
     assert llm.supports_function_calling() is False
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: AnthropicCompletion(model="claude-3-5-sonnet-20241022"),
+        lambda: BedrockCompletion(
+            model="anthropic.claude-3-5-sonnet-20241022-v2:0"
+        ),
+        lambda: GeminiCompletion(model="gemini-1.5-pro"),
+    ],
+)
+def test_provider_default_supports_tools_wins_over_the_catalog(
+    factory: Callable[[], Any],
+    stub_catalog: Callable[[dict[str, Any] | None], None],
+) -> None:
+    stub_catalog({"supports_function_calling": False})
+
+    llm = factory()
+
+    assert llm.supports_tools is True
+    assert llm.supports_function_calling() is True
 
 
 def test_litellm_path_honors_explicit_supports_tools(
@@ -170,7 +196,9 @@ def test_litellm_catalog_function_calling_boolean_is_authoritative(catalog_suppo
 @pytest.mark.parametrize("catalog_support", [True, False])
 def test_anthropic_request_tool_gate_uses_catalog_capability(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
     stub_catalog({"supports_function_calling": catalog_support})
-    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
+    llm = AnthropicCompletion(
+        model="claude-3-5-sonnet-20241022", supports_tools=None
+    )
 
     params = llm._prepare_completion_params(
         [{"role": "user", "content": "hello"}],
@@ -181,9 +209,8 @@ def test_anthropic_request_tool_gate_uses_catalog_capability(catalog_support: bo
 
 
 @pytest.mark.parametrize("catalog_support", [True, False])
-def test_gemini_request_tool_gate_uses_catalog_capability(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
-    stub_catalog({"supports_function_calling": catalog_support})
-    llm = GeminiCompletion(model="gemini-1.0-pro")
+def test_gemini_request_tool_gate_uses_supports_tools(catalog_support: bool) -> None:
+    llm = GeminiCompletion(model="gemini-1.0-pro", supports_tools=catalog_support)
 
     config = llm._prepare_generation_config(
         tools=[{"name": "get_weather", "parameters": {"type": "object"}}]
@@ -195,7 +222,9 @@ def test_gemini_request_tool_gate_uses_catalog_capability(catalog_support: bool,
 @pytest.mark.parametrize("catalog_support", [True, False])
 def test_bedrock_request_tool_gate_uses_catalog_capability(catalog_support: bool, stub_catalog: Callable[[dict[str, Any] | None], None]) -> None:
     stub_catalog({"supports_function_calling": catalog_support})
-    llm = BedrockCompletion(model="anthropic.claude-3-5-sonnet-20241022-v2:0")
+    llm = BedrockCompletion(
+        model="anthropic.claude-3-5-sonnet-20241022-v2:0", supports_tools=None
+    )
     llm._client = MagicMock()
     llm._client.converse.return_value = {
         "output": {"message": {"role": "assistant", "content": [{"text": "ok"}]}},
@@ -235,7 +264,7 @@ def test_bedrock_request_tool_gate_uses_catalog_capability(catalog_support: bool
         (lambda: AzureCompletion(model="gpt-4o", provider="azure"), True),
         (
             lambda: AnthropicCompletion(
-                model="claude-sonnet-4-5", provider="anthropic"
+                model="claude-sonnet-4-5", provider="anthropic", supports_tools=None
             ),
             True,
         ),
@@ -243,6 +272,7 @@ def test_bedrock_request_tool_gate_uses_catalog_capability(catalog_support: bool
             lambda: BedrockCompletion(
                 model="us.anthropic.claude-3-5-sonnet-20241022-v2:0",
                 provider="bedrock",
+                supports_tools=None,
             ),
             True,
         ),
@@ -298,3 +328,25 @@ def test_llm_factory_resolves_the_catalog_under_the_routed_provider(
     assert llm.provider == expected_provider
     assert llm.catalog_entry is not None
     assert llm.catalog_entry["litellm_provider"].startswith(expected_provider)
+
+
+@pytest.mark.parametrize(
+    ("model", "catalog", "expected"),
+    [
+        ("gemini-1.0-pro", None, False),
+        ("gemini-1.5-pro", None, True),
+        ("gemini-1.0-pro", {"supports_function_calling": True}, True),
+        ("gemini-1.5-pro", {"supports_function_calling": False}, False),
+    ],
+)
+def test_gemini_none_supports_tools_uses_catalog_then_version_default(
+    model: str,
+    catalog: dict[str, Any] | None,
+    expected: bool,
+    stub_catalog: Callable[[dict[str, Any] | None], None],
+) -> None:
+    stub_catalog(catalog)
+
+    llm = GeminiCompletion(model=model, supports_tools=None)
+
+    assert llm.supports_function_calling() is expected
