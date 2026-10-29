@@ -26,7 +26,7 @@ O checkpointing salva um snapshot do estado de execução durante uma execução
 
 ### O que é um checkpoint
 
-Um checkpoint captura tudo o que o CrewAI precisa para recriar uma execução em andamento: o estado completo da crew, flow ou agente — configuração, memória e fontes de conhecimento dos agentes, progresso das tarefas, saídas intermediárias, estado interno e atributos — junto com os inputs do kickoff, o histórico de eventos até aquele ponto e um ID de linhagem que liga o checkpoint à execução de origem.
+Um checkpoint captura o estado que o CrewAI precisa para recriar uma execução em andamento: o estado completo da crew, flow ou agente — configuração, memória e fontes de conhecimento dos agentes, progresso das tarefas, saídas intermediárias, estado interno e atributos — junto com os inputs do kickoff, o histórico de eventos até aquele ponto e um ID de linhagem que liga o checkpoint à execução de origem. Callbacks são salvos apenas como referências a funções nomeadas; veja [O que uma restauração não traz de volta](#o-que-uma-restauração-não-traz-de-volta).
 
 Restaurar reconstrói esse estado e continua. Tarefas concluídas são puladas, memória e conhecimento são reidratados, e o trabalho downstream roda contra as mesmas saídas que a execução original produziu. Fazer fork executa a mesma restauração sob uma nova linhagem, para que a nova branch e a execução original gravem checkpoints lado a lado sem sobrescrever uma a outra.
 
@@ -50,6 +50,37 @@ Gravações de checkpoint automáticas (acionadas por evento) são best-effort: 
 ### Modelo de herança
 
 `Crew`, `Flow` e `Agent` aceitam um argumento `checkpoint`. Filhos herdam do pai a menos que definam seu próprio valor ou passem `False` para desativar. Ative o checkpointing uma vez na crew e todos os agentes participam, ou exclua um agente seletivamente.
+
+### O que uma restauração não traz de volta
+
+Uma restauração constrói a crew, o flow ou o agente a partir do arquivo de checkpoint, não do objeto em que você chama `kickoff()`. `crew.kickoff(from_checkpoint=...)` executa a crew armazenada no arquivo, então os callables definidos em `crew` não são copiados.
+
+Um checkpoint salva um callback como o caminho pontuado de uma função de nível de módulo, como `"my_project.hooks.on_task_done"`, e o importa novamente na restauração. Um checkpoint é dado, então o CrewAI só importa esses caminhos quando a variável de ambiente `CREWAI_DESERIALIZE_CALLBACKS=1` está definida. Sem ela, restaurar um checkpoint que nomeia um callback lança um `ValueError`. Defina-a apenas para arquivos de checkpoint em que você confia.
+
+Estes itens não são salvos e não rodam após uma restauração:
+
+- Lambdas, closures, métodos vinculados como `notifier.on_task_done`, objetos `functools.partial` e instâncias chamáveis. O CrewAI emite o aviso `A ... callback cannot be saved in a checkpoint` quando você passa um deles para uma `Task`, um `Agent`, uma `Crew` ou uma ferramenta; definir o atributo depois não emite aviso. Uma `cache_function` de ferramenta desse tipo é restaurada como uma função que nunca guarda em cache.
+- Guardrails chamáveis. O CrewAI emite um aviso ao gravar o checkpoint. Guardrails em texto são salvos.
+- Hooks `@before_kickoff` e `@after_kickoff` em uma classe `@CrewBase`.
+
+Para manter um callback que não pode ser salvo, restaure com `Crew.from_checkpoint()` e atribua-o novamente antes de `kickoff()`:
+
+```python
+from crewai import CheckpointConfig, Crew
+
+
+class Notifier:
+    def on_task_done(self, output):
+        print(f"Finished: {output.description}")
+
+
+notifier = Notifier()
+crew = Crew.from_checkpoint(
+    CheckpointConfig(restore_from="./.checkpoints/<timestamp>_<uuid>.json")
+)
+crew.tasks[-1].callback = notifier.on_task_done
+result = crew.kickoff()
+```
 
 ## Tutorial: Retomar uma crew com falha
 
@@ -92,6 +123,10 @@ Este passo a passo leva cerca de 5 minutos. Você executará uma crew de duas ta
     ```
 
     A tarefa de pesquisa é pulada, o escritor executa contra a saída de pesquisa salva e a crew finaliza.
+
+    <Note>
+    A crew retomada é construída a partir do arquivo de checkpoint, não de `crew`. Se suas tarefas usam callbacks, leia [O que uma restauração não traz de volta](#o-que-uma-restauração-não-traz-de-volta).
+    </Note>
   </Step>
 </Steps>
 

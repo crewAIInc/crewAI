@@ -1,3 +1,6 @@
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from crewai.llms.context_window import (
@@ -9,7 +12,13 @@ from crewai.llms.context_window import (
     LLM_CONTEXT_WINDOW_SIZES,
     bare_context_windows,
     context_windows_from_catalog,
+    _chunk_messages,
+    summarize_messages,
     resolve_context_window_size,
+)
+from crewai.utilities.message_utils import build_summary_prompt
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
 )
 
 
@@ -130,10 +139,12 @@ def test_affected_model_ids_use_their_specific_context_windows(
         ("gemma-4-31b-it", GEMINI_CONTEXT_WINDOWS, 262_144),
         ("amazon.nova-2-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
         ("global.moonshotai.kimi-k3", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        # 200k: LiteLLM's catalog had 1M here until its refresh for 1.15.28
+        # corrected it to the model's documented window.
         (
             "anthropic.claude-3-5-sonnet-20241022-v2:0",
             BEDROCK_CONTEXT_WINDOWS,
-            1_000_000,
+            200_000,
         ),
         ("us.anthropic.claude-opus-4-1-20250805-v1:0", BEDROCK_CONTEXT_WINDOWS, 200_000),
         (
@@ -248,3 +259,177 @@ def test_bare_context_windows_uses_the_smaller_limit_when_votes_tie() -> None:
     )
 
     assert windows["claude-sonnet-4-5"] == 200_000
+
+
+def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
+    """Prompt overhead affects the chunk boundary, just as it does at call time."""
+
+    class SummaryCountingLLM:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def get_input_tokens_count(self, messages):
+            self.requests.append(messages)
+            return 100 + messages[-1]["content"].count("x")
+
+    llm = SummaryCountingLLM()
+    messages = [
+        {"role": "user", "content": "x" * 20},
+        {"role": "user", "content": "x" * 20},
+    ]
+
+    chunks = _chunk_messages(llm, messages, max_tokens=125)
+
+    assert chunks == [[messages[0]], [messages[1]]]
+    assert all(
+        llm.get_input_tokens_count(build_summary_prompt(chunk)) <= 125
+        for chunk in chunks
+    )
+    assert all(len(request) == 2 for request in llm.requests)
+
+
+def _summary_llm(reply: str = "<summary>Summary</summary>") -> MagicMock:
+    llm = MagicMock()
+    llm.get_context_window_size.return_value = 1_000
+    llm.get_input_tokens_count.return_value = 1
+    llm.acall = AsyncMock(return_value=reply)
+    return llm
+
+
+def test_summary_preserves_system_messages_and_merged_files() -> None:
+    first, second = MagicMock(), MagicMock()
+    messages = [
+        {"role": "system", "content": "System"},
+        {"role": "user", "content": "First", "files": {"a.pdf": first}},
+        {"role": "assistant", "content": "Reply"},
+        {"role": "user", "content": "Second", "files": {"b.pdf": second}},
+    ]
+
+    summarize_messages(_summary_llm(), messages, [], verbose=False)
+
+    assert messages[0] == {"role": "system", "content": "System"}
+    assert messages[1]["files"] == {"a.pdf": first, "b.pdf": second}
+
+
+def test_summary_prompt_preserves_tool_and_multimodal_text() -> None:
+    llm = _summary_llm()
+    messages = [
+        {"role": "user", "content": [{"type": "text", "text": "Question"}]},
+        {"role": "tool", "name": "search", "content": "Result"},
+    ]
+
+    summarize_messages(llm, messages, [], verbose=False)
+
+    prompt = llm.acall.call_args.args[0][1]["content"]
+    assert "[USER]: Question" in prompt
+    assert "[TOOL_RESULT (search)]: Result" in prompt
+
+
+def test_summary_extracts_structured_summary_tag() -> None:
+    messages = [{"role": "user", "content": "Question"}]
+
+    summarize_messages(
+        _summary_llm("before <summary>Extracted</summary> after"),
+        messages,
+        [],
+        verbose=False,
+    )
+
+    assert "Extracted" in messages[0]["content"]
+    assert "before" not in messages[0]["content"]
+
+
+def test_summary_propagates_provider_context_errors() -> None:
+    llm = _summary_llm()
+    llm.acall = AsyncMock(side_effect=Exception("context length exceeded"))
+
+    with pytest.raises(Exception, match="context length exceeded"):
+        summarize_messages(
+            llm, [{"role": "user", "content": "Question"}], [], verbose=False
+        )
+
+
+def test_summary_limits_parallel_requests_to_four() -> None:
+    class ConcurrentSummaryLLM:
+        def __init__(self) -> None:
+            self.active = 0
+            self.max_active = 0
+
+        def get_context_window_size(self) -> int:
+            return 25
+
+        def get_input_tokens_count(self, messages) -> int:
+            return messages[-1]["content"].count("§")
+
+        async def acall(self, messages, callbacks):
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            await asyncio.sleep(0)
+            self.active -= 1
+            return "<summary>Summary</summary>"
+
+    llm = ConcurrentSummaryLLM()
+    summarize_messages(
+        llm,
+        [{"role": "user", "content": "§" * 20} for _ in range(5)],
+        [],
+        verbose=False,
+    )
+
+    assert llm.max_active == 4
+
+
+def test_summary_chunking_splits_a_single_oversized_text_message() -> None:
+    class CountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            return messages[-1]["content"].count("§")
+
+    message = {"role": "user", "content": "§" * 50}
+
+    chunks = _chunk_messages(CountingLLM(), [message], max_tokens=20)
+
+    assert "".join(
+        part["content"] for chunk in chunks for part in chunk
+    ) == message["content"]
+    assert max(
+        len(part["content"]) for chunk in chunks for part in chunk
+    ) == 15
+    assert all(
+        CountingLLM().get_input_tokens_count(build_summary_prompt(chunk)) <= 20
+        for chunk in chunks
+    )
+
+
+def test_summary_chunking_handles_non_additive_prompt_overhead() -> None:
+    class NonAdditiveCountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            message_count = messages[-1]["content"].count("[USER]:")
+            return message_count * 10 + (5 if message_count > 1 else 0)
+
+    messages = [
+        {"role": "user", "content": "First"},
+        {"role": "user", "content": "Second"},
+    ]
+
+    chunks = _chunk_messages(NonAdditiveCountingLLM(), messages, max_tokens=20)
+
+    assert chunks == [[messages[0]], [messages[1]]]
+
+
+def test_summary_chunking_rejects_unsplittable_oversized_content() -> None:
+    class CountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            return 100 if "[Called tools: huge]" in messages[-1]["content"] else 1
+
+    with pytest.raises(LLMContextLengthExceededError, match="no text"):
+        _chunk_messages(
+            CountingLLM(),
+            [
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{"function": {"name": "huge"}}],
+                }
+            ],
+            max_tokens=10,
+        )

@@ -1,0 +1,113 @@
+---
+title: أداة بحث Linkup
+description: أداة `LinkupSearchTool` تتيح الاستعلام من Linkup API للحصول على معلومات سياقية.
+icon: link
+mode: "wide"
+---
+
+# `LinkupSearchTool`
+
+## الوصف
+
+توفر أداة `LinkupSearchTool` القدرة على الاستعلام من Linkup API للحصول على معلومات سياقية واسترجاع نتائج منظمة. هذه الأداة مثالية لإثراء سير العمل بمعلومات محدّثة وموثوقة من Linkup، مما يسمح للوكلاء بالوصول إلى بيانات ذات صلة أثناء مهامهم.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت Linkup SDK:
+
+```shell
+uv add linkup-sdk
+```
+
+## خطوات البدء
+
+لاستخدام `LinkupSearchTool` بفعالية، اتبع هذه الخطوات:
+
+1. **مفتاح API**: احصل على مفتاح Linkup API.
+2. **إعداد البيئة**: قم بإعداد بيئتك بمفتاح API.
+3. **تثبيت SDK**: ثبّت Linkup SDK باستخدام الأمر أعلاه.
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة واستخدامها مع وكيل:
+
+```python Code
+from crewai_tools import LinkupSearchTool
+from crewai import Agent
+import os
+
+# Initialize the tool with your API key
+linkup_tool = LinkupSearchTool(api_key=os.getenv("LINKUP_API_KEY"))
+
+# Define an agent that uses the tool
+@agent
+def researcher(self) -> Agent:
+    '''
+    This agent uses the LinkupSearchTool to retrieve contextual information
+    from the Linkup API.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[linkup_tool]
+    )
+```
+
+## المعاملات
+
+تقبل أداة `LinkupSearchTool` المعاملات التالية:
+
+### معاملات المُنشئ
+- **api_key**: مطلوب. مفتاح Linkup API الخاص بك.
+
+### معاملات التشغيل
+- **query**: مطلوب. مصطلح أو عبارة البحث.
+- **depth**: اختياري. عمق البحث. الافتراضي هو "standard".
+- **output_type**: اختياري. نوع المخرجات. الافتراضي هو "searchResults".
+
+## الاستخدام المتقدم
+
+يمكنك تخصيص معاملات البحث للحصول على نتائج أكثر تحديداً:
+
+```python Code
+# Perform a search with custom parameters
+results = linkup_tool.run(
+    query="Women Nobel Prize Physics",
+    depth="deep",
+    output_type="searchResults"
+)
+```
+
+## تنسيق الإرجاع
+
+تُرجع الأداة النتائج بالتنسيق التالي:
+
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "name": "Result Title",
+      "url": "https://example.com/result",
+      "content": "Content of the result..."
+    },
+    // Additional results...
+  ]
+}
+```
+
+في حالة حدوث خطأ، ستكون الاستجابة:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+## معالجة الأخطاء
+
+تتعامل الأداة بسلاسة مع أخطاء API وتوفر ملاحظات منظمة. إذا فشل طلب API، ستُرجع الأداة قاموساً يحتوي على `success: false` ورسالة خطأ.
+
+## الخلاصة
+
+توفر أداة `LinkupSearchTool` طريقة سلسة لدمج قدرات استرجاع المعلومات السياقية من Linkup في وكلاء CrewAI. من خلال الاستفادة من هذه الأداة، يمكن للوكلاء الوصول إلى معلومات ذات صلة ومحدّثة لتعزيز اتخاذ القرارات وتنفيذ المهام.

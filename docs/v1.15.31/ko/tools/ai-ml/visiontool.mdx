@@ -1,0 +1,62 @@
+---
+title: 비전 도구
+description: VisionTool은 이미지에서 텍스트를 추출하도록 설계되었습니다.
+icon: eye
+mode: "wide"
+---
+
+# `VisionTool`
+
+## 설명
+
+이 도구는 이미지에서 텍스트를 추출하는 데 사용됩니다. 에이전트에 전달되면 이미지에서 텍스트를 추출한 후 이를 사용하여 응답, 보고서 또는 기타 출력을 생성합니다.
+이미지의 URL 또는 경로(PATH)를 에이전트에 전달해야 합니다.
+
+이미지에 대한 사용자 지정 `query`를 요청하고, 요청에 가장 적합한 모델을 자동으로 선택하는 `complexity_level`을 지정할 수도 있습니다:
+
+| 복잡도 수준 | 모델         |
+| :--------------- | :------------ |
+| `easy`           | `gpt-5.6-luna`  |
+| `medium` (기본값) | `gpt-5.6-terra` |
+| `hard`           | `gpt-5.6-sol`   |
+
+도구에 명시적인 `llm` 또는 `model`을 제공하면, 복잡도 기반 모델 선택보다 우선합니다.
+
+## 설치
+
+crewai_tools 패키지를 설치하세요
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용법
+
+VisionTool을 사용하려면 OpenAI API 키를 환경 변수 `OPENAI_API_KEY`에 설정해야 합니다.
+
+```python Code
+from crewai_tools import VisionTool
+
+vision_tool = VisionTool()
+
+@agent
+def researcher(self) -> Agent:
+    '''
+    이 agent는 VisionTool을 사용하여 이미지에서 텍스트를 추출합니다.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[vision_tool]
+    )
+```
+
+## 인수
+
+VisionTool은 다음과 같은 인수를 받습니다:
+
+| 인수                | 타입     | 설명                                                                              |
+| :------------------ | :------- | :-------------------------------------------------------------------------------- |
+| **image_path_url**  | `string` | **필수**. 텍스트를 추출해야 하는 이미지 파일의 경로(또는 URL)입니다.               |
+| **query**           | `string` | **선택**. 이미지에 대해 모델에 묻는 질문 또는 지시입니다. 기본값은 `"What's in this image?"`입니다. |
+| **complexity_level** | `string` | **선택**. 모델을 선택하는 요청의 복잡도입니다: `easy`, `medium`, `hard`. 기본값은 `medium`입니다. |
