@@ -1962,3 +1962,35 @@ def test_task_prompt_raises_for_missing_crew_prompt_file(tmp_path):
 
     with pytest.raises(Exception, match="not found"):
         task.prompt()
+
+
+def test_crew_interpolation_honors_prompt_file_before_agents_are_attached(tmp_path):
+    """Crew kickoff interpolates inputs before setup_agents() sets agent.crew,
+    so the crew has to hand its prompt_file to the task directly."""
+    prompt_file = tmp_path / "prompts.json"
+    prompt_file.write_text(
+        json.dumps(
+            {"slices": {"conversation_history_instruction": "CUSTOM HISTORY"}}
+        ),
+        encoding="utf-8",
+    )
+    agent = Agent(
+        role="Researcher",
+        goal="Research a topic",
+        backstory="You research topics.",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Research quantum computing.",
+        expected_output="A short summary.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], prompt_file=str(prompt_file))
+    assert agent.crew is None
+
+    crew._interpolate_inputs(
+        {"crew_chat_messages": json.dumps([{"role": "user", "content": "hi"}])}
+    )
+
+    assert "CUSTOM HISTORY" in task.description
+    assert "User: hi" in task.description
