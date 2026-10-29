@@ -2087,7 +2087,7 @@ class AnthropicCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self._resolve_supports_function_calling(True)
+        return self._resolve_supports_function_calling(default=True)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
