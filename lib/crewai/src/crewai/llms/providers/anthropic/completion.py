@@ -13,6 +13,8 @@ from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
     LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
     llm_call_context,
 )
 from crewai.llms.hooks.base import BaseInterceptor
@@ -440,10 +442,11 @@ class AnthropicCompletion(BaseLLM):
                 without leaking a sync one.
         """
 
+        self.api_key = _without_placeholder(self.api_key)
         if self.api_key is None:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("ANTHROPIC_API_KEY"))
             if self.api_key is None:
-                raise ValueError("ANTHROPIC_API_KEY is required")
+                raise MissingAPIKeyError("ANTHROPIC_API_KEY", self.model)
 
         client_params = {
             "api_key": self.api_key,

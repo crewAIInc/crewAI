@@ -47,6 +47,8 @@ try:
     from crewai.llms.base_llm import (
         BaseLLM,
         LLMCallBlockedError,
+        MissingAPIKeyError,
+        _without_placeholder,
         call_stream_override,
         llm_call_context,
     )
@@ -200,6 +202,19 @@ class AzureCompletion(BaseLLM):
 
         base_url = self._get_responses_base_url()
 
+        self.api_key = (
+            _without_placeholder(self.api_key)
+            or _without_placeholder(os.getenv("AZURE_API_KEY"))
+            or None
+        )
+        if self.api_key is None and not _without_placeholder(
+            os.getenv("OPENAI_API_KEY")
+        ):
+            # The delegate is a plain OpenAI client, so azure-identity cannot
+            # authenticate it. Without a key it reads OPENAI_API_KEY, kept for
+            # existing setups; when that is unset too, name the Azure variable.
+            raise MissingAPIKeyError("AZURE_API_KEY", self.model)
+
         delegate_kwargs: dict[str, Any] = {
             "model": self.model,
             "api_key": self.api_key,
@@ -248,6 +263,11 @@ class AzureCompletion(BaseLLM):
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
 
+    def _get_responses_delegate(self) -> Any:
+        if self._responses_delegate is None:
+            self._init_responses_delegate()
+        return self._responses_delegate
+
     def get_input_tokens_count(
         self,
         messages: str | list[LLMMessage],
@@ -283,8 +303,9 @@ class AzureCompletion(BaseLLM):
         # Re-read env vars so that a deferred build can pick up credentials
         # that weren't set at instantiation time (e.g. LLM constructed at
         # module import before deployment env vars were injected).
+        self.api_key = _without_placeholder(self.api_key)
         if not self.api_key:
-            self.api_key = os.getenv("AZURE_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("AZURE_API_KEY"))
         if not self.endpoint:
             endpoint = (
                 os.getenv("AZURE_ENDPOINT")
@@ -340,10 +361,11 @@ class AzureCompletion(BaseLLM):
         try:
             from azure.identity import DefaultAzureCredential
         except ImportError:
-            raise ValueError(
-                "Azure API key is required when azure-identity is not "
-                "installed. Set AZURE_API_KEY, or install azure-identity "
-                'for keyless auth: uv add "crewai[azure-ai-inference]"'
+            raise MissingAPIKeyError(
+                "AZURE_API_KEY",
+                self.model,
+                alternative="For keyless auth instead, install azure-identity: "
+                'uv add "crewai[azure-ai-inference]"',
             ) from None
 
         return DefaultAzureCredential()
@@ -509,10 +531,9 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            with call_stream_override(
-                self._responses_delegate, bool(self._effective_stream())
-            ):
-                return self._responses_delegate.call(
+            delegate = self._get_responses_delegate()
+            with call_stream_override(delegate, bool(self._effective_stream())):
+                return delegate.call(
                     messages=messages,
                     tools=tools,
                     callbacks=callbacks,
@@ -591,10 +612,9 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            with call_stream_override(
-                self._responses_delegate, bool(self._effective_stream())
-            ):
-                return await self._responses_delegate.acall(
+            delegate = self._get_responses_delegate()
+            with call_stream_override(delegate, bool(self._effective_stream())):
+                return await delegate.acall(
                     messages=messages,
                     tools=tools,
                     callbacks=callbacks,

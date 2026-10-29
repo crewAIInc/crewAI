@@ -1358,6 +1358,8 @@ llm = LLM(
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
+
+    إذا كان مفتاح المزوّد غير موجود، أو كان لا يزال القيمة المؤقتة `YOUR_API_KEY` التي يكتبها `crewai create flow` في `.env`، فإن crewAI يرفع الخطأ `MissingAPIKeyError` مع ذكر اسم المتغير الذي يجب تعيينه. أضف المفتاح إلى ملف `.env` في مشروعك ثم شغّل `crewai run` مرة أخرى. هذا الخطأ صنف فرعي من `ValueError`، ويمكن استيراده من `crewai.llms.base_llm`.
   </Tab>
   <Tab title="أسماء النماذج">
     <Check>

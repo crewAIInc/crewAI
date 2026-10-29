@@ -83,6 +83,47 @@ class LLMCallBlockedError(ValueError):
     """
 
 
+# Written to .env by `crewai create flow`; it passes a presence check and only
+# fails later at the provider as an authentication error.
+_API_KEY_PLACEHOLDER: Final[str] = "YOUR_API_KEY"
+
+
+def _without_placeholder(api_key: str | None) -> str | None:
+    return None if api_key == _API_KEY_PLACEHOLDER else api_key
+
+
+class MissingAPIKeyError(ValueError):
+    """An LLM provider needs an API key and none is configured.
+
+    Raised when the key is unset or still holds the ``YOUR_API_KEY`` placeholder
+    that ``crewai create flow`` writes to ``.env``. A ``ValueError`` so existing
+    ``except ValueError`` handlers keep catching it.
+
+    Attributes:
+        env_var: The environment variable the provider reads the key from.
+        model: The model that needs the key.
+    """
+
+    def __init__(self, env_var: str, model: str, alternative: str = "") -> None:
+        """Build the message that tells the user which variable to set.
+
+        Args:
+            env_var: The environment variable the provider reads the key from.
+            model: The model that needs the key.
+            alternative: A sentence naming a keyless way to authenticate, for
+                providers that offer one.
+        """
+        self.env_var = env_var
+        self.model = model
+        message = (
+            f"{env_var} is required for model '{model}' but is not set or is "
+            f"still the placeholder '{_API_KEY_PLACEHOLDER}'. Add "
+            f"{env_var}=<your-api-key> to the .env file in your project root, "
+            f"then run `crewai run` again."
+        )
+        super().__init__(f"{message} {alternative}" if alternative else message)
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD: Final[float] = 0.25
