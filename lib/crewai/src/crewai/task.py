@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from concurrent.futures import Future
+import contextlib
 import contextvars
 from copy import copy as shallow_copy
 import datetime
@@ -98,7 +99,7 @@ from crewai.utilities.guardrail_types import (
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import I18N_DEFAULT, get_i18n
 from crewai.utilities.string_utils import interpolate_only
 
 
@@ -1003,6 +1004,26 @@ class Task(BaseModel):
     def _post_agent_execution(self, agent: BaseAgent) -> None:
         pass
 
+    def _prompt_slice(self, name: str) -> str:
+        """Retrieve a prompt slice, honoring the crew's ``prompt_file``.
+
+        Falls back to the built-in prompts when the task has no crew, the crew has
+        no ``prompt_file``, or the file does not define the slice, so prompt files
+        that only customize other entries keep working.
+
+        Args:
+            name: The key of the prompt slice to retrieve.
+
+        Returns:
+            The prompt slice as a string.
+        """
+        crew = self.agent.crew if self.agent is not None else None
+        if crew is not None and not isinstance(crew, str) and crew.prompt_file:
+            custom = get_i18n(prompt_file=crew.prompt_file)
+            with contextlib.suppress(Exception):
+                return custom.slice(name)
+        return I18N_DEFAULT.slice(name)
+
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
 
@@ -1078,7 +1099,7 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = I18N_DEFAULT.slice("expected_output").format(
+        output = self._prompt_slice("expected_output").format(
             expected_output=self.expected_output
         )
         tasks_slices = [description, output]
@@ -1171,7 +1192,7 @@ Follow these guidelines:
             self.output_file = output_file
 
         if inputs.get("crew_chat_messages"):
-            conversation_instruction = I18N_DEFAULT.slice(
+            conversation_instruction = self._prompt_slice(
                 "conversation_history_instruction"
             )
 

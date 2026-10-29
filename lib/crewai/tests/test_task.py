@@ -1883,3 +1883,82 @@ def test_async_execution_fails():
       with pytest.raises(RuntimeError, match="boom!"):
         execution = task.execute_async(agent=researcher)
         execution.result()
+
+
+def _crew_with_prompt_file(prompt_file: str | None) -> tuple[Task, Crew]:
+    agent = Agent(
+        role="Researcher",
+        goal="Research a topic",
+        backstory="You research topics.",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Research quantum computing.",
+        expected_output="A short summary.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], prompt_file=prompt_file)
+    agent.crew = crew
+    return task, crew
+
+
+def test_task_prompt_honors_crew_prompt_file(tmp_path):
+    """A slice overridden in the crew's prompt_file reaches the task prompt (GH-7766)."""
+    prompt_file = tmp_path / "prompts.json"
+    prompt_file.write_text(
+        json.dumps(
+            {
+                "slices": {
+                    "expected_output": "CUSTOM CRITERIA: {expected_output}",
+                    "conversation_history_instruction": "CUSTOM HISTORY INSTRUCTION",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    task, _ = _crew_with_prompt_file(str(prompt_file))
+
+    prompt = task.prompt()
+
+    assert "CUSTOM CRITERIA: A short summary." in prompt
+    assert "This is the expected criteria for your final answer" not in prompt
+
+    task.interpolate_inputs_and_add_conversation_history(
+        {"crew_chat_messages": json.dumps([{"role": "user", "content": "hi"}])}
+    )
+    assert "CUSTOM HISTORY INSTRUCTION" in task.description
+    assert "User: hi" in task.description
+
+
+def test_task_prompt_falls_back_to_defaults_for_slices_missing_from_prompt_file(
+    tmp_path,
+):
+    """A prompt_file that does not define a slice keeps the built-in text."""
+    prompt_file = tmp_path / "prompts.json"
+    prompt_file.write_text(
+        json.dumps({"hierarchical_manager_agent": {"role": "Boss"}}),
+        encoding="utf-8",
+    )
+    task, _ = _crew_with_prompt_file(str(prompt_file))
+
+    assert (
+        "This is the expected criteria for your final answer: A short summary."
+        in task.prompt()
+    )
+
+
+def test_task_prompt_uses_defaults_without_prompt_file():
+    task, _ = _crew_with_prompt_file(None)
+
+    assert (
+        "This is the expected criteria for your final answer: A short summary."
+        in task.prompt()
+    )
+
+
+def test_task_prompt_raises_for_missing_crew_prompt_file(tmp_path):
+    """A bad prompt_file path is reported instead of silently ignored."""
+    task, _ = _crew_with_prompt_file(str(tmp_path / "missing.json"))
+
+    with pytest.raises(Exception, match="not found"):
+        task.prompt()
