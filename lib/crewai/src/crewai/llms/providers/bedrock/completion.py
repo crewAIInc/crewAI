@@ -263,6 +263,7 @@ class BedrockCompletion(BaseLLM):
     interceptor: BaseInterceptor[Any, Any] | None = None
     response_format: type[BaseModel] | None = None
     is_claude_model: bool = False
+    supports_tools: bool | None = True
     supports_streaming: bool = True
     model_id: str = ""
 

@@ -266,6 +266,7 @@ class AnthropicCompletion(BaseLLM):
     response_format: JsonResponseFormat | type[BaseModel] | None = None
     tool_search: AnthropicToolSearchConfig | None = None
     is_claude_3: bool = False
+    supports_tools: bool | None = True
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)

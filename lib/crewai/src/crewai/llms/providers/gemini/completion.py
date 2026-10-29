@@ -57,6 +57,7 @@ class GeminiCompletion(BaseLLM):
     response_format: type[BaseModel] | None = None
     thinking_config: Any = None
     tools: list[dict[str, Any]] | None = None
+    supports_tools: bool | None = None
     is_gemini_2_0: bool = False
 
     _client: Any = PrivateAttr(default=None)
@@ -96,6 +97,10 @@ class GeminiCompletion(BaseLLM):
 
         model = data.get("model", "gemini-2.0-flash-001")
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
+        if data.get("supports_tools") is None:
+            data["supports_tools"] = bool(
+                version_match and float(version_match.group(1)) >= 1.5
+            )
         data["is_gemini_2_0"] = bool(
             version_match and float(version_match.group(1)) >= 2.0
         )
@@ -1427,13 +1432,9 @@ class GeminiCompletion(BaseLLM):
             response_id=stream_response_id,
         )
 
-    def _gemini_version(self) -> float:
-        match = re.search(r"gemini-(\d+(?:\.\d+)?)", self.model.lower())
-        return float(match.group(1)) if match else 0.0
-
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self._resolve_supports_function_calling(self._gemini_version() >= 1.5)
+        return self._resolve_supports_function_calling(False)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
