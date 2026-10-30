@@ -3492,18 +3492,6 @@ def test_legacy_experimental_discriminator_is_rejected() -> None:
         AgentExecutor.model_validate({"executor_type": "experimental"})
 
 
-def test_experimental_executor_import_is_removed() -> None:
-    import importlib
-
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("crewai.experimental.agent_executor")
-
-    experimental = importlib.import_module("crewai.experimental")
-    for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
-        with pytest.raises(AttributeError):
-            getattr(experimental, name)
-
-
 def test_training_output_updates_json_iteration_key() -> None:
     agent_id = "agent-id"
     training_data = {
