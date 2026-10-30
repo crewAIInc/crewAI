@@ -817,7 +817,7 @@ class Task(BaseModel):
             if self.output_file:
                 content = (
                     task_output.json_dict
-                    if task_output.json_dict
+                    if task_output.json_dict is not None
                     else (
                         task_output.pydantic.model_dump_json()
                         if task_output.pydantic
@@ -976,7 +976,7 @@ class Task(BaseModel):
             if self.output_file:
                 content = (
                     task_output.json_dict
-                    if task_output.json_dict
+                    if task_output.json_dict is not None
                     else (
                         task_output.pydantic.model_dump_json()
                         if task_output.pydantic
