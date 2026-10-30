@@ -1596,6 +1596,51 @@ class TestHandleTurnReplyFallback:
         assert assistant_messages == ["computed reply"]
 
 
+class TestDocumentedPersistenceExample:
+    """The ``resume_session.py`` example from the conversational Flow guide."""
+
+    SESSION = "notes-demo"
+
+    def test_fresh_instance_resumes_and_a_new_session_is_separate(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "notes.db"))
+
+        @persist(store)
+        class NoteTaker(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "note"
+
+            @listen("note")
+            def take_note(self) -> str:
+                reply = f"noted: {self.state.current_user_message}"
+                self.append_assistant_message(reply)
+                return reply
+
+        first = NoteTaker()
+        first.handle_turn("buy milk", session_id=self.SESSION)
+        assert [(m.role, m.content) for m in first.state.messages] == [
+            ("user", "buy milk"),
+            ("assistant", "noted: buy milk"),
+        ]
+
+        second = NoteTaker()
+        second.handle_turn("and eggs", session_id=self.SESSION)
+        assert [(m.role, m.content) for m in second.state.messages] == [
+            ("user", "buy milk"),
+            ("assistant", "noted: buy milk"),
+            ("user", "and eggs"),
+            ("assistant", "noted: and eggs"),
+        ]
+
+        other = NoteTaker()
+        other.handle_turn("different", session_id="other-session")
+        assert [(m.role, m.content) for m in other.state.messages] == [
+            ("user", "different"),
+            ("assistant", "noted: different"),
+        ]
+
+
 class TestPersistCustomListenReplies:
     """Custom ``@listen`` returns must land in ``@persist`` snapshots.
 

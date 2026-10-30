@@ -84,6 +84,76 @@ flow.handle_turn("Where is my order?", session_id=session_id)
 flow.handle_turn("What about returns?", session_id=session_id)
 ```
 
+## Persisting and resuming a session
+
+A session id plus `@persist` is what lets a **fresh** `Flow` instance pick the conversation
+back up. Reusing one in-memory instance is a different thing: it never left.
+
+`SQLiteFlowPersistence` stores one row per session. Constructing a new instance with the
+same store and calling `handle_turn(..., session_id=...)` restores the stored messages
+first, then appends the new turn, so the history keeps its order and gains no duplicates.
+
+```python resume_session.py
+from typing import Any
+
+from crewai.flow import Flow, listen, start
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+store = SQLiteFlowPersistence("./notes.db")
+SESSION = "notes-demo"
+
+
+@persist(store)
+class NoteTaker(Flow):
+    conversational = True
+
+    @start()
+    def begin(self) -> None:
+        pass
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        return "note"
+
+    @listen("note")
+    def take_note(self) -> str:
+        reply = f"noted: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+first = NoteTaker()
+first.handle_turn("buy milk", session_id=SESSION)
+print("first:", [(message.role, message.content) for message in first.state.messages])
+
+second = NoteTaker()
+second.handle_turn("and eggs", session_id=SESSION)
+print("second:", [(message.role, message.content) for message in second.state.messages])
+
+other = NoteTaker()
+other.handle_turn("different", session_id="other-session")
+print("other:", [(message.role, message.content) for message in other.state.messages])
+```
+
+Run it and you should see:
+
+```text
+first: [('user', 'buy milk'), ('assistant', 'noted: buy milk')]
+second: [('user', 'buy milk'), ('assistant', 'noted: buy milk'), ('user', 'and eggs'), ('assistant', 'noted: and eggs')]
+other: [('user', 'different'), ('assistant', 'noted: different')]
+```
+
+`second` is a new object, not `first`, and it carries the whole exchange; `other` proves a
+different session id starts a separate conversation.
+
+What a restart restores is **persisted conversation state**: messages, the flow's stored
+state, and the session row. It does not restore running background work, in-flight method
+executions, or open resources such as a live LLM stream — those belonged to the process
+that died, and the new instance starts fresh work on the next turn.
+
+If you set `defer_trace_finalization=True` (on `ConversationConfig` or the instance), the
+per-turn trace finalization is skipped by design; call `flow.finalize_session_traces()`
+once when the session actually ends so the deferred batch is flushed.
+
 ## Streaming a turn
 
 Use `stream_turn()` when a UI or runtime needs structured events for one chat turn. It returns a stream session with ordered frames for Flow routing, LLM chunks, tool activity, and conversation messages.
