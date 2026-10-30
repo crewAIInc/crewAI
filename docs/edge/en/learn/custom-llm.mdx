@@ -9,9 +9,73 @@ mode: "wide"
 
 CrewAI supports custom LLM implementations through the `BaseLLM` abstract base class. This allows you to integrate any LLM provider that doesn't have built-in support in LiteLLM, or implement custom authentication mechanisms.
 
+## Offline Quick Start
+
+Start here if you want to see the `BaseLLM` interface working before you point it at a
+provider. This stub answers with a fixed string, makes no HTTP request, and needs no API
+key, so it runs the same on every machine.
+
+```python offline_custom_llm.py
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Task
+
+
+class EchoLLM(BaseLLM):
+    """A deterministic stub: it returns a fixed reply and never calls the network."""
+
+    def __init__(self, reply: str = "pong"):
+        super().__init__(model="echo")
+        self.reply = reply
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+    ) -> Any:
+        return self.reply
+
+    # Declare capabilities honestly: this stub has no native tool calling
+    # and no native stop-word support.
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+
+llm = EchoLLM("pong")
+print("direct:", llm.call("ping"))
+
+agent = Agent(
+    role="Echo",
+    goal="Repeat what you are told",
+    backstory="A deterministic stub used to exercise the interface.",
+    llm=llm,
+    verbose=False,
+)
+task = Task(description="Say pong", expected_output="pong", agent=agent)
+print("crew:", Crew(agents=[agent], tasks=[task]).kickoff())
+```
+
+Run it and you should see:
+
+```text
+direct: pong
+crew: pong
+```
+
+`BaseLLM` also accepts extra keyword arguments on `call`, which the framework passes for
+tasks and agents. This stub is for learning and testing only: replace the body of `call`
+with a real provider request (the Quick Start below is the next step) before you use it
+for anything that matters. Because it claims no native support, CrewAI applies stop words
+and tool handling itself, so the stub never silently claims a capability it lacks.
+
 ## Quick Start
 
-Here's a minimal custom LLM implementation:
+Here's a minimal custom LLM implementation that talks to a real provider:
 
 ```python
 from crewai import BaseLLM
