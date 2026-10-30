@@ -673,8 +673,6 @@ def test_flow_method_types_from_definition() -> None:
 
 CONVERSATIONAL_FLOW_YAML = """schema: crewai.flow/v1
 name: SupportFlow
-config:
-  suppress_flow_events: true
 conversational:
   llm: gpt-4o-mini
 methods:
@@ -847,6 +845,9 @@ def test_run_declarative_flow_still_runs_a_disabled_conversational_flow(
     definition_path = tmp_path / "flow.yaml"
     definition_path.write_text(
         CONVERSATIONAL_FLOW_YAML.replace(
+            "name: SupportFlow\n",
+            "name: SupportFlow\nconfig:\n  suppress_flow_events: true\n",
+        ).replace(
             "conversational:\n  llm: gpt-4o-mini",
             "conversational:\n  enabled: false",
         ).replace("    listen: order\n", "    start: true\n"),
