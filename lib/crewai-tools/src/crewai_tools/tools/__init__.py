@@ -62,6 +62,14 @@ from crewai_tools.tools.db2_search_tool import (
     DB2ToolSchema,
     DB2VectorSearchTool,
 )
+from crewai_tools.tools.decodo_ecommerce_tool.decodo_ecommerce_tool import (
+    DecodoEcommerceTool,
+)
+from crewai_tools.tools.decodo_search_tool.decodo_search_tool import DecodoSearchTool
+from crewai_tools.tools.decodo_serp_tool.decodo_serp_tool import DecodoSERPTool
+from crewai_tools.tools.decodo_web_scraper_tool.decodo_web_scraper_tool import (
+    DecodoWebScraperTool,
+)
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
 )
@@ -258,6 +266,10 @@ __all__ = [
     "DaytonaExecTool",
     "DaytonaFileTool",
     "DaytonaPythonTool",
+    "DecodoEcommerceTool",
+    "DecodoSERPTool",
+    "DecodoSearchTool",
+    "DecodoWebScraperTool",
     "DirectoryReadTool",
     "DirectorySearchTool",
     "E2BExecTool",

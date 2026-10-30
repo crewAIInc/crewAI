@@ -189,6 +189,10 @@ e2b = [
     "e2b~=2.20.0",
     "e2b-code-interpreter~=2.6.0",
 ]
+decodo = [
+    # 2.5.0 is the first release that supports Python 3.10 and 3.11.
+    "decodo-sdk>=2.5.0,<3",
+]
 
 
 [tool.uv]
