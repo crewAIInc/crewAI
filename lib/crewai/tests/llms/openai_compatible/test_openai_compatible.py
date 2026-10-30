@@ -103,6 +103,33 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_zai_config(self):
+        """Test Z.ai provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["zai"]
+        assert config.base_url == "https://api.z.ai/api/paas/v4"
+        assert config.api_key_env == "ZAI_API_KEY"
+        assert config.base_url_env == "ZAI_BASE_URL"
+        assert config.api_key_required is True
+        assert config.fallback_api_key_envs == ("BIGMODEL_API_KEY", "ZHIPUAI_API_KEY")
+
+    def test_zhipuai_config(self):
+        """Test ZhipuAI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["zhipuai"]
+        assert config.base_url == "https://open.bigmodel.cn/api/paas/v4"
+        assert config.api_key_env == "ZHIPUAI_API_KEY"
+        assert config.base_url_env == "ZHIPUAI_BASE_URL"
+        assert config.api_key_required is True
+        assert config.fallback_api_key_envs == ("BIGMODEL_API_KEY", "ZAI_API_KEY")
+
+    def test_zhipu_is_alias(self):
+        """Test zhipu is configured same as zhipuai."""
+        zhipuai = OPENAI_COMPATIBLE_PROVIDERS["zhipuai"]
+        zhipu = OPENAI_COMPATIBLE_PROVIDERS["zhipu"]
+        assert zhipu.base_url == zhipuai.base_url
+        assert zhipu.api_key_env == zhipuai.api_key_env
+        assert zhipu.base_url_env == zhipuai.base_url_env
+        assert zhipu.fallback_api_key_envs == zhipuai.fallback_api_key_envs
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -431,6 +458,66 @@ class TestLLMIntegration:
             )
             assert llm.temperature == 0.7
             assert llm.max_tokens == 1000
+
+    def test_zai_api_key_fallback_to_bigmodel(self):
+        """Test Z.ai resolves BIGMODEL_API_KEY when ZAI_API_KEY is unset."""
+        with patch.dict(os.environ, {"BIGMODEL_API_KEY": "bigmodel-test-key"}, clear=True):
+            completion = OpenAICompatibleCompletion(
+                model="glm-5.3-flash", provider="zai"
+            )
+            assert completion.api_key == "bigmodel-test-key"
+
+    def test_zai_api_key_fallback_to_zhipuai(self):
+        """Test Z.ai resolves ZHIPUAI_API_KEY when ZAI_API_KEY and BIGMODEL_API_KEY are unset."""
+        with patch.dict(os.environ, {"ZHIPUAI_API_KEY": "zhipuai-test-key"}, clear=True):
+            completion = OpenAICompatibleCompletion(
+                model="glm-5.3-flash", provider="zai"
+            )
+            assert completion.api_key == "zhipuai-test-key"
+
+    def test_llm_factory_creates_openai_compatible_for_zai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Z.ai."""
+        with patch.dict(os.environ, {"ZAI_API_KEY": "test-key"}):
+            llm = LLM(model="zai/glm-5.3-flash")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "zai"
+            assert llm.model == "glm-5.3-flash"
+            assert llm.base_url == "https://api.z.ai/api/paas/v4"
+
+    def test_llm_factory_creates_openai_compatible_for_zhipuai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for ZhipuAI."""
+        with patch.dict(os.environ, {"ZHIPUAI_API_KEY": "test-key"}):
+            llm = LLM(model="zhipuai/glm-5.3-flash")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "zhipuai"
+            assert llm.model == "glm-5.3-flash"
+            assert llm.base_url == "https://open.bigmodel.cn/api/paas/v4"
+
+    def test_llm_factory_infers_provider_from_glm_prefix(self):
+        """Test LLM factory infers zai provider for bare glm- models."""
+        with patch.dict(os.environ, {"ZAI_API_KEY": "test-key"}):
+            llm = LLM(model="glm-5.3-flash")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "zai"
+            assert llm.model == "glm-5.3-flash"
+
+    def test_llm_factory_creates_openai_compatible_for_bigmodel(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for bigmodel."""
+        with patch.dict(os.environ, {"BIGMODEL_API_KEY": "test-key"}):
+            llm = LLM(model="bigmodel/glm-5.3-flash")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "bigmodel"
+            assert llm.model == "glm-5.3-flash"
+            assert llm.base_url == "https://open.bigmodel.cn/api/paas/v4"
+
+    def test_llm_explicit_provider_bigmodel(self):
+        """Test LLM with explicit provider='bigmodel' routes to native OpenAICompatibleCompletion."""
+        with patch.dict(os.environ, {"BIGMODEL_API_KEY": "test-key"}):
+            llm = LLM(model="glm-5.3-flash", provider="bigmodel")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "bigmodel"
+            assert llm.model == "glm-5.3-flash"
+            assert llm.base_url == "https://open.bigmodel.cn/api/paas/v4"
 
 
 class TestCallMocking:
