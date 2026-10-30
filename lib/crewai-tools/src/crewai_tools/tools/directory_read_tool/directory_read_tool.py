@@ -42,8 +42,6 @@ class DirectoryReadTool(BaseTool):
             raise ValueError("Directory must be provided.")
 
         directory = validate_directory_path(directory)
-        if directory[-1] == "/":
-            directory = directory[:-1]
         files_list = [
             os.path.join(root, filename)
             for root, _, files in os.walk(directory)
