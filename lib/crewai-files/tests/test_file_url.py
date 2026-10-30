@@ -2,10 +2,12 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from crewai_files import FileBytes, FileUrl, ImageFile
+from crewai_files import FileBytes, FileUrl, ImageFile, PDFFile
 from crewai_files.core.resolved import InlineBase64, UrlReference
 from crewai_files.core.sources import FilePath, _normalize_source
+from crewai_files.formatting.gemini import GeminiFormatter
 from crewai_files.resolution.resolver import FileResolver
+from crewai_files.resolution.utils import wrap_file_source
 import pytest
 
 
@@ -84,6 +86,56 @@ class TestFileUrl:
 
         assert url.content_type == "application/octet-stream"
 
+    @pytest.mark.parametrize("path", ["download", "asset.bin"])
+    @pytest.mark.parametrize(
+        ("filename", "content_type", "wrapper"),
+        [
+            ("chart.png", "image/png", ImageFile),
+            ("report.pdf", "application/pdf", PDFFile),
+        ],
+    )
+    def test_filename_mime_for_download_urls(
+        self,
+        path: str,
+        filename: str,
+        content_type: str,
+        wrapper: type[ImageFile] | type[PDFFile],
+    ) -> None:
+        source = FileUrl(
+            url=f"https://example.com/{path}?token=fixture", filename=filename
+        )
+        file = wrap_file_source(source)
+
+        assert isinstance(file, wrapper)
+        assert file.content_type == content_type
+        resolved = FileResolver().resolve(file, "gemini")
+        assert isinstance(resolved, UrlReference)
+        assert GeminiFormatter.format_block(resolved) == {
+            "fileData": {"mimeType": content_type, "fileUri": source.url}
+        }
+
+    @pytest.mark.parametrize("filename", [None, "file.unknownext123"])
+    def test_filename_mime_unknown_falls_back(self, filename: str | None) -> None:
+        source = FileUrl(url="https://example.com/download", filename=filename)
+
+        assert source.content_type == "application/octet-stream"
+
+    def test_filename_mime_preserves_specific_url_type(self) -> None:
+        source = FileUrl(url="https://example.com/image.png", filename="download.pdf")
+
+        assert source.content_type == "image/png"
+
+    @pytest.mark.asyncio
+    async def test_filename_mime_async_resolution(self) -> None:
+        file = ImageFile(
+            source=FileUrl(url="https://example.com/download", filename="chart.png")
+        )
+
+        resolved = await FileResolver().aresolve(file, "gemini")
+
+        assert isinstance(resolved, UrlReference)
+        assert resolved.content_type == "image/png"
+
     def test_read_fetches_content(self):
         """Test that read() fetches content from URL."""
         url = FileUrl(url="https://example.com/image.png")
@@ -113,9 +165,10 @@ class TestFileUrl:
             mock_get.assert_called_once()
             assert content1 == content2
 
-    def test_read_updates_content_type_from_response(self):
+    def test_read_updates_content_type_from_response(self) -> None:
         """Test that read() updates content type from response headers."""
-        url = FileUrl(url="https://example.com/file")
+        url = FileUrl(url="https://example.com/file", filename="chart.png")
+        assert url.content_type == "image/png"
         mock_response = MagicMock()
         mock_response.content = b"fake content"
         mock_response.headers = {"content-type": "image/webp; charset=utf-8"}
@@ -126,9 +179,10 @@ class TestFileUrl:
             assert url.content_type == "image/webp"
 
     @pytest.mark.asyncio
-    async def test_aread_fetches_content(self):
+    async def test_aread_fetches_content(self) -> None:
         """Test that aread() fetches content from URL asynchronously."""
-        url = FileUrl(url="https://example.com/image.png")
+        url = FileUrl(url="https://example.com/file", filename="report.pdf")
+        assert url.content_type == "application/pdf"
         mock_response = MagicMock()
         mock_response.content = b"async fake content"
         mock_response.headers = {"content-type": "image/png"}
@@ -143,6 +197,7 @@ class TestFileUrl:
             content = await url.aread()
 
             assert content == b"async fake content"
+            assert url.content_type == "image/png"
 
     @pytest.mark.asyncio
     async def test_aread_caches_content(self):
