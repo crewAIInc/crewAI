@@ -12,6 +12,7 @@ from pydantic import BaseModel, BeforeValidator, Field, PlainSerializer, Private
 
 from crewai.events.base_events import BaseEvent
 from crewai.utilities.rw_lock import RWLock
+from crewai.utilities.serialization import to_serializable
 
 
 _event_type_map: dict[str, type[BaseEvent]] = {}
@@ -64,12 +65,17 @@ EdgeType = Literal[
 class EventNode(BaseModel):
     """A node wrapping a single event with its adjacency lists."""
 
+    # A recorded event can carry live objects -- the exception in a tool error event's
+    # ``error``, the tool class in ``tool_class`` -- and ``model_dump(mode="json")``
+    # raises on those. One such event then failed every checkpoint that followed it, so
+    # the payload goes through ``to_serializable``, which degrades what JSON cannot hold
+    # instead of raising. It is the same conversion ``BaseEvent.to_json`` already uses.
     event: Annotated[
         BaseEvent,
         BeforeValidator(_resolve_event),
         PlainSerializer(
             lambda v, info: (
-                v.model_dump(mode="json") if info.mode == "json" else v.model_dump()
+                to_serializable(v) if info.mode == "json" else v.model_dump()
             ),
         ),
     ]
