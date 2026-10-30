@@ -29,6 +29,7 @@ from pydantic import (
     BeforeValidator,
     Field,
     PrivateAttr,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -1261,7 +1262,7 @@ Follow these guidelines:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
 
-        if self.output_pydantic or self.output_json:
+        if model := self.output_pydantic or self.output_json:
             model_output = convert_to_model(
                 result,
                 self.output_pydantic,
@@ -1269,7 +1270,9 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-            pydantic_output, json_output = self._unpack_model_output(model_output)
+            pydantic_output, json_output = self._unpack_model_output(
+                model_output, model
+            )
 
         return pydantic_output, json_output
 
@@ -1280,7 +1283,7 @@ Follow these guidelines:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
 
-        if self.output_pydantic or self.output_json:
+        if model := self.output_pydantic or self.output_json:
             model_output = await async_convert_to_model(
                 result,
                 self.output_pydantic,
@@ -1288,24 +1291,28 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-            pydantic_output, json_output = self._unpack_model_output(model_output)
+            pydantic_output, json_output = self._unpack_model_output(
+                model_output, model
+            )
 
         return pydantic_output, json_output
 
     @staticmethod
     def _unpack_model_output(
         model_output: dict[str, Any] | BaseModel | str,
+        model: type[BaseModel],
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
         if isinstance(model_output, BaseModel):
             return model_output, None
         if isinstance(model_output, dict):
             return None, model_output
-        if isinstance(model_output, str):
-            try:
-                return None, json.loads(model_output)
-            except json.JSONDecodeError:
-                return None, None
-        return None, None
+        # A string is either JSON a converter produced or the original answer
+        # that conversion fell back to; keep it only when it fits the model.
+        try:
+            model.model_validate_json(model_output)
+        except ValidationError:
+            return None, None
+        return None, json.loads(model_output)
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
