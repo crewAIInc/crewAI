@@ -3249,6 +3249,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         all_triggers = [trigger_method, *router_results]
 
+        feedback_pause: HumanFeedbackPending | None = None
+
         with self._or_listeners_lock:
             rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
 
@@ -3291,7 +3293,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             )
                             for listener_name in listeners_triggered
                         ]
-                        await asyncio.gather(*tasks)
+                        try:
+                            await asyncio.gather(*tasks)
+                        except HumanFeedbackPending as e:
+                            # A listener paused for human feedback. Keep
+                            # dispatching the remaining trigger outcomes so
+                            # their listeners still run, then re-raise below
+                            # so the flow pauses for the reply as usual.
+                            feedback_pause = feedback_pause or e
 
                 if current_trigger in router_results:
                     for method_name in self._start_method_names():
@@ -3308,6 +3317,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                                 self._is_execution_resuming = was_resuming
                             else:
                                 await self._execute_start_method(method_name)
+
+        if feedback_pause is not None:
+            raise feedback_pause
 
     def _condition_met(
         self,

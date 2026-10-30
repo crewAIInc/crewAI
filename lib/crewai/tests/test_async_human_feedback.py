@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback, router
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -563,6 +563,55 @@ class TestFlowResumeWithFeedback:
                 f"an unpaired event breaks started/finished pairing and every "
                 f"duration built on it"
             )
+
+    def test_router_outcome_listeners_run_when_sibling_listener_pauses(self) -> None:
+        """A pending human-feedback listener must not swallow router outcomes.
+
+        ``_execute_listeners`` dispatches the triggering method's listeners first
+        and then the router outcomes. When the human-feedback listener raised
+        ``HumanFeedbackPending``, that loop stopped there, so the listeners of the
+        router outcome never ran -- not during the run and not after ``resume()``,
+        because the router had already completed. The remaining outcomes are now
+        dispatched before the pause propagates, matching what happens when the
+        same listener subscribes to the start method directly.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class PausingProvider(HumanFeedbackProvider):
+                def request_feedback(self, context, flow):
+                    raise HumanFeedbackPending(context=context)
+
+            class ReviewFlow(Flow):
+                @start()
+                def begin(self):
+                    pass
+
+                @listen(begin)
+                @human_feedback(message="Approve?", provider=PausingProvider())
+                def review(self):
+                    return "draft"
+
+                @listen(review)
+                def record_review(self, result):
+                    self.state["review"] = result.feedback
+
+                @router(begin)
+                def route(self):
+                    return "ready"
+
+                @listen("ready")
+                def ship(self):
+                    self.state["shipped"] = True
+
+            pending = ReviewFlow(persistence=persistence).kickoff()
+            assert isinstance(pending, HumanFeedbackPending)
+
+            flow = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+            flow.resume("approved")
+
+            state = {key: value for key, value in flow.state.items() if key != "id"}
+            assert state == {"shipped": True, "review": "approved"}
 
     def test_resume_without_pending_raises_error(self) -> None:
         """Test that resume raises error without pending context."""
