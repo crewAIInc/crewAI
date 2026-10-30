@@ -673,6 +673,8 @@ def test_flow_method_types_from_definition() -> None:
 
 CONVERSATIONAL_FLOW_YAML = """schema: crewai.flow/v1
 name: SupportFlow
+config:
+  suppress_flow_events: true
 conversational:
   llm: gpt-4o-mini
 methods:
