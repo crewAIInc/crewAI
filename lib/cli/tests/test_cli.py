@@ -1069,3 +1069,18 @@ def test_crewai_drops_a_paste_marker_it_inherited(monkeypatch):
     CliRunner().invoke(crewai, ["version"])
 
     assert "CREWAI_PASTED_API_KEYS" not in os.environ
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["replay", "-t", "abc", "-f", "old.pkl"],
+        ["run", "-f", "old.pkl"],
+        ["test", "-f", "old.pkl"],
+    ],
+)
+def test_trained_agents_file_rejects_pickle(runner, args):
+    result = runner.invoke(crewai, args)
+
+    assert result.exit_code != 0
+    assert "pickle format" in result.output

@@ -116,7 +116,7 @@ def test_train_crew_exits_with_the_script_exit_code(mock_subprocess_run):
     )
 
     with pytest.raises(SystemExit) as exc_info:
-        train_crew(5, "trained_agents_data.pkl")
+        train_crew(5, "trained_agents_data.json")
 
     assert exc_info.value.code == 42
 
@@ -148,3 +148,10 @@ def test_train_command_exits_zero_when_the_script_succeeds(
     result = CliRunner().invoke(train, ["-n", "1"])
 
     assert result.exit_code == 0
+
+
+@mock.patch("crewai_cli.train_crew.subprocess.run")
+def test_train_crew_rejects_pickle_filename(mock_subprocess_run):
+    with pytest.raises(click.ClickException, match=r"pickle format.*Re-run"):
+        train_crew(5, "trained_agents_data.pkl")
+    mock_subprocess_run.assert_not_called()

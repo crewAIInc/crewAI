@@ -1,6 +1,7 @@
 import subprocess
 
 import click
+from crewai_core.constants import PICKLE_UNSUPPORTED_MESSAGE
 
 
 def train_crew(n_iterations: int, filename: str) -> None:
@@ -13,6 +14,11 @@ def train_crew(n_iterations: int, filename: str) -> None:
     if n_iterations <= 0:
         raise click.ClickException(
             "The number of iterations must be a positive integer."
+        )
+
+    if filename.endswith(".pkl"):
+        raise click.ClickException(
+            PICKLE_UNSUPPORTED_MESSAGE.format(file_name=filename)
         )
 
     if not filename.endswith(".json"):

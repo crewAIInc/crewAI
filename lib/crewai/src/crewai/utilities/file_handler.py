@@ -4,6 +4,7 @@ import os
 import tempfile
 from typing import Any, TypedDict
 
+from crewai_core.constants import PICKLE_UNSUPPORTED_MESSAGE
 from crewai_core.lock_store import lock as store_lock
 from typing_extensions import Unpack
 
@@ -115,15 +116,6 @@ class FileHandler:
 
         except Exception as e:
             raise ValueError(f"Failed to log message: {e!s}") from e
-
-
-PICKLE_UNSUPPORTED_MESSAGE = (
-    "Training data in pickle format ({file_name}) is no longer supported. "
-    "Loading a pickle file can execute arbitrary code, so CrewAI now stores "
-    "training data as JSON. Re-run `crewai train -n <iterations> -f "
-    "trained_agents_data.json` to regenerate it, and do not load pickle files "
-    "from sources you do not trust."
-)
 
 
 class JSONHandler:
