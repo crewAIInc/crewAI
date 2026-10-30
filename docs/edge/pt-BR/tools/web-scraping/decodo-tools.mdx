@@ -1,0 +1,126 @@
+---
+title: Ferramentas Decodo
+description: Ferramentas da Decodo Web Scraping API para extrair páginas web, pesquisar no Google e na Amazon, consultar produtos e obter resultados de mecanismos de busca.
+icon: globe
+mode: "wide"
+---
+
+# Ferramentas Decodo
+
+Estas ferramentas usam a Web Scraping API da [Decodo](https://decodo.com) para dar aos seus agentes páginas web e resultados de busca em tempo real.
+
+## Instalação
+
+```shell
+uv add 'crewai-tools[decodo]'
+```
+
+## Variáveis de Ambiente
+
+- `DECODO_API_KEY` (obrigatória)
+
+Copie sua chave de API da sua assinatura da Web Scraping API no [painel da Decodo](https://dashboard.decodo.com/web-data/playground). Você também pode passá-la para cada ferramenta com `api_key=`.
+
+## Ferramentas Incluídas
+
+- `DecodoWebScraperTool`: extrai qualquer URL pública e retorna a página em Markdown.
+- `DecodoSearchTool`: pesquisa no Google ou na Amazon e retorna os resultados estruturados em JSON.
+- `DecodoEcommerceTool`: obtém detalhes de produtos ou resultados de busca da Amazon, Walmart ou Target em JSON.
+- `DecodoSERPTool`: obtém páginas de resultados do Google ou do Bing, com paginação, ou uma resposta do Google AI Mode em JSON.
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import DecodoSearchTool, DecodoWebScraperTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and summarize up-to-date information from the web",
+    backstory="You search the web, read the most relevant pages and report what they say.",
+    tools=[DecodoSearchTool(), DecodoWebScraperTool()],
+)
+
+task = Task(
+    description="Find the three most recent announcements about {topic} and summarize each one.",
+    expected_output="Three bullet points, each with a one-sentence summary and the source URL.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff(inputs={"topic": "solid-state batteries"}))
+```
+
+## Ferramentas
+
+### DecodoWebScraperTool
+
+```python Code
+from crewai_tools import DecodoWebScraperTool
+
+tool = DecodoWebScraperTool()
+print(tool.run(url="https://ip.decodo.com"))
+```
+
+| Argumento | Tipo | Descrição |
+| --- | --- | --- |
+| `url` | `str` | URL completa da página a ser extraída. |
+| `geo` | `str`, opcional | País de onde a requisição é enviada, por exemplo `United States`. |
+| `js_render` | `bool`, opcional | Abre a página em um navegador headless. Só é necessário para páginas que carregam conteúdo com JavaScript. |
+
+Markdown maior que `max_chars` (padrão `45000`) é truncado para manter a página dentro do contexto do agente.
+
+### DecodoSearchTool
+
+```python Code
+from crewai_tools import DecodoSearchTool
+
+tool = DecodoSearchTool()
+print(tool.run(query="mechanical keyboard", source="amazon"))
+```
+
+| Argumento | Tipo | Descrição |
+| --- | --- | --- |
+| `query` | `str` | Consulta de busca. |
+| `source` | `"google"` ou `"amazon"`, opcional | `google` (padrão) para resultados da web, `amazon` para listagens de produtos. |
+| `geo` | `str`, opcional | Google: o nome de um país, por exemplo `United States`. Amazon: um CEP dos EUA, por exemplo `10001`, ou um código de país de duas letras para entrega fora dos EUA, por exemplo `DE`. |
+
+### DecodoEcommerceTool
+
+```python Code
+from crewai_tools import DecodoEcommerceTool
+
+tool = DecodoEcommerceTool()
+print(tool.run(store="amazon", product_id="B09H74FXNW"))
+```
+
+Passe `product_id` ou `query`:
+
+| Argumento | Tipo | Descrição |
+| --- | --- | --- |
+| `store` | `"amazon"`, `"walmart"` ou `"target"` | Loja a ser consultada. |
+| `product_id` | `str`, opcional | Detalhes de um produto. Amazon: o ASIN, por exemplo `B09H74FXNW`. Walmart ou Target: o ID do produto na URL do produto. |
+| `query` | `str`, opcional | Pesquisa os produtos da loja em vez disso. |
+| `zip_code` | `str`, opcional | CEP dos EUA para preços e disponibilidade nesse local de entrega, por exemplo `10001`. |
+
+### DecodoSERPTool
+
+```python Code
+from crewai_tools import DecodoSERPTool
+
+tool = DecodoSERPTool()
+print(tool.run(query="what are solid state batteries", engine="google_ai_mode"))
+```
+
+| Argumento | Tipo | Descrição |
+| --- | --- | --- |
+| `query` | `str` | Consulta de busca. |
+| `engine` | `"google"`, `"bing"` ou `"google_ai_mode"`, opcional | `google` (padrão) ou `bing` para uma página de resultados; `google_ai_mode` para a resposta escrita pela IA do Google e as fontes que ela cita. |
+| `page` | `int`, opcional | Página de resultados a obter, começando em 1. Ignorado por `google_ai_mode`. |
+| `geo` | `str`, opcional | País de onde a busca é feita, por exemplo `United States`. |
+
+Os resultados do Bing são renderizados em um navegador headless e podem levar mais de um minuto.
+
+## Erros
+
+Quando uma requisição falha, por exemplo por causa de uma chave de API inválida, de um limite de taxa, de uma página que retorna `404` ou de um erro de rede, as ferramentas retornam um `ToolFailure` em vez de lançar uma exceção. O agente vê o que deu errado e pode tentar novamente ou mudar de abordagem.

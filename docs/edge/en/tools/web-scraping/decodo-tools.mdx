@@ -1,0 +1,126 @@
+---
+title: Decodo Tools
+description: Decodo Web Scraping API tools for scraping web pages, searching Google and Amazon, looking up products, and fetching search engine results.
+icon: globe
+mode: "wide"
+---
+
+# Decodo Tools
+
+These tools use the [Decodo](https://decodo.com) Web Scraping API to give your agents live web pages and search results.
+
+## Installation
+
+```shell
+uv add 'crewai-tools[decodo]'
+```
+
+## Environment Variables
+
+- `DECODO_API_KEY` (required)
+
+Copy your API key from your Web Scraping API subscription on the [Decodo dashboard](https://dashboard.decodo.com/web-data/playground). You can also pass it to each tool with `api_key=`.
+
+## Included Tools
+
+- `DecodoWebScraperTool`: scrapes any public URL and returns the page as Markdown.
+- `DecodoSearchTool`: searches Google or Amazon and returns the parsed results as JSON.
+- `DecodoEcommerceTool`: gets product details or search results from Amazon, Walmart or Target as JSON.
+- `DecodoSERPTool`: gets Google or Bing results pages, with paging, or a Google AI Mode answer as JSON.
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import DecodoSearchTool, DecodoWebScraperTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and summarize up-to-date information from the web",
+    backstory="You search the web, read the most relevant pages and report what they say.",
+    tools=[DecodoSearchTool(), DecodoWebScraperTool()],
+)
+
+task = Task(
+    description="Find the three most recent announcements about {topic} and summarize each one.",
+    expected_output="Three bullet points, each with a one-sentence summary and the source URL.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff(inputs={"topic": "solid-state batteries"}))
+```
+
+## Tools
+
+### DecodoWebScraperTool
+
+```python Code
+from crewai_tools import DecodoWebScraperTool
+
+tool = DecodoWebScraperTool()
+print(tool.run(url="https://ip.decodo.com"))
+```
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `url` | `str` | Full URL of the page to scrape. |
+| `geo` | `str`, optional | Country to send the request from, e.g. `United States`. |
+| `js_render` | `bool`, optional | Open the page in a headless browser. Only needed for pages that load content with JavaScript. |
+
+Markdown longer than `max_chars` (default `45000`) is truncated to keep the page within the agent's context.
+
+### DecodoSearchTool
+
+```python Code
+from crewai_tools import DecodoSearchTool
+
+tool = DecodoSearchTool()
+print(tool.run(query="mechanical keyboard", source="amazon"))
+```
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `query` | `str` | Search query. |
+| `source` | `"google"` or `"amazon"`, optional | `google` (default) for web results, `amazon` for product listings. |
+| `geo` | `str`, optional | Google: a country name, e.g. `United States`. Amazon: a US ZIP code, e.g. `10001`, or a two-letter country code for delivery outside the US, e.g. `DE`. |
+
+### DecodoEcommerceTool
+
+```python Code
+from crewai_tools import DecodoEcommerceTool
+
+tool = DecodoEcommerceTool()
+print(tool.run(store="amazon", product_id="B09H74FXNW"))
+```
+
+Pass either `product_id` or `query`:
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `store` | `"amazon"`, `"walmart"` or `"target"` | Store to look up. |
+| `product_id` | `str`, optional | One product's details. Amazon: the ASIN, e.g. `B09H74FXNW`. Walmart or Target: the product ID from the product URL. |
+| `query` | `str`, optional | Search the store's products instead. |
+| `zip_code` | `str`, optional | US ZIP code for prices and availability at that delivery location, e.g. `10001`. |
+
+### DecodoSERPTool
+
+```python Code
+from crewai_tools import DecodoSERPTool
+
+tool = DecodoSERPTool()
+print(tool.run(query="what are solid state batteries", engine="google_ai_mode"))
+```
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `query` | `str` | Search query. |
+| `engine` | `"google"`, `"bing"` or `"google_ai_mode"`, optional | `google` (default) or `bing` for a results page; `google_ai_mode` for Google's AI-written answer and the sources it cites. |
+| `page` | `int`, optional | Results page to fetch, starting at 1. Ignored by `google_ai_mode`. |
+| `geo` | `str`, optional | Country to search from, e.g. `United States`. |
+
+Bing results are rendered in a headless browser and can take over a minute.
+
+## Errors
+
+When a request fails, for example because of an invalid API key, a rate limit, a page that returns `404` or a network error, the tools return a `ToolFailure` instead of raising. The agent sees what went wrong and can retry or change course.

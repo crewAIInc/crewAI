@@ -8868,6 +8868,465 @@
       }
     },
     {
+      "description": "Look up products on Amazon, Walmart or Target and return structured JSON. Pass product_id for one product's details: title, price, rating, seller, availability. Pass query to search the store and get matching products with prices.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the Decodo Web Scraping API",
+          "name": "DECODO_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Decodo Ecommerce",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get product details or search results from Amazon, Walmart or Target, parsed as JSON.\n\nArgs:\n    api_key: Decodo Web Scraping API key. Defaults to the ``DECODO_API_KEY`` environment variable.",
+        "properties": {},
+        "required": [],
+        "title": "DecodoEcommerceTool",
+        "type": "object"
+      },
+      "name": "DecodoEcommerceTool",
+      "package_dependencies": [
+        "decodo-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Get one product's details. Amazon: the ASIN, e.g. 'B09H74FXNW'. Walmart or Target: the product ID from the product URL, e.g. '15296401808'",
+            "title": "Product Id"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Search the store's products for this query instead",
+            "title": "Query"
+          },
+          "store": {
+            "description": "Store to look up: 'amazon', 'walmart' or 'target'",
+            "enum": [
+              "amazon",
+              "walmart",
+              "target"
+            ],
+            "title": "Store",
+            "type": "string"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "US ZIP code to see prices and availability for that delivery location, e.g. '10001'",
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "store"
+        ],
+        "title": "DecodoEcommerceArgs",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get search engine results as structured JSON. Use engine='google' or engine='bing' for a full results page, with page for deeper results. Use engine='google_ai_mode' for Google's AI-written answer and the sources it cites.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the Decodo Web Scraping API",
+          "name": "DECODO_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Decodo SERP",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search Google or Bing, or ask Google AI Mode, and return the parsed results as JSON.\n\nArgs:\n    api_key: Decodo Web Scraping API key. Defaults to the ``DECODO_API_KEY`` environment variable.",
+        "properties": {},
+        "required": [],
+        "title": "DecodoSERPTool",
+        "type": "object"
+      },
+      "name": "DecodoSERPTool",
+      "package_dependencies": [
+        "decodo-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "engine": {
+            "default": "google",
+            "description": "'google' or 'bing' for a results page; 'google_ai_mode' for Google's AI-written answer with the links it cites",
+            "enum": [
+              "google",
+              "bing",
+              "google_ai_mode"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "geo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country to search from, as a country name, e.g. 'United States'",
+            "title": "Geo"
+          },
+          "page": {
+            "default": 1,
+            "description": "Results page to fetch, starting at 1. Ignored by google_ai_mode",
+            "minimum": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Search query",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "DecodoSERPArgs",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search Google or Amazon and return the parsed results page as JSON. Use source='google' for up-to-date web results and rankings, source='amazon' to find and compare product listings.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the Decodo Web Scraping API",
+          "name": "DECODO_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Decodo Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search Google or Amazon with the Decodo Web Scraping API and return the parsed results as JSON.\n\nArgs:\n    api_key: Decodo Web Scraping API key. Defaults to the ``DECODO_API_KEY`` environment variable.",
+        "properties": {},
+        "required": [],
+        "title": "DecodoSearchTool",
+        "type": "object"
+      },
+      "name": "DecodoSearchTool",
+      "package_dependencies": [
+        "decodo-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "geo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Location to search from. Google: a country name, e.g. 'United States'. Amazon: a US ZIP code, e.g. '10001', or a two-letter country code for delivery outside the US, e.g. 'DE'",
+            "title": "Geo"
+          },
+          "query": {
+            "description": "Search query",
+            "title": "Query",
+            "type": "string"
+          },
+          "source": {
+            "default": "google",
+            "description": "Where to search: 'google' for web results, 'amazon' for product listings",
+            "enum": [
+              "google",
+              "amazon"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "DecodoSearchArgs",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Fetch any public web page and return its content as Markdown. Use it to read a specific URL: an article, documentation, a product page.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the Decodo Web Scraping API",
+          "name": "DECODO_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Decodo Web Scraper",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Scrape any public web page with the Decodo Web Scraping API and return it as Markdown.\n\nArgs:\n    api_key: Decodo Web Scraping API key. Defaults to the ``DECODO_API_KEY`` environment variable.\n    max_chars: Markdown longer than this is truncated, to keep the page within the agent's context.",
+        "properties": {
+          "max_chars": {
+            "default": 45000,
+            "title": "Max Chars",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "DecodoWebScraperTool",
+        "type": "object"
+      },
+      "name": "DecodoWebScraperTool",
+      "package_dependencies": [
+        "decodo-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "geo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country to send the request from, as a country name, e.g. 'United States'",
+            "title": "Geo"
+          },
+          "js_render": {
+            "default": false,
+            "description": "Open the page in a headless browser. Only needed for pages that load content with JavaScript.",
+            "title": "Js Render",
+            "type": "boolean"
+          },
+          "url": {
+            "description": "Full URL of the page to scrape, including https://",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "DecodoWebScraperArgs",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to recursively list a directory's content.",
       "env_vars": [],
       "humanized_name": "List files in directory",
