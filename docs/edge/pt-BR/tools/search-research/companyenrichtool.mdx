@@ -1,0 +1,44 @@
+---
+title: "Ferramentas CompanyEnrich"
+description: "Enriqueça empresas, pesquise perfis e descubra empresas semelhantes."
+---
+
+## Configuração
+
+Instale `crewai-tools` e configure `COMPANYENRICH_API_KEY` com uma chave do [painel CompanyEnrich](https://app.companyenrich.com/). Também é possível passar `api_key` ao criar cada ferramenta.
+
+## Uso
+
+```python
+from crewai import Agent
+from crewai_tools import (
+    CompanyEnrichCompanyTool,
+    CompanyEnrichSearchTool,
+    CompanyEnrichSimilarTool,
+)
+
+tools = [
+    CompanyEnrichCompanyTool(),
+    CompanyEnrichSearchTool(),
+    CompanyEnrichSimilarTool(),
+]
+agent = Agent(
+    role="Company researcher",
+    goal="Research companies using current company data",
+    backstory="You research company profiles and matching accounts.",
+    tools=tools,
+)
+
+# Direct calls also work; these consume CompanyEnrich credits.
+profile = tools[0].run(domain="stripe.com")
+companies = tools[1].run(semantic_query="B2B software companies", page_size=5)
+lookalikes = tools[2].run(domains=["stripe.com"], page_size=5)
+```
+
+## Comportamento
+
+Cada ferramenta faz uma solicitação com tempo limite de 30 segundos, configurável com `timeout`. As ferramentas de pesquisa e empresas semelhantes retornam uma página com os metadados originais de paginação. `page` começa em 1; `page_size` tem valor padrão 5 e aceita 1–100. A busca de empresas semelhantes aceita 1–10 domínios. A pesquisa exige `page * page_size <= 10000`.
+
+O enriquecimento custa 1 crédito por chamada. A pesquisa custa 1 crédito por empresa retornada (mínimo 1); a busca de semelhantes custa 5 créditos por empresa retornada (mínimo 5). Não há novas tentativas ou paginação automáticas. Erros HTTP, incluindo credenciais inválidas (401), créditos insuficientes (402) e limites de requisições (429), são propagados ao chamador.
+
+Consulte a [referência da API CompanyEnrich](https://docs.companyenrich.com/reference) para campos de resposta e preços atuais.

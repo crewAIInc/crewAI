@@ -1,0 +1,44 @@
+---
+title: "أدوات CompanyEnrich"
+description: "إثراء بيانات الشركات والبحث عن ملفاتها واكتشاف الشركات المشابهة."
+---
+
+## الإعداد
+
+ثبّت `crewai-tools` واضبط `COMPANYENRICH_API_KEY` باستخدام مفتاح من [لوحة CompanyEnrich](https://app.companyenrich.com/). يمكنك أيضًا تمرير `api_key` عند إنشاء كل أداة.
+
+## الاستخدام
+
+```python
+from crewai import Agent
+from crewai_tools import (
+    CompanyEnrichCompanyTool,
+    CompanyEnrichSearchTool,
+    CompanyEnrichSimilarTool,
+)
+
+tools = [
+    CompanyEnrichCompanyTool(),
+    CompanyEnrichSearchTool(),
+    CompanyEnrichSimilarTool(),
+]
+agent = Agent(
+    role="Company researcher",
+    goal="Research companies using current company data",
+    backstory="You research company profiles and matching accounts.",
+    tools=tools,
+)
+
+# Direct calls also work; these consume CompanyEnrich credits.
+profile = tools[0].run(domain="stripe.com")
+companies = tools[1].run(semantic_query="B2B software companies", page_size=5)
+lookalikes = tools[2].run(domains=["stripe.com"], page_size=5)
+```
+
+## السلوك
+
+تنفّذ كل أداة طلبًا واحدًا بمهلة 30 ثانية قابلة للتعديل عبر `timeout`. تعيد أدوات البحث والشركات المشابهة صفحة واحدة مع بيانات ترقيم الصفحات الأصلية. يبدأ `page` من 1؛ وتكون القيمة الافتراضية لـ `page_size` هي 5، ضمن النطاق 1–100. يقبل البحث عن الشركات المشابهة من 1 إلى 10 نطاقات. يتطلب البحث `page * page_size <= 10000`.
+
+يكلف الإثراء رصيدًا واحدًا لكل طلب. يكلف البحث رصيدًا واحدًا لكل شركة مع حد أدنى قدره 1؛ وتكلف الشركات المشابهة 5 أرصدة لكل شركة مع حد أدنى قدره 5. لا تُعاد الطلبات ولا تُجلب الصفحات تلقائيًا. تُمرّر أخطاء HTTP إلى المستدعي، بما فيها بيانات الاعتماد غير الصالحة (401) والرصيد غير الكافي (402) وحدود المعدل (429).
+
+راجع [مرجع CompanyEnrich API](https://docs.companyenrich.com/reference) لحقول الاستجابة والأسعار الحالية.

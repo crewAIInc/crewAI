@@ -1,0 +1,44 @@
+---
+title: "CompanyEnrich 도구"
+description: "회사 정보를 보강하고 회사를 검색하며 유사한 회사를 찾습니다."
+---
+
+## 설정
+
+`crewai-tools`를 설치하고 [CompanyEnrich 대시보드](https://app.companyenrich.com/)에서 받은 키로 `COMPANYENRICH_API_KEY`를 설정하세요. 각 도구를 생성할 때 `api_key`를 전달할 수도 있습니다.
+
+## 사용법
+
+```python
+from crewai import Agent
+from crewai_tools import (
+    CompanyEnrichCompanyTool,
+    CompanyEnrichSearchTool,
+    CompanyEnrichSimilarTool,
+)
+
+tools = [
+    CompanyEnrichCompanyTool(),
+    CompanyEnrichSearchTool(),
+    CompanyEnrichSimilarTool(),
+]
+agent = Agent(
+    role="Company researcher",
+    goal="Research companies using current company data",
+    backstory="You research company profiles and matching accounts.",
+    tools=tools,
+)
+
+# Direct calls also work; these consume CompanyEnrich credits.
+profile = tools[0].run(domain="stripe.com")
+companies = tools[1].run(semantic_query="B2B software companies", page_size=5)
+lookalikes = tools[2].run(domains=["stripe.com"], page_size=5)
+```
+
+## 동작
+
+각 도구는 기본 제한 시간 30초로 요청을 한 번 실행합니다. `timeout`으로 변경할 수 있습니다. 검색 및 유사 회사 도구는 원본 페이지 메타데이터와 함께 한 페이지만 반환합니다. `page`는 1부터 시작하며 `page_size`는 기본값 5, 허용 범위 1–100입니다. 유사 회사 검색은 도메인 1–10개를 받습니다. 검색에는 `page * page_size <= 10000` 조건이 적용됩니다.
+
+회사 정보 보강은 호출당 1크레딧입니다. 검색은 반환된 회사당 1크레딧(최소 1), 유사 회사 검색은 회사당 5크레딧(최소 5)입니다. 자동 재시도나 페이지 순회는 하지 않습니다. 잘못된 인증 정보(401), 크레딧 부족(402), 요청 한도(429)를 포함한 HTTP 오류는 호출자에게 전달됩니다.
+
+응답 필드와 최신 요금은 [CompanyEnrich API 참조](https://docs.companyenrich.com/reference)를 확인하세요.
