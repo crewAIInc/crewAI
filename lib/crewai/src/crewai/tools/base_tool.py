@@ -141,18 +141,29 @@ def _restore_tool_func(value: Any) -> Callable[..., Any]:
 def _resolve_tool_func(path: str) -> Callable[..., Any]:
     """Resolve the serialized dotted path of a ``Tool.func``.
 
-    A function decorated with ``@tool`` is replaced in its module by the
-    ``Tool`` wrapping it, so its dotted path resolves to that tool rather than
-    to a callable. In that case the tool's wrapped function is returned.
+    A function decorated with ``@tool`` is replaced in its module (or on a
+    class) by the ``Tool`` wrapping it, so its dotted path may resolve to that
+    tool rather than to a callable. Walk multi-segment paths the same way as
+    ``_resolve_dotted_path`` (``module.Class.name``), and when the path lands
+    on a ``BaseTool``, return its wrapped function.
     """
-    module_path, _, name = path.rpartition(".")
-    try:
-        obj = getattr(importlib.import_module(module_path), name)
-    except (ImportError, AttributeError, ValueError):
-        return _resolve_dotted_path(path)
-    inner = getattr(obj, "func", None)
-    if isinstance(obj, BaseTool) and callable(inner):
-        return inner  # type: ignore[no-any-return]
+    parts = path.split(".")
+    for i in range(len(parts), 0, -1):
+        module_path = ".".join(parts[:i])
+        try:
+            obj: Any = importlib.import_module(module_path)
+        except (ImportError, TypeError, ValueError):
+            continue
+        try:
+            for attr in parts[i:]:
+                obj = getattr(obj, attr)
+        except AttributeError:
+            continue
+        inner = getattr(obj, "func", None)
+        if isinstance(obj, BaseTool) and callable(inner):
+            return inner  # type: ignore[no-any-return]
+        if callable(obj):
+            return obj  # type: ignore[no-any-return]
     return _resolve_dotted_path(path)
 
 

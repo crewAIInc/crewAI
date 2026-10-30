@@ -869,3 +869,26 @@ def test_agent_with_decorated_tool_serializes_to_json():
     data = json.loads(agent.model_dump_json())
 
     assert data["tools"][0]["func"] == f"{__name__}.checkpoint_add_two"
+
+
+class NestedToolHelpers:
+    @tool("checkpoint_nested_add_two")
+    def checkpoint_nested_add_two(value: int) -> int:
+        """Add two to a value (class-nested for qualname coverage)."""
+        return value + 2
+
+
+def test_class_nested_tool_func_round_trips_through_checkpoint(monkeypatch):
+    """``callable_to_string`` emits ``module.Class.name``; restore must unwrap."""
+    from crewai.tools.base_tool import Tool, _resolve_tool_dict
+
+    nested = NestedToolHelpers.checkpoint_nested_add_two
+    monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+    data = json.loads(nested.model_dump_json())
+
+    assert data["func"] == f"{__name__}.NestedToolHelpers.checkpoint_nested_add_two"
+
+    restored = _resolve_tool_dict(data)
+    assert isinstance(restored, Tool)
+    assert restored.func is nested.func
+    assert restored.run(value=1) == 3
