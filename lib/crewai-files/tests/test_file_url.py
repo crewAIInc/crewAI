@@ -165,9 +165,10 @@ class TestFileUrl:
             mock_get.assert_called_once()
             assert content1 == content2
 
-    def test_read_updates_content_type_from_response(self):
+    def test_read_updates_content_type_from_response(self) -> None:
         """Test that read() updates content type from response headers."""
-        url = FileUrl(url="https://example.com/file")
+        url = FileUrl(url="https://example.com/file", filename="chart.png")
+        assert url.content_type == "image/png"
         mock_response = MagicMock()
         mock_response.content = b"fake content"
         mock_response.headers = {"content-type": "image/webp; charset=utf-8"}
@@ -178,9 +179,10 @@ class TestFileUrl:
             assert url.content_type == "image/webp"
 
     @pytest.mark.asyncio
-    async def test_aread_fetches_content(self):
+    async def test_aread_fetches_content(self) -> None:
         """Test that aread() fetches content from URL asynchronously."""
-        url = FileUrl(url="https://example.com/image.png")
+        url = FileUrl(url="https://example.com/file", filename="report.pdf")
+        assert url.content_type == "application/pdf"
         mock_response = MagicMock()
         mock_response.content = b"async fake content"
         mock_response.headers = {"content-type": "image/png"}
@@ -195,6 +197,7 @@ class TestFileUrl:
             content = await url.aread()
 
             assert content == b"async fake content"
+            assert url.content_type == "image/png"
 
     @pytest.mark.asyncio
     async def test_aread_caches_content(self):
