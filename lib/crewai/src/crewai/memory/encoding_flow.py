@@ -250,10 +250,26 @@ class EncodingFlow(Flow[EncodingState]):
                 None,
             )
             scope_search_root = active_root if active_root else "/"
-            existing_scopes = self._storage.list_scopes(scope_search_root) or ["/"]
-            existing_categories = list(
-                self._storage.list_categories(scope_prefix=active_root).keys()
-            )
+            try:
+                existing_scopes = self._storage.list_scopes(scope_search_root) or ["/"]
+            except Exception:
+                logger.warning(
+                    "Storage scope listing failed in parallel_analyze, "
+                    "falling back to the root scope only",
+                    exc_info=True,
+                )
+                existing_scopes = ["/"]
+            try:
+                existing_categories = list(
+                    self._storage.list_categories(scope_prefix=active_root).keys()
+                )
+            except Exception:
+                logger.warning(
+                    "Storage category listing failed in parallel_analyze, "
+                    "continuing without category suggestions",
+                    exc_info=True,
+                )
+                existing_categories = []
 
         save_futures: dict[int, Future[MemoryAnalysis]] = {}
         consol_futures: dict[int, Future[ConsolidationPlan]] = {}
