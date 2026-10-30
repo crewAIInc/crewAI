@@ -534,7 +534,9 @@ class FileUrl(BaseModel):
             response.raise_for_status()
             self._content = response.content
             if "content-type" in response.headers:
-                self._content_type = response.headers["content-type"].split(";")[0]
+                self._content_type = (
+                    response.headers["content-type"].split(";", 1)[0].strip().lower()
+                )
         return self._content
 
     async def aread(self) -> bytes:
@@ -547,7 +549,12 @@ class FileUrl(BaseModel):
                 response.raise_for_status()
                 self._content = response.content
                 if "content-type" in response.headers:
-                    self._content_type = response.headers["content-type"].split(";")[0]
+                    self._content_type = (
+                        response.headers["content-type"]
+                        .split(";", 1)[0]
+                        .strip()
+                        .lower()
+                    )
         return self._content
 
 
