@@ -10,9 +10,10 @@ Migration guide: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/depr
 from typing import Any, ClassVar, cast
 import warnings
 
-from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.core.types import Documents, Embeddings
 from crewai.rag.embeddings.providers.google.types import VertexAIProviderConfig
 
 
