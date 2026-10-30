@@ -389,3 +389,59 @@ def test_a_tool_call_response_reaches_the_caller_with_its_id(
     )
     assert call_id == "tc_42"
     assert name == "lookup"
+
+
+TOOL_RESULT_MESSAGES: list[dict[str, Any]] = [
+    {"role": "user", "content": "hi"},
+    {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [
+            {
+                "id": "tc_9",
+                "type": "function",
+                "function": {"name": "lookup", "arguments": "{}"},
+            }
+        ],
+    },
+    {"role": "tool", "tool_call_id": "tc_9", "content": "tool result text"},
+]
+
+
+@pytest.mark.parametrize("case", PROVIDERS)
+def test_a_tool_result_reaches_the_sdk_tied_to_its_call_id(
+    case: _ProviderCase,
+) -> None:
+    """A tool's result must arrive with the id of the call it answers.
+
+    The two providers disagree on the wire format -- OpenAI keeps the
+    ``role="tool"`` message with ``tool_call_id``, Anthropic rewrites it as a
+    ``tool_result`` block inside a user message and renames the field to
+    ``tool_use_id`` -- so the format is asserted per provider, but the content
+    and the id linkage are asserted on both.
+    """
+    llm = case.completion()
+    fake_client, context = case.with_sync_response("ok")
+
+    with context:
+        llm.call(TOOL_RESULT_MESSAGES)
+
+    if case.name == "openai":
+        sent = fake_client.chat.completions.with_raw_response.create.call_args.kwargs[
+            "messages"
+        ]
+        tool_messages = [m for m in sent if m["role"] == "tool"]
+        assert tool_messages, "the tool result must reach the SDK"
+        assert tool_messages[-1]["tool_call_id"] == "tc_9"
+        assert tool_messages[-1]["content"] == "tool result text"
+    else:
+        sent = fake_client.messages.create.call_args.kwargs["messages"]
+        result_blocks = [
+            block
+            for message in sent
+            for block in message.get("content", [])
+            if isinstance(block, dict) and block.get("type") == "tool_result"
+        ]
+        assert result_blocks, "the tool result must reach the SDK"
+        assert result_blocks[-1]["tool_use_id"] == "tc_9"
+        assert result_blocks[-1]["content"] == "tool result text"
