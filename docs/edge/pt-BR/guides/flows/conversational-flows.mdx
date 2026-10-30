@@ -18,6 +18,11 @@ Os exemplos abaixo optam explicitamente por `ConversationConfig(trace_scope="tur
 | Turno concluído | Com `trace_scope="turn"`: `conversation_turn_completed` e `FlowFinished` por turno bem-sucedido; `FlowFailed` em caso de falha |
 | Trace da sessão inteira | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
+Se o seu Flow precisa fazer uma pergunta **dentro** de um único passo em vez de iniciar um turno,
+use `Flow.ask()` com um input provider em vez de `handle_turn()` — veja
+[Coletando entrada com `ask()`](/pt-BR/concepts/flows#collecting-input-with-ask) para a diferença
+e um provider executável.
+
 ## APIs de turno
 
 Use **`flow.handle_turn(message, session_id=...)`** para cada mensagem de usuário em REST, WebSocket, testes e UIs customizadas. Use **`flow.chat()`** quando quiser um loop de chat local no terminal para um `Flow` conversacional.

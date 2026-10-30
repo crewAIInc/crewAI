@@ -523,6 +523,100 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 تركز بنية نظام الاستمرارية على الدقة التقنية وخيارات التخصيص، مما يتيح للمطورين الحفاظ على التحكم الكامل في إدارة الحالة مع الاستفادة من ميزات الموثوقية المدمجة.
 
+## جمع المدخلات باستخدام `ask()`
+
+يوقف `ask()` طريقة التدفق قيد التنفيذ حتى تصل الإجابة. الافتراضي هو القراءة من الطرفية، وهذا
+يزعج في الاختبارات. **مزوّد المدخلات** يستبدل الطرفية: أي كائن يملك
+`request_input(message, flow, metadata=None)` يفي بالغرض، فيمكنك ربط واجهة أو طابور أو قائمة
+نصية دون تغيير التدفق.
+
+يستطيع المزوّد قراءة `metadata` الخاصة بالطلب، والرد بكائن `InputResponse` يحمل بيانات وصفية
+خاصة به. يعيد `ask()` النص دائمًا (أو `None` عند عدم توفر إجابة)، وتُحفظ البيانات الوصفية
+للاتجاهين في `flow.input_history`.
+
+```python scripted_input.py
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """مزوّد حتمي: يعيد إجابات معدة مسبقًا ثم يعلن عدم توفر مدخلات."""
+
+    def __init__(self, answers: list[str | None]) -> None:
+        self._answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        self.received_metadata.append(metadata)
+        if not self._answers:
+            return None
+        answer = self._answers.pop(0)
+        if answer is None:
+            return None
+        return InputResponse(
+            text=answer,
+            metadata={"source": "script", "prompt": message},
+        )
+
+
+provider = ScriptedProvider(["CrewAI", None])
+
+
+class SurveyFlow(Flow):
+    input_provider = provider
+
+    @start()
+    def gather(self):
+        # البيانات الوصفية للطلب تصل إلى المزوّد.
+        topic = self.ask(
+            "What topic should we research?",
+            metadata={"channel": "#research"},
+        )
+        print("topic:", topic)
+
+        # المزوّد الذي لا يملك إجابة يعيد None، وهذا ليس إجابة.
+        extra = self.ask("Anything else?")
+        if extra is None:
+            print("no further input available, using the fallback")
+            extra = "(none)"
+        return f"{topic} / {extra}"
+
+
+flow = SurveyFlow()
+print("result:", flow.kickoff())
+
+for entry in flow.input_history:
+    print(entry["message"], "->", entry["response"], "|", entry["response_metadata"])
+```
+
+عند التشغيل ستظهر النتيجة التالية:
+
+```text
+topic: CrewAI
+no further input available, using the fallback
+result: CrewAI / (none)
+What topic should we research? -> CrewAI | {'source': 'script', 'prompt': 'What topic should we research?'}
+Anything else? -> None | None
+```
+
+هناك أمران يستحقان الانتباه. وصلت البيانات الوصفية للسؤال الثاني إلى المزوّد رغم أنه لم يملك
+إجابة، وكل عنصر في `flow.input_history` يحتفظ بـ `message` و`response` و`method_name`
+و`timestamp` و`metadata` (الطلب) و`response_metadata` (الإجابة). ويعيد `input_history` نسخة،
+فتعديلها لا يغيّر ما سجّله التدفق.
+
+يعالج `ask()` و`handle_turn()` مشكلتين مختلفتين. يوقف `ask()` **خطوة قيد التنفيذ** ويعيد نصًا
+إلى تلك الطريقة. أما `handle_turn()` فيبدأ **جولة محادثة** في التدفق: يوجّه الرسالة وينفّذ
+المستمعين المطابقين ويضيف إلى سجل المحادثة. استخدم `ask()` لسؤال داخل خطوة في سير عمل،
+و`handle_turn()` عندما يكون التدفق كله محادثة. راجع
+[التدفقات الحوارية](/ar/guides/flows/conversational-flows) للحالة الثانية.
+
 ## التحكم في التدفق
 
 ### المنطق الشرطي: `or`
