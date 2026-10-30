@@ -1,0 +1,58 @@
+---
+title: أدوات TextKit
+description: أرسل الرسائل النصية ورموز التحقق من الهاتف من وكلائك باستخدام TextKit.
+icon: comment-sms
+mode: "wide"
+---
+
+## نظرة عامة
+
+تتيح هذه الأدوات للوكيل إرسال رسالة نصية وقراءة سجل الرسائل والتحقق من رقم هاتف عبر واجهة برمجة
+[TextKit](https://jointextkit.com).
+
+| الأداة | ما تفعله |
+| --- | --- |
+| `TextKitSendMessageTool` | ترسل رسالة نصية |
+| `TextKitListMessagesTool` | تعرض الرسائل المرسلة والمستلمة، الأحدث أولاً |
+| `TextKitSendVerificationTool` | ترسل رمزاً لمرة واحدة عبر رسالة نصية |
+| `TextKitCheckVerificationTool` | تتحقق من رمز |
+
+## التثبيت
+
+تأتي الأدوات مع `crewai-tools` ولا تحتاج إلى تبعيات إضافية:
+
+```shell
+uv add crewai-tools
+```
+
+## متغيرات البيئة
+
+- `TEXTKIT_API_KEY` (مطلوب): مفتاح TextKit API الخاص بك (`ssms_sk_...`).
+
+مع مفتاح الاختبار تكون عمليات الإرسال محاكاة ولا تُرسل أي رسالة. ومع المفتاح الحي، ترسل أداة الإرسال
+رسائل إلى أشخاص حقيقيين وتُحتسب التكلفة على حسابك.
+
+## مثال
+
+```python
+from crewai import Agent
+from crewai_tools import TextKitListMessagesTool, TextKitSendMessageTool
+
+agent = Agent(
+    role="Customer notifier",
+    goal="Text customers when their order ships",
+    backstory="You keep customers up to date.",
+    tools=[TextKitSendMessageTool(), TextKitListMessagesTool()],
+)
+```
+
+## المعاملات
+
+- `TextKitSendMessageTool`: `to` و`body` و`from_number` (اختياري عندما يكون للحساب رقم واحد)
+  و`idempotency_key` (اختياري؛ أعد استخدامه عند إعادة المحاولة حتى لا تُرسل الرسالة مرتين)
+- `TextKitListMessagesTool`: `limit` و`cursor` و`number` و`status` و`direction` (كلها اختيارية)
+- `TextKitSendVerificationTool`: `phone` و`app_name` (اختياري)
+- `TextKitCheckVerificationTool`: `phone` و`code`
+
+تستخدم أرقام الهاتف صيغة E.164، مثل `+14155550132`. تؤدي الطلبات الفاشلة إلى خطأ يتضمن رمز الواجهة
+البرمجية ورسالتها.

@@ -28879,6 +28879,483 @@
       }
     },
     {
+      "description": "Check a code sent by textkit_send_verification. Returns JSON where verified is true when the code is correct.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for TextKit (ssms_sk_...)",
+          "name": "TEXTKIT_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "textkit_check_verification",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Check a TextKit verification code.",
+        "properties": {
+          "timeout": {
+            "default": 30,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "TextKitCheckVerificationTool",
+        "type": "object"
+      },
+      "name": "TextKitCheckVerificationTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for TextKitCheckVerificationTool.",
+        "properties": {
+          "code": {
+            "description": "The code the person received",
+            "title": "Code",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Number the code was texted to, in E.164",
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ],
+        "title": "TextKitCheckVerificationInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List SMS messages on a TextKit account, newest first, including replies received. Returns JSON with data, has_more and next_cursor.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for TextKit (ssms_sk_...)",
+          "name": "TEXTKIT_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "textkit_list_messages",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "List messages on a TextKit account.",
+        "properties": {
+          "timeout": {
+            "default": 30,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "TextKitListMessagesTool",
+        "type": "object"
+      },
+      "name": "TextKitListMessagesTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for TextKitListMessagesTool.",
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "next_cursor from the previous page",
+            "title": "Cursor"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "outbound",
+                  "inbound"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "outbound (sent) or inbound (received)",
+            "title": "Direction"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Messages per page",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only messages to or from this number (E.164)",
+            "title": "Number"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "queued",
+                  "sent",
+                  "delivered",
+                  "failed",
+                  "blocked",
+                  "received"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only messages with this status",
+            "title": "Status"
+          }
+        },
+        "title": "TextKitListMessagesInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Send an SMS to a phone number through TextKit. Texts a real person and bills the account when used with a live key, so only send when the task calls for it. Returns the message as JSON, including its id and status.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for TextKit (ssms_sk_...)",
+          "name": "TEXTKIT_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "textkit_send_message",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Send an SMS through TextKit.",
+        "properties": {
+          "timeout": {
+            "default": 30,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "TextKitSendMessageTool",
+        "type": "object"
+      },
+      "name": "TextKitSendMessageTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for TextKitSendMessageTool.",
+        "properties": {
+          "body": {
+            "description": "The message text",
+            "maxLength": 1600,
+            "title": "Body",
+            "type": "string"
+          },
+          "from_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Sending number in E.164 format, or a sender pool id. Optional when the account has exactly one number.",
+            "title": "From Number"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Reuse the same key when retrying so the text is not sent twice. Valid for 24 hours.",
+            "title": "Idempotency Key"
+          },
+          "to": {
+            "description": "Recipient's phone number in E.164 format",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to",
+          "body"
+        ],
+        "title": "TextKitSendMessageInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Text a one-time verification code to a phone number through TextKit. No sending number is needed. Follow up with textkit_check_verification.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for TextKit (ssms_sk_...)",
+          "name": "TEXTKIT_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "textkit_send_verification",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Text a one-time verification code through TextKit.",
+        "properties": {
+          "timeout": {
+            "default": 30,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "TextKitSendVerificationTool",
+        "type": "object"
+      },
+      "name": "TextKitSendVerificationTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for TextKitSendVerificationTool.",
+        "properties": {
+          "app_name": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Product name shown in the message",
+            "title": "App Name"
+          },
+          "phone": {
+            "description": "Number to text the code to, in E.164 format",
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "title": "TextKitSendVerificationInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that reads the content at a URL and returns it as text. To use this tool, provide a 'url' parameter with an http:// or https:// address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text responses are converted to text; other binary types are rejected. Well suited to presigned and share links from S3, Cloudflare R2, Google Drive, OneDrive and SharePoint, which serve real documents with a generic content type and no file extension; the type is detected from the response bytes. The link must already grant access, as a presigned or shared link does. URLs that resolve to private or internal network addresses are refused, as are responses over the tool's size limit. Optionally provide 'start_line' and 'line_count' to read only part of the content.",
       "env_vars": [],
       "humanized_name": "Read content from a URL",
