@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_fireworks_ai_config(self):
+        """Test Fireworks AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["fireworks_ai"]
+        assert config.base_url == "https://api.fireworks.ai/inference/v1"
+        assert config.api_key_env == "FIREWORKS_API_KEY"
+        assert config.base_url_env == "FIREWORKS_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -180,6 +188,26 @@ class TestOpenAICompatibleCompletion:
         ):
             OpenAICompatibleCompletion(
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
+            )
+
+    def test_fireworks_ai_missing_api_key_names_env_var(self):
+        """Fireworks requires a key; the error names FIREWORKS_API_KEY."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="FIREWORKS_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="accounts/fireworks/models/llama-v3p1-8b-instruct",
+                provider="fireworks_ai",
+            )
+
+    def test_fireworks_ai_does_not_borrow_openai_credentials(self):
+        """An OpenAI key alone must not satisfy Fireworks."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai"}, clear=True), pytest.raises(
+            ValueError, match="FIREWORKS_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="accounts/fireworks/models/llama-v3p1-8b-instruct",
+                provider="fireworks_ai",
             )
 
     def test_api_key_from_env(self):
@@ -420,6 +448,80 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepseek"
             assert llm.model == "deepseek-chat"
+
+    def test_llm_creates_openai_compatible_for_fireworks_ai(self):
+        """fireworks_ai/<id> routes natively instead of falling back to LiteLLM."""
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            llm = LLM(model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "fireworks_ai"
+            assert llm.model == "accounts/fireworks/models/llama-v3p1-8b-instruct"
+            assert llm.base_url == "https://api.fireworks.ai/inference/v1"
+
+    def test_fireworks_ai_route_names_the_native_class(self):
+        """Routing resolves to the native class, so no LiteLLM fallback is built."""
+        route = LLM._resolve_route(
+            "fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct", {}
+        )
+        assert route.native_class is OpenAICompatibleCompletion
+        assert route.provider == "fireworks_ai"
+
+    def test_fireworks_ai_keeps_the_account_and_model_segments(self):
+        """Only the provider prefix is removed; the rest of the path reaches the SDK."""
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            llm = LLM(
+                model="fireworks_ai/accounts/acme/models/qwen3-235b-a22b-instruct-2507"
+            )
+            assert llm.provider == "fireworks_ai"
+            assert llm.model == "accounts/acme/models/qwen3-235b-a22b-instruct-2507"
+
+    def test_llm_creates_openai_compatible_for_fireworks_ai_explicit_provider(self):
+        """Explicit provider="fireworks_ai" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            llm = LLM(
+                model="accounts/fireworks/models/llama-v3p1-8b-instruct",
+                provider="fireworks_ai",
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "fireworks_ai"
+            assert llm.model == "accounts/fireworks/models/llama-v3p1-8b-instruct"
+
+    def test_fireworks_ai_base_url_env_override(self):
+        """FIREWORKS_BASE_URL redirects Fireworks to a proxy or gateway."""
+        with patch.dict(
+            os.environ,
+            {
+                "FIREWORKS_API_KEY": "test-key",
+                "FIREWORKS_BASE_URL": "https://fireworks-gateway.example.com/inference/v1",
+            },
+        ):
+            llm = LLM(model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct")
+            assert llm.base_url == "https://fireworks-gateway.example.com/inference/v1"
+
+    def test_fireworks_ai_explicit_configuration_wins_over_env(self):
+        """Explicit api_key/base_url beat FIREWORKS_API_KEY and FIREWORKS_BASE_URL."""
+        with patch.dict(
+            os.environ,
+            {
+                "FIREWORKS_API_KEY": "env-key",
+                "FIREWORKS_BASE_URL": "https://env.example.com/inference/v1",
+            },
+        ):
+            llm = LLM(
+                model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct",
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/inference/v1",
+            )
+            assert llm.api_key == "explicit-key"
+            assert llm.base_url == "https://explicit.example.com/inference/v1"
+
+    def test_fireworks_ai_client_params_use_fireworks_endpoint_and_key(self):
+        """The OpenAI client is built against Fireworks, not api.openai.com."""
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "fw-test"}):
+            llm = LLM(model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct")
+            params = llm._get_client_params()
+            assert params["api_key"] == "fw-test"
+            assert params["base_url"] == "https://api.fireworks.ai/inference/v1"
 
     def test_llm_passes_kwargs_to_completion(self):
         """Test LLM passes kwargs to OpenAICompatibleCompletion."""
