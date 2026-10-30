@@ -13,6 +13,8 @@ db/
 test.py
 rc-tests/*
 *.pkl
+training_data.json
+trained_agents_data.json
 temp/*
 .vscode/*
 crew_tasks_output.json
