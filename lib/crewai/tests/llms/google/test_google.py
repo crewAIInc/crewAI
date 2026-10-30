@@ -1474,3 +1474,54 @@ def test_gemini_no_thinking_tokens_defaults_to_zero():
     usage = llm._extract_token_usage(mock_response)
     assert usage["reasoning_tokens"] == 0
     assert usage["cached_prompt_tokens"] == 0
+
+
+def test_gemini_safety_settings_mapping_reaches_the_sdk_as_a_list():
+    """#8794: the documented {category: threshold} mapping must be normalized
+    into the list form the Gen AI SDK expects, not passed as a bare dict."""
+    from unittest.mock import patch
+
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+        safety_settings={
+            "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+            "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+        },
+    )
+
+    with patch.object(completion, "_get_sync_client") as client_factory:
+        client = client_factory.return_value
+        completion.call("Say hello")
+
+    config = client.models.generate_content.call_args.kwargs["config"]
+    safety = config.safety_settings
+    assert isinstance(safety, list)
+    assert {entry.category: entry.threshold for entry in safety} == {
+        "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+        "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+    }
+
+
+def test_gemini_safety_settings_survive_to_config_dict_round_trip():
+    """#8794: to_config_dict() must keep the {category: threshold} mapping so
+    LLM(**config) can rebuild the same LLM."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+        safety_settings={
+            "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+            "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+        },
+    )
+
+    config = completion.to_config_dict()
+
+    assert config["safety_settings"] == {
+        "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+        "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+    }
+    rebuilt = GeminiCompletion(**{k: v for k, v in config.items() if k != "llm_type"})
+    assert rebuilt.safety_settings == completion.safety_settings
