@@ -140,7 +140,8 @@ def test_run_declarative_flow_in_project_env_uses_uv(
                 "capture_output": False,
                 "text": True,
                 "check": True,
-                "env": {"EXISTING": "value"},
+                # The re-run's start was counted here (`test_run_usage.py`).
+                "env": {"EXISTING": "value", "CREWAI_RUN_COUNTED": "1"},
             },
         )
     ]

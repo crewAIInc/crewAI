@@ -12,7 +12,9 @@ agent with no terminal gets a verdict from this one command.
 Who may evaluate what is AMP's decision: an anonymous run once without an
 account, then it needs one; a run traced while logged in for that
 organization's members; a deployment execution for members who may see its
-traces. The command sends the saved `crewai login` when there is one.
+traces. The command sends the saved `crewai login` when there is one; when
+AMP refuses it (401) and somebody is at the terminal, it starts the login once
+and asks again, as the run app's Evaluate and Deploy do.
 
 `crewai eval --models "a,b"` compares models instead: AMP finds the project's
 deployment by `[tool.crewai].project_id` (or `--deployment`), which runs once as
@@ -40,16 +42,18 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import sys
 import time
-from typing import Any, Literal, NoReturn, cast
+from typing import Any, BinaryIO, Literal, NoReturn, cast
 from urllib.parse import urlparse
 import uuid
 import webbrowser
 
 import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_core.plus_api import restore_machine_transport
 from crewai_core.settings import Settings
 from dotenv import dotenv_values, set_key
 import httpx
@@ -138,6 +142,10 @@ StopReason = Literal[
     "amp_5xx",
     "invalid_response",
     "evaluation_failed",
+    "login_abandoned",
+    "login_timed_out",
+    "login_failed",
+    "login_still_required",
     "unexpected",
 ]
 
@@ -160,6 +168,13 @@ NOT_TRACED = (
     f"({LAST_RUN_FILE})."
 )
 
+# With no terminal, what the crew prints while it runs (its panels, the final
+# answer, every tool call) goes to this file in the project's `.crewai/`, not to
+# the coding agent's screen: in one measured run it was 341 of 378 lines, all
+# before the verdict, and an agent pays for every line or has the end cut off.
+RUN_LOG_FILE = "last_run.log"
+RUN_LOG_TAIL_LINES = 40
+
 # Why `crewai eval` ran the crew before evaluating, a word from a closed list:
 # nothing traced yet, the project changed since its last traced run, or the run
 # app's Evaluate pressed on a run that was not traced.
@@ -171,6 +186,22 @@ RUNNING_THE_CREW: dict[RunReason, str] = {
         "to evaluate what it does now."
     ),
     "run_again": "That run was not traced: running the crew again to evaluate it.",
+}
+# Said before the consent screen, at a terminal: that screen asks about a trace
+# before there is a run, so the person reads first why `crewai eval` needs one.
+BEFORE_ASKING: dict[RunReason, str] = {
+    "no_traced_run": (
+        "No traced run of this crew yet. To evaluate it, the crew runs now and its "
+        "trace goes to CrewAI AMP, which grades it."
+    ),
+    "project_changed": (
+        "The project changed since its last traced run. To evaluate what it does "
+        "now, the crew runs again and its trace goes to CrewAI AMP, which grades it."
+    ),
+    "run_again": (
+        "That run was not traced. To evaluate it, the crew runs again and its trace "
+        "goes to CrewAI AMP, which grades it."
+    ),
 }
 TRACING_NOW_ON = (
     "Tracing is now on for this project: its runs' traces are sent to CrewAI AMP, "
@@ -201,9 +232,9 @@ UNTRUSTED_AMP = (
 )
 
 
-def tracing_turned_off() -> bool:
-    """Has this project said no to tracing — `CREWAI_TRACING_ENABLED` false or
-    0, in its `.env` (which wins, as the run loads it) or else the environment?"""
+def _project_tracing_value() -> str:
+    """`CREWAI_TRACING_ENABLED` as the run will see it: the project's `.env`
+    (which wins, as the run loads it) or else the environment, lowercased."""
     value: str | None = None
     with contextlib.suppress(Exception):
         env_file = Path.cwd() / ".env"
@@ -211,7 +242,13 @@ def tracing_turned_off() -> bool:
             value = dotenv_values(env_file).get(TRACING_ENV_VAR)
     if value is None:
         value = os.environ.get(TRACING_ENV_VAR)
-    return str(value or "").strip().lower() in ("false", "0")
+    return str(value or "").strip().lower()
+
+
+def tracing_turned_off() -> bool:
+    """Has this project said no to tracing — `CREWAI_TRACING_ENABLED` false or
+    0, in its `.env` (which wins, as the run loads it) or else the environment?"""
+    return _project_tracing_value() in ("false", "0")
 
 
 def turn_tracing_on() -> None:
@@ -335,12 +372,18 @@ def eval_crew(
             ),
             style="yellow",
         )
+    wait_for_spans = run_id is None and _ran_just_now(record)
     try:
-        started = _start_evaluation(
+        client, started = _start_logging_in_once(
             client,
-            execution_id,
-            wait_for_spans=run_id is None and _ran_just_now(record),
-            project_id=project_id,
+            lambda amp: _start_evaluation(
+                amp,
+                execution_id,
+                wait_for_spans=wait_for_spans,
+                project_id=project_id,
+            ),
+            trusted=trusted,
+            log_in=_log_in_at_the_terminal,
         )
     except EvaluationStoppedError as stopped:
         _stop(stopped)
@@ -372,6 +415,7 @@ def eval_crew(
     record_finished(finished)
     _print_verdict(finished, url)
     _print_brief(finished)
+    save_evaluation(client, finished)
     _say_where_the_criteria_live(write_eval_config(finished))
     # The exit code is what a CI job reads, so it is the gate's: 0 only for a
     # run that PASSED. A failed gate, one without a verdict, and an evaluation
@@ -525,6 +569,7 @@ def evaluate_run(
     on_started: Callable[[dict[str, Any]], None],
     on_status: Callable[[dict[str, Any]], None] | None = None,
     note: Callable[[str], None] = _note,
+    log_in: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Start the evaluation of EXECUTION_ID and wait for its verdict.
 
@@ -537,14 +582,24 @@ def evaluate_run(
     The spans of a run that just ended may still be in flight, which is the
     whole reason this is called from inside the app that ran it, so the wait
     for them is always on here.
+
+    LOG_IN is how the caller offers a new login when AMP refuses the saved one
+    (`_start_logging_in_once`); without it that refusal stops the evaluation.
     """
-    client = _amp_client(_machine_amp_origins(), note=note)
-    started = _start_evaluation(
-        client,
-        execution_id,
-        wait_for_spans=True,
+    trusted = _machine_amp_origins()
+    project_id = get_project_id()
+    client, started = _start_logging_in_once(
+        _amp_client(trusted, note=note),
+        lambda amp: _start_evaluation(
+            amp,
+            execution_id,
+            wait_for_spans=True,
+            note=note,
+            project_id=project_id,
+        ),
+        trusted=trusted,
+        log_in=log_in,
         note=note,
-        project_id=get_project_id(),
     )
     # After the start, exactly as the command counts it: `cli_usage:eval` is the
     # count of evaluations that began, and an evaluation the app runs is one.
@@ -670,12 +725,16 @@ def _anonymous(client: PlusAPI) -> PlusAPI:
 
 def _load_project_env() -> None:
     """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is
-    the one the run used — with `crewai eval`'s token left as it was."""
+    the one the run used — with `crewai eval`'s token left as it was, and the
+    machine's proxy and CA: the crew this command runs inherits this
+    environment and pins them from it, for AMP requests that carry the saved
+    login."""
     env_file = Path.cwd() / ".env"
     if env_file.is_file():
         from crewai_cli.run_crew import load_project_env
 
         load_project_env(env_file)
+        restore_machine_transport(os.environ)
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
@@ -713,6 +772,102 @@ def saved_login() -> str | None:
             "Run `crewai login` again, or `crewai eval` will not know who you are.",
             reason="login_unreadable",
         ) from error
+
+
+LOGGING_IN_AGAIN = (
+    "CrewAI AMP did not accept the saved login. Log in again, and the run is "
+    "evaluated once you have."
+)
+LOGIN_ABANDONED = (
+    "The login was cancelled, so the run was not evaluated. Run `crewai login`, "
+    "then evaluate it again."
+)
+LOGIN_TIMED_OUT = (
+    "The login code expired before sign-in finished, so the run was not evaluated. "
+    "Run `crewai login`, then evaluate it again."
+)
+LOGIN_FAILED = (
+    "The login failed ({error}), so the run was not evaluated. Run `crewai login`, "
+    "then evaluate it again."
+)
+LOGIN_STILL_REQUIRED = (
+    "CrewAI AMP still refused the login after signing in again: {refusal}"
+)
+
+
+def log_in_again() -> None:
+    """AMP refused the saved login: start `crewai login` once, as the run app's
+    Deploy does (`run_crew._chain_deploy`), so the evaluation can be tried again.
+
+    A login that does not complete stops the evaluation, with why in a word for
+    the usage count: abandoned (Ctrl-C), timed out (the code expired), failed.
+    """
+    from crewai_cli.authentication.main import AuthenticationCommand
+
+    _count_usage("cli_usage:eval_login_prompted")
+    console.print(Text(LOGGING_IN_AGAIN), style="yellow")
+    try:
+        AuthenticationCommand().login()
+    except KeyboardInterrupt as error:
+        raise EvaluationStoppedError(
+            LOGIN_ABANDONED, reason="login_abandoned"
+        ) from error
+    except SystemExit as error:
+        raise EvaluationStoppedError(
+            LOGIN_TIMED_OUT, reason="login_timed_out"
+        ) from error
+    except Exception as error:
+        raise EvaluationStoppedError(
+            LOGIN_FAILED.format(error=f"{type(error).__name__}: {error}"),
+            reason="login_failed",
+        ) from error
+
+
+def _log_in_at_the_terminal() -> bool:
+    """`crewai eval`'s login offer: only with somebody at the terminal to confirm
+    the code. With nobody there, False, and the refusal stops the command with
+    its `crewai login` sentence."""
+    if not _at_a_terminal():
+        return False
+    log_in_again()
+    return True
+
+
+def _start_logging_in_once(
+    client: PlusAPI,
+    start: Callable[[PlusAPI], dict[str, Any]],
+    *,
+    trusted: set[str],
+    log_in: Callable[[], bool] | None,
+    note: Callable[[str], None] = _note,
+) -> tuple[PlusAPI, dict[str, Any]]:
+    """START the evaluation with CLIENT, and the client it started with.
+
+    When AMP refuses the saved login (401) that went with the request, LOG_IN
+    offers a new one — False when it cannot be offered here, and the refusal
+    stops the evaluation as it always did — and the start is tried once more
+    with it. Only once: AMP also answers 401 for an account a new login cannot
+    fix, so a second refusal stops as `login_still_required`.
+    """
+    try:
+        return client, start(client)
+    except EvaluationStoppedError as stopped:
+        if (
+            stopped.reason != "amp_401"
+            or client.api_key is None
+            or log_in is None
+            or not log_in()
+        ):
+            raise
+    client = _amp_client(trusted, note=note)
+    try:
+        return client, start(client)
+    except EvaluationStoppedError as again:
+        if again.reason != "amp_401":
+            raise
+        raise EvaluationStoppedError(
+            LOGIN_STILL_REQUIRED.format(refusal=again), reason="login_still_required"
+        ) from again
 
 
 def _why_run_the_crew(
@@ -789,6 +944,9 @@ def tracing_already_on() -> bool:
     """Did somebody turn tracing on already — `CREWAI_TRACING_ENABLED=true`, or
     the consent a person gave once? A crew that sets `tracing=True` in code is
     not seen from here."""
+    # The project's `.env` beats a shell `false` the gate below would honor.
+    if _project_tracing_value() in ("true", "1"):
+        return True
     try:
         from crewai_core.user_data import is_tracing_enabled
 
@@ -881,12 +1039,13 @@ def _at_a_terminal() -> bool:
     return not is_dmn_mode_enabled() and sys.stdin.isatty()
 
 
-def _ask_before_the_first_enable() -> None:
-    """Nobody turned tracing on yet, and a person is here: ask on crewAI's
-    trace consent screen before turning it on. A no, or no answer before it
-    times out, runs nothing."""
+def _ask_before_the_first_enable(why: RunReason) -> None:
+    """Nobody turned tracing on yet, and a person is here: say why the crew
+    runs, then ask on crewAI's trace consent screen before turning tracing on.
+    A no, or no answer before it times out, runs nothing."""
     from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
 
+    console.print(Text(BEFORE_ASKING[why]), style="bold")
     if not prompt_user_for_trace_viewing(sharing=True):
         record_stop("declined")
         console.print(NOT_SHARED, style="yellow")
@@ -953,20 +1112,22 @@ def _run_the_crew_to_evaluate(
     # script) the yes is inferred from this command and tracing is turned on
     # for the project — said once, plainly, here and in the run app. From
     # then on the project traces, and nothing more is asked or said.
-    turned_on_now = False
+    turned_on_now = asked = False
     if not tracing_already_on():
         if _at_a_terminal():
-            _ask_before_the_first_enable()
+            _ask_before_the_first_enable(why)
+            asked = True
         else:
             turn_tracing_on()
             turned_on_now = True
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
-    said = (
-        f"{RUNNING_THE_CREW[why]} {TRACING_NOW_ON}"
-        if turned_on_now
-        else RUNNING_THE_CREW[why]
-    )
-    console.print(Text(said), style="bold")
+    if not asked:  # the line before the consent screen already said why
+        said = (
+            f"{RUNNING_THE_CREW[why]} {TRACING_NOW_ON}"
+            if turned_on_now
+            else RUNNING_THE_CREW[why]
+        )
+        console.print(Text(said), style="bold")
 
     from crewai_cli.crew_run_tui import evaluating_after_run
     from crewai_cli.run_crew import run_crew
@@ -978,11 +1139,23 @@ def _run_the_crew_to_evaluate(
     # The handshake (`crewai_core.eval_handshake`) carries what this command
     # decided before the project's `.env` was loaded: the AMP origins its saved
     # login may go to, and whether it just turned tracing on.
+    # Whoever reads the output decides, as for the brief: stdout, not stdin.
+    run_log = _run_log_path() if nobody_watching() else None
+    if run_log is not None:
+        console.print(
+            f"The crew's output goes to {_shown_path(run_log)} while it runs.",
+            style="dim",
+        )
     began = datetime.now(timezone.utc)
-    with evaluating_after_run(
-        trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
-    ) as watched:
+    started = time.monotonic()
+    with (
+        evaluating_after_run(
+            trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
+        ) as watched,
+        _run_output_to(run_log) as run_log,
+    ):
         run_crew(**run_args)
+    seconds = time.monotonic() - started
 
     # The app says what it did with the run it watched, and its word settles
     # this: it evaluated it (nothing left to do), or it had nothing to evaluate
@@ -994,7 +1167,8 @@ def _run_the_crew_to_evaluate(
             remember_project_state(str(marker["execution_id"]))
             return None
         record_stop("untraced_after_run")
-        console.print(NOT_TRACED, style="bold red")
+        _say_what_the_run_left(run_log, seconds, traced=False)
+        console.print(_not_traced(run_log), style="bold red")
         raise SystemExit(1)
 
     # The project's record, only when it was written after this run began: a
@@ -1005,11 +1179,155 @@ def _run_the_crew_to_evaluate(
         record.get("execution_id") if _recorded_since(record, began) else None
     )
     if traced:
+        _say_what_the_run_left(run_log, seconds, traced=True)
         return str(traced)
 
     record_stop("untraced_after_run")
-    console.print(NOT_TRACED, style="bold red")
+    _say_what_the_run_left(run_log, seconds, traced=False)
+    console.print(_not_traced(run_log), style="bold red")
     raise SystemExit(1)
+
+
+def _not_traced(run_log: Path | None) -> str:
+    """NOT_TRACED, pointing at where the run's output went."""
+    if run_log is None:
+        return NOT_TRACED
+    return NOT_TRACED.replace("(its output is above)", "(its last lines are above)")
+
+
+def _run_log_path() -> Path | None:
+    """Where a run with no terminal sends its output, or None when the
+    project's `.crewai/` cannot be written (the output then stays on screen)."""
+    from crewai.telemetry.tracing.last_run import LAST_RUN_DIR, project_dir
+
+    try:
+        path = project_dir() / LAST_RUN_DIR / RUN_LOG_FILE
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return path
+
+
+@contextlib.contextmanager
+def _run_output_to(path: Path | None) -> Iterator[Path | None]:
+    """Send everything printed inside the block to PATH, and yield it; with no
+    PATH, yield None and change nothing.
+
+    It moves this process's own stdout and stderr (file descriptors 1 and 2),
+    which every child the run starts inherits, so each way a project runs —
+    `uv run`, the JSON crew runner, a declarative flow — is covered without
+    touching any of them. Anything that keeps them from moving leaves the
+    output where it was: a quiet log is a nicety, never a failed run. Both are
+    always put back after, one by one, whatever failed: a stream left on the
+    log would swallow the verdict, and the run's own error is never hidden by
+    a failure to put them back."""
+    log = _open_run_log(path) if path is not None else None
+    if log is None:
+        yield None
+        return
+    with log:
+        _flush_std_streams()
+        saved: dict[int, int] = {}
+        moved: list[int] = []
+        try:
+            for fd in (1, 2):
+                saved[fd] = os.dup(fd)
+            for fd in (1, 2):
+                os.dup2(log.fileno(), fd)
+                moved.append(fd)
+        except OSError:
+            _put_back(saved, moved)
+            yield None
+            return
+        _point_windows_std_handles_at(1, 2)
+        try:
+            yield path
+        finally:
+            _flush_std_streams()
+            _put_back(saved, moved)
+            _point_windows_std_handles_at(1, 2)
+
+
+def _open_run_log(path: Path) -> BinaryIO | None:
+    """The run log, opened for writing owner-only and never through a link:
+    it holds final answers, tool output and tracebacks that can carry a
+    credential. A log an earlier run left is emptied and its mode tightened.
+    None when it cannot be opened that way."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        if path.is_symlink():
+            return None  # a link someone planted does not choose where it goes
+        fd = os.open(path, flags, 0o600)
+    except OSError:
+        return None
+    with contextlib.suppress(OSError, AttributeError):
+        os.fchmod(fd, 0o600)
+    return os.fdopen(fd, "wb")
+
+
+def _flush_std_streams() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        with contextlib.suppress(Exception):
+            stream.flush()
+
+
+def _put_back(saved: dict[int, int], moved: list[int]) -> None:
+    """Point every MOVED descriptor at its SAVED original again, and close
+    every saved copy: each on its own, so one failure stops none of the rest."""
+    for fd in moved:
+        with contextlib.suppress(OSError):
+            os.dup2(saved[fd], fd)
+    for copy in saved.values():
+        _close_quietly(copy)
+
+
+def _close_quietly(fd: int) -> None:
+    with contextlib.suppress(OSError):
+        os.close(fd)
+
+
+def _point_windows_std_handles_at(out_fd: int, err_fd: int) -> None:
+    """On Windows a child takes the process's standard handles, not its file
+    descriptors: point them where descriptors 1 and 2 now go."""
+    if os.name != "nt":
+        return
+    with contextlib.suppress(Exception):
+        import ctypes
+        import msvcrt
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle_of = msvcrt.get_osfhandle  # type: ignore[attr-defined]
+        kernel32.SetStdHandle(-11, handle_of(out_fd))  # STD_OUTPUT_HANDLE
+        kernel32.SetStdHandle(-12, handle_of(err_fd))  # STD_ERROR_HANDLE
+
+
+def _say_what_the_run_left(log: Path | None, seconds: float, traced: bool) -> None:
+    """After a quiet run: where its output is, and — when it left nothing to
+    evaluate — its last lines, which usually hold the error."""
+    if log is None:
+        return
+    where = _shown_path(log)
+    if traced:
+        console.print(
+            f"The crew ran in {seconds:.0f}s; its output is in {where}.", style="dim"
+        )
+        return
+    with contextlib.suppress(OSError):
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        tail = lines[-RUN_LOG_TAIL_LINES:]
+        if tail:
+            console.print(
+                f"The crew's output is in {where}; its last {len(tail)} lines:",
+                style="bold",
+            )
+            console.print(Text("\n".join(tail)))
+
+
+def _shown_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
 
 
 def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
@@ -2057,6 +2375,130 @@ _FOLDER_FLAGS = (
 _NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
 
 
+# Every evaluation `crewai eval` reads keeps its full data in the project. The
+# report opens for one five-minute sitting after it is first read, and the
+# verdict this command waits for is that read: a coding agent that wants a
+# check's quotes or the trace an hour later, after its edits, would find it
+# closed. The newest few are kept; older ones are removed.
+SAVED_EVALUATIONS_DIR = "evaluations"
+SAVED_EVALUATIONS_KEPT = 10
+# Written last, and only when every file was: what says a folder was saved
+# whole by this command — so a save cut short is tried again, and only such a
+# folder is ever removed to keep the newest.
+SAVED_MARKER = ".crewai-eval-saved"
+# The verdict is already printed when the save starts, and one run's export is
+# small: a slow save must not hold a CI job or an agent for export's two minutes.
+SAVE_TIMEOUT = httpx.Timeout(10.0, read=20.0)
+
+
+def save_evaluation(client: PlusAPI, finished: dict[str, Any]) -> None:
+    """Save evaluation FINISHED's full data (the export) into
+    `.crewai/evaluations/<id>/`, and say where.
+
+    Only inside a project, and never at the cost of the evaluation: a service
+    that does not export yet says nothing, and any other failure is one line.
+    A save cut short, or one that skipped a file, leaves no marker, says so,
+    and is tried again the next time this evaluation is read.
+    """
+    try:
+        canonical = str(uuid.UUID(str(finished.get("id"))))
+    except ValueError:
+        return
+    if not Path("pyproject.toml").is_file():
+        return  # `crewai eval --run ID` from anywhere: no project to keep it in
+    from crewai.telemetry.tracing.last_run import LAST_RUN_DIR
+
+    folder = Path(LAST_RUN_DIR) / SAVED_EVALUATIONS_DIR / canonical
+    if _saved_whole(folder):
+        # Graded again with nothing changed: the same evaluation, saved when it
+        # was first read — and its sitting may have closed since.
+        console.print(Text(_saved_line(folder)), soft_wrap=True)
+        return
+    try:
+        response = client.export_evaluation(canonical, timeout=SAVE_TIMEOUT)
+    except Exception as error:
+        console.print(Text(f"Its full data was not saved: {error}"), style="dim")
+        return
+    if response.status_code == 404:
+        return  # an evaluation service that does not export yet
+    payload = _payload(response) or {}
+    files = payload.get("files")
+    if response.status_code != 200 or not isinstance(files, dict):
+        said = payload.get("message")
+        why = said if isinstance(said, str) and said.strip() else None
+        why = why or f"AMP answered {response.status_code}."
+        console.print(Text(f"Its full data was not saved: {why}"), style="dim")
+        return
+    try:
+        _, skipped = _write_export(folder, files, marker=SAVED_MARKER)
+    except ExportWriteError as error:
+        console.print(Text(f"Its full data was not saved: {error}"), style="dim")
+        return
+    if skipped:
+        plural = "" if skipped == 1 else "s"
+        console.print(
+            Text(
+                f"Part of its data was saved in {folder}/: {skipped} file{plural} "
+                "skipped (an unsafe path, or content that is not text)."
+            ),
+            style="dim",
+            soft_wrap=True,
+        )
+        return
+    _keep_newest_saved_evaluations(folder.parent)
+    console.print(Text(_saved_line(folder)), soft_wrap=True)
+
+
+def _saved_line(folder: Path) -> str:
+    return f"Its full data is saved in {folder}/ — start with {EXPORT_START_HERE}."
+
+
+def _saved_whole(folder: Path) -> bool:
+    """Did this command save FOLDER whole? Its marker is there, a plain file."""
+    try:
+        return stat.S_ISREG((folder / SAVED_MARKER).lstat().st_mode)
+    except OSError:
+        return False
+
+
+def _is_a_link(path: Path) -> bool:
+    """A symbolic link, or a Windows junction, which `is_symlink` misses."""
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)  # Python 3.12+
+    return bool(is_junction and is_junction())
+
+
+def _keep_newest_saved_evaluations(folder: Path) -> None:
+    """Remove all but the SAVED_EVALUATIONS_KEPT newest evaluations this
+    command saved whole: only a real folder named by an evaluation id with the
+    marker in it — never a link, never a folder it did not write. Nothing is
+    removed when FOLDER, or the `.crewai/` above it, is a link."""
+    with contextlib.suppress(OSError):
+        if _is_a_link(folder) or _is_a_link(folder.parent):
+            return
+        if os.path.normcase(folder.resolve()) != os.path.normcase(
+            Path.cwd().resolve() / folder
+        ):
+            return
+        saved = []
+        for entry in folder.iterdir():
+            try:
+                uuid.UUID(entry.name)
+            except ValueError:
+                continue
+            if _is_a_link(entry) or not entry.is_dir() or not _saved_whole(entry):
+                continue
+            saved.append((entry.stat().st_mtime, entry))
+        saved.sort(reverse=True)
+        for _, old in saved[SAVED_EVALUATIONS_KEPT:]:
+            shutil.rmtree(old, ignore_errors=True)
+
+
+class ExportWriteError(Exception):
+    """An export could not be written where it was going; the message says why."""
+
+
 def export_evaluation(evaluation_id: str) -> None:
     """Write evaluation EVALUATION_ID's full data into `./crewai-eval-<id>/`.
 
@@ -2097,7 +2539,10 @@ def export_evaluation(evaluation_id: str) -> None:
         )
 
     folder = Path(f"{EXPORT_DIR_PREFIX}{canonical}")
-    written, skipped = _write_export(folder, files)
+    try:
+        written, skipped = _write_export(folder, files)
+    except ExportWriteError as error:
+        _fail(str(error))
     line = f"Wrote {len(written)} file{'' if len(written) == 1 else 's'} to {folder}/"
     if EXPORT_START_HERE in written:
         line += f" — start with {EXPORT_START_HERE}"
@@ -2172,7 +2617,9 @@ def _export_target(name: str) -> list[str] | None:
     every segment a plain name (`[A-Za-z0-9._-]+`, never `.` or `..`). A `.git`
     segment is refused too: a `.git/config` there could name a command for the
     next `git status` in the folder to run, and a shell prompt runs one. The
-    top `.gitignore` is this command's own. So is a name Windows keeps for a
+    top `.gitignore` is this command's own, and so is the top SAVED_MARKER: a
+    marker AMP sent would say a save was whole when it was not. So is a name
+    Windows keeps for a
     device (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9`, `LPT0`-`LPT9`, with any
     extension), on every platform, since the folder may be opened on Windows
     later or sit on a drive it shares: there `NUL.md` is the null device, and
@@ -2191,9 +2638,14 @@ def _export_target(name: str) -> list[str] | None:
             or seen.split(".", 1)[0] in _WINDOWS_DEVICE_NAMES
         ):
             return None
-    if len(segments) == 1 and _as_a_filesystem_sees_it(segments[0]) == ".gitignore":
+    if len(segments) == 1 and _as_a_filesystem_sees_it(segments[0]) in _RESERVED_TOP:
         return None
     return segments
+
+
+# The folder's own files, which no exported file may be: `.gitignore` keeps the
+# data out of a commit, the marker says the save was whole.
+_RESERVED_TOP = frozenset({".gitignore", SAVED_MARKER})
 
 
 def _as_a_filesystem_sees_it(segment: str) -> str:
@@ -2201,8 +2653,11 @@ def _as_a_filesystem_sees_it(segment: str) -> str:
     return segment.rstrip(".").lower()
 
 
-def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
+def _write_export(
+    folder: Path, files: dict[str, Any], *, marker: str | None = None
+) -> tuple[list[str], int]:
     """Write FILES under FOLDER: the names written, and how many were skipped.
+    MARKER, when given, is written last, and only when nothing was skipped.
 
     The `.gitignore` goes first, so the data is never in the folder without it.
     A file whose path would go through a link, or through a file where a
@@ -2216,10 +2671,12 @@ def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
         try:
             ignored = put([".gitignore"], b"*\n")
         except OSError as error:
-            _fail(f"Could not write the export into {folder}/: {error}")
+            raise ExportWriteError(
+                f"Could not write the export into {folder}/: {error}"
+            ) from error
         if not ignored:
             # The data never goes into the folder without it.
-            _fail(
+            raise ExportWriteError(
                 f"{folder}/.gitignore is a folder, not this command's file: remove it "
                 "and export again, so the data is never committed by accident."
             )
@@ -2236,11 +2693,20 @@ def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
             try:
                 put_there = put(segments, data)
             except OSError as error:
-                _fail(f"Could not write {folder}/{name}: {error}")
+                raise ExportWriteError(
+                    f"Could not write {folder}/{name}: {error}"
+                ) from error
             if put_there:
                 written.append(name)
             else:
                 skipped += 1
+        if marker is not None and not skipped:
+            try:
+                put([marker], b"Saved whole by `crewai eval`.\n")
+            except OSError as error:
+                raise ExportWriteError(
+                    f"Could not write {folder}/{marker}: {error}"
+                ) from error
     return written, skipped
 
 
@@ -2266,24 +2732,38 @@ def _export_folder(folder: Path) -> Iterator[Callable[[list[str], bytes], bool]]
 
 def _export_root_is_a_link(folder: Path) -> NoReturn:
     """Stop: whoever made FOLDER a link chose where it leads, not this command."""
-    _fail(f"{folder} is a link; the export writes only into a folder of its own.")
+    raise ExportWriteError(
+        f"{folder} is a link; the export writes only into a folder of its own."
+    )
 
 
 def _export_root_handle(folder: Path) -> int:
-    """A handle on FOLDER, made when missing, opened inside the current
-    directory and never through a link."""
+    """A handle on FOLDER, a path relative to the current directory: each of
+    its folders made when missing and opened inside the one before it, never
+    through a link."""
     try:
-        here = os.open(".", _FOLDER_FLAGS)
-        try:
-            with contextlib.suppress(FileExistsError):
-                os.mkdir(folder.name, dir_fd=here)
-            return os.open(folder.name, _FOLDER_FLAGS, dir_fd=here)
-        finally:
-            os.close(here)
+        handle = os.open(".", _FOLDER_FLAGS)
     except OSError as error:
-        if folder.is_symlink():
+        raise ExportWriteError(
+            f"Could not write the export into {folder}/: {error}"
+        ) from error
+    try:
+        for part in folder.parts:
+            with contextlib.suppress(FileExistsError):
+                os.mkdir(part, dir_fd=handle)
+            inner = os.open(part, _FOLDER_FLAGS, dir_fd=handle)
+            os.close(handle)
+            handle = inner
+    except OSError as error:
+        os.close(handle)
+        if any(
+            Path(*folder.parts[: n + 1]).is_symlink() for n in range(len(folder.parts))
+        ):
             _export_root_is_a_link(folder)
-        _fail(f"Could not write the export into {folder}/: {error}")
+        raise ExportWriteError(
+            f"Could not write the export into {folder}/: {error}"
+        ) from error
+    return handle
 
 
 def _put_through_handles(root: int, segments: list[str], data: bytes) -> bool:
@@ -2340,14 +2820,18 @@ def _export_root_by_path(folder: Path) -> Path:
     `is_symlink` does not see, and which any account can make), would carry
     every file somewhere else.
     """
-    if folder.is_symlink():
-        _export_root_is_a_link(folder)
+    # Every folder on the way, before anything is made through one of them.
+    for n in range(len(folder.parts)):
+        if _is_a_link(Path(*folder.parts[: n + 1])):
+            _export_root_is_a_link(folder)
     try:
-        folder.mkdir(exist_ok=True)
+        folder.mkdir(parents=True, exist_ok=True)
         root = folder.resolve()
     except OSError as error:
-        _fail(f"Could not write the export into {folder}/: {error}")
-    if os.path.normcase(root) != os.path.normcase(Path.cwd().resolve() / folder.name):
+        raise ExportWriteError(
+            f"Could not write the export into {folder}/: {error}"
+        ) from error
+    if os.path.normcase(root) != os.path.normcase(Path.cwd().resolve() / folder):
         _export_root_is_a_link(folder)
     return root
 

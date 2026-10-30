@@ -1760,125 +1760,539 @@ class TestSuccessfulToolsUnaffected:
 
 
 from crewai.utilities.agent_utils import MAX_REPEATED_TOOL_CALLS  # noqa: E402
+from crewai.utilities.i18n import I18N_DEFAULT  # noqa: E402
+
+FORCED_ANSWER = "Answer from what I already found."
+OWN_ANSWER = "Answer I chose to give."
+REPEAT_WARNING = "with the same arguments 4 times in a row and got the same result"
+
+
+def _echo_call(call_id: str, text: str) -> dict[str, Any]:
+    return {
+        "id": call_id,
+        "type": "function",
+        "function": {"name": "echo", "arguments": json.dumps({"text": text})},
+    }
 
 
 class LoopingNativeLLM(LLM):
-    """Asks for the same native tool call forever, like a stuck agent."""
+    """Asks for the same native tool calls every turn, like a stuck agent.
+
+    ``steps`` holds the echo texts requested per turn; once they run out the
+    model answers on its own. The forced-final-answer turn offers no tools and
+    gets :data:`FORCED_ANSWER`.
+    """
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "LoopingNativeLLM":
         return object.__new__(cls)
 
-    def __init__(self) -> None:
+    def __init__(self, steps: list[list[str]] | None = None) -> None:
         super().__init__(model="gpt-4o")
+        self.steps = steps if steps is not None else [["hi"]] * 50
         self.calls = 0
+        self.tool_turns = 0
 
     def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
         self.calls += 1
+        if not tools:
+            return FORCED_ANSWER
+        if self.tool_turns >= len(self.steps):
+            return OWN_ANSWER
+        texts = self.steps[self.tool_turns]
+        self.tool_turns += 1
         return [
-            {
-                "id": f"call_{self.calls}",
-                "type": "function",
-                "function": {"name": "echo", "arguments": '{"text": "hi"}'},
-            }
+            _echo_call(f"call_{self.tool_turns}_{i}", text)
+            for i, text in enumerate(texts)
         ]
 
     def supports_function_calling(self) -> bool:
         return True
 
 
-class TestRepeatedToolCallStopsTheRun:
-    """Same call + same result means no progress: stop before the context fills."""
+class LoopingTextLLM(LLM):
+    """The ReAct counterpart of :class:`LoopingNativeLLM`."""
 
-    def test_helper_raises_on_the_last_identical_call(self) -> None:
+    def __new__(cls, *args: Any, **kwargs: Any) -> "LoopingTextLLM":
+        return object.__new__(cls)
+
+    def __init__(self, texts: list[str] | None = None) -> None:
+        super().__init__(model="gpt-4o")
+        self.texts = texts if texts is not None else ["hi"] * 50
+        self.tool_turns = 0
+
+    def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+        if I18N_DEFAULT.errors("force_final_answer") in str(messages[-1]["content"]):
+            return f"Thought: done\nFinal Answer: {FORCED_ANSWER}"
+        if self.tool_turns >= len(self.texts):
+            return f"Thought: done\nFinal Answer: {OWN_ANSWER}"
+        text = self.texts[self.tool_turns]
+        self.tool_turns += 1
+        return (
+            "Thought: again\nAction: echo\n"
+            + f"Action Input: {json.dumps({'text': text})}"
+        )
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+
+def _looping_crew(
+    llm: LLM, policy: ToolFailurePolicy | None = None, **agent_kwargs: Any
+) -> tuple[Crew, Agent]:
+    agent = Agent(
+        role="Looper",
+        goal="g",
+        backstory="b",
+        llm=llm,
+        tools=[WorkingTool()],
+        tool_failure_policy=policy,
+        **agent_kwargs,
+    )
+    task = Task(description="echo", expected_output="x", agent=agent)
+    return Crew(agents=[agent], tasks=[task]), agent
+
+
+def _repeated_call_records(records: list[ToolFailureRecord]) -> list[ToolFailureRecord]:
+    return [r for r in records if r.failure.reason is ToolFailureReason.REPEATED_CALL]
+
+
+def _tool_contents(messages: list[Any]) -> list[str]:
+    return [str(m["content"]) for m in messages if m.get("role") == "tool"]
+
+
+def test_tool_result_equality_ignores_the_raw_result() -> None:
+    from crewai.tools.tool_types import ToolResult
+
+    with_raw = ToolResult("2", False, raw_result=2)
+
+    assert with_raw == ToolResult("2", False)
+    assert with_raw.raw_result == 2
+    assert ToolResult("2").raw_result == "2"
+
+
+def test_tool_result_keeps_an_explicit_none_raw_result() -> None:
+    from crewai.tools.tool_types import ToolResult
+
+    assert ToolResult("None", raw_result=None).raw_result is None
+
+
+class NoneTool(BaseTool):
+    """A side-effect tool: it does its work and returns nothing."""
+
+    name: str = "echo"
+    description: str = "Record the input."
+
+    def _run(self, text: str) -> Any:
+        return None
+
+
+def test_none_result_streak_survives_format_reminders_on_text_tools() -> None:
+    """A tool returning ``None`` is still caught when ToolUsage appends reminders.
+
+    Without a tools handler ToolUsage reruns the identical call instead of
+    answering with its own repeat notice, so the streak sees every result.
+    """
+    from crewai.agents.parser import AgentAction
+    from crewai.tools.tool_failure import tool_failure_collector
+    from crewai.utilities.agent_utils import (
+        check_repeated_tool_call,
+        repeated_tool_call_limit_reached,
+    )
+    from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+    agent = Agent(role="Looper", goal="g", backstory="b")
+    task = Task(description="echo", expected_output="x", agent=agent)
+    tool = NoneTool().to_structured_tool()
+    counts: dict[int, int] = {}
+    shown: list[str] = []
+    notes: list[str] = []
+
+    with tool_failure_collector() as records:
+        for _ in range(MAX_REPEATED_TOOL_CALLS):
+            executed = execute_tool_and_check_finality(
+                agent_action=AgentAction(
+                    thought="t",
+                    tool="echo",
+                    tool_input='{"text": "hi"}',
+                    text='Action: echo\nAction Input: {"text": "hi"}',
+                ),
+                tools=[tool],
+                agent=agent,
+                task=task,
+            )
+            assert executed.raw_result is None
+            shown.append(executed.result)
+            notes.append(
+                check_repeated_tool_call(
+                    counts,
+                    tool_name="echo",
+                    tool_args={"text": "hi"},
+                    result=executed.raw_result,
+                    agent=agent,
+                    task=task,
+                )
+            )
+
+    assert len(set(shown)) > 1, "expected a format reminder on some results"
+    assert REPEAT_WARNING in notes[MAX_REPEATED_TOOL_CALLS - 2]
+    assert repeated_tool_call_limit_reached(counts)
+    assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+
+class TestRepeatedToolCallHelper:
+    """The streak: consecutive identical calls with identical results."""
+
+    def _call(self, counts: dict[int, int], text: str, result: str = "x", **kw: Any) -> str:
         from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        return check_repeated_tool_call(
+            counts, tool_name="echo", tool_args={"text": text}, result=result, **kw
+        )
+
+    def test_warns_one_call_before_the_limit(self) -> None:
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
+
+        counts: dict[int, int] = {}
+        notes = [self._call(counts, "hi") for _ in range(MAX_REPEATED_TOOL_CALLS - 1)]
+
+        assert notes[:-1] == [""] * (MAX_REPEATED_TOOL_CALLS - 2)
+        assert "You have called 'echo' " + REPEAT_WARNING in notes[-1]
+        assert "give your final answer" in notes[-1]
+        assert not repeated_tool_call_limit_reached(counts)
+
+    def test_reaches_the_limit_and_records_a_repeated_call_failure(self) -> None:
+        from crewai.tools.tool_failure import tool_failure_collector
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
 
         agent = Agent(role="Looper", goal="g", backstory="b")
         counts: dict[int, int] = {}
+        events: list[ToolFailureDetectedEvent] = []
+
+        with crewai_event_bus.scoped_handlers(), tool_failure_collector() as records:
+
+            @crewai_event_bus.on(ToolFailureDetectedEvent)
+            def _(source: Any, event: ToolFailureDetectedEvent) -> None:
+                events.append(event)
+
+            for _ in range(MAX_REPEATED_TOOL_CALLS):
+                self._call(counts, "hi", agent=agent)
+            crewai_event_bus.flush()
+
+        assert repeated_tool_call_limit_reached(counts)
+        assert len(records) == 1
+        assert records[0].failure.reason is ToolFailureReason.REPEATED_CALL
+        assert records[0].tool_name == "echo"
+        assert records[0].failure.message.startswith(
+            "Agent 'Looper' called 'echo' with the same arguments 5 times in a row"
+        )
+        assert [e.failure.reason for e in events] == [ToolFailureReason.REPEATED_CALL]
+
+    def test_raise_policy_still_aborts_at_the_limit(self) -> None:
+        agent = Agent(
+            role="Looper", goal="g", backstory="b", tool_failure_policy="raise"
+        )
+        counts: dict[int, int] = {}
         for _ in range(MAX_REPEATED_TOOL_CALLS - 1):
-            check_repeated_tool_call(
-                counts, tool_name="echo", tool_args={"text": "hi"}, result="x", agent=agent
-            )
+            self._call(counts, "hi", agent=agent)
 
-        with pytest.raises(ToolExecutionFailedError) as exc_info:
-            check_repeated_tool_call(
-                counts, tool_name="echo", tool_args={"text": "hi"}, result="x", agent=agent
-            )
+        with pytest.raises(
+            ToolExecutionFailedError, match="called 'echo' with the same arguments 5"
+        ) as exc_info:
+            self._call(counts, "hi", agent=agent)
 
-        record = exc_info.value.record
-        assert record.failure.reason is ToolFailureReason.REPEATED_CALL
-        assert record.tool_name == "echo"
-        assert "Looper" in str(exc_info.value)
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
 
-    def test_helper_allows_repeats_whose_result_changes(self) -> None:
-        from crewai.utilities.agent_utils import check_repeated_tool_call
+    def test_the_limit_stays_reached_after_a_different_call(self) -> None:
+        """A parallel batch can hold another call after the one that hit the limit."""
+        from crewai.tools.tool_failure import tool_failure_collector
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
+
+        counts: dict[int, int] = {}
+        with tool_failure_collector() as records:
+            for _ in range(MAX_REPEATED_TOOL_CALLS):
+                self._call(counts, "hi")
+            assert self._call(counts, "other") == ""
+            assert self._call(counts, "hi") == ""
+
+        assert repeated_tool_call_limit_reached(counts)
+        assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+    def test_a_different_call_resets_the_streak(self) -> None:
+        """Re-reading a source between other lookups is not a loop."""
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
+
+        counts: dict[int, int] = {}
+        for _ in range(3):
+            for _ in range(MAX_REPEATED_TOOL_CALLS - 2):
+                assert self._call(counts, "source") == ""
+            assert self._call(counts, "other") == ""
+
+        assert not repeated_tool_call_limit_reached(counts)
+
+    def test_a_different_result_resets_the_streak(self) -> None:
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
 
         counts: dict[int, int] = {}
         for status in ["queued", "running", "running-2", "running-3", "done", "done-2"]:
-            check_repeated_tool_call(
-                counts, tool_name="poll", tool_args={"id": 1}, result=status
-            )
+            assert self._call(counts, "poll", result=status) == ""
 
-    def test_native_loop_stops_the_crew_early(self) -> None:
+        assert not repeated_tool_call_limit_reached(counts)
+
+    def test_an_alternating_loop_is_left_to_max_iter(self) -> None:
+        """A, B, A, B... never repeats back to back, so max_iter is what ends it."""
+        from crewai.utilities.agent_utils import repeated_tool_call_limit_reached
+
+        counts: dict[int, int] = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS):
+            for text in ("a", "b"):
+                assert self._call(counts, text, result=text) == ""
+
+        assert not repeated_tool_call_limit_reached(counts)
+
+
+class TestRepeatedToolCallEndsWithAnAnswer:
+    """A stuck agent is warned, then forced to answer; its work is kept."""
+
+    def test_native_loop_is_warned_then_forced_to_answer(self) -> None:
         llm = LoopingNativeLLM()
+        crew, agent = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        # Stopped on the limit, not after max_iter.
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        tool_results = _tool_contents(agent.last_messages)
+        assert len(tool_results) == MAX_REPEATED_TOOL_CALLS
+        assert REPEAT_WARNING in tool_results[MAX_REPEATED_TOOL_CALLS - 2]
+        assert not any(REPEAT_WARNING in r for r in tool_results[:-2])
+        records = _repeated_call_records(result.tool_failures)
+        assert len(records) == 1
+        assert records[0].agent_role == "Looper"
+
+    @pytest.mark.asyncio
+    async def test_native_loop_is_forced_to_answer_async(self) -> None:
+        llm = LoopingNativeLLM()
+        crew, _ = _looping_crew(llm)
+
+        result = await crew.kickoff_async()
+
+        assert result.raw == FORCED_ANSWER
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert len(_repeated_call_records(result.tool_failures)) == 1
+
+    def test_text_loop_is_warned_then_forced_to_answer(self) -> None:
+        llm = LoopingTextLLM()
+        crew, agent = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        # ToolUsage answers the 2nd identical call with its own repeat notice,
+        # and the streak counts from that notice: one call later than native.
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS + 1
+        assert str(agent.last_messages).count(REPEAT_WARNING) == 1
+        assert len(_repeated_call_records(result.tool_failures)) == 1
+
+    @pytest.mark.asyncio
+    async def test_text_loop_is_forced_to_answer_async(self) -> None:
+        llm = LoopingTextLLM()
+        crew, agent = _looping_crew(llm)
+
+        result = await crew.kickoff_async()
+
+        assert result.raw == FORCED_ANSWER
+        assert llm.tool_turns < agent.max_iter
+        assert len(_repeated_call_records(result.tool_failures)) == 1
+
+    def test_standalone_agent_kickoff_is_forced_to_answer(self) -> None:
+        llm = LoopingNativeLLM()
+        _, agent = _looping_crew(llm)
+
+        output = agent.kickoff("echo hi")
+
+        assert output.raw == FORCED_ANSWER
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert len(_repeated_call_records(output.tool_failures)) == 1
+
+    def test_identical_parallel_calls_in_one_step_count_toward_the_streak(self) -> None:
+        llm = LoopingNativeLLM([["hi", "hi", "hi"]] * 10)
+        crew, agent = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert llm.tool_turns == 2
+        tool_results = _tool_contents(agent.last_messages)
+        assert [REPEAT_WARNING in r for r in tool_results] == [
+            False, False, False, True, False, False,
+        ]
+        assert len(_repeated_call_records(result.tool_failures)) == 1
+
+    def test_a_streak_completed_mid_batch_still_forces_the_answer(self) -> None:
+        """The other call in the batch that hits the limit must not undo the stop."""
+        steps = [["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1) + [["hi", "other"]]
+        llm = LoopingNativeLLM(steps + [["hi"]] * 3)
+        crew, _ = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert len(_repeated_call_records(result.tool_failures)) == 1
+
+    def test_different_parallel_calls_in_one_step_do_not_count(self) -> None:
+        llm = LoopingNativeLLM([["a", "b"]] * (MAX_REPEATED_TOOL_CALLS + 1))
+        crew, _ = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == OWN_ANSWER
+        assert _repeated_call_records(result.tool_failures) == []
+
+    def test_rereading_a_source_between_lookups_does_not_stop_the_agent(self) -> None:
+        """The reported case: the count used to span the whole task."""
+        reads = ["source"] * (MAX_REPEATED_TOOL_CALLS - 2)
+        llm = LoopingNativeLLM([[t] for t in [*reads, "other", *reads, "other", *reads]])
+        crew, _ = _looping_crew(llm)
+
+        result = crew.kickoff()
+
+        assert result.raw == OWN_ANSWER
+        assert _repeated_call_records(result.tool_failures) == []
+
+    def test_text_rereading_a_source_does_not_stop_the_agent(self) -> None:
+        """Standalone, so no task format reminder makes the repeated results differ."""
+        llm = LoopingTextLLM(["source", "other"] * MAX_REPEATED_TOOL_CALLS)
+        _, agent = _looping_crew(llm)
+
+        output = agent.kickoff("echo")
+
+        assert output.raw == OWN_ANSWER
+        assert llm.tool_turns == 2 * MAX_REPEATED_TOOL_CALLS
+        assert _repeated_call_records(output.tool_failures) == []
+
+    def test_raise_policy_still_stops_the_crew(self) -> None:
+        llm = LoopingNativeLLM()
+        crew, _ = _looping_crew(llm, ToolFailurePolicy.RAISE)
+
+        with pytest.raises(
+            ToolExecutionFailedError, match="called 'echo' with the same arguments 5"
+        ) as exc_info:
+            crew.kickoff()
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+
+    def test_ignore_policy_still_forces_the_answer_but_records_nothing(self) -> None:
+        llm = LoopingNativeLLM()
+        crew, _ = _looping_crew(llm, ToolFailurePolicy.IGNORE)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert result.tool_failures == []
+
+    def test_streak_does_not_carry_into_the_next_task(self) -> None:
+        llm = LoopingNativeLLM([["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1))
         agent = Agent(
             role="Looper", goal="g", backstory="b", llm=llm, tools=[WorkingTool()]
         )
-        task = Task(description="echo", expected_output="x", agent=agent)
+        tasks = [
+            Task(description=f"echo {n}", expected_output="x", agent=agent)
+            for n in (1, 2)
+        ]
+        crew = Crew(agents=[agent], tasks=tasks)
 
-        with pytest.raises(ToolExecutionFailedError) as exc_info:
-            Crew(agents=[agent], tasks=[task]).kickoff()
+        def next_task_steps(*_: Any) -> None:
+            llm.steps = [["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1)
+            llm.tool_turns = 0
 
-        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
-        assert "Looper" in str(exc_info.value)
-        # Stopped on the last allowed call, not after max_iter, and not retried.
-        assert llm.calls == MAX_REPEATED_TOOL_CALLS
+        tasks[0].callback = next_task_steps
+        result = crew.kickoff()
 
-    def test_text_loop_stops_the_crew_early(self) -> None:
-        step = 'Thought: again\nAction: echo\nAction Input: {"text": "hi"}'
-        llm = ScriptedLLM([step])
-        agent = Agent(
-            role="Looper", goal="g", backstory="b", llm=llm, tools=[WorkingTool()]
-        )
-        task = Task(description="echo", expected_output="x", agent=agent)
+        assert [t.raw for t in result.tasks_output] == [OWN_ANSWER, OWN_ANSWER]
+        assert _repeated_call_records(result.tool_failures) == []
 
-        with pytest.raises(ToolExecutionFailedError) as exc_info:
-            Crew(agents=[agent], tasks=[task]).kickoff()
 
-        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
-        # ToolUsage nudges every other identical call, so the count is not exact.
-        assert llm._index < agent.max_iter
+class TestRepeatedToolCallInPlanSteps:
+    """A plan step that loops ends with what it has, like its max-iterations path."""
 
-    def test_planning_step_loop_raises_instead_of_failing_the_step(self) -> None:
+    def _execute(self, llm: LLM, task: Task | None = None, **agent_kwargs: Any) -> Any:
         from crewai.agents.step_executor import StepExecutor
+        from crewai.tools.tool_failure import tool_failure_collector
         from crewai.utilities.planning_types import TodoItem
         from crewai.utilities.step_execution_context import StepExecutionContext
 
+        tool = WorkingTool()
         executor = StepExecutor(
-            llm=LoopingNativeLLM(),
-            tools=[],
-            agent=Agent(role="Looper", goal="g", backstory="b"),
-            original_tools=[WorkingTool()],
+            llm=llm,
+            tools=[tool.to_structured_tool()],
+            agent=Agent(role="Looper", goal="g", backstory="b", **agent_kwargs),
+            original_tools=[tool],
+            task=task,
         )
-
-        with pytest.raises(ToolExecutionFailedError) as exc_info:
-            executor.execute(
+        with tool_failure_collector() as records:
+            result = executor.execute(
                 TodoItem(step_number=1, description="echo"),
                 StepExecutionContext(task_description="t", task_goal="g"),
             )
+        return result, records
+
+    def test_native_step_loop_keeps_its_result(self) -> None:
+        llm = LoopingNativeLLM()
+
+        result, records = self._execute(llm)
+
+        assert result.success
+        assert "echoed: hi" in result.result
+        assert REPEAT_WARNING not in result.result
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+    def test_native_step_streak_completed_mid_batch_still_ends_the_step(self) -> None:
+        steps = [["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1) + [["hi", "other"]]
+        llm = LoopingNativeLLM(steps + [["hi"]] * 3)
+
+        result, records = self._execute(llm)
+
+        assert result.success
+        assert llm.tool_turns == MAX_REPEATED_TOOL_CALLS
+        assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+    @pytest.mark.parametrize("with_task", [False, True])
+    def test_text_step_loop_keeps_its_result(self, with_task: bool) -> None:
+        """With a task, ToolUsage appends a format reminder every few results."""
+        llm = LoopingTextLLM()
+        task = Task(description="echo", expected_output="x") if with_task else None
+
+        result, records = self._execute(llm, task)
+
+        assert result.success
+        assert REPEAT_WARNING not in result.result
+        assert llm.tool_turns < 15
+        assert [r.failure.reason for r in records] == [ToolFailureReason.REPEATED_CALL]
+
+    def test_native_step_sees_the_warning_before_the_stop(self) -> None:
+        seen: list[Any] = []
+
+        class RecordingLLM(LoopingNativeLLM):
+            def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+                seen.append(list(messages))
+                return super().call(messages, tools, callbacks, available_functions, **kw)
+
+        self._execute(RecordingLLM())
+
+        tool_results = _tool_contents(seen[-1])
+        assert REPEAT_WARNING in tool_results[-1]
+        assert len(tool_results) == MAX_REPEATED_TOOL_CALLS - 1
+
+    def test_raise_policy_still_aborts_the_step(self) -> None:
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            self._execute(LoopingNativeLLM(), tool_failure_policy="raise")
 
         assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
-
-    def test_helper_raises_on_an_alternating_loop(self) -> None:
-        """A, B, A, B... is still a loop; counting only consecutive repeats misses it."""
-        from crewai.utilities.agent_utils import check_repeated_tool_call
-
-        counts: dict[int, int] = {}
-        with pytest.raises(ToolExecutionFailedError):
-            for _ in range(MAX_REPEATED_TOOL_CALLS):
-                for text in ("a", "b"):
-                    check_repeated_tool_call(
-                        counts, tool_name="echo", tool_args={"text": text}, result=text
-                    )
 
     @pytest.mark.asyncio
     async def test_parallel_step_loop_stops_the_agent(self) -> None:

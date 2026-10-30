@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.28",
+    "crewai==1.15.33",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4>=4.13.4,<5",
     "python-docx~=1.2.0",
@@ -118,8 +118,9 @@ github = [
     # GHSA-9rj7-rf2p-w77r, GHSA-4gmw-gg2m-w46p, GHSA-hh9p-6wh2-4mfc,
     # GHSA-wvpp-8hx9-p66j and GHSA-jm78-9fvv-mhgr (further unguarded git
     # option forwarding / arbitrary file read); force 3.1.58+. 3.1.58 then has
-    # PYSEC-2026-3785 through -3788; force 3.1.59+.
-    "gitpython>=3.1.59,<4",
+    # PYSEC-2026-3785 through -3788, and <=3.2.0 has GHSA-83vg-56qc-22m7;
+    # force 3.2.1+.
+    "gitpython>=3.2.1,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
@@ -148,12 +149,18 @@ oxylabs = [
     # allow it rather than pinning consumers to a single release.
     "oxylabs>=2.0.0,<4",
 ]
+azure-documentdb = [
+    "azure-identity>=1.17.0,<2",
+    "pymongo>=4.18.3; python_version >= '3.11'",
+    "pymongo>=4.18.2,<4.18.3; python_version < '3.11'",
+]
 mongodb = [
     # <4.18.1 has GHSA-8fvv-fgr5-f8ch (GridFS delete treats a mapping id as a
     # query). <4.18.2 has GHSA-qx36-8mw2-4r3x, GHSA-v4x9-3549-crwv, and
-    # GHSA-vp6j-j7w5-5xjj. Declared here, not only as a uv override, so
+    # GHSA-vp6j-j7w5-5xjj, and GHSA-98qm-wvgf-w4cf. Declared here, not only as a uv override, so
     # consumers installing crewai-tools[mongodb] get this floor.
-    "pymongo>=4.18.2"
+    "pymongo>=4.18.3; python_version >= '3.11'",
+    "pymongo>=4.18.2,<4.18.3; python_version < '3.11'",
 ]
 oracledb = [
     "oracledb>=2.2.0"
