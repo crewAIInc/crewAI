@@ -747,3 +747,18 @@ def test_commands_that_need_a_login_exit_1_when_logged_out(runner, args):
     assert result.exit_code == 1, result.output
     assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
     assert "Run 'crewai login' to sign up/login." in result.output
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["replay", "-t", "abc", "-f", "old.pkl"],
+        ["run", "-f", "old.pkl"],
+        ["test", "-f", "old.pkl"],
+    ],
+)
+def test_trained_agents_file_rejects_pickle(runner, args):
+    result = runner.invoke(crewai, args)
+
+    assert result.exit_code != 0
+    assert "pickle format" in result.output

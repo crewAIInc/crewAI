@@ -101,3 +101,10 @@ def test_train_crew_unexpected_exception(mock_subprocess_run, click):
     click.echo.assert_called_once_with(
         "An unexpected error occurred: Unexpected error", err=True
     )
+
+
+@mock.patch("crewai_cli.train_crew.subprocess.run")
+def test_train_crew_rejects_pickle_filename(mock_subprocess_run):
+    with pytest.raises(click.ClickException, match=r"pickle format.*Re-run"):
+        train_crew(5, "trained_agents_data.pkl")
+    mock_subprocess_run.assert_not_called()

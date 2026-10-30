@@ -6,6 +6,7 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 import click
+from crewai_core.constants import PICKLE_UNSUPPORTED_MESSAGE
 
 # Imported first so AMP requests pin the machine's proxy and CA settings before
 # any command loads a project's .env (see crewai_core.plus_api).
@@ -120,6 +121,14 @@ def _get_cli_version() -> str:
         return get_version("crewai-cli")
     except Exception:
         return "unknown"
+
+
+def _reject_pickle_file(
+    ctx: click.Context, param: click.Parameter, value: str | None
+) -> str | None:
+    if value is not None and value.endswith(".pkl"):
+        raise click.BadParameter(PICKLE_UNSUPPORTED_MESSAGE.format(file_name=value))
+    return value
 
 
 @click.group()
@@ -388,6 +397,7 @@ def train(
     "trained_agents_file",
     type=str,
     default=None,
+    callback=_reject_pickle_file,
     help=(
         "Path to trained-agents JSON data (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
@@ -616,6 +626,7 @@ def memory(
     "trained_agents_file",
     type=str,
     default=None,
+    callback=_reject_pickle_file,
     help=(
         "Crew-only: path to trained-agents JSON data (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
@@ -663,6 +674,7 @@ def install(context: click.Context) -> None:
     "trained_agents_file",
     type=str,
     default=None,
+    callback=_reject_pickle_file,
     help=(
         "Path to trained-agents JSON data (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
