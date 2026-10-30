@@ -11,12 +11,14 @@ from typing import Any, Final, Literal
 
 import click
 from crewai_core.printer import PRINTER
+from crewai_core.project import configured_project_definition
 from packaging import version
 import tomli
 
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
+from crewai.project.crew_loader import load_crew
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.project_utils import read_toml
@@ -309,7 +311,11 @@ def run_crew_tool(crew: Crew, messages: list[LLMMessage], **kwargs: Any) -> str:
 
 
 def load_crew_and_name() -> tuple[Crew, str]:
-    """Load the crew by importing the crew class from the user's project.
+    """Load the crew from the user's project.
+
+    A JSON crew project (``[tool.crewai].definition`` in ``pyproject.toml``) is
+    loaded from that definition, as ``crewai run`` does; otherwise the crew
+    class is imported from ``src/<project>/crew.py``.
 
     Returns:
         A tuple containing the Crew instance and the name of the crew.
@@ -327,6 +333,12 @@ def load_crew_and_name() -> tuple[Crew, str]:
     folder_name = project_name
 
     crew_class_name = project_name.replace("_", " ").title().replace(" ", "")
+
+    if definition := configured_project_definition(
+        "crew", pyproject_data=pyproject_data, project_root=cwd
+    ):
+        crew, _ = load_crew(definition)
+        return crew, crew_class_name
 
     src_path = cwd / "src"
     if str(src_path) not in sys.path:

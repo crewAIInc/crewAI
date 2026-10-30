@@ -5,9 +5,12 @@ import inspect
 from pathlib import Path
 import subprocess
 import sys
-from typing import Any
+from typing import Any, NoReturn
 
 import click
+
+from crewai_cli.input_prompt import is_interactive
+from crewai_cli.run_crew import record_run_stopped, stops_run_as
 
 
 def _project_script_target(script_name: str) -> str | None:
@@ -51,7 +54,8 @@ def _load_conversational_flow_from_kickoff_script() -> Any | None:
             and issubclass(value, Flow)
             and getattr(value, "conversational", False)
         ):
-            return value()
+            with stops_run_as("load_failed"):
+                return value()
 
     for value in vars(module).values():
         if (
@@ -64,7 +68,74 @@ def _load_conversational_flow_from_kickoff_script() -> Any | None:
     return None
 
 
-def _run_conversational_flow_tui(flow: Any) -> Any:
+def _kickoff_flow_with_inputs(inputs: dict[str, Any]) -> Any:
+    """Kick off the project's flow with ``inputs``, as AMP does: the flow class
+    defined in the ``kickoff`` script's module, ``FlowClass().kickoff(inputs=...)``.
+
+    ``main.py``'s own ``kickoff()`` is not called, so a project scaffolded before
+    it read inputs still gets them instead of silently running on defaults.
+    """
+    target = _project_script_target("kickoff")
+    if not target or ":" not in target:
+        record_run_stopped("invalid_project")
+        raise click.UsageError(
+            "--inputs needs a `kickoff` script in [project.scripts] that points "
+            "at the module defining the flow"
+        )
+    module_name = target.split(":", 1)[0]
+    _prepare_project_import_path()
+    with stops_run_as("load_failed"):
+        module = importlib.import_module(module_name)
+        from crewai.flow.flow import Flow
+
+    # A set: one class bound under two names (`MyFlow = ContentFlow`) is one flow.
+    flows = list(
+        {
+            value
+            for value in vars(module).values()
+            if inspect.isclass(value)
+            and issubclass(value, Flow)
+            and value.__module__ == module.__name__
+        }
+    )
+    if len(flows) != 1:
+        found = ", ".join(sorted(flow.__name__ for flow in flows)) or "none"
+        record_run_stopped("load_failed")
+        raise click.UsageError(
+            f"--inputs needs exactly one Flow class defined in {module_name}; "
+            f"found: {found}"
+        )
+    if getattr(flows[0], "conversational", False):
+        record_run_stopped("unsupported_option")
+        raise click.UsageError(
+            "--inputs is not supported for a conversational flow; it takes "
+            "messages, not inputs"
+        )
+    with stops_run_as("load_failed"):
+        flow = flows[0]()
+    return flow.kickoff(inputs=inputs)
+
+
+def _exit_without_chat_terminal() -> NoReturn:
+    """Explain how to drive a conversational flow headless, then exit 1.
+
+    The chat TUI would block on a terminal that is not there. Callers check
+    ``is_interactive()`` themselves, before any fallback of their own.
+    """
+    record_run_stopped("no_terminal")
+    click.secho(
+        "  This flow is conversational, which needs an interactive terminal.\n"
+        "  Drive it from Python instead: `flow.handle_turn(message, "
+        "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
+        fg="yellow",
+        err=True,
+    )
+    raise SystemExit(1)
+
+
+def _run_conversational_flow_tui(
+    flow: Any, definition: str | Path | None = None
+) -> Any:
     from crewai.events.event_listener import EventListener
 
     from crewai_cli.crew_run_tui import CrewRunApp
@@ -78,6 +149,13 @@ def _run_conversational_flow_tui(flow: Any) -> Any:
     app._flow = flow
     app.run()
 
+    if getattr(app, "_want_traced_rerun", False):
+        # This conversational flow again (by its definition, when it was named
+        # by one), traced, then evaluated.
+        from crewai_cli.run_crew import _chain_traced_rerun
+
+        _chain_traced_rerun({"definition": str(definition) if definition else None})
+
     if app._status == "failed":
         raise SystemExit(1)
 
@@ -90,6 +168,8 @@ def kickoff_flow() -> None:
     """
     flow = _load_conversational_flow_from_kickoff_script()
     if flow is not None:
+        if not is_interactive():
+            _exit_without_chat_terminal()
         _run_conversational_flow_tui(flow)
         return
 

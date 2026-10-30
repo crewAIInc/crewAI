@@ -1231,7 +1231,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     ```
 
     <Tip>
-      [Click here](/en/concepts/event-listener#event-listeners) for more details
+      [Click here](/en/concepts/event-listener#creating-a-custom-event-listener) for more details
     </Tip>
   </Tab>
 
@@ -1387,6 +1387,17 @@ Learn how to get the most out of your LLM configuration:
       3. Use chunking for large documents
       4. Monitor token usage to optimize costs
     </Info>
+
+    **Models CrewAI does not know.** CrewAI looks up each model's context window in a built-in catalog and uses 85% of it, keeping the rest as headroom. That size decides when a large tool result is saved to a file instead of being added to the conversation, and when the conversation is summarized. If the catalog does not list your model, CrewAI assumes a default window (8,192 tokens for most providers) and logs a warning that names the model. Set `context_window_size` to the model's full context window in tokens. It takes priority over the catalog for every provider, and the same 85% applies:
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/google/gemini-4-argon",
+        context_window_size=1_048_576,  # the model's full context window, in tokens
+    )
+    ```
   </Accordion>
 
   <Accordion title="Performance Optimization">
@@ -1506,6 +1517,8 @@ llm = LLM(
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
+
+    If a provider's key is missing, or is still the `YOUR_API_KEY` placeholder that `crewai create flow` writes to `.env`, crewAI raises `MissingAPIKeyError` naming the variable to set. Add the key to your project's `.env` and run `crewai run` again. The error is a `ValueError` subclass, importable from `crewai.llms.base_llm`.
   </Tab>
   <Tab title="Model Names">
     <Check>
@@ -1551,6 +1564,30 @@ llm = LLM(
     <Warning>
       A large or deeply nested `response_model` makes upstream timeouts more likely. Treat these as transient provider failures, not as the model producing malformed structured output.
     </Warning>
+  </Tab>
+  <Tab title="Empty Responses">
+    <Tip>
+      An empty answer can be transient, so the agent resends the same request once before failing.
+    </Tip>
+
+    If the model again returns no content and no tool calls, the agent raises `EmptyLLMResponseError`. It subclasses `ValueError`, so existing `except ValueError` handlers still catch it:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
   </Tab>
   <Tab title="Context Length">
     <Tip>
