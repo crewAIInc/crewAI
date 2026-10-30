@@ -216,6 +216,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "zai",
     "zhipuai",
     "zhipu",
+    "bigmodel",
 ]
 
 
@@ -244,7 +245,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "zai": "zai",
     "zhipuai": "zhipuai",
     "zhipu": "zhipuai",
-    "bigmodel": "zhipuai",
+    "bigmodel": "bigmodel",
 }
 
 

@@ -501,6 +501,24 @@ class TestLLMIntegration:
             assert llm.provider == "zai"
             assert llm.model == "glm-5.3-flash"
 
+    def test_llm_factory_creates_openai_compatible_for_bigmodel(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for bigmodel."""
+        with patch.dict(os.environ, {"BIGMODEL_API_KEY": "test-key"}):
+            llm = LLM(model="bigmodel/glm-5.3-flash")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "bigmodel"
+            assert llm.model == "glm-5.3-flash"
+            assert llm.base_url == "https://open.bigmodel.cn/api/paas/v4"
+
+    def test_llm_explicit_provider_bigmodel(self):
+        """Test LLM with explicit provider='bigmodel' routes to native OpenAICompatibleCompletion."""
+        with patch.dict(os.environ, {"BIGMODEL_API_KEY": "test-key"}):
+            llm = LLM(model="glm-5.3-flash", provider="bigmodel")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "bigmodel"
+            assert llm.model == "glm-5.3-flash"
+            assert llm.base_url == "https://open.bigmodel.cn/api/paas/v4"
+
 
 class TestCallMocking:
     """Tests for mocking the call method."""

@@ -119,6 +119,13 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_required=True,
         fallback_api_key_envs=("BIGMODEL_API_KEY", "ZAI_API_KEY"),
     ),
+    "bigmodel": ProviderConfig(
+        base_url="https://open.bigmodel.cn/api/paas/v4",
+        api_key_env="BIGMODEL_API_KEY",
+        base_url_env="BIGMODEL_BASE_URL",
+        api_key_required=True,
+        fallback_api_key_envs=("ZHIPUAI_API_KEY", "ZAI_API_KEY"),
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
