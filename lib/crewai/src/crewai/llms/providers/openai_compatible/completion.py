@@ -97,6 +97,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "fireworks_ai": ProviderConfig(
+        base_url="https://api.fireworks.ai/inference/v1",
+        api_key_env="FIREWORKS_API_KEY",
+        base_url_env="FIREWORKS_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
