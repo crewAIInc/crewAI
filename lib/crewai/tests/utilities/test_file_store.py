@@ -169,3 +169,63 @@ class TestAsyncFileStore:
         finally:
             await aclear_files(crew_id)
             await aclear_task_files(task_id)
+
+
+class TestRunSync:
+    """The sync bridge must not replace a coroutine's error with an event-loop error."""
+
+    def test_runtime_error_survives_a_running_loop(self) -> None:
+        import asyncio
+
+        from crewai.utilities.file_store import _run_sync
+
+        async def operation() -> None:
+            raise RuntimeError("file store failed")
+
+        async def main() -> None:
+            with pytest.raises(RuntimeError, match="file store failed"):
+                _run_sync(operation())
+
+        asyncio.run(main())
+
+    def test_runtime_error_survives_without_a_running_loop(self) -> None:
+        from crewai.utilities.file_store import _run_sync
+
+        async def operation() -> None:
+            raise RuntimeError("file store failed")
+
+        with pytest.raises(RuntimeError, match="file store failed"):
+            _run_sync(operation())
+
+    def test_value_error_survives_a_running_loop(self) -> None:
+        import asyncio
+
+        from crewai.utilities.file_store import _run_sync
+
+        async def operation() -> None:
+            raise ValueError("bad file")
+
+        async def main() -> None:
+            with pytest.raises(ValueError, match="bad file"):
+                _run_sync(operation())
+
+        asyncio.run(main())
+
+    def test_context_var_reaches_the_worker_thread(self) -> None:
+        import asyncio
+        import contextvars
+
+        from crewai.utilities.file_store import _run_sync
+
+        marker: contextvars.ContextVar[str] = contextvars.ContextVar(
+            "file_store_marker", default="missing"
+        )
+
+        async def operation() -> str:
+            return marker.get()
+
+        async def main() -> None:
+            marker.set("kept")
+            assert _run_sync(operation()) == "kept"
+
+        asyncio.run(main())
