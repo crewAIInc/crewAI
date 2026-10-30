@@ -984,13 +984,29 @@ class AnthropicCompletion(BaseLLM):
                     for tc in tool_calls:
                         if isinstance(tc, dict):
                             func = tc.get("function", {})
+                            raw_arguments = func.get("arguments", "{}")
+                            if isinstance(raw_arguments, str):
+                                # Arguments are stored verbatim from the LLM
+                                # and may be truncated or malformed (e.g. a
+                                # stream cut by a length limit); degrade to an
+                                # empty input like the Gemini and OpenAI
+                                # providers instead of failing the whole
+                                # conversation replay.
+                                try:
+                                    arguments: Any = (
+                                        json.loads(raw_arguments)
+                                        if raw_arguments
+                                        else {}
+                                    )
+                                except (json.JSONDecodeError, TypeError):
+                                    arguments = {}
+                            else:
+                                arguments = raw_arguments
                             tool_use = {
                                 "type": "tool_use",
                                 "id": tc.get("id", ""),
                                 "name": func.get("name", ""),
-                                "input": json.loads(func.get("arguments", "{}"))
-                                if isinstance(func.get("arguments"), str)
-                                else func.get("arguments", {}),
+                                "input": arguments,
                             }
                             assistant_content.append(tool_use)
                     if assistant_content:
