@@ -804,7 +804,7 @@ O CrewAI suporta respostas em streaming de LLMs, permitindo que sua aplicação 
     ```
 
     <Tip>
-      [Clique aqui](/pt-BR/concepts/event-listener#event-listeners) para mais detalhes
+      [Clique aqui](/pt-BR/concepts/event-listener#criando-um-listener-de-evento-personalizado) para mais detalhes
     </Tip>
   </Tab>
 </Tabs>
@@ -867,6 +867,17 @@ Saiba como obter o máximo da configuração do seu LLM:
       3. Utilize divisão para documentos grandes
       4. Monitore tokens para otimizar custos
     </Info>
+
+    **Modelos que o CrewAI não conhece.** O CrewAI busca a janela de contexto de cada modelo em um catálogo embutido e usa 85% dela, deixando o restante como margem. Esse tamanho decide quando um resultado grande de ferramenta é salvo em um arquivo em vez de entrar na conversa, e quando a conversa é resumida. Se o catálogo não lista o seu modelo, o CrewAI assume uma janela padrão (8.192 tokens na maioria dos provedores) e registra um aviso com o nome do modelo. Defina `context_window_size` com a janela de contexto completa do modelo, em tokens. Ela tem prioridade sobre o catálogo em todos os provedores, e os mesmos 85% se aplicam:
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/google/gemini-4-argon",
+        context_window_size=1_048_576,  # the model's full context window, in tokens
+    )
+    ```
   </Accordion>
 
   <Accordion title="Otimização de Performance">
@@ -938,6 +949,8 @@ Saiba como obter o máximo da configuração do seu LLM:
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
+
+    Se a chave de um provedor estiver ausente, ou ainda for o placeholder `YOUR_API_KEY` que o `crewai create flow` grava no `.env`, o crewAI lança `MissingAPIKeyError` indicando a variável a ser definida. Adicione a chave ao `.env` do seu projeto e execute `crewai run` novamente. O erro é uma subclasse de `ValueError` e pode ser importado de `crewai.llms.base_llm`.
   </Tab>
   <Tab title="Nomes dos Modelos">
     <Check>
@@ -983,6 +996,30 @@ Saiba como obter o máximo da configuração do seu LLM:
     <Warning>
       Um `response_model` grande ou profundamente aninhado aumenta a chance de timeouts upstream. Trate esses casos como falhas transitórias do provedor, e não como o modelo produzindo saída estruturada malformada.
     </Warning>
+  </Tab>
+  <Tab title="Respostas Vazias">
+    <Tip>
+      Uma resposta vazia pode ser transitória, por isso o agente reenvia a mesma requisição uma vez antes de falhar.
+    </Tip>
+
+    Se o modelo novamente não retornar conteúdo nem chamadas de ferramenta, o agente lança `EmptyLLMResponseError`. Ela é subclasse de `ValueError`, então os handlers `except ValueError` existentes continuam a capturá-la:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
   </Tab>
   <Tab title="Comprimento do Contexto">
     <Tip>
