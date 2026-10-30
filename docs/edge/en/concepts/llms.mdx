@@ -1188,6 +1188,38 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Together AI">
+    CrewAI talks to Together AI through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    TOGETHER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    TOGETHER_BASE_URL=https://api.together.ai/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Together AI features:
+      - Open-weight models behind an OpenAI-compatible endpoint
+      - Streaming, tool calling and JSON schema structured outputs
+      - Serverless and dedicated endpoints
+    </Info>
+
+    Only the `together/` prefix is removed. Model ids keep their `organization/model`
+    form, so `together/Qwen/Qwen3-235B-A22B-Instruct-2507-tput` reaches the API as
+    `Qwen/Qwen3-235B-A22B-Instruct-2507-tput`.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
