@@ -404,7 +404,7 @@ CrewAI Flows는 비구조적 및 구조적 상태 관리 옵션을 모두 제공
 클래스 레벨에서 @persist 데코레이터를 적용하면 모든 flow 메서드 상태가 자동으로 영속됩니다:
 
 ```python
-@persist  # 기본적으로 SQLiteFlowPersistence 사용
+@persist()  # 기본적으로 SQLiteFlowPersistence 사용
 class MyFlow(Flow[MyState]):
     @start()
     def initialize_flow(self):
@@ -425,7 +425,7 @@ class MyFlow(Flow[MyState]):
 
 ```python
 class AnotherFlow(Flow[dict]):
-    @persist  # Persists only this method's state
+    @persist()  # Persists only this method's state
     @start()
     def begin(self):
         if "runs" not in self.state:
@@ -450,7 +450,7 @@ class CounterState(BaseModel):
     id: str = ""
     counter: int = 0
 
-@persist
+@persist()
 class CounterFlow(Flow[CounterState]):
     @start()
     def step(self):
