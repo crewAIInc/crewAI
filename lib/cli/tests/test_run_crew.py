@@ -593,7 +593,7 @@ def test_json_run_install_failure_exits_nonzero(monkeypatch, tmp_path: Path):
 
 
 def test_run_json_crew_exports_trained_agents_env(monkeypatch, tmp_path: Path):
-    """JSON crews run in-process, so the pickle path must land in the env var."""
+    """JSON crews run in-process, so the trained-agents path must land in the env var."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(CREWAI_TRAINED_AGENTS_FILE_ENV, raising=False)
 
