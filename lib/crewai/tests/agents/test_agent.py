@@ -1258,6 +1258,32 @@ def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypat
     assert result == "What is 1 + 1?"
 
 
+def test_agent_use_trained_data_warns_about_legacy_pickle_file(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_TRAINED_AGENTS_FILE", raising=False)
+    (tmp_path / "trained_agents_data.pkl").write_bytes(b"not loaded")
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with pytest.warns(UserWarning, match="pickle format.*Re-run `crewai train"):
+        result = agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    assert result == "What is 1 + 1?"
+
+
+def test_agent_use_trained_data_no_warning_without_legacy_pickle_file(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_TRAINED_AGENTS_FILE", raising=False)
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
