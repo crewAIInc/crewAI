@@ -729,6 +729,99 @@ Access all feedback collected during a flow via `self.last_human_feedback` (most
 
 For a complete guide on human feedback in flows, including **async/non-blocking feedback** with custom providers (Slack, webhooks, etc.), see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
 
+### Asking the user for input with `ask()`
+
+`Flow.ask()` pauses the current step to ask the user a question and returns the answer text — use it for wizards, clarifications, and mid-flow decisions. This is different from `handle_turn()`, which starts a whole conversational turn on a conversational `Flow` (see [Conversational Flows](/en/guides/flows/conversational-flows)).
+
+By default `ask()` reads from the terminal. To collect input from anywhere else — a script, a queue, Slack, a web UI — set a custom input provider: any object implementing `request_input(message, flow, metadata=None)`.
+
+```python Code
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Deterministic provider: scripted answers keyed by question text."""
+
+    def __init__(self, script):
+        # script: list of (question_substring, answer, responder) tuples.
+        self.script = script
+
+    def request_input(self, message, flow, metadata=None):
+        # Metadata passed to ask() arrives here; use it to route the question.
+        for question_part, answer, responder in self.script:
+            if question_part in message:
+                return InputResponse(
+                    text=answer,
+                    metadata={"responded_by": responder, "channel": "script"},
+                )
+        # Unavailable input: return None explicitly. Never invent an answer.
+        return None
+
+
+class OnboardingFlow(Flow):
+    input_provider = ScriptedProvider(
+        script=[("team name", "spinach-labs", "abhishek")]
+    )
+
+    @start()
+    def onboard(self):
+        # ask() returns the response text; metadata goes to the provider.
+        team = self.ask(
+            "What is your team name?",
+            metadata={"user_id": "u123", "channel": "#onboarding"},
+        )
+        if team is None:
+            return "onboarding skipped: no team name provided"
+        # No scripted answer for this question, so the provider returns None.
+        nickname = self.ask("Pick a nickname for the team bot?")
+        if nickname is None:
+            # Handle None explicitly: unavailable input is NOT an answer.
+            return f"team '{team}' onboarded without a nickname"
+        return f"team '{team}' onboarded, bot nickname '{nickname}'"
+
+
+flow = OnboardingFlow()
+print(flow.kickoff())
+```
+
+Run it (no stdin, no model calls, no credentials):
+
+```bash
+python scripted_input_provider_example.py
+```
+
+Expected output:
+
+```text
+team 'spinach-labs' onboarded without a nickname
+```
+
+Every `ask()` call is recorded in `flow.input_history`: the question, the response (or `None`), the asking method, the request `metadata`, and the provider's `response_metadata`.
+
+```python Code
+for entry in flow.input_history:
+    print(entry["message"], "->", entry["response"])
+    print("request metadata:", entry["metadata"])
+    print("response metadata:", entry["response_metadata"])
+```
+
+```text
+What is your team name? -> spinach-labs
+request metadata: {'user_id': 'u123', 'channel': '#onboarding'}
+response metadata: {'responded_by': 'abhishek', 'channel': 'script'}
+Pick a nickname for the team bot? -> None
+request metadata: None
+response metadata: None
+```
+
+Notes:
+
+- `ask()` blocks the calling step until the provider answers (an optional `timeout=` also yields `None` on expiry). It never blocks the event loop: synchronous providers run in a thread pool.
+- When `@persist` is configured, `ask()` checkpoints `self.state` before waiting, so a crash while waiting for input does not lose state.
+- Return a plain string from `request_input()` for simple answers; return an `InputResponse` when the answer should carry metadata back. Return `None` for unavailable input (user cancelled, no scripted answer, connection dropped) and handle it explicitly — `None` means "no answer", never an empty answer.
+- `ask()` prompts **inside** one running step. `handle_turn()` starts a **new conversational turn** (appends the user line, routes, runs the graph). Use `ask()` for a mid-step question and `handle_turn()` for the next chat message.
+
 ## Adding Agents to Flows
 
 Agents can be seamlessly integrated into your flows, providing a lightweight alternative to full Crews when you need simpler, focused task execution. Here's an example of how to use an Agent within a flow to perform market research:

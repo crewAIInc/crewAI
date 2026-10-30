@@ -1886,6 +1886,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
+    @property
+    def input_history(self) -> list[InputHistoryEntry]:
+        """Audit trail of ``ask()`` prompts and responses.
+
+        Each call to :meth:`ask` appends one entry recording the question,
+        the response (or ``None`` when input was unavailable), which method
+        asked, and any metadata exchanged between the caller and the input
+        provider.
+
+        Returns:
+            list[InputHistoryEntry]: A copy of the recorded input history.
+                Each entry carries ``message``, ``response``,
+                ``method_name``, ``timestamp``, ``metadata`` (request
+                metadata), and ``response_metadata`` (provider metadata).
+        """
+        return list(self._input_history)
+
     def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
