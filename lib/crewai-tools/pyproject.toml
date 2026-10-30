@@ -149,6 +149,10 @@ oxylabs = [
     # allow it rather than pinning consumers to a single release.
     "oxylabs>=2.0.0,<4",
 ]
+youtube = [
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.25.0",
+    ]
 azure-documentdb = [
     "azure-identity>=1.17.0,<2",
     "pymongo>=4.18.3; python_version >= '3.11'",
