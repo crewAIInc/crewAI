@@ -1396,7 +1396,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "Use 'await flow.resume_async(feedback)' instead."
             )
 
-        return asyncio.run(self.resume_async(feedback))
+        # Like kickoff(): from_pending() registered this flow in the caller's
+        # runtime state, so the outermost scope has to be closed here or the
+        # flow stays in every later run's checkpoints.
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
+        try:
+            return asyncio.run(self.resume_async(feedback))
+        finally:
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def resume_async(self, feedback: str = "") -> Any:
         """Async version of resume.
@@ -1424,6 +1431,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._cel_now = datetime.now(timezone.utc)
 
         execution_token = None
+
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
 
         # Force `current_flow_id` to this flow's match id for the
         # duration of the resume so the usage listener's filter passes
@@ -1464,6 +1473,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
             self._end_trace_execution(execution_token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
