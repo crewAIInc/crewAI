@@ -937,6 +937,39 @@ def test_azure_openai_model_parameter_excluded():
         assert params["stream"] == False
 
 
+def test_prepare_completion_params_forwards_max_completion_tokens_and_reasoning_effort():
+    """Completions path must forward max_completion_tokens / reasoning_effort.
+
+    Azure reasoning deployments reject max_tokens; these settings used to be
+    dropped on api="completions" and only reached the Responses delegate.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com/openai/deployments/gpt-5-nano",
+    }):
+        llm = LLM(
+            model="azure/gpt-5-nano",
+            max_completion_tokens=256,
+            reasoning_effort="low",
+        )
+        params = llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "Say hello."}]
+        )
+        extras = params.get("model_extras") or {}
+        assert extras.get("max_completion_tokens") == 256
+        assert extras.get("reasoning_effort") == "low"
+        assert "max_tokens" not in params
+
+        # When only max_tokens is set, keep sending it as before.
+        llm_mt = LLM(model="azure/gpt-5-nano", max_tokens=128)
+        params_mt = llm_mt._prepare_completion_params(
+            messages=[{"role": "user", "content": "Say hello."}]
+        )
+        assert params_mt.get("max_tokens") == 128
+        extras_mt = params_mt.get("model_extras") or {}
+        assert "max_completion_tokens" not in extras_mt
+
+
 def test_non_azure_openai_model_parameter_included():
     """
     Test that model parameter IS included for non-Azure OpenAI endpoints

@@ -687,8 +687,14 @@ class AzureCompletion(BaseLLM):
             params["frequency_penalty"] = self.frequency_penalty
         if self.presence_penalty is not None:
             params["presence_penalty"] = self.presence_penalty
-        if self.max_tokens is not None:
+        # Prefer max_completion_tokens when set (Azure reasoning / o-series and
+        # gpt-5 chat completions reject max_tokens). Mirror OpenAICompletion.
+        if self.max_completion_tokens is not None:
+            model_extras["max_completion_tokens"] = self.max_completion_tokens
+        elif self.max_tokens is not None:
             params["max_tokens"] = self.max_tokens
+        if self.reasoning_effort is not None:
+            model_extras["reasoning_effort"] = self.reasoning_effort
         stops = self.stop_sequences
         if stops and self.supports_stop_words():
             params["stop"] = stops
