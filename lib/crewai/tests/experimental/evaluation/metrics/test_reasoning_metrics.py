@@ -186,3 +186,47 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         assert isinstance(result, EvaluationScore)
         assert result.score == 4.2
         assert "• Loop Avoidance: 2.0/10" in result.feedback
+
+
+class TestReasoningEfficiencyMultimodalResponses:
+    """Message-list responses must be read through the shared message-text helper."""
+
+    @pytest.fixture
+    def llm_calls(self) -> List[Dict[str, Any]]:
+        response = [
+            {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "Review the evidence"}],
+            }
+        ]
+        return [
+            {"prompt": "What next?", "response": response, "timestamp": 1000 + index}
+            for index in range(3)
+        ]
+
+    @pytest.fixture
+    def evaluator(self) -> ReasoningEfficiencyEvaluator:
+        return ReasoningEfficiencyEvaluator(llm=MagicMock(spec=LLM))
+
+    def test_loop_detection_reads_the_text_parts(
+        self, evaluator: ReasoningEfficiencyEvaluator, llm_calls: List[Dict[str, Any]]
+    ) -> None:
+        is_loop, details = evaluator._detect_loops(llm_calls)
+
+        assert is_loop is True
+        assert details[0]["snippet"] == "Review the evidence..."
+
+    def test_call_samples_render_the_text_parts(
+        self, evaluator: ReasoningEfficiencyEvaluator, llm_calls: List[Dict[str, Any]]
+    ) -> None:
+        samples = evaluator._get_call_samples(llm_calls)
+
+        assert "Review the evidence" in samples
+        assert "'type'" not in samples
+
+    def test_response_length_counts_text_characters(
+        self, evaluator: ReasoningEfficiencyEvaluator, llm_calls: List[Dict[str, Any]]
+    ) -> None:
+        pattern = evaluator._analyze_reasoning_patterns(llm_calls)
+
+        assert pattern["metrics"]["avg_length"] == len("Review the evidence")
