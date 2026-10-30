@@ -21,6 +21,7 @@ from typing import (
 )
 import warnings
 
+from crewai_core.constants import PICKLE_UNSUPPORTED_MESSAGE
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -1471,6 +1472,19 @@ class Agent(BaseAgent):
             if crew_trained_agents_file
             else os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE)
         )
+
+        legacy_file = os.path.splitext(trained_file)[0] + ".pkl"
+        if (
+            not os.path.exists(trained_file)
+            and trained_file == TRAINED_AGENTS_DATA_FILE
+            and os.path.exists(legacy_file)
+        ):
+            warnings.warn(
+                f"Ignoring {legacy_file}: "
+                + PICKLE_UNSUPPORTED_MESSAGE.format(file_name=legacy_file),
+                UserWarning,
+                stacklevel=2,
+            )
 
         if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
