@@ -6,7 +6,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
-from typing import Any, Literal
+from typing import Literal
 import uuid
 
 import aiosqlite
@@ -20,22 +20,15 @@ CREATE TABLE IF NOT EXISTS checkpoints (
     created_at TEXT NOT NULL,
     parent_id TEXT,
     branch TEXT NOT NULL DEFAULT 'main',
-    data TEXT NOT NULL
+    data JSONB NOT NULL
 )
 """
 
-# ``data`` is bound as plain JSON text. The previous writer used SQLite's
-# ``jsonb()``, which exists only in SQLite >= 3.45.0 (2024-01-15) and made
-# every checkpoint write fail with ``no such function: jsonb`` on system
-# Pythons shipping older SQLite (Ubuntu 22.04, Debian 12, RHEL 9, macOS).
-# Reads use a plain ``SELECT`` so no JSON1 function is required anywhere;
-# rows written as JSONB blobs by that writer (readable only by SQLite that
-# has ``jsonb``) are decoded in :func:`_decode_data`.
 _INSERT = (
     "INSERT INTO checkpoints (id, created_at, parent_id, branch, data) "
-    "VALUES (?, ?, ?, ?, ?)"
+    "VALUES (?, ?, ?, ?, jsonb(?))"
 )
-_SELECT = "SELECT data FROM checkpoints WHERE id = ?"
+_SELECT = "SELECT json(data) FROM checkpoints WHERE id = ?"
 _PRUNE = """
 DELETE FROM checkpoints WHERE branch = ? AND rowid NOT IN (
     SELECT rowid FROM checkpoints WHERE branch = ? ORDER BY rowid DESC LIMIT ?
@@ -52,40 +45,6 @@ def _make_id() -> tuple[str, str]:
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     checkpoint_id = f"{ts}_{uuid.uuid4().hex[:8]}"
     return checkpoint_id, ts
-
-
-def _decode_data(raw: Any) -> str:
-    """Decode a stored checkpoint ``data`` value into JSON text.
-
-    Rows written by this provider are TEXT. Rows written before the storage
-    format changed to text are binary JSONB blobs, produced by SQLite's
-    ``jsonb()``; decoding them requires that same ``jsonb``-capable SQLite
-    (>= 3.45.0), so the attempt is skipped with a clear error on older
-    versions instead of a cryptic SQL failure.
-
-    Args:
-        raw: The value returned for the ``data`` column.
-
-    Returns:
-        The checkpoint payload as JSON text.
-
-    Raises:
-        ValueError: If the payload is a legacy JSONB blob on a SQLite
-            version that cannot decode it.
-    """
-    if not isinstance(raw, bytes):
-        return str(raw)
-    if sqlite3.sqlite_version_info < (3, 45, 0):
-        raise ValueError(
-            "This checkpoint database contains rows written in the legacy "
-            "JSONB format (SQLite >= 3.45.0); reading them requires a "
-            f"Python with SQLite >= 3.45.0, found {sqlite3.sqlite_version}."
-        )
-    with closing(sqlite3.connect(":memory:")) as conn:
-        decoded = conn.execute("SELECT json(?)", (raw,)).fetchone()
-    if decoded is None or decoded[0] is None:
-        raise ValueError("Failed to decode legacy JSONB checkpoint data")
-    return str(decoded[0])
 
 
 class SqliteProvider(BaseProvider):
@@ -175,16 +134,15 @@ class SqliteProvider(BaseProvider):
             The raw JSON string.
 
         Raises:
-            ValueError: If the checkpoint ID is not found, or the row was
-                written as a legacy JSONB blob on a SQLite version that
-                cannot decode it.
+            ValueError: If the checkpoint ID is not found.
         """
         db_path, checkpoint_id = location.rsplit("#", 1)
         with closing(sqlite3.connect(db_path)) as conn, conn:
             row = conn.execute(_SELECT, (checkpoint_id,)).fetchone()
             if row is None:
                 raise ValueError(f"Checkpoint not found: {checkpoint_id}")
-            return _decode_data(row[0])
+            result: str = row[0]
+            return result
 
     async def afrom_checkpoint(self, location: str) -> str:
         """Read a checkpoint from the SQLite database asynchronously.
@@ -196,9 +154,7 @@ class SqliteProvider(BaseProvider):
             The raw JSON string.
 
         Raises:
-            ValueError: If the checkpoint ID is not found, or the row was
-                written as a legacy JSONB blob on a SQLite version that
-                cannot decode it.
+            ValueError: If the checkpoint ID is not found.
         """
         db_path, checkpoint_id = location.rsplit("#", 1)
         async with aiosqlite.connect(db_path) as db:
@@ -206,4 +162,5 @@ class SqliteProvider(BaseProvider):
             row = await cursor.fetchone()
             if row is None:
                 raise ValueError(f"Checkpoint not found: {checkpoint_id}")
-            return _decode_data(row[0])
+            result: str = row[0]
+            return result
