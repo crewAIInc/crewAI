@@ -117,6 +117,15 @@ class FileHandler:
             raise ValueError(f"Failed to log message: {e!s}") from e
 
 
+PICKLE_UNSUPPORTED_MESSAGE = (
+    "Training data in pickle format ({file_name}) is no longer supported. "
+    "Loading a pickle file can execute arbitrary code, so CrewAI now stores "
+    "training data as JSON. Re-run `crewai train -n <iterations> -f "
+    "trained_agents_data.json` to regenerate it, and do not load pickle files "
+    "from sources you do not trust."
+)
+
+
 class JSONHandler:
     """Handler for saving and loading JSON data.
 
@@ -132,6 +141,8 @@ class JSONHandler:
         Args:
             file_name: The name of the file for saving and loading data.
         """
+        if file_name.endswith(".pkl"):
+            raise ValueError(PICKLE_UNSUPPORTED_MESSAGE.format(file_name=file_name))
         if not file_name.endswith(".json"):
             raise ValueError("Training data filename must end with .json")
 
@@ -177,10 +188,16 @@ class JSONHandler:
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             try:
                 with open(self.file_path, encoding="utf-8") as file:
-                    return json.load(file)
+                    data = json.load(file)
             except FileNotFoundError:
                 return {}
-            except json.JSONDecodeError as error:
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
                 raise ValueError(
                     f"Training data file contains invalid JSON: {self.file_path}"
                 ) from error
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Training data file must contain a JSON object: {self.file_path}"
+            )
+        return data

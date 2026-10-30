@@ -42,6 +42,10 @@ class TestJSONHandler(unittest.TestCase):
         ):
             JSONHandler("training-data")
 
+    def test_rejects_pickle_filename_with_migration_guidance(self):
+        with self.assertRaisesRegex(ValueError, "pickle format.*Re-run `crewai train"):
+            JSONHandler("trained_agents_data.pkl")
+
     def test_load_missing_file(self):
         loaded_data = self.handler.load()
         assert loaded_data == {}
@@ -54,6 +58,27 @@ class TestJSONHandler(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, f"invalid JSON: {self.file_path}"):
             self.handler.load()
+
+    def test_load_rejects_non_object_json(self):
+        Path(self.file_path).write_text("[]", encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "must contain a JSON object"):
+            self.handler.load()
+
+    def test_load_binary_file_does_not_execute_it(self):
+        marker = Path(self.file_path + ".marker")
+
+        class Exploit:
+            def __reduce__(self):
+                return (Path(str(marker)).write_text, ("pwned",))
+
+        import pickle
+
+        Path(self.file_path).write_bytes(pickle.dumps(Exploit()))
+
+        with self.assertRaisesRegex(ValueError, "invalid JSON"):
+            self.handler.load()
+        assert not marker.exists()
 
     def test_save_serialization_failure_preserves_existing_data(self):
         original = {"key": "value"}
