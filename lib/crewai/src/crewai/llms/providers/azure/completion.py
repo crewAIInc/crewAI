@@ -736,6 +736,9 @@ class AzureCompletion(BaseLLM):
         # pipeline, not the request body, so they have to travel in model_extras.
         if self.max_completion_tokens is not None:
             model_extras["max_completion_tokens"] = self.max_completion_tokens
+            # Reasoning deployments reject a body that carries both token caps,
+            # so the legacy one must not survive next to the new one.
+            params.pop("max_tokens", None)
         if self.reasoning_effort is not None:
             model_extras["reasoning_effort"] = self.reasoning_effort
 

@@ -1649,3 +1649,27 @@ def test_azure_completion_params_forward_cap_and_reasoning_effort():
         extras = params.get("model_extras", {})
         assert extras.get("max_completion_tokens") == 256
         assert extras.get("reasoning_effort") == "low"
+
+def test_azure_completion_params_drop_legacy_cap_when_reasoning_cap_is_set():
+    """A reasoning deployment rejects a body carrying both token caps.
+
+    Azure answers `max_tokens` alongside `max_completion_tokens` with an
+    unsupported-parameter error, so the legacy cap must not survive next to
+    the reasoning one.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com",
+    }):
+        llm = LLM(
+            model="azure/gpt-5-nano",
+            max_tokens=128,
+            max_completion_tokens=256,
+        )
+
+        params = llm._prepare_completion_params(
+            [{"role": "user", "content": "Say hello."}]
+        )
+
+        assert "max_tokens" not in params
+        assert params.get("model_extras", {}).get("max_completion_tokens") == 256
