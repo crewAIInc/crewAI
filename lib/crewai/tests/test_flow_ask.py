@@ -598,6 +598,84 @@ class TestInputHistory:
         assert flow._input_history[1]["message"] == "Depth?"
         assert flow._input_history[1]["response"] == "detailed"
 
+    def test_public_input_history_matches_the_private_record(self) -> None:
+        """``input_history`` exposes the same entries as a copy."""
+
+        class TestFlow(Flow):
+            input_provider = MockInputProvider(["AI"])
+
+            @start()
+            def gather(self):
+                return self.ask("Topic?")
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        history = flow.input_history
+        assert len(history) == 1
+        assert history[0]["message"] == "Topic?"
+        assert history[0]["response"] == "AI"
+        assert history[0]["method_name"] == "gather"
+
+        history.clear()
+        assert len(flow.input_history) == 1, "input_history must be a copy"
+
+
+class TestDocumentedScriptedProviderExample:
+    """The ``scripted_input.py`` example from the Flow concepts guide."""
+
+    def test_example_round_trips_metadata_and_handles_unavailable_input(self) -> None:
+        class ScriptedProvider:
+            def __init__(self, answers: list[str | None]) -> None:
+                self._answers = list(answers)
+                self.received_metadata: list[dict[str, Any] | None] = []
+
+            def request_input(
+                self, message: str, flow: Flow, metadata: dict[str, Any] | None = None
+            ) -> str | None:
+                self.received_metadata.append(metadata)
+                if not self._answers:
+                    return None
+                answer = self._answers.pop(0)
+                if answer is None:
+                    return None
+                return InputResponse(
+                    text=answer,
+                    metadata={"source": "script", "prompt": message},
+                )
+
+        provider = ScriptedProvider(["CrewAI", None])
+
+        class SurveyFlow(Flow):
+            input_provider = provider
+
+            @start()
+            def gather(self):
+                topic = self.ask(
+                    "What topic should we research?",
+                    metadata={"channel": "#research"},
+                )
+                extra = self.ask("Anything else?")
+                if extra is None:
+                    extra = "(none)"
+                return f"{topic} / {extra}"
+
+        flow = SurveyFlow()
+        assert flow.kickoff() == "CrewAI / (none)"
+
+        # The request metadata reached the provider for both questions, the
+        # second of which the provider answered with "no input available".
+        assert provider.received_metadata == [{"channel": "#research"}, None]
+
+        history = flow.input_history
+        assert history[0]["response"] == "CrewAI"
+        assert history[0]["response_metadata"] == {
+            "source": "script",
+            "prompt": "What topic should we research?",
+        }
+        assert history[1]["response"] is None
+        assert history[1]["response_metadata"] is None
+
     def test_input_history_includes_method_name(self) -> None:
         """Input history records which method called ask()."""
 

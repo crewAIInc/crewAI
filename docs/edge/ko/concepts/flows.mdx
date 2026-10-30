@@ -516,6 +516,100 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 영속성 시스템의 아키텍처는 기술적 정밀성과 맞춤화 옵션을 강조하여, 개발자가 내장된 신뢰성 기능의 이점을 누리면서 상태 관리에 대한 완전한 제어권을 유지할 수 있게 해줍니다.
 
+## `ask()`로 입력 받기
+
+`ask()`는 실행 중인 플로우 메서드를 답이 도착할 때까지 멈춥니다. 기본값은 콘솔 입력이라
+테스트에서 다루기 불편합니다. **입력 제공자**를 지정하면 콘솔을 대체합니다.
+`request_input(message, flow, metadata=None)`을 가진 객체라면 무엇이든 되므로, 플로우를
+바꾸지 않고 UI, 큐, 미리 정한 목록을 연결할 수 있습니다.
+
+제공자는 요청 `metadata`를 읽을 수 있고, 자체 메타데이터를 담은 `InputResponse`로 답할 수
+있습니다. `ask()`는 항상 텍스트를 반환하며(답이 없으면 `None`), 양방향 메타데이터는
+`flow.input_history`에 남습니다.
+
+```python scripted_input.py
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """결정적 제공자: 정해진 답을 순서대로 재생하고, 없으면 입력 없음을 알립니다."""
+
+    def __init__(self, answers: list[str | None]) -> None:
+        self._answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        self.received_metadata.append(metadata)
+        if not self._answers:
+            return None
+        answer = self._answers.pop(0)
+        if answer is None:
+            return None
+        return InputResponse(
+            text=answer,
+            metadata={"source": "script", "prompt": message},
+        )
+
+
+provider = ScriptedProvider(["CrewAI", None])
+
+
+class SurveyFlow(Flow):
+    input_provider = provider
+
+    @start()
+    def gather(self):
+        # 요청 메타데이터가 제공자에게 전달됩니다.
+        topic = self.ask(
+            "What topic should we research?",
+            metadata={"channel": "#research"},
+        )
+        print("topic:", topic)
+
+        # 답할 것이 없는 제공자는 None을 반환하며, 이는 답이 아닙니다.
+        extra = self.ask("Anything else?")
+        if extra is None:
+            print("no further input available, using the fallback")
+            extra = "(none)"
+        return f"{topic} / {extra}"
+
+
+flow = SurveyFlow()
+print("result:", flow.kickoff())
+
+for entry in flow.input_history:
+    print(entry["message"], "->", entry["response"], "|", entry["response_metadata"])
+```
+
+실행하면 다음과 같이 출력됩니다:
+
+```text
+topic: CrewAI
+no further input available, using the fallback
+result: CrewAI / (none)
+What topic should we research? -> CrewAI | {'source': 'script', 'prompt': 'What topic should we research?'}
+Anything else? -> None | None
+```
+
+두 가지를 짚어 둘 만합니다. 제공자는 두 번째 질문에 답이 없었는데도 요청 메타데이터를
+받았고, `flow.input_history`의 각 항목은 `message`, `response`, `method_name`, `timestamp`,
+`metadata`(요청), `response_metadata`(답변)를 유지합니다. `input_history`는 복사본을
+반환하므로 수정해도 플로우가 기록한 내용은 바뀌지 않습니다.
+
+`ask()`와 `handle_turn()`은 서로 다른 문제를 풉니다. `ask()`는 **이미 실행 중인 단계**를
+블록하고 그 메서드에 문자열을 반환합니다. `handle_turn()`은 플로우에서 **대화 턴**을
+시작하여 메시지를 라우팅하고 일치하는 리스너를 실행하며 대화 기록에 추가합니다. 워크플로
+단계 안의 질문에는 `ask()`를, 전체 플로우가 채팅이라면 `handle_turn()`을 사용하십시오.
+후자는 [대화형 플로우](/ko/guides/flows/conversational-flows)를 참고하십시오.
+
 ## 흐름 제어
 
 ### 조건부 로직: `or`

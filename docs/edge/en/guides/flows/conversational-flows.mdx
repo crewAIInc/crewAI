@@ -18,6 +18,8 @@ The examples below opt into `ConversationConfig(trace_scope="turn")`. Existing c
 | Turn complete | With `trace_scope="turn"`: `conversation_turn_completed` and `FlowFinished` per successful turn; `FlowFailed` on failure |
 | Full-session trace | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
+If your flow needs to ask a question **inside** a single step instead of starting a turn, use `Flow.ask()` with an input provider rather than `handle_turn()` — see [Collecting Input with `ask()`](/en/concepts/flows#collecting-input-with-ask) for the difference and a runnable provider.
+
 ## Turn APIs
 
 Use **`flow.handle_turn(message, session_id=...)`** for every user message from REST, WebSocket, tests, and custom UIs. Use **`flow.chat()`** when you want a local terminal chat loop for a conversational `Flow`.

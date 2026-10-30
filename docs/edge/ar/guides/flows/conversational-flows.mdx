@@ -18,6 +18,11 @@ mode: "wide"
 | اكتمال الجولة | مع `trace_scope="turn"`: ‏`conversation_turn_completed` و`FlowFinished` لكل جولة ناجحة؛ و`FlowFailed` عند الفشل |
 | تتبع الجلسة الكامل | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
+إذا كان تدفقك يحتاج إلى طرح سؤال **داخل** خطوة واحدة بدلًا من بدء جولة، فاستخدم `Flow.ask()`
+مع مزوّد مدخلات بدلًا من `handle_turn()`. راجع
+[جمع المدخلات باستخدام `ask()`](/ar/concepts/flows#collecting-input-with-ask) لمعرفة الفرق
+والحصول على مزوّد قابل للتشغيل.
+
 ## واجهات الجولات
 
 استخدم **`flow.handle_turn(message, session_id=...)`** لكل رسالة مستخدم من REST أو WebSocket أو الاختبارات أو الواجهات المخصصة. استخدم **`flow.chat()`** عندما تريد حلقة دردشة محلية في الطرفية لـ `Flow` محادثي.

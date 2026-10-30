@@ -516,6 +516,101 @@ Se o `restore_from_state_id` informado não corresponder a nenhum estado persist
 
 A arquitetura de persistência enfatiza precisão técnica e opções de personalização, permitindo que desenvolvedores mantenham controle total sobre o gerenciamento de estado enquanto se beneficiam dos recursos de confiabilidade integrados.
 
+## Coletando entrada com `ask()`
+
+`ask()` pausa o método de Flow em execução até que chegue uma resposta. Por padrão ele lê do
+console, o que atrapalha em testes. Um **input provider** substitui o console: qualquer objeto
+com `request_input(message, flow, metadata=None)` serve, então você pode ligar uma UI, uma fila
+ou uma lista roteirizada sem mudar o Flow.
+
+O provider pode ler o `metadata` da requisição e responder com um `InputResponse` que carrega
+metadados próprios. `ask()` sempre devolve o texto (ou `None` quando não há resposta); os
+metadados das duas direções ficam em `flow.input_history`.
+
+```python scripted_input.py
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Provider determinístico: repete uma lista de respostas e depois diz que não há entrada."""
+
+    def __init__(self, answers: list[str | None]) -> None:
+        self._answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        self.received_metadata.append(metadata)
+        if not self._answers:
+            return None
+        answer = self._answers.pop(0)
+        if answer is None:
+            return None
+        return InputResponse(
+            text=answer,
+            metadata={"source": "script", "prompt": message},
+        )
+
+
+provider = ScriptedProvider(["CrewAI", None])
+
+
+class SurveyFlow(Flow):
+    input_provider = provider
+
+    @start()
+    def gather(self):
+        # O metadado da requisição chega ao provider.
+        topic = self.ask(
+            "What topic should we research?",
+            metadata={"channel": "#research"},
+        )
+        print("topic:", topic)
+
+        # Um provider sem nada a dizer devolve None; isso não é uma resposta.
+        extra = self.ask("Anything else?")
+        if extra is None:
+            print("no further input available, using the fallback")
+            extra = "(none)"
+        return f"{topic} / {extra}"
+
+
+flow = SurveyFlow()
+print("result:", flow.kickoff())
+
+for entry in flow.input_history:
+    print(entry["message"], "->", entry["response"], "|", entry["response_metadata"])
+```
+
+Execute e você deverá ver:
+
+```text
+topic: CrewAI
+no further input available, using the fallback
+result: CrewAI / (none)
+What topic should we research? -> CrewAI | {'source': 'script', 'prompt': 'What topic should we research?'}
+Anything else? -> None | None
+```
+
+Dois pontos merecem atenção. O provider recebeu o metadado da segunda pergunta mesmo sem ter
+resposta, e cada entrada de `flow.input_history` guarda `message`, `response`, `method_name`,
+`timestamp`, `metadata` (requisição) e `response_metadata` (resposta) — `input_history` devolve
+uma cópia, então editá-la não altera o que o Flow registrou.
+
+`ask()` e `handle_turn()` resolvem problemas diferentes. `ask()` bloqueia um **passo que já
+está em execução** e devolve uma string para esse método. `handle_turn()` inicia um **turno
+conversacional** no Flow: roteia a mensagem, executa os listeners correspondentes e acrescenta
+ao histórico da conversa. Use `ask()` para uma pergunta dentro de um passo do fluxo de trabalho;
+use `handle_turn()` quando o Flow inteiro for um chat. Veja
+[Flows conversacionais](/pt-BR/guides/flows/conversational-flows) para o segundo caso.
+
 ## Controle de Flow
 
 ### Lógica Condicional: `or`
