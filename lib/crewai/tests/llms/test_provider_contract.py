@@ -90,12 +90,14 @@ class _ProviderCase:
         model: str,
         sync_builder: Callable[[str], tuple[Any, Any]],
         async_builder: Callable[[str], tuple[Any, Any]],
+        failure_builder: Callable[[], tuple[Any, Any]],
     ) -> None:
         self.name = name
         self.completion_class = completion_class
         self.model = model
         self._sync_builder = sync_builder
         self._async_builder = async_builder
+        self._failure_builder = failure_builder
 
     def completion(self) -> Any:
         return self.completion_class(model=self.model, api_key="placeholder-key")
@@ -106,11 +108,24 @@ class _ProviderCase:
     def with_async_response(self, text: str) -> tuple[Any, Any]:
         return self._async_builder(text)
 
+    def with_failing_call(self) -> tuple[Any, Any]:
+        return self._failure_builder()
+
 
 def _openai_sync(text: str) -> tuple[Any, Any]:
     fake_client = MagicMock()
     fake_client.chat.completions.with_raw_response.create.return_value = (
         _openai_raw_response(text)
+    )
+    return fake_client, patch.object(
+        OpenAICompletion, "_get_sync_client", return_value=fake_client
+    )
+
+
+def _openai_failure() -> tuple[Any, Any]:
+    fake_client = MagicMock()
+    fake_client.chat.completions.with_raw_response.create.side_effect = RuntimeError(
+        "boom"
     )
     return fake_client, patch.object(
         OpenAICompletion, "_get_sync_client", return_value=fake_client
@@ -135,6 +150,14 @@ def _anthropic_sync(text: str) -> tuple[Any, Any]:
     )
 
 
+def _anthropic_failure() -> tuple[Any, Any]:
+    fake_client = MagicMock()
+    fake_client.messages.create.side_effect = RuntimeError("boom")
+    return fake_client, patch.object(
+        AnthropicCompletion, "_get_sync_client", return_value=fake_client
+    )
+
+
 def _anthropic_async(text: str) -> tuple[Any, Any]:
     fake_client = MagicMock()
     fake_client.messages.create = AsyncMock(return_value=_anthropic_message(text))
@@ -145,12 +168,24 @@ def _anthropic_async(text: str) -> tuple[Any, Any]:
 
 PROVIDERS = [
     pytest.param(
-        _ProviderCase("openai", OpenAICompletion, OPENAI_MODEL, _openai_sync, _openai_async),
+        _ProviderCase(
+            "openai",
+            OpenAICompletion,
+            OPENAI_MODEL,
+            _openai_sync,
+            _openai_async,
+            _openai_failure,
+        ),
         id="openai",
     ),
     pytest.param(
         _ProviderCase(
-            "anthropic", AnthropicCompletion, ANTHROPIC_MODEL, _anthropic_sync, _anthropic_async
+            "anthropic",
+            AnthropicCompletion,
+            ANTHROPIC_MODEL,
+            _anthropic_sync,
+            _anthropic_async,
+            _anthropic_failure,
         ),
         id="anthropic",
     ),
@@ -220,3 +255,45 @@ def test_a_plain_string_prompt_reaches_the_sdk_as_a_user_message(
     roles = [message["role"] for message in sent["messages"]]
     assert roles[-1] == "user"
     assert sent["messages"][-1]["content"] != ""
+
+
+@pytest.mark.parametrize("case", PROVIDERS)
+def test_one_call_records_usage_with_the_same_keys(case: _ProviderCase) -> None:
+    """Both providers surface identical usage keys for the same exchange."""
+    llm = case.completion()
+    _, context = case.with_sync_response("hello")
+
+    with context:
+        llm.call("hi")
+
+    usage = llm._token_usage
+    assert usage["successful_requests"] == 1
+    assert usage["prompt_tokens"] == 3
+    assert usage["completion_tokens"] == 2
+    assert usage["total_tokens"] == 5
+
+
+@pytest.mark.parametrize("case", PROVIDERS)
+def test_a_failed_call_emits_exactly_one_failure_event(case: _ProviderCase) -> None:
+    """One logical failure is one ``llm_call_failed`` event, either provider."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallFailedEvent
+
+    with crewai_event_bus.scoped_handlers():
+        received: list[LLMCallFailedEvent] = []
+        crewai_event_bus.register_handler(
+            LLMCallFailedEvent,
+            lambda source, event: received.append(event),
+        )
+
+        llm = case.completion()
+        _, context = case.with_failing_call()
+
+        with context:
+            with pytest.raises(RuntimeError, match="boom"):
+                llm.call("hi")
+
+        # Sync handlers run on the bus's executor; flush before asserting.
+        assert crewai_event_bus.flush(timeout=5)
+        assert len(received) == 1
+        assert received[0].model == case.model
