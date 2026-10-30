@@ -52,6 +52,14 @@ except Exception as e:
     raise Exception(f"An error occurred while training the crew: {e}")
 ```
 
+<Warning>
+  **pickle에서 마이그레이션:** 학습 데이터는 이제 JSON(`training_data.json`, `trained_agents_data.json`)으로 저장됩니다. 이전 버전은 pickle(`.pkl`) 파일을 사용했습니다. pickle 파일을 역직렬화하면 임의의 코드가 실행될 수 있으므로 CrewAI는 더 이상 pickle 파일을 로드하지 않습니다. 신뢰할 수 없는 `.pkl` 파일은 crew가 시작되는 즉시 사용자의 컴퓨터에서 코드를 실행할 수 있었습니다.
+
+  - 기존 `.pkl` 파일은 무시됩니다. `trained_agents_data.pkl`이 있고 `trained_agents_data.json`이 없으면 에이전트는 학습된 제안 없이 실행되며 경고가 기록됩니다.
+  - `crewai train -f`, `--trained-agents-file`, `CREWAI_TRAINED_AGENTS_FILE` 또는 `Crew(trained_agents_file=...)`에 `.pkl` 파일을 전달하면 오류가 발생합니다.
+  - 마이그레이션하려면 `crewai train -n <n_iterations> -f trained_agents_data.json`을 다시 실행하세요. 신뢰할 수 없는 출처의 pickle 파일은 로드하지 마세요.
+</Warning>
+
 ### 주요 참고 사항
 
 - **양의 정수 필수 조건:** 반복 횟수(`n_iterations`)가 양의 정수인지 확인하세요. 이 조건이 충족되지 않으면 코드에서 `ValueError`가 발생합니다.

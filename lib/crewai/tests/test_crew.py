@@ -3036,6 +3036,18 @@ def test_crew_train_error(researcher, writer):
         )
 
 
+def test_crew_train_rejects_pickle_filename_with_original_error(researcher, writer):
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher, writer], tasks=[task])
+
+    with pytest.raises(ValueError, match="pickle format.*Re-run `crewai train"):
+        crew.train(n_iterations=1, filename="trained_agents_data.pkl")
+
+
 def test__setup_for_training(researcher, writer):
     researcher.allow_delegation = True
     writer.allow_delegation = True

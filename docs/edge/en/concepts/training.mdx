@@ -181,6 +181,14 @@ flowchart TD
   </Tab>
 </Tabs>
 
+<Warning>
+  **Migrating from pickle:** Training data is now stored as JSON (`training_data.json` and `trained_agents_data.json`). Earlier versions used pickle (`.pkl`) files. CrewAI no longer loads pickle files, because unpickling a file can execute arbitrary code, so an untrusted `.pkl` file could run code on your machine as soon as a crew started.
+
+  - Existing `.pkl` files are ignored. If a `trained_agents_data.pkl` is found and no `trained_agents_data.json` exists, agents run without trained suggestions and a warning is logged.
+  - Passing a `.pkl` file to `crewai train -f`, `--trained-agents-file`, `CREWAI_TRAINED_AGENTS_FILE` or `Crew(trained_agents_file=...)` raises an error.
+  - To migrate, re-run `crewai train -n <n_iterations> -f trained_agents_data.json`. Do not load pickle files from sources you do not trust.
+</Warning>
+
 ### Key Points to Note
 
 - **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.

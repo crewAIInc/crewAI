@@ -1488,9 +1488,21 @@ class Agent(BaseAgent):
 
         if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
+                suggestions = (
+                    trained_data_output.get("suggestions")
+                    if isinstance(trained_data_output, dict)
+                    else None
+                )
+                if not isinstance(suggestions, list) or not all(
+                    isinstance(item, str) for item in suggestions
+                ):
+                    raise ValueError(
+                        f"Trained data for agent '{self.role}' in {trained_file} "
+                        "must contain a list of string suggestions."
+                    )
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
-                    + "\n - ".join(trained_data_output["suggestions"])
+                    + "\n - ".join(suggestions)
                 )
         return task_prompt
 
