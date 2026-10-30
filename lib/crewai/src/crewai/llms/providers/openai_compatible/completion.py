@@ -286,3 +286,30 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def get_context_window_size(self) -> int:
+        """Get the context window size for the model.
+
+        These providers serve model ids from their own catalogs, so the
+        provider's entries are consulted first. The OpenAI table is still
+        merged in because a compatible endpoint may also serve models under
+        their OpenAI names. Without this, every catalogued Fireworks, DeepInfra
+        or Groq model fell back to the 8,192 default.
+
+        Returns:
+            The model's context window in tokens.
+        """
+        from crewai.llms.context_window import (
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            OPENAI_COMPATIBLE_CONTEXT_WINDOWS,
+            OPENAI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
+
+        provider_windows = OPENAI_COMPATIBLE_CONTEXT_WINDOWS.get(self.provider, {})
+        return resolve_context_window_size(
+            self.model,
+            {**OPENAI_CONTEXT_WINDOWS, **provider_windows},
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
+        )

@@ -151,6 +151,26 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(_
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
     _CATALOG, providers=_OPENAI_PROVIDERS
 )
+
+# Context windows for the providers served by ``OpenAICompatibleCompletion``,
+# keyed by the provider name the class carries. Each one is filtered by its own
+# ``litellm_provider``; looking them up in ``OPENAI_CONTEXT_WINDOWS`` alone leaves
+# every Fireworks (660 catalogued ids), DeepInfra (272) or Groq (18) model on the
+# 8,192 default even though the catalog publishes a limit for it.
+_OPENAI_COMPATIBLE_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {
+        "groq",
+        "fireworks_ai",
+        "together",
+        "deepinfra",
+        "snowflake",
+        "dashscope",
+    }
+)
+OPENAI_COMPATIBLE_CONTEXT_WINDOWS: Final[dict[str, dict[str, int]]] = {
+    provider: context_windows_from_catalog(_CATALOG, providers=frozenset({provider}))
+    for provider in _OPENAI_COMPATIBLE_PROVIDERS
+}
 AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
     _CATALOG, providers=_AZURE_PROVIDERS
 )

@@ -6,6 +6,10 @@ from unittest.mock import patch
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.context_window import (
+    CONTEXT_WINDOW_USAGE_RATIO,
+    DEFAULT_CONTEXT_WINDOW_SIZE,
+)
 from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
@@ -449,3 +453,53 @@ class TestCallMocking:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert hasattr(completion, "acall")
         assert callable(completion.acall)
+
+
+class TestContextWindow:
+    """Each provider must resolve window sizes from its own catalog entries."""
+
+    @pytest.mark.parametrize(
+        ("provider", "model", "catalog_window"),
+        [
+            ("deepinfra", "Gryphe/MythoMax-L2-13b", 4096),
+            ("deepinfra", "NousResearch/Hermes-3-Llama-3.1-405B", 131072),
+        ],
+    )
+    def test_window_comes_from_the_provider_catalog(
+        self, provider, model, catalog_window
+    ):
+        """A catalogued model used its provider's limit, not the 8,192 default.
+
+        Looking these ids up in ``OPENAI_CONTEXT_WINDOWS`` alone matched
+        nothing, so every DeepInfra model compacted against 8,192 tokens.
+        """
+        completion = OpenAICompatibleCompletion(
+            model=model, provider=provider, api_key="test-key"
+        )
+
+        assert completion.get_context_window_size() == int(
+            catalog_window * CONTEXT_WINDOW_USAGE_RATIO
+        )
+
+    def test_window_falls_back_for_an_uncatalogued_model(self):
+        """An id no catalog lists still gets the documented default."""
+        completion = OpenAICompatibleCompletion(
+            model="not-a-real-model-zzz", provider="deepinfra", api_key="test-key"
+        )
+
+        assert completion.get_context_window_size() == int(
+            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+        )
+
+    def test_explicit_window_wins_over_the_catalog(self):
+        """``context_window_size`` on the instance still takes precedence."""
+        completion = OpenAICompatibleCompletion(
+            model="Gryphe/MythoMax-L2-13b",
+            provider="deepinfra",
+            api_key="test-key",
+            context_window_size=32_000,
+        )
+
+        assert completion.get_context_window_size() == int(
+            32_000 * CONTEXT_WINDOW_USAGE_RATIO
+        )
