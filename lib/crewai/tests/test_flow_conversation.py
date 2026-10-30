@@ -1124,6 +1124,80 @@ class TestConversationalFlow:
 
         assert outputs == ["\nAssistant: raw assistant output"]
 
+    def test_chat_restores_defer_setting_when_finalization_raises(self) -> None:
+        """A failing finalizer must not leave the temporary deferral behind."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        flow = MyChat()
+        inputs = iter(["quit"])
+
+        with patch.object(
+            flow, "finalize_session_traces", side_effect=RuntimeError("finalization failed")
+        ) as mock_finalize, pytest.raises(RuntimeError, match="finalization failed"):
+            flow.chat(input_fn=lambda _: next(inputs), output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_restores_defer_setting_after_eof(self) -> None:
+        """An EOF exit still restores the deferral and finalizes once."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        flow = MyChat()
+
+        def input_fn(_: str) -> str:
+            raise EOFError
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=input_fn, output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_restores_defer_setting_after_keyboard_interrupt(self) -> None:
+        """Ctrl-C still restores the deferral and finalizes once."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        flow = MyChat()
+
+        def input_fn(_: str) -> str:
+            raise KeyboardInterrupt
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=input_fn, output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_keeps_an_initially_enabled_deferral(self) -> None:
+        """A flow that already defers keeps that instance setting after the session ends."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        flow = MyChat()
+        flow.defer_trace_finalization = True
+        inputs = iter(["quit"])
+
+        with patch.object(flow, "finalize_session_traces"):
+            flow.chat(input_fn=lambda _: next(inputs), output_fn=lambda _: None)
+
+        assert flow.defer_trace_finalization is True
+
     def test_chat_rejects_non_conversational_flows(self) -> None:
         class PlainFlow(Flow):
             @start()
