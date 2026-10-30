@@ -911,6 +911,1417 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
 
         assert thinking_found, "Thinking block not found in assistant message content in second call"
 
+
+def test_anthropic_thinking_blocks_preserved_on_tool_use_turn():
+    """A tool_use assistant turn must keep the thinking blocks Anthropic requires"""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_use_response = MagicMock()
+    tool_use_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [tool_use_response, final_response]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = llm.call(messages, tools=tools)
+    assert tool_calls == [
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        }
+    ]
+
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    llm.call(messages, tools=tools)
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    assistant_message = next(
+        msg for msg in second_call_messages if msg["role"] == "assistant"
+    )
+    assert isinstance(assistant_message["content"], list)
+    assert assistant_message["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+    assert assistant_message["content"][1]["type"] == "tool_use"
+    assert assistant_message["content"][1]["id"] == "toolu_1"
+
+
+def test_anthropic_thinking_blocks_only_on_matching_tool_use_turn():
+    """Across two consecutive tool-use turns, thinking blocks stay on their own turn"""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    first_tool_response = MagicMock()
+    first_tool_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Look up the weather in Paris.",
+            "signature": "sig-one",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    first_tool_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    first_tool_response.stop_reason = "tool_use"
+    first_tool_response.id = "msg_1"
+
+    second_tool_response = MagicMock()
+    second_tool_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Now look up the weather in Rome.",
+            "signature": "sig-two",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_2",
+            "name": "get_weather",
+            "input": {"city": "Rome"},
+        },
+    ]
+    second_tool_response.usage = MagicMock(input_tokens=11, output_tokens=6)
+    second_tool_response.stop_reason = "tool_use"
+    second_tool_response.id = "msg_2"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="18C in Paris, 24C in Rome.")]
+    final_response.usage = MagicMock(input_tokens=13, output_tokens=7)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_3"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [
+        first_tool_response,
+        second_tool_response,
+        final_response,
+    ]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris and Rome?"}]
+
+    assert llm.call(messages, tools=tools)[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    assert llm.call(messages, tools=tools)[0]["id"] == "toolu_2"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_2",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Rome"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_2", "content": "24C"})
+
+    llm.call(messages, tools=tools)
+
+    # Second request: the first tool-use turn is the matching turn, so it
+    # carries the thinking blocks of the response that produced toolu_1.
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    first_turn = next(
+        msg
+        for msg in second_call_messages
+        if msg["role"] == "assistant" and msg.get("content")
+        and isinstance(msg["content"], list)
+        and any(block.get("id") == "toolu_1" for block in msg["content"])
+    )
+    assert first_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Look up the weather in Paris.",
+        "signature": "sig-one",
+    }
+
+    # Third request: the latest thinking blocks belong to the second
+    # tool-use turn only. The earlier turn must not receive them.
+    third_call_messages = mock_client.messages.create.call_args_list[2].kwargs["messages"]
+    tool_use_turns = [
+        msg
+        for msg in third_call_messages
+        if msg["role"] == "assistant"
+        and isinstance(msg.get("content"), list)
+        and any(block.get("type") == "tool_use" for block in msg["content"])
+    ]
+    assert len(tool_use_turns) == 2
+
+    earlier_turn, matching_turn = tool_use_turns
+    assert earlier_turn["content"] == [
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        }
+    ]
+    assert matching_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Now look up the weather in Rome.",
+        "signature": "sig-two",
+    }
+    assert matching_turn["content"][1]["type"] == "tool_use"
+    assert matching_turn["content"][1]["id"] == "toolu_2"
+
+
+def test_anthropic_redacted_thinking_data_preserved_on_tool_use_turn():
+    """A redacted thinking block must keep its opaque data on replay
+
+    Regression: `_extract_thinking_block` copied thinking/signature for
+    redacted blocks, but a RedactedThinkingBlock only carries an encrypted
+    `data` field that Anthropic requires back unchanged. The cached block
+    was replayed without it, making the follow-up request invalid.
+    """
+    from anthropic.types import RedactedThinkingBlock
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    # The SDK object shape keeps its data too.
+    extracted = llm._extract_thinking_block(
+        RedactedThinkingBlock(data="opaque-encrypted-data-sdk", type="redacted_thinking")
+    )
+    assert extracted == {
+        "type": "redacted_thinking",
+        "data": "opaque-encrypted-data-sdk",
+    }
+
+    tool_use_response = MagicMock()
+    tool_use_response.content = [
+        {"type": "redacted_thinking", "data": "opaque-encrypted-data"},
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [tool_use_response, final_response]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = llm.call(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    assert llm._previous_thinking_blocks == [
+        {"type": "redacted_thinking", "data": "opaque-encrypted-data"}
+    ]
+
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    llm.call(messages, tools=tools)
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    assistant_message = next(
+        msg for msg in second_call_messages if msg["role"] == "assistant"
+    )
+    redacted_block = assistant_message["content"][0]
+    # The replayed block must be exactly what Anthropic handed back.
+    assert redacted_block == {
+        "type": "redacted_thinking",
+        "data": "opaque-encrypted-data",
+    }
+    assert RedactedThinkingBlock.model_validate(redacted_block) is not None
+
+
+def test_anthropic_thinking_blocks_not_replayed_across_conversations():
+    """Cached thinking must not leak into another conversation's turns
+
+    Regression: `_previous_thinking_blocks` was replayed on whatever
+    history the LLM instance formatted next, so when one instance served
+    two conversations, conversation B's assistant turns received
+    conversation A's signed thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_use_response = MagicMock()
+    tool_use_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Conversation A: check the weather in Paris.",
+            "signature": "sig-A",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_A",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Conversation B answer.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [
+        tool_use_response,
+        tool_use_response,
+        final_response,
+    ]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+
+    # Conversation A: the tool-use turn caches A's thinking blocks.
+    llm.call(
+        [{"role": "user", "content": "A: what is the weather in Paris?"}], tools=tools
+    )
+
+    # Conversation B shares this LLM instance with its own history. Its
+    # text assistant turn must not receive A's cached thinking blocks.
+    llm.call(
+        [
+            {"role": "user", "content": "B: first question."},
+            {"role": "assistant", "content": "B: earlier answer."},
+            {"role": "user", "content": "B: second question."},
+        ]
+    )
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    b_assistant_turns = [
+        msg for msg in second_call_messages if msg["role"] == "assistant"
+    ]
+    assert len(b_assistant_turns) == 1
+    assert b_assistant_turns[0]["content"] == "B: earlier answer."
+
+    # B's tool-use turn carries different tool ids, so A's cached blocks
+    # must not be prepended to it either.
+    llm.call(
+        [
+            {"role": "user", "content": "B: first question."},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "toolu_B",
+                        "type": "function",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": '{"city": "Paris"}',
+                        },
+                    }
+                ],
+            },
+            {"role": "tool", "tool_call_id": "toolu_B", "content": "18C"},
+        ],
+        tools=tools,
+    )
+
+    third_call_messages = mock_client.messages.create.call_args_list[2].kwargs["messages"]
+    b_tool_turn = next(
+        msg
+        for msg in third_call_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    )
+    assert b_tool_turn["content"] == [
+        {
+            "type": "tool_use",
+            "id": "toolu_B",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        }
+    ]
+
+
+def test_anthropic_thinking_blocks_replayed_when_turn_persists_subset_of_tool_calls():
+    """A turn that kept part of the tool batch must still get its thinking.
+
+    Regression: the replay gate required the turn's tool_use ids to equal the
+    cached set exactly. Executors can persist only a subset of a response's
+    tool calls (``_execute_first_tool`` runs the first call, and a batch
+    stops at a ``result_as_answer`` tool), so the follow-up request went out
+    as a bare ``tool_use`` turn — the Anthropic 400 this PR fixes.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_use_response = MagicMock()
+    tool_use_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Look up both cities.",
+            "signature": "sig-1",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_A",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_B",
+            "name": "get_weather",
+            "input": {"city": "Rome"},
+        },
+    ]
+    tool_use_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Done.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [tool_use_response, final_response]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+
+    # The response asks for two tools, but the history keeps only the first
+    # call, as executors running one tool or stopping at result_as_answer do.
+    llm.call(
+        [{"role": "user", "content": "Weather for Paris and Rome?"}], tools=tools
+    )
+    llm.call(
+        [
+            {"role": "user", "content": "Weather for Paris and Rome?"},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "toolu_A",
+                        "type": "function",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": '{"city": "Paris"}',
+                        },
+                    }
+                ],
+            },
+            {"role": "tool", "tool_call_id": "toolu_A", "content": "18C"},
+        ],
+        tools=tools,
+    )
+
+    follow_up_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    a_tool_turns = [
+        msg
+        for msg in follow_up_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    ]
+    assert a_tool_turns, "the subset tool turn must carry its thinking blocks"
+    assert a_tool_turns[0]["content"] == [
+        {
+            "type": "thinking",
+            "thinking": "Look up both cities.",
+            "signature": "sig-1",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_A",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+
+
+def test_anthropic_thinking_blocks_replayed_when_text_truncated_by_stop_words():
+    """A stop-word-truncated turn must still be recognized as its own.
+
+    Regression: the text fingerprint compared the persisted turn content to
+    the raw response text exactly. The provider's return value is truncated
+    at stop words (and may be extended by after-call hooks), so the persisted
+    turn differed from the raw text and its thinking blocks were dropped.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+        stop=["Observation:"],
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    thinking_response = MagicMock()
+    thinking_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Answer the question directly.",
+            "signature": "sig-2",
+        },
+        types.SimpleNamespace(text="The answer. Observation: hidden tail"),
+    ]
+    thinking_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    thinking_response.stop_reason = "end_turn"
+    thinking_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Done.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [thinking_response, final_response]
+    llm._client = mock_client
+
+    # The executor persists the provider's truncated return value.
+    llm.call([{"role": "user", "content": "What is the answer?"}])
+    llm.call(
+        [
+            {"role": "user", "content": "What is the answer?"},
+            {"role": "assistant", "content": "The answer."},
+            {"role": "user", "content": "Continue."},
+        ]
+    )
+
+    follow_up_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    text_turns = [
+        msg
+        for msg in follow_up_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    ]
+    assert text_turns, "the truncated text turn must carry its thinking blocks"
+    assert text_turns[0]["content"] == [
+        {
+            "type": "thinking",
+            "thinking": "Answer the question directly.",
+            "signature": "sig-2",
+        },
+        {"type": "text", "text": "The answer."},
+    ]
+
+
+def test_anthropic_thinking_blocks_not_replayed_when_other_conversations_text_is_a_prefix():
+    """A text fingerprint match alone must not replay thinking blocks.
+
+    Regression: the text gate accepted any non-empty prefix or extension
+    of the cached raw text, so on a shared LLM instance a later
+    conversation whose last assistant text happened to be a prefix of the
+    cached response (or vice versa) received that response's signed
+    thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    thinking_response = MagicMock()
+    thinking_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Conversation A reasoning.",
+            "signature": "sig-A",
+        },
+        types.SimpleNamespace(text="The capital of France is Paris, its largest city."),
+    ]
+    thinking_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    thinking_response.stop_reason = "end_turn"
+    thinking_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="B is done.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [thinking_response, final_response]
+    llm._client = mock_client
+
+    # Conversation A caches its thinking blocks with a text fingerprint.
+    llm.call([{"role": "user", "content": "A: capital of France?"}])
+
+    # Conversation B shares this instance. Its last assistant text is a
+    # strict prefix of A's raw response text, but the turn belongs to a
+    # different conversation and must not carry A's thinking blocks.
+    llm.call(
+        [
+            {"role": "user", "content": "B: first question."},
+            {"role": "assistant", "content": "The capital of France"},
+            {"role": "user", "content": "B: second question."},
+        ]
+    )
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    b_structured_turns = [
+        msg
+        for msg in second_call_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    ]
+    assert b_structured_turns == []
+
+
+def test_anthropic_thinking_blocks_replayed_when_stop_words_strip_leading_whitespace():
+    """Leading whitespace in the raw text must not hide a truncated turn.
+
+    Regression: ``_apply_stop_words`` strips the truncated return value,
+    and raw response text commonly opens with the whitespace that follows
+    a thinking block. The exact and prefix comparisons both failed on that
+    leading whitespace, so the originating turn lost its thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+        stop=["Observation:"],
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    thinking_response = MagicMock()
+    thinking_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Answer with the number only.",
+            "signature": "sig-3",
+        },
+        types.SimpleNamespace(text="\n\nThe answer is 42. Observation: hidden tail"),
+    ]
+    thinking_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    thinking_response.stop_reason = "end_turn"
+    thinking_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Done.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [thinking_response, final_response]
+    llm._client = mock_client
+
+    # The executor persists the provider's truncated-and-stripped return
+    # value, which no longer shares the raw text's leading whitespace.
+    llm.call([{"role": "user", "content": "What is the answer?"}])
+    llm.call(
+        [
+            {"role": "user", "content": "What is the answer?"},
+            {"role": "assistant", "content": "The answer is 42."},
+            {"role": "user", "content": "Continue."},
+        ]
+    )
+
+    follow_up_messages = mock_client.messages.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    text_turns = [
+        msg
+        for msg in follow_up_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    ]
+    assert text_turns, "the whitespace-stripped turn must carry its thinking blocks"
+    assert text_turns[0]["content"] == [
+        {
+            "type": "thinking",
+            "thinking": "Answer with the number only.",
+            "signature": "sig-3",
+        },
+        {"type": "text", "text": "The answer is 42."},
+    ]
+
+
+def test_anthropic_thinking_blocks_replayed_on_every_turn_of_a_multi_turn_conversation():
+    """Multi-turn text conversations must keep replaying each turn's thinking.
+
+    Regression: the conversation snapshot stored the replayed turn in its
+    injected (structured) form, while the next request formats that same
+    historical turn as plain text, so the prefix check failed and every
+    other turn silently lost its thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    def thinking_response(signature: str, text: str, message_id: str) -> MagicMock:
+        resp = MagicMock()
+        resp.content = [
+            {"type": "thinking", "thinking": "reasoning", "signature": signature},
+            types.SimpleNamespace(text=text),
+        ]
+        resp.usage = MagicMock(input_tokens=10, output_tokens=5)
+        resp.stop_reason = "end_turn"
+        resp.id = message_id
+        return resp
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [
+        thinking_response("sig-1", "first answer.", "msg_1"),
+        thinking_response("sig-2", "second answer.", "msg_2"),
+        thinking_response("sig-3", "third answer.", "msg_3"),
+    ]
+    llm._client = mock_client
+
+    llm.call([{"role": "user", "content": "first question?"}])
+    llm.call(
+        [
+            {"role": "user", "content": "first question?"},
+            {"role": "assistant", "content": "first answer."},
+            {"role": "user", "content": "second question?"},
+        ]
+    )
+    llm.call(
+        [
+            {"role": "user", "content": "first question?"},
+            {"role": "assistant", "content": "first answer."},
+            {"role": "user", "content": "second question?"},
+            {"role": "assistant", "content": "second answer."},
+            {"role": "user", "content": "third question?"},
+        ]
+    )
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    second_assistant = next(
+        msg for msg in second_call_messages if msg["role"] == "assistant"
+    )
+    assert second_assistant["content"] == [
+        {"type": "thinking", "thinking": "reasoning", "signature": "sig-1"},
+        {"type": "text", "text": "first answer."},
+    ]
+
+    third_call_messages = mock_client.messages.create.call_args_list[2].kwargs[
+        "messages"
+    ]
+    assistant_turns = [msg for msg in third_call_messages if msg["role"] == "assistant"]
+    # The earlier turn is no longer last, so it goes back to plain text.
+    assert assistant_turns[0]["content"] == "first answer."
+    # The latest turn must still carry its own thinking blocks.
+    assert assistant_turns[-1]["content"] == [
+        {"type": "thinking", "thinking": "reasoning", "signature": "sig-2"},
+        {"type": "text", "text": "second answer."},
+    ]
+
+
+def test_anthropic_stale_thinking_not_replayed_after_no_thinking_response():
+    """A no-thinking follow-up must clear stored thinking for later turns
+
+    Regression: `_previous_thinking_blocks` kept the tool turn's blocks when
+    the follow-up response had no thinking, so a continued conversation
+    replayed that turn's signed thinking on the latest assistant message.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_use_response = MagicMock()
+    tool_use_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.id = "msg_1"
+
+    no_thinking_response = MagicMock()
+    no_thinking_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    no_thinking_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    no_thinking_response.stop_reason = "end_turn"
+    no_thinking_response.id = "msg_2"
+
+    follow_up_response = MagicMock()
+    follow_up_response.content = [types.SimpleNamespace(text="A light jacket is enough.")]
+    follow_up_response.usage = MagicMock(input_tokens=14, output_tokens=8)
+    follow_up_response.stop_reason = "end_turn"
+    follow_up_response.id = "msg_3"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [
+        tool_use_response,
+        no_thinking_response,
+        follow_up_response,
+    ]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    # Turn 1: the model thinks and requests the weather tool.
+    tool_calls = llm.call(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    # Turn 2: the tool result comes back and the model answers without
+    # thinking, so no thinking blocks belong to the next request.
+    llm.call(messages, tools=tools)
+    assert llm._previous_thinking_blocks == []
+    messages.append({"role": "assistant", "content": "It is 18C in Paris."})
+
+    # Turn 3: the conversation continues; turn 1's thinking must not be
+    # replayed on the latest assistant message.
+    messages.append({"role": "user", "content": "What should I wear?"})
+    llm.call(messages)
+
+    third_call_messages = mock_client.messages.create.call_args_list[2].kwargs["messages"]
+    for message in third_call_messages:
+        if message.get("role") == "assistant" and isinstance(message.get("content"), list):
+            assert not any(
+                block.get("type") in ("thinking", "redacted_thinking")
+                for block in message["content"]
+            ), "Stale thinking blocks were replayed on a later assistant turn"
+
+
+def test_anthropic_streaming_stale_thinking_not_replayed_after_no_thinking_response():
+    """Streaming: a no-thinking follow-up must clear stored thinking too"""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(
+        model="claude-fable-5",
+        stream=True,
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    tool_use_final = MagicMock()
+    tool_use_final.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_final.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_final.stop_reason = "tool_use"
+    tool_use_final.id = "msg_1"
+
+    no_thinking_final = MagicMock()
+    no_thinking_final.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    no_thinking_final.usage = MagicMock(input_tokens=12, output_tokens=6)
+    no_thinking_final.stop_reason = "end_turn"
+    no_thinking_final.id = "msg_2"
+
+    follow_up_final = MagicMock()
+    follow_up_final.content = [types.SimpleNamespace(text="A light jacket is enough.")]
+    follow_up_final.usage = MagicMock(input_tokens=14, output_tokens=8)
+    follow_up_final.stop_reason = "end_turn"
+    follow_up_final.id = "msg_3"
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.side_effect = [
+        _SyncAnthropicStream([], tool_use_final),
+        _SyncAnthropicStream([], no_thinking_final),
+        _SyncAnthropicStream([], follow_up_final),
+    ]
+    llm._client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    # Turn 1: the model thinks and requests the weather tool.
+    tool_calls = llm.call(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    # Turn 2: the follow-up has no thinking, so the stored blocks are stale.
+    llm.call(messages, tools=tools)
+    assert llm._previous_thinking_blocks == []
+    messages.append({"role": "assistant", "content": "It is 18C in Paris."})
+
+    # Turn 3: the continued conversation must not replay turn 1's thinking.
+    messages.append({"role": "user", "content": "What should I wear?"})
+    llm.call(messages)
+
+    third_call_messages = mock_client.messages.stream.call_args_list[2].kwargs["messages"]
+    for message in third_call_messages:
+        if message.get("role") == "assistant" and isinstance(message.get("content"), list):
+            assert not any(
+                block.get("type") in ("thinking", "redacted_thinking")
+                for block in message["content"]
+            ), "Stale thinking blocks were replayed on a later assistant turn"
+
+
+def test_anthropic_tool_use_conversation_thinking_cleared_after_no_thinking_follow_up():
+    """The tool-use conversation flow must also drop thinking on no-thinking replies"""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    initial_response = MagicMock()
+    initial_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    initial_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    initial_response.stop_reason = "tool_use"
+    initial_response.id = "msg_1"
+
+    follow_up_response = MagicMock()
+    follow_up_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    follow_up_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    follow_up_response.stop_reason = "end_turn"
+    follow_up_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = follow_up_response
+    llm._client = mock_client
+
+    # A previous response already stored its thinking, as the completion
+    # handler does before handing tool use over to the conversation flow.
+    llm._previous_thinking_blocks = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        }
+    ]
+
+    result = llm._handle_tool_use_conversation(
+        initial_response,
+        [
+            {
+                "type": "tool_use",
+                "id": "toolu_1",
+                "name": "get_weather",
+                "input": {"city": "Paris"},
+            }
+        ],
+        params={
+            "messages": [{"role": "user", "content": "What is the weather in Paris?"}]
+        },
+        available_functions={"get_weather": lambda **kw: "18C"},
+    )
+
+    assert result == "It is 18C in Paris."
+
+    # The follow-up request keeps the tool turn's thinking inline...
+    sent_messages = mock_client.messages.create.call_args.kwargs["messages"]
+    assistant_turn = next(
+        message
+        for message in sent_messages
+        if message["role"] == "assistant" and isinstance(message.get("content"), list)
+    )
+    assert assistant_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+
+    # ...but the follow-up response carries no thinking, so the cached
+    # blocks must not survive it.
+    assert llm._previous_thinking_blocks == []
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_tool_use_turn_keeps_thinking_blocks():
+    """Async: a tool-use turn must cache its thinking for the follow-up request
+
+    Regression: `_ahandle_completion` returned tool calls without updating
+    `_previous_thinking_blocks`, so the executor's follow-up `acall` sent a
+    bare `tool_use` assistant turn and Anthropic rejected the request.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_response = MagicMock()
+    tool_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_response.stop_reason = "tool_use"
+    tool_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(side_effect=[tool_response, final_response])
+    llm._async_client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = await llm.acall(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    assert await llm.acall(messages, tools=tools) == "It is 18C in Paris."
+
+    # The follow-up request must carry the tool turn's thinking blocks on the
+    # matching assistant turn, exactly like the synchronous path.
+    follow_up_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    tool_turn = next(
+        message
+        for message in follow_up_messages
+        if message["role"] == "assistant"
+        and isinstance(message.get("content"), list)
+        and any(block.get("id") == "toolu_1" for block in message["content"])
+    )
+    assert tool_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_streaming_tool_use_turn_keeps_thinking_blocks():
+    """Async streaming: a tool-use turn must cache its thinking as well
+
+    Regression: `_ahandle_streaming_completion` returned tool calls without
+    updating `_previous_thinking_blocks`, so the executor's follow-up `acall`
+    sent a bare `tool_use` assistant turn and Anthropic rejected the request.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(
+        model="claude-fable-5",
+        stream=True,
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    tool_use_final = MagicMock()
+    tool_use_final.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_final.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_final.stop_reason = "tool_use"
+    tool_use_final.id = "msg_1"
+
+    final_message = MagicMock()
+    final_message.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_message.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_message.stop_reason = "end_turn"
+    final_message.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.side_effect = [
+        _AsyncAnthropicStream([], tool_use_final),
+        _AsyncAnthropicStream([], final_message),
+    ]
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = await llm.acall(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    await llm.acall(messages, tools=tools)
+
+    # The follow-up request must carry the tool turn's thinking blocks on the
+    # matching assistant turn, exactly like the synchronous streaming path.
+    follow_up_messages = mock_client.messages.stream.call_args_list[1].kwargs["messages"]
+    tool_turn = next(
+        message
+        for message in follow_up_messages
+        if message["role"] == "assistant"
+        and isinstance(message.get("content"), list)
+        and any(block.get("id") == "toolu_1" for block in message["content"])
+    )
+    assert tool_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+
+
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
 def test_anthropic_function_calling():
     """Test that function calling is properly handled"""
