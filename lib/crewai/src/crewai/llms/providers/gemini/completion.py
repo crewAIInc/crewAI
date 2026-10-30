@@ -11,7 +11,13 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -33,6 +39,22 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+
+def _resolve_api_key(api_key: str | None) -> str | None:
+    """Pick ``api_key``, then ``GOOGLE_API_KEY``, then ``GEMINI_API_KEY``.
+
+    The placeholder is skipped so a leftover one cannot hide a real key further
+    down. It is returned only when nothing real is set, so ``_initialize_client``
+    can report it instead of letting the SDK read it from the environment.
+    """
+    candidates = [
+        key
+        for key in (api_key, os.getenv("GOOGLE_API_KEY"), os.getenv("GEMINI_API_KEY"))
+        if key
+    ]
+    real = [key for key in candidates if _without_placeholder(key)]
+    return next(iter(real or candidates), None)
 
 
 class GeminiCompletion(BaseLLM):
@@ -80,11 +102,7 @@ class GeminiCompletion(BaseLLM):
             seqs = [seqs]
         data["stop"] = seqs
 
-        data["api_key"] = (
-            data.get("api_key")
-            or os.getenv("GOOGLE_API_KEY")
-            or os.getenv("GEMINI_API_KEY")
-        )
+        data["api_key"] = _resolve_api_key(data.get("api_key"))
         data["project"] = data.get("project") or os.getenv("GOOGLE_CLOUD_PROJECT")
         data["location"] = (
             data.get("location") or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
@@ -130,10 +148,7 @@ class GeminiCompletion(BaseLLM):
         if self._client is None:
             # Re-read env vars so a deferred build can pick up credentials
             # that weren't set at instantiation time.
-            if not self.api_key:
-                self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
-                    "GEMINI_API_KEY"
-                )
+            self.api_key = _resolve_api_key(self.api_key)
             if not self.project:
                 self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
             self._client = self._initialize_client(self.use_vertexai)
@@ -246,7 +261,7 @@ class GeminiCompletion(BaseLLM):
         if self.client_params:
             client_params.update(self.client_params)
 
-        has_api_key = bool(self.api_key)
+        has_api_key = bool(_without_placeholder(self.api_key))
         has_project = bool(self.project)
 
         if has_api_key and has_project:
@@ -285,17 +300,25 @@ class GeminiCompletion(BaseLLM):
             client_params.pop("location", None)
 
         else:
+            missing_key = MissingAPIKeyError(
+                "GEMINI_API_KEY",
+                self.model,
+                alternative="For Vertex AI with Application Default Credentials "
+                "instead, set GOOGLE_CLOUD_PROJECT and run "
+                "`gcloud auth application-default login`.",
+            )
+            if self.api_key:
+                # Only the placeholder gets here; the SDK would read it from the
+                # environment again and fail later at the API.
+                raise missing_key
             try:
                 return genai.Client(**client_params)
-            except Exception as e:
-                raise ValueError(
-                    "Authentication required. Provide one of:\n"
-                    "  1. API key via GOOGLE_API_KEY or GEMINI_API_KEY environment variable\n"
-                    "     (use_vertexai=True is optional for Vertex AI with API key)\n"
-                    "  2. For Vertex AI with ADC: Set GOOGLE_CLOUD_PROJECT and run:\n"
-                    "     gcloud auth application-default login\n"
-                    "  3. Pass api_key parameter directly to LLM constructor\n"
-                ) from e
+            except ValueError as e:
+                # The SDK has no dedicated error type for a missing key. Any other
+                # ValueError (e.g. invalid http_options) is not one, so keep it.
+                if not str(e).startswith("No API key was provided"):
+                    raise
+                raise missing_key from e
         return genai.Client(**client_params)
 
     def _get_client_params(self) -> dict[str, Any]:
@@ -1447,7 +1470,10 @@ class GeminiCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, GEMINI_CONTEXT_WINDOWS, default=1_048_576
+            self.model,
+            GEMINI_CONTEXT_WINDOWS,
+            default=1_048_576,
+            configured=self.context_window_size,
         )
 
     def _effective_max_tokens(self) -> int | float | None:
