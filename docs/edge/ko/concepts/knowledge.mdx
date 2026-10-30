@@ -618,6 +618,21 @@ crew = Crew(
         }
     }
 )
+
+# Option 5: Use DeepInfra embeddings (open-weight models behind an OpenAI-compatible API)
+# Set DEEPINFRA_API_KEY environment variable if api_key is omitted in config
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "deepinfra",
+        "config": {
+            "model_name": "Qwen/Qwen3-Embedding-8B",
+            "api_key": "your-deepinfra-api-key"  # Optional if DEEPINFRA_API_KEY is set
+        }
+    }
+)
 ```
 
 #### Azure OpenAI 임베딩 구성
