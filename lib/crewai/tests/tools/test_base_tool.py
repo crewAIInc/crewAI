@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Callable
 import json
+import os
 from unittest.mock import patch
 
 from crewai.agent import Agent
@@ -792,3 +793,79 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
+
+
+@tool("checkpoint_add_two")
+def checkpoint_add_two(value: int) -> int:
+    """Add two to a value."""
+    return value + 2
+
+
+def test_tool_func_serializes_to_dotted_path_in_json():
+    data = json.loads(checkpoint_add_two.model_dump_json())
+
+    assert data["func"] == f"{__name__}.checkpoint_add_two"
+
+
+def test_tool_func_of_local_function_serializes_to_none():
+    @tool("local_add_two")
+    def local_add_two(value: int) -> int:
+        """Add two to a value."""
+        return value + 2
+
+    data = json.loads(local_add_two.model_dump_json())
+
+    assert data["func"] is None
+
+
+def test_tool_func_round_trips_through_checkpoint_dict(monkeypatch):
+    from crewai.tools.base_tool import Tool, _resolve_tool_dict
+
+    monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+    data = json.loads(checkpoint_add_two.model_dump_json())
+    restored = _resolve_tool_dict(data)
+
+    assert isinstance(restored, Tool)
+    assert restored.func is checkpoint_add_two.func
+    assert restored.run(value=1) == 3
+
+
+def test_tool_func_is_not_imported_without_deserialize_opt_in(monkeypatch):
+    from crewai.tools.base_tool import Tool, _resolve_tool_dict
+
+    monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+    data = json.loads(checkpoint_add_two.model_dump_json())
+    data["func"] = "os.system"
+    restored = _resolve_tool_dict(data)
+
+    assert isinstance(restored, Tool)
+    assert restored.func is not os.system
+    with pytest.raises(RuntimeError, match="CREWAI_DESERIALIZE_CALLBACKS"):
+        restored.func("echo should-not-run")
+    # The unresolved path is kept, so a later checkpoint still records it.
+    assert json.loads(restored.model_dump_json())["func"] == "os.system"
+
+
+def test_tool_func_that_could_not_be_serialized_restores_a_placeholder():
+    from crewai.tools.base_tool import Tool, _resolve_tool_dict
+
+    data = json.loads(checkpoint_add_two.model_dump_json())
+    data["func"] = None
+    restored = _resolve_tool_dict(data)
+
+    assert isinstance(restored, Tool)
+    with pytest.raises(RuntimeError, match="could not be serialized"):
+        restored.func(value=1)
+
+
+def test_agent_with_decorated_tool_serializes_to_json():
+    agent = Agent(
+        role="r",
+        goal="g",
+        backstory="b",
+        tools=[checkpoint_add_two],
+    )
+
+    data = json.loads(agent.model_dump_json())
+
+    assert data["tools"][0]["func"] == f"{__name__}.checkpoint_add_two"
