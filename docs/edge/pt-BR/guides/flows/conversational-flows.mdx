@@ -228,6 +228,79 @@ Com `trace_scope="turn"`, cada `handle_turn()` conclui uma execução do grafo e
 
 Não use `@human_feedback` para linhas de chat de follow-up, a menos que um humano precise aprovar uma saída específica antes de exibi-la.
 
+## Persistindo e restaurando uma conversa entre instâncias
+
+`@persist` grava um snapshot do estado do flow no backend de persistência após a execução de um método decorado. Uma instância **nova** de `Flow` com a mesma configuração de persistência e o mesmo `session_id` restaura esse snapshot, então a conversa pode continuar após reinícios de processo sem reutilizar a instância em memória.
+
+O exemplo abaixo é totalmente determinístico: um `route_turn` customizado e um único handler `@listen` substituem o roteador LLM e o modelo de chat, então ele roda sem credenciais de provedor ou chamadas de modelo pagas. Ele usa um caminho SQLite explícito e um id de sessão estável.
+
+```python
+from crewai import Flow
+from crewai.flow import ConversationConfig, ConversationState, listen, persist
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+DB_PATH = "conversation.db"
+SESSION_ID = "session-1"
+
+store = SQLiteFlowPersistence(DB_PATH)
+
+
+@ConversationConfig()
+class RecallFlow(Flow[ConversationState]):
+    def route_turn(self, context: dict) -> str | None:
+        # Deterministic routing: no LLM required.
+        return "recall"
+
+    @listen("recall")
+    @persist(store)
+    def handle_recall(self) -> str:
+        reply = f"echo: {self.state.current_user_message or ''}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+# Turn 1 — first instance.
+flow_a = RecallFlow()
+flow_a.handle_turn("hello", session_id=SESSION_ID)
+
+# Turn 2 — a *fresh* instance with the same persistence and session id.
+flow_b = RecallFlow()
+flow_b.handle_turn("are you there?", session_id=SESSION_ID)
+
+# The restored history keeps both sides of the conversation, in order,
+# with no duplicate messages.
+for message in flow_b.state.messages:
+    print(f"{message.role}: {message.content}")
+```
+
+Saída esperada:
+
+```
+user: hello
+assistant: echo: hello
+user: are you there?
+assistant: echo: are you there?
+```
+
+Rode como script:
+
+```bash
+python conversation_persistence.py
+```
+
+Um `session_id` diferente em uma nova instância inicia uma conversa separada; ele não carrega o histórico da sessão anterior:
+
+```python
+flow_c = RecallFlow()
+flow_c.handle_turn("first message", session_id="session-2")
+
+# session-2 starts fresh — its history has only its own turn.
+print([m.content for m in flow_c.state.messages])
+# ['first message', 'echo: first message']
+```
+
+Esta demonstração de reinício de instância modela apenas a **recuperação de estado persistido**. Ela restaura mensagens e flags do snapshot; não restaura trabalho em segundo plano em execução, recursos de execução ao vivo nem um trace em andamento. Se a sua sessão adiar a finalização de trace, chame `finalize_session_traces()` quando a conversa terminar para fechar o trace de sessão adiado.
+
 ## `Flow` conversacional
 
 Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn` e `end_conversation`. O listener descontinuado `answer_from_history_turn` permanece disponível para compatibilidade. O framework gerencia `state.messages`, pode acionar um LLM de roteamento e pode finalizar o trace de cada turno automaticamente com `trace_scope="turn"`. Você escreve as **rotas customizadas**; o framework cuida do resto.
