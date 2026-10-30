@@ -263,7 +263,7 @@ class BedrockCompletion(BaseLLM):
     interceptor: BaseInterceptor[Any, Any] | None = None
     response_format: type[BaseModel] | None = None
     is_claude_model: bool = False
-    supports_tools: bool = True
+    supports_tools: bool | None = True
     supports_streaming: bool = True
     model_id: str = ""
 
@@ -379,7 +379,7 @@ class BedrockCompletion(BaseLLM):
         if system_message:
             converse_input["system"] = [{"text": system_message}]
 
-        if tools:
+        if tools and self.supports_function_calling():
             converse_input["toolConfig"] = {
                 "tools": self._format_tools_for_converse(tools)
             }
@@ -490,7 +490,7 @@ class BedrockCompletion(BaseLLM):
                     )
 
                 # Bedrock requires toolConfig when messages contain toolUse/toolResult
-                if tools:
+                if tools and self.supports_function_calling():
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
                             "Sequence[ToolTypeDef]",
@@ -633,7 +633,7 @@ class BedrockCompletion(BaseLLM):
                     )
 
                 # Bedrock requires toolConfig when messages contain toolUse/toolResult
-                if tools:
+                if tools and self.supports_function_calling():
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
                             "Sequence[ToolTypeDef]",
@@ -2225,7 +2225,7 @@ class BedrockCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self.supports_tools
+        return self._resolve_supports_function_calling(default=True)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words.
