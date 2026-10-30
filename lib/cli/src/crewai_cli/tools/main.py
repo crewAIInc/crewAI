@@ -61,9 +61,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     A class to handle tool repository related operations for CrewAI projects.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, base_url: str | None = None) -> None:
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry, base_url=base_url)
 
     def create(self, handle: str) -> None:
         self._ensure_not_in_project()

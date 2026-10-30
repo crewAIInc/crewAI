@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable, Coroutine
 from typing import Any
 
+from crewai.mcp.content import content_blocks_to_text
 from crewai.tools import BaseTool
 
 
@@ -163,7 +164,6 @@ class MCPToolWrapper(BaseTool):
         """Execute the actual MCP tool call."""
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
-        from mcp.types import TextContent
 
         server_url = self.mcp_server_params["url"]
 
@@ -180,10 +180,7 @@ class MCPToolWrapper(BaseTool):
                         )
 
                         if result.content:
-                            content_item = result.content[0]
-                            if isinstance(content_item, TextContent):
-                                return content_item.text
-                            return str(content_item)
+                            return content_blocks_to_text(result.content)
                         return str(result)
 
             return await asyncio.wait_for(
