@@ -1833,10 +1833,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     return cast(T, self._state.model_copy(deep=False))
         else:
+            # Sync listeners may change the live dict while deepcopy traverses it.
+            # Snapshot its top-level entries first, then copy nested values.
+            state_snapshot = self._state.copy()
             try:
-                return cast(T, copy.deepcopy(self._state))
+                return cast(T, copy.deepcopy(state_snapshot))
             except (TypeError, AttributeError):
-                return cast(T, self._state.copy())
+                return cast(T, state_snapshot)
 
     @property
     def state(self) -> T:
