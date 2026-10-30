@@ -1092,8 +1092,8 @@ def _update_catalog_and_create_pr(cwd: Path, version: str, dry_run: bool) -> str
     """Refresh the LiteLLM catalog and open a standalone PR for it.
 
     Runs before the version bump so the catalog lands on main ahead of the
-    release commits. When the upstream catalog matches the checked-in file no
-    branch or PR is created.
+    release commits. The catalog is downloaded before any branch is created, so
+    when it matches the checked-in file no branch or PR is created.
 
     Returns:
         The catalog branch name if a PR was created, None otherwise.
@@ -1112,18 +1112,20 @@ def _update_catalog_and_create_pr(cwd: Path, version: str, dry_run: bool) -> str
     run_command(["git", "checkout", "main"])
     run_command(["git", "pull"])
 
-    catalog_branch = f"chore/update-litellm-catalog-v{version}"
-    create_or_reset_branch(catalog_branch)
-
     catalog_path = update_catalog(cwd)
     if not run_command(["git", "status", "--porcelain", "--", str(catalog_path)]):
         console.print("[green]✓[/green] LiteLLM catalog is already up to date")
-        run_command(["git", "checkout", "main"])
-        run_command(["git", "branch", "-D", catalog_branch])
         return None
     console.print(
         f"[green]✓[/green] Updated LiteLLM catalog {catalog_path.relative_to(cwd)}"
     )
+
+    catalog_branch = f"chore/update-litellm-catalog-v{version}"
+    try:
+        create_or_reset_branch(catalog_branch)
+    except BaseException:
+        run_command(["git", "checkout", "--", str(catalog_path)])
+        raise
 
     pr_title = f"chore: update litellm model catalog for v{version}"
     run_command(["git", "add", str(catalog_path)])
