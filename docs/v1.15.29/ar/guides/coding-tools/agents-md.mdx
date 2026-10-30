@@ -1,0 +1,65 @@
+---
+title: أدوات البرمجة
+description: استخدم AGENTS.md لتوجيه أدوات البرمجة وبيئات التطوير عبر مشاريع CrewAI.
+icon: terminal
+mode: "wide"
+---
+
+## لماذا AGENTS.md
+
+`AGENTS.md` هو ملف تعليمات خفيف محلي للمستودع يمنح أدوات البرمجة توجيهات متسقة خاصة بالمشروع. ضعه في جذر المشروع واعتبره المصدر الموثوق لكيفية عمل المساعدين: الاصطلاحات والأوامر وملاحظات البنية والحدود.
+
+## إنشاء مشروع باستخدام CLI
+
+استخدم CLI الخاص بـ CrewAI لإنشاء هيكل مشروع. يُضاف `AGENTS.md` في الجذر، ومعه ملفا `CLAUDE.md` و`GEMINI.md` اللذان يستوردانه، بحيث يقرأ Claude Code وGemini CLI نفس التوجيهات التي يقرأها كل مساعد آخر.
+
+```bash
+# Crew
+crewai create crew my_crew
+
+# Flow
+crewai create flow my_flow
+
+# Tool repository
+crewai tool create my_tool
+```
+
+## إعداد الأدوات: توجيه المساعدين إلى AGENTS.md
+
+### Codex
+
+يمكن توجيه Codex بملفات `AGENTS.md` الموضوعة في مستودعك. استخدمها لتوفير سياق مشروع مستمر مثل الاصطلاحات والأوامر وتوقعات سير العمل.
+
+### Claude Code
+
+يقرأ Claude Code ملف `CLAUDE.md` ويتجاهل `AGENTS.md`. تأتي المشاريع المُنشأة بملف `CLAUDE.md` تعليمته الوحيدة هي سطر الاستيراد `@AGENTS.md`، بحيث تُحمَّل التوجيهات المشتركة دون تكرارها. أضف الملاحظات الخاصة بـ Claude تحت هذا السطر واحتفظ بالاصطلاحات المشتركة في `AGENTS.md`.
+
+لمشروع أُنشئ قبل أن يُضاف `CLAUDE.md` إلى الهيكل، أضف الاستيراد بنفسك:
+
+```bash
+printf '@AGENTS.md\n' > CLAUDE.md
+```
+
+لا تُعِد تسمية `AGENTS.md` إلى `CLAUDE.md`: يقرأ Codex وCursor ملف `AGENTS.md`، وإعادة التسمية تخفيه عنهما.
+
+### Gemini CLI وGoogle Antigravity
+
+يقوم Gemini CLI وAntigravity بتحميل ملف سياق المشروع (الافتراضي: `GEMINI.md`) من جذر المستودع والمجلدات الأصلية. تأتي المشاريع المُنشأة بملف `GEMINI.md` تعليمته الوحيدة هي سطر الاستيراد `@./AGENTS.md`، بحيث تُحمَّل التوجيهات المشتركة دون تكرارها. أضف الملاحظات الخاصة بـ Gemini تحت هذا السطر واحتفظ بالاصطلاحات المشتركة في `AGENTS.md`.
+
+لمشروع أُنشئ قبل أن يُضاف `GEMINI.md` إلى الهيكل، أضف الاستيراد بنفسك:
+
+```bash
+printf '@./AGENTS.md\n' > GEMINI.md
+```
+
+بدلاً من ذلك، عيّن `context.fileName` في إعدادات Gemini CLI ليشمل `AGENTS.md` فيقرأه Gemini مباشرة. لا تُعِد تسمية `AGENTS.md` إلى `GEMINI.md`: يقرأ Codex وCursor ملف `AGENTS.md`، وإعادة التسمية تخفيه عنهما.
+
+### Cursor
+
+يدعم Cursor ملف `AGENTS.md` كملف تعليمات مشروع. ضعه في جذر المشروع لتوفير توجيهات لمساعد البرمجة في Cursor.
+
+### Windsurf
+
+يوفر Claude Code تكاملاً رسميًا مع Windsurf. إذا كنت تستخدم Claude Code داخل Windsurf، اتبع توجيهات Claude Code أعلاه واستورد `AGENTS.md` من `CLAUDE.md`.
+
+إذا كنت تستخدم مساعد Windsurf الأصلي، هيّئ ميزة قواعد أو تعليمات المشروع (إذا كانت متاحة) لقراءة `AGENTS.md` أو الصق المحتويات مباشرة.

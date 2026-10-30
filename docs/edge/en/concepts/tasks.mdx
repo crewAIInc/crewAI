@@ -167,7 +167,7 @@ Understanding task outputs is crucial for building effective AI workflows. CrewA
 
 The output of a task in CrewAI framework is encapsulated within the `TaskOutput` class. This class provides a structured way to access results of a task, including various formats such as raw output, JSON, and Pydantic models.
 
-By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` will only include the `pydantic` or `json_dict` output if the original `Task` object was configured with `output_pydantic` or `output_json`, respectively.
+By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` will only include the `pydantic` or `json_dict` output if the original `Task` object was configured with `output_pydantic` or `output_json`, respectively. If the output cannot be converted to that model, those fields are `None` and only `raw` is set.
 
 ### Task Output Attributes
 
@@ -186,7 +186,7 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 
 | Method/Property | Description                                                                                       |
 | :-------------- | :------------------------------------------------------------------------------------------------ |
-| **json**        | Returns the JSON string representation of the task output if the output format is JSON.           |
+| **json**        | Returns the JSON string representation of the task output if the output format is JSON, or `None` if the output could not be converted. |
 | **to_dict**     | Converts the JSON and Pydantic outputs to a dictionary.                                           |
 | **str**         | Returns the string representation of the task output, prioritizing Pydantic, then JSON, then raw. |
 
@@ -744,6 +744,8 @@ In this example:
 ---
 
 By using output_pydantic or output_json, you ensure that your tasks produce outputs in a consistent and structured format, making it easier to process and utilize the data within your application or across multiple tasks.
+
+When the task's agent has tools, its requests carry no enforced response schema while tools are offered; the schema reaches the model only in the prompt. Once the agent gives its final answer, CrewAI checks that answer against the model. If it does not fit, CrewAI asks once more, over the same conversation, with the schema and without tools, so exact values from tool results reach the structured output. The task's `raw` output is then that answer as JSON, and a custom `converter_cls` is not used. With streaming on, the stream carries the text answer and then the structured one. An answer that already fits costs no extra call, and if the extra request fails, the text answer is kept and converted as before. The same applies to `Agent.kickoff(response_format=...)`.
 
 ## Integrating Tools with Tasks
 

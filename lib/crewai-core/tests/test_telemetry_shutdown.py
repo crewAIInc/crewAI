@@ -56,7 +56,7 @@ def test_exit_hook_stops_waiting_at_the_flush_deadline(
 
     with (
         patch(
-            "requests.Session.post",
+            "requests.Session.request",
             side_effect=requests.exceptions.ConnectionError("collector down"),
         ),
         caplog.at_level(logging.DEBUG),
@@ -77,14 +77,17 @@ def test_exit_hook_returns_as_soon_as_the_flush_succeeds(
     live_telemetry.provider.get_tracer("test").start_span("probe").end()
 
     with (
-        patch("requests.Session.post", return_value=MagicMock(ok=True)) as post,
+        patch(
+            "requests.Session.request",
+            return_value=MagicMock(status_code=200, reason="OK"),
+        ) as request,
         caplog.at_level(logging.DEBUG),
     ):
         started = time.monotonic()
         live_telemetry._shutdown()
         elapsed = time.monotonic() - started
 
-    assert post.call_count == 1
+    assert request.call_count == 1
     assert elapsed < 5  # not the 10s deadline
     assert _otlp_messages(caplog) == []
 
