@@ -19,6 +19,9 @@ uv add 'crewai[tools]' tavily-python
 
 ```bash
 export TAVILY_API_KEY='your-tavily-api-key'
+
+# 선택 사항: 프록시, 게이트웨이 또는 Tavily 호환 제공자로 요청을 보내도록 지정합니다
+export TAVILY_API_BASE_URL='https://your-tavily-compatible-endpoint.com'
 ```
 
 ## 예제 사용법
@@ -71,6 +74,7 @@ print(result)
 - `include_images` (Optional[bool]): 추출 결과에 이미지를 포함할지 여부. 기본값은 `False`입니다.
 - `extract_depth` (Literal["basic", "advanced"]): 추출의 깊이. 더 빠르고 표면적인 추출에는 `"basic"`을, 더 포괄적인 추출에는 `"advanced"`를 사용합니다. 기본값은 `"basic"`입니다.
 - `timeout` (int): 추출 요청이 완료될 때까지 대기하는 최대 시간(초)입니다. 기본값은 `60`입니다.
+- `api_base_url` (str, 선택): Tavily API의 기본 URL입니다(예: 프록시, 게이트웨이 또는 Tavily 호환 제공자). 기본값은 `TAVILY_API_BASE_URL` 환경 변수이며, 설정되지 않은 경우 Tavily 공개 API를 사용합니다.
 
 ## 고급 사용법
 

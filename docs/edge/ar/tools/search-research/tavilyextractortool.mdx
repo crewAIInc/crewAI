@@ -19,6 +19,9 @@ uv add 'crewai[tools]' tavily-python
 
 ```bash
 export TAVILY_API_KEY='your-tavily-api-key'
+
+# اختياري: توجيه الأداة إلى خادم وسيط أو بوابة أو مزود متوافق مع Tavily
+export TAVILY_API_BASE_URL='https://your-tavily-compatible-endpoint.com'
 ```
 
 ## مثال على الاستخدام
@@ -71,6 +74,7 @@ print(result)
 - `include_images` (Optional[bool]): ما إذا كان يجب تضمين الصور في نتائج الاستخراج. الافتراضي هو `False`.
 - `extract_depth` (Literal["basic", "advanced"]): عمق الاستخراج. استخدم `"basic"` للاستخراج السريع السطحي أو `"advanced"` للاستخراج الأكثر شمولاً. الافتراضي هو `"basic"`.
 - `timeout` (int): الحد الأقصى للوقت بالثواني لانتظار إكمال طلب الاستخراج. الافتراضي هو `60`.
+- `api_base_url` (str، اختياري): عنوان URL الأساسي لـ Tavily API، مثل خادم وسيط أو بوابة أو مزود متوافق مع Tavily. القيمة الافتراضية هي متغير البيئة `TAVILY_API_BASE_URL`، أو واجهة Tavily العامة إن لم يتم تعيينه.
 
 ## الاستخدام المتقدم
 
