@@ -181,6 +181,14 @@ flowchart TD
   </Tab>
 </Tabs>
 
+<Warning>
+  **الانتقال من pickle:** تُخزَّن بيانات التدريب الآن بصيغة JSON ‏(`training_data.json` و`trained_agents_data.json`). كانت الإصدارات السابقة تستخدم ملفات pickle ‏(`.pkl`). لم يعد CrewAI يحمّل ملفات pickle، لأن فك تسلسل ملف pickle قد ينفّذ تعليمات برمجية عشوائية، وبالتالي قد ينفّذ ملف `.pkl` غير موثوق تعليمات برمجية على جهازك بمجرد بدء تشغيل الطاقم.
+
+  - يتم تجاهل ملفات `.pkl` الموجودة. إذا وُجد `trained_agents_data.pkl` ولم يوجد `trained_agents_data.json`، يعمل الوكلاء بدون الاقتراحات المدربة ويُسجَّل تحذير.
+  - تمرير ملف `.pkl` إلى `crewai train -f` أو `--trained-agents-file` أو `CREWAI_TRAINED_AGENTS_FILE` أو `Crew(trained_agents_file=...)` يؤدي إلى خطأ.
+  - للانتقال، أعد تشغيل `crewai train -n <n_iterations> -f trained_agents_data.json`. لا تحمّل ملفات pickle من مصادر لا تثق بها.
+</Warning>
+
 ### نقاط مهمة يجب ملاحظتها
 
 - **متطلب العدد الصحيح الموجب:** تأكد من أن عدد التكرارات (`n_iterations`) هو عدد صحيح موجب. سيرمي الكود `ValueError` إذا لم يتحقق هذا الشرط.

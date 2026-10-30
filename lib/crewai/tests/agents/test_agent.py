@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import json
 import os
 import threading
 from unittest import mock
@@ -1256,6 +1257,19 @@ def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypat
         result = agent._use_trained_data(task_prompt="What is 1 + 1?")
 
     assert result == "What is 1 + 1?"
+
+
+@pytest.mark.parametrize("bad_entry", [{"suggestions": "do x"}, {"quality": 1}, ["x"]])
+def test_agent_use_trained_data_rejects_malformed_suggestions(
+    tmp_path, monkeypatch, bad_entry
+):
+    trained_file = tmp_path / "trained.json"
+    trained_file.write_text(json.dumps({"researcher": bad_entry}), encoding="utf-8")
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", str(trained_file))
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with pytest.raises(ValueError, match="list of string suggestions"):
+        agent._use_trained_data(task_prompt="What is 1 + 1?")
 
 
 def test_agent_use_trained_data_warns_about_legacy_pickle_file(
