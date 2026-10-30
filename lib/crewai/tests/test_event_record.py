@@ -7,6 +7,7 @@ import json
 import pytest
 
 from crewai.events.base_events import BaseEvent
+from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
 from crewai.state.event_record import EventRecord, EventNode
 
 
@@ -278,6 +279,22 @@ class TestTraversal:
 
 
 class TestSerialization:
+    def test_tool_usage_error_roundtrip(self):
+        error = ValueError("service unavailable")
+        event = ToolUsageErrorEvent(
+            tool_name="check", tool_args={}, error=error
+        )
+        record = EventRecord()
+        record.add(event)
+
+        assert event.error is error
+        assert record.model_dump()["nodes"][event.event_id]["event"]["error"] is error
+
+        dumped = record.model_dump(mode="json")
+        assert dumped["nodes"][event.event_id]["event"]["error"] == str(error)
+        restored = EventRecord.model_validate(dumped)
+        assert restored.get(event.event_id).event.error == str(error)
+
     def test_empty_record_roundtrip(self):
         g = EventRecord()
         restored = EventRecord.model_validate_json(g.model_dump_json())
@@ -329,6 +346,26 @@ class TestSerialization:
 
 
 class TestRuntimeStateIntegration:
+    def test_tool_usage_error_does_not_break_checkpoint_serialization(self):
+        from crewai import RuntimeState
+
+        state = RuntimeState(root=[])
+        error = ValueError("service unavailable")
+        event = ToolUsageErrorEvent(
+            tool_name="check", tool_args={}, error=error
+        )
+        state.event_record.add(event)
+
+        checkpoint = state.model_dump(mode="json")
+        assert (
+            checkpoint["event_record"]["nodes"][event.event_id]["event"]["error"]
+            == str(error)
+        )
+        restored = RuntimeState.model_validate(
+            checkpoint, context={"from_checkpoint": True}
+        )
+        assert restored.event_record.get(event.event_id).event.error == str(error)
+
     def test_runtime_state_serializes_event_record(self):
         from crewai import Agent, Crew, RuntimeState
 

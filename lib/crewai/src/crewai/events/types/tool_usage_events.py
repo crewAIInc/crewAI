@@ -2,7 +2,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_serializer
 
 from crewai.events.base_events import BaseEvent
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
@@ -80,6 +80,11 @@ class ToolUsageErrorEvent(ToolUsageEvent):
 
     error: Any
     type: Literal["tool_usage_error"] = "tool_usage_error"
+
+    @field_serializer("error", when_used="json")
+    def _serialize_error(self, error: Any) -> Any:
+        """Keep exceptions live for listeners but store their message in checkpoints."""
+        return str(error) if isinstance(error, BaseException) else error
 
 
 class ToolFailureDetectedEvent(ToolUsageEvent):
