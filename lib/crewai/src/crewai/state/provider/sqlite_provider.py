@@ -20,13 +20,19 @@ CREATE TABLE IF NOT EXISTS checkpoints (
     created_at TEXT NOT NULL,
     parent_id TEXT,
     branch TEXT NOT NULL DEFAULT 'main',
-    data JSONB NOT NULL
+    data TEXT NOT NULL
 )
 """
 
+# ``data`` is bound as plain JSON text. The previous writer used SQLite's
+# ``jsonb()``, which exists only in SQLite >= 3.45.0 (2024-01-15) and made
+# every checkpoint write fail with ``no such function: jsonb`` on system
+# Pythons shipping older SQLite (Ubuntu 22.04, Debian 12, RHEL 9, macOS).
+# ``json(data)`` in ``_SELECT`` keeps rows written as JSONB blobs by that
+# writer readable.
 _INSERT = (
     "INSERT INTO checkpoints (id, created_at, parent_id, branch, data) "
-    "VALUES (?, ?, ?, ?, jsonb(?))"
+    "VALUES (?, ?, ?, ?, ?)"
 )
 _SELECT = "SELECT json(data) FROM checkpoints WHERE id = ?"
 _PRUNE = """
