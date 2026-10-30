@@ -2458,7 +2458,7 @@ class OpenAICompletion(BaseLLM):
                 function_name = call_data["name"]
                 arguments = call_data["arguments"]
 
-                if not function_name or not arguments:
+                if not function_name:
                     continue
 
                 if function_name not in available_functions:
@@ -2468,7 +2468,7 @@ class OpenAICompletion(BaseLLM):
                     continue
 
                 try:
-                    function_args = json.loads(arguments)
+                    function_args = json.loads(arguments) if arguments.strip() else {}
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse streamed tool arguments: {e}")
                     continue

@@ -8,7 +8,7 @@ a single corrupted call.
 """
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from azure.ai.inference.models import StreamingChatCompletionsUpdate
 
@@ -79,3 +79,28 @@ def test_azure_streaming_parallel_tool_calls_are_keyed_by_wire_index():
     assert json.loads(weather["function"]["arguments"]) == {"city": "Paris"}
     assert clock["function"]["name"] == "get_time"
     assert json.loads(clock["function"]["arguments"]) == {"tz": "UTC"}
+
+
+def test_azure_streaming_runs_tool_called_with_empty_arguments():
+    """A zero-argument tool streams its arguments as "" and must run with {}."""
+    get_time = MagicMock(return_value="12:00")
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+        stream=True,
+    )
+
+    with patch.object(llm._client, "complete") as mock_complete:
+        mock_complete.return_value = iter(
+            [_tool_call_chunk(0, "call_aaa", "get_time", "")]
+        )
+
+        result = llm.call(
+            [{"role": "user", "content": "What time is it?"}],
+            available_functions={"get_time": get_time},
+        )
+
+    assert result == "12:00"
+    get_time.assert_called_once_with()
