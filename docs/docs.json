@@ -258,6 +258,7 @@
                         "icon": "magnifying-glass",
                         "pages": [
                           "edge/en/tools/search-research/overview",
+                          "edge/en/tools/search-research/companyenrichtool",
                           "edge/en/tools/search-research/serperdevtool",
                           "edge/en/tools/search-research/bravesearchtool",
                           "edge/en/tools/search-research/exasearchtool",
@@ -20016,6 +20017,7 @@
                         "icon": "magnifying-glass",
                         "pages": [
                           "edge/pt-BR/tools/search-research/overview",
+                          "edge/pt-BR/tools/search-research/companyenrichtool",
                           "edge/pt-BR/tools/search-research/serperdevtool",
                           "edge/pt-BR/tools/search-research/bravesearchtool",
                           "edge/pt-BR/tools/search-research/exasearchtool",
@@ -38209,6 +38211,7 @@
                         "icon": "magnifying-glass",
                         "pages": [
                           "edge/ko/tools/search-research/overview",
+                          "edge/ko/tools/search-research/companyenrichtool",
                           "edge/ko/tools/search-research/serperdevtool",
                           "edge/ko/tools/search-research/bravesearchtool",
                           "edge/ko/tools/search-research/exasearchtool",
@@ -57011,6 +57014,7 @@
                         "icon": "magnifying-glass",
                         "pages": [
                           "edge/ar/tools/search-research/overview",
+                          "edge/ar/tools/search-research/companyenrichtool",
                           "edge/ar/tools/search-research/serperdevtool",
                           "edge/ar/tools/search-research/bravesearchtool",
                           "edge/ar/tools/search-research/exasearchtool",
