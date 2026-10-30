@@ -283,7 +283,7 @@ def test_a_python_flow_given_inputs_without_a_kickoff_script(
     ("pyproject", "args", "kind"),
     [
         (CREW_PYPROJECT, ["--inputs", "{}"], "crew"),
-        (FLOW_PYPROJECT, ["-f", "trained.pkl"], "flow"),
+        (FLOW_PYPROJECT, ["-f", "trained.json"], "flow"),
     ],
 )
 def test_an_option_this_project_kind_does_not_take(

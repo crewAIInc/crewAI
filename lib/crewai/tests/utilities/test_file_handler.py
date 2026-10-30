@@ -1,21 +1,22 @@
 import json
 import os
-from pathlib import Path
-from typing import Any
 import unittest
 import uuid
 
+from pathlib import Path
+from typing import Any
+
 import pytest
-from crewai.utilities.file_handler import FileHandler, PickleHandler
+from crewai.utilities.file_handler import FileHandler, JSONHandler
 
 
-class TestPickleHandler(unittest.TestCase):
+class TestJSONHandler(unittest.TestCase):
     def setUp(self):
         # Use a unique file name for each test to avoid race conditions in parallel test execution
         unique_id = str(uuid.uuid4())
-        self.file_name = f"test_data_{unique_id}.pkl"
+        self.file_name = f"test_data_{unique_id}.json"
         self.file_path = os.path.join(os.getcwd(), self.file_name)
-        self.handler = PickleHandler(self.file_name)
+        self.handler = JSONHandler(self.file_name)
 
     def tearDown(self):
         if os.path.exists(self.file_path):
@@ -35,21 +36,58 @@ class TestPickleHandler(unittest.TestCase):
         loaded_data = self.handler.load()
         assert loaded_data == data
 
-    def test_load_empty_file(self):
+    def test_rejects_non_json_filename(self):
+        with self.assertRaisesRegex(
+            ValueError, "Training data filename must end with .json"
+        ):
+            JSONHandler("training-data")
+
+    def test_rejects_pickle_filename_with_migration_guidance(self):
+        with self.assertRaisesRegex(ValueError, "pickle format.*Re-run `crewai train"):
+            JSONHandler("trained_agents_data.pkl")
+
+    def test_load_missing_file(self):
         loaded_data = self.handler.load()
         assert loaded_data == {}
 
     def test_load_corrupted_file(self):
-        with open(self.file_path, "wb") as file:
-            file.write(b"corrupted data")
+        with open(self.file_path, "w", encoding="utf-8") as file:
+            file.write("corrupted data")
             file.flush()
             os.fsync(file.fileno())  # Ensure data is written to disk
 
-        with pytest.raises(Exception) as exc:
+        with self.assertRaisesRegex(ValueError, f"invalid JSON: {self.file_path}"):
             self.handler.load()
 
-        assert str(exc.value) == "pickle data was truncated"
-        assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+    def test_load_rejects_non_object_json(self):
+        Path(self.file_path).write_text("[]", encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "must contain a JSON object"):
+            self.handler.load()
+
+    def test_load_binary_file_does_not_execute_it(self):
+        marker = Path(self.file_path + ".marker")
+
+        class Exploit:
+            def __reduce__(self):
+                return (Path(str(marker)).write_text, ("pwned",))
+
+        import pickle
+
+        Path(self.file_path).write_bytes(pickle.dumps(Exploit()))
+
+        with self.assertRaisesRegex(ValueError, "invalid JSON"):
+            self.handler.load()
+        assert not marker.exists()
+
+    def test_save_serialization_failure_preserves_existing_data(self):
+        original = {"key": "value"}
+        self.handler.save(original)
+
+        with self.assertRaises(TypeError):
+            self.handler.save({"unsupported": object()})
+
+        assert self.handler.load() == original
 
 
 @pytest.mark.parametrize("kind", ["unsupported", "circular"])

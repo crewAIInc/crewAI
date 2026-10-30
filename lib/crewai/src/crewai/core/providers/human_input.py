@@ -130,7 +130,7 @@ class HumanInputProvider(Protocol):
         ...
 
     @staticmethod
-    def _get_output_string(answer: AgentFinish) -> str:
+    def get_output_string(answer: AgentFinish) -> str:
         """Extract output string from answer.
 
         Args:

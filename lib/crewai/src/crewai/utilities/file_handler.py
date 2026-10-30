@@ -1,9 +1,10 @@
 from datetime import datetime
 import json
 import os
-import pickle
+import tempfile
 from typing import Any, TypedDict
 
+from crewai_core.constants import PICKLE_UNSUPPORTED_MESSAGE
 from crewai_core.lock_store import lock as store_lock
 from typing_extensions import Unpack
 
@@ -117,23 +118,25 @@ class FileHandler:
             raise ValueError(f"Failed to log message: {e!s}") from e
 
 
-class PickleHandler:
-    """Handler for saving and loading data using pickle.
+class JSONHandler:
+    """Handler for saving and loading JSON data.
 
     Attributes:
-        file_path: The path to the pickle file.
+        file_path: The path to the JSON file.
     """
 
     def __init__(self, file_name: str) -> None:
-        """Initialize the PickleHandler with the name of the file where data will be stored.
+        """Initialize the JSONHandler with the name of the file where data will be stored.
 
         The file will be saved in the current directory.
 
         Args:
             file_name: The name of the file for saving and loading data.
         """
-        if not file_name.endswith(".pkl"):
-            file_name += ".pkl"
+        if file_name.endswith(".pkl"):
+            raise ValueError(PICKLE_UNSUPPORTED_MESSAGE.format(file_name=file_name))
+        if not file_name.endswith(".json"):
+            raise ValueError("Training data filename must end with .json")
 
         self.file_path = os.path.join(os.getcwd(), file_name)
 
@@ -143,17 +146,30 @@ class PickleHandler:
 
     def save(self, data: Any) -> None:
         """
-        Save the data to the specified file using pickle.
+        Save the data to the specified file as JSON.
 
         Args:
           data: The data to be saved to the file.
         """
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            with open(self.file_path, "wb") as f:
-                pickle.dump(obj=data, file=f)
+            file_descriptor, temporary_path = tempfile.mkstemp(
+                dir=os.path.dirname(self.file_path),
+                prefix=f".{os.path.basename(self.file_path)}.",
+                suffix=".tmp",
+            )
+            try:
+                with os.fdopen(file_descriptor, "w", encoding="utf-8") as file:
+                    json.dump(data, file)
+                    file.flush()
+                    os.fsync(file.fileno())
+                os.replace(temporary_path, self.file_path)
+            except Exception:
+                if os.path.exists(temporary_path):
+                    os.remove(temporary_path)
+                raise
 
     def load(self) -> Any:
-        """Load the data from the specified file using pickle.
+        """Load the data from the specified JSON file.
 
         Returns:
             The data loaded from the file.
@@ -163,7 +179,17 @@ class PickleHandler:
 
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             try:
-                with open(self.file_path, "rb") as file:
-                    return pickle.load(file)  # noqa: S301
-            except (FileNotFoundError, EOFError):
+                with open(self.file_path, encoding="utf-8") as file:
+                    data = json.load(file)
+            except FileNotFoundError:
                 return {}
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                raise ValueError(
+                    f"Training data file contains invalid JSON: {self.file_path}"
+                ) from error
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Training data file must contain a JSON object: {self.file_path}"
+            )
+        return data

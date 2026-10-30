@@ -21,6 +21,7 @@ from typing import (
 )
 import warnings
 
+from crewai_core.constants import PICKLE_UNSUPPORTED_MESSAGE
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -1472,11 +1473,36 @@ class Agent(BaseAgent):
             else os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE)
         )
 
+        legacy_file = os.path.splitext(trained_file)[0] + ".pkl"
+        if (
+            not os.path.exists(trained_file)
+            and trained_file == TRAINED_AGENTS_DATA_FILE
+            and os.path.exists(legacy_file)
+        ):
+            warnings.warn(
+                f"Ignoring {legacy_file}: "
+                + PICKLE_UNSUPPORTED_MESSAGE.format(file_name=legacy_file),
+                UserWarning,
+                stacklevel=2,
+            )
+
         if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
+                suggestions = (
+                    trained_data_output.get("suggestions")
+                    if isinstance(trained_data_output, dict)
+                    else None
+                )
+                if not isinstance(suggestions, list) or not all(
+                    isinstance(item, str) for item in suggestions
+                ):
+                    raise ValueError(
+                        f"Trained data for agent '{self.role}' in {trained_file} "
+                        "must contain a list of string suggestions."
+                    )
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
-                    + "\n - ".join(trained_data_output["suggestions"])
+                    + "\n - ".join(suggestions)
                 )
         return task_prompt
 

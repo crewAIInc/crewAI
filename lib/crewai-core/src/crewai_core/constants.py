@@ -6,8 +6,15 @@ from typing import Final
 
 
 CREWAI_TRAINED_AGENTS_FILE_ENV: Final[str] = "CREWAI_TRAINED_AGENTS_FILE"
-TRAINING_DATA_FILE: Final[str] = "training_data.pkl"
-TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.pkl"
+TRAINING_DATA_FILE: Final[str] = "training_data.json"
+TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.json"
+PICKLE_UNSUPPORTED_MESSAGE: Final[str] = (
+    "Training data in pickle format ({file_name}) is no longer supported. "
+    "Loading a pickle file can execute arbitrary code, so CrewAI now stores "
+    "training data as JSON. Re-run `crewai train -n <iterations> -f "
+    "trained_agents_data.json` to regenerate it, and do not load pickle files "
+    "from sources you do not trust."
+)
 KNOWLEDGE_DIRECTORY: Final[str] = "knowledge"
 MAX_FILE_NAME_LENGTH: Final[int] = 255
 

@@ -3004,7 +3004,7 @@ def test_crew_train_success(researcher, writer, monkeypatch):
     monkeypatch.setattr("sys.stdin", mock_inputs)
 
     crew.train(
-        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.json"
     )
 
     with condition:
@@ -3036,6 +3036,18 @@ def test_crew_train_error(researcher, writer):
         )
 
 
+def test_crew_train_rejects_pickle_filename_with_original_error(researcher, writer):
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher, writer], tasks=[task])
+
+    with pytest.raises(ValueError, match="pickle format.*Re-run `crewai train"):
+        crew.train(n_iterations=1, filename="trained_agents_data.pkl")
+
+
 def test__setup_for_training(researcher, writer):
     researcher.allow_delegation = True
     writer.allow_delegation = True
@@ -3057,7 +3069,7 @@ def test__setup_for_training(researcher, writer):
     for agent in agents:
         assert agent.allow_delegation is True
 
-    crew._setup_for_training("trained_agents_data.pkl")
+    crew._setup_for_training("trained_agents_data.json")
 
     assert crew._train is True
     assert task.human_input is True
@@ -3075,12 +3087,12 @@ def test_crew_trained_agents_file_is_preserved_on_copy(researcher):
     crew = Crew(
         agents=[researcher],
         tasks=[task],
-        trained_agents_file="custom_trained_agents.pkl",
+        trained_agents_file="custom_trained_agents.json",
     )
 
     cloned_crew = crew.copy()
 
-    assert cloned_crew.trained_agents_file == "custom_trained_agents.pkl"
+    assert cloned_crew.trained_agents_file == "custom_trained_agents.json"
 
 
 @pytest.mark.vcr()

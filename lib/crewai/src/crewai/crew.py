@@ -338,7 +338,7 @@ class Crew(FlowTrackable, BaseModel):
     trained_agents_file: str | Path | None = Field(
         default=None,
         description=(
-            "Path to a trained-agents pickle produced by train(). "
+            "Path to trained-agents JSON data produced by train(). "
             "When set, agents load suggestions from this file during inference."
         ),
     )
@@ -947,6 +947,9 @@ class Crew(FlowTrackable, BaseModel):
     ) -> None:
         """Trains the crew for a given number of iterations."""
         inputs = inputs or {}
+        # Reject an unsupported filename (e.g. .pkl) up front; the cleanup in the
+        # except block below builds the same handler and would mask this error.
+        CrewTrainingHandler(filename)
         try:
             crewai_event_bus.emit(
                 self,
