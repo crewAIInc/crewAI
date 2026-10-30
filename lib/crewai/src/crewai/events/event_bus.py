@@ -423,7 +423,7 @@ class CrewAIEventsBus:
         if errors:
             for handler, error in errors:
                 self._console.print(
-                    f"[CrewAIEventsBus] Sync handler error in {handler.__name__}: {error}"
+                    f"[CrewAIEventsBus] Sync handler error in {getattr(handler, '__name__', handler)}: {error}"
                 )
 
     async def _acall_handlers(
