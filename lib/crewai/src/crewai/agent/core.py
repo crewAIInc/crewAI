@@ -2191,7 +2191,13 @@ class Agent(BaseAgent):
             if isinstance(guardrail_result.result, str):
                 output.raw = guardrail_result.result
             elif isinstance(guardrail_result.result, BaseModel):
-                output.pydantic = guardrail_result.result
+                if guardrail_result.result is output:
+                    # (True, output): the guardrail approves the output it was
+                    # given and passes it through unchanged; keep response_format
+                    # result as-is rather than overwriting output.pydantic.
+                    pass
+                else:
+                    output.pydantic = guardrail_result.result
 
         return output
 
