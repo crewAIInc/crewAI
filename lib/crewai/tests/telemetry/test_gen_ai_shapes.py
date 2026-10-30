@@ -1,6 +1,6 @@
 import json
 
-from crewai.telemetry.tracing.gen_ai_shapes import truncate_attr
+from crewai.telemetry.tracing.gen_ai_shapes import to_input_messages, truncate_attr
 import pytest
 
 
@@ -35,3 +35,25 @@ def test_truncation_preserves_json_and_respects_byte_cap(payload, cap):
         assert result is not None
         assert len(result.encode("utf-8")) <= cap
         assert json.loads(result)["_truncated"] is True
+
+
+def test_multimodal_input_records_text_instead_of_provider_json():
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Describe this image"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "data:image/png;base64,abc"},
+                },
+            ],
+        },
+    ]
+
+    assert to_input_messages(messages) == [
+        {
+            "role": "user",
+            "parts": [{"type": "text", "content": "Describe this image"}],
+        },
+    ]
