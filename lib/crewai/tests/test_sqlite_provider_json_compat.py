@@ -99,13 +99,21 @@ def test_legacy_jsonb_row_under_old_sqlite_raises_clear_error(
     db_path = tmp_path / "checkpoints.db"
     provider.checkpoint('{"step": 1}', str(db_path))
 
-    # Produce a real JSONB blob row (the engine here is >= 3.45 even though
-    # the provider is told the Python reports an older SQLite).
+    # Legacy rows are binary JSONB blobs. The version check fires before any
+    # decoding, so a BLOB bound directly (no jsonb() call) exercises the same
+    # path — and keeps the test runnable on SQLite engines < 3.45 too. Real
+    # JSONB blobs are covered by test_from_checkpoint_reads_legacy_jsonb_rows.
     with closing(sqlite3.connect(db_path)) as conn, conn:
         conn.execute(
             "INSERT INTO checkpoints (id, created_at, parent_id, branch, data) "
-            "VALUES (?, ?, ?, ?, jsonb(?))",
-            ("20260101T000000_legacy", "20260101T000000", None, "main", '{"step": 0}'),
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                "20260101T000000_legacy",
+                "20260101T000000",
+                None,
+                "main",
+                b"legacy-jsonb-blob",
+            ),
         )
 
     with pytest.raises(ValueError, match="SQLite >= 3.45.0"):
