@@ -1,8 +1,8 @@
 # ruff: noqa: T201
 """Refresh the checked-in LiteLLM model catalog.
 
-``devtools release`` calls :func:`update_catalog` after the version-bump PR
-merges, while it is preparing the docs PR. The standalone script
+``devtools release`` calls :func:`update_catalog` first, in its own PR, before
+the version-bump PR. The standalone script
 ``scripts/update_litellm_catalog.py`` is the manual wrapper.
 """
 
