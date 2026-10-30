@@ -1,18 +1,19 @@
 """Instructor embeddings provider."""
 
-from chromadb.utils.embedding_functions.instructor_embedding_function import (
-    InstructorEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class InstructorProvider(BaseEmbeddingsProvider[InstructorEmbeddingFunction]):
+class InstructorProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Instructor embeddings provider."""
 
-    embedding_callable: type[InstructorEmbeddingFunction] = Field(
-        default=InstructorEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "instructor_embedding_function", "InstructorEmbeddingFunction"
+        ),
         description="Instructor embedding function class",
     )
     model_name: str = Field(

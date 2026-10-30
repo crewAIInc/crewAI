@@ -2,19 +2,20 @@
 
 from typing import Literal
 
-from chromadb.utils.embedding_functions.google_embedding_function import (
-    GoogleGenerativeAiEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class GenerativeAiProvider(BaseEmbeddingsProvider[GoogleGenerativeAiEmbeddingFunction]):
+class GenerativeAiProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Google Generative AI embeddings provider."""
 
-    embedding_callable: type[GoogleGenerativeAiEmbeddingFunction] = Field(
-        default=GoogleGenerativeAiEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "google_embedding_function", "GoogleGenerativeAiEmbeddingFunction"
+        ),
         description="Google Generative AI embedding function class",
     )
     model_name: Literal[
