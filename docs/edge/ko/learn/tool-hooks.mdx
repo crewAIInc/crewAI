@@ -108,35 +108,21 @@ def sanitize_results(context):
 특정 크루 인스턴스에 대한 훅을 등록합니다:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
-from crewai.hooks import before_tool_call_crew, after_tool_call_crew
+from crewai import Crew, Process
+from crewai.hooks import on, HookAborted, InterceptionPoint
+from crewai.project import CrewBase, crew
 
 @CrewBase
 class MyProjCrew:
-    @before_tool_call_crew
-    def validate_tool_inputs(self, context):
-        # 이 크루에만 적용됩니다
-        if context.tool_name == "web_search":
-            if not context.tool_input.get('query'):
-                print("❌ 잘못된 검색 쿼리")
-                return False
-        return None
-    
-    @after_tool_call_crew
-    def log_tool_results(self, context):
-        # 크루별 도구 로깅
-        print(f"✅ {context.tool_name} 완료됨")
-        return None
-    
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def validate_tool_inputs(self, ctx):
+        # Only applies to this crew
+        if ctx.tool_name == "web_search" and not ctx.tool_input.get("query"):
+            raise HookAborted(reason="empty search query", source="input-validation")
+
     @crew
     def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True
-        )
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
 ```
 
 ## 일반적인 사용 사례

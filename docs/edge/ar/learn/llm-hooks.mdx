@@ -122,29 +122,21 @@ def sanitize_response(context):
 تسجيل خطافات لمثيل طاقم محدد:
 
 ```python
+from crewai import Crew, Process
+from crewai.hooks import on, InterceptionPoint
+from crewai.project import CrewBase, crew
+
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
-    def validate_inputs(self, context):
+    @on(InterceptionPoint.PRE_MODEL_CALL)
+    def validate_inputs(self, ctx):
         # Only applies to this crew
-        if context.iterations == 0:
-            print(f"Starting task: {context.task.description}")
-        return None
-
-    @after_llm_call_crew
-    def log_responses(self, context):
-        # Crew-specific response logging
-        print(f"Response length: {len(context.response)}")
-        return None
+        if ctx.iterations == 0:
+            print(f"Starting task: {ctx.task.description}")
 
     @crew
     def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True
-        )
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
 ```
 
 ## حالات الاستخدام الشائعة

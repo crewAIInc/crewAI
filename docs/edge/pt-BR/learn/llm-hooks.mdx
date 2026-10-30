@@ -110,33 +110,21 @@ def sanitize_response(context):
 Registre hooks para uma instância específica de crew:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
-from crewai.hooks import before_llm_call_crew, after_llm_call_crew
+from crewai import Crew, Process
+from crewai.hooks import on, InterceptionPoint
+from crewai.project import CrewBase, crew
 
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
-    def validate_inputs(self, context):
-        # Aplica-se apenas a esta crew
-        if context.iterations == 0:
-            print(f"Iniciando tarefa: {context.task.description}")
-        return None
-    
-    @after_llm_call_crew
-    def log_responses(self, context):
-        # Logging específico da crew
-        print(f"Comprimento da resposta: {len(context.response)}")
-        return None
-    
+    @on(InterceptionPoint.PRE_MODEL_CALL)
+    def validate_inputs(self, ctx):
+        # Only applies to this crew
+        if ctx.iterations == 0:
+            print(f"Starting task: {ctx.task.description}")
+
     @crew
     def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True
-        )
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
 ```
 
 ## Casos de Uso Comuns
