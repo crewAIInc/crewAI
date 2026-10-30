@@ -702,6 +702,11 @@ def run(
 
 @crewai.group(name="eval", invoke_without_command=True)
 @click.option(
+    "--no-open",
+    is_flag=True,
+    help="Print the report URL without opening a browser.",
+)
+@click.option(
     "--run",
     "run_id",
     type=str,
@@ -741,6 +746,7 @@ def run(
 @click.pass_context
 def eval_command(
     ctx: click.Context,
+    no_open: bool,
     run_id: str | None,
     models: str | None,
     deployment_id: str | None,
@@ -785,13 +791,13 @@ def eval_command(
                 "--run grades a run that already happened; --models runs the "
                 "deployment again. Give one of them."
             )
-        eval_models(models, deployment_id=deployment_id)
+        eval_models(models, deployment_id=deployment_id, open_browser=not no_open)
         return
     if deployment_id is not None:
         raise click.UsageError(
             "--deployment names the deployment --models runs; add --models LIST."
         )
-    eval_crew(run_id=run_id)
+    eval_crew(run_id=run_id, open_browser=not no_open)
 
 
 @eval_command.command(name="export")
