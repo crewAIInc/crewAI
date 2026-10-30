@@ -1188,6 +1188,40 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Groq">
+    CrewAI talks to Groq through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    GROQ_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    GROQ_BASE_URL=https://api.groq.com/openai/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="groq/llama-3.3-70b-versatile",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Groq features:
+      - Low-latency inference on Groq's own hardware
+      - OpenAI-compatible chat completions with streaming and tool calling
+      - Model ids are passed through unchanged, so an id that carries its own
+        slash, such as `groq/openai/gpt-oss-120b`, keeps both segments
+    </Info>
+
+    Groq documents request fields that some of its models do not support, such as
+    `logprobs` and `logit_bias`. See the
+    [Groq OpenAI compatibility guide](https://console.groq.com/docs/openai) for the
+    current list.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses

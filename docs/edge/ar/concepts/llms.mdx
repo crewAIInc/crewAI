@@ -1045,6 +1045,38 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Groq">
+    يتصل CrewAI بـ Groq عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    GROQ_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    GROQ_BASE_URL=https://api.groq.com/openai/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="groq/llama-3.3-70b-versatile",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Groq:
+      - استدلال منخفض الكمون على عتاد Groq الخاص
+      - إكمالات دردشة متوافقة مع OpenAI مع البث واستدعاء الأدوات
+      - تُمرَّر معرّفات النماذج دون تغيير، لذا يحتفظ معرّف يحمل شرطة مائلة خاصة به
+        مثل `groq/openai/gpt-oss-120b` بكلا المقطعين
+    </Info>
+
+    توثّق Groq حقول طلب لا تدعمها بعض نماذجها، مثل `logprobs` و`logit_bias`. راجع
+    [دليل التوافق مع OpenAI من Groq](https://console.groq.com/docs/openai) للقائمة الحالية.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
