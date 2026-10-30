@@ -1967,13 +1967,23 @@ class BedrockCompletion(BaseLLM):
                     bedrock_content = []
                     for tc in tool_calls:
                         func = tc.get("function", {})
+                        raw_arguments = func.get("arguments", "{}")
+                        if isinstance(raw_arguments, dict):
+                            arguments: Any = raw_arguments
+                        else:
+                            # Arguments are stored verbatim from the LLM and
+                            # may be truncated or malformed; degrade to an
+                            # empty input like the Gemini and OpenAI providers
+                            # instead of failing the whole conversation replay.
+                            try:
+                                arguments = json.loads(raw_arguments or "{}")
+                            except (json.JSONDecodeError, TypeError):
+                                arguments = {}
                         tool_use_block = {
                             "toolUse": {
                                 "toolUseId": tc.get("id", f"call_{id(tc)}"),
                                 "name": func.get("name", ""),
-                                "input": func.get("arguments", {})
-                                if isinstance(func.get("arguments"), dict)
-                                else json.loads(func.get("arguments", "{}") or "{}"),
+                                "input": arguments,
                             }
                         }
                         bedrock_content.append(tool_use_block)
