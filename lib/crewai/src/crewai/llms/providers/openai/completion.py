@@ -1434,6 +1434,10 @@ class OpenAICompletion(BaseLLM):
                 response_id=response_id,
             )
 
+            content = self._invoke_after_llm_call_hooks(
+                params.get("input", []), content, from_agent
+            )
+
         except NotFoundError as e:
             error_msg = f"Model {self.model} not found: {e}"
             logging.error(error_msg)
@@ -1732,7 +1736,9 @@ class OpenAICompletion(BaseLLM):
             response_id=response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params.get("input", []), full_response, from_agent
+        )
 
     def _extract_function_calls_from_response(
         self, response: Response
@@ -2423,7 +2429,8 @@ class OpenAICompletion(BaseLLM):
         Returns:
             Tool calls list when tools were invoked without available_functions,
             tool execution result when available_functions is provided,
-            or the text response string.
+            or the text response string, which has gone through the
+            after_llm_call hooks.
         """
         if usage_data:
             self._track_token_usage_internal(usage_data)
@@ -2497,7 +2504,9 @@ class OpenAICompletion(BaseLLM):
             response_id=response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     def _handle_streaming_completion(
         self,
@@ -2636,7 +2645,7 @@ class OpenAICompletion(BaseLLM):
                         response_id=response_id_stream,
                     )
 
-        result = self._finalize_streaming_response(
+        return self._finalize_streaming_response(
             full_response=full_response,
             tool_calls=tool_calls,
             usage_data=usage_data,
@@ -2647,11 +2656,6 @@ class OpenAICompletion(BaseLLM):
             finish_reason=stream_finish_reason,
             response_id=stream_response_id,
         )
-        if isinstance(result, str):
-            return self._invoke_after_llm_call_hooks(
-                params["messages"], result, from_agent
-            )
-        return result
 
     async def _ahandle_completion(
         self,
@@ -2799,6 +2803,10 @@ class OpenAICompletion(BaseLLM):
 
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
+
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
         except NotFoundError as e:
             error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
@@ -2912,7 +2920,9 @@ class OpenAICompletion(BaseLLM):
                     finish_reason=parsed_stream_finish_reason,
                     response_id=parsed_stream_response_id,
                 )
-                return accumulated_content
+                return self._invoke_after_llm_call_hooks(
+                    params["messages"], accumulated_content, from_agent
+                )
 
         stream: AsyncIterator[
             ChatCompletionChunk
