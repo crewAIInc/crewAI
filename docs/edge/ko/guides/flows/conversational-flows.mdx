@@ -228,6 +228,79 @@ def route_turn(self, context):
 
 후속 채팅 줄에 `@human_feedback`를 쓰지 마세요. 특정 스텝 출력을 사람이 승인해야 할 때만 사용하세요.
 
+## 인스턴스 간 대화 저장 및 복원
+
+`@persist`는 데코레이트된 메서드가 실행된 뒤 flow 상태를 저장 백엔드에 스냅샷으로 기록합니다. 동일한 영속성 설정과 동일한 `session_id`를 가진 **새** `Flow` 인스턴스는 그 스냅샷을 복원하므로, 메모리상 인스턴스를 재사용하지 않고도 프로세스 재시작을 넘어 대화를 이어갈 수 있습니다.
+
+아래 예제는 완전히 결정적입니다. 커스텀 `route_turn`과 단일 `@listen` 핸들러가 LLM 라우터와 채팅 모델을 대신하므로 제공자 자격 증명이나 유료 모델 호출 없이 실행됩니다. 명시적인 SQLite 경로와 안정적인 세션 ID를 사용합니다.
+
+```python
+from crewai import Flow
+from crewai.flow import ConversationConfig, ConversationState, listen, persist
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+DB_PATH = "conversation.db"
+SESSION_ID = "session-1"
+
+store = SQLiteFlowPersistence(DB_PATH)
+
+
+@ConversationConfig()
+class RecallFlow(Flow[ConversationState]):
+    def route_turn(self, context: dict) -> str | None:
+        # Deterministic routing: no LLM required.
+        return "recall"
+
+    @listen("recall")
+    @persist(store)
+    def handle_recall(self) -> str:
+        reply = f"echo: {self.state.current_user_message or ''}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+# Turn 1 — first instance.
+flow_a = RecallFlow()
+flow_a.handle_turn("hello", session_id=SESSION_ID)
+
+# Turn 2 — a *fresh* instance with the same persistence and session id.
+flow_b = RecallFlow()
+flow_b.handle_turn("are you there?", session_id=SESSION_ID)
+
+# The restored history keeps both sides of the conversation, in order,
+# with no duplicate messages.
+for message in flow_b.state.messages:
+    print(f"{message.role}: {message.content}")
+```
+
+예상 출력:
+
+```
+user: hello
+assistant: echo: hello
+user: are you there?
+assistant: echo: are you there?
+```
+
+스크립트로 실행하세요:
+
+```bash
+python conversation_persistence.py
+```
+
+새 인스턴스에서 다른 `session_id`를 사용하면 별도의 대화가 시작되며, 이전 세션의 기록을 불러오지 않습니다:
+
+```python
+flow_c = RecallFlow()
+flow_c.handle_turn("first message", session_id="session-2")
+
+# session-2 starts fresh — its history has only its own turn.
+print([m.content for m in flow_c.state.messages])
+# ['first message', 'echo: first message']
+```
+
+이 인스턴스 재시작 시연은 **저장된 상태 복구**만을 모델링합니다. 스냅샷에서 메시지와 플래그는 복원하지만, 실행 중인 백그라운드 작업, 라이브 실행 리소스, 진행 중인 trace는 복원하지 않습니다. 세션이 trace 종료를 지연하는 경우 대화가 끝날 때 `finalize_session_traces()`를 호출해 지연된 세션 trace를 닫으세요.
+
 ## 대화형 `Flow`
 
 `Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation` 리스너를 제공합니다. 사용 중단된 `answer_from_history_turn` 리스너는 호환성을 위해 계속 제공됩니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 `trace_scope="turn"`으로 각 턴의 trace를 자동으로 종료할 수 있습니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
