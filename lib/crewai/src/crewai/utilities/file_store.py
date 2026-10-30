@@ -47,12 +47,13 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
     """
     try:
         asyncio.get_running_loop()
-        ctx = contextvars.copy_context()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(ctx.run, asyncio.run, coro)
-            return future.result()
     except RuntimeError:
         return asyncio.run(coro)
+
+    ctx = contextvars.copy_context()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(ctx.run, asyncio.run, coro)
+        return future.result()
 
 
 DEFAULT_TTL = 3600
