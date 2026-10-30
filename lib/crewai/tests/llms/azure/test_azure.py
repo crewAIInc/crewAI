@@ -1619,3 +1619,33 @@ def test_azure_credential_scopes_in_to_config_dict():
         )
         config = llm.to_config_dict()
         assert config["credential_scopes"] == scopes
+
+
+def test_azure_completion_params_forward_cap_and_reasoning_effort():
+    """A reasoning deployment is capped and tuned on the default completions API.
+
+    ``ChatCompletionsClient.complete`` only merges ``model_extras`` into the
+    request body (extra kwargs go to the HTTP pipeline), so both settings have
+    to travel there.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com",
+    }):
+        llm = LLM(
+            model="azure/gpt-5-nano",
+            max_completion_tokens=256,
+            reasoning_effort="low",
+        )
+
+        from crewai.llms.providers.azure.completion import AzureCompletion
+        assert isinstance(llm, AzureCompletion)
+        assert llm.api == "completions"
+
+        params = llm._prepare_completion_params(
+            [{"role": "user", "content": "Say hello."}]
+        )
+
+        extras = params.get("model_extras", {})
+        assert extras.get("max_completion_tokens") == 256
+        assert extras.get("reasoning_effort") == "low"
