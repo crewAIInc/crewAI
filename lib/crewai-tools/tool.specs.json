@@ -28883,7 +28883,7 @@
       "env_vars": [
         {
           "default": null,
-          "description": "API key for TextKit (ssms_sk_...)",
+          "description": "API key for TextKit (tk_sk_...)",
           "name": "TEXTKIT_API_KEY",
           "required": true
         }
@@ -28979,7 +28979,7 @@
       "env_vars": [
         {
           "default": null,
-          "description": "API key for TextKit (ssms_sk_...)",
+          "description": "API key for TextKit (tk_sk_...)",
           "name": "TEXTKIT_API_KEY",
           "required": true
         }
@@ -29133,7 +29133,7 @@
       "env_vars": [
         {
           "default": null,
-          "description": "API key for TextKit (ssms_sk_...)",
+          "description": "API key for TextKit (tk_sk_...)",
           "name": "TEXTKIT_API_KEY",
           "required": true
         }
@@ -29256,7 +29256,7 @@
       "env_vars": [
         {
           "default": null,
-          "description": "API key for TextKit (ssms_sk_...)",
+          "description": "API key for TextKit (tk_sk_...)",
           "name": "TEXTKIT_API_KEY",
           "required": true
         }

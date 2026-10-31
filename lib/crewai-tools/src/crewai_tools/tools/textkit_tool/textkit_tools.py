@@ -77,7 +77,7 @@ class TextKitBaseTool(BaseTool):
         default_factory=lambda: [
             EnvVar(
                 name="TEXTKIT_API_KEY",
-                description="API key for TextKit (ssms_sk_...)",
+                description="API key for TextKit (tk_sk_...)",
                 required=True,
             ),
         ]
