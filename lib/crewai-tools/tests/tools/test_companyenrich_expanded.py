@@ -275,3 +275,84 @@ def test_advanced_paid_error_sanitized_once():
     assert "test-key" not in str(exc.value)
     assert exc.value.request is None
     assert exc.value.response is None
+
+
+@pytest.mark.parametrize("body", [b"", b"<html>test-key private upstream body</html>"])
+@pytest.mark.parametrize(
+    "name,inputs",
+    [
+        ("CompanyEnrichCompanyTool", {"domain": "example.com"}),
+        ("CompanyEnrichAdvancedRequestTool", {"operation": "get_industries"}),
+    ],
+)
+def test_real_invalid_json_response_has_sanitized_error_without_context(
+    name, inputs, body
+):
+    import requests
+
+    response = requests.Response()
+    response.status_code = 200
+    response._content = body
+    response.request = requests.Request(
+        "GET",
+        "https://api.companyenrich.com",
+        headers={"Authorization": "Bearer test-key"},
+    ).prepare()
+    with (
+        patch(
+            "crewai_tools.tools.companyenrich_tool.companyenrich_tool.requests.request",
+            return_value=response,
+        ) as send,
+        pytest.raises(ValueError, match="CompanyEnrich returned invalid JSON") as error,
+    ):
+        getattr(tools, name)(api_key="test-key").run(**inputs)
+    send.assert_called_once()
+    assert type(error.value) is ValueError
+    assert error.value.__context__ is None
+    assert error.value.__cause__ is None
+    assert not hasattr(error.value, "request")
+    assert not hasattr(error.value, "response")
+    assert "test-key" not in str(error.value)
+    assert "private upstream body" not in str(error.value)
+
+
+@pytest.mark.parametrize("exception_name", ["HTTPError", "Timeout"])
+@pytest.mark.parametrize(
+    "name,inputs",
+    [
+        ("CompanyEnrichCompanyTool", {"domain": "example.com"}),
+        ("CompanyEnrichAdvancedRequestTool", {"operation": "get_industries"}),
+    ],
+)
+def test_request_errors_preserve_type_without_sensitive_exception_context(
+    name, inputs, exception_name
+):
+    import requests
+
+    request = requests.Request(
+        "GET",
+        "https://api.companyenrich.com",
+        headers={"Authorization": "Bearer test-key"},
+    ).prepare()
+    response = requests.Response()
+    response.status_code = 500
+    response._content = b"test-key private upstream body"
+    error_type = getattr(requests, exception_name)
+    failure = error_type(
+        "test-key private upstream message", request=request, response=response
+    )
+    with (
+        patch(
+            "crewai_tools.tools.companyenrich_tool.companyenrich_tool.requests.request",
+            side_effect=failure,
+        ) as send,
+        pytest.raises(error_type, match="CompanyEnrich request failed") as error,
+    ):
+        getattr(tools, name)(api_key="test-key").run(**inputs)
+    send.assert_called_once()
+    assert type(error.value) is error_type
+    assert error.value.__context__ is None
+    assert error.value.__cause__ is None
+    assert error.value.request is None
+    assert error.value.response is None
+    assert "test-key" not in str(error.value)
