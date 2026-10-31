@@ -1622,6 +1622,88 @@ def test_sibling_router_chains_keep_their_own_causal_parent():
     assert parent("left_listener") == finished["left_route"].event_id
 
 
+@pytest.mark.parametrize("review_first", [True, False])
+def test_sibling_routers_sharing_an_outcome_keep_the_reviewed_state(review_first):
+    """Siblings emitting one outcome hand downstream the reviewed run's state."""
+    received = []
+    events = []
+
+    class SharedOutcomeFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        if review_first:
+
+            @listen(begin)
+            @human_feedback(
+                message="Review:", emit=["approved", "rejected"], llm="gpt-4o-mini"
+            )
+            def review(self):
+                return "draft"
+
+            @router(begin)
+            def plain(self):
+                return "approved"
+
+        else:
+
+            @router(begin)
+            def plain(self):
+                return "approved"
+
+            @listen(begin)
+            @human_feedback(
+                message="Review:", emit=["approved", "rejected"], llm="gpt-4o-mini"
+            )
+            def review(self):
+                return "draft"
+
+        @router("approved")
+        def approved_route(self, payload):
+            received.append(("approved_route", payload))
+            return "done"
+
+        @listen("approved")
+        def approved_listener(self, payload):
+            received.append(("approved_listener", payload))
+
+    flow = SharedOutcomeFlow()
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def capture_started(source, event):
+            events.append(event)
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def capture_finished(source, event):
+            events.append(event)
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="looks good"),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+        ):
+            flow.kickoff()
+        crewai_event_bus.flush()
+
+    assert {name for name, _ in received} == {"approved_route", "approved_listener"}
+    for _, payload in received:
+        assert isinstance(payload, HumanFeedbackResult)
+        assert payload.outcome == "approved"
+
+    started = {
+        e.method_name: e for e in events if isinstance(e, MethodExecutionStartedEvent)
+    }
+    finished = {
+        e.method_name: e for e in events if isinstance(e, MethodExecutionFinishedEvent)
+    }
+    assert started["approved_route"].triggered_by_event_id == finished["review"].event_id
+    assert (
+        started["approved_listener"].triggered_by_event_id
+        == finished["review"].event_id
+    )
+
+
 def test_router_cascade_chain():
     """Test a chain of routers where each router triggers the next."""
     execution_order = []

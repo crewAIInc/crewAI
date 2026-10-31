@@ -3267,16 +3267,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_str = str(router_result)
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
-                router_result_payloads[router_result_str] = (
-                    outcome_feedback if outcome_feedback is not None else router_result
+                # Siblings may emit the same outcome. The run that carried a
+                # review then owns that outcome's state, so its payload, review
+                # and causal parent reach downstream together.
+                _, earlier_feedback = outcome_branch.get(
+                    router_result_str, (None, None)
                 )
-
-                if outcome_feedback is not None:
-                    router_result_to_feedback[router_result_str] = outcome_feedback
-                outcome_branch[router_result_str] = (
-                    current_triggering_event_id,
-                    outcome_feedback,
-                )
+                if outcome_feedback is not None or earlier_feedback is None:
+                    router_result_payloads[router_result_str] = (
+                        outcome_feedback
+                        if outcome_feedback is not None
+                        else router_result
+                    )
+                    if outcome_feedback is not None:
+                        router_result_to_feedback[router_result_str] = outcome_feedback
+                    outcome_branch[router_result_str] = (
+                        current_triggering_event_id,
+                        outcome_feedback,
+                    )
                 pending_triggers[router_result_event] = (
                     pending_triggers.get(router_result_event, frozenset())
                     | upstream_routers
