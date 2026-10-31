@@ -187,6 +187,7 @@ class _CompanyEnrichTool(BaseTool):
         )
         if not key or not key.strip():
             raise ValueError("Set COMPANYENRICH_API_KEY or pass api_key to the tool")
+        request_error: type[requests.RequestException] | None = None
         try:
             response = requests.request(
                 method,
@@ -201,13 +202,20 @@ class _CompanyEnrichTool(BaseTool):
                 allow_redirects=False,
             )
             response.raise_for_status()
-            if 300 <= response.status_code < 400:
-                raise ValueError("Unexpected redirect from CompanyEnrich")
-            return response.json()
         except requests.RequestException as exc:
-            raise type(exc)(
+            request_error = type(exc)
+        if request_error is not None:
+            raise request_error(
                 "CompanyEnrich request failed; check connectivity, credentials and credits"
-            ) from None
+            )
+        if 300 <= response.status_code < 400:
+            raise ValueError("Unexpected redirect from CompanyEnrich")
+        try:
+            return response.json()
+        except ValueError:
+            pass
+        # Raise outside the handler so the response body is not retained as context.
+        raise ValueError("CompanyEnrich returned invalid JSON")
 
     def _invoke(self, values: dict[str, Any]) -> Any:
         values = self.args_schema.model_validate(values).model_dump()
