@@ -1,6 +1,7 @@
 """Cleanup only drops cache entries of the providers it was asked to clean."""
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 
 import crewai_files.cache.cleanup as cleanup_module
 from crewai_files.cache.cleanup import acleanup_uploaded_files, cleanup_uploaded_files
@@ -20,6 +21,20 @@ class RecordingUploader:
     async def adelete(self, file_id: str) -> bool:
         self.deleted.append(file_id)
         return True
+
+
+class BlockingUploader(RecordingUploader):
+    """Hold an async delete open so the test can inspect the cache mid-flight."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def adelete(self, file_id: str) -> bool:
+        self.started.set()
+        await self.release.wait()
+        return await super().adelete(file_id)
 
 
 def _seed(cache: UploadCache) -> None:
@@ -119,3 +134,53 @@ class TestCleanupProviderScope:
 
         assert cleaned == 0
         assert cache.get_by_hash("hash-openai", "openai") is not None
+
+    def test_cleanup_drops_expired_entries_for_scoped_provider(self, monkeypatch):
+        _register(monkeypatch, {"openai": RecordingUploader()})
+
+        cache = UploadCache()
+        expired = datetime.now(timezone.utc) - timedelta(seconds=1)
+        asyncio.run(
+            cache.aset_by_hash(
+                "hash-expired",
+                "text/plain",
+                "openai",
+                "file-expired",
+                expires_at=expired,
+            )
+        )
+        _seed(cache)
+        assert len(cache) == 3
+
+        cleanup_uploaded_files(cache, providers=["openai"])
+
+        assert cache.get_by_hash("hash-openai", "openai") is None
+        assert cache.get_by_hash("hash-expired", "openai") is None
+        assert cache.get_by_hash("hash-anthropic", "anthropic") is not None
+
+    def test_acleanup_drops_cache_after_remote_deletes_finish(self, monkeypatch):
+        uploader = BlockingUploader()
+        _register(monkeypatch, {"openai": uploader})
+
+        cache = UploadCache()
+        _seed(cache)
+
+        async def scenario() -> int:
+            task = asyncio.create_task(
+                acleanup_uploaded_files(
+                    cache, delete_from_provider=True, providers=["openai"]
+                )
+            )
+            await asyncio.wait_for(uploader.started.wait(), timeout=1)
+            try:
+                cached = await cache.aget_by_hash("hash-openai", "openai")
+                assert cached is not None
+            finally:
+                uploader.release.set()
+            return await task
+
+        cleaned = asyncio.run(scenario())
+
+        assert cleaned == 1
+        assert cache.get_by_hash("hash-openai", "openai") is None
+        assert cache.get_by_hash("hash-anthropic", "anthropic") is not None

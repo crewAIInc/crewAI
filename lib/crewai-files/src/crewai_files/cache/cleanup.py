@@ -96,7 +96,7 @@ def cleanup_uploaded_files(
                 if _safe_delete(uploader, upload.file_id, provider):
                     cleaned += 1
 
-        _drop_provider_from_cache(cache, provider, uploads)
+        cache.remove_provider(provider)
 
     logger.info(f"Cleaned up {cleaned} uploaded files")
     return cleaned
@@ -197,34 +197,6 @@ def _get_providers_from_cache(cache: UploadCache) -> set[ProviderType]:
     return cache.get_providers()
 
 
-def _drop_provider_from_cache(
-    cache: UploadCache, provider: ProviderType, uploads: list[CachedUpload]
-) -> None:
-    """Forget every cache entry of a single provider.
-
-    Scoping the drop to one provider keeps the other providers' entries around,
-    so cleanup of one backend never loses the bookkeeping of the others.
-    """
-    for upload in uploads:
-        cache.remove_by_file_id(upload.file_id, provider)
-
-    # get_all_for_provider skips expired entries, and those still take up a slot
-    # in the provider's key set, so sweep whatever the uploads list missed.
-    for leftover in cache.get_all_for_provider(provider):
-        cache.remove_by_file_id(leftover.file_id, provider)
-
-
-async def _adrop_provider_from_cache(
-    cache: UploadCache, provider: ProviderType, uploads: list[CachedUpload]
-) -> None:
-    """Async version of _drop_provider_from_cache."""
-    for upload in uploads:
-        await cache.aremove_by_file_id(upload.file_id, provider)
-
-    for leftover in await cache.aget_all_for_provider(provider):
-        await cache.aremove_by_file_id(leftover.file_id, provider)
-
-
 async def _asafe_delete(
     uploader: FileUploader,
     file_id: str,
@@ -292,6 +264,8 @@ async def acleanup_uploaded_files(
                     file_uploader, cached.file_id, cached.provider
                 )
 
+    providers_to_drop: list[ProviderType] = []
+
     for provider, uploads in provider_uploads.items():
         if delete_from_provider:
             uploader = _uploader_or_none(provider)
@@ -305,11 +279,16 @@ async def acleanup_uploaded_files(
                 asyncio.create_task(delete_one(uploader, cached)) for cached in uploads
             )
 
-        await _adrop_provider_from_cache(cache, provider, uploads)
+        providers_to_drop.append(provider)
 
     if delete_from_provider:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         cleaned = sum(1 for r in results if r is True)
+
+    # Drop entries only after the remote deletes finish so a concurrent user of
+    # the cache does not lose the upload record while deletion is in flight.
+    for provider in providers_to_drop:
+        await cache.aremove_provider(provider)
 
     logger.info(f"Cleaned up {cleaned} uploaded files")
     return cleaned
