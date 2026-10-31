@@ -43,9 +43,10 @@ def test_serper_tool_custom_initialization():
     assert tool.locale == "en"
 
 
+@pytest.mark.parametrize("search_type", ["search", "SEARCH", "Search"])
 @patch("requests.post")
-def test_serper_tool_search(mock_post):
-    tool = SerperDevTool(n_results=2)
+def test_serper_tool_search(mock_post, search_type):
+    tool = SerperDevTool(n_results=2, search_type=search_type)
     mock_response = {
         "searchParameters": {"q": "test query", "type": "search"},
         "organic": [
@@ -80,11 +81,13 @@ def test_serper_tool_search(mock_post):
     assert result["searchParameters"]["q"] == "test query"
     assert len(result["organic"]) == 2
     assert result["organic"][0]["title"] == "Test Title 1"
+    assert mock_post.call_args.args[0] == "https://google.serper.dev/search"
 
 
+@pytest.mark.parametrize("search_type", ["news", "NEWS", "News"])
 @patch("requests.post")
-def test_serper_tool_news_search(mock_post):
-    tool = SerperDevTool(n_results=2, search_type="news")
+def test_serper_tool_news_search(mock_post, search_type):
+    tool = SerperDevTool(n_results=2, search_type=search_type)
     mock_response = {
         "searchParameters": {"q": "test news", "type": "news"},
         "news": [
@@ -106,6 +109,7 @@ def test_serper_tool_news_search(mock_post):
     assert "news" in result
     assert len(result["news"]) == 1
     assert result["news"][0]["title"] == "News Title 1"
+    assert mock_post.call_args.args[0] == "https://google.serper.dev/news"
 
 
 @patch("requests.post")
@@ -121,9 +125,9 @@ def test_serper_tool_with_location_params(mock_post):
 
 
 def test_invalid_search_type():
-    tool = SerperDevTool()
+    tool = SerperDevTool(search_type="invalid")
     with pytest.raises(ValueError) as exc_info:
-        tool.run(search_query="test", search_type="invalid")
+        tool.run(search_query="test")
     assert "Invalid search type" in str(exc_info.value)
 
 
