@@ -1218,3 +1218,38 @@ class TestCreateModelFromSchemaRecursive:
         model = create_model_from_schema(deepcopy(MUTUAL_RECURSION_SCHEMA), model_name="A")
         instance = model(val="hello", b={"val": 42})
         assert instance.val == "hello"
+
+
+def test_email_format_builds_model_without_email_validator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#8850: 'format': 'email' must fall back to str when email-validator is
+    missing. EmailStr imports fine without it; the failure happens at model
+    build time, so the module-level ImportError fallback never ran."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    src_root = str(Path(__file__).resolve().parents[2] / "src")
+    code = (
+        "import sys\n"
+        "sys.modules['email_validator'] = None  # simulate the missing package\n"
+        f"sys.path.insert(0, {src_root!r})\n"
+        "from crewai.utilities import pydantic_schema_utils as psu\n"
+        "assert psu.EmailStr is str, 'EmailStr fallback did not engage'\n"
+        "model = psu.create_model_from_schema({\n"
+        "    'type': 'object',\n"
+        "    'title': 'SendEnvelope',\n"
+        "    'properties': {'signer_email': {'type': 'string', 'format': 'email'}},\n"
+        "    'required': ['signer_email'],\n"
+        "})\n"
+        "instance = model(signer_email='a@b.com')\n"
+        "assert instance.signer_email == 'a@b.com'\n"
+        "print('ok')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr[-800:]
+    assert "ok" in result.stdout
