@@ -86,7 +86,7 @@ class QdrantVectorSearchTool(BaseTool):
         """Perform vector similarity search."""
 
         search_filter = (
-            self.qdrant_config.filter.model_copy()
+            self.qdrant_config.filter.model_copy(deep=True)
             if self.qdrant_config.filter is not None
             else self.qdrant_package.http.models.Filter(must=[])
         )
