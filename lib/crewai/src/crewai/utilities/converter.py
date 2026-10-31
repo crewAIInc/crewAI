@@ -405,9 +405,14 @@ def convert_with_instructions(
         raise ValueError("Agent must have a valid LLM instance for conversion")
 
     instructions = get_conversion_instructions(model=model, llm=llm)
+    # The refit converter must NOT carry the calling agent: an agent-stamped
+    # converter routes its own partial-JSON fallback back through
+    # convert_with_instructions, spawning a nested LLM call tree on every
+    # failed attempt (unbounded provider fan-out). With agent=None, a
+    # ValidationError stays inside this converter's max_attempts loop.
     converter = create_converter(
-        agent=agent,
-        converter_cls=converter_cls,
+        agent=None,
+        converter_cls=converter_cls or Converter,
         llm=llm,
         text=result,
         model=model,
@@ -549,9 +554,14 @@ async def async_convert_with_instructions(
         raise ValueError("Agent must have a valid LLM instance for conversion")
 
     instructions = get_conversion_instructions(model=model, llm=llm)
+    # The refit converter must NOT carry the calling agent: an agent-stamped
+    # converter routes its own partial-JSON fallback back through
+    # convert_with_instructions, spawning a nested LLM call tree on every
+    # failed attempt (unbounded provider fan-out). With agent=None, a
+    # ValidationError stays inside this converter's max_attempts loop.
     converter = create_converter(
-        agent=agent,
-        converter_cls=converter_cls,
+        agent=None,
+        converter_cls=converter_cls or Converter,
         llm=llm,
         text=result,
         model=model,
