@@ -67,6 +67,7 @@ def _scope_prefix_filter(prefix: str) -> str:
     descendants = f"scope LIKE '{_sql_str(escaped)}/%' ESCAPE '\\'"
     return f"({exact} OR {descendants})"
 
+
 class LanceDBStorage:
     """LanceDB-backed storage for the unified memory system."""
 
