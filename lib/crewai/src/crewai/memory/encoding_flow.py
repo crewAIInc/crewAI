@@ -481,6 +481,8 @@ class EncodingFlow(Flow[EncodingState]):
                     categories=existing.categories,
                     metadata=existing.metadata,
                     importance=existing.importance,
+                    source=existing.source,
+                    private=existing.private,
                     created_at=existing.created_at,
                     last_accessed=now,
                     embedding=new_emb if new_emb else existing.embedding,
