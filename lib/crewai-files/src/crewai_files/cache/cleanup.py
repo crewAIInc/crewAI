@@ -67,6 +67,8 @@ def cleanup_uploaded_files(
     Args:
         cache: The upload cache to clean up.
         delete_from_provider: If True, delete files from the provider as well.
+            Files whose provider has no uploader available are left in the cache,
+            since they cannot be deleted remotely.
         providers: Optional list of providers to clean up. If None, cleans all.
 
     Returns:
@@ -81,8 +83,8 @@ def cleanup_uploaded_files(
             continue
         provider_uploads[provider] = cache.get_all_for_provider(provider)
 
-    if delete_from_provider:
-        for provider, uploads in provider_uploads.items():
+    for provider, uploads in provider_uploads.items():
+        if delete_from_provider:
             uploader = _uploader_or_none(provider)
             if uploader is None:
                 logger.warning(
@@ -94,7 +96,7 @@ def cleanup_uploaded_files(
                 if _safe_delete(uploader, upload.file_id, provider):
                     cleaned += 1
 
-    cache.clear()
+        cache.remove_provider(provider)
 
     logger.info(f"Cleaned up {cleaned} uploaded files")
     return cleaned
@@ -233,6 +235,8 @@ async def acleanup_uploaded_files(
     Args:
         cache: The upload cache to clean up.
         delete_from_provider: If True, delete files from the provider as well.
+            Files whose provider has no uploader available are left in the cache,
+            since they cannot be deleted remotely.
         providers: Optional list of providers to clean up. If None, cleans all.
         max_concurrency: Maximum number of concurrent delete operations.
 
@@ -248,6 +252,8 @@ async def acleanup_uploaded_files(
             continue
         provider_uploads[provider] = await cache.aget_all_for_provider(provider)
 
+    tasks: list[asyncio.Task[bool]] = []
+
     if delete_from_provider:
         semaphore = asyncio.Semaphore(max_concurrency)
 
@@ -258,8 +264,10 @@ async def acleanup_uploaded_files(
                     file_uploader, cached.file_id, cached.provider
                 )
 
-        tasks: list[asyncio.Task[bool]] = []
-        for provider, uploads in provider_uploads.items():
+    providers_to_drop: list[ProviderType] = []
+
+    for provider, uploads in provider_uploads.items():
+        if delete_from_provider:
             uploader = _uploader_or_none(provider)
             if uploader is None:
                 logger.warning(
@@ -271,10 +279,16 @@ async def acleanup_uploaded_files(
                 asyncio.create_task(delete_one(uploader, cached)) for cached in uploads
             )
 
+        providers_to_drop.append(provider)
+
+    if delete_from_provider:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         cleaned = sum(1 for r in results if r is True)
 
-    await cache.aclear()
+    # Drop entries only after the remote deletes finish so a concurrent user of
+    # the cache does not lose the upload record while deletion is in flight.
+    for provider in providers_to_drop:
+        await cache.aremove_provider(provider)
 
     logger.info(f"Cleaned up {cleaned} uploaded files")
     return cleaned
