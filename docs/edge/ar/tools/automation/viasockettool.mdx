@@ -1,0 +1,70 @@
+---
+title: أدوات viaSocket
+description: "تحوّل `ViaSocketTools` التطبيقات التي ربطها المستخدمون النهائيون عبر viaSocket (أكثر من 2,300 تطبيق مثل Slack وGoogle Sheets وHubSpot) إلى أدوات CrewAI."
+icon: plug
+mode: "wide"
+---
+
+# `ViaSocketTools`
+
+## الوصف
+
+تربط [viaSocket](https://viasocket.com) أكثر من 2,300 تطبيق، مثل Slack وGoogle Sheets وHubSpot وNotion. تحوّل `ViaSocketTools` كل إجراء مختار من تطبيق ربطه المستخدم النهائي إلى أداة CrewAI. تعمل الأداة عبر اتصال ذلك المستخدم نفسه، فيتصرف الوكلاء داخل تطبيقاته دون كتابة كود موصلات أو التعامل مع OAuth من جهتك.
+
+## التثبيت
+
+```shell
+uv add viasocket
+```
+
+## متغيرات البيئة
+
+- `VIASOCKET_ORG_ID` و`VIASOCKET_PROJECT_ID` و`VIASOCKET_EMBED_SECRET` (مطلوبة): شغّل `npx viasocket-apps setup` في مشروعك، أو انسخها من لوحة تحكم viaSocket (**Integrations → Create embed → Install Code**). يمكنك أيضًا تمرير `org_id` و`project_id` و`secret` مباشرة.
+
+يربط المستخدمون النهائيون تطبيقاتهم عبر نافذة الربط المنبثقة من viaSocket داخل منتجك. للتجربة أولًا، اربط تطبيقًا لنفسك من الطرفية:
+
+```shell
+npx viasocket-apps connect slack --user me
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ViaSocketTools
+
+tools = ViaSocketTools(
+    user="me",  # the end user the apps were connected for
+    apps=["slack"],
+    actions={"slack": ["send-message"]},
+)
+
+agent = Agent(
+    role="Operations assistant",
+    goal="Keep the team updated in Slack",
+    backstory="You post updates where the team reads them.",
+    tools=tools,
+    verbose=True,
+)
+
+task = Task(
+    description="Post a short summary of today's release in the #general channel",
+    agent=agent,
+    expected_output="Confirmation that the message was posted",
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## المعاملات
+
+- `user` (مطلوب): المعرّف الفريد الذي رُبطت تحته تطبيقات المستخدم النهائي.
+- `apps` (مطلوب): التطبيقات بحسب الـ slug (`slack` و`google-sheets` و`hubspot`).
+- `actions` (اختياري): الإجراءات لكل تطبيق بحسب المسار أو `action_id` (`{"slack": ["send-message"]}`). التطبيق غير المذكور يحصل على كل إجراءاته المنشورة.
+
+## ملاحظات
+
+- أسماء الأدوات بصيغة `<app>_<action>` مثل `slack_send-message`. تُبنى مدخلات كل أداة من نموذج الإجراء، فيرى الوكيل الحقول ونص المساعدة نفسها التي يراها الشخص.
+- الحقول التي تحمل معرّفًا (قناة، ورقة) تُملأ بأداة `<app>_list-options` الخاصة بالتطبيق، التي تقرأ القيم الحقيقية من حساب المستخدم.
+- إذا لم يربط المستخدم التطبيق، أو أعاد التطبيق خطأً، يحصل الوكيل على إجابة نصية بدلًا من استثناء.

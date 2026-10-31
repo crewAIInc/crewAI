@@ -1,0 +1,70 @@
+---
+title: Ferramentas viaSocket
+description: "`ViaSocketTools` transforma os apps que seus usuários finais conectaram pelo viaSocket (mais de 2.300, como Slack, Google Sheets e HubSpot) em ferramentas do CrewAI."
+icon: plug
+mode: "wide"
+---
+
+# `ViaSocketTools`
+
+## Descrição
+
+O [viaSocket](https://viasocket.com) conecta mais de 2.300 apps, como Slack, Google Sheets, HubSpot e Notion. `ViaSocketTools` transforma cada ação escolhida de um app que seu usuário final conectou em uma ferramenta do CrewAI. A ferramenta roda na conexão do próprio usuário, então seus agentes atuam nos apps dele sem código de conector nem OAuth do seu lado.
+
+## Instalação
+
+```shell
+uv add viasocket
+```
+
+## Variáveis de Ambiente
+
+- `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID`, `VIASOCKET_EMBED_SECRET` (obrigatórias): rode `npx viasocket-apps setup` no seu projeto ou copie-as do painel do viaSocket (**Integrations → Create embed → Install Code**). Você também pode passar `org_id`, `project_id` e `secret` diretamente.
+
+Seus usuários finais conectam os apps pelo popup de conexão do viaSocket no seu produto. Para testar antes, conecte um app para você mesmo pelo terminal:
+
+```shell
+npx viasocket-apps connect slack --user me
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ViaSocketTools
+
+tools = ViaSocketTools(
+    user="me",  # the end user the apps were connected for
+    apps=["slack"],
+    actions={"slack": ["send-message"]},
+)
+
+agent = Agent(
+    role="Operations assistant",
+    goal="Keep the team updated in Slack",
+    backstory="You post updates where the team reads them.",
+    tools=tools,
+    verbose=True,
+)
+
+task = Task(
+    description="Post a short summary of today's release in the #general channel",
+    agent=agent,
+    expected_output="Confirmation that the message was posted",
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## Parâmetros
+
+- `user` (obrigatório): o identificador único sob o qual os apps do usuário final foram conectados.
+- `apps` (obrigatório): os apps, pelo slug (`slack`, `google-sheets`, `hubspot`).
+- `actions` (opcional): as ações por app, pelo caminho ou `action_id` (`{"slack": ["send-message"]}`). Um app não listado recebe todas as ações publicadas.
+
+## Observações
+
+- Os nomes das ferramentas seguem `<app>_<action>`, como `slack_send-message`. A entrada de cada ferramenta é construída a partir do formulário da ação, então o agente vê os mesmos campos e textos de ajuda que uma pessoa veria.
+- Campos que guardam um id (um canal, uma planilha) são preenchidos com a ferramenta `<app>_list-options` do app, que lê os valores reais da conta do usuário.
+- Se o usuário não conectou o app, ou o app retorna um erro, o agente recebe uma resposta em texto em vez de uma exceção.
