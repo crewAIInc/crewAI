@@ -64,8 +64,8 @@ class ScrapeElementFromWebsiteTool(BaseTool):
             )
             self.args_schema = FixedScrapeElementFromWebsiteToolSchema
             self._generate_description()
-            if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
+        if cookies is not None:
+            self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,
