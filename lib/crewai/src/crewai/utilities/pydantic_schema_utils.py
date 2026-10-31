@@ -1264,9 +1264,10 @@ def _json_schema_to_pydantic_type(
         items_schema = json_schema.get("items")
         prefix_items = json_schema.get("prefixItems")
         # Draft-07 tuple validation and 2020-12 prefixItems both describe an
-        # array positionally with a list of schemas. Flatten them into one
-        # element union rather than passing the list to the single-schema path,
-        # which would fail with "list object has no attribute 'get'".
+        # array positionally with a list of schemas. Flatten them, plus any
+        # rest schema, into one element union rather than passing the list to
+        # the single-schema path, which would fail with "list object has no
+        # attribute 'get'".
         item_schemas: list[Any] = []
         if isinstance(prefix_items, list):
             item_schemas.extend(prefix_items)
@@ -1274,6 +1275,9 @@ def _json_schema_to_pydantic_type(
                 item_schemas.append(items_schema)
         elif isinstance(items_schema, list):
             item_schemas.extend(items_schema)
+            additional_items = json_schema.get("additionalItems")
+            if isinstance(additional_items, dict):
+                item_schemas.append(additional_items)
         elif isinstance(items_schema, dict):
             item_type = _json_schema_to_pydantic_type(
                 items_schema,

@@ -291,6 +291,25 @@ class TestTypedArrays:
         with pytest.raises(ValidationError):
             Model(pair=[None])
 
+    def test_tuple_form_items_with_additional_items(self) -> None:
+        """Draft-07 `additionalItems` types the elements after the tuple."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "values": {
+                    "type": "array",
+                    "items": [{"type": "string"}],
+                    "additionalItems": {"type": "integer"},
+                },
+            },
+            "required": ["values"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(values=["a", 1, 2]).values == ["a", 1, 2]
+
+        with pytest.raises(ValidationError):
+            Model(values=["a", {}])
+
     def test_prefix_items_with_items_schema(self) -> None:
         """2020-12 prefixes an array with `prefixItems` and types the rest."""
         schema = {
