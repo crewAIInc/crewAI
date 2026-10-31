@@ -8,6 +8,19 @@ from crewai_tools import (
     CompanyEnrichSearchTool,
     CompanyEnrichSimilarTool,
 )
+from crewai_tools.generate_tool_specs import ToolSpecExtractor
+
+
+@pytest.mark.parametrize(
+    "tool_class",
+    [CompanyEnrichCompanyTool, CompanyEnrichSearchTool, CompanyEnrichSimilarTool],
+)
+def test_companyenrich_tools_are_discovered_in_catalog(tool_class):
+    specs = {spec["name"]: spec for spec in ToolSpecExtractor().extract_all_tools()}
+    assert tool_class.__name__ in specs
+    spec = specs[tool_class.__name__]
+    assert spec["env_vars"][0]["name"] == "COMPANYENRICH_API_KEY"
+    assert "api_key" not in spec["run_params_schema"]["properties"]
 
 
 @pytest.fixture
