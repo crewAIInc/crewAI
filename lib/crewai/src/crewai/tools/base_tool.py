@@ -40,6 +40,7 @@ from crewai.tools.structured_tool import (
 )
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
 from crewai.types.callback import SerializableCallable, _trusted_deserialize
+from crewai.utilities.coroutine_utils import is_coroutine_function
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -112,7 +113,7 @@ _BUILTIN_CACHE_FUNCTIONS: dict[str, Callable[..., bool]] = {
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
     """Check if a callable is async."""
-    return asyncio.iscoroutinefunction(func)
+    return is_coroutine_function(func)
 
 
 def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:

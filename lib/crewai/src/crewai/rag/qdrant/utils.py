@@ -1,6 +1,5 @@
 """Utility functions for Qdrant operations."""
 
-import asyncio
 from typing import TypeGuard
 from uuid import uuid4
 
@@ -29,6 +28,7 @@ from crewai.rag.qdrant.types import (
     QueryEmbedding,
 )
 from crewai.rag.types import BaseRecord, SearchResult
+from crewai.utilities.coroutine_utils import is_coroutine_function
 
 
 def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
@@ -81,7 +81,7 @@ def _is_async_embedding_function(
     Returns:
         True if the function is async, False otherwise.
     """
-    return asyncio.iscoroutinefunction(func)
+    return is_coroutine_function(func)
 
 
 def _get_collection_params(
