@@ -249,14 +249,18 @@ def test_validate_call_params_supported():
     class DummyResponse(BaseModel):
         a: int
 
-    # Patch supports_response_schema to simulate a supported model.
-    with patch("crewai.llm.supports_response_schema", return_value=True):
-        llm = LLM(
-            model="openrouter/deepseek/deepseek-chat",
-            response_format=DummyResponse,
-            is_litellm=True,
-        )
+    # Initialize the lazy LiteLLM import before patching its bound helper.
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-chat",
+        response_format=DummyResponse,
+        is_litellm=True,
+    )
+
+    with patch("crewai.llm.supports_response_schema", return_value=True) as supports_schema:
         llm._validate_call_params()
+        supports_schema.assert_called_once_with(
+            model="openrouter/deepseek/deepseek-chat", custom_llm_provider="openrouter"
+        )
 
 
 @requires_litellm_python_311
@@ -264,16 +268,20 @@ def test_validate_call_params_not_supported():
     class DummyResponse(BaseModel):
         a: int
 
-    # Patch supports_response_schema to simulate an unsupported model.
-    with patch("crewai.llm.supports_response_schema", return_value=False):
-        llm = LLM(
-            model="gemini/gemini-1.5-pro",
-            response_format=DummyResponse,
-            is_litellm=True,
-        )
+    # Initialize the lazy LiteLLM import before patching its bound helper.
+    llm = LLM(
+        model="gemini/gemini-1.5-pro",
+        response_format=DummyResponse,
+        is_litellm=True,
+    )
+
+    with patch("crewai.llm.supports_response_schema", return_value=False) as supports_schema:
         with pytest.raises(ValueError) as excinfo:
             llm._validate_call_params()
         assert "does not support response_format" in str(excinfo.value)
+        supports_schema.assert_called_once_with(
+            model="gemini/gemini-1.5-pro", custom_llm_provider="gemini"
+        )
 
 
 def test_validate_call_params_no_response_format():
