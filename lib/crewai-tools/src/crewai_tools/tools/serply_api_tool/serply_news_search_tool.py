@@ -79,7 +79,7 @@ class SerplyNewsSearchTool(BaseTool):
                         result["link"],
                         timeout=30,
                     )
-                    final_link = r.history[-1].headers["Location"]
+                    final_link = r.url
                     string.append(
                         "\n".join(
                             [
