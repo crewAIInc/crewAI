@@ -1,44 +1,53 @@
 ---
 title: "CompanyEnrich 도구"
-description: "회사 정보를 보강하고 회사를 검색하며 유사한 회사를 찾습니다."
+description: "12개 기본 도구와 고정된 고급 작업 선택기로 회사와 사람을 조사합니다."
 ---
 
 ## 설정
 
-`crewai-tools`를 설치하고 [CompanyEnrich 대시보드](https://app.companyenrich.com/)에서 받은 키로 `COMPANYENRICH_API_KEY`를 설정하세요. 각 도구를 생성할 때 `api_key`를 전달할 수도 있습니다.
+`crewai-tools`를 설치하고 [CompanyEnrich 대시보드](https://app.companyenrich.com/)에서 발급한 키를 `COMPANYENRICH_API_KEY`에 설정하세요. 도구 생성 시 `api_key`를 전달할 수도 있습니다. 필요한 도구를 CrewAI 에이전트에 추가하세요.
+
+## 기본 도구
+
+| 도구 | 엔드포인트 |
+| --- | --- |
+| `CompanyEnrichCompanyTool` | `GET /companies/enrich` |
+| `CompanyEnrichSearchTool` | `POST /companies/search` |
+| `CompanyEnrichSimilarTool` | `POST /companies/similar` |
+| `CompanyEnrichPeopleSearchTool` | `POST /people/search` |
+| `CompanyEnrichPersonLookupTool` | `POST /people/lookup` |
+| `CompanyEnrichWorkforceTool` | `GET /companies/workforce` |
+| `CompanyEnrichPropertiesTool` | `POST /companies/enrich` |
+| `CompanyEnrichBatchTool` | `POST /companies/enrich/batch` |
+| `CompanyEnrichCompanyByIdTool` | `GET /companies` |
+| `CompanyEnrichPersonByIdTool` | `GET /people` |
+| `CompanyEnrichSearchCountTool` | `POST /companies/search/count` |
+| `CompanyEnrichSimilarCountTool` | `POST /companies/similar/count` |
 
 ## 사용법
 
 ```python
-from crewai import Agent
 from crewai_tools import (
-    CompanyEnrichCompanyTool,
-    CompanyEnrichSearchTool,
-    CompanyEnrichSimilarTool,
+    CompanyEnrichCompanyTool, CompanyEnrichPeopleSearchTool,
+    CompanyEnrichSearchCountTool, CompanyEnrichAdvancedRequestTool,
 )
 
-tools = [
-    CompanyEnrichCompanyTool(),
-    CompanyEnrichSearchTool(),
-    CompanyEnrichSimilarTool(),
-]
-agent = Agent(
-    role="Company researcher",
-    goal="Research companies using current company data",
-    backstory="You research company profiles and matching accounts.",
-    tools=tools,
+profile = CompanyEnrichCompanyTool().run(domain="stripe.com", expand=["workforce"])
+people = CompanyEnrichPeopleSearchTool().run(
+    filters={"companyFilter": {"domains": ["stripe.com"]}}, expand=["education"], page_size=5
 )
-
-# Direct calls also work; these consume CompanyEnrich credits.
-profile = tools[0].run(domain="stripe.com")
-companies = tools[1].run(semantic_query="B2B software companies", page_size=5)
-lookalikes = tools[2].run(domains=["stripe.com"], page_size=5)
+count = CompanyEnrichSearchCountTool().run(filters={"countries": ["US"]})
+industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
 ```
 
-## 동작
+## 입력과 결과
 
-각 도구는 기본 제한 시간 30초로 요청을 한 번 실행합니다. `timeout`으로 변경할 수 있습니다. 검색 및 유사 회사 도구는 원본 페이지 메타데이터와 함께 한 페이지만 반환합니다. `page`는 1부터 시작하며 `page_size`는 기본값 5, 허용 범위 1–100입니다. 유사 회사 검색은 도메인 1–10개를 받습니다. 검색에는 `page * page_size <= 10000` 조건이 적용됩니다.
+검색 도구는 전체 `filters` 객체를 받습니다. 회사 검색은 최대 500자의 `semantic_query`와 최대 250자의 `query`도 받습니다. null이 아닌 전용 입력이 동일한 필터 필드보다 우선하며 나머지 필드는 유지됩니다. 지원되는 `expand` 배열(회사는 `workforce`, 사람은 `education`)과 해당 경로에서 지원하는 `wait_for_enrichment`를 사용하세요. 인력 조회는 `company_id` 또는 `domain` 중 정확히 하나가 필요합니다. 일괄 보강은 도메인 1–50개, 유사 회사는 1–10개를 받습니다. 회사 ID는 UUID이며 사람 ID는 양의 int64 정수 또는 십진 문자열입니다.
 
-회사 정보 보강은 호출당 1크레딧입니다. 검색은 반환된 회사당 1크레딧(최소 1), 유사 회사 검색은 회사당 5크레딧(최소 5)입니다. 자동 재시도나 페이지 순회는 하지 않습니다. 잘못된 인증 정보(401), 크레딧 부족(402), 요청 한도(429)를 포함한 HTTP 오류는 호출자에게 전달됩니다.
+기본 검색은 `page=1`, `page_size=5`를 유지합니다. 페이지 크기는 1–100이고 페이지와 크기의 곱은 10,000 이하여야 합니다. 모든 API 필드와 페이지 메타데이터를 유지합니다. 개수는 0을 포함한 숫자로 반환하고 일괄 및 분류 결과는 배열을 유지합니다.
 
-응답 필드와 최신 요금은 [CompanyEnrich API 참조](https://docs.companyenrich.com/reference)를 확인하세요.
+## 고급 작업
+
+`CompanyEnrichAdvancedRequestTool`은 `operation`의 고정된 42개 작업과 선택적 `body`, `query`, `path_parameters` 객체를 받습니다. 기본 작업, 미리보기/개수/스크롤, 학력, 지리/분류, 비동기 내보내기, 대량 보강 및 작업 수명 주기를 지원합니다. 저장된 목록 관리와 `/me`는 제외됩니다. 알 수 없는 작업 및 쿼리/경로 필드와 잘못된 ID 및 필수 작업 입력은 요청 전에 거부됩니다. 베타 이메일 작업은 `allow_beta=True`가 필요합니다. 고급 페이지 요청은 페이지 1과 크기 10을 명시적으로 기본값으로 사용하며 내보내기 개수는 1–50,000이 필요합니다.
+
+각 호출은 고정된 CompanyEnrich HTTPS API에 한 번 요청합니다. `timeout`은 기본 30초이며 변경할 수 있습니다. 자동 재시도, 페이지 조회, 폴링 또는 결과 URL 다운로드는 없습니다. 작업에는 크레딧이 사용될 수 있으므로 스키마와 현재 요금은 [API 문서](https://docs.companyenrich.com/reference)를 확인하세요. HTTP 오류는 API 키나 원본 오류 본문이 없는 정제된 메시지로 전달됩니다.

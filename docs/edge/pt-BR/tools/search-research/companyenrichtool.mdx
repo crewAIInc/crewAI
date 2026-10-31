@@ -1,44 +1,53 @@
 ---
 title: "Ferramentas CompanyEnrich"
-description: "Enriqueça empresas, pesquise perfis e descubra empresas semelhantes."
+description: "Pesquise empresas e pessoas com doze ferramentas principais e um seletor fixo de operações avançadas."
 ---
 
 ## Configuração
 
-Instale `crewai-tools` e configure `COMPANYENRICH_API_KEY` com uma chave do [painel CompanyEnrich](https://app.companyenrich.com/). Também é possível passar `api_key` ao criar cada ferramenta.
+Instale `crewai-tools` e defina `COMPANYENRICH_API_KEY` com uma chave do [painel CompanyEnrich](https://app.companyenrich.com/). Também é possível passar `api_key` ao criar a ferramenta. Adicione as ferramentas desejadas ao agente CrewAI.
+
+## Ferramentas principais
+
+| Ferramenta | Endpoint |
+| --- | --- |
+| `CompanyEnrichCompanyTool` | `GET /companies/enrich` |
+| `CompanyEnrichSearchTool` | `POST /companies/search` |
+| `CompanyEnrichSimilarTool` | `POST /companies/similar` |
+| `CompanyEnrichPeopleSearchTool` | `POST /people/search` |
+| `CompanyEnrichPersonLookupTool` | `POST /people/lookup` |
+| `CompanyEnrichWorkforceTool` | `GET /companies/workforce` |
+| `CompanyEnrichPropertiesTool` | `POST /companies/enrich` |
+| `CompanyEnrichBatchTool` | `POST /companies/enrich/batch` |
+| `CompanyEnrichCompanyByIdTool` | `GET /companies` |
+| `CompanyEnrichPersonByIdTool` | `GET /people` |
+| `CompanyEnrichSearchCountTool` | `POST /companies/search/count` |
+| `CompanyEnrichSimilarCountTool` | `POST /companies/similar/count` |
 
 ## Uso
 
 ```python
-from crewai import Agent
 from crewai_tools import (
-    CompanyEnrichCompanyTool,
-    CompanyEnrichSearchTool,
-    CompanyEnrichSimilarTool,
+    CompanyEnrichCompanyTool, CompanyEnrichPeopleSearchTool,
+    CompanyEnrichSearchCountTool, CompanyEnrichAdvancedRequestTool,
 )
 
-tools = [
-    CompanyEnrichCompanyTool(),
-    CompanyEnrichSearchTool(),
-    CompanyEnrichSimilarTool(),
-]
-agent = Agent(
-    role="Company researcher",
-    goal="Research companies using current company data",
-    backstory="You research company profiles and matching accounts.",
-    tools=tools,
+profile = CompanyEnrichCompanyTool().run(domain="stripe.com", expand=["workforce"])
+people = CompanyEnrichPeopleSearchTool().run(
+    filters={"companyFilter": {"domains": ["stripe.com"]}}, expand=["education"], page_size=5
 )
-
-# Direct calls also work; these consume CompanyEnrich credits.
-profile = tools[0].run(domain="stripe.com")
-companies = tools[1].run(semantic_query="B2B software companies", page_size=5)
-lookalikes = tools[2].run(domains=["stripe.com"], page_size=5)
+count = CompanyEnrichSearchCountTool().run(filters={"countries": ["US"]})
+industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
 ```
 
-## Comportamento
+## Entradas e resultados
 
-Cada ferramenta faz uma solicitação com tempo limite de 30 segundos, configurável com `timeout`. As ferramentas de pesquisa e empresas semelhantes retornam uma página com os metadados originais de paginação. `page` começa em 1; `page_size` tem valor padrão 5 e aceita 1–100. A busca de empresas semelhantes aceita 1–10 domínios. A pesquisa exige `page * page_size <= 10000`.
+As ferramentas de busca aceitam um objeto `filters` completo. A busca de empresas também aceita `semantic_query` (até 500 caracteres) e `query` (até 250). Entradas dedicadas não nulas têm precedência sobre campos correspondentes dos filtros; os demais campos são preservados. Use os arrays `expand` suportados (`workforce` para empresas e `education` para pessoas) e `wait_for_enrichment` nas rotas que o documentam. A consulta de funcionários exige exatamente um `company_id` ou `domain`. O enriquecimento em lote aceita 1–50 domínios; empresas semelhantes aceitam 1–10. IDs de empresas são UUIDs; IDs de pessoas aceitam inteiros int64 positivos ou strings decimais.
 
-O enriquecimento custa 1 crédito por chamada. A pesquisa custa 1 crédito por empresa retornada (mínimo 1); a busca de semelhantes custa 5 créditos por empresa retornada (mínimo 5). Não há novas tentativas ou paginação automáticas. Erros HTTP, incluindo credenciais inválidas (401), créditos insuficientes (402) e limites de requisições (429), são propagados ao chamador.
+As buscas principais mantêm `page=1` e `page_size=5`. O tamanho aceita 1–100 e o produto da página pelo tamanho deve ser no máximo 10.000. Todos os campos da API e os metadados de paginação são preservados. Contagens retornam números, incluindo zero; resultados em lote e taxonomias mantêm arrays.
 
-Consulte a [referência da API CompanyEnrich](https://docs.companyenrich.com/reference) para campos de resposta e preços atuais.
+## Operações avançadas
+
+`CompanyEnrichAdvancedRequestTool` aceita um enum fixo de 42 operações em `operation`, além de objetos opcionais `body`, `query` e `path_parameters`. Inclui operações principais, prévia/contagem/scroll, formação acadêmica, geografia/taxonomias, exportações assíncronas, enriquecimento em massa e ciclo de vida de tarefas. Exclui administração de listas salvas e `/me`. Operações e campos de consulta/caminho desconhecidos, identificadores inválidos e entradas obrigatórias de tarefas são rejeitados antes da requisição. Operações beta de e-mail exigem `allow_beta=True`. Requisições avançadas paginadas usam explicitamente página 1 e tamanho 10; exportações exigem contagem de 1 a 50.000.
+
+Cada chamada faz uma requisição à API HTTPS fixa do CompanyEnrich, com `timeout` configurável (30 segundos por padrão). Não há novas tentativas, paginação, polling ou download de URLs de resultados automáticos. As operações podem consumir créditos; consulte a [referência da API](https://docs.companyenrich.com/reference) para schemas e preços atuais. Falhas HTTP são propagadas com mensagens sanitizadas, sem a chave da API ou o corpo original do erro.
