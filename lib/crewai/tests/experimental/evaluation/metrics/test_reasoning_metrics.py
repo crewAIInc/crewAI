@@ -186,3 +186,55 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         assert isinstance(result, EvaluationScore)
         assert result.score == 4.2
         assert "• Loop Avoidance: 2.0/10" in result.feedback
+
+
+def test_reasoning_evaluator_handles_multimodal_message_content() -> None:
+    """#8796: multimodal text parts must not crash loop detection, pattern
+    analysis or call samples."""
+    from unittest.mock import MagicMock
+
+    from crewai.llm import LLM
+
+    evaluator = ReasoningEfficiencyEvaluator(llm=MagicMock(spec=LLM))
+    response = [
+        {
+            "role": "assistant",
+            "content": [{"type": "text", "text": "Review the evidence"}],
+        }
+    ]
+    calls = [{"response": response}] * 3
+
+    loop_detected, _ = evaluator._detect_loops(calls)
+    patterns = evaluator._analyze_reasoning_patterns(calls)
+    samples = evaluator._get_call_samples(calls)
+
+    assert loop_detected is True
+    assert patterns["details"]
+    assert "Review the evidence" in samples
+
+
+def test_reasoning_evaluator_counts_multimodal_text_length_only() -> None:
+    """Length stats count text characters, not the repr of the parts list."""
+    from unittest.mock import MagicMock
+
+    from crewai.llm import LLM
+
+    evaluator = ReasoningEfficiencyEvaluator(llm=MagicMock(spec=LLM))
+    long_text = "x" * 500
+    calls = [
+        {
+            "response": [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": long_text},
+                        {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+                    ],
+                }
+            ]
+        }
+    ]
+
+    patterns = evaluator._analyze_reasoning_patterns(calls)
+
+    assert patterns["metrics"]["avg_length"] == 500
