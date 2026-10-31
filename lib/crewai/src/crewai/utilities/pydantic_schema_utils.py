@@ -74,6 +74,10 @@ if TYPE_CHECKING:
     from pydantic.main import AnyClassMethod
 else:
     try:
+        # pydantic.EmailStr always imports fine; using it raises ImportError
+        # at model-build time unless the optional email-validator package is
+        # present, so probe for it here to make the str fallback effective.
+        import email_validator  # noqa: F401
         from pydantic import EmailStr
     except ImportError:
         logger.warning(
