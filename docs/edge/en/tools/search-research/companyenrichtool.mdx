@@ -1,44 +1,53 @@
 ---
 title: "CompanyEnrich tools"
-description: "Enrich companies, search company profiles, and discover similar companies."
+description: "Research companies and people with twelve core tools and a fixed advanced operation selector."
 ---
 
 ## Setup
 
-Install `crewai-tools` and set `COMPANYENRICH_API_KEY` to a key from your [CompanyEnrich dashboard](https://app.companyenrich.com/). You can also pass `api_key` when constructing each tool.
+Install `crewai-tools` and set `COMPANYENRICH_API_KEY` to a key from your [CompanyEnrich dashboard](https://app.companyenrich.com/). You can also pass `api_key` when constructing each tool. Add any of these tools to a CrewAI agent.
+
+## Core tools
+
+| Tool | Endpoint |
+| --- | --- |
+| `CompanyEnrichCompanyTool` | `GET /companies/enrich` |
+| `CompanyEnrichSearchTool` | `POST /companies/search` |
+| `CompanyEnrichSimilarTool` | `POST /companies/similar` |
+| `CompanyEnrichPeopleSearchTool` | `POST /people/search` |
+| `CompanyEnrichPersonLookupTool` | `POST /people/lookup` |
+| `CompanyEnrichWorkforceTool` | `GET /companies/workforce` |
+| `CompanyEnrichPropertiesTool` | `POST /companies/enrich` |
+| `CompanyEnrichBatchTool` | `POST /companies/enrich/batch` |
+| `CompanyEnrichCompanyByIdTool` | `GET /companies` |
+| `CompanyEnrichPersonByIdTool` | `GET /people` |
+| `CompanyEnrichSearchCountTool` | `POST /companies/search/count` |
+| `CompanyEnrichSimilarCountTool` | `POST /companies/similar/count` |
 
 ## Usage
 
 ```python
-from crewai import Agent
 from crewai_tools import (
-    CompanyEnrichCompanyTool,
-    CompanyEnrichSearchTool,
-    CompanyEnrichSimilarTool,
+    CompanyEnrichCompanyTool, CompanyEnrichPeopleSearchTool,
+    CompanyEnrichSearchCountTool, CompanyEnrichAdvancedRequestTool,
 )
 
-tools = [
-    CompanyEnrichCompanyTool(),
-    CompanyEnrichSearchTool(),
-    CompanyEnrichSimilarTool(),
-]
-agent = Agent(
-    role="Company researcher",
-    goal="Research companies using current company data",
-    backstory="You research company profiles and matching accounts.",
-    tools=tools,
+profile = CompanyEnrichCompanyTool().run(domain="stripe.com", expand=["workforce"])
+people = CompanyEnrichPeopleSearchTool().run(
+    filters={"companyFilter": {"domains": ["stripe.com"]}}, expand=["education"], page_size=5
 )
-
-# Direct calls also work; these consume CompanyEnrich credits.
-profile = tools[0].run(domain="stripe.com")
-companies = tools[1].run(semantic_query="B2B software companies", page_size=5)
-lookalikes = tools[2].run(domains=["stripe.com"], page_size=5)
+count = CompanyEnrichSearchCountTool().run(filters={"countries": ["US"]})
+industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
 ```
 
-## Behavior
+## Inputs and results
 
-Each tool makes one request with a 30-second timeout (configurable with `timeout`). Search and similar-company tools return one page, including the original pagination metadata. `page` starts at 1; `page_size` defaults to 5 and accepts 1–100. Similar-company discovery accepts 1–10 domains. Search requires `page * page_size <= 10000`.
+Search tools accept a full `filters` object. Company search also accepts `semantic_query` (up to 500 characters) and `query` (up to 250). Dedicated non-null inputs override matching filter fields; every other filter field is retained. Use supported `expand` arrays (`workforce` for companies, `education` for people) and `wait_for_enrichment` on routes that document it. Workforce requires exactly one `company_id` or `domain`. Batch enrichment accepts 1–50 domains; lookalikes accept 1–10. Company IDs are UUIDs; person IDs accept positive int64 integers or decimal strings.
 
-Enrichment costs 1 credit per call. Search costs 1 credit per returned company (minimum 1); similar-company discovery costs 5 credits per returned company (minimum 5). Calls are not automatically retried or paginated. HTTP errors, including invalid credentials (401), insufficient credits (402), and rate limits (429), are raised to the caller.
+Core search defaults remain `page=1`, `page_size=5`; page size accepts 1–100 and page multiplied by page size must not exceed 10,000. Each result preserves all API fields and pagination metadata. Counts return numbers, including zero; batch and taxonomy results retain arrays.
 
-See the [CompanyEnrich API reference](https://docs.companyenrich.com/reference) for response fields and current pricing.
+## Advanced operations
+
+`CompanyEnrichAdvancedRequestTool` accepts a fixed enum of 42 operations through `operation`, plus optional `body`, `query`, and `path_parameters` objects. It covers core operations, preview/count/scroll, people education, geography/taxonomy, and explicit async export, bulk enrichment, and job lifecycle calls. It excludes saved-list administration and `/me`. Unknown operations, query/path fields, invalid identifiers and required job inputs fail before a request. Email beta operations require `allow_beta=True`. Advanced page requests default explicitly to page 1 and page size 10; async exports require a count from 1 to 50,000.
+
+Each call uses the fixed CompanyEnrich HTTPS API and makes one request with a configurable `timeout` (30 seconds by default). There are no automatic retries, pagination, polling, or result-URL downloads. Operations may consume credits; see the [API reference](https://docs.companyenrich.com/reference) for schemas and current pricing. HTTP failures are raised with sanitized messages, without the API key or upstream error body.
