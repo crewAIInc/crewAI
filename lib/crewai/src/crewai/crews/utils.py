@@ -141,7 +141,15 @@ def prepare_task_execution(
         ValueError: If no agent is available for the task.
     """
     if start_index is not None and task_index < start_index:
-        if task.output:
+        # Checkpoint replay derives its start index from lifecycle evidence;
+        # Crew.replay uses the separate task-output log and keeps its existing
+        # output-based replay contract.
+        reusable_output = (
+            crew._has_reusable_task_output(task)
+            if crew.checkpoint_kickoff_event_id is not None
+            else task.output is not None
+        )
+        if reusable_output:
             task_outputs.append(task.output)
             if not task.async_execution:
                 last_sync_output = task.output
