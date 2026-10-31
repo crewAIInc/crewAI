@@ -327,6 +327,130 @@ class TestSerialization:
 
 
 
+class TestNonSerializableEventPayloads:
+    """Events can carry live objects, and the record still has to dump to JSON.
+
+    ``ToolUsageErrorEvent.error`` holds the exception the tool raised and
+    ``ToolExecutionErrorEvent.tool_class`` holds a callable, neither of which
+    ``model_dump(mode="json")`` can encode. Before the fix, the first such event made
+    every later checkpoint fail with ``PydanticSerializationError``.
+    """
+
+    def test_tool_usage_error_event_roundtrip(self):
+        from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
+
+        g = EventRecord()
+        event = ToolUsageErrorEvent(
+            tool_name="check",
+            tool_args={},
+            error=ValueError("service unavailable"),
+        )
+        g.add(event)
+
+        dumped = g.model_dump_json()
+        assert "service unavailable" in dumped
+
+        node = EventRecord.model_validate_json(dumped).get(event.event_id)
+        assert node is not None
+        assert node.event.type == "tool_usage_error"
+
+    def test_tool_execution_error_event_roundtrip(self):
+        from crewai.events.types.tool_usage_events import ToolExecutionErrorEvent
+
+        class Check:
+            def _run(self) -> int:
+                return 1
+
+        g = EventRecord()
+        event = ToolExecutionErrorEvent(
+            tool_name="check",
+            tool_args={},
+            error=RuntimeError("nope"),
+            tool_class=Check,
+        )
+        g.add(event)
+
+        dumped = g.model_dump_json()
+        assert "nope" in dumped
+
+        node = EventRecord.model_validate_json(dumped).get(event.event_id)
+        assert node is not None
+        assert node.event.type == "tool_execution_error"
+
+    def test_serializable_payload_is_unchanged(self):
+        g = EventRecord()
+        event = _event("test", source_type="crew", task_id="t1", emission_sequence=42)
+        g.add(event)
+
+        dumped = json.loads(g.model_dump_json())["nodes"][event.event_id]["event"]
+        assert dumped == event.model_dump(mode="json")
+
+    def test_nested_payload_is_not_truncated(self):
+        """A payload JSON already holds is stored at full depth, as it was before.
+
+        ``messages`` and the ``tool_calls`` inside it sit deeper than
+        ``to_serializable``'s default ``max_depth``; converting every payload through
+        it replaced those entries with ``repr`` strings even though the dump succeeded.
+        """
+        from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
+
+        messages = [
+            {"role": "system", "content": "you are a helper"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "search", "arguments": {"q": "crewai"}},
+                    }
+                ],
+            },
+        ]
+
+        g = EventRecord()
+        event = LLMCallCompletedEvent(
+            model="gpt-4o-mini",
+            response="done",
+            messages=messages,
+            call_type=LLMCallType.LLM_CALL,
+            call_id="call_1",
+        )
+        g.add(event)
+
+        dumped = json.loads(g.model_dump_json())["nodes"][event.event_id]["event"]
+        assert dumped == event.model_dump(mode="json")
+
+    def test_live_object_does_not_truncate_the_rest_of_the_payload(self):
+        """Only the value JSON cannot hold degrades; nested data stays nested."""
+        from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
+
+        g = EventRecord()
+        event = ToolUsageErrorEvent(
+            tool_name="check",
+            tool_args={"steps": [{"call": {"args": {"q": "crewai"}}}]},
+            error=ValueError("service unavailable"),
+        )
+        g.add(event)
+
+        dumped = json.loads(g.model_dump_json())["nodes"][event.event_id]["event"]
+        assert dumped["tool_args"] == event.tool_args
+        assert dumped["error"] == repr(event.error)
+
+    def test_live_payload_stays_live_in_memory(self):
+        """Only the JSON dump converts the payload; listeners still see the exception."""
+        from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
+
+        g = EventRecord()
+        error = ValueError("service unavailable")
+        g.add(ToolUsageErrorEvent(tool_name="check", tool_args={}, error=error))
+
+        node = g.get(next(iter(g.nodes)))
+        assert node is not None
+        assert node.event.error is error
+
+
 
 class TestRuntimeStateIntegration:
     def test_runtime_state_serializes_event_record(self):
