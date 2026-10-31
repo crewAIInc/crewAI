@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.15.28",
-    "crewai-cli==1.15.28",
+    "crewai-core==1.15.33",
+    "crewai-cli==1.15.33",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -20,9 +20,9 @@ dependencies = [
     "pdfplumber~=0.11.4",
     "regex~=2026.1.15",
     # Telemetry and Monitoring
-    "opentelemetry-api>=1.42,<2",
-    "opentelemetry-sdk>=1.42,<2",
-    "opentelemetry-exporter-otlp-proto-http>=1.42,<2",
+    "opentelemetry-api>=1.45.1,<2",
+    "opentelemetry-sdk>=1.45.1,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
     # Data Handling
     "chromadb~=1.5.9",
     "tokenizers>=0.21,<1",
@@ -47,7 +47,7 @@ dependencies = [
     "aiosqlite~=0.21.0",
     "pyyaml~=6.0",
     "aiofiles~=24.1.0",
-    "lancedb>=0.29.2,<0.30.1",
+    "lancedb>=0.33.0,<1.0.0",
 ]
 
 [project.urls]
@@ -58,7 +58,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.15.28",
+    "crewai-tools==1.15.33",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
@@ -96,7 +96,7 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm>=1.88.6,<2",
+    "litellm>=1.100.4,<1.100.5",
 ]
 bedrock = [
     "boto3~=1.43.46",

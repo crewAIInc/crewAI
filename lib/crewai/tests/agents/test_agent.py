@@ -1427,7 +1427,7 @@ def test_handle_context_length_exceeds_limit():
     respect_context_window = True
     callbacks = []
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize:
+    with patch.object(llm, "summarize_messages") as mock_summarize:
         mock_summarize.side_effect = ValueError("Context length limit exceeded")
 
         # Directly call handle_context_length with our parameters
@@ -2437,6 +2437,182 @@ def test_agent_from_repository_without_org_set(
         style="yellow",
     )
 
+
+def _repository_response(status_code: int = 200) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    response.text = "Agent not found"
+    response.json.return_value = {
+        "role": "repo role",
+        "goal": "repo goal",
+        "backstory": "repo backstory",
+        "max_iter": 7,
+        "tools": [
+            {"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}
+        ],
+    }
+    return response
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config(mock_get_agent, mock_get_auth_token):
+    """agents.yaml reaches Agent as ``config=``, so the key must work there too."""
+    from crewai_tools import SerperDevTool
+
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(config={"from_repository": "test_agent"})
+
+    mock_get_agent.assert_called_once_with("test_agent")
+    assert agent.from_repository == "test_agent"
+    assert agent.role == "repo role"
+    assert agent.goal == "repo goal"
+    assert agent.backstory == "repo backstory"
+    assert agent.max_iter == 7
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_precedence(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+
+    from_config = Agent(
+        config={"from_repository": "test_agent", "role": "Yaml Role"}
+    )
+    from_kwarg = Agent(
+        role="Kwarg Role",
+        config={"from_repository": "test_agent", "role": "Yaml Role"},
+    )
+
+    assert (from_config.role, from_config.goal) == ("Yaml Role", "repo goal")
+    assert (from_kwarg.role, from_kwarg.goal) == ("Kwarg Role", "repo goal")
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_kwarg_wins_over_config_repository(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(
+        from_repository="kwarg_agent", config={"from_repository": "yaml_agent"}
+    )
+
+    mock_get_agent.assert_called_once_with("kwarg_agent")
+    assert agent.from_repository == "kwarg_agent"
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_with_local_fields_still_fetches(
+    mock_get_agent, mock_get_auth_token
+):
+    """With role/goal/backstory set locally the repository used to be skipped
+    silently, dropping its tools and settings."""
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(
+        config={
+            "from_repository": "test_agent",
+            "role": "Yaml Role",
+            "goal": "Yaml Goal",
+            "backstory": "Yaml Backstory",
+        }
+    )
+
+    mock_get_agent.assert_called_once_with("test_agent")
+    assert (agent.role, agent.goal, agent.backstory) == (
+        "Yaml Role",
+        "Yaml Goal",
+        "Yaml Backstory",
+    )
+    assert agent.max_iter == 7
+    assert len(agent.tools) == 1
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_agent_not_found(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response(status_code=404)
+
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent does not exist, make sure the name is correct",
+    ):
+        Agent(config={"from_repository": "test_agent", "role": "Yaml Role"})
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_kwarg_and_config_fields_config_wins(
+    mock_get_agent, mock_get_auth_token
+):
+    """Behaviour change: config fields used to lose to the repository here."""
+    mock_get_agent.return_value = _repository_response()
+
+    agent = Agent(from_repository="test_agent", config={"goal": "Yaml Goal"})
+
+    assert (agent.role, agent.goal) == ("repo role", "Yaml Goal")
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_in_config_requires_login(mock_get_agent):
+    """Logged out, a config ``from_repository`` fails like the keyword form."""
+    from crewai.auth.token import AuthError
+
+    with (
+        patch("crewai_core.token_manager.TokenManager.get_token", return_value=None),
+        pytest.raises(AuthError, match="No token found, make sure you are logged in"),
+    ):
+        Agent(
+            config={
+                "from_repository": "test_agent",
+                "role": "Yaml Role",
+                "goal": "Yaml Goal",
+                "backstory": "Yaml Backstory",
+            }
+        )
+
+    mock_get_agent.assert_not_called()
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_does_not_mutate_input(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_agent.return_value = _repository_response()
+    values = {"from_repository": "test_agent", "config": {"goal": "Yaml Goal"}}
+
+    Agent.model_validate(values)
+
+    assert values == {
+        "from_repository": "test_agent",
+        "config": {"goal": "Yaml Goal"},
+    }
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_config_without_from_repository_does_not_fetch(mock_get_agent):
+    agent = Agent(
+        config={
+            "role": "Yaml Role",
+            "goal": "Yaml Goal",
+            "backstory": "Yaml Backstory",
+        },
+        goal="Kwarg Goal",
+    )
+
+    mock_get_agent.assert_not_called()
+    assert agent.from_repository is None
+    assert (agent.role, agent.goal, agent.backstory) == (
+        "Yaml Role",
+        "Kwarg Goal",
+        "Yaml Backstory",
+    )
+
+
 def test_agent_apps_consolidated_functionality():
     agent = Agent(
         role="Platform Agent",
@@ -2626,6 +2802,43 @@ def test_get_platform_tools_warns_when_token_is_missing(monkeypatch, capsys):
 
     assert result == []
     assert "No Enterprise Action Auth Token found" in capsys.readouterr().out
+
+
+def test_get_platform_tools_supports_legacy_platform_integration_token(monkeypatch):
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "old-token")
+    agent = Agent(role="Old Token Agent", goal="g", backstory="b", apps=["gmail"])
+
+    resolved_tools = [MagicMock()]
+    with patch("crewai_tools.CrewaiPlatformTools", return_value=resolved_tools):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == resolved_tools
+
+
+def test_get_platform_tools_warning_includes_the_resolution_error(monkeypatch):
+    def fail(apps):
+        raise RuntimeError("integrations API returned 503")
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", fail)
+    agent = Agent(role="Failing Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(
+        UserWarning, match=r"Cause: integrations API returned 503$"
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warning_has_no_cause_without_an_error(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Empty Agent", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(UserWarning, match="none resolved to any tools") as caught:
+        agent.get_platform_tools(agent.apps)
+
+    assert "Cause:" not in str(caught[0].message)
 
 
 def test_get_platform_tools_quiet_when_tools_resolve(monkeypatch):
