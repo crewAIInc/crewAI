@@ -1,0 +1,70 @@
+---
+title: viaSocket Tools
+description: "`ViaSocketTools` turns the apps your end users connected through viaSocket (2,300+, such as Slack, Google Sheets and HubSpot) into CrewAI tools."
+icon: plug
+mode: "wide"
+---
+
+# `ViaSocketTools`
+
+## Description
+
+[viaSocket](https://viasocket.com) connects 2,300+ apps, such as Slack, Google Sheets, HubSpot and Notion. `ViaSocketTools` turns each chosen action of an app your end user connected into a CrewAI tool. The tool runs on that user's own connection, so your agents act in their apps without connector code or OAuth on your side.
+
+## Installation
+
+```shell
+uv add viasocket
+```
+
+## Environment Variables
+
+- `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID`, `VIASOCKET_EMBED_SECRET` (required): run `npx viasocket-apps setup` in your project, or copy them from the viaSocket dashboard (**Integrations → Create embed → Install Code**). You can also pass `org_id`, `project_id` and `secret` directly.
+
+Your end users connect their apps through viaSocket's connect popup in your product. To try it first, connect an app for yourself from the terminal:
+
+```shell
+npx viasocket-apps connect slack --user me
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ViaSocketTools
+
+tools = ViaSocketTools(
+    user="me",  # the end user the apps were connected for
+    apps=["slack"],
+    actions={"slack": ["send-message"]},
+)
+
+agent = Agent(
+    role="Operations assistant",
+    goal="Keep the team updated in Slack",
+    backstory="You post updates where the team reads them.",
+    tools=tools,
+    verbose=True,
+)
+
+task = Task(
+    description="Post a short summary of today's release in the #general channel",
+    agent=agent,
+    expected_output="Confirmation that the message was posted",
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## Parameters
+
+- `user` (required): the unique identifier the end user's apps were connected under.
+- `apps` (required): the apps, by slug (`slack`, `google-sheets`, `hubspot`).
+- `actions` (optional): the actions per app, by path or `action_id` (`{"slack": ["send-message"]}`). An app left out gets every published action.
+
+## Notes
+
+- Tool names are `<app>_<action>`, such as `slack_send-message`. Each tool's input is built from the action's form, so the agent sees the same fields and help text a person would.
+- Fields that hold an id (a channel, a sheet) are filled with the app's `<app>_list-options` tool, which reads the real values from the user's account.
+- If the user has not connected an app, or the app returns an error, the agent gets a plain-text answer instead of an exception.

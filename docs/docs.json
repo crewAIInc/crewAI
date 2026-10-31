@@ -337,6 +337,7 @@
                           "edge/en/tools/automation/apifyactorstool",
                           "edge/en/tools/automation/composiotool",
                           "edge/en/tools/automation/multiontool",
+                          "edge/en/tools/automation/viasockettool",
                           "edge/en/tools/automation/waittool",
                           "edge/en/tools/automation/zapieractionstool"
                         ]
@@ -20081,7 +20082,8 @@
                           "edge/pt-BR/tools/automation/overview",
                           "edge/pt-BR/tools/automation/apifyactorstool",
                           "edge/pt-BR/tools/automation/composiotool",
-                          "edge/pt-BR/tools/automation/multiontool"
+                          "edge/pt-BR/tools/automation/multiontool",
+                          "edge/pt-BR/tools/automation/viasockettool"
                         ]
                       }
                     ]
@@ -38283,6 +38285,7 @@
                           "edge/ko/tools/automation/apifyactorstool",
                           "edge/ko/tools/automation/composiotool",
                           "edge/ko/tools/automation/multiontool",
+                          "edge/ko/tools/automation/viasockettool",
                           "edge/ko/tools/automation/zapieractionstool"
                         ]
                       }
@@ -57085,6 +57088,7 @@
                           "edge/ar/tools/automation/apifyactorstool",
                           "edge/ar/tools/automation/composiotool",
                           "edge/ar/tools/automation/multiontool",
+                          "edge/ar/tools/automation/viasockettool",
                           "edge/ar/tools/automation/zapieractionstool"
                         ]
                       }
