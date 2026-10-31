@@ -253,6 +253,25 @@ def test_gemini_started_event_surfaces_max_output_tokens():
     assert event.max_tokens == 2000
 
 
+@pytest.mark.parametrize(
+    ("token_kwargs", "expected"),
+    [
+        ({"max_tokens": 1000}, 1000),
+        ({"max_output_tokens": 2000}, 2000),
+        ({"max_tokens": 1000, "max_output_tokens": 2000}, 2000),
+        ({}, None),
+    ],
+)
+def test_gemini_generation_config_caps_output_tokens(token_kwargs, expected):
+    """max_tokens caps Gemini output unless max_output_tokens is set."""
+    llm = LLM(model="google/gemini-2.0-flash-001", api_key="test-key", **token_kwargs)
+
+    config = llm._prepare_generation_config()
+
+    assert config.max_output_tokens == expected
+    assert llm._effective_max_tokens() == expected
+
+
 def test_gemini_specific_parameters():
     """
     Test Gemini-specific parameters like stop_sequences, streaming, and safety settings
