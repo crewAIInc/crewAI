@@ -385,6 +385,59 @@ class TestNonSerializableEventPayloads:
         dumped = json.loads(g.model_dump_json())["nodes"][event.event_id]["event"]
         assert dumped == event.model_dump(mode="json")
 
+    def test_nested_payload_is_not_truncated(self):
+        """A payload JSON already holds is stored at full depth, as it was before.
+
+        ``messages`` and the ``tool_calls`` inside it sit deeper than
+        ``to_serializable``'s default ``max_depth``; converting every payload through
+        it replaced those entries with ``repr`` strings even though the dump succeeded.
+        """
+        from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
+
+        messages = [
+            {"role": "system", "content": "you are a helper"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "search", "arguments": {"q": "crewai"}},
+                    }
+                ],
+            },
+        ]
+
+        g = EventRecord()
+        event = LLMCallCompletedEvent(
+            model="gpt-4o-mini",
+            response="done",
+            messages=messages,
+            call_type=LLMCallType.LLM_CALL,
+            call_id="call_1",
+        )
+        g.add(event)
+
+        dumped = json.loads(g.model_dump_json())["nodes"][event.event_id]["event"]
+        assert dumped == event.model_dump(mode="json")
+
+    def test_live_object_does_not_truncate_the_rest_of_the_payload(self):
+        """Only the value JSON cannot hold degrades; nested data stays nested."""
+        from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
+
+        g = EventRecord()
+        event = ToolUsageErrorEvent(
+            tool_name="check",
+            tool_args={"steps": [{"call": {"args": {"q": "crewai"}}}]},
+            error=ValueError("service unavailable"),
+        )
+        g.add(event)
+
+        dumped = json.loads(g.model_dump_json())["nodes"][event.event_id]["event"]
+        assert dumped["tool_args"] == event.tool_args
+        assert dumped["error"] == repr(event.error)
+
     def test_live_payload_stays_live_in_memory(self):
         """Only the JSON dump converts the payload; listeners still see the exception."""
         from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
