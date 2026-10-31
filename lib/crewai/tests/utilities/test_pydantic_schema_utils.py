@@ -16,7 +16,7 @@ from copy import deepcopy
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -272,6 +272,43 @@ class TestTypedArrays:
         Model = create_model_from_schema(schema)
         obj = Model(data=[1, "two", 3.0])
         assert obj.data == [1, "two", 3.0]
+
+    def test_tuple_form_items(self) -> None:
+        """Draft-07 allows `items` to be a list of positional schemas."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "pair": {
+                    "type": "array",
+                    "items": [{"type": "string"}, {"type": "integer"}],
+                },
+            },
+            "required": ["pair"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(pair=["a", 1]).pair == ["a", 1]
+
+        with pytest.raises(ValidationError):
+            Model(pair=[None])
+
+    def test_prefix_items_with_items_schema(self) -> None:
+        """2020-12 prefixes an array with `prefixItems` and types the rest."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "values": {
+                    "type": "array",
+                    "prefixItems": [{"type": "string"}],
+                    "items": {"type": "integer"},
+                },
+            },
+            "required": ["values"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(values=["a", 1, 2]).values == ["a", 1, 2]
+
+        with pytest.raises(ValidationError):
+            Model(values=[None])
 
 
 class TestUnionTypes:
