@@ -318,6 +318,7 @@ class SerperDevTool(BaseTool):
         """Execute the search operation."""
         search_query: str | None = kwargs.get("search_query") or kwargs.get("query")
         search_type: str = kwargs.get("search_type", self.search_type)
+        search_type = search_type.lower()
         save_file = kwargs.get("save_file", self.save_file)
 
         if not search_query:
