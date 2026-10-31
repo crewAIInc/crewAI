@@ -54,6 +54,7 @@ CrewAI AOP에는 코드를 작성하지 않고도 에이전트 생성 및 구성
 | **코드 실행 허용** _(옵션)_              | `allow_code_execution`   | `Optional[bool]`              | 에이전트의 코드 실행 활성화 여부입니다. 기본값은 False입니다.                                                          |
 | **최대 재시도 횟수** _(옵션)_            | `max_retry_limit`        | `int`                         | 오류 발생 시 최대 재시도 횟수입니다. 기본값은 2입니다.                                                                 |
 | **컨텍스트 윈도우 준수** _(옵션)_         | `respect_context_window` | `bool`                        | 메시지를 컨텍스트 윈도우 크기 내로 유지하기 위하여 요약 기능을 사용합니다. 기본값은 True입니다.                         |
+| **향상된 압축 사용** _(옵션)_           | `use_better_compaction`  | `bool`                        | 너무 큰 네이티브 도구 결과를 임시 파일로 미루고 에이전트가 이를 나누어 읽습니다. 기본값은 True입니다.                     |
 | **코드 실행 모드** _(옵션)_              | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | 코드 실행 모드: 'safe'(Docker 사용) 또는 'unsafe'(직접 실행). 기본값은 'safe'입니다.                                   |
 | **멀티모달** _(옵션)_                    | `multimodal`             | `bool`                        | 에이전트가 멀티모달 기능을 지원하는지 여부입니다. 기본값은 False입니다.                                                |
 | **날짜 자동 삽입** _(옵션)_              | `inject_date`            | `bool`                        | 에이전트 프롬프트에 현재 날짜를 자동으로 삽입할지 여부입니다. 기본값은 False입니다.                                     |
@@ -650,8 +651,70 @@ asyncio.run(main())
 ```
 
 <Note>
-`kickoff()` 메서드는 내부적으로 `LiteAgent`를 사용하며, 모든 agent 설정(역할, 목표, 백스토리, 도구 등)을 유지하면서도 더 간단한 실행 흐름을 제공합니다.
+`kickoff()` 메서드는 crew 안의 에이전트가 쓰는 것과 같은 `AgentExecutor`로 작업이나 crew 없이 에이전트를 실행하며, 모든 agent 설정(역할, 목표, 백스토리, 도구 등)을 유지합니다.
 </Note>
+
+## 이전 릴리스에서 에이전트 업그레이드
+
+1.15.29 릴리스는 `CrewAgentExecutor`를 제거했고, 모든 에이전트가 큰 도구 결과, 긴 대화, 반복되는 도구 호출을 처리하는 방식을 바꾸었습니다. 이 변경 사항은 crew 안의 에이전트, Flow 안의 에이전트, `kickoff()`로 호출한 에이전트 모두에 적용됩니다. 예외는 [계획](/ko/concepts/planning)을 세우는 에이전트의 계획 단계입니다. 이 단계에서는 도구 결과가 미뤄지지 않고, 대화가 요약되지 않으며, 반복 호출 횟수는 단계마다 새로 셉니다. 1.15.28 이하에서 옮겨 오는 경우 아래 항목을 하나씩 확인하세요.
+
+### `CrewAgentExecutor` 제거
+
+`AgentExecutor`가 유일한 에이전트 실행기입니다. 1.14.5부터 기본값이었으므로, `executor_class`를 설정한 적 없는 에이전트는 이미 이 실행기로 실행되고 있었습니다.
+
+- `executor_class=CrewAgentExecutor` 또는 설정 파일의 문자열 `"CrewAgentExecutor"`는 `CrewAgentExecutor has been removed. Use crewai.agents.agent_executor.AgentExecutor.` 메시지와 함께 검증에 실패합니다. 이 설정을 제거하세요.
+- 다음 import 경로는 더 이상 존재하지 않습니다: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, `crewai.experimental.agent_executor` 모듈, `crewai.experimental.AgentExecutor`, `crewai.experimental.CrewAgentExecutorFlow`. 실행기는 `crewai.agents`에서 import하세요:
+
+```python Code
+from crewai.agents import AgentExecutor
+```
+
+이전 실행기를 되살리는 설정은 없습니다.
+
+### 너무 큰 도구 결과는 미뤄집니다
+
+네이티브 도구 호출이 모델 컨텍스트 윈도우의 25%보다 큰 결과를 반환하면, 에이전트는 더 이상 결과 전체를 받지 않습니다. 대신 짧은 미리보기와 임시 파일에 대한 참조를 받고, 나머지는 `Read a deferred tool result` 도구(모델에는 `read_a_deferred_tool_result`로 보입니다)로 나누어 읽습니다. 이 도구는 필요할 때 CrewAI가 에이전트에 추가합니다.
+
+- 실패한 도구 호출, `result_as_answer=True`인 도구, 텍스트 기반(ReAct) 도구 호출은 미뤄지지 않습니다.
+- 파일은 시스템 임시 디렉터리 아래의 비공개 디렉터리에 저장됩니다. 파일을 만든 실행 중에만 읽을 수 있으며, 해당 작업 또는 `kickoff()` 호출이 끝나면 삭제됩니다.
+
+도구 결과 전체를 대화에 유지하려면 에이전트에서 미루기를 끄세요:
+
+```python Code
+from crewai import Agent
+
+agent = Agent(
+    role="Source Reviewer",
+    goal="Quote sources exactly",
+    backstory="Checks every quote against the original text",
+    use_better_compaction=False,  # Keep whole tool results in the conversation
+)
+```
+
+### 컨텍스트는 넘치기 전에 요약됩니다
+
+`respect_context_window=True`(기본값)일 때 에이전트는 이제 요청을 보내기 전에 매번 크기를 잽니다. 요청이 모델의 컨텍스트 윈도우보다 크면, 제공자가 요청을 거부할 때까지 기다리지 않고 CrewAI가 먼저 이전 대화를 요약합니다. 요약 과정에서 정확한 인용문 같은 세부 내용이 사라질 수 있습니다.
+
+요약을 끄려면 `respect_context_window=False`로 설정하세요. 그러면 너무 긴 요청은 `SystemExit("Context length exceeded and user opted not to summarize...")`로 실행을 중단합니다. `SystemExit`는 `Exception`의 하위 클래스가 아니므로 `except Exception` 블록으로는 잡히지 않습니다.
+
+### 반복되는 도구 호출은 작업을 중단합니다
+
+에이전트가 한 번의 실행에서 같은 도구를 같은 인수로 호출해 같은 결과를 다섯 번 받으면, CrewAI는 `ToolExecutionFailedError`와 함께 에이전트가 `called '<tool>' with the same arguments 5 times and got the same result each time`라는 메시지로 작업을 중단합니다.
+
+- 횟수는 연속 호출만이 아니라 작업 또는 `kickoff()` 호출 전체를 기준으로 세며, 도구 캐시가 응답한 결과도 포함합니다.
+- 이 중단은 `tool_failure_policy` 설정과 관계없이 일어나며, `max_retry_limit`로 재시도되지 않습니다.
+- 다섯 번이라는 한도는 고정되어 있습니다. 이를 바꾸거나 끄는 설정은 없습니다.
+
+### 컨텍스트 윈도우 크기를 정하는 방법
+
+미루기와 요약은 모두 CrewAI가 모델에 사용하는 컨텍스트 윈도우, 즉 패키지에 포함된 LiteLLM 모델 카탈로그에 등록된 윈도우의 85%를 기준으로 판단합니다. 카탈로그에 없는 모델은 제공자 기본값을 사용합니다. OpenAI, Azure, Bedrock, OpenAI 호환(예: OpenRouter), LiteLLM 경유 모델의 기본값은 8,192 토큰이므로 85% 비율을 적용하면 CrewAI는 6,963을 사용하며, 두 기능 모두 모델의 실제 윈도우에 비해 훨씬 일찍 작동합니다. `get_context_window_size()`를 재정의하지 않은 사용자 정의 `BaseLLM` 하위 클래스는 4,096을 사용합니다. CrewAI가 사용하는 크기를 확인하려면 LLM에서 `get_context_window_size()`를 호출하세요. LLM은 실행할 때와 같은 방식으로 만들어지므로 제공자 API 키가 설정되어 있어야 합니다:
+
+```python Code
+from crewai import LLM
+
+llm = LLM(model="openrouter/your-provider/your-model")
+print(llm.get_context_window_size())
+```
 
 ## 중요한 고려사항 및 모범 사례
 

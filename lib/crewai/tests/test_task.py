@@ -615,6 +615,22 @@ def test_no_inject_date():
     assert "2025-05-21" not in result.raw
 
 
+def test_json_property_is_none_when_output_json_was_not_produced():
+    from crewai.crews.crew_output import CrewOutput
+    from crewai.tasks.output_format import OutputFormat
+
+    task_output = TaskOutput(
+        description="Score the title",
+        agent="Scorer",
+        raw="not json",
+        output_format=OutputFormat.JSON,
+    )
+    crew_output = CrewOutput(raw="not json", tasks_output=[task_output])
+
+    assert task_output.json is None
+    assert crew_output.json is None
+
+
 @pytest.mark.vcr()
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):

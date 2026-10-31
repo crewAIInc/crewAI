@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Sequence
 import concurrent.futures
 import contextlib
 import contextvars
@@ -12,6 +12,7 @@ import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
+import warnings
 
 from crewai_core.printer import ColoredText, Printer
 from crewai_core.settings import Settings
@@ -33,7 +34,12 @@ from crewai.events.types.llm_events import (
     ContextWindowSummarizationStartedEvent,
 )
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
+from crewai.llms.base_llm import (
+    BaseLLM,
+    EmptyLLMResponseError,
+    LLMCallBlockedError,
+    call_stop_override,
+)
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -41,10 +47,8 @@ from crewai.tools.structured_tool import (
     strip_composite_description_prefix,
 )
 from crewai.tools.tool_failure import (
-    ToolExecutionFailedError,
     ToolFailure,
     ToolFailureReason,
-    ToolFailureRecord,
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
@@ -70,6 +74,7 @@ if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
+    from crewai.crew import Crew
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -384,6 +389,7 @@ def handle_max_iterations_exceeded(
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
     verbose: bool = True,
+    request_within_rpm_limit: Callable[[], bool] | None = None,
 ) -> AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -394,9 +400,13 @@ def handle_max_iterations_exceeded(
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
         verbose: Whether to print output.
+        request_within_rpm_limit: RPM limiter that admits each model request.
 
     Returns:
         AgentFinish with the final answer after exceeding max iterations.
+
+    Raises:
+        EmptyLLMResponseError: If the answer and its single retry were empty.
     """
     if verbose:
         printer.print(
@@ -410,18 +420,14 @@ def handle_max_iterations_exceeded(
         format_message_for_llm(I18N_DEFAULT.errors("force_final_answer"), role="user")
     )
 
-    answer = llm.call(
-        messages,
-        callbacks=callbacks,
+    enforce_rpm_limit(request_within_rpm_limit)
+    answer = _call_llm_retrying_empty(
+        llm,
+        lambda: llm.call(messages, callbacks=callbacks),
+        printer,
+        verbose=verbose,
+        request_within_rpm_limit=request_within_rpm_limit,
     )
-
-    if answer is None or answer == "":
-        if verbose:
-            printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-        raise ValueError("Invalid response from LLM call - None or empty.")
 
     formatted = format_answer(answer=answer)
 
@@ -502,37 +508,70 @@ def _prepare_llm_call(
         yield executor_context.messages
 
 
-def _validate_and_finalize_llm_response(
-    answer: Any,
-    executor_context: AgentExecutor | LiteAgent | None,
+def _report_empty_llm_answer(
+    printer: Printer, verbose: bool, *, retrying: bool
+) -> None:
+    if not verbose:
+        return
+    if retrying:
+        printer.print(
+            content="Received an empty response from the LLM. Retrying once.",
+            color="yellow",
+        )
+    else:
+        printer.print(
+            content="Received None or empty response from LLM call.",
+            color="red",
+        )
+
+
+def _call_llm_retrying_empty(
+    llm: LLM | BaseLLM,
+    call: Callable[[], Any],
     printer: Printer,
-    verbose: bool = True,
-) -> str | BaseModel | Any:
-    """Shared post-call logic: validate response and run after hooks.
+    verbose: bool,
+    request_within_rpm_limit: Callable[[], bool] | None,
+) -> Any:
+    """Make an LLM call, repeating it once if the answer came back empty.
 
-    Args:
-        answer: The raw LLM response.
-        executor_context: Optional executor context for hook invocation.
-        printer: Printer instance for output.
-        verbose: Whether to print output.
-
-    Returns:
-        The potentially modified response.
+    An answer is empty when it is falsy (``None``, ``""``, no tool calls) or
+    the call raised :class:`EmptyLLMResponseError` (LiteLLM streaming). The
+    caller admits the first request through the RPM limiter; the retry is
+    admitted here.
 
     Raises:
-        ValueError: If the response is None or empty.
+        EmptyLLMResponseError: If the retry was empty too.
     """
-    if not answer:
-        if verbose:
-            printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-        raise ValueError("Invalid response from LLM call - None or empty.")
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=True)
+    enforce_rpm_limit(request_within_rpm_limit)
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=False)
+    raise EmptyLLMResponseError(llm.model)
 
-    return _setup_after_llm_call_hooks(
-        executor_context, answer, printer, verbose=verbose
-    )
+
+async def _acall_llm_retrying_empty(
+    llm: LLM | BaseLLM,
+    call: Callable[[], Awaitable[Any]],
+    printer: Printer,
+    verbose: bool,
+    request_within_rpm_limit: Callable[[], bool] | None,
+) -> Any:
+    """Async counterpart of :func:`_call_llm_retrying_empty`."""
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := await call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=True)
+    enforce_rpm_limit(request_within_rpm_limit)
+    with contextlib.suppress(EmptyLLMResponseError):
+        if answer := await call():
+            return answer
+    _report_empty_llm_answer(printer, verbose, retrying=False)
+    raise EmptyLLMResponseError(llm.model)
 
 
 def _summarize_context_before_llm_call(
@@ -704,7 +743,7 @@ def get_llm_response(
 
     Raises:
         Exception: If an error occurs.
-        ValueError: If the response is None or empty.
+        EmptyLLMResponseError: If the answer and its single retry were empty.
     """
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
@@ -721,18 +760,28 @@ def get_llm_response(
                 from_task=from_task,
                 from_agent=from_agent,
             )
-        answer = llm.call(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        answer = _call_llm_retrying_empty(
+            llm,
+            lambda: llm.call(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            ),
+            printer,
+            verbose=verbose,
+            request_within_rpm_limit=(
+                executor_context.request_within_rpm_limit
+                if executor_context is not None
+                else None
+            ),
         )
 
-    return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
     )
 
 
@@ -770,7 +819,7 @@ async def aget_llm_response(
 
     Raises:
         Exception: If an error occurs.
-        ValueError: If the response is None or empty.
+        EmptyLLMResponseError: If the answer and its single retry were empty.
     """
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
@@ -788,18 +837,28 @@ async def aget_llm_response(
                 from_task=from_task,
                 from_agent=from_agent,
             )
-        answer = await llm.acall(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        answer = await _acall_llm_retrying_empty(
+            llm,
+            lambda: llm.acall(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            ),
+            printer,
+            verbose=verbose,
+            request_within_rpm_limit=(
+                executor_context.request_within_rpm_limit
+                if executor_context is not None
+                else None
+            ),
         )
 
-    return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
     )
 
 
@@ -1944,42 +2003,93 @@ def check_repeated_tool_call(
     result: Any,
     agent: BaseAgent | LiteAgent | None = None,
     task: Task | None = None,
-) -> None:
-    """Stop a run that keeps repeating an identical tool call.
+    crew: Crew | None = None,
+) -> str:
+    """Track a streak of identical tool calls and warn the agent before it is stopped.
+
+    A call extends the streak only when its tool, arguments and result all match
+    the previous call; anything else starts a new one. One call before
+    MAX_REPEATED_TOOL_CALLS the agent gets a warning. At the limit the stop is
+    reported as a ``REPEATED_CALL`` failure under the tool failure policy, and
+    the caller ends its loop once :func:`repeated_tool_call_limit_reached`. The
+    limit then stays reached until ``counts`` is cleared.
 
     Args:
-        counts: Per-run tally of seen (tool, args, result) keys. Updated in place.
+        counts: The current streak, keyed by (tool, args, result). Updated in place.
         tool_name: Name of the tool that was called.
         tool_args: Arguments the tool was called with.
         result: What the tool returned.
-        agent: The calling agent, named in the error.
-        task: The task in flight, named in the error.
+        agent: The calling agent, named in the failure.
+        task: The task in flight, named in the failure.
+        crew: The crew in flight, consulted for the failure policy.
+
+    Returns:
+        Text to append to the result the agent sees, or "" when there is none.
 
     Raises:
-        ToolExecutionFailedError: On the MAX_REPEATED_TOOL_CALLS-th identical call.
+        ToolExecutionFailedError: At the limit, under ``ToolFailurePolicy.RAISE``.
     """
+    if repeated_tool_call_limit_reached(counts):
+        # Already stopped: another call later in the same batch must not reset it.
+        return ""
     key = hash(
         json.dumps([tool_name, tool_args, str(result)], sort_keys=True, default=str)
     )
-    counts[key] = counts.get(key, 0) + 1
-    if counts[key] < MAX_REPEATED_TOOL_CALLS:
-        return
+    if key not in counts:
+        # Only the current streak is kept, so any other call resets it.
+        counts.clear()
+    counts[key] = streak = counts.get(key, 0) + 1
 
-    role = getattr(agent, "role", None)
-    raise ToolExecutionFailedError(
-        ToolFailureRecord(
-            tool_name=tool_name,
-            failure=ToolFailure(
+    if streak == MAX_REPEATED_TOOL_CALLS - 1:
+        return (
+            f"\n\nYou have called '{tool_name}' with the same arguments {streak} "
+            "times in a row and got the same result. Calling it again will not "
+            "change it: use what you have and give your final answer."
+        )
+    if streak == MAX_REPEATED_TOOL_CALLS:
+        # Not tool scope: the loop is the agent's, not a fault of the tool.
+        handle_tool_failure(
+            ToolFailure(
                 message=(
-                    f"Agent '{role}' called '{tool_name}' with the same "
-                    f"arguments {MAX_REPEATED_TOOL_CALLS} times and got the same "
-                    "result each time. Stopped because it is not making progress."
+                    f"Agent '{getattr(agent, 'role', None)}' called '{tool_name}' "
+                    f"with the same arguments {MAX_REPEATED_TOOL_CALLS} times in a "
+                    "row and got the same result each time. Stopped it calling "
+                    "tools so it answers with what it has."
                 ),
                 reason=ToolFailureReason.REPEATED_CALL,
             ),
+            tool_name=tool_name,
             tool_args=tool_args,
-            agent_role=role,
-            task_name=(task.name or task.description) if task else None,
-            task_id=str(task.id) if task else None,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
+    return ""
+
+
+def summarize_messages(
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+    callbacks: list[TokenCalcHandler],
+    verbose: bool = True,
+) -> None:
+    """Deprecated: use ``crewai.llms.context_window.summarize_messages``.
+
+    Kept with its pre-1.15.29 argument order (``messages`` before ``llm``);
+    the replacement takes ``llm`` first.
+    """
+    warnings.warn(
+        "crewai.utilities.agent_utils.summarize_messages is deprecated. "
+        "Use crewai.llms.context_window.summarize_messages(llm, messages, "
+        "callbacks, verbose), which takes llm first.",
+        DeprecationWarning,
+        stacklevel=2,
     )
+    from crewai.llms.context_window import summarize_messages as _summarize_messages
+
+    _summarize_messages(llm, messages, callbacks, verbose)
+
+
+def repeated_tool_call_limit_reached(counts: dict[int, int]) -> bool:
+    """Whether the streak tracked by :func:`check_repeated_tool_call` hit the limit."""
+    return any(streak >= MAX_REPEATED_TOOL_CALLS for streak in counts.values())
