@@ -1,0 +1,58 @@
+---
+title: Ferramentas TextKit
+description: Envie SMS e códigos de verificação de telefone pelos seus agentes com o TextKit.
+icon: comment-sms
+mode: "wide"
+---
+
+## Visão Geral
+
+Estas ferramentas permitem que um agente envie um texto, leia o histórico de mensagens e verifique
+um número de telefone pela API do [TextKit](https://jointextkit.com).
+
+| Ferramenta | O que faz |
+| --- | --- |
+| `TextKitSendMessageTool` | Envia um SMS |
+| `TextKitListMessagesTool` | Lista mensagens enviadas e recebidas, das mais recentes para as mais antigas |
+| `TextKitSendVerificationTool` | Envia um código de uso único por SMS |
+| `TextKitCheckVerificationTool` | Verifica um código |
+
+## Instalação
+
+As ferramentas vêm com o `crewai-tools` e não precisam de dependências extras:
+
+```shell
+uv add crewai-tools
+```
+
+## Variáveis de Ambiente
+
+- `TEXTKIT_API_KEY` (obrigatória): sua chave de API do TextKit (`tk_sk_...`).
+
+Com uma chave de teste, os envios são simulados e nenhum texto é enviado. Com uma chave de produção,
+a ferramenta de envio manda textos para pessoas reais e cobra da sua conta.
+
+## Exemplo
+
+```python
+from crewai import Agent
+from crewai_tools import TextKitListMessagesTool, TextKitSendMessageTool
+
+agent = Agent(
+    role="Customer notifier",
+    goal="Text customers when their order ships",
+    backstory="You keep customers up to date.",
+    tools=[TextKitSendMessageTool(), TextKitListMessagesTool()],
+)
+```
+
+## Parâmetros
+
+- `TextKitSendMessageTool`: `to`, `body`, `from_number` (opcional quando a conta tem um número),
+  `idempotency_key` (opcional; reutilize em uma nova tentativa para o texto não ser enviado duas vezes)
+- `TextKitListMessagesTool`: `limit`, `cursor`, `number`, `status`, `direction` (todos opcionais)
+- `TextKitSendVerificationTool`: `phone`, `app_name` (opcional)
+- `TextKitCheckVerificationTool`: `phone`, `code`
+
+Os números de telefone usam o formato E.164, por exemplo `+14155550132`. Requisições com falha geram
+um erro com o código e a mensagem da API.

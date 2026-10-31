@@ -1,0 +1,58 @@
+---
+title: TextKit Tools
+description: Send SMS and phone verification codes from your agents with TextKit.
+icon: comment-sms
+mode: "wide"
+---
+
+## Overview
+
+These tools let an agent send a text, read message history, and verify a phone number
+through the [TextKit](https://jointextkit.com) API.
+
+| Tool | What it does |
+| --- | --- |
+| `TextKitSendMessageTool` | Sends an SMS |
+| `TextKitListMessagesTool` | Lists sent and received messages, newest first |
+| `TextKitSendVerificationTool` | Texts a one-time code |
+| `TextKitCheckVerificationTool` | Checks a code |
+
+## Installation
+
+The tools ship with `crewai-tools` and need no extra dependencies:
+
+```shell
+uv add crewai-tools
+```
+
+## Environment Variables
+
+- `TEXTKIT_API_KEY` (required): your TextKit API key (`tk_sk_...`).
+
+With a test key, sends are simulated and no text goes out. With a live key, the send tool texts
+real people and bills your account.
+
+## Example
+
+```python
+from crewai import Agent
+from crewai_tools import TextKitListMessagesTool, TextKitSendMessageTool
+
+agent = Agent(
+    role="Customer notifier",
+    goal="Text customers when their order ships",
+    backstory="You keep customers up to date.",
+    tools=[TextKitSendMessageTool(), TextKitListMessagesTool()],
+)
+```
+
+## Parameters
+
+- `TextKitSendMessageTool`: `to`, `body`, `from_number` (optional when the account has one number),
+  `idempotency_key` (optional; reuse it on a retry so the text is not sent twice)
+- `TextKitListMessagesTool`: `limit`, `cursor`, `number`, `status`, `direction` (all optional)
+- `TextKitSendVerificationTool`: `phone`, `app_name` (optional)
+- `TextKitCheckVerificationTool`: `phone`, `code`
+
+Phone numbers use E.164 format, for example `+14155550132`. Failed requests raise an error with
+the API's code and message.

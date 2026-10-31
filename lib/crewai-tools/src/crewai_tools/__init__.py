@@ -219,6 +219,12 @@ from crewai_tools.tools.tavily_research_tool.tavily_research_tool import (
     TavilyResearchTool,
 )
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
+from crewai_tools.tools.textkit_tool.textkit_tools import (
+    TextKitCheckVerificationTool,
+    TextKitListMessagesTool,
+    TextKitSendMessageTool,
+    TextKitSendVerificationTool,
+)
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.url_read_tool.url_read_tool import URLReadTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
@@ -346,6 +352,10 @@ __all__ = [
     "TavilyGetResearchTool",
     "TavilyResearchTool",
     "TavilySearchTool",
+    "TextKitCheckVerificationTool",
+    "TextKitListMessagesTool",
+    "TextKitSendMessageTool",
+    "TextKitSendVerificationTool",
     "URLReadTool",
     "VisionTool",
     "WaitTool",

@@ -1,0 +1,58 @@
+---
+title: TextKit 도구
+description: TextKit으로 에이전트에서 SMS와 전화번호 인증 코드를 보냅니다.
+icon: comment-sms
+mode: "wide"
+---
+
+## 개요
+
+이 도구를 사용하면 에이전트가 [TextKit](https://jointextkit.com) API로 문자를 보내고, 메시지 기록을
+읽고, 전화번호를 인증할 수 있습니다.
+
+| 도구 | 기능 |
+| --- | --- |
+| `TextKitSendMessageTool` | SMS를 보냅니다 |
+| `TextKitListMessagesTool` | 보내고 받은 메시지를 최신순으로 나열합니다 |
+| `TextKitSendVerificationTool` | 일회용 코드를 문자로 보냅니다 |
+| `TextKitCheckVerificationTool` | 코드를 확인합니다 |
+
+## 설치
+
+이 도구는 `crewai-tools`에 포함되어 있으며 추가 의존성이 필요하지 않습니다:
+
+```shell
+uv add crewai-tools
+```
+
+## 환경 변수
+
+- `TEXTKIT_API_KEY` (필수): TextKit API 키 (`tk_sk_...`).
+
+테스트 키를 사용하면 전송이 시뮬레이션되며 실제 문자는 발송되지 않습니다. 라이브 키를 사용하면 전송
+도구가 실제 사람에게 문자를 보내고 계정에 요금이 청구됩니다.
+
+## 예제
+
+```python
+from crewai import Agent
+from crewai_tools import TextKitListMessagesTool, TextKitSendMessageTool
+
+agent = Agent(
+    role="Customer notifier",
+    goal="Text customers when their order ships",
+    backstory="You keep customers up to date.",
+    tools=[TextKitSendMessageTool(), TextKitListMessagesTool()],
+)
+```
+
+## 매개변수
+
+- `TextKitSendMessageTool`: `to`, `body`, `from_number` (계정에 번호가 하나면 선택 사항),
+  `idempotency_key` (선택 사항, 재시도할 때 같은 값을 쓰면 문자가 두 번 발송되지 않습니다)
+- `TextKitListMessagesTool`: `limit`, `cursor`, `number`, `status`, `direction` (모두 선택 사항)
+- `TextKitSendVerificationTool`: `phone`, `app_name` (선택 사항)
+- `TextKitCheckVerificationTool`: `phone`, `code`
+
+전화번호는 E.164 형식을 사용합니다 (예: `+14155550132`). 요청이 실패하면 API의 코드와 메시지가 포함된
+오류가 발생합니다.
