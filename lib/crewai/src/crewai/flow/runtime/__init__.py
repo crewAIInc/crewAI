@@ -153,6 +153,7 @@ from crewai.types.streaming import (
     StreamSession,
 )
 from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities.coroutine_utils import is_coroutine_function
 from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
     create_async_frame_generator,
@@ -2905,7 +2906,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
             return args, kwargs
 
-        if asyncio.iscoroutinefunction(original_method):
+        if is_coroutine_function(original_method):
 
             async def enhanced_method(*args: Any, **kwargs: Any) -> Any:
                 args, kwargs = prepare_kwargs(*args, **kwargs)
@@ -2995,7 +2996,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             method_name_token = current_flow_method_name.set(method_name)
             try:
-                if asyncio.iscoroutinefunction(method):
+                if is_coroutine_function(method):
                     result = await method(*args, **kwargs)
                 else:
                     # Run sync methods in thread pool for isolation

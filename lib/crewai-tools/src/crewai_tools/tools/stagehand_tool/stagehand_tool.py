@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
+from crewai.utilities.coroutine_utils import is_coroutine_function
 from pydantic import BaseModel, Field
 
 
@@ -689,7 +690,7 @@ class StagehandTool(BaseTool):
             try:
                 close_method: Any = getattr(self._stagehand, "close", None)
                 if close_method is not None:
-                    if asyncio.iscoroutinefunction(close_method):
+                    if is_coroutine_function(close_method):
                         try:
                             loop = asyncio.get_event_loop()
                             if loop.is_running():

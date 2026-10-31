@@ -6,7 +6,8 @@ async support, and attribute preservation functionality.
 
 from __future__ import annotations
 
-import asyncio
+
+
 from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -29,6 +30,7 @@ from crewai.flow.human_feedback import (
     HumanFeedbackResult,
     _resolve_llm_instance,
 )
+from crewai.utilities.coroutine_utils import is_coroutine_function
 
 
 class TestHumanFeedbackValidation:
@@ -283,7 +285,7 @@ class TestAsyncSupport:
         async def async_method(self):
             return "async output"
 
-        assert asyncio.iscoroutinefunction(async_method)
+        assert is_coroutine_function(async_method)
 
     def test_sync_method_remains_sync(self):
         """Test that sync methods remain synchronous."""
@@ -292,7 +294,7 @@ class TestAsyncSupport:
         def sync_method(self):
             return "sync output"
 
-        assert not asyncio.iscoroutinefunction(sync_method)
+        assert not is_coroutine_function(sync_method)
 
 
 class TestHumanFeedbackExecution:
