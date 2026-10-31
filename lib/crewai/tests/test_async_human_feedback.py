@@ -613,6 +613,67 @@ class TestFlowResumeWithFeedback:
             state = {key: value for key, value in flow.state.items() if key != "id"}
             assert state == {"shipped": True, "review": "approved"}
 
+    @pytest.mark.parametrize("failure_kind", ["listener", "start"])
+    @pytest.mark.parametrize("pause", [True, False])
+    def test_router_outcome_error_preserves_pending_feedback(
+        self, failure_kind: str, pause: bool
+    ) -> None:
+        """Later dispatch errors must not discard a human request already sent."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            failure = RuntimeError("router outcome failed")
+
+            class ReviewProvider(HumanFeedbackProvider):
+                def request_feedback(self, context, flow):
+                    if pause:
+                        raise HumanFeedbackPending(context=context)
+                    return "approved"
+
+            outcome_decorator = listen if failure_kind == "listener" else start
+
+            class ReviewFlow(Flow):
+                @start()
+                def begin(self):
+                    pass
+
+                @listen(begin)
+                @human_feedback(message="Approve?", provider=ReviewProvider())
+                def review(self):
+                    return "draft"
+
+                @listen(review)
+                def record_review(self, result):
+                    self.state["review"] = result.feedback
+
+                @router(begin)
+                def route(self):
+                    return "ready"
+
+                @outcome_decorator("ready")
+                def fail(self):
+                    self.state["attempted"] = True
+                    raise failure
+
+            flow = ReviewFlow(persistence=persistence)
+            if not pause:
+                with pytest.raises(RuntimeError) as exc_info:
+                    flow.kickoff()
+                assert exc_info.value is failure
+                assert persistence.load_pending_feedback(flow.state["id"]) is None
+                return
+
+            pending = flow.kickoff()
+            assert isinstance(pending, HumanFeedbackPending)
+            assert pending.__cause__ is failure
+            assert pending.context.method_name == "review"
+            assert pending.context.method_output == "draft"
+
+            restored = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+            assert restored.state["attempted"] is True
+            restored.resume("approved")
+            assert restored.state["review"] == "approved"
+            assert persistence.load_pending_feedback(pending.context.flow_id) is None
+
     def test_resume_without_pending_raises_error(self) -> None:
         """Test that resume raises error without pending context."""
 

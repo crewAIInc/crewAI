@@ -3254,69 +3254,77 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         with self._or_listeners_lock:
             rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
 
-        for idx, current_trigger in enumerate(all_triggers):
-            if current_trigger:
-                if idx > 0 and rearmable:
-                    self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
-                listeners_triggered = self._find_triggered_methods(
-                    current_trigger, router_only=False
-                )
-                ran_for_trigger.setdefault(str(current_trigger), set()).update(
-                    listeners_triggered
-                )
-                if listeners_triggered:
-                    listener_result = router_result_payloads.get(
-                        str(current_trigger), result
+        try:
+            for idx, current_trigger in enumerate(all_triggers):
+                if current_trigger:
+                    if idx > 0 and rearmable:
+                        self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
+                    listeners_triggered = self._find_triggered_methods(
+                        current_trigger, router_only=False
                     )
-                    racing_group = self._get_racing_group_for_listeners(
+                    ran_for_trigger.setdefault(str(current_trigger), set()).update(
                         listeners_triggered
                     )
-                    if racing_group:
-                        racing_members, _ = racing_group
-                        other_listeners = [
-                            name
-                            for name in listeners_triggered
-                            if name not in racing_members
-                        ]
-                        await self._execute_racing_listeners(
-                            racing_members,
-                            other_listeners,
-                            listener_result,
-                            current_triggering_event_id,
+                    if listeners_triggered:
+                        listener_result = router_result_payloads.get(
+                            str(current_trigger), result
                         )
-                    else:
-                        tasks = [
-                            self._execute_single_listener(
-                                listener_name,
+                        racing_group = self._get_racing_group_for_listeners(
+                            listeners_triggered
+                        )
+                        if racing_group:
+                            racing_members, _ = racing_group
+                            other_listeners = [
+                                name
+                                for name in listeners_triggered
+                                if name not in racing_members
+                            ]
+                            await self._execute_racing_listeners(
+                                racing_members,
+                                other_listeners,
                                 listener_result,
                                 current_triggering_event_id,
                             )
-                            for listener_name in listeners_triggered
-                        ]
-                        try:
-                            await asyncio.gather(*tasks)
-                        except HumanFeedbackPending as e:
-                            # A listener paused for human feedback. Keep
-                            # dispatching the remaining trigger outcomes so
-                            # their listeners still run, then re-raise below
-                            # so the flow pauses for the reply as usual.
-                            feedback_pause = feedback_pause or e
+                        else:
+                            tasks = [
+                                self._execute_single_listener(
+                                    listener_name,
+                                    listener_result,
+                                    current_triggering_event_id,
+                                )
+                                for listener_name in listeners_triggered
+                            ]
+                            try:
+                                await asyncio.gather(*tasks)
+                            except HumanFeedbackPending as e:
+                                # A listener paused for human feedback. Keep
+                                # dispatching the remaining trigger outcomes so
+                                # their listeners still run, then re-raise below
+                                # so the flow pauses for the reply as usual.
+                                feedback_pause = feedback_pause or e
 
-                if current_trigger in router_results:
-                    for method_name in self._start_method_names():
-                        if self._start_condition_triggered_by(
-                            method_name, current_trigger
-                        ) and method_name not in ran_for_trigger.get(
-                            str(current_trigger), set()
-                        ):
-                            if method_name in self._completed_methods:
-                                # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
-                                was_resuming = self._is_execution_resuming
-                                self._is_execution_resuming = False
-                                await self._execute_start_method(method_name)
-                                self._is_execution_resuming = was_resuming
-                            else:
-                                await self._execute_start_method(method_name)
+                    if current_trigger in router_results:
+                        for method_name in self._start_method_names():
+                            if self._start_condition_triggered_by(
+                                method_name, current_trigger
+                            ) and method_name not in ran_for_trigger.get(
+                                str(current_trigger), set()
+                            ):
+                                if method_name in self._completed_methods:
+                                    # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
+                                    was_resuming = self._is_execution_resuming
+                                    self._is_execution_resuming = False
+                                    await self._execute_start_method(method_name)
+                                    self._is_execution_resuming = was_resuming
+                                else:
+                                    await self._execute_start_method(method_name)
+        except Exception as e:
+            if feedback_pause is not None:
+                # The provider has already requested feedback. Preserve the
+                # pause so kickoff persists it, keeping the later error as
+                # its cause for diagnostics.
+                raise feedback_pause from e
+            raise
 
         if feedback_pause is not None:
             raise feedback_pause
