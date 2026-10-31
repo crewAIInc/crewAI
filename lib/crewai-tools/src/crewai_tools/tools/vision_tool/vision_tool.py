@@ -26,7 +26,7 @@ DEFAULT_MODEL: str = COMPLEXITY_MODEL_MAP["medium"]
 class ImagePromptSchema(BaseModel):
     """Input for Vision Tool."""
 
-    image_path_url: str = "The image path or URL."
+    image_path_url: str = Field(..., description="The image path or URL.")
     query: str = Field(
         default="What's in this image?",
         description="The question or instruction to ask the model about the image.",
