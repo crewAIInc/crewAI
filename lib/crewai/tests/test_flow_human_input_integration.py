@@ -111,6 +111,57 @@ class TestFlowHumanInputIntegration:
             mock_pause.assert_called_once()
             mock_resume.assert_called_once()
 
+    @patch("builtins.input", return_value="")
+    def test_result_for_review_panel_shown_when_output_provided(self, mock_input):
+        """Result under review is rendered regardless of verbose (issue #6072)."""
+        provider = SyncHumanInputProvider()
+        crew = MagicMock()
+        crew._train = False
+
+        formatter = event_listener.formatter
+
+        with (
+            patch.object(formatter, "pause_live_updates"),
+            patch.object(formatter, "resume_live_updates"),
+            patch.object(formatter.console, "print") as mock_console_print,
+        ):
+            provider._prompt_input(crew, output_to_review="The sky is blue.")
+
+            review_panels = [
+                call[0][0]
+                for call in mock_console_print.call_args_list
+                if call[0]
+                and hasattr(call[0][0], "title")
+                and "Result for Review" in str(call[0][0].title)
+            ]
+            assert len(review_panels) == 1
+            assert "The sky is blue." in str(review_panels[0].renderable)
+
+    @patch("builtins.input", return_value="")
+    def test_result_for_review_panel_absent_without_output(self, mock_input):
+        """No result panel is shown when no output is provided."""
+        provider = SyncHumanInputProvider()
+        crew = MagicMock()
+        crew._train = False
+
+        formatter = event_listener.formatter
+
+        with (
+            patch.object(formatter, "pause_live_updates"),
+            patch.object(formatter, "resume_live_updates"),
+            patch.object(formatter.console, "print") as mock_console_print,
+        ):
+            provider._prompt_input(crew)
+
+            review_panels = [
+                call[0][0]
+                for call in mock_console_print.call_args_list
+                if call[0]
+                and hasattr(call[0][0], "title")
+                and "Result for Review" in str(call[0][0].title)
+            ]
+            assert review_panels == []
+
     def test_training_mode_human_input(self):
         """Test human input in training mode."""
         provider = SyncHumanInputProvider()
