@@ -7,7 +7,11 @@ import requests
 from crewai_tools.security.safe_path import validate_url
 
 
-class JinaScrapeWebsiteToolInput(BaseModel):
+class FixedJinaScrapeWebsiteToolInput(BaseModel):
+    """Input schema for a JinaScrapeWebsiteTool with a configured URL."""
+
+
+class JinaScrapeWebsiteToolInput(FixedJinaScrapeWebsiteToolInput):
     """Input schema for JinaScrapeWebsiteTool."""
 
     website_url: str = Field(..., description="Mandatory website url to read the file")
@@ -32,6 +36,7 @@ class JinaScrapeWebsiteTool(BaseTool):
         if website_url is not None:
             self.website_url = website_url
             self.description = f"A tool that can be used to read {website_url}'s content and return markdown content."
+            self.args_schema = FixedJinaScrapeWebsiteToolInput
             self._generate_description()
 
         if custom_headers is not None:
