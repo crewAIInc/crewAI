@@ -16,10 +16,11 @@ The sebbi client hashes inputs and outputs (SHA-256) inside your process and sen
 Pin the release you have reviewed:
 
 ```bash
-pip install "sebbi==1.1.1"
+echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3" > requirements-sebbi.txt
+pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-The version on `main` in that repository is the version published to PyPI, so you can read exactly what you install. The client has no dependencies.
+`--require-hashes` makes pip refuse any file other than the reviewed wheel `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`). That wheel was built from the source at commit [`6c8fa2a`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/6c8fa2a50694f763a07d27fa133bc5e8dd54a5cd/python) and published through PyPI Trusted Publishing with a PyPI publish attestation. The client has no dependencies.
 
 No account is needed to start (1,000 receipts a day). Set `SEBBI_API_KEY` from [sebbi.pro/connect](https://sebbi.pro/connect) for full volume.
 

@@ -16,10 +16,11 @@ mode: "wide"
 ثبّت الإصدار الذي راجعته:
 
 ```bash
-pip install "sebbi==1.1.1"
+echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3" > requirements-sebbi.txt
+pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-الإصدار الموجود في الفرع `main` من ذلك المستودع هو الإصدار المنشور على PyPI، لذا يمكنك قراءة ما ستثبته بالضبط. لا يعتمد العميل على أي حزم أخرى.
+يجعل الخيار `--require-hashes` الأداة pip ترفض أي ملف غير العجلة التي راجعتها `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`). بُنيت هذه العجلة من الشيفرة المصدرية في الإيداع [`6c8fa2a`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/6c8fa2a50694f763a07d27fa133bc5e8dd54a5cd/python) ونُشرت عبر PyPI Trusted Publishing مع شهادة نشر من PyPI. لا يعتمد العميل على أي حزم أخرى.
 
 لا تحتاج إلى حساب للبدء (1,000 إيصال يوميًا). عيّن `SEBBI_API_KEY` من [sebbi.pro/connect](https://sebbi.pro/connect) للحصول على السعة الكاملة.
 
