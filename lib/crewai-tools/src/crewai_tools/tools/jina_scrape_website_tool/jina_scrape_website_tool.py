@@ -46,7 +46,7 @@ class JinaScrapeWebsiteTool(BaseTool):
             self.headers["Authorization"] = f"Bearer {api_key}"
 
     def _run(self, website_url: str | None = None) -> str:
-        url = website_url or self.website_url
+        url = self.website_url if self.website_url is not None else website_url
         if not url:
             raise ValueError(
                 "Website URL must be provided either during initialization or execution"

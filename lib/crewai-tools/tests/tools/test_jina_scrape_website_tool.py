@@ -31,7 +31,10 @@ def test_scrape_configured_or_run_time_url(fixed_url: bool) -> None:
     assert result == "# Article\nReader content"
     get.assert_called_once_with(
         f"https://r.jina.ai/{url}",
-        headers={"X-Target-Selector": "article", "Authorization": "Bearer synthetic-key"},
+        headers={
+            "X-Target-Selector": "article",
+            "Authorization": "Bearer synthetic-key",
+        },
         timeout=15,
     )
     response.raise_for_status.assert_called_once_with()
@@ -61,3 +64,35 @@ def test_fixed_url_propagates_http_error() -> None:
     ):
         with pytest.raises(requests.HTTPError, match="503"):
             JinaScrapeWebsiteTool(website_url="https://example.com/article").run()
+
+
+@pytest.mark.parametrize("structured", [False, True])
+@pytest.mark.parametrize(
+    "runtime_url", ["https://other.example/article", "http://127.0.0.1/"]
+)
+def test_fixed_url_cannot_be_overridden(structured: bool, runtime_url: str) -> None:
+    pinned_url = "https://example.com/article"
+    tool = JinaScrapeWebsiteTool(website_url=pinned_url, api_key="synthetic-key")
+    response = Mock(text="Pinned article")
+    with patch(
+        "crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool.requests.get",
+        return_value=response,
+    ) as get:
+        if structured:
+            result = tool.to_structured_tool().invoke({"website_url": runtime_url})
+        else:
+            result = tool.run(website_url=runtime_url)
+
+    assert result == "Pinned article"
+    assert get.call_args.args[0] == f"https://r.jina.ai/{pinned_url}"
+
+
+@pytest.mark.parametrize("pinned_url", ["", "file:///tmp/example"])
+def test_invalid_fixed_url_cannot_be_replaced(pinned_url: str) -> None:
+    tool = JinaScrapeWebsiteTool(website_url=pinned_url)
+    with patch(
+        "crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool.requests.get"
+    ) as get:
+        with pytest.raises(ValueError):
+            tool.run(website_url="https://example.com/article")
+    get.assert_not_called()
