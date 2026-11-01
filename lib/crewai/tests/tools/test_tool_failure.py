@@ -2397,14 +2397,16 @@ def exported_spans(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     from crewai.telemetry.telemetry import Telemetry
 
+    # Before building the provider: the SDK reads OTEL_SDK_DISABLED once, at
+    # construction, and hands out no-op tracers if it was set.
+    for var in TELEMETRY_OPT_OUTS:
+        monkeypatch.delenv(var, raising=False)
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exporter))
     telemetry = Telemetry()
     monkeypatch.setattr(telemetry, "provider", provider, raising=False)
     monkeypatch.setattr(telemetry, "ready", True)
-    for var in TELEMETRY_OPT_OUTS:
-        monkeypatch.delenv(var, raising=False)
     return exporter
 
 
@@ -2557,3 +2559,19 @@ class TestRepeatedToolCallTelemetry:
         self._stop_once()
 
         assert exported_spans.get_finished_spans() == ()
+
+    def test_a_failing_telemetry_backend_does_not_change_the_stop(
+        self, exported_spans: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The count runs before failure handling, so it must never break the stop."""
+        from crewai.telemetry.telemetry import Telemetry
+
+        def collector_down(*_: Any, **__: Any) -> Any:
+            raise RuntimeError("collector down")
+
+        monkeypatch.setattr(Telemetry().provider, "get_tracer", collector_down)
+        crew, _ = _looping_crew(LoopingNativeLLM())
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
