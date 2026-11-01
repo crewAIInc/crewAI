@@ -57,7 +57,7 @@ overrides = [
     { name = "langsmith", specifier = ">=0.8.18,<1" },
     { name = "msgpack", specifier = ">=1.2.3" },
     { name = "multidict", specifier = ">=6.9.1,<7" },
-    { name = "nltk", specifier = ">=3.10.3" },
+    { name = "nltk", specifier = ">=3.10.4" },
     { name = "oauthlib", specifier = ">=4.0.0" },
     { name = "onnxruntime", marker = "python_full_version < '3.11'", specifier = "<1.24" },
     { name = "openai", specifier = ">=2.30.0,<3" },
