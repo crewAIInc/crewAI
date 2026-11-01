@@ -40,6 +40,7 @@ from crewai.llms.base_llm import (
     LLMCallBlockedError,
     call_stop_override,
 )
+from crewai.telemetry.telemetry import Telemetry
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -2047,6 +2048,9 @@ def check_repeated_tool_call(
             "change it: use what you have and give your final answer."
         )
     if streak == MAX_REPEATED_TOOL_CALLS:
+        # Counted here, not from ToolFailureDetectedEvent: the stop happens under
+        # every policy, including `ignore`, which emits no event.
+        Telemetry().feature_usage_span("tool_failure:repeated_call")
         # Not tool scope: the loop is the agent's, not a fault of the tool.
         handle_tool_failure(
             ToolFailure(
