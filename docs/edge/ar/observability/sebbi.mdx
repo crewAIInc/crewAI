@@ -16,11 +16,11 @@ mode: "wide"
 ثبّت الإصدار الذي راجعته:
 
 ```bash
-echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3" > requirements-sebbi.txt
+echo "sebbi==1.2.1 --hash=sha256:dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f" > requirements-sebbi.txt
 pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-يجعل الخيار `--require-hashes` الأداة pip تثبّت الملف المنشور على PyPI باسم `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`) بالضبط ولا شيء غيره. لا يعتمد العميل على أي حزم أخرى.
+يجعل الخيار `--require-hashes` الأداة pip تثبّت الملف `sebbi-1.2.1-py3-none-any.whl` (sha256 `dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f`) بالضبط ولا شيء غيره. بنى هذا الملف ورفعه سير العمل العام [`release.yml`](https://github.com/justrightdecorators-ops/sebbi-sdk/blob/d735bb292bee309546a64d5351a711a13f26156a/.github/workflows/release.yml) عند الإيداع [`d735bb2`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/d735bb292bee309546a64d5351a711a13f26156a) في مستودع sebbi-sdk العام، باستخدام PyPI Trusted Publishing؛ وتذكر شهادة النشر على PyPI ذلك المستودع وسير العمل والإيداع. لا يعتمد العميل على أي حزم أخرى.
 
 لا تحتاج إلى حساب للبدء (1,000 إيصال يوميًا). عيّن `SEBBI_API_KEY` من [sebbi.pro/connect](https://sebbi.pro/connect) للحصول على السعة الكاملة.
 

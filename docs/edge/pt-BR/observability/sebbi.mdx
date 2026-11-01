@@ -16,11 +16,11 @@ O cliente sebbi calcula o hash (SHA-256) das entradas e saídas dentro do seu pr
 Fixe a versão que você revisou:
 
 ```bash
-echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3" > requirements-sebbi.txt
+echo "sebbi==1.2.1 --hash=sha256:dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f" > requirements-sebbi.txt
 pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-`--require-hashes` faz o pip instalar exatamente o arquivo publicado no PyPI como `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`) e nada além dele. O cliente não tem dependências.
+`--require-hashes` faz o pip instalar exatamente `sebbi-1.2.1-py3-none-any.whl` (sha256 `dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f`) e nada além dele. Esse arquivo foi gerado e enviado pelo workflow público [`release.yml`](https://github.com/justrightdecorators-ops/sebbi-sdk/blob/d735bb292bee309546a64d5351a711a13f26156a/.github/workflows/release.yml) no commit [`d735bb2`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/d735bb292bee309546a64d5351a711a13f26156a) do repositório público sebbi-sdk, via PyPI Trusted Publishing; o atestado de publicação do PyPI registra esse repositório, workflow e commit. O cliente não tem dependências.
 
 Não é preciso conta para começar (1.000 recibos por dia). Defina `SEBBI_API_KEY` em [sebbi.pro/connect](https://sebbi.pro/connect) para volume completo.
 

@@ -16,11 +16,11 @@ sebbi 클라이언트는 프로세스 내부에서 입력과 출력의 해시(SH
 검토한 릴리스를 고정하세요:
 
 ```bash
-echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3" > requirements-sebbi.txt
+echo "sebbi==1.2.1 --hash=sha256:dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f" > requirements-sebbi.txt
 pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-`--require-hashes`를 사용하면 pip는 PyPI에 `sebbi-1.1.1-py3-none-any.whl`(sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`)로 게시된 바로 그 파일만 설치합니다. 클라이언트에는 의존성이 없습니다.
+`--require-hashes`를 사용하면 pip는 `sebbi-1.2.1-py3-none-any.whl`(sha256 `dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f`) 파일만 정확히 설치합니다. 이 파일은 공개 sebbi-sdk 저장소의 커밋 [`d735bb2`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/d735bb292bee309546a64d5351a711a13f26156a)에서 공개 워크플로 [`release.yml`](https://github.com/justrightdecorators-ops/sebbi-sdk/blob/d735bb292bee309546a64d5351a711a13f26156a/.github/workflows/release.yml)이 PyPI Trusted Publishing으로 빌드하고 업로드했으며, PyPI 게시 증명(attestation)에 해당 저장소, 워크플로, 커밋이 기록되어 있습니다. 클라이언트에는 의존성이 없습니다.
 
 시작하는 데 계정이 필요하지 않습니다(하루 1,000개 영수증). 전체 용량을 사용하려면 [sebbi.pro/connect](https://sebbi.pro/connect)에서 받은 `SEBBI_API_KEY`를 설정하세요.
 
