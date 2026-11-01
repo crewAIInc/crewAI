@@ -1,0 +1,73 @@
+---
+title: sebbi Receipts
+description: Tamper-evident receipts for every CrewAI agent step and task, checkable by anyone
+icon: receipt
+mode: "wide"
+---
+
+# sebbi receipts for CrewAI
+
+[sebbi](https://sebbi.pro/receipts) gives every step your crew takes a sealed receipt with a public link anyone can check: your customer, your auditor, your insurer or a regulator. Receipts are Merkle-batched, sealed into an append-only chain, witnessed by independent chains and timestamped into Bitcoin, so a record of what an agent did cannot be quietly edited afterwards.
+
+Inputs and outputs are fingerprinted (SHA-256) on your machine. Only the fingerprints, a short label and a timestamp are sent. Sealing runs in the background and never slows or breaks your crew.
+
+## Installation
+
+```bash
+pip install sebbi
+```
+
+No account is needed to start (1,000 receipts a day). Set `SEBBI_API_KEY` from [sebbi.pro/connect](https://sebbi.pro/connect) for full volume.
+
+## Usage
+
+```python
+from crewai import Agent, Crew, Task
+from sebbi.integrations.crewai import step_callback, task_callback
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    step_callback=step_callback,   # a receipt for every agent step
+    task_callback=task_callback,   # a receipt for every finished task
+)
+
+result = crew.kickoff()
+```
+
+Get the link for the latest receipt:
+
+```python
+import sebbi
+print(sebbi.last().url)   # https://sebbi.pro/r/...
+```
+
+## Sealing a specific action
+
+Wrap any tool function your agents call:
+
+```python
+import sebbi
+
+@sebbi.receipt("issue-refund")
+def issue_refund(order_id: str, amount: float) -> dict:
+    ...
+```
+
+## Reversals
+
+If an action is undone (a refund, a cancelled payment), seal the reversal. The original receipt stays on record and is shown as reversed, linked to the new receipt and the reason:
+
+```python
+sebbi.reverse(receipt, "Customer cancelled; refund returned")
+```
+
+## Checking a receipt
+
+Open the receipt link, or call `GET https://sebbi.pro/v1/receipts/<id>`. Each check re-runs the Merkle inclusion proof and confirms the root is sealed in the chain.
+
+## Resources
+
+- [sebbi receipts](https://sebbi.pro/receipts)
+- [PyPI package](https://pypi.org/project/sebbi/)
+- [MCP server](https://sebbi.pro/mcp)
