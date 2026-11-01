@@ -781,3 +781,17 @@ def test_render_report_prints_bracketed_text_verbatim(severity, capsys):
     assert "[stale_lockfile] uv.lock is out of date with pyproject.toml" in out
     assert "error: crewai[tools]==1.0 not found; stray [/red] tag" in out
     assert "hint: Add [tool.hatch.build.targets.wheel] under [project]." in out
+
+
+def test_classify_validation_error_without_a_key_is_not_an_llm_failure(
+    tmp_path: Path,
+) -> None:
+    """Only a ValidationError that names a missing key is an LLM key problem."""
+    v = DeployValidator(project_root=tmp_path)
+    v._classify_import_error(
+        "ValidationError",
+        "1 validation error for Agent\n  role\n    Field required [type=missing]",
+        tb="",
+    )
+    assert "llm_init_missing_key" not in _codes(v)
+    assert "llm_provider_init_failed" not in _codes(v)

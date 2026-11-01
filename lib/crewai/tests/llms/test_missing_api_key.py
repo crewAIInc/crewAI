@@ -484,3 +484,22 @@ class TestOpenAICompatible:
 
         assert [r.code for r in validator.results] == ["llm_init_missing_key"]
         assert "DEEPSEEK_API_KEY" in validator.results[0].title
+
+    def test_deploy_validator_reads_the_missing_variable_from_an_agent(
+        self, tmp_path: Path
+    ) -> None:
+        """An ``Agent`` built from a model string wraps the key error in its own
+        ``ValidationError``; ``crewai deploy`` must still name the variable."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValidationError) as exc_info:
+                Agent(role="r", goal="g", backstory="b", llm="deepseek/deepseek-chat")
+
+        validator = DeployValidator(project_root=tmp_path)
+        validator._classify_import_error(
+            type(exc_info.value).__name__,
+            str(exc_info.value),
+            tb="".join(traceback.format_exception(exc_info.value)),
+        )
+
+        assert [r.code for r in validator.results] == ["llm_init_missing_key"]
+        assert "DEEPSEEK_API_KEY" in validator.results[0].title
