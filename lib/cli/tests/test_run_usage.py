@@ -531,25 +531,47 @@ def test_uv_could_not_be_started(project, usage, monkeypatch) -> None:
     assert usage == [started("crew"), stopped("launch_failed")]
 
 
+def fail_project_scripts(monkeypatch: pytest.MonkeyPatch) -> None:
+    def failing(command: list[str], **kwargs: Any) -> None:
+        raise subprocess.CalledProcessError(1, command, output=f"{SECRET} failed")
+
+    monkeypatch.setattr(subprocess, "run", failing)
+
+
 @pytest.mark.parametrize(
     ("pyproject", "kind"),
     [(CREW_PYPROJECT, "crew"), (FLOW_PYPROJECT, "flow")],
 )
-def test_a_project_script_that_fails_counts_no_stop(
-    project, usage, monkeypatch, pyproject, kind
-) -> None:
+def test_a_project_script_that_fails(project, usage, monkeypatch, pyproject, kind) -> None:
     """`uv run` exits 1 for a failed install, an import error and a crew that
-    failed after kickoff alike; that run's kickoff spans tell them apart."""
+    failed after kickoff alike, so the reason says only that the script failed;
+    that run's kickoff spans tell them apart."""
     write(project / "pyproject.toml", pyproject)
+    fail_project_scripts(monkeypatch)
 
-    def failing(command: list[str], **kwargs: Any) -> None:
-        raise subprocess.CalledProcessError(1, command)
+    result = crewai_run()
 
-    monkeypatch.setattr(subprocess, "run", failing)
+    # Unchanged: this path has always reported the error and exited 0.
+    assert result.exit_code == 0
+    assert f"An error occurred while running the {kind}" in result.output
+    assert f"{SECRET} failed" in result.output
+    assert usage == [started(kind), stopped("script_failed")]
+    assert_events_are_anonymous(usage)
 
-    crewai_run()
 
-    assert usage == [started(kind)]
+def test_an_interrupted_project_script_counts_no_stop(project, usage, monkeypatch) -> None:
+    """Ctrl-C is the person ending the run, not the run failing."""
+    write(project / "pyproject.toml", CREW_PYPROJECT)
+
+    def interrupted(command: list[str], **kwargs: Any) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(subprocess, "run", interrupted)
+
+    result = crewai_run()
+
+    assert result.exit_code == 1
+    assert usage == [started("crew")]
 
 
 def test_a_re_run_that_fails_leaves_its_stop_to_the_re_run(
@@ -615,11 +637,16 @@ def test_a_failing_count_never_changes_the_outcome(
     assert type(broken.exception) is type(working.exception)
 
 
+@pytest.mark.parametrize("script_fails", [False, True])
 @pytest.mark.parametrize("flag", OPT_OUT_FLAGS)
-def test_an_opted_out_process_sends_nothing(project, commands, monkeypatch, flag) -> None:
+def test_an_opted_out_process_sends_nothing(
+    project, commands, monkeypatch, flag, script_fails
+) -> None:
     """The real `Telemetry`, its exporter replaced: opted out, no span starts;
-    opted in, the same run sends its start."""
+    opted in, the same run sends its start, and its stop when its script failed."""
     write(project / "pyproject.toml", CREW_PYPROJECT)
+    if script_fails:
+        fail_project_scripts(monkeypatch)
     provider = MagicMock()
     span = provider.get_tracer.return_value.start_span.return_value
     monkeypatch.setattr(core_telemetry, "TracerProvider", lambda **kwargs: provider)
@@ -648,7 +675,7 @@ def test_an_opted_out_process_sends_nothing(project, commands, monkeypatch, flag
     monkeypatch.delenv(flag)
     monkeypatch.setattr(core_telemetry.Telemetry, "_instance", None)
     assert crewai_run().exit_code == 0
-    assert sent() == [started("crew")]
+    assert sent() == [started("crew")] + ([stopped("script_failed")] if script_fails else [])
 
 
 @pytest.mark.parametrize("flag", OPT_OUT_FLAGS)
@@ -669,3 +696,15 @@ def test_a_project_env_opt_out_is_honored_without_loading_it(
     write(project / ".env", f"{flag}=false\n")
     assert crewai_run().exit_code == 0
     assert usage == [started("crew")]
+
+
+@pytest.mark.parametrize("flag", OPT_OUT_FLAGS)
+def test_a_project_env_opt_out_covers_a_failed_script(
+    project, usage, monkeypatch, flag
+) -> None:
+    write(project / "pyproject.toml", CREW_PYPROJECT)
+    write(project / ".env", f"{flag}=true\n")
+    fail_project_scripts(monkeypatch)
+
+    assert crewai_run().exit_code == 0
+    assert usage == []
