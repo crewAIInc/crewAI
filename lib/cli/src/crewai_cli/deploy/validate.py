@@ -923,8 +923,13 @@ class DeployValidator:
             return
 
         # crewai.llm.LLM.__new__ wraps provider init errors as
-        # ImportError("Error importing native provider: ...").
-        if "Error importing native provider" in err_msg or "native provider" in err_msg:
+        # ImportError("Error importing native provider: ..."), except a missing
+        # key, which newer crewai raises as MissingAPIKeyError.
+        if (
+            err_type == "MissingAPIKeyError"
+            or "Error importing native provider" in err_msg
+            or "native provider" in err_msg
+        ):
             missing_key = self._extract_missing_api_key(err_msg)
             if missing_key:
                 provider = _KNOWN_API_KEY_HINTS.get(missing_key, missing_key)
