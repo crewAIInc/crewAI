@@ -44,6 +44,9 @@ class GithubSearchTool(RagTool):
     ) -> None:
         super().__init__(**kwargs)
 
+        if content_types is not None:
+            self.content_types = content_types
+
         if github_repo and content_types:
             self.add(repo=github_repo, content_types=content_types)
             self.description = f"A tool that can be used to semantic search a query the {github_repo} github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
