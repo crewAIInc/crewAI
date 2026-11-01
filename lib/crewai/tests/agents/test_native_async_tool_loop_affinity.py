@@ -14,7 +14,9 @@ historical ``run()`` behavior for sync tools and sync callers.
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
+import os
 import threading
 from typing import Any
 
@@ -380,3 +382,91 @@ def test_streaming_kickoff_captures_the_caller_loop(monkeypatch: pytest.MonkeyPa
 
     assert captured, "self.kickoff was never offloaded"
     assert captured[0] is not None, "streaming kickoff lost the caller loop"
+
+
+def test_concurrent_kickoffs_do_not_starve_the_loop_default_executor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CWE-833 regression: as many concurrent kickoffs as the loop's default executor
+    has threads used to wedge the pool, because every parked kickoff thread held a
+    default-pool slot while the bridged tool needed one for asyncio.to_thread.
+
+    Kickoffs now run on the dedicated kickoff pool, so the tool still gets a thread.
+    Without that pool the bounded bridge wait fires instead (TimeoutError).
+    """
+    loop_pool_workers = min(32, (os.cpu_count() or 1) + 4)
+    offloaded_on_caller_loop: list[str] = []
+
+    @tool("blocking_sdk")
+    async def blocking_sdk(query: str) -> str:
+        """Emulate a blocking SDK offload (the pattern that starved the pool)."""
+        value = await asyncio.to_thread(lambda: f"sdk:{query}")
+        offloaded_on_caller_loop.append(value)
+        return value
+
+    tool_call = [
+        {
+            "id": "call_1",
+            "type": "function",
+            "function": {"name": "blocking_sdk", "arguments": json.dumps({"query": "q"})},
+        }
+    ]
+
+    def build_crew() -> tuple[Crew, ScriptedLLM]:
+        llm = ScriptedLLM([("tool", copy.deepcopy(tool_call)), "final answer"])
+        agent = Agent(
+            role="worker",
+            goal="use the tools",
+            backstory="agent",
+            llm=llm,
+            tools=[blocking_sdk],
+            allow_delegation=False,
+            max_iter=6,
+        )
+        task = Task(description="use the tool", expected_output="the result", agent=agent)
+        return Crew(agents=[agent], tasks=[task], process=Process.sequential), llm
+
+    # A short bridge bound turns a would-be permanent hang into a fast failure.
+    monkeypatch.setattr(
+        "crewai.utilities.agent_utils.NATIVE_TOOL_BRIDGE_TIMEOUT_SECONDS", 5.0
+    )
+
+    crews = [build_crew() for _ in range(loop_pool_workers)]
+
+    async def scenario() -> None:
+        await asyncio.gather(*(crew.kickoff_async() for crew, _ in crews))
+
+    asyncio.run(scenario())
+
+    results = [_tool_result_seen_by_llm(llm) for _, llm in crews]
+    assert all("sdk:q" in seen for seen in results), results
+    assert len(offloaded_on_caller_loop) == loop_pool_workers
+
+
+def test_kickoff_worker_thread_is_not_a_loop_default_executor_thread() -> None:
+    """The kickoff body runs on the dedicated pool so a parked kickoff never holds a
+    thread the loop's default executor needs."""
+    observed: list[str] = []
+
+    def fake_kickoff(self: Any, inputs: Any = None, input_files: Any = None) -> Any:
+        observed.append(threading.current_thread().name)
+        return CrewOutput(raw="done", tasks_output=[], token_usage=UsageMetrics())
+
+    async def scenario() -> None:
+        stub_agent = Agent(
+            role="worker",
+            goal="noop",
+            backstory="agent",
+            llm=ScriptedLLM(["unused"]),
+            tools=[],
+            allow_delegation=False,
+        )
+        task = Task(description="noop", expected_output="noop", agent=stub_agent)
+        crew = Crew(agents=[stub_agent], tasks=[task], process=Process.sequential)
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(Crew, "kickoff", fake_kickoff)
+            await crew.kickoff_async()
+
+    asyncio.run(scenario())
+
+    assert observed and observed[0].startswith("crewai-kickoff"), observed

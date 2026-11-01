@@ -126,7 +126,11 @@ from crewai.tools.tool_failure import ToolFailurePolicy
 from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities.agent_utils import _reset_caller_loop, _set_caller_loop
+from crewai.utilities.agent_utils import (
+    _reset_caller_loop,
+    _set_caller_loop,
+    run_in_kickoff_thread,
+)
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.env import get_env_context
@@ -1172,7 +1176,12 @@ class Crew(FlowTrackable, BaseModel):
                 caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
                 try:
                     self.stream = False
-                    result = await asyncio.to_thread(self.kickoff, inputs, input_files)
+                    # Dedicated pool, not the loop's default executor: the parked kickoff
+                    # thread must not compete with tool coroutines that need a worker
+                    # thread of their own (CWE-833, see run_native_tool_result).
+                    result = await run_in_kickoff_thread(
+                        self.kickoff, inputs, input_files
+                    )
                     if isinstance(result, CrewOutput):
                         ctx.result_holder.append(result)
                 except Exception as e:
@@ -1198,7 +1207,7 @@ class Crew(FlowTrackable, BaseModel):
         # instead of failing with "attached to a different loop".
         caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
         try:
-            return await asyncio.to_thread(self.kickoff, inputs, input_files)
+            return await run_in_kickoff_thread(self.kickoff, inputs, input_files)  # type: ignore[no-any-return]
         finally:
             _reset_caller_loop(caller_loop_token)
 
