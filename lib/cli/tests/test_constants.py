@@ -32,7 +32,11 @@ def test_gemini_models_offer_no_shut_down_model() -> None:
     fails the first run with a ClientError."""
     gemini_models = MODELS["gemini"]
     assert gemini_models[0] == "gemini/gemini-3.8-flash"
-    for model in ("gemini/gemini-4-argon", "gemini/gemini-3.6-flash"):
+    for model in (
+        "gemini/gemini-4-argon",
+        "gemini/gemini-3.6-flash",
+        "gemini/gemini-3.5-flash-lite",
+    ):
         assert model in gemini_models
     shut_down = {
         "gemini/gemini-3-pro-preview",
@@ -45,3 +49,18 @@ def test_gemini_models_offer_no_shut_down_model() -> None:
         "gemini/gemini-2.5-pro-exp-03-25",
     }
     assert not shut_down.intersection(gemini_models)
+
+
+def test_default_wizard_offers_no_gemini_model_new_accounts_cannot_use() -> None:
+    """With no key, `crewai create crew` shows the curated Gemini list, so it
+    must hold only models a new account can call; the first is the default."""
+    from crewai_cli.create_json_crew import (
+        _PROVIDER_MODELS,
+        _default_model_for_provider,
+    )
+
+    gemini_models = [model_id for model_id, _ in _PROVIDER_MODELS["gemini"]]
+    assert _default_model_for_provider("gemini") == "gemini/gemini-3.8-flash"
+    for model in ("gemini-4-argon", "gemini-3.6-flash", "gemini-3.5-flash-lite"):
+        assert model in gemini_models
+    assert not [m for m in gemini_models if m.startswith(("gemini-2.", "gemini-1."))]
