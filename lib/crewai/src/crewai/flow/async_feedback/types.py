@@ -70,6 +70,9 @@ class PendingFeedbackContext:
     requested_at: datetime = field(default_factory=datetime.now)
     execution_uuid: str | None = None
     trace_context: tuple[int, int] | None = None
+    # Dispatch continuations that must wait for this feedback response.
+    deferred_dispatches: list[dict[str, Any]] = field(default_factory=list)
+    continuation_error: str | None = None
 
     @staticmethod
     def _make_json_safe(value: Any) -> Any:
@@ -116,6 +119,8 @@ class PendingFeedbackContext:
             "requested_at": self.requested_at.isoformat(),
             "execution_uuid": self.execution_uuid,
             "trace_context": list(self.trace_context) if self.trace_context else None,
+            "deferred_dispatches": self._make_json_safe(self.deferred_dispatches),
+            "continuation_error": self.continuation_error,
         }
 
     @classmethod
@@ -154,6 +159,8 @@ class PendingFeedbackContext:
             llm=data.get("llm"),
             requested_at=requested_at,
             execution_uuid=data.get("execution_uuid"),
+            deferred_dispatches=data.get("deferred_dispatches", []),
+            continuation_error=data.get("continuation_error"),
             trace_context=(trace_context[0], trace_context[1])
             if trace_context
             else None,

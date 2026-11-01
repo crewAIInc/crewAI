@@ -615,10 +615,10 @@ class TestFlowResumeWithFeedback:
 
     @pytest.mark.parametrize("failure_kind", ["listener", "start"])
     @pytest.mark.parametrize("pause", [True, False])
-    def test_router_outcome_error_preserves_pending_feedback(
+    def test_router_outcome_error_is_deferred_until_feedback_resumes(
         self, failure_kind: str, pause: bool
     ) -> None:
-        """Later dispatch errors must not discard a human request already sent."""
+        """Do not execute later work until the outstanding reply has arrived."""
         with tempfile.TemporaryDirectory() as tmpdir:
             persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
             failure = RuntimeError("router outcome failed")
@@ -664,13 +664,18 @@ class TestFlowResumeWithFeedback:
 
             pending = flow.kickoff()
             assert isinstance(pending, HumanFeedbackPending)
-            assert pending.__cause__ is failure
+            # Only the first request is active; later listeners and starts
+            # are persisted, so their failures cannot happen before the reply.
+            assert pending.__cause__ is None
             assert pending.context.method_name == "review"
             assert pending.context.method_output == "draft"
 
             restored = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+            assert "attempted" not in restored.state
+            with pytest.raises(RuntimeError) as exc_info:
+                restored.resume("approved")
+            assert exc_info.value is failure
             assert restored.state["attempted"] is True
-            restored.resume("approved")
             assert restored.state["review"] == "approved"
             assert persistence.load_pending_feedback(pending.context.flow_id) is None
 

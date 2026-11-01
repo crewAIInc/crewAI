@@ -84,6 +84,11 @@ from crewai.execution import (
     end_execution,
     get_execution_uuid,
 )
+from crewai.flow.async_feedback._payloads import (
+    decode_payload,
+    encode_payload,
+    payload_types,
+)
 from crewai.flow.async_feedback.types import (
     HumanFeedbackPending,
     HumanFeedbackProvider,
@@ -1475,6 +1480,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             raise ValueError(
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
+        if context.continuation_error is not None:
+            raise ValueError(
+                f"Cannot resume deferred work: {context.continuation_error}"
+            )
         emit = context.emit
 
         if not self.suppress_flow_events:
@@ -1586,6 +1595,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             method_output_entry["human_feedback"] = result
         self._method_outputs.append(method_output_entry)
 
+        deferred_dispatches = context.deferred_dispatches
+        context.deferred_dispatches = []
         try:
             if emit and collapsed_outcome:
                 await self._execute_listeners(
@@ -1597,9 +1608,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     FlowMethodName(context.method_name),
                     result,
                 )
+            to_resume, deferred_dispatches = deferred_dispatches, []
+            await self._resume_deferred_dispatches(to_resume)
         except Exception as e:
             # Check if flow was paused again for human feedback (loop case)
             if isinstance(e, HumanFeedbackPending):
+                e.context.deferred_dispatches.extend(deferred_dispatches)
                 self._pending_feedback_context = e.context
 
                 if self.persistence is None:
@@ -3249,85 +3263,149 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         all_triggers = [trigger_method, *router_results]
 
-        feedback_pause: HumanFeedbackPending | None = None
-
         with self._or_listeners_lock:
-            rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
+            rearmable = list(self._fired_or_listeners)
 
-        try:
-            for idx, current_trigger in enumerate(all_triggers):
-                if current_trigger:
-                    if idx > 0 and rearmable:
-                        self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
-                    listeners_triggered = self._find_triggered_methods(
-                        current_trigger, router_only=False
-                    )
-                    ran_for_trigger.setdefault(str(current_trigger), set()).update(
-                        listeners_triggered
-                    )
-                    if listeners_triggered:
-                        listener_result = router_result_payloads.get(
-                            str(current_trigger), result
+        dispatches = [
+            {
+                "kind": "trigger",
+                "trigger": str(trigger),
+                "result": router_result_payloads.get(str(trigger), result),
+                "encoded": False,
+                "event": current_triggering_event_id,
+                "router": trigger in router_results,
+                "ran": list(ran_for_trigger.get(str(trigger), set())),
+                "rearm": idx > 0,
+                "rearmable": rearmable,
+            }
+            for idx, trigger in enumerate(all_triggers)
+            if trigger
+        ]
+        await self._resume_deferred_dispatches(dispatches)
+
+    def _deferred_payload_types(self) -> dict[str, type]:
+        return payload_types(self._methods.values(), (HumanFeedbackResult,))
+
+    async def _resume_deferred_dispatches(
+        self, dispatches: list[dict[str, Any]]
+    ) -> None:
+        """Carry unstarted work across pauses without issuing orphan requests."""
+        for index, dispatch in enumerate(dispatches):
+            try:
+                kind = dispatch["kind"]
+                if kind == "trigger":
+                    await self._execute_deferred_trigger(dispatch)
+                elif kind == "listener":
+                    await self._execute_single_listener(
+                        FlowMethodName(dispatch["method"]),
+                        decode_payload(
+                            dispatch["result"], self._deferred_payload_types()
                         )
-                        racing_group = self._get_racing_group_for_listeners(
-                            listeners_triggered
+                        if dispatch.get("encoded")
+                        else dispatch["result"],
+                        dispatch["event"],
+                    )
+                elif kind == "conditional_starts":
+                    starts = [
+                        {"kind": "start", "method": str(name)}
+                        for name in self._start_method_names()
+                        if self._start_condition_triggered_by(
+                            name, FlowMethodName(dispatch["trigger"])
                         )
-                        if racing_group:
-                            racing_members, _ = racing_group
-                            other_listeners = [
-                                name
-                                for name in listeners_triggered
-                                if name not in racing_members
-                            ]
-                            await self._execute_racing_listeners(
-                                racing_members,
-                                other_listeners,
-                                listener_result,
-                                current_triggering_event_id,
-                            )
-                        else:
-                            tasks = [
-                                self._execute_single_listener(
-                                    listener_name,
-                                    listener_result,
-                                    current_triggering_event_id,
-                                )
-                                for listener_name in listeners_triggered
-                            ]
-                            try:
-                                await asyncio.gather(*tasks)
-                            except HumanFeedbackPending as e:
-                                # A listener paused for human feedback. Keep
-                                # dispatching the remaining trigger outcomes so
-                                # their listeners still run, then re-raise below
-                                # so the flow pauses for the reply as usual.
-                                feedback_pause = feedback_pause or e
+                        and name not in dispatch["ran"]
+                    ]
+                    await self._resume_deferred_dispatches(starts)
+                elif kind == "start":
+                    name = FlowMethodName(dispatch["method"])
+                    was_resuming = self._is_execution_resuming
+                    if name in self._completed_methods:
+                        self._is_execution_resuming = False
+                    try:
+                        await self._execute_start_method(name)
+                    finally:
+                        self._is_execution_resuming = was_resuming
+                else:
+                    raise ValueError(f"Unknown deferred dispatch kind: {kind}")
+            except HumanFeedbackPending as pause:  # noqa: PERF203 - Preserve the unstarted dispatch tail.
+                # Inner continuations precede their enclosing dispatch's tail.
+                # Encode only work that actually crosses a pause boundary;
+                # synchronous listeners retain the original object identity.
+                try:
+                    tail = []
+                    types = self._deferred_payload_types()
+                    for remaining in dispatches[index + 1 :]:
+                        entry = remaining.copy()
+                        if "result" in entry and not entry.get("encoded"):
+                            entry["result"] = encode_payload(entry["result"], types)
+                            entry["encoded"] = True
+                        tail.append(entry)
+                    pause.context.deferred_dispatches.extend(tail)
+                except (TypeError, ValueError) as error:
+                    # Preserve the request already issued, rather than losing
+                    # its pending context behind a serialization exception.
+                    pause.context.continuation_error = str(error)
+                    raise pause from error
+                raise
 
-                    if current_trigger in router_results:
-                        for method_name in self._start_method_names():
-                            if self._start_condition_triggered_by(
-                                method_name, current_trigger
-                            ) and method_name not in ran_for_trigger.get(
-                                str(current_trigger), set()
-                            ):
-                                if method_name in self._completed_methods:
-                                    # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
-                                    was_resuming = self._is_execution_resuming
-                                    self._is_execution_resuming = False
-                                    await self._execute_start_method(method_name)
-                                    self._is_execution_resuming = was_resuming
-                                else:
-                                    await self._execute_start_method(method_name)
-        except Exception as e:
-            if feedback_pause is not None:
-                # The provider has already requested feedback. Preserve the
-                # pause so kickoff persists it, keeping the later error as
-                # its cause for diagnostics.
-                raise feedback_pause from e
-            raise
+    async def _execute_deferred_trigger(self, dispatch: dict[str, Any]) -> None:
+        """Resolve a trigger only when it is reached, preserving state changes."""
+        trigger = FlowMethodName(dispatch["trigger"])
+        rearmable = set(dispatch["rearmable"])
+        if dispatch["rearm"] and rearmable:
+            self._rearm_or_listeners_for_trigger(trigger, rearmable)
+        listeners = self._find_triggered_methods(trigger, router_only=False)
+        ran = set(dispatch["ran"]) | set(listeners)
+        has_feedback = any(
+            method.human_feedback is not None
+            for method in self._definition.methods.values()
+        )
+        racing_group = (
+            self._get_racing_group_for_listeners(listeners) if listeners else None
+        )
+        if has_feedback and racing_group:
+            # Racing providers cannot share the single pending-context slot.
+            raise ValueError(
+                "Racing listeners in human-feedback flows require request-scoped persistence"
+            )
 
-        if feedback_pause is not None:
-            raise feedback_pause
+        jobs = [
+            {
+                "kind": "listener",
+                "method": str(name),
+                "result": dispatch["result"],
+                "encoded": dispatch.get("encoded", False),
+                "event": dispatch["event"],
+            }
+            for name in listeners
+        ]
+        starts = (
+            [{"kind": "conditional_starts", "trigger": str(trigger), "ran": list(ran)}]
+            if dispatch["router"]
+            else []
+        )
+        if has_feedback:
+            # A descendant listener can also reach a feedback provider, so
+            # serialize dispatch in feedback-bearing flows, not just methods
+            # with a direct decorator. Other flows retain parallel execution.
+            await self._resume_deferred_dispatches([*jobs, *starts])
+            return
+
+        if racing_group:
+            members, _ = racing_group
+            others = [name for name in listeners if name not in members]
+            await self._execute_racing_listeners(
+                members, others, dispatch["result"], dispatch["event"]
+            )
+        else:
+            await asyncio.gather(
+                *[
+                    self._execute_single_listener(
+                        FlowMethodName(job["method"]), job["result"], job["event"]
+                    )
+                    for job in jobs
+                ]
+            )
+        await self._resume_deferred_dispatches(starts)
 
     def _condition_met(
         self,
