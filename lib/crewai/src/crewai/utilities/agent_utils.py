@@ -10,6 +10,7 @@ from datetime import datetime
 import inspect
 import json
 import logging
+import os
 import re
 from typing import TYPE_CHECKING, Any, Final
 import warnings
@@ -1507,13 +1508,24 @@ _caller_loop_context: contextvars.ContextVar[asyncio.AbstractEventLoop | None] =
     contextvars.ContextVar("crewai_caller_loop", default=None)
 )
 
+# Upper bound on how long a worker thread waits for a bridged tool coroutine. A
+# bounded wait keeps a starved caller-loop executor from wedging the process
+# forever (CWE-833); it is generous enough for genuinely long-running tools.
+NATIVE_TOOL_BRIDGE_TIMEOUT_SECONDS: Final[float] = float(
+    os.environ.get("CREWAI_NATIVE_TOOL_BRIDGE_TIMEOUT", "300")
+)
 
-def _set_caller_loop(loop: asyncio.AbstractEventLoop) -> contextvars.Token[asyncio.AbstractEventLoop | None]:
+
+def _set_caller_loop(
+    loop: asyncio.AbstractEventLoop,
+) -> contextvars.Token[asyncio.AbstractEventLoop | None]:
     """Capture the loop an async kickoff awaits on for the duration of the run."""
     return _caller_loop_context.set(loop)
 
 
-def _reset_caller_loop(token: contextvars.Token[asyncio.AbstractEventLoop | None]) -> None:
+def _reset_caller_loop(
+    token: contextvars.Token[asyncio.AbstractEventLoop | None],
+) -> None:
     """Clear the captured caller loop (contextvar reset is token-scoped)."""
     _caller_loop_context.reset(token)
 
@@ -1540,8 +1552,16 @@ def run_native_tool_result(
 
     Async implementations are expected not to block: bridged coroutines run on the
     application's loop, so a tool that blocks inside its coroutine stalls every other
-    task on that loop for the duration. Offload blocking client calls to a worker
-    thread inside the tool instead.
+    task on that loop for the duration.
+
+    Prefer awaiting the library's native async client. Offloading a blocking SDK call
+    with ``asyncio.to_thread`` from inside a bridged coroutine draws on the *caller
+    loop's default executor* — the same pool the kickoff's own worker thread came
+    from — so enough concurrent kickoffs each waiting on such a tool can starve the
+    pool (CWE-833). If a blocking library must be used, hand it a dedicated
+    ``ThreadPoolExecutor`` (``loop.run_in_executor(<own pool>, ...)``) rather than the
+    default one. The bridge wait is bounded by ``NATIVE_TOOL_BRIDGE_TIMEOUT_SECONDS``
+    so a starved pool surfaces as an error instead of wedging the process.
     """
     loop = caller_loop if caller_loop is not None else _caller_loop_context.get()
     if loop is not None and tool is not None and _has_async_implementation(tool):
@@ -1562,7 +1582,24 @@ def run_native_tool_result(
                 # Only scheduling failures fall back. Exceptions raised by the
                 # coroutine (RuntimeError included) propagate unchanged: re-running
                 # the tool here would repeat its side effects and mask the failure.
-                return future.result()
+                try:
+                    return future.result(timeout=NATIVE_TOOL_BRIDGE_TIMEOUT_SECONDS)
+                except concurrent.futures.TimeoutError:
+                    # The wait must not be unbounded (CWE-833): a tool whose coroutine
+                    # waits on the caller loop's saturated default executor would
+                    # otherwise block this worker thread forever. Cancel so the
+                    # abandoned coroutine does not keep running, and never fall back
+                    # to tool_func here — the tool already started and may have had
+                    # side effects.
+                    future.cancel()
+                    raise TimeoutError(
+                        f"Native tool {getattr(tool, 'name', type(tool).__name__)!r} did not "
+                        f"finish within {NATIVE_TOOL_BRIDGE_TIMEOUT_SECONDS:g}s on the caller's "
+                        "event loop. This usually means the tool blocks the loop or offloads "
+                        "blocking work to the loop's default executor, which the pending "
+                        "kickoffs are occupying; make the tool await its library's async client "
+                        "or use a dedicated ThreadPoolExecutor (see crewai#8904)."
+                    ) from None
     return tool_func(**args_dict)
 
 
@@ -1573,7 +1610,10 @@ def _has_async_implementation(tool: Any) -> bool:
         # Tool wraps a user callable; it decides whether async work exists.
         # (Tool always overrides _arun, even for sync funcs.)
         return asyncio.iscoroutinefunction(wrapped)
-    meth = type(tool).__dict__.get("_arun")
+    # Resolve through the MRO: a class-based tool may inherit a working _arun from a
+    # parent, and reading only the concrete class __dict__ would misclassify it as
+    # sync, sending it back to a fresh asyncio.run loop (the bug this fixes).
+    meth = getattr(type(tool), "_arun", None)
     if meth is None:
         return False
     func = getattr(meth, "__func__", meth)
