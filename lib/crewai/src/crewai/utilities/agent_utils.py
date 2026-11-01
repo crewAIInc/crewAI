@@ -7,6 +7,7 @@ import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
+import functools
 import inspect
 import json
 import logging
@@ -1507,6 +1508,37 @@ class NativeToolCallResult:
 _caller_loop_context: contextvars.ContextVar[asyncio.AbstractEventLoop | None] = (
     contextvars.ContextVar("crewai_caller_loop", default=None)
 )
+
+# Worker pool for the synchronous kickoff bodies the async entry points offload.
+# Deliberately NOT the event loop's default executor (asyncio.to_thread): each
+# in-flight kickoff parks its thread inside run_native_tool_result while the caller
+# loop runs the tool coroutine, and a bridged tool that offloads blocking work with
+# asyncio.to_thread needs a thread from that very default pool. With as many
+# kickoffs as pool workers the pool starves and every run wedges (CWE-833). A
+# dedicated pool keeps the loop's default pool available to tool coroutines.
+_KICKOFF_EXECUTOR_MAX_WORKERS: Final[int] = max(4, min(32, (os.cpu_count() or 1) + 4))
+_kickoff_executor: Final[concurrent.futures.ThreadPoolExecutor] = (
+    concurrent.futures.ThreadPoolExecutor(
+        max_workers=_KICKOFF_EXECUTOR_MAX_WORKERS, thread_name_prefix="crewai-kickoff"
+    )
+)
+
+
+async def run_in_kickoff_thread(
+    func: Callable[..., Any], *args: Any, **kwargs: Any
+) -> Any:
+    """Await blocking kickoff work on the dedicated kickoff pool.
+
+    Same contract as ``asyncio.to_thread`` (it still runs off the event loop and
+    still receives a copy of the current context, so the caller-loop ContextVar and
+    other context set by the async entry point are visible), but the worker thread
+    comes from ``_kickoff_executor`` instead of the loop's default pool.
+    """
+    loop = asyncio.get_running_loop()
+    ctx = contextvars.copy_context()
+    call = functools.partial(ctx.run, func, *args, **kwargs)
+    return await loop.run_in_executor(_kickoff_executor, call)
+
 
 # Upper bound on how long a worker thread waits for a bridged tool coroutine. A
 # bounded wait keeps a starved caller-loop executor from wedging the process
