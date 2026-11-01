@@ -2244,7 +2244,9 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                raw_parsed = self._get_sync_client().beta.chat.completions.with_raw_response.parse(
+                raw_parsed = self._client_for_attempt(
+                    self._get_sync_client()
+                ).beta.chat.completions.with_raw_response.parse(
                     **parse_params,
                     response_format=response_model,
                 )
@@ -2536,7 +2538,9 @@ class OpenAICompletion(BaseLLM):
             }
 
             stream: ChatCompletionStream[BaseModel]
-            with self._get_sync_client().beta.chat.completions.stream(
+            with self._client_for_attempt(
+                self._get_sync_client()
+            ).beta.chat.completions.stream(
                 **parse_params, response_format=response_model
             ) as stream:
                 for chunk in stream:
@@ -2684,7 +2688,9 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                raw_parsed = await self._get_async_client().beta.chat.completions.with_raw_response.parse(
+                raw_parsed = await self._client_for_attempt(
+                    self._get_async_client()
+                ).beta.chat.completions.with_raw_response.parse(
                     **parse_params,
                     response_format=response_model,
                 )

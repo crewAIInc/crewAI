@@ -320,3 +320,113 @@ async def test_async_non_streaming_chat_keeps_sdk_retries_for_the_first_attempt_
         _llm_retry_replay.reset(token)
 
     assert budgets == [0 if replay else None]
+
+
+class _Model:
+    """Stands in for the pydantic schema handed to the beta parse helpers."""
+
+
+class _StructuredRecordingClient(_RecordingClient):
+    """Records the retry budget in force on the structured-output helpers."""
+
+    @property
+    def beta(self) -> "_StructuredRecordingClient":
+        return self
+
+    def parse(self, **kwargs: object) -> Any:
+        self._record()
+
+    def stream(self, **kwargs: object) -> Any:
+        self._record()
+
+
+class _StoppedAsync(BaseException):
+    """Async sibling of _Stopped: skips the provider's own error handling."""
+
+
+class _AsyncStructuredRecordingClient(_StructuredRecordingClient):
+    async def parse(self, **kwargs: object) -> Any:
+        self.budgets.append(self.chain[-1] if self.chain else None)
+        raise _StoppedAsync
+
+
+@pytest.mark.parametrize("replay", [False, True])
+def test_structured_output_parse_keeps_sdk_retries_for_the_first_attempt_only(
+    replay: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    budgets: list[object] = []
+    monkeypatch.setattr(
+        OpenAICompletion,
+        "_get_sync_client",
+        lambda self: _StructuredRecordingClient(budgets),
+    )
+    completion = OpenAICompletion.__new__(OpenAICompletion)
+
+    token = _llm_retry_replay.set(replay)
+    try:
+        with pytest.raises(Exception):  # noqa: B017, PT011 - the fake stops the call
+            completion._handle_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Model,
+            )
+    finally:
+        _llm_retry_replay.reset(token)
+
+    assert budgets == [0 if replay else None]
+
+
+@pytest.mark.parametrize("replay", [False, True])
+def test_structured_output_stream_keeps_sdk_retries_for_the_first_attempt_only(
+    replay: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    budgets: list[object] = []
+    monkeypatch.setattr(
+        OpenAICompletion,
+        "_get_sync_client",
+        lambda self: _StructuredRecordingClient(budgets),
+    )
+    completion = OpenAICompletion.__new__(OpenAICompletion)
+
+    token = _llm_retry_replay.set(replay)
+    try:
+        with pytest.raises(Exception):  # noqa: B017, PT011 - the fake stops the call
+            completion._handle_streaming_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Model,
+            )
+    finally:
+        _llm_retry_replay.reset(token)
+
+    assert budgets == [0 if replay else None]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("replay", [False, True])
+async def test_async_structured_output_parse_keeps_sdk_retries_for_the_first_attempt_only(
+    replay: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    budgets: list[object] = []
+    monkeypatch.setattr(
+        OpenAICompletion,
+        "_get_async_client",
+        lambda self: _AsyncStructuredRecordingClient(budgets),
+    )
+    completion = OpenAICompletion.__new__(OpenAICompletion)
+
+    token = _llm_retry_replay.set(replay)
+    try:
+        with pytest.raises(_StoppedAsync):
+            await completion._ahandle_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Model,
+            )
+    finally:
+        _llm_retry_replay.reset(token)
+
+    assert budgets == [0 if replay else None]
