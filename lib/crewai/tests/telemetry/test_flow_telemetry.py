@@ -13,7 +13,9 @@ the input and conversation-failure events had no listener at all.
 from __future__ import annotations
 
 import contextlib
+import os
 import time
+from unittest.mock import patch
 
 import pytest
 
@@ -215,6 +217,32 @@ def test_failed_flow_reports_the_failure_and_the_method(
         ("BoomFlow", "failed", "RuntimeError")
     ]
     assert ("BoomFlow", "user", "RuntimeError") in method_failures
+
+
+def test_a_missing_api_key_is_reported_as_its_type(
+    durations: list[tuple[str, float, str, str | None]],
+    method_failures: list[tuple[str, str, str | None]],
+) -> None:
+    """An OpenAI-compatible provider used to report it as an ``ImportError``."""
+    from crewai.llm import LLM
+    from crewai.llms.base_llm import MissingAPIKeyError
+
+    class NoKeyFlow(Flow):
+        @start()
+        def go(self) -> str:
+            LLM(model="deepseek/deepseek-chat")
+            return "unreachable"
+
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        pytest.raises(MissingAPIKeyError, match="DEEPSEEK_API_KEY is required"),
+    ):
+        NoKeyFlow().kickoff()
+
+    assert [(n, o, e) for n, _d, o, e in durations] == [
+        ("NoKeyFlow", "failed", "MissingAPIKeyError")
+    ]
+    assert ("NoKeyFlow", "user", "MissingAPIKeyError") in method_failures
 
 
 def test_a_failed_flow_is_still_counted_as_an_execution(
