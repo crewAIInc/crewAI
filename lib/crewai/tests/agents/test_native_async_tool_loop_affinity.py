@@ -15,11 +15,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from typing import Any
+
+import pytest
 
 from crewai import Agent, Crew, Process, Task
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import tool
+from crewai.crews.crew_output import CrewOutput
+from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities import agent_utils
 from crewai.utilities.agent_utils import run_native_tool_result
 
 
@@ -249,3 +255,128 @@ def test_async_native_tool_honors_caller_loop_under_kickoff_async() -> None:
 
     seen = _tool_result_seen_by_llm(llm)
     assert "got:expected-item" in seen, f"async tool failed; LLM saw: {seen!r}"
+
+def test_inherited_arun_is_treated_as_async() -> None:
+    """A class-based tool that inherits a real _arun from a parent must still be
+    bridged; reading only the concrete class __dict__ would classify it as sync
+    and send it back to a fresh asyncio.run loop."""
+
+    class _AsyncParent:
+        func = None  # no wrapped callable: force the class-based detection branch
+
+        async def _arun(self, **kwargs: Any) -> str:
+            caller_bound = _HOLDER.value
+            if caller_bound is not None:
+                await asyncio.wait_for(caller_bound, timeout=2)
+                _HOLDER.value = None
+                return f"got:{caller_bound.result()}"
+            return "from-parent-arun"
+
+        def arun(self, **kwargs: Any) -> Any:
+            return self._arun(**kwargs)
+
+    class _InheritingTool(_AsyncParent):
+        pass
+
+    inherited_tool = _InheritingTool()
+    caller_loop = asyncio.new_event_loop()
+    try:
+
+        async def scenario() -> str:
+            caller_bound: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+            asyncio.get_running_loop().call_later(0.05, caller_bound.set_result, "inherited-ok")
+            _HOLDER.value = caller_bound
+            return await asyncio.to_thread(
+                run_native_tool_result,
+                lambda **kwargs: "from-sync-fallback",
+                {"x": 1},
+                inherited_tool,
+                caller_loop=caller_loop,
+            )
+
+        assert caller_loop.run_until_complete(scenario()) == "got:inherited-ok"
+    finally:
+        _HOLDER.value = None
+        caller_loop.close()
+
+
+def test_bridge_wait_is_bounded_and_cancels_the_coroutine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A tool that never finishes must surface as a TimeoutError instead of blocking
+    the worker thread forever (CWE-833); the abandoned coroutine is cancelled."""
+
+    started = threading.Event()
+    cancelled = threading.Event()
+
+    @tool("hangs")
+    async def hangs(query: str) -> str:
+        """Never finishes."""
+        started.set()
+        try:
+            await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return "unreachable"
+
+    monkeypatch.setattr(
+        "crewai.utilities.agent_utils.NATIVE_TOOL_BRIDGE_TIMEOUT_SECONDS", 0.2
+    )
+
+    caller_loop = asyncio.new_event_loop()
+    try:
+
+        async def scenario() -> BaseException | None:
+            try:
+                await asyncio.to_thread(
+                    run_native_tool_result,
+                    hangs.run,
+                    {"query": "q"},
+                    hangs,
+                    caller_loop=caller_loop,
+                )
+            except BaseException as exc:  # noqa: BLE001 - the exception is the assertion
+                return exc
+            return None
+
+        exc = caller_loop.run_until_complete(scenario())
+        assert started.is_set(), "the tool coroutine should have started on the caller loop"
+        assert isinstance(exc, TimeoutError), f"expected TimeoutError, got {exc!r}"
+        assert "did not finish" in str(exc)
+        # let the cancellation land on the loop
+        caller_loop.run_until_complete(asyncio.sleep(0))
+        assert cancelled.is_set(), "the abandoned coroutine must be cancelled, not left running"
+    finally:
+        caller_loop.close()
+
+
+def test_streaming_kickoff_captures_the_caller_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """kickoff_async(stream=True) also runs self.kickoff in a worker thread, so it must
+    set the caller-loop context too — otherwise async native tools keep breaking there."""
+
+    captured: list[asyncio.AbstractEventLoop | None] = []
+
+    def fake_kickoff(self: Any, inputs: Any = None, input_files: Any = None) -> Any:
+        captured.append(agent_utils._caller_loop_context.get())
+        return CrewOutput(raw="streamed", tasks_output=[], token_usage=UsageMetrics())
+
+    async def scenario() -> None:
+        stub_agent = Agent(
+            role="worker",
+            goal="use the tools",
+            backstory="agent",
+            llm=ScriptedLLM(["unused"]),
+            tools=[],
+            allow_delegation=False,
+        )
+        task = Task(description="noop", expected_output="noop", agent=stub_agent)
+        crew = Crew(agents=[stub_agent], tasks=[task], process=Process.sequential, stream=True)
+        monkeypatch.setattr(Crew, "kickoff", fake_kickoff)
+
+        streaming = await crew.kickoff_async()
+        async for _ in streaming:
+            pass
+
+    asyncio.run(scenario())
+
+    assert captured, "self.kickoff was never offloaded"
+    assert captured[0] is not None, "streaming kickoff lost the caller loop"

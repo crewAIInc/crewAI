@@ -1175,6 +1175,10 @@ class Crew(FlowTrackable, BaseModel):
             ctx = StreamingContext(use_async=True)
 
             async def run_crew() -> None:
+                # Capture this loop before offloading self.kickoff, exactly as the
+                # non-streaming path below does: the worker thread must still bridge its
+                # async native tools back onto the caller's loop (issue #7630 family).
+                caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
                 try:
                     self.stream = False
                     result = await asyncio.to_thread(self.kickoff, inputs, input_files)
@@ -1183,6 +1187,7 @@ class Crew(FlowTrackable, BaseModel):
                 except Exception as e:
                     signal_error(ctx.state, e, is_async=True)
                 finally:
+                    _reset_caller_loop(caller_loop_token)
                     self.stream = True
                     signal_end(ctx.state, is_async=True)
 
