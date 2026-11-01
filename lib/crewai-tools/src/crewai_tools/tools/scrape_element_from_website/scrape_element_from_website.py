@@ -55,7 +55,10 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         css_element: str | None = None,
         **kwargs: Any,
     ):
+        """Initialize the scraper, binding configured cookies to a fixed URL."""
         super().__init__(**kwargs)
+        if cookies is not None and not website_url:
+            raise ValueError("cookies require a fixed website_url.")
         if website_url is not None:
             self.website_url = website_url
             self.css_element = css_element
@@ -64,8 +67,8 @@ class ScrapeElementFromWebsiteTool(BaseTool):
             )
             self.args_schema = FixedScrapeElementFromWebsiteToolSchema
             self._generate_description()
-        if cookies is not None:
-            self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
+            if cookies is not None:
+                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,
@@ -76,7 +79,11 @@ class ScrapeElementFromWebsiteTool(BaseTool):
                 "beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`"
             )
 
-        website_url = kwargs.get("website_url", self.website_url)
+        website_url = (
+            self.website_url
+            if self.website_url is not None
+            else kwargs.get("website_url")
+        )
         css_element = kwargs.get("css_element", self.css_element)
 
         if website_url is None or css_element is None:

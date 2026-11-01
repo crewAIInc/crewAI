@@ -172,7 +172,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", oauthlib = "2026-09-29T00:00:00Z", certifi = "2026-10-21T00:00:00Z", uv = "2026-10-21T00:00:00Z", pypdf = "2026-10-22T00:00:00Z" }
+exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", oauthlib = "2026-09-29T00:00:00Z", certifi = "2026-10-21T00:00:00Z", uv = "2026-10-21T00:00:00Z", pypdf = "2026-10-29T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
@@ -203,7 +203,11 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # GHSA-7mh2-4gg2-979f, GHSA-9mx8-4j7g-633p, and GHSA-39mj-jf6j-2qj3; force 6.21.1+.
 # pypdf <6.21.2 has GHSA-6c7f-9265-g8fw, GHSA-jr96-gvgh-j3r4, and GHSA-gmh7-3g9r-mjh5 (long
 # runtimes on crafted indirect objects, cross-reference streams, and xref limits); force 6.21.2+.
-# 6.21.2 (2026-10-21) is newer than the global 3-day cutoff, hence its exclude-newer-package entry.
+# pypdf <6.21.3 has GHSA-62m5-6wh8-28x7 (encrypted files), GHSA-42gh-23hr-vphw (page labels),
+# GHSA-x3rh-gjgm-fmqc (cross-reference streams) and GHSA-4vqv-7265-gm2w (strict-mode exceptions), and
+# <6.21.4 has GHSA-5849-834g-hvw5, GHSA-mfr5-77xh-9j7h (infinite loops on xref trailer search and
+# dictionary cloning) and GHSA-cggf-277g-3q54 (page tree memory); force 6.21.4+.
+# pypdf's exclude-newer-package date admits 6.21.4 (2026-10-28).
 # filelock <4.2.1 has GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5 (SQLite-backed ReadWriteLock), and
 # GHSA-567q-5qvw-pf92 (Windows soft-lock markers). 4.2.x requires Python 3.11+, so Python 3.10
 # stays on filelock 3.x, as with Pillow. unstructured (through 0.27.34) and
@@ -226,6 +230,8 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # gitpython <=3.2.0 has GHSA-83vg-56qc-22m7 (submodule path validation after cloning can plant a Git hook);
 # force 3.2.1+.
 # pyasn1 <0.6.4 has GHSA-8ppf-4f7h-5ppj and GHSA-hm4w-wwcw-mr6r; force 0.6.4+.
+# pyasn1 <0.6.5 has GHSA-2qm8-x737-gmw5, GHSA-fm9c-5rcf-2q5p, GHSA-mm57-4v3p-rchx and GHSA-9m75-vc3g-4x39
+# (quadratic-time decoding DoS); force 0.6.5+.
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # urllib3 <2.8.0 has GHSA-8988-9cw3-xx77 (HTTPS proxy TLS configuration ignored), GHSA-gh4c-6fx4-qh6g (chunked
 # deflate infinite loop) and GHSA-vxq7-64xx-v4gw (unbounded chunk-size line); force 2.8.0+.
@@ -235,6 +241,8 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # and GHSA-f4xh-w4cj-qxq8; force 0.8.18+.
 # authlib <1.9.0 has GHSA-6v38-4h7w-rj9h (JWS JSON empty-signature validation bypass).
 # authlib <1.9.1 also has GHSA-8m4g-j4wp-wgcg; retain the patched floor.
+# joserfc (via authlib) <1.7.5 has GHSA-jpxq-7h8p-2q76 (CPU exhaustion via JWE recipients) and <1.7.6 has
+# GHSA-9pg5-8c7x-5hfx (compact JWS size guard allocates before rejecting); force 1.7.6+.
 # pip 26.1.1 has PYSEC-2026-196; force 26.1.2+.
 # aiohttp <=3.13.x has GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg; fixed in 3.14.0; force 3.14.0+.
 # aiohttp <=3.14.1 has GHSA-mq44-7p77-q5h7, GHSA-mfx4-hv73-q22v; fixed in 3.14.2.
@@ -298,10 +306,12 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # DNSPython 2.9.0 requires Python 3.11+, so Python 3.10 retains its compatible
 # transitive resolution until CrewAI drops Python 3.10 support.
 # soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; force 2.9.2+.
-# litellm <1.100.4 has GHSA-3cv6-jpf6-8222 (authenticated SSRF and provider-credential exfiltration),
-# GHSA-g5ff-637f-6q2m (arbitrary file read), and GHSA-7hp6-4w63-5g45 (LiteLLM proxy privilege escalation).
-# The floor lives in
-# lib/crewai/pyproject.toml (the crewai[litellm] extra) rather than here, since crewai declares litellm directly.
+# litellm is pinned to ONE reviewed release (crewai[litellm] in lib/crewai/pyproject.toml), never a range:
+# a user's install resolves to the newest release a range allows, which we have not reviewed, and litellm
+# has shipped compromised releases before (GHSA-5mg7-485q-xm76, 1.82.7-1.82.8). Moving it is a crewAI release.
+# 1.105.3 has no known advisory (GitHub, OSV) and is patched for GHSA-3cv6-jpf6-8222, GHSA-g5ff-637f-6q2m and
+# GHSA-7hp6-4w63-5g45. The previous pin, 1.100.4, imports typing.NotRequired, so it fails on Python 3.10.
+# 1.106.x imports mcp.types.CacheableResult, which no released mcp 1.x has, so its tool calls fail.
 # oauthlib <4.0.0 has GHSA-xpv3-w29h-x7cv / PYSEC-2026-4114 (PKCE code_verifier timing side channel)
 # and GHSA-hj66-6f7g-4r5v (JSONP callback injection on RevocationEndpoint). Fixed in 4.0.0.
 # Transitive via chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client.
@@ -320,7 +330,7 @@ override-dependencies = [
     "virtualenv>=21.14.11",
     "transformers>=5.4.0; python_version >= '3.10'",
     "cryptography>=50.0.0",
-    "pypdf>=6.21.2,<7",
+    "pypdf>=6.21.4,<7",
     "uv>=0.13.4,<1",
     "certifi>=2026.10.18",
     "python-multipart>=0.0.27,<1",
@@ -328,9 +338,10 @@ override-dependencies = [
     "opentelemetry-api>=1.45.1,<2",
     "opentelemetry-sdk>=1.45.1,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
-    "pyasn1>=0.6.4",
+    "pyasn1>=0.6.5",
     "langsmith>=0.8.18,<1",
     "authlib>=1.9.1",
+    "joserfc>=1.7.6",
     "pip>=26.2", # PYSEC-2026-3721 / CVE-2026-13346 — fixed in 26.2
     "aiohttp>=3.14.4",
     # [chunking] carried here because override-dependencies replace the whole
