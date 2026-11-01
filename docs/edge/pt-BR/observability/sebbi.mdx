@@ -9,7 +9,7 @@ mode: "wide"
 
 O [sebbi](https://sebbi.pro/receipts) dá a cada etapa da sua crew um recibo selado com um link público que qualquer pessoa pode verificar: seu cliente, seu auditor, sua seguradora ou um regulador. Os recibos são agrupados em árvores de Merkle, selados em uma cadeia somente de acréscimo, testemunhados por cadeias independentes e com carimbo de tempo no Bitcoin, de modo que o registro do que um agente fez não pode ser alterado silenciosamente depois.
 
-O cliente sebbi calcula o hash (SHA-256) das entradas e saídas dentro do seu processo e envia apenas as impressões digitais, um rótulo curto e um carimbo de tempo. O cliente é de código aberto, então você pode confirmar isso antes de instalar: [github.com/justrightdecorators-ops/sebbi-sdk](https://github.com/justrightdecorators-ops/sebbi-sdk). A selagem roda em uma thread em segundo plano e nunca gera exceções na sua crew.
+O cliente sebbi calcula o hash (SHA-256) das entradas e saídas dentro do seu processo e envia apenas as impressões digitais, um rótulo curto e um carimbo de tempo. O código do cliente é público: [github.com/justrightdecorators-ops/sebbi-sdk](https://github.com/justrightdecorators-ops/sebbi-sdk). A selagem roda em uma thread em segundo plano e nunca gera exceções na sua crew.
 
 ## Instalação
 
@@ -20,7 +20,7 @@ echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41d
 pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-`--require-hashes` faz o pip recusar qualquer arquivo que não seja o wheel revisado `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`). Esse wheel foi gerado a partir do código no commit [`6c8fa2a`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/6c8fa2a50694f763a07d27fa133bc5e8dd54a5cd/python) e publicado via PyPI Trusted Publishing, com atestado de publicação do PyPI. O cliente não tem dependências.
+`--require-hashes` faz o pip instalar exatamente o arquivo publicado no PyPI como `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`) e nada além dele. O cliente não tem dependências.
 
 Não é preciso conta para começar (1.000 recibos por dia). Defina `SEBBI_API_KEY` em [sebbi.pro/connect](https://sebbi.pro/connect) para volume completo.
 

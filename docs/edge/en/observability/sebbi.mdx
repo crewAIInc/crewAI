@@ -9,7 +9,7 @@ mode: "wide"
 
 [sebbi](https://sebbi.pro/receipts) gives every step your crew takes a sealed receipt with a public link anyone can check: your customer, your auditor, your insurer or a regulator. Receipts are Merkle-batched, sealed into an append-only chain, witnessed by independent chains and timestamped into Bitcoin, so a record of what an agent did cannot be quietly edited afterwards.
 
-The sebbi client hashes inputs and outputs (SHA-256) inside your process and sends only the fingerprints, a short label and a timestamp. The client is open source, so you can confirm that before installing: [github.com/justrightdecorators-ops/sebbi-sdk](https://github.com/justrightdecorators-ops/sebbi-sdk). Sealing runs in a background thread and never raises into your crew.
+The sebbi client hashes inputs and outputs (SHA-256) inside your process and sends only the fingerprints, a short label and a timestamp. The client source is public: [github.com/justrightdecorators-ops/sebbi-sdk](https://github.com/justrightdecorators-ops/sebbi-sdk). Sealing runs in a background thread and never raises into your crew.
 
 ## Installation
 
@@ -20,7 +20,7 @@ echo "sebbi==1.1.1 --hash=sha256:46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41d
 pip install --require-hashes -r requirements-sebbi.txt
 ```
 
-`--require-hashes` makes pip refuse any file other than the reviewed wheel `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`). That wheel was built from the source at commit [`6c8fa2a`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/6c8fa2a50694f763a07d27fa133bc5e8dd54a5cd/python) and published through PyPI Trusted Publishing with a PyPI publish attestation. The client has no dependencies.
+`--require-hashes` makes pip install exactly the file published to PyPI as `sebbi-1.1.1-py3-none-any.whl` (sha256 `46f1ebf4d63ba2e942bfc91ffe02b5a1d509414da01c41df762f1bb7543701a3`) and nothing else. The client has no dependencies.
 
 No account is needed to start (1,000 receipts a day). Set `SEBBI_API_KEY` from [sebbi.pro/connect](https://sebbi.pro/connect) for full volume.
 
