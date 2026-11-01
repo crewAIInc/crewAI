@@ -1,0 +1,77 @@
+---
+title: إيصالات sebbi
+description: إيصالات مقاومة للتلاعب لكل خطوة ومهمة يؤديها وكلاء CrewAI، يمكن لأي شخص التحقق منها
+icon: receipt
+mode: "wide"
+---
+
+# إيصالات sebbi لـ CrewAI
+
+يمنح [sebbi](https://sebbi.pro/receipts) كل خطوة يقوم بها فريقك إيصالًا مختومًا مع رابط عام يمكن لأي شخص التحقق منه: عميلك أو المدقق أو شركة التأمين أو الجهة التنظيمية. تُجمع الإيصالات في أشجار ميركل، وتُختم في سلسلة لا تقبل إلا الإضافة، وتشهد عليها سلاسل مستقلة، ويُسجل طابعها الزمني في البيتكوين، فلا يمكن تعديل سجل ما فعله الوكيل لاحقًا دون أن يُلاحظ ذلك.
+
+يحسب عميل sebbi بصمة (SHA-256) للمدخلات والمخرجات داخل عمليتك، ولا يرسل سوى البصمات وتسمية قصيرة وطابع زمني. العميل مفتوح المصدر، لذا يمكنك التأكد من ذلك قبل التثبيت: [github.com/justrightdecorators-ops/sebbi-sdk](https://github.com/justrightdecorators-ops/sebbi-sdk). يعمل الختم في خيط خلفي ولا يرفع أي استثناء داخل فريقك.
+
+## التثبيت
+
+ثبّت الإصدار الذي راجعته:
+
+```bash
+pip install "sebbi==1.1.1"
+```
+
+الإصدار الموجود في الفرع `main` من ذلك المستودع هو الإصدار المنشور على PyPI، لذا يمكنك قراءة ما ستثبته بالضبط. لا يعتمد العميل على أي حزم أخرى.
+
+لا تحتاج إلى حساب للبدء (1,000 إيصال يوميًا). عيّن `SEBBI_API_KEY` من [sebbi.pro/connect](https://sebbi.pro/connect) للحصول على السعة الكاملة.
+
+## الاستخدام
+
+```python
+from crewai import Agent, Crew, Task
+from sebbi.integrations.crewai import step_callback, task_callback
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    step_callback=step_callback,   # إيصال لكل خطوة يقوم بها الوكيل
+    task_callback=task_callback,   # إيصال لكل مهمة مكتملة
+)
+
+result = crew.kickoff()
+```
+
+احصل على رابط أحدث إيصال:
+
+```python
+import sebbi
+print(sebbi.last().url)   # https://sebbi.pro/r/...
+```
+
+## ختم إجراء محدد
+
+غلّف أي دالة أداة يستدعيها وكلاؤك:
+
+```python
+import sebbi
+
+@sebbi.receipt("issue-refund")
+def issue_refund(order_id: str, amount: float) -> dict:
+    ...
+```
+
+## الإلغاء والعكس
+
+إذا تم التراجع عن إجراء (استرداد مبلغ أو دفعة ملغاة)، فاختم عملية العكس. يبقى الإيصال الأصلي في السجل ويظهر على أنه معكوس، مرتبطًا بالإيصال الجديد وبالسبب:
+
+```python
+sebbi.reverse(receipt, "ألغى العميل الطلب؛ تم رد المبلغ")
+```
+
+## التحقق من إيصال
+
+افتح رابط الإيصال، أو استدعِ `GET https://sebbi.pro/v1/receipts/<id>`. يعيد كل تحقق تشغيل إثبات تضمين ميركل ويؤكد أن الجذر مختوم في السلسلة.
+
+## موارد
+
+- [إيصالات sebbi](https://sebbi.pro/receipts)
+- [الشيفرة المصدرية للعميل](https://github.com/justrightdecorators-ops/sebbi-sdk)
+- [حزمة PyPI](https://pypi.org/project/sebbi/)
