@@ -1557,4 +1557,3 @@ def test_nested_agent_execution_preserves_parent_tool_results():
         assert manager_results[0]["result"] == "Manager Report: 100"
         manager_output = process_tool_results(manager, "Manager final summary")
         assert manager_output == "Manager Report: 100"
-
