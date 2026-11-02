@@ -1,0 +1,151 @@
+---
+title: نقل SSE
+description: تعلم كيفية ربط CrewAI بخوادم MCP البعيدة باستخدام Server-Sent Events (SSE) للاتصال في الوقت الفعلي.
+icon: wifi
+mode: "wide"
+---
+
+## نظرة عامة
+
+توفر Server-Sent Events (SSE) طريقة قياسية لخادم الويب لإرسال تحديثات إلى العميل عبر اتصال HTTP واحد طويل الأمد. في سياق MCP، تُستخدم SSE للخوادم البعيدة لبث البيانات (مثل استجابات الأدوات) إلى تطبيق CrewAI في الوقت الفعلي.
+
+## المفاهيم الرئيسية
+
+- **خوادم بعيدة**: SSE مناسب لخوادم MCP المستضافة عن بُعد.
+- **بث أحادي الاتجاه**: عادةً ما يكون SSE قناة اتصال أحادية الاتجاه من الخادم إلى العميل.
+- **إعداد `MCPServerAdapter`**: لـ SSE، ستوفر عنوان URL الخادم وتحدد نوع النقل.
+
+## الاتصال عبر SSE
+
+يمكنك الاتصال بخادم MCP المبني على SSE باستخدام نهجين رئيسيين لإدارة دورة حياة الاتصال:
+
+### 1. اتصال مُدار بالكامل (الموصى به)
+
+استخدام مدير سياق Python (تعليمة `with`) هو النهج الموصى به. يتعامل تلقائياً مع إنشاء وإغلاق الاتصال بخادم MCP SSE.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8000/sse", # Replace with your actual SSE server URL
+    "transport": "sse"
+}
+
+# Using MCPServerAdapter with a context manager
+try:
+    with MCPServerAdapter(server_params) as tools:
+        print(f"Available tools from SSE MCP server: {[tool.name for tool in tools]}")
+
+        # Example: Using a tool from the SSE MCP server
+        sse_agent = Agent(
+            role="Remote Service User",
+            goal="Utilize a tool provided by a remote SSE MCP server.",
+            backstory="An AI agent that connects to external services via SSE.",
+            tools=tools,
+            reasoning=True,
+            verbose=True,
+        )
+
+        sse_task = Task(
+            description="Fetch real-time stock updates for 'AAPL' using an SSE tool.",
+            expected_output="The latest stock price for AAPL.",
+            agent=sse_agent,
+            markdown=True
+        )
+
+        sse_crew = Crew(
+            agents=[sse_agent],
+            tasks=[sse_task],
+            verbose=True,
+            process=Process.sequential
+        )
+
+        if tools: # Only kickoff if tools were loaded
+            result = sse_crew.kickoff() # Add inputs={'stock_symbol': 'AAPL'} if tool requires it
+            print("\nCrew Task Result (SSE - Managed):\n", result)
+        else:
+            print("Skipping crew kickoff as tools were not loaded (check server connection).")
+
+except Exception as e:
+    print(f"Error connecting to or using SSE MCP server (Managed): {e}")
+    print("Ensure the SSE MCP server is running and accessible at the specified URL.")
+
+```
+
+<Note>
+استبدل `"http://localhost:8000/sse"` بعنوان URL الفعلي لخادم MCP SSE الخاص بك.
+</Note>
+
+### 2. دورة حياة اتصال يدوية
+
+إذا كنت بحاجة إلى تحكم أدق، يمكنك إدارة دورة حياة اتصال `MCPServerAdapter` يدوياً.
+
+<Info>
+**يجب** عليك استدعاء `mcp_server_adapter.stop()` لضمان إغلاق الاتصال وتحرير الموارد. يُوصى بشدة باستخدام كتلة `try...finally`.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8000/sse", # Replace with your actual SSE server URL
+    "transport": "sse"
+}
+
+mcp_server_adapter = None
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual SSE): {[tool.name for tool in tools]}")
+
+    manual_sse_agent = Agent(
+        role="Remote Data Analyst",
+        goal="Analyze data fetched from a remote SSE MCP server using manual connection management.",
+        backstory="An AI skilled in handling SSE connections explicitly.",
+        tools=tools,
+        verbose=True
+    )
+
+    analysis_task = Task(
+        description="Fetch and analyze the latest user activity trends from the SSE server.",
+        expected_output="A summary report of user activity trends.",
+        agent=manual_sse_agent
+    )
+
+    analysis_crew = Crew(
+        agents=[manual_sse_agent],
+        tasks=[analysis_task],
+        verbose=True,
+        process=Process.sequential
+    )
+
+    result = analysis_crew.kickoff()
+    print("\nCrew Task Result (SSE - Manual):\n", result)
+
+except Exception as e:
+    print(f"An error occurred during manual SSE MCP integration: {e}")
+    print("Ensure the SSE MCP server is running and accessible.")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected:
+        print("Stopping SSE MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Ensure stop is called**
+    elif mcp_server_adapter:
+        print("SSE MCP server adapter was not connected. No stop needed or start failed.")
+
+```
+
+## اعتبارات أمان SSE
+
+<Warning>
+**هجمات إعادة ربط DNS**: يمكن أن تكون عمليات نقل SSE عرضة لهجمات إعادة ربط DNS إذا لم يكن خادم MCP مؤمناً بشكل صحيح. قد يسمح هذا لمواقع ويب خبيثة بالتفاعل مع خوادم MCP المحلية أو على الشبكة الداخلية.
+</Warning>
+
+للتخفيف من هذا الخطر:
+- يجب أن تتحقق تطبيقات خادم MCP من **رؤوس `Origin`** على اتصالات SSE الواردة.
+- عند تشغيل خوادم MCP SSE محلية للتطوير، **اربط فقط بـ `localhost` (`127.0.0.1`)** بدلاً من جميع واجهات الشبكة (`0.0.0.0`).
+- نفّذ **مصادقة مناسبة** لجميع اتصالات SSE إذا كشفت أدوات أو بيانات حساسة.
+
+للحصول على نظرة شاملة على أفضل ممارسات الأمان، يرجى الرجوع إلى صفحة [اعتبارات الأمان](./security.mdx) ووثائق [أمان نقل MCP](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations) الرسمية.
