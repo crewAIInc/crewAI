@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
 from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 from crewai_tools.tools.pdf_search_tool.pdf_search_tool import PDFSearchTool
 
@@ -88,6 +90,7 @@ def test_pdf_search_tool_with_vectordb_and_embedding_config(
     mock_create_client: Mock,
 ) -> None:
     """Test PDFSearchTool with both vector DB and embedding config."""
+    pytest.importorskip("chromadb")
     mock_embedding_func = MagicMock()
     mock_embedding_func.return_value = [[0.1] * 1536]
 
