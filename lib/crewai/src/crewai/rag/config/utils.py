@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from crewai.rag.config.constants import (
     DEFAULT_RAG_CONFIG_CLASS,
     DEFAULT_RAG_CONFIG_PATH,
+    DEFAULT_RAG_PROVIDER,
 )
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
@@ -35,6 +36,19 @@ def set_rag_config(config: RagConfigType) -> None:
     client = create_client(config)
     context = RagContext(config=config, client=client)
     _rag_context.set(context)
+
+
+def get_rag_provider() -> str:
+    """Get the provider name of the active RAG configuration.
+
+    Unlike :func:`get_rag_config`, this never builds a default configuration or
+    client, so it is safe to call before any embedder or API key is set up.
+
+    Returns:
+        The configured provider name, or the default provider if none is set.
+    """
+    context = _rag_context.get()
+    return context.config.provider if context else DEFAULT_RAG_PROVIDER
 
 
 def get_rag_config() -> RagConfigType:
