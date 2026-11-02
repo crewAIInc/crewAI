@@ -185,3 +185,32 @@ def test_qdrant_config_default_without_fastembed_explains_how_to_install(monkeyp
     with pytest.raises(ImportError, match=r"pip install crewai\[qdrant\]"):
         QdrantConfig()
 
+
+
+def test_knowledge_keeps_active_qdrant_connection_settings(tmp_path):
+    from crewai.knowledge.storage.knowledge_storage import _build_rag_config
+    from crewai.rag.config.utils import clear_rag_config
+    from crewai.rag.qdrant.config import QdrantConfig
+    from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
+    from crewai.rag.qdrant.types import QdrantClientParams
+
+    base = QdrantConfig(
+        options=QdrantClientParams(path=str(tmp_path / "custom")),
+        embedding_function=lambda text: [0.0],
+    )
+    clear_rag_config()
+
+    config = _build_rag_config("qdrant", lambda texts: [], base)
+
+    assert config.options["path"] == str(tmp_path / "custom")
+    assert isinstance(config.embedding_function, QdrantEmbeddingAdapter)
+
+
+def test_knowledge_ignores_active_config_of_another_provider():
+    from crewai.knowledge.storage.knowledge_storage import _build_rag_config
+    from crewai.rag.chromadb.config import ChromaDBConfig
+    from crewai.rag.qdrant.config import QdrantConfig
+
+    config = _build_rag_config("qdrant", lambda texts: [], ChromaDBConfig())
+
+    assert isinstance(config, QdrantConfig)

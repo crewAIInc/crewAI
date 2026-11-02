@@ -1,3 +1,4 @@
+from dataclasses import replace
 import logging
 import traceback
 from typing import Any, cast
@@ -8,7 +9,11 @@ from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.rag.config.types import RagConfigType
-from crewai.rag.config.utils import get_rag_client, get_rag_provider
+from crewai.rag.config.utils import (
+    get_active_rag_config,
+    get_rag_client,
+    get_rag_provider,
+)
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
@@ -18,8 +23,16 @@ from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
 
 
-def _build_rag_config(provider: str, embedding_function: Any) -> RagConfigType:
+def _build_rag_config(
+    provider: str,
+    embedding_function: Any,
+    base_config: RagConfigType | None = None,
+) -> RagConfigType:
     """Build a RAG config for ``provider`` around a CrewAI embedding function.
+
+    When ``base_config`` is the active config for the same provider, its
+    connection settings (url, api_key, path, ...) are kept and only the
+    embedding function is replaced.
 
     Backends are imported here so that only the configured one is needed.
 
@@ -29,6 +42,11 @@ def _build_rag_config(provider: str, embedding_function: Any) -> RagConfigType:
     """
     if provider == "chromadb":
         from crewai.rag.chromadb.config import ChromaDBConfig
+
+        if base_config is not None and base_config.provider == provider:
+            return replace(
+                cast(ChromaDBConfig, base_config), embedding_function=embedding_function
+            )
 
         warnings.filterwarnings(
             "ignore",
@@ -42,12 +60,12 @@ def _build_rag_config(provider: str, embedding_function: Any) -> RagConfigType:
         from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
         from crewai.rag.qdrant.types import QdrantEmbeddingFunctionWrapper
 
-        return QdrantConfig(
-            embedding_function=cast(
-                QdrantEmbeddingFunctionWrapper,
-                QdrantEmbeddingAdapter(embedding_function),
-            )
+        wrapped = cast(
+            QdrantEmbeddingFunctionWrapper, QdrantEmbeddingAdapter(embedding_function)
         )
+        if base_config is not None and base_config.provider == provider:
+            return replace(cast(QdrantConfig, base_config), embedding_function=wrapped)
+        return QdrantConfig(embedding_function=wrapped)
 
     raise ValueError(f"Unsupported RAG provider for knowledge storage: {provider}")
 
@@ -71,7 +89,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def _init_client(self) -> Self:
         if self.embedder:
             embedding_function = build_embedder(self.embedder)  # type: ignore[arg-type]
-            config = _build_rag_config(get_rag_provider(), embedding_function)
+            config = _build_rag_config(
+                get_rag_provider(), embedding_function, get_active_rag_config()
+            )
             self._client = create_client(config)
         return self
 
