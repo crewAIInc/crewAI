@@ -201,9 +201,9 @@ class BaseClient(Protocol):
             ConnectionError: If unable to connect to the vector database backend.
 
         Example:
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
+            >>> from crewai.rag.config.utils import get_rag_client
             >>> from crewai.rag.types import BaseRecord
-            >>> client = ChromaDBClient()
+            >>> client = get_rag_client()
             >>>
             >>> records: list[BaseRecord] = [
             ...     {
@@ -253,11 +253,11 @@ class BaseClient(Protocol):
 
         Example:
             >>> import asyncio
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
+            >>> from crewai.rag.config.utils import get_rag_client
             >>> from crewai.rag.types import BaseRecord
             >>>
             >>> async def add_documents():
-            ...     client = ChromaDBClient()
+            ...     client = get_rag_client()
             ...
             ...     records: list[BaseRecord] = [
             ...         {
@@ -307,8 +307,8 @@ class BaseClient(Protocol):
             ConnectionError: If unable to connect to the vector database backend.
 
         Example:
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
-            >>> client = ChromaDBClient()
+            >>> from crewai.rag.config.utils import get_rag_client
+            >>> client = get_rag_client()
             >>>
             >>> results = client.search(
             ...     collection_name="my_docs",
@@ -345,10 +345,10 @@ class BaseClient(Protocol):
 
         Example:
             >>> import asyncio
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
+            >>> from crewai.rag.config.utils import get_rag_client
             >>>
             >>> async def search_documents():
-            ...     client = ChromaDBClient()
+            ...     client = get_rag_client()
             ...     results = await client.asearch(
             ...         collection_name="my_docs",
             ...         query="Python programming best practices",
@@ -377,8 +377,8 @@ class BaseClient(Protocol):
             ConnectionError: If unable to connect to the vector database backend.
 
         Example:
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
-            >>> client = ChromaDBClient()
+            >>> from crewai.rag.config.utils import get_rag_client
+            >>> client = get_rag_client()
             >>> client.delete_collection(collection_name="old_docs")
             >>> print("Collection 'old_docs' deleted successfully")
         """
@@ -397,10 +397,10 @@ class BaseClient(Protocol):
 
         Example:
             >>> import asyncio
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
+            >>> from crewai.rag.config.utils import get_rag_client
             >>>
             >>> async def delete_old_collection():
-            ...     client = ChromaDBClient()
+            ...     client = get_rag_client()
             ...     await client.adelete_collection(collection_name="old_docs")
             ...     print("Collection 'old_docs' deleted successfully")
             >>> asyncio.run(delete_old_collection())
@@ -420,8 +420,8 @@ class BaseClient(Protocol):
             PermissionError: If the operation is not allowed by the backend.
 
         Example:
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
-            >>> client = ChromaDBClient()
+            >>> from crewai.rag.config.utils import get_rag_client
+            >>> client = get_rag_client()
             >>> client.reset()
             >>> print("Vector database completely reset - all data deleted")
         """
@@ -437,10 +437,10 @@ class BaseClient(Protocol):
 
         Example:
             >>> import asyncio
-            >>> from crewai.rag.chromadb.client import ChromaDBClient
+            >>> from crewai.rag.config.utils import get_rag_client
             >>>
             >>> async def reset_database():
-            ...     client = ChromaDBClient()
+            ...     client = get_rag_client()
             ...     await client.areset()
             ...     print("Vector database completely reset - all data deleted")
             >>> asyncio.run(reset_database())
