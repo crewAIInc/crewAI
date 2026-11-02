@@ -140,3 +140,24 @@ def test_a_reused_async_task_starts_uncancelled(researcher: Agent) -> None:
         output = task.execute_async().result(timeout=30)
 
     assert output.raw == "ok"
+
+
+def test_a_reused_task_starts_uncancelled_in_the_sync_path(
+    researcher: Agent,
+) -> None:
+    """Sync execution shares the check, so it must clear the flag too.
+
+    A crew signals every task in its batch, finished ones included, so the same
+    task object can carry the flag out of a failed run and later be executed
+    synchronously — that run must not be born cancelled.
+    """
+    task = Task(description="B", expected_output="x", agent=researcher)
+
+    def fake_execute_task(self: Agent, task: Task, context=None, tools=None) -> str:
+        return "ok"
+
+    with patch.object(Agent, "execute_task", fake_execute_task):
+        task._request_cancellation()
+        output = task.execute_sync()
+
+    assert output.raw == "ok"

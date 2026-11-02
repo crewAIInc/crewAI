@@ -635,6 +635,10 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
+        # The flag belongs to one run, the same as in execute_async: a crew
+        # signals every task in its batch, finished ones included, so a task
+        # that took part in a failed run must not start its next one cancelled.
+        self._cancellation.clear()
         self.start_time = datetime.datetime.now()
         return self._execute_core(agent, context, tools)
 
