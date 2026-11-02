@@ -561,7 +561,10 @@ def _count_usage(feature: str) -> None:
 # pyproject.toml said which.
 RunKind = Literal["crew", "json_crew", "flow", "declarative_flow", "unknown"]
 
-# Where `crewai run` stopped before the crew or flow kicked off.
+# Where `crewai run` stopped before the crew or flow kicked off; except
+# `script_failed`, a Python project's `uv run` script that exited non-zero,
+# which uv reports alike for an install, an import and a run that failed after
+# kickoff. The run's own kickoff spans tell those apart.
 RunStopReason = Literal[
     "no_project",
     "invalid_project",
@@ -573,6 +576,7 @@ RunStopReason = Literal[
     "load_failed",
     "no_terminal",
     "launch_failed",
+    "script_failed",
 ]
 
 # Set on a `crewai run` this command re-runs inside the project's environment,
@@ -628,7 +632,8 @@ def record_run_started(kind: RunKind) -> None:
 
 
 def record_run_stopped(reason: RunStopReason) -> None:
-    """Count a `crewai run` that stopped before kickoff, and where.
+    """Count a `crewai run` that stopped before kickoff, and where, or whose
+    project script failed (`script_failed`).
 
     The reason is a word from a closed list, never the error, which can carry
     a path, a project name or the project's own code.
@@ -1064,6 +1069,7 @@ def _execute_uv_script(
         subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603
 
     except subprocess.CalledProcessError as e:
+        record_run_stopped("script_failed")
         _handle_run_error(e, entity_type)
 
     except Exception as e:
