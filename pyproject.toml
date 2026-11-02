@@ -139,6 +139,7 @@ exclude_dirs = ["lib/crewai/src/crewai/cli/templates", "lib/cli/src/crewai_cli/t
 [tool.pytest.ini_options]
 markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
+    "requires_chromadb: skipped when the optional chromadb package is not installed",
 ]
 testpaths = [
     "lib/crewai/tests",
