@@ -1696,7 +1696,9 @@ def test_the_comparison_is_counted_with_the_models_and_nothing_that_names_it(dep
     monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
     install(monkeypatch, FakeModelsAMP(statuses=[compared()]))
 
-    eval_module.eval_models(MODELS)
+    # The second model is under a vendor that is not public, so it stays
+    # `<provider>/other` however much the model catalog grows.
+    eval_module.eval_models("openai/gpt-4o-mini, openrouter/acme-corp/support-bot-v3")
 
     assert spans == [("cli_usage:eval_models", {
         "authenticated": "true",

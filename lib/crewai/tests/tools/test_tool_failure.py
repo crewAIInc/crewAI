@@ -2366,3 +2366,212 @@ class TestRepeatedToolCallInPlanSteps:
             t.join(timeout=30)
 
         assert errors == []
+
+
+REPEATED_CALL_FEATURE = "tool_failure:repeated_call"
+TELEMETRY_OPT_OUTS = ("OTEL_SDK_DISABLED", "CREWAI_DISABLE_TELEMETRY", "CREWAI_DISABLE_TRACKING")
+
+
+@pytest.fixture
+def features(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The Feature Usage names a run reports, whatever the telemetry env says."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    recorded: list[str] = []
+    monkeypatch.setattr(
+        Telemetry,
+        "feature_usage_span",
+        lambda self, feature, attributes=None: recorded.append(feature),
+    )
+    return recorded
+
+
+@pytest.fixture
+def exported_spans(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Point the anonymous telemetry singleton at an in-memory exporter, enabled."""
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    from crewai.telemetry.telemetry import Telemetry
+
+    # Before building the provider: the SDK reads OTEL_SDK_DISABLED once, at
+    # construction, and hands out no-op tracers if it was set.
+    for var in TELEMETRY_OPT_OUTS:
+        monkeypatch.delenv(var, raising=False)
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    telemetry = Telemetry()
+    monkeypatch.setattr(telemetry, "provider", provider, raising=False)
+    monkeypatch.setattr(telemetry, "ready", True)
+    return exporter
+
+
+class TestRepeatedToolCallTelemetry:
+    """Each stop is one anonymous Feature Usage count, on every path that stops."""
+
+    @pytest.mark.parametrize("llm_cls", [LoopingNativeLLM, LoopingTextLLM])
+    def test_crew_kickoff(self, features: list[str], llm_cls: type[LLM]) -> None:
+        crew, _ = _looping_crew(llm_cls())
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("llm_cls", [LoopingNativeLLM, LoopingTextLLM])
+    async def test_crew_kickoff_async(
+        self, features: list[str], llm_cls: type[LLM]
+    ) -> None:
+        crew, _ = _looping_crew(llm_cls())
+
+        result = await crew.kickoff_async()
+
+        assert result.raw == FORCED_ANSWER
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("llm_cls", [LoopingNativeLLM, LoopingTextLLM])
+    async def test_crew_akickoff(self, features: list[str], llm_cls: type[LLM]) -> None:
+        crew, _ = _looping_crew(llm_cls())
+
+        result = await crew.akickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    @pytest.mark.parametrize("llm_cls", [LoopingNativeLLM, LoopingTextLLM])
+    def test_agent_kickoff(self, features: list[str], llm_cls: type[LLM]) -> None:
+        _, agent = _looping_crew(llm_cls())
+
+        output = agent.kickoff("echo hi")
+
+        assert output.raw == FORCED_ANSWER
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("llm_cls", [LoopingNativeLLM, LoopingTextLLM])
+    async def test_agent_kickoff_async(
+        self, features: list[str], llm_cls: type[LLM]
+    ) -> None:
+        _, agent = _looping_crew(llm_cls())
+
+        output = await agent.kickoff_async("echo hi")
+
+        assert output.raw == FORCED_ANSWER
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    @pytest.mark.parametrize("llm_cls", [LoopingNativeLLM, LoopingTextLLM])
+    def test_plan_step(self, features: list[str], llm_cls: type[LLM]) -> None:
+        result, _ = TestRepeatedToolCallInPlanSteps()._execute(llm_cls())
+
+        assert result.success
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    def test_raise_policy_counts_before_it_aborts(self, features: list[str]) -> None:
+        crew, _ = _looping_crew(LoopingNativeLLM(), ToolFailurePolicy.RAISE)
+
+        with pytest.raises(ToolExecutionFailedError, match="same arguments 5"):
+            crew.kickoff()
+
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    def test_ignore_policy_still_counts_the_stop(self, features: list[str]) -> None:
+        """`ignore` emits no event, but the run is still stopped."""
+        crew, _ = _looping_crew(LoopingNativeLLM(), ToolFailurePolicy.IGNORE)
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
+        assert result.tool_failures == []
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    def test_a_streak_completed_mid_batch_counts_once(self, features: list[str]) -> None:
+        steps = [["hi"]] * (MAX_REPEATED_TOOL_CALLS - 1) + [["hi", "other", "hi"]]
+        crew, _ = _looping_crew(LoopingNativeLLM(steps + [["hi"]] * 3))
+
+        crew.kickoff()
+
+        assert features.count(REPEATED_CALL_FEATURE) == 1
+
+    @pytest.mark.parametrize(
+        "steps",
+        [
+            [["a", "b"]] * (MAX_REPEATED_TOOL_CALLS + 1),
+            [["source"]] * (MAX_REPEATED_TOOL_CALLS - 1) + [["other"]],
+        ],
+        ids=["different_parallel_calls", "warned_but_not_stopped"],
+    )
+    def test_no_count_when_the_guard_does_not_stop(
+        self, features: list[str], steps: list[list[str]]
+    ) -> None:
+        crew, _ = _looping_crew(LoopingNativeLLM(steps))
+
+        result = crew.kickoff()
+
+        assert result.raw == OWN_ANSWER
+        assert REPEATED_CALL_FEATURE not in features
+
+    def test_text_rereading_a_source_is_not_counted(self, features: list[str]) -> None:
+        _, agent = _looping_crew(
+            LoopingTextLLM(["source", "other"] * MAX_REPEATED_TOOL_CALLS)
+        )
+
+        assert agent.kickoff("echo").raw == OWN_ANSWER
+        assert REPEATED_CALL_FEATURE not in features
+
+    def _stop_once(self) -> None:
+        from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        agent = Agent(role="Secret Looper", goal="g", backstory="b")
+        counts: dict[int, int] = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS + 1):
+            check_repeated_tool_call(
+                counts,
+                tool_name="private_crm_lookup",
+                tool_args={"customer": "acme-secret"},
+                result="private result",
+                agent=agent,
+            )
+
+    def test_span_carries_only_the_closed_feature_name(self, exported_spans: Any) -> None:
+        self._stop_once()
+
+        spans = exported_spans.get_finished_spans()
+        assert [s.name for s in spans] == ["Feature Usage"]
+        attributes = dict(spans[0].attributes or {})
+        assert attributes["feature"] == REPEATED_CALL_FEATURE
+        assert set(attributes) == {"crewai_version", "feature"}
+
+    @pytest.mark.parametrize("opt_out", TELEMETRY_OPT_OUTS)
+    def test_opt_out_sends_nothing(
+        self,
+        exported_spans: Any,
+        monkeypatch: pytest.MonkeyPatch,
+        opt_out: str,
+    ) -> None:
+        monkeypatch.setenv(opt_out, "true")
+
+        self._stop_once()
+
+        assert exported_spans.get_finished_spans() == ()
+
+    def test_a_failing_telemetry_backend_does_not_change_the_stop(
+        self, exported_spans: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The count runs before failure handling, so it must never break the stop."""
+        from crewai.telemetry.telemetry import Telemetry
+
+        def collector_down(*_: Any, **__: Any) -> Any:
+            raise RuntimeError("collector down")
+
+        monkeypatch.setattr(Telemetry().provider, "get_tracer", collector_down)
+        crew, _ = _looping_crew(LoopingNativeLLM())
+
+        result = crew.kickoff()
+
+        assert result.raw == FORCED_ANSWER
