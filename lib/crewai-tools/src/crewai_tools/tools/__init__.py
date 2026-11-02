@@ -93,6 +93,9 @@ from crewai_tools.tools.generate_crewai_automation_tool.generate_crewai_automati
     GenerateCrewaiAutomationTool,
 )
 from crewai_tools.tools.github_search_tool.github_search_tool import GithubSearchTool
+from crewai_tools.tools.golden_directive_tool.golden_directive_tool import (
+    GoldenDirectiveTool,
+)
 from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
     HyperbrowserLoadTool,
 )
@@ -273,6 +276,7 @@ __all__ = [
     "FirecrawlSearchTool",
     "GenerateCrewaiAutomationTool",
     "GithubSearchTool",
+    "GoldenDirectiveTool",
     "HyperbrowserLoadTool",
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
