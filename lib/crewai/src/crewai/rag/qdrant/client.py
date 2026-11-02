@@ -12,12 +12,14 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.core.exceptions import ClientMethodMismatchError
+from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
 from crewai.rag.qdrant.types import (
     AsyncEmbeddingFunction,
     CreateCollectionParams,
     EmbeddingFunction,
     QdrantClientType,
     QdrantCollectionCreateParams,
+    QueryEmbedding,
 )
 from crewai.rag.qdrant.utils import (
     _create_point_from_document,
@@ -28,7 +30,7 @@ from crewai.rag.qdrant.utils import (
     _prepare_search_params,
     _process_search_results,
 )
-from crewai.rag.types import SearchResult
+from crewai.rag.types import BaseRecord, SearchResult
 
 
 class QdrantClient(BaseClient):
@@ -89,6 +91,22 @@ class QdrantClient(BaseClient):
                 },
             )
         return _get_collection_params(kwargs)
+
+    def _embed_in_batch(
+        self, documents: list[BaseRecord]
+    ) -> list[QueryEmbedding] | None:
+        """Embed a batch of documents with one call, if the embedder supports it.
+
+        A ``QdrantEmbeddingAdapter`` gets one request per batch instead of one per
+        document. Returns ``None`` for embedders that only embed single texts.
+        """
+        embedder = self.embedding_function
+        if not isinstance(embedder, QdrantEmbeddingAdapter):
+            return None
+        return cast(
+            list[QueryEmbedding],
+            embedder.embed_batch([doc["content"] for doc in documents]),
+        )
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
@@ -289,14 +307,18 @@ class QdrantClient(BaseClient):
         for i in range(0, len(documents), batch_size):
             batch_docs = documents[i : min(i + batch_size, len(documents))]
             points = []
-            for doc in batch_docs:
-                if _is_async_embedding_function(self.embedding_function):
+            batch_embeddings = self._embed_in_batch(batch_docs)
+            for index, doc in enumerate(batch_docs):
+                if batch_embeddings is not None:
+                    embedding = batch_embeddings[index]
+                elif _is_async_embedding_function(self.embedding_function):
                     raise TypeError(
                         "Async embedding function cannot be used with sync add_documents. "
                         "Use aadd_documents instead."
                     )
-                sync_fn = cast(EmbeddingFunction, self.embedding_function)
-                embedding = sync_fn(doc["content"])
+                else:
+                    sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                    embedding = sync_fn(doc["content"])
                 point = _create_point_from_document(doc, embedding)
                 points.append(point)
             self.client.upsert(collection_name=collection_name, points=points)
@@ -334,8 +356,11 @@ class QdrantClient(BaseClient):
         for i in range(0, len(documents), batch_size):
             batch_docs = documents[i : min(i + batch_size, len(documents))]
             points = []
-            for doc in batch_docs:
-                if _is_async_embedding_function(self.embedding_function):
+            batch_embeddings = self._embed_in_batch(batch_docs)
+            for index, doc in enumerate(batch_docs):
+                if batch_embeddings is not None:
+                    embedding = batch_embeddings[index]
+                elif _is_async_embedding_function(self.embedding_function):
                     embedding = await self.embedding_function(doc["content"])
                 else:
                     sync_fn = cast(EmbeddingFunction, self.embedding_function)

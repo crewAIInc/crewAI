@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import field
+import os
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from crewai_core.paths import db_storage_path
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.config.base import BaseRagConfig
-from crewai.rag.qdrant.constants import DEFAULT_STORAGE_PATH
 from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
 from crewai.rag.qdrant.types import QdrantClientParams, QdrantEmbeddingFunctionWrapper
 
@@ -23,9 +24,10 @@ def _default_options() -> QdrantClientParams:
     """Create default Qdrant client options.
 
     Returns:
-        Default options with file-based storage.
+        Default options with file-based storage. The path is resolved when the
+        config is created, so it follows ``CREWAI_STORAGE_DIR``.
     """
-    return QdrantClientParams(path=DEFAULT_STORAGE_PATH)
+    return QdrantClientParams(path=os.path.join(db_storage_path(), "qdrant"))
 
 
 def _default_embedding_function() -> QdrantEmbeddingFunctionWrapper:

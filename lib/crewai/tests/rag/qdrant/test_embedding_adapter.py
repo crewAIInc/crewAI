@@ -103,3 +103,43 @@ def test_plain_embedding_function_keeps_default_dimension():
     client.create_collection(collection_name="c")
 
     assert qdrant.create_collection.call_args.kwargs["vectors_config"].size == 384
+
+
+def test_embed_batch_makes_one_call_for_many_texts():
+    embedder = FakeEmbedder(4)
+    vectors = QdrantEmbeddingAdapter(embedder).embed_batch(["a", "b", "c"])
+
+    assert len(vectors) == 3
+    assert embedder.calls == [["a", "b", "c"]]
+
+
+def test_add_documents_embeds_each_batch_with_one_call():
+    embedder = FakeEmbedder(4)
+    client, qdrant = _client_with(QdrantEmbeddingAdapter(embedder))
+    qdrant.collection_exists.return_value = True
+
+    client.add_documents(
+        collection_name="c",
+        documents=[{"content": text} for text in "abcde"],
+        batch_size=2,
+    )
+
+    assert embedder.calls == [["a", "b"], ["c", "d"], ["e"]]
+    assert qdrant.upsert.call_count == 3
+
+
+def test_add_documents_keeps_per_document_calls_for_plain_embedders():
+    calls: list[str] = []
+
+    def embed(text: str) -> list[float]:
+        calls.append(text)
+        return [0.1, 0.2]
+
+    client, qdrant = _client_with(embed)
+    qdrant.collection_exists.return_value = True
+
+    client.add_documents(
+        collection_name="c", documents=[{"content": "a"}, {"content": "b"}]
+    )
+
+    assert calls == ["a", "b"]

@@ -36,9 +36,23 @@ class QdrantEmbeddingAdapter:
         Returns:
             Embedding vector as a list of floats.
         """
-        vector: list[float] = self._embedding_function([text])[0].tolist()
-        self._vector_size = len(vector)
-        return vector
+        return self.embed_batch([text])[0]
+
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Embed several texts with one call to the wrapped function.
+
+        Args:
+            texts: Texts to embed.
+
+        Returns:
+            One embedding vector per text, in order.
+        """
+        vectors: list[list[float]] = [
+            vector.tolist() for vector in self._embedding_function(texts)
+        ]
+        if vectors:
+            self._vector_size = len(vectors[0])
+        return vectors
 
     @property
     def vector_size(self) -> int:
