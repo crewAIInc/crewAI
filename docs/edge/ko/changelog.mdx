@@ -4,6 +4,60 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 11월 1일">
+  ## v1.15.34
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.34)
+
+  ## 변경 사항
+
+  ### 기능
+  - 버전 증가 전에 독립형 LiteLLM 카탈로그 PR 추가
+  - 크루아이 실행이 시작되기 전에 중단된 위치 기록
+  - 조직의 기술을 나열하기 위해 크루아이 기술 검색 추가
+  - Python 흐름에 crewai run --inputs 전달
+  - 배포 생성 시 --zip 추가 및 zip이 빌드된 커밋 인쇄
+  - planningconfig로 에이전트 계획 문서화 및 추론 페이지 마이그레이션
+
+  ### 버그 수정
+  - crewai create에서 종료된 Gemini 모델 제공 중단
+  - OpenAI 호환 제공자에 대해 MissingAPIKeyError 발생
+  - 익명 텔레메트리에서 반복된 도구 호출 중단 수 계산
+  - 프로젝트 스크립트가 실패한 crewai 실행 수 계산
+  - crewai[litellm]가 Python 3.10에서 가져올 수 있도록 하며, joserfc, pyasn1, pypdf 바닥 수치 발생
+  - 빈 LLM 응답을 한 번 재시도하고 유형화된 오류 발생
+  - 도구를 사용하는 에이전트가 완료될 때 구조화된 출력 요청
+  - 출력 모델과 일치하지 않는 JSON을 실패하는 대신 리팩토링
+  - 반복된 도구 호출에 대해 경고하고 중단 시 작업 유지
+  - context_window_size를 존중하고 대체 창에 대해 경고
+  - 누락되거나 자리 표시자 API 키에 대해 MissingAPIKeyError 발생
+  - 제거된 가져오기 경로를 사용 중단 경고와 함께 복원
+  - LiteLLM 스트리밍 오류에서 제공자의 예외 유지
+  - 읽을 수 없는 지연 결과에서 복구 방법을 모델에 전달
+  - AMP가 평가 중 저장된 로그인을 거부할 때 로그인 요청 및 한 번 재시도
+  - 리치 라이브 패널이 리디렉션된 로그로 다시 그리는 것 중단
+  - 에이전트의 구성 내에서 from_repository 설정
+  - 복원할 수 없는 콜백을 null로 저장하여 복원 중단 방지
+  - 401에서 AMP의 이유 표시 및 실행 앱의 배포를 다시 로그인 허용
+  - 로그인 시 전체 장치 코드 수명 대기 및 타임아웃 시 1로 종료
+  - crewai가 forward-ref 네임스페이스를 재구성할 때 모듈 정체성 유지
+  - crewai 업데이트 시 UV 프로젝트를 다시 쓰는 대신 업그레이드 명령 인쇄
+  - 흐름 스캐폴드의 마지막 단계에서 게시물 반환
+  - crewai+ 명령이 로그인을 필요로 할 때 1로 종료
+  - Python 대화형 흐름에 터미널이 없을 때 안내와 함께 종료
+  - Python 3.12에서 실행 TUI에 깊이 중첩된 JSON을 텍스트로 유지
+  - JSON 크루 러너가 이전 crewai-core에 대해 로드할 수 있도록 허용
+  - LiteLLM 도구 호출 및 구조화된 출력 호출에 대한 토큰 사용량 보고
+
+  ### 주요 변경 사항
+  - 마이그레이션 노트와 함께 1.15.29 에이전트 실행기 제거 문서화
+
+  ## 기여자
+
+  @Vidit-Ostwal, @alexmarchenko-crewai, @dependabot[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="2026년 10월 27일">
   ## v1.15.32
 

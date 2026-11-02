@@ -263,11 +263,8 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # 3.9.4, so that ignore is no longer needed. 3.10.0-3.10.1 have PYSEC-2026-3726
 # (symlink-based arbitrary file read in IPIPANCorpusReader); fixed in 3.10.2.
 # 3.10.3 also clears later 3.10.2 findings (proxy SSRF, pickle allowlist RCE,
-# JVM option injection, XML entity expansion). 3.10.3 still has
-# GHSA-8mgp-746c-j5xp (CVE-2026-81726; model-artifact pathsec bypass); no
-# patched PyPI release yet, so that GHSA is ignored in pip-audit until one
-# ships. TODO: drop --ignore-vuln GHSA-8mgp-746c-j5xp when bumping nltk
-# past 3.10.3. Transitive via
+# JVM option injection, XML entity expansion). 3.10.4 fixes GHSA-8mgp-746c-j5xp
+# (CVE-2026-81726; model-artifact pathsec bypass). Transitive via
 # crewai-tools[xml] -> unstructured.
 # accelerate <=1.14.0 has GHSA-4j2p-28q2-5m79 (CVE-2026-69112): path traversal
 # and FIFO DoS via unsanitized sharded-checkpoint weight_map entries. Latest
@@ -354,7 +351,7 @@ override-dependencies = [
     "setuptools>=84.1.0", # PYSEC-2026-3447 / GHSA-xmj3-9gf7-h52w — fixed in 84.1.0
     "filelock>=4.2.1; python_version >= '3.11'",
     "filelock>=3.24.2,<4; python_version < '3.11'",
-    "nltk>=3.10.3",
+    "nltk>=3.10.4",
     "h2>=4.4.1",
     "torch>=2.13.0",
     "fsspec>=2026.6.0",
