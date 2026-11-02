@@ -4,6 +4,60 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="01 nov 2026">
+  ## v1.15.34
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.34)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar catálogo LiteLLM autônomo PR antes do aumento de versão
+  - Registrar onde a execução do crewai para antes do início
+  - Adicionar busca de habilidades do crewai para listar as habilidades da organização
+  - Passar crewai run --inputs para um fluxo Python
+  - Adicionar deploy create --zip e imprimir o commit de onde um zip é construído
+  - Documentar planejamento de agentes com planningconfig e migrar página de raciocínio
+
+  ### Correções de Bugs
+  - Parar de oferecer modelos Gemini para desligamento em crewai create
+  - Levantar MissingAPIKeyError para provedores compatíveis com OpenAI
+  - Contar paradas de chamadas de ferramentas repetidas na telemetria anônima
+  - Contar uma execução do crewai cujo script do projeto falha
+  - Permitir que crewai[litellm] importe no Python 3.10; levantar joserfc, pyasn1, pypdf floors
+  - Tentar novamente uma resposta LLM vazia uma vez e levantar um erro tipado
+  - Pedir saída estruturada quando um agente que usa ferramenta termina
+  - Refatorar JSON que não corresponde ao modelo de saída em vez de falhar
+  - Avisar sobre chamadas de ferramentas repetidas e manter o trabalho ao parar
+  - Honrar context_window_size e avisar sobre a janela de fallback
+  - Levantar MissingAPIKeyError para uma chave de API ausente ou de espaço reservado
+  - Restaurar caminhos de importação removidos com avisos de depreciação
+  - Manter a exceção do provedor em erros de streaming do LiteLLM
+  - Informar ao modelo como se recuperar de um resultado diferido ilegível
+  - Oferecer um login e tentar novamente uma vez quando o AMP rejeitar o login salvo durante a avaliação
+  - Parar a repintura rica do painel ao vivo em logs redirecionados
+  - Carregar from_repository definido dentro da configuração de um agente
+  - Salvar callbacks não restauráveis como nulos em vez de quebrar a restauração
+  - Mostrar a razão do AMP em um 401 e permitir que o log de implantação do aplicativo de execução faça login novamente
+  - Aguardar toda a duração do código do dispositivo no login e sair 1 em caso de timeout
+  - Manter a identidade do módulo quando o crewai reconstrói namespaces de referência avançada
+  - Imprimir comandos de atualização em vez de reescrever projetos UV na atualização do crewai
+  - Retornar a postagem da última etapa do scaffold do fluxo
+  - Sair 1 quando um comando crewai+ precisar de um login
+  - Sair com orientações quando um fluxo conversacional Python não tiver terminal
+  - Manter JSON profundamente aninhado como texto na TUI de execução no Python 3.12
+  - Permitir que o executor JSON crew carregue contra um crewai-core mais antigo
+  - Relatar uso de token para chamadas de ferramenta LiteLLM e chamadas de saída estruturada
+
+  ### Mudanças Quebradoras
+  - Documentar a remoção do executor de agente 1.15.29 com notas de migração
+
+  ## Contribuidores
+
+  @Vidit-Ostwal, @alexmarchenko-crewai, @dependabot[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="27 out 2026">
   ## v1.15.32
 
