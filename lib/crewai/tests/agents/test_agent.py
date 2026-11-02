@@ -1822,7 +1822,6 @@ def test_agent_with_knowledge_sources_extensive_role():
     string_source = StringKnowledgeSource(content=content)
 
     with (
-        patch("crewai.knowledge") as mock_knowledge,
         patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage.save"
         ) as mock_save,
@@ -1830,9 +1829,6 @@ def test_agent_with_knowledge_sources_extensive_role():
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage.search"
         ) as mock_search,
     ):
-        mock_knowledge_instance = mock_knowledge.return_value
-        mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
         mock_save.return_value = None
         mock_search.return_value = [
             {"id": "1", "content": content, "metadata": {}, "score": 0.9}
