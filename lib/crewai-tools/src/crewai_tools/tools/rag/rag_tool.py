@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from typing import Annotated, Any, Literal, cast
 
+from crewai.rag.config.utils import default_embedding_function
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import ProviderSpec
@@ -191,15 +192,12 @@ class RagTool(BaseTool):
     def _parse_config(self, config: RagToolConfig) -> Any:
         """Normalize the RagToolConfig into a provider-specific config object.
 
-        Defaults to 'chromadb' with no extra provider config if none is supplied.
+        Defaults to local Qdrant with OpenAI's text-embedding-3-small when no
+        provider is supplied. ``chromadb`` needs the ``crewai[chromadb]`` extra.
         """
-        if not config:
-            return self._create_provider_config("chromadb", {}, None)
-
-        vectordb_cfg = cast(VectorDbConfig, config.get("vectordb", {}))
-        provider: Literal["chromadb", "qdrant"] = vectordb_cfg.get(
-            "provider", "chromadb"
-        )
+        vectordb_cfg = cast(VectorDbConfig, (config or {}).get("vectordb", {}))
+        configured_provider = vectordb_cfg.get("provider")
+        provider: Literal["chromadb", "qdrant"] = configured_provider or "qdrant"
         provider_config: dict[str, Any] = vectordb_cfg.get("config", {})
 
         supported = ("chromadb", "qdrant")
@@ -209,13 +207,15 @@ class RagTool(BaseTool):
                 f"CrewAI RAG currently supports: {', '.join(supported)}."
             )
 
-        embedding_spec: ProviderSpec | None = config.get("embedding_model")
+        embedding_spec: ProviderSpec | None = (config or {}).get("embedding_model")
         if embedding_spec:
             embedding_spec = cast(
                 ProviderSpec, _validate_embedding_config(embedding_spec)
             )
 
         embedding_function = build_embedder(embedding_spec) if embedding_spec else None
+        if configured_provider is None and embedding_function is None:
+            embedding_function = default_embedding_function()
         return self._create_provider_config(
             provider, provider_config, embedding_function
         )
@@ -237,10 +237,13 @@ class RagTool(BaseTool):
 
         if provider == "qdrant":
             from crewai.rag.qdrant.config import QdrantConfig
+            from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
 
             kwargs = dict(provider_config)
             if embedding_function is not None:
-                kwargs["embedding_function"] = embedding_function
+                kwargs["embedding_function"] = QdrantEmbeddingAdapter(
+                    embedding_function
+                )
             return QdrantConfig(**kwargs)
 
         raise ValueError(f"Unhandled provider: {provider}")
