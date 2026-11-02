@@ -320,7 +320,8 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # and GHSA-hj66-6f7g-4r5v (JSONP callback injection on RevocationEndpoint). Fixed in 4.0.0.
 # 3.3.0-4.0.0 has GHSA-3jp2-3mrg-2vxc / CVE-2026-49272 (device-flow bearer token for any known
 # client ID). Fixed in 4.0.1.
-# Transitive via chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client.
+# A direct dependency of crewai, and also transitive via the crewai[chromadb] extra
+# (chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client).
 # 4.0.1 (2026-10-31) is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
 # mail-parser <4.6.3 has GHSA-r7w7-vpq8-c5vv (ReDoS), GHSA-fr3h-cpq2-9496 (path traversal),
 # GHSA-72px-j8gh-p79x (sender IP spoofing), GHSA-24mq-4vc6-2prf (uncaught exceptions /
