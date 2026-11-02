@@ -196,7 +196,8 @@ def test_gemini_developer_token_count_uses_character_fallback_for_unrepresentabl
 
 
 @pytest.mark.parametrize("explicit_model", [False, True])
-def test_gemini_developer_token_count_preserves_configured_response_schema(explicit_model):
+@pytest.mark.parametrize("vertexai", [False, True])
+def test_gemini_token_count_preserves_configured_response_schema(explicit_model, vertexai):
     from pydantic import BaseModel
     from crewai.llms.base_llm import BaseLLM
 
@@ -209,7 +210,8 @@ def test_gemini_developer_token_count_preserves_configured_response_schema(expli
         response_format=Answer,
     )
     client = MagicMock()
-    client.vertexai = False
+    client.vertexai = vertexai
+    client.models.count_tokens.side_effect = RuntimeError("Count Tokens unavailable")
     prompt = "Explain CrewAI."
     expected = BaseLLM.get_input_tokens_count(llm, prompt, response_model=Answer)
     with patch.object(llm, "_get_sync_client", return_value=client):
@@ -217,7 +219,10 @@ def test_gemini_developer_token_count_preserves_configured_response_schema(expli
             prompt, response_model=Answer if explicit_model else None
         )
     assert actual == expected
-    client.models.count_tokens.assert_not_called()
+    if vertexai:
+        client.models.count_tokens.assert_called_once()
+    else:
+        client.models.count_tokens.assert_not_called()
 
 
 def test_gemini_developer_token_count_forwards_supported_content():

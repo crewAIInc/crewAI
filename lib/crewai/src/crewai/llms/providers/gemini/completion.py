@@ -203,7 +203,9 @@ class GeminiCompletion(BaseLLM):
                 config=count_config,
             )
         except Exception:
-            return super().get_input_tokens_count(messages, tools, response_model)
+            return super().get_input_tokens_count(
+                messages, tools, response_model or self.response_format
+            )
         return int(response.total_tokens)
 
     def to_config_dict(self) -> dict[str, Any]:
