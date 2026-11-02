@@ -761,6 +761,40 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+
+  <Accordion title="Otari">
+    O CrewAI se comunica com o Otari pelo cliente OpenAI nativo, então não é necessário instalar o LiteLLM.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Obrigatório
+    OTARI_API_KEY=<your-api-key>
+
+    # Opcional, aponta para um gateway auto-hospedado em vez de otari.ai
+    OTARI_BASE_URL=https://api.otari.ai/api/v1
+    ```
+
+    Exemplo de uso no seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="otari/openai:gpt-4o",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Recursos do Otari:
+      - Um endpoint compatível com OpenAI na frente de vários provedores, escolhidos pela configuração do gateway
+      - Chaves de API virtuais com orçamentos e rastreamento de uso por chave
+      - Políticas de roteamento e aliases que fazem failover entre modelos
+    </Info>
+
+    O que vem depois de `otari/` é o endereço do Otari para o modelo, então chega ao gateway sem alteração.
+    Use um seletor `provider:model`, por exemplo `otari/openai:gpt-4o` ou
+    `otari/anthropic:claude-sonnet-4-6`; um alias, por exemplo `otari/support-agent`; ou o nome de
+    uma política de roteamento, caso em que o Otari escolhe o candidato e faz failover para o próximo
+    em caso de falha. `OTARI_BASE_URL` aponta para a sua própria implantação e termina em `/api/v1`.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming

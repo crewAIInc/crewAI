@@ -788,6 +788,40 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Otari">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Otari에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하세요:
+    ```toml Code
+    # 필수
+    OTARI_API_KEY=<your-api-key>
+
+    # 선택 사항, otari.ai 대신 자체 호스팅 게이트웨이를 가리킴
+    OTARI_BASE_URL=https://api.otari.ai/api/v1
+    ```
+
+    CrewAI 프로젝트에서의 사용 예시:
+    ```python Code
+    llm = LLM(
+        model="otari/openai:gpt-4o",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Otari 특징:
+      - 게이트웨이 설정으로 선택되는 여러 공급자 앞의 OpenAI 호환 엔드포인트 하나
+      - 키별 예산과 사용량 추적을 갖춘 가상 API 키
+      - 실패 시 모델 간 폴오버를 수행하는 라우팅 정책 및 별칭
+    </Info>
+
+    `otari/` 뒤의 값은 해당 모델에 대한 Otari의 주소이므로 게이트웨이에 그대로 전달됩니다.
+    `provider:model` 선택자(예: `otari/openai:gpt-4o`, `otari/anthropic:claude-sonnet-4-6`),
+    별칭(예: `otari/support-agent`), 또는 라우팅 정책 이름을 사용하세요. 라우팅 정책을 쓰면
+    Otari가 후보를 고르고 실패 시 다음 후보로 폴오버합니다. `OTARI_BASE_URL`은 자체 배포를
+    가리키며 `/api/v1`로 끝납니다.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

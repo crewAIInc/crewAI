@@ -214,6 +214,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "otari",
 ]
 
 
@@ -239,6 +240,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "otari": "otari",
 }
 
 
@@ -478,6 +480,11 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "otari":
+            # Otari routes to whatever its own config names: a provider:model
+            # selector, an alias, or a routing policy. Any non-empty id is valid.
+            return bool(model_lower)
+
         return False
 
     @classmethod
@@ -523,6 +530,13 @@ class LLM(BaseLLM):
                 # Raise here rather than fall through to LiteLLM, where the same
                 # malformed id fails later and differently per environment.
                 cls._require_deepinfra_model(model_part, prefix=f"{prefix}/")
+            elif canonical_provider == "otari" and not model_part:
+                # An empty selector would otherwise fall through to LiteLLM,
+                # which is not what a gateway reference is for.
+                raise ValueError(
+                    f"Otari model is empty in '{model}'; write "
+                    "'otari/provider:model', 'otari/alias' or 'otari/policy-name'"
+                )
 
             valid_native_model = bool(
                 canonical_provider
@@ -703,6 +717,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "otari",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
