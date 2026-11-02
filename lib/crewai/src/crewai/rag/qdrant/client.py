@@ -2,6 +2,7 @@
 
 from typing import Any, cast
 
+from qdrant_client.models import Distance, VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -13,6 +14,7 @@ from crewai.rag.core.base_client import (
 from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.types import (
     AsyncEmbeddingFunction,
+    CreateCollectionParams,
     EmbeddingFunction,
     QdrantClientType,
     QdrantCollectionCreateParams,
@@ -65,6 +67,29 @@ class QdrantClient(BaseClient):
         self.default_score_threshold = default_score_threshold
         self.default_batch_size = default_batch_size
 
+    def _build_collection_params(
+        self, kwargs: QdrantCollectionCreateParams
+    ) -> CreateCollectionParams:
+        """Build collection params, sizing vectors from the embedder when possible.
+
+        When ``vectors_config`` is not given and the embedding function exposes an
+        integer ``vector_size`` (e.g. ``QdrantEmbeddingAdapter``, which measures it
+        once with a real embedding call), the collection is created with that
+        dimension instead of the 384 default.
+        """
+        vector_size = getattr(self.embedding_function, "vector_size", None)
+        if "vectors_config" not in kwargs and isinstance(vector_size, int):
+            kwargs = cast(
+                QdrantCollectionCreateParams,
+                {
+                    **kwargs,
+                    "vectors_config": VectorParams(
+                        size=vector_size, distance=Distance.COSINE
+                    ),
+                },
+            )
+        return _get_collection_params(kwargs)
+
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
 
@@ -100,7 +125,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = self._build_collection_params(kwargs)
         self.client.create_collection(**params)
 
     async def acreate_collection(
@@ -140,7 +165,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = self._build_collection_params(kwargs)
         await self.client.create_collection(**params)
 
     def get_or_create_collection(
@@ -182,7 +207,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
+        params = self._build_collection_params(kwargs)
         self.client.create_collection(**params)
 
         return self.client.get_collection(collection_name)
@@ -226,7 +251,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
+        params = self._build_collection_params(kwargs)
         await self.client.create_collection(**params)
 
         return await self.client.get_collection(collection_name)
