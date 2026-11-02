@@ -53,6 +53,9 @@ class ToolFailureReason(str, Enum):
     INVALID_INPUT = "invalid_input"
     """Arguments could not be parsed or validated into the tool's schema."""
 
+    REPEATED_CALL = "repeated_call"
+    """The agent kept making the same call and getting the same result."""
+
 
 class ToolFailurePolicy(str, Enum):
     """How an agent reacts when one of its tools reports a failure."""

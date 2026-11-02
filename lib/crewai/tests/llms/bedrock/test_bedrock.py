@@ -471,6 +471,109 @@ def test_bedrock_aws_credentials_configuration():
     assert llm_explicit.region_name == "us-west-2"
 
 
+def test_bedrock_accepts_litellm_compatible_region_kwarg(bedrock_mocks):
+    """The LiteLLM region kwarg must configure the native SDK session."""
+    mock_session_class, _ = bedrock_mocks
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_region_name="eu-west-1",
+    )
+
+    assert mock_session_class.call_args.kwargs["region_name"] == "eu-west-1"
+    assert "aws_region_name" not in llm.additional_params
+
+
+def test_bedrock_accepts_litellm_compatible_guardrail_kwarg(bedrock_mocks):
+    """The LiteLLM guardrail kwarg must reach the native Converse request."""
+    _, mock_client = bedrock_mocks
+    guardrail_config = {
+        "guardrailIdentifier": "gr-test",
+        "guardrailVersion": "1",
+    }
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        guardrailConfig=guardrail_config,
+    )
+
+    llm.call("Hello")
+
+    assert mock_client.converse.call_args.kwargs["guardrailConfig"] == guardrail_config
+    assert "guardrailConfig" not in llm.additional_params
+
+
+def test_bedrock_accepts_litellm_kwargs_from_additional_params(bedrock_mocks):
+    """LiteLLM aliases moved to additional params still configure Bedrock."""
+    mock_session_class, mock_client = bedrock_mocks
+    guardrail_config = {
+        "guardrailIdentifier": "gr-from-additional-params",
+        "guardrailVersion": "DRAFT",
+    }
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        additional_params={
+            "aws_region_name": "ap-south-1",
+            "guardrailConfig": guardrail_config,
+        },
+    )
+
+    llm.call("Hello")
+
+    assert mock_session_class.call_args.kwargs["region_name"] == "ap-south-1"
+    assert mock_client.converse.call_args.kwargs["guardrailConfig"] == guardrail_config
+    assert "aws_region_name" not in llm.additional_params
+    assert "guardrailConfig" not in llm.additional_params
+
+
+def test_bedrock_prefers_native_kwargs_over_litellm_aliases(bedrock_mocks):
+    """Explicit native configuration wins when both forms are provided."""
+    mock_session_class, mock_client = bedrock_mocks
+    native_guardrail_config = {
+        "guardrailIdentifier": "gr-native",
+        "guardrailVersion": "1",
+    }
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        region_name="us-west-2",
+        guardrail_config=native_guardrail_config,
+        additional_params={
+            "aws_region_name": "ap-south-1",
+            "guardrailConfig": {
+                "guardrailIdentifier": "gr-legacy",
+                "guardrailVersion": "DRAFT",
+            },
+        },
+    )
+
+    llm.call("Hello")
+
+    assert mock_session_class.call_args.kwargs["region_name"] == "us-west-2"
+    assert (
+        mock_client.converse.call_args.kwargs["guardrailConfig"]
+        == native_guardrail_config
+    )
+    assert "aws_region_name" not in llm.additional_params
+    assert "guardrailConfig" not in llm.additional_params
+
+
+def test_bedrock_does_not_send_litellm_role_kwarg_to_converse(bedrock_mocks):
+    """AWS role configuration is not a Bedrock Converse request parameter."""
+    _, mock_client = bedrock_mocks
+    role_arn = "arn:aws:iam::123456789012:role/Bedrock"
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_role_name=role_arn,
+    )
+
+    llm.call("Hello")
+
+    assert "aws_role_name" not in mock_client.converse.call_args.kwargs
+
+
 def test_bedrock_model_capabilities():
     """
     Test that model capabilities are correctly identified
@@ -692,6 +795,88 @@ def test_bedrock_token_usage_tracking():
         assert llm._token_usage['prompt_tokens'] == 50
         assert llm._token_usage['completion_tokens'] == 25
         assert llm._token_usage['total_tokens'] == 75
+
+
+def test_bedrock_input_token_count_forwards_converse_payload(bedrock_mocks):
+    """Counting preserves the Converse system, message, and tool payload."""
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    client.count_tokens.return_value = {"inputTokens": 42}
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is the weather?"},
+    ]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location.",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    client.count_tokens.assert_called_once_with(
+        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        input={
+            "converse": {
+                "system": [{"text": "Be concise."}],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{"text": "What is the weather?"}],
+                    }
+                ],
+                "toolConfig": {
+                    "tools": [
+                        {
+                            "toolSpec": {
+                                "name": "get_weather",
+                                "description": "Get weather for a location.",
+                                "inputSchema": {
+                                    "json": {"type": "object", "properties": {}}
+                                },
+                            }
+                        }
+                    ]
+                },
+            }
+        },
+    )
+
+
+def test_bedrock_input_token_count_uses_character_fallback_for_unsupported_models(
+    bedrock_mocks,
+):
+    """Runtime models without CountTokens report the Mantle requirement."""
+    from botocore.exceptions import ClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-opus-4-7-v1:0")
+    client.count_tokens.side_effect = ClientError(
+        {
+            "Error": {
+                "Code": "ValidationException",
+                "Message": "This model does not support CountTokens.",
+            }
+        },
+        "CountTokens",
+    )
+
+    assert llm.get_input_tokens_count("12345") == 2
+
+
+def test_bedrock_input_token_count_uses_character_fallback_for_transport_errors(
+    bedrock_mocks,
+):
+    """VCR transport failures do not prevent proactive context preflight."""
+    from botocore.exceptions import HTTPClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
+    client.count_tokens.side_effect = HTTPClientError(error=RuntimeError("VCR miss"))
+
+    assert llm.get_input_tokens_count("12345") == 2
 
 
 def test_bedrock_tool_use_conversation_flow():
@@ -918,7 +1103,7 @@ def test_bedrock_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Bedrock API."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client, 'converse') as mock_converse:

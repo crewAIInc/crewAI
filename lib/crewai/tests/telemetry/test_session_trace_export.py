@@ -48,7 +48,7 @@ def tracing_environment(monkeypatch):
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
     for name in (
         "CREWAI_USER_PAT",
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
         "CREWAI_EPHEMERAL_TRACE_MAX_SPANS",
         "CREWAI_EPHEMERAL_TRACE_MAX_BYTES",
     ):
@@ -374,14 +374,14 @@ def test_an_export_without_a_viewer_url_is_recorded_all_the_same(
 
 def test_credential_precedence_and_missing_login(monkeypatch):
     monkeypatch.setenv("CREWAI_USER_PAT", "pat")
-    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "integration")
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "integration")
     login = Mock(return_value="login")
     monkeypatch.setattr("crewai.telemetry.tracing.grants.get_auth_token", login)
     assert tracing_credential() == "pat"
     monkeypatch.delenv("CREWAI_USER_PAT")
     assert tracing_credential() == "integration"
     login.assert_not_called()
-    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN")
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN")
     assert tracing_credential() == "login"
     login.side_effect = AuthError("No saved login")
     assert tracing_credential() is None
@@ -746,7 +746,9 @@ def test_first_time_execution_uses_local_session_even_with_saved_credentials(
     assert len(collector.grants) == int(approved)
 
 
-@pytest.mark.parametrize("disabled_by", ["override", "environment", "sdk"])
+# `OTEL_SDK_DISABLED` is not among them: it is the telemetry opt-out
+# (test_deferred_trace_transitions.py::test_the_telemetry_opt_out_does_not_turn_tracing_off).
+@pytest.mark.parametrize("disabled_by", ["override", "environment"])
 def test_disabled_execution_does_not_collect_or_request_grants(
     collector, monkeypatch, disabled_by
 ):
@@ -759,8 +761,6 @@ def test_disabled_execution_does_not_collect_or_request_grants(
     )
     if disabled_by == "environment":
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
-    elif disabled_by == "sdk":
-        monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
     consent = Mock(return_value=True)
     with trace_consent(consent):
         token = begin_execution(tracing=False if disabled_by == "override" else None)

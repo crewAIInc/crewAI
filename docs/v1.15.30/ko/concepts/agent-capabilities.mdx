@@ -1,0 +1,147 @@
+---
+title: "에이전트 기능"
+description: "CrewAI 에이전트를 확장하는 다섯 가지 방법 이해하기: 도구, MCP, 앱, 스킬, 지식."
+icon: puzzle-piece
+mode: "wide"
+---
+
+## 개요
+
+CrewAI 에이전트는 **다섯 가지 고유한 기능 유형**으로 확장할 수 있으며, 각각 다른 목적을 가지고 있습니다. 각 유형을 언제 사용해야 하는지, 그리고 어떻게 함께 작동하는지 이해하는 것이 효과적인 에이전트를 구축하는 핵심입니다.
+
+<CardGroup cols={2}>
+  <Card title="도구" icon="wrench" href="/ko/concepts/tools" color="#3B82F6">
+    **호출 가능한 함수** — 에이전트가 행동을 취할 수 있게 합니다. 웹 검색, 파일 작업, API 호출, 코드 실행.
+  </Card>
+  <Card title="MCP 서버" icon="plug" href="/ko/mcp/overview" color="#8B5CF6">
+    **원격 도구 서버** — Model Context Protocol을 통해 에이전트를 외부 도구 서버에 연결합니다. 도구와 같은 효과이지만 외부에서 호스팅됩니다.
+  </Card>
+  <Card title="앱" icon="grid-2" color="#EC4899">
+    **플랫폼 통합** — CrewAI 플랫폼을 통해 에이전트를 SaaS 앱(Gmail, Slack, Jira, Salesforce)에 연결합니다. 플랫폼 통합 토큰으로 로컬에서 실행됩니다.
+  </Card>
+  <Card title="스킬" icon="bolt" href="/ko/concepts/skills" color="#F59E0B">
+    **도메인 전문성** — 에이전트 프롬프트에 지침, 가이드라인 및 참조 자료를 주입합니다. 스킬은 에이전트에게 *어떻게 생각할지*를 알려줍니다.
+  </Card>
+  <Card title="지식" icon="book" href="/ko/concepts/knowledge" color="#10B981">
+    **검색된 사실** — 시맨틱 검색(RAG)을 통해 문서, 파일 및 URL에서 에이전트에게 데이터를 제공합니다. 지식은 에이전트에게 *무엇을 알아야 하는지*를 제공합니다.
+  </Card>
+</CardGroup>
+
+---
+
+## 핵심 구분
+
+가장 중요한 점: **이 기능들은 두 가지 범주로 나뉩니다**.
+
+### 액션 기능 (도구, MCP, 앱)
+
+에이전트에게 **무언가를 할 수 있는** 능력을 부여합니다 — API 호출, 파일 읽기, 웹 검색, 이메일 전송. 실행 시점에 세 가지 모두 동일한 내부 형식(`BaseTool` 인스턴스)으로 변환되며, 에이전트가 호출할 수 있는 통합 도구 목록에 나타납니다.
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool
+
+agent = Agent(
+    role="Researcher",
+    goal="Find and compile market data",
+    backstory="Expert market analyst",
+    tools=[SerperDevTool(), FileReadTool()],  # 로컬 도구
+    mcps=["https://mcp.example.com/sse"],     # 원격 MCP 서버 도구
+    apps=["gmail", "google_sheets"],           # 플랫폼 통합
+)
+```
+
+### 컨텍스트 기능 (스킬, 지식)
+
+에이전트의 **프롬프트**를 수정합니다 — 에이전트가 추론을 시작하기 전에 전문성, 지침 또는 검색된 데이터를 주입합니다. 에이전트에게 새로운 액션을 제공하는 것이 아니라, 에이전트가 어떻게 생각하고 어떤 정보에 접근할 수 있는지를 형성합니다.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Security Auditor",
+    goal="Audit cloud infrastructure for vulnerabilities",
+    backstory="Expert in cloud security with 10 years of experience",
+    skills=["./skills/security-audit"],        # 도메인 지침
+    knowledge_sources=[pdf_source, url_source], # 검색된 사실
+)
+```
+
+---
+
+## 언제 무엇을 사용할까
+
+| 필요한 것...                                             | 사용할 것          | 예시                                     |
+| :------------------------------------------------------- | :---------------- | :--------------------------------------- |
+| 에이전트가 웹을 검색                                      | **도구**          | `tools=[SerperDevTool()]`                |
+| 에이전트가 MCP를 통해 원격 API 호출                       | **MCP**           | `mcps=["https://api.example.com/sse"]`   |
+| 에이전트가 Gmail로 이메일 전송                            | **앱**            | `apps=["gmail"]`                         |
+| 에이전트가 특정 절차를 따름                               | **스킬**          | `skills=["./skills/code-review"]`        |
+| 에이전트가 회사 문서 참조                                 | **지식**          | `knowledge_sources=[pdf_source]`         |
+| 에이전트가 웹 검색 AND 리뷰 가이드라인 준수               | **도구 + 스킬**    | 둘 다 함께 사용                           |
+
+---
+
+## 기능 조합하기
+
+실제로 에이전트는 종종 **여러 기능 유형을 함께** 사용합니다. 현실적인 예시입니다:
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+# 완전히 갖춘 리서치 에이전트
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Produce comprehensive market analysis reports",
+    backstory="Expert analyst with deep industry knowledge",
+
+    # 액션: 에이전트가 할 수 있는 것
+    tools=[
+        SerperDevTool(),         # 웹 검색
+        FileReadTool(),          # 로컬 파일 읽기
+        CodeInterpreterTool(),   # 분석을 위한 Python 코드 실행
+    ],
+    mcps=["https://data-api.example.com/sse"],  # 원격 데이터 API 접근
+    apps=["google_sheets"],                      # Google Sheets에 쓰기
+
+    # 컨텍스트: 에이전트가 아는 것
+    skills=["./skills/research-methodology"],    # 연구 수행 방법
+    knowledge_sources=[company_docs],            # 회사 특화 데이터
+)
+```
+
+---
+
+## 비교 테이블
+
+| 특성 | 도구 | MCP | 앱 | 스킬 | 지식 |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **에이전트에게 액션 부여** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **프롬프트 수정** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **코드 필요** | 예 | 설정만 | 설정만 | 마크다운만 | 설정만 |
+| **로컬 실행** | 예 | 경우에 따라 | 예 (환경 변수 필요) | N/A | 예 |
+| **API 키 필요** | 도구별 | 서버별 | 통합 토큰 | 아니오 | 임베더만 |
+| **Agent에 설정** | `tools=[]` | `mcps=[]` | `apps=[]` | `skills=[]` | `knowledge_sources=[]` |
+| **Crew에 설정** | ❌ | ❌ | ❌ | `skills=[]` | `knowledge_sources=[]` |
+
+---
+
+## 상세 가이드
+
+각 기능 유형에 대해 더 알아볼 준비가 되셨나요?
+
+<CardGroup cols={2}>
+  <Card title="도구" icon="wrench" href="/ko/concepts/tools">
+    맞춤형 도구 생성, 75개 이상의 OSS 카탈로그 사용, 캐싱 및 비동기 실행 설정.
+  </Card>
+  <Card title="MCP 통합" icon="plug" href="/ko/mcp/overview">
+    stdio, SSE 또는 HTTP를 통해 MCP 서버에 연결. 도구 필터링, 인증 설정.
+  </Card>
+  <Card title="스킬" icon="bolt" href="/ko/concepts/skills">
+    SKILL.md로 스킬 패키지 구축, 도메인 전문성 주입, 점진적 공개 사용.
+  </Card>
+  <Card title="지식" icon="book" href="/ko/concepts/knowledge">
+    PDF, CSV, URL 등에서 지식 추가. 임베더 및 검색 설정.
+  </Card>
+</CardGroup>

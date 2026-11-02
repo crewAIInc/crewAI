@@ -179,6 +179,108 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
     assert info.path == "/"
 
 
+def test_lancedb_list_records_order_and_pagination(lancedb_path: Path) -> None:
+    """Test that LanceDBStorage.list_records returns newest records first with correct pagination."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    base_time = datetime(2025, 1, 1, 12, 0, 0)
+    records = [
+        MemoryRecord(
+            id=f"rec_{i}",
+            content=f"content {i}",
+            scope="/test",
+            created_at=base_time + timedelta(minutes=i),
+            embedding=[0.0] * 4,
+        )
+        for i in range(10)
+    ]
+    # Make /other records strictly newer than /test records to discriminate scope filtering vs global listing
+    other_records = [
+        MemoryRecord(
+            id=f"other_{i}",
+            content=f"other content {i}",
+            scope="/other",
+            created_at=base_time + timedelta(minutes=10 + i),
+            embedding=[0.0] * 4,
+        )
+        for i in range(5)
+    ]
+    storage.save(records + other_records)
+
+    # 1. Page 1: limit=3, offset=0 returns 3 newest records (rec_9, rec_8, rec_7)
+    page1 = storage.list_records(scope_prefix="/test", limit=3, offset=0)
+    assert [r.id for r in page1] == ["rec_9", "rec_8", "rec_7"]
+    assert page1[0].created_at > page1[1].created_at > page1[2].created_at
+
+    # 2. Page 2: limit=3, offset=3 returns next 3 newest (rec_6, rec_5, rec_4)
+    page2 = storage.list_records(scope_prefix="/test", limit=3, offset=3)
+    assert [r.id for r in page2] == ["rec_6", "rec_5", "rec_4"]
+
+    # 3. Page 3: limit=3, offset=6 returns next 3 newest (rec_3, rec_2, rec_1)
+    page3 = storage.list_records(scope_prefix="/test", limit=3, offset=6)
+    assert [r.id for r in page3] == ["rec_3", "rec_2", "rec_1"]
+
+    # 4. Page 4: limit=3, offset=9 returns last 1 record (rec_0)
+    page4 = storage.list_records(scope_prefix="/test", limit=3, offset=9)
+    assert [r.id for r in page4] == ["rec_0"]
+
+    # 5. Page 5: offset beyond total count returns empty list
+    page5 = storage.list_records(scope_prefix="/test", limit=3, offset=10)
+    assert page5 == []
+
+    # 6. Global listing without scope_prefix returns newest across all scopes
+    all_newest = storage.list_records(limit=4, offset=0)
+    assert [r.id for r in all_newest] == [
+        "other_4",
+        "other_3",
+        "other_2",
+        "other_1",
+    ]
+
+    # 7. Negative offset returns empty list
+    assert storage.list_records(scope_prefix="/test", limit=3, offset=-1) == []
+
+    # 8. Root records (scope='/') are excluded from scoped listing
+    root_record = MemoryRecord(
+        id="root_rec",
+        content="root content",
+        scope="/",
+        created_at=base_time + timedelta(hours=1),
+        embedding=[0.0] * 4,
+    )
+    storage.save([root_record])
+    scoped = storage.list_records(scope_prefix="/test", limit=5, offset=0)
+    assert "root_rec" not in [r.id for r in scoped]
+
+
+def test_lancedb_list_records_exceeding_scan_cap(tmp_path: Path) -> None:
+    """Test that LanceDBStorage.list_records returns true newest records even when table exceeds 50k rows."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "mem_large"), vector_dim=2)
+    base_time = datetime(2025, 1, 1, 12, 0, 0)
+    total_records = 52_000
+    recs = [
+        MemoryRecord(
+            id=f"r_{i}",
+            content=f"c_{i}",
+            scope="/test",
+            created_at=base_time + timedelta(seconds=i),
+            embedding=[0.0, 0.0],
+        )
+        for i in range(total_records)
+    ]
+    storage.save(recs)
+
+    results = storage.list_records(scope_prefix="/test", limit=3, offset=0)
+    assert [r.id for r in results] == [
+        f"r_{total_records - 1}",
+        f"r_{total_records - 2}",
+        f"r_{total_records - 3}",
+    ]
+
+
 
 
 @pytest.fixture
@@ -797,6 +899,7 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: PostgreSQL is the database."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.supports_function_calling.return_value = False
@@ -1212,3 +1315,93 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+def _memory_with_private_records(lancedb_path: Path):
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+    from crewai.memory.unified_memory import Memory
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=2)
+    storage.save(
+        [
+            MemoryRecord(
+                content="secret api key sk-abc123",
+                scope="/notes",
+                embedding=[1.0, 0.0],
+                private=True,
+                source=None,
+            ),
+            MemoryRecord(
+                content="team-wide note",
+                scope="/notes",
+                embedding=[1.0, 0.0],
+            ),
+        ]
+    )
+    mem = Memory(
+        llm=MagicMock(),
+        storage=storage,
+        embedder=lambda texts: [[1.0, 0.0]] * len(texts),
+    )
+    return mem
+
+
+@pytest.mark.parametrize("depth", ["shallow", "deep"])
+def test_private_record_without_source_does_not_leak(lancedb_path: Path, depth: str) -> None:
+    """A private record saved with source=None must not be visible to default
+    (source=None, include_private=False) recalls.
+
+    The filter used to be `not r.private or r.source == source`, and
+    `None == None` passed — every default caller saw the "private" record.
+    """
+    mem = _memory_with_private_records(lancedb_path)
+
+    results = mem.recall(
+        "secret api key", scope="/notes", depth=depth, include_private=False
+    )
+
+    contents = [m.record.content for m in results]
+    assert "secret api key sk-abc123" not in contents, (
+        "private source=None record leaked to an unprivileged recall "
+        f"({depth} path): {contents!r}"
+    )
+    assert "team-wide note" in contents, "public records must stay visible"
+
+
+def test_private_record_still_visible_to_its_source_and_when_included(lancedb_path: Path) -> None:
+    """The tightening must not hide private records from legitimate access."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+    from crewai.memory.types import MemoryRecord as MR
+    from crewai.memory.unified_memory import Memory
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=2)
+    storage.save(
+        [
+            MR(
+                content="private to worker-1",
+                scope="/notes",
+                embedding=[1.0, 0.0],
+                private=True,
+                source="worker-1",
+            )
+        ]
+    )
+    mem = Memory(
+        llm=MagicMock(),
+        storage=storage,
+        embedder=lambda texts: [[1.0, 0.0]] * len(texts),
+    )
+
+    as_owner = mem.recall(
+        "private to worker", scope="/notes", depth="shallow", source="worker-1"
+    )
+    assert [m.record.content for m in as_owner] == ["private to worker-1"], (
+        "the owning source must still see its private record"
+    )
+
+    with_private = mem.recall(
+        "private to worker", scope="/notes", depth="shallow", include_private=True
+    )
+    assert [m.record.content for m in with_private] == ["private to worker-1"], (
+        "include_private=True must still see everything"
+    )

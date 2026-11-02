@@ -5,7 +5,7 @@ from crewai_tools.tools.crewai_platform_tools import CrewaiPlatformTools
 
 
 class TestCrewaiPlatformTools(unittest.TestCase):
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -19,7 +19,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert tools is not None
         assert type(tools) is list
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -96,7 +96,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             {"apps": "slack"},
         ]
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -135,7 +135,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         ]
         assert all(tool.args_schema.model_fields == {} for tool in tools)
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     def test_crewai_platform_tools_empty_apps(self):
         with patch(
             "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
@@ -150,7 +150,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             assert isinstance(tools, list)
             assert len(tools) == 0
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -164,9 +164,9 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(ValueError) as context:
                 CrewaiPlatformTools(apps=["github"])
-            assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" in str(context.exception)
+            assert "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN" in str(context.exception)
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
     )
@@ -211,7 +211,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
             "CREWAI_PLUS_URL": "https://platform.example.test/",
         },
         clear=True,
@@ -265,7 +265,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
             "CREWAI_PLUS_URL": "https://platform.example.test/",
         },
         clear=True,
@@ -290,7 +290,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
             "CREWAI_PLUS_URL": "https://platform.example.test/",
         },
         clear=True,
@@ -320,7 +320,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             "connection_id": connection_id
         }
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -364,7 +364,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert [tool.app for tool in tools] == ["github", "slack"]
         assert [tool.description for tool in tools] == ["Search GitHub", "Search Slack"]
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )

@@ -752,7 +752,12 @@ class Memory(BaseModel):
                         raw = [
                             (r, s)
                             for r, s in raw
-                            if not r.private or r.source == source
+                            # A private record is visible only to the source that
+                            # created it. `r.source == source` alone would also
+                            # match source=None records (None == None) and leak
+                            # them to every default caller.
+                            if not r.private
+                            or (source is not None and r.source == source)
                         ]
                     results = []
                     for r, s in raw:

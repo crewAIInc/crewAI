@@ -36,13 +36,13 @@ class TestPlatformIntegrationToken:
 
         assert get_platform_integration_token() == test_token
 
-    @patch.dict(os.environ, {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "env-token-456"})
+    @patch.dict(os.environ, {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "env-token-456"})
     def test_get_platform_integration_token_from_env_var(self):
         assert _platform_integration_token.get() is None
 
         assert get_platform_integration_token() == "env-token-456"
 
-    @patch.dict(os.environ, {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "env-token"})
+    @patch.dict(os.environ, {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "env-token"})
     def test_context_var_takes_precedence_over_env_var(self):
         context_token = "context-token"
 
@@ -126,7 +126,7 @@ class TestPlatformIntegrationToken:
 
         assert get_platform_integration_token() is None
 
-    @patch.dict(os.environ, {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "env-backup"})
+    @patch.dict(os.environ, {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "env-backup"})
     def test_platform_context_with_env_fallback(self):
         """Test platform_context interaction with environment variable fallback."""
         context_token = "context-token"
@@ -187,7 +187,7 @@ class TestPlatformIntegrationToken:
         with platform_context(long_token):
             assert get_platform_integration_token() == long_token
 
-    @patch.dict(os.environ, {"CREWAI_PLATFORM_INTEGRATION_TOKEN": ""})
+    @patch.dict(os.environ, {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": ""})
     def test_empty_env_var(self):
         assert _platform_integration_token.get() is None
         assert get_platform_integration_token() == ""

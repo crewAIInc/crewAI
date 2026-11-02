@@ -40,6 +40,19 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(response, mock_response)
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_get_integration_token_works_with_older_core(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"api_key": "integration-token"}
+        mock_make_request.return_value = mock_response
+
+        assert self.api.get_integration_token() == "integration-token"
+
+        mock_make_request.assert_called_once_with(
+            "GET", "/crewai_plus/api/v1/me/integration-token", timeout=30
+        )
+        mock_response.raise_for_status.assert_called_once_with()
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_create_evaluation_files_it_under_the_project(self, mock_make_request):
         self.api.create_evaluation("run-1", eval_config="{}", project_id="proj-1")
 
@@ -101,7 +114,24 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.get_evaluation("ev-1")
 
         mock_make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1",
+            params={"can_export": "1"},
+            timeout=30.0,
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_export_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.export_evaluation("ev-1")
+
+        mock_make_request.assert_called_once_with(
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1/export",
+            timeout=httpx.Timeout(30.0, read=120.0),
         )
         self.assertEqual(response, mock_response)
 
@@ -283,6 +313,8 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
+    @patch.dict("crewai_core.plus_api._MACHINE_TRANSPORT_ENV", clear=True)
+    @patch("crewai_core.plus_api._os_proxies", dict)
     @patch("crewai_core.plus_api.httpx.Client")
     def test_make_request(self, mock_client_class):
         mock_client_instance = MagicMock()
@@ -292,7 +324,9 @@ class TestPlusAPI(unittest.TestCase):
 
         response = self.api._make_request("GET", "test_endpoint")
 
-        mock_client_class.assert_called_once_with(trust_env=False, verify=True)
+        mock_client_class.assert_called_once_with(
+            verify=True, trust_env=False, mounts={}
+        )
         mock_client_instance.request.assert_called_once_with(
             "GET", f"{self.api.base_url}/test_endpoint", headers=self.api.headers
         )
@@ -309,6 +343,23 @@ class TestPlusAPI(unittest.TestCase):
     def test_deploy_by_uuid(self, mock_make_request):
         self.api.deploy_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
+            "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy"
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_a_forced_push_says_so_and_an_unforced_one_sends_what_it_always_did(self, mock_make_request):
+        self.api.deploy_by_uuid("test_uuid", force=True)
+        mock_make_request.assert_called_with(
+            "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy", json={"force": True}
+        )
+        self.api.deploy_by_name("test_project", project_id="proj-1", force=True)
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/by-name/test_project/deploy",
+            json={"project_id": "proj-1", "force": True},
+        )
+        self.api.deploy_by_uuid("test_uuid", force=False)
+        mock_make_request.assert_called_with(
             "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy"
         )
 
@@ -442,6 +493,8 @@ class TestPlusAPI(unittest.TestCase):
             data={"env[ENV_VAR]": "value"},
             timeout=300,
         )
+        self.api.update_crew_from_zip("test_uuid", "/tmp/test.zip", force=True)
+        assert mock_make_multipart_request.call_args.kwargs["data"] == {"force": "true"}
 
     @patch("crewai_core.plus_api.Settings")
     @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
@@ -511,9 +564,14 @@ def _requests_sent_by(call: Callable[[PlusAPI], object]) -> list[httpx.Request]:
         return httpx.Response(200, json={})
 
     transport = httpx.MockTransport(answer)
-    with patch(
-        "crewai_core.plus_api.httpx.Client",
-        side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+    # A machine or OS proxy would mount a real transport ahead of the mock one.
+    with (
+        patch.dict("crewai_core.plus_api._MACHINE_TRANSPORT_ENV", clear=True),
+        patch("crewai_core.plus_api._os_proxies", dict),
+        patch(
+            "crewai_core.plus_api.httpx.Client",
+            side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+        ),
     ):
         call(PlusAPI("test_api_key"))
     return sent
@@ -550,3 +608,78 @@ def test_requests_without_their_own_timeout_keep_the_httpx_default():
 
     assert request.url.path == "/crewai_plus/api/v1/agents/an_agent"
     assert request.extensions["timeout"]["read"] == 5.0
+
+
+def test_an_export_waits_two_minutes_for_its_large_answer():
+    """The export carries every setup's outputs and traces, tens of MB: the
+    httpx default of 5 s would cut it off."""
+    (request,) = _requests_sent_by(lambda api: api.export_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1/export"
+    assert request.extensions["timeout"] == {
+        "connect": 30.0,
+        "read": 120.0,
+        "write": 30.0,
+        "pool": 30.0,
+    }
+
+
+def test_reading_an_evaluation_says_this_cli_can_export_it():
+    """`can_export=1` lets the brief name `crewai eval export`: an AMP that does
+    not know the parameter drops it, and the brief stays silent about it."""
+    (request,) = _requests_sent_by(lambda api: api.get_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1"
+    assert dict(request.url.params) == {"can_export": "1"}
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_zip_deploy_uploads_go_through_the_proxy_the_machine_names(
+    tmp_path, monkeypatch
+):
+    # Corporate networks and coding-agent sandboxes only allow traffic through
+    # the proxy in HTTP(S)_PROXY; the CLI's own ZIP upload must use it too.
+    # The machine's variables are the ones crewai-core pinned at startup.
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import threading
+    import zipfile
+
+    seen = []
+
+    class Proxy(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            seen.append((self.path, self.headers.get("Authorization"), body))
+            self.send_response(201)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Proxy)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    monkeypatch.setattr(
+        "crewai_core.plus_api._MACHINE_TRANSPORT_ENV",
+        {"HTTP_PROXY": f"http://127.0.0.1:{server.server_address[1]}"},
+    )
+    project_zip = tmp_path / "project.zip"
+    with zipfile.ZipFile(project_zip, "w") as archive:
+        archive.writestr("pyproject.toml", "[project]\nname = 'demo'\n")
+
+    try:
+        response = PlusAPI("amp-token", base_url="http://amp.test").create_crew_from_zip(
+            project_zip, name="demo"
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.status_code == 201
+    ((target, authorization, body),) = seen
+    assert target == "http://amp.test/crewai_plus/api/v1/crews/zip"
+    assert authorization == "Bearer amp-token"
+    assert b'filename="project.zip"' in body

@@ -16,16 +16,32 @@ HttpMethod = Literal["GET", "POST", "PATCH", "DELETE"]
 class PlusAPI(_CorePlusAPI):
     """CLI API client.
 
-    The ZIP deployment methods live here as well as in newer crewai-core
-    versions so editable CLI installs still work when an older crewai-core is
-    present in the runtime environment. The evaluation methods live here
-    because only the CLI calls them.
+    The ZIP deployment and integration-token methods live here as well as in
+    newer crewai-core versions so editable CLI installs still work when an
+    older crewai-core is present in the runtime environment. The evaluation
+    methods live here because only the CLI calls them.
     """
 
     EVALUATIONS_RESOURCE = f"{_CorePlusAPI.TRACING_RESOURCE}/evaluations"
     # AMP reads the run's spans from Wharf inside the POST; a large run takes a while.
     EVALUATION_START_TIMEOUT = 120.0
     EVALUATION_POLL_TIMEOUT = 30.0
+    # The export carries every setup's outputs, checks and traces — tens of MB
+    # for a large comparison — and AMP gathers them before it answers.
+    EVALUATION_EXPORT_TIMEOUT = httpx.Timeout(EVALUATION_POLL_TIMEOUT, read=120.0)
+    CLI_INTEGRATION_TOKEN_RESOURCE = "/crewai_plus/api/v1/me/integration-token"  # noqa: S105 - API path, not a secret
+
+    def get_integration_token(self) -> str:
+        """Return the Enterprise Action Auth Token for the active organization."""
+        response = self._make_request(
+            "GET", self.CLI_INTEGRATION_TOKEN_RESOURCE, timeout=30
+        )
+        response.raise_for_status()
+        payload = response.json()
+        token = payload.get("api_key") if isinstance(payload, dict) else None
+        if not isinstance(token, str) or not token:
+            raise RuntimeError("AMP did not return an integration token")
+        return token
 
     def create_evaluation(
         self,
@@ -86,11 +102,30 @@ class PlusAPI(_CorePlusAPI):
         )
 
     def get_evaluation(self, evaluation_id: str) -> httpx.Response:
-        """The evaluation's status and, once done, its verdict."""
+        """The evaluation's status and, once done, its verdict.
+
+        `can_export=1` says this CLI has `crewai eval export`, so the brief may
+        point at it. AMP passes it on to the evaluation service; an AMP from
+        before exports drops it, so the brief names the command only when the
+        CLI, AMP and the service all serve it.
+        """
         return self._make_request(
             "GET",
             f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}",
+            params={"can_export": "1"},
             timeout=self.EVALUATION_POLL_TIMEOUT,
+        )
+
+    def export_evaluation(
+        self, evaluation_id: str, *, timeout: httpx.Timeout | None = None
+    ) -> httpx.Response:
+        """The evaluation's full data as files (crewai eval export):
+        `{"id", "kind", "files": {relative path: text}}`. TIMEOUT replaces the
+        default, which allows the two minutes a large comparison may take."""
+        return self._make_request(
+            "GET",
+            f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}/export",
+            timeout=timeout or self.EVALUATION_EXPORT_TIMEOUT,
         )
 
     def _make_multipart_request(
@@ -113,10 +148,16 @@ class PlusAPI(_CorePlusAPI):
             request_kwargs["data"] = data
         if timeout is not None:
             request_kwargs["timeout"] = timeout
+        # An older crewai-core has no _http_client; its clients ignore proxies.
+        http_client = getattr(self, "_http_client", None)
 
         with (
             path.open("rb") as file_handle,
-            httpx.Client(trust_env=False, verify=verify) as client,
+            (
+                http_client(verify)
+                if http_client
+                else httpx.Client(verify=verify, trust_env=False)
+            ) as client,
         ):
             files = {
                 "zip_file": (path.name, file_handle, "application/zip"),
@@ -158,14 +199,19 @@ class PlusAPI(_CorePlusAPI):
         *,
         env: dict[str, str] | None = None,
         project_id: str | None = None,
+        force: bool = False,
     ) -> httpx.Response:
         """Update an existing crew deployment from a local project ZIP archive.
 
-        PROJECT_ID as for `create_crew_from_zip`.
+        PROJECT_ID as for `create_crew_from_zip`; FORCE redeploys even while a
+        models comparison runs on the deployment (AMP answers 409
+        ``comparison_running`` otherwise; an older AMP ignores it).
         """
         data: dict[str, str] = {}
         if project_id:
             data["project_id"] = project_id
+        if force:
+            data["force"] = "true"
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

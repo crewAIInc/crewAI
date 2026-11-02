@@ -219,6 +219,205 @@
       }
     },
     {
+      "description": "Search Azure DocumentDB for documents relevant to a natural language query.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Connection string, unless passed to the constructor.",
+          "name": "AZURE_DOCUMENTDB_CONNECTION_STRING",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "OpenAI key (not required when using Azure OpenAI).",
+          "name": "OPENAI_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Set to use Azure OpenAI for embeddings.",
+          "name": "AZURE_OPENAI_ENDPOINT",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Azure OpenAI key when using Azure OpenAI.",
+          "name": "AZURE_OPENAI_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Azure OpenAI API version when using Azure OpenAI.",
+          "name": "OPENAI_API_VERSION",
+          "required": false
+        }
+      ],
+      "humanized_name": "AzureDocumentDBVectorSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "AzureDocumentDBVectorSearchConfig": {
+            "description": "Options for Azure DocumentDB's native vector search.",
+            "properties": {
+              "include_embeddings": {
+                "default": false,
+                "description": "Return stored embedding vectors.",
+                "title": "Include Embeddings",
+                "type": "boolean"
+              },
+              "include_score": {
+                "default": true,
+                "description": "Return similarity scores.",
+                "title": "Include Score",
+                "type": "boolean"
+              },
+              "limit": {
+                "default": 4,
+                "description": "Maximum number of results.",
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              },
+              "pre_filter": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "DocumentDB filter applied during search, e.g. metadata.category.",
+                "title": "Pre Filter"
+              }
+            },
+            "title": "AzureDocumentDBVectorSearchConfig",
+            "type": "object"
+          },
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve documents using Azure DocumentDB, not MongoDB Atlas vector search.\n\nDocuments contain ``text``, ``metadata`` and ``embedding`` fields. Embeddings\nuse OpenAI, or Azure OpenAI when AZURE_OPENAI_ENDPOINT is configured.",
+        "properties": {
+          "collection_name": {
+            "minLength": 1,
+            "title": "Collection Name",
+            "type": "string"
+          },
+          "connection_timeout_ms": {
+            "default": 10000,
+            "minimum": 1,
+            "title": "Connection Timeout Ms",
+            "type": "integer"
+          },
+          "database_name": {
+            "minLength": 1,
+            "title": "Database Name",
+            "type": "string"
+          },
+          "dimensions": {
+            "default": 1536,
+            "minimum": 1,
+            "title": "Dimensions",
+            "type": "integer"
+          },
+          "embedding_model": {
+            "default": "text-embedding-3-small",
+            "description": "OpenAI embedding model or Azure OpenAI deployment name.",
+            "minLength": 1,
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "query_config": {
+            "$ref": "#/$defs/AzureDocumentDBVectorSearchConfig"
+          },
+          "use_azure_identity": {
+            "default": false,
+            "description": "Use renewable Entra tokens for Azure OpenAI instead of an API key.",
+            "title": "Use Azure Identity",
+            "type": "boolean"
+          },
+          "vector_index_name": {
+            "default": "crewai_vector_index",
+            "minLength": 1,
+            "title": "Vector Index Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "database_name",
+          "collection_name"
+        ],
+        "title": "AzureDocumentDBVectorSearchTool",
+        "type": "object"
+      },
+      "name": "AzureDocumentDBVectorSearchTool",
+      "package_dependencies": [
+        "pymongo",
+        "azure-identity"
+      ],
+      "run_params_schema": {
+        "description": "Input accepted by the Azure DocumentDB vector search tool.",
+        "properties": {
+          "query": {
+            "description": "Text to find relevant documents for.",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "AzureDocumentDBToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that performs image searches using the Brave Search API. Results are returned as structured JSON data.",
       "env_vars": [
         {

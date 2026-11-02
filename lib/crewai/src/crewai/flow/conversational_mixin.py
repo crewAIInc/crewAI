@@ -144,6 +144,7 @@ def _config_from_definition(
     """
     return ConversationConfig(
         system_prompt=definition.system_prompt,
+        respect_context_window=definition.respect_context_window,
         llm=definition.llm,
         router=(
             _router_config_from_definition(definition.router, project_root)
@@ -156,6 +157,7 @@ def _config_from_definition(
         answer_from_history_llm=definition.answer_from_history_llm,
         visible_agent_outputs=definition.visible_agent_outputs,
         defer_trace_finalization=definition.defer_trace_finalization,
+        trace_scope=definition.trace_scope,
     )
 
 
@@ -383,7 +385,7 @@ class _ConversationalMixin:
 
         llm_instance = self._coerce_llm(llm)
         with self._conversation_streaming_enabled(llm_instance):
-            response = llm_instance.call(messages=messages)
+            response = self._call_conversation_llm(llm_instance, messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -421,7 +423,7 @@ class _ConversationalMixin:
             *self.build_agent_context("answer_from_history"),
         ]
         with self._conversation_streaming_enabled(llm_instance):
-            response = llm_instance.call(messages=messages)
+            response = self._call_conversation_llm(llm_instance, messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -444,6 +446,11 @@ class _ConversationalMixin:
         an assistant message when the handler didn't.
         If that fallback appends, state is snapshotted again so ``@persist``
         restores the assistant reply on a fresh Flow instance.
+
+        With ``ConversationConfig(trace_scope="turn")``, turns finish their
+        traces automatically. Reuse ``session_id`` with persistence to resume
+        the conversation; no tracing cleanup is required in turn scope. The
+        default keeps the existing deferred session lifecycle unchanged.
 
         Raises:
             ValueError: If the flow is not conversational. Without this the
@@ -482,6 +489,8 @@ class _ConversationalMixin:
             object.__setattr__(self, "_assistant_reply_appended", False)
             object.__setattr__(self, "_turn_recorded_results", [])
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+            if isinstance(result, HumanFeedbackPending):
+                return result
             self._append_public_turn_result_and_persist(result)
         except Exception as exc:
             failed_event = ConversationTurnFailedEvent(
@@ -567,6 +576,8 @@ class _ConversationalMixin:
                     object.__setattr__(
                         self, "_streaming_conversation_turn", original_streaming_turn
                     )
+                if isinstance(result, HumanFeedbackPending):
+                    return result
                 self._append_public_turn_result_and_persist(result)
             except HumanFeedbackPending as exc:
                 return exc
@@ -1090,6 +1101,12 @@ class _ConversationalMixin:
             return None
         return _conversation_state_with_defaults(state_definition.default)
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        # Public custom-handler replies must be recorded while the turn's trace
+        # is active, including trace_scope="turn" and streaming turns.
+        if self._should_apply_pending_kickoff_context():
+            self._append_public_turn_result_and_persist(output)
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         return (
             self._is_conversational_enabled() and self._pending_user_message is not None
@@ -1120,27 +1137,21 @@ class _ConversationalMixin:
         return ordered_starts, True
 
     def _should_defer_trace_finalization(self) -> bool:
-        """Whether per-turn ``FlowFinished`` + ``finalize_batch`` should be skipped.
+        """Resolve an explicit trace scope before the legacy deferral flags.
 
-        True when either:
-          - ``flow.defer_trace_finalization`` is set on the instance, OR
-          - the resolved conversational configuration enables it.
-
-        Either source enables the deferred-session pattern. The caller
-        eventually invokes ``finalize_session_traces()`` to close the batch.
-
-        Read through ``_conversation_config`` rather than the definition so
-        deferral follows the same precedence as every other behavior knob. A
-        class config and a declaration can disagree on the hybrid
-        ``ClassWithConfig.from_declaration(...)`` path, and deferral must not
-        be the one setting that follows the other source.
+        Omitting the scope preserves existing class, declaration and instance
+        behavior, including callers that finalize a whole session manually.
+        Scope follows the same class/definition precedence as other chat config.
         """
-        if getattr(self, "defer_trace_finalization", False):
-            return True
-        if not self._is_conversational_enabled():
-            return False
-        config = self._conversation_config
-        return bool(config and config.defer_trace_finalization)
+        config = (
+            self._conversation_config if self._is_conversational_enabled() else None
+        )
+        if config is not None and config.trace_scope is not None:
+            return config.trace_scope == "session"
+        return bool(
+            getattr(self, "defer_trace_finalization", False)
+            or (config and config.defer_trace_finalization)
+        )
 
     def _reset_turn_execution_state(self) -> None:
         """Clear per-execution tracking so the next turn re-runs the graph."""
@@ -1263,11 +1274,77 @@ class _ConversationalMixin:
         response_format: type[BaseModel],
     ) -> Any:
         try:
-            return llm.call(messages=messages, response_format=response_format)
+            return self._call_conversation_llm(
+                llm, messages=messages, response_format=response_format
+            )
         except TypeError as exc:
             if "response_format" not in str(exc):
                 raise
-            return llm.call(messages=messages, response_model=response_format)
+            return self._call_conversation_llm(
+                llm, messages=messages, response_model=response_format
+            )
+
+    def _call_conversation_llm(
+        self,
+        llm: Any,
+        *,
+        messages: list[LLMMessage],
+        **kwargs: Any,
+    ) -> Any:
+        """Compact request-local context and recover once from provider overflow.
+
+        The canonical transcript remains available for display and persistence.
+        Summary calls disable streaming so their internal output never becomes
+        part of the assistant's streamed reply. Call-only custom LLMs retain
+        their existing behavior.
+        """
+        from crewai_core.printer import Printer
+
+        from crewai.llms.base_llm import BaseLLM, call_stream_override
+        from crewai.utilities.agent_utils import (
+            _proactively_summarize_context,
+            _summarize_context_before_llm_call,
+            is_context_length_exceeded,
+        )
+
+        config = self._conversation_config
+        current_user_message = cast(ConversationState, self.state).current_user_message
+        compact = isinstance(llm, BaseLLM) and (
+            config is None or config.respect_context_window
+        )
+        if compact:
+            original_messages = list(messages)
+            with call_stream_override(llm, False):
+                _proactively_summarize_context(
+                    llm=llm,
+                    messages=messages,
+                    callbacks=[],
+                    printer=Printer(),
+                    tools=None,
+                    response_model=kwargs.get("response_format")
+                    or kwargs.get("response_model"),
+                    verbose=False,
+                    allow_single_user_compaction=True,
+                )
+            if messages != original_messages and current_user_message:
+                messages.append({"role": "user", "content": current_user_message})
+        try:
+            return llm.call(messages=messages, **kwargs)
+        except Exception as exc:
+            if not compact or not is_context_length_exceeded(exc):
+                raise
+            with call_stream_override(llm, False):
+                _summarize_context_before_llm_call(
+                    llm=llm,
+                    messages=messages,
+                    callbacks=[],
+                    printer=Printer(),
+                    verbose=False,
+                    allow_single_user_compaction=True,
+                )
+            if current_user_message:
+                messages.append({"role": "user", "content": current_user_message})
+            return llm.call(messages=messages, **kwargs)
 
     def _build_router_messages(
         self,
