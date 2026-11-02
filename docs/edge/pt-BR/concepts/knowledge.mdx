@@ -246,11 +246,11 @@ agent_collection_name = agent.role  # e.g., "Especialista Técnico"
 # Crew knowledge storage
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
-# Path: ~/.local/share/CrewAI/{project}/knowledge/
-#   ├── crew/                    # Crew knowledge collection
-#   ├── Especialista Técnico/    # Agent knowledge collection
-#   └── Another Agent Role/      # Another agent's collection
+# Both stored in the same Qdrant storage but different collections
+# Path: ~/.local/share/CrewAI/{project}/qdrant/collection/
+#   ├── knowledge_crew/                    # Crew knowledge collection
+#   ├── knowledge_Especialista Técnico/    # Agent knowledge collection
+#   └── knowledge_Another Agent Role/      # Another agent's collection
 ```
 
 ### Exemplos Completos Funcionais
@@ -406,8 +406,18 @@ Configuração de armazenamento personalizada para gerenciar como o knowledge é
 ## Transparência do Armazenamento de Knowledge
 
 <Info>
-**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena automaticamente as fontes de knowledge em diretórios específicos da plataforma usando ChromaDB para armazenamento vetorial. Entender essas localizações e padrões ajuda com implantações de produção, depuração e gerenciamento de armazenamento.
+**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena automaticamente as fontes de knowledge em diretórios específicos da plataforma usando um banco de dados Qdrant local para armazenamento vetorial. Entender essas localizações e padrões ajuda com implantações de produção, depuração e gerenciamento de armazenamento.
 </Info>
+
+<Warning>
+**O Knowledge agora usa Qdrant como padrão, em vez de ChromaDB.** O knowledge indexado com ChromaDB em versões anteriores não é lido automaticamente, e nada é migrado. Execute seu crew novamente para indexar suas fontes de knowledge no Qdrant (elas são reprocessadas, o que chama seu embedder novamente), ou volte a usar o ChromaDB com `pip install "crewai[chromadb]"` e `set_rag_config(ChromaDBConfig())`.
+</Warning>
+
+<Note>
+O armazenamento local do Qdrant tem dois limites a considerar:
+- **Um processo por pasta.** Um segundo processo que abra a mesma pasta de armazenamento falha. Isso difere do ChromaDB, que permitia vários processos compartilharem uma pasta.
+- **Não é seguro para escritas concorrentes entre threads.** Buscas feitas por várias threads são seguras, mas grave o knowledge durante a configuração do crew, e não em tarefas paralelas.
+</Note>
 
 ### Onde o CrewAI Armazena Arquivos de Knowledge
 
@@ -418,28 +428,28 @@ Por padrão, o CrewAI usa o mesmo sistema de armazenamento que a memória, armaz
 **macOS:**
 ```
 ~/Library/Application Support/CrewAI/{project_name}/
-└── knowledge/                    # Knowledge ChromaDB files
-    ├── chroma.sqlite3           # ChromaDB metadata
-    ├── {collection_id}/         # Vector embeddings
-    └── knowledge_{collection}/  # Named collections
+└── qdrant/                       # Local Qdrant database (Knowledge)
+    ├── meta.json                # Qdrant metadata
+    └── collection/
+        └── knowledge_{collection}/  # One folder per collection (storage.sqlite)
 ```
 
 **Linux:**
 ```
 ~/.local/share/CrewAI/{project_name}/
-└── knowledge/
-    ├── chroma.sqlite3
-    ├── {collection_id}/
-    └── knowledge_{collection}/
+└── qdrant/
+    ├── meta.json
+    └── collection/
+        └── knowledge_{collection}/
 ```
 
 **Windows:**
 ```
 C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
-└── knowledge\
-    ├── chroma.sqlite3
-    ├── {collection_id}\
-    └── knowledge_{collection}\
+└── qdrant\
+    ├── meta.json
+    └── collection\
+        └── knowledge_{collection}\
 ```
 
 ### Encontrando Sua Localização de Armazenamento de Knowledge
@@ -451,14 +461,15 @@ from crewai.utilities.paths import db_storage_path
 import os
 
 # Get the knowledge storage path
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
+knowledge_path = os.path.join(db_storage_path(), "qdrant")
 print(f"Knowledge storage location: {knowledge_path}")
 
 # List knowledge collections and files
 if os.path.exists(knowledge_path):
     print("\nKnowledge storage contents:")
-    for item in os.listdir(knowledge_path):
-        item_path = os.path.join(knowledge_path, item)
+    collections_path = os.path.join(knowledge_path, "collection")
+    for item in os.listdir(collections_path):
+        item_path = os.path.join(collections_path, item)
         if os.path.isdir(item_path):
             print(f"📁 Collection: {item}/")
             # Show collection contents
@@ -883,7 +894,7 @@ from crewai.utilities.paths import db_storage_path
 
 # Check storage structure
 storage_path = db_storage_path()
-knowledge_path = os.path.join(storage_path, "knowledge")
+knowledge_path = os.path.join(storage_path, "qdrant", "collection")
 
 if os.path.exists(knowledge_path):
     print("Knowledge collections found:")
@@ -912,25 +923,26 @@ if hasattr(agent, 'knowledge') and agent.knowledge:
 
 #### Inspecionar Coleções de Knowledge
 ```python
-import chromadb
+from qdrant_client import QdrantClient
 from crewai.utilities.paths import db_storage_path
 import os
 
-# Connect to CrewAI's knowledge ChromaDB
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
+# Connect to CrewAI's local knowledge database.
+# Local Qdrant allows one process per folder, so stop your crew first.
+knowledge_path = os.path.join(db_storage_path(), "qdrant")
 
 if os.path.exists(knowledge_path):
-    client = chromadb.PersistentClient(path=knowledge_path)
-    collections = client.list_collections()
+    client = QdrantClient(path=knowledge_path)
 
     print("Knowledge Collections:")
-    for collection in collections:
-        print(f"  - {collection.name}: {collection.count()} documents")
+    for collection in client.get_collections().collections:
+        count = client.count(collection.name).count
+        print(f"  - {collection.name}: {count} documents")
 
         # Sample a few documents to verify content
-        if collection.count() > 0:
-            sample = collection.peek(limit=2)
-            print(f"    Sample content: {sample['documents'][0][:100]}...")
+        if count > 0:
+            points, _ = client.scroll(collection.name, limit=2, with_payload=True)
+            print(f"    Sample content: {points[0].payload['content'][:100]}...")
 else:
     print("No knowledge storage found")
 ```
@@ -990,7 +1002,7 @@ crew = Crew(
 )
 ```
 
-**Erros "ChromaDB permissão negada":**
+**Erros de "permissão negada" no armazenamento de knowledge:**
 ```bash
 # Fix storage permissions
 chmod -R 755 ~/.local/share/CrewAI/
@@ -1004,7 +1016,7 @@ from crewai.utilities.paths import db_storage_path
 
 print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
 print("Computed storage path:", db_storage_path())
-print("Knowledge path:", os.path.join(db_storage_path(), "knowledge"))
+print("Knowledge path:", os.path.join(db_storage_path(), "qdrant"))
 ```
 
 ### Comandos de Reset de Knowledge

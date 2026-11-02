@@ -66,7 +66,7 @@ tool = CSVSearchTool(
             },
         },
         "vectordb": {
-            "provider": "chromadb",  # or "qdrant"
+            "provider": "chromadb",  # requires crewai[chromadb]; default is "qdrant"
             "config": {
                 # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
                 # from qdrant_client.models import VectorParams, Distance

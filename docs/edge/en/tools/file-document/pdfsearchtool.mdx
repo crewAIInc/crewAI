@@ -45,13 +45,13 @@ tool = PDFSearchTool(pdf='path/to/your/document.pdf')
 
 ## Custom model and embeddings
 
-By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows. Note: a vector database is required because generated embeddings must be stored and queried from a vectordb.
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows. Note: a vector database is required because generated embeddings must be stored and queried from a vectordb. The default vector database is local Qdrant; `chromadb` needs `pip install "crewai[chromadb]"`.
 
 ```python Code
 from crewai_tools import PDFSearchTool
 
 # - embedding_model (required): choose provider + provider-specific config
-# - vectordb (required): choose vector DB and pass its config
+# - vectordb (optional, defaults to Qdrant): choose vector DB and pass its config
 
 tool = PDFSearchTool(
     config={
@@ -84,7 +84,7 @@ tool = PDFSearchTool(
             },
         },
         "vectordb": {
-                    "provider": "chromadb",  # or "qdrant"
+                    "provider": "chromadb",  # requires crewai[chromadb]; default is "qdrant"
                     "config": {
                         # For ChromaDB: pass "settings" (chromadb.config.Settings) or rely on defaults.
                         # Example (uncomment and import):

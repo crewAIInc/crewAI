@@ -58,7 +58,7 @@ tool = DirectorySearchTool(
             },
         },
         "vectordb": {
-            "provider": "chromadb",  # ou "qdrant"
+            "provider": "chromadb",  # requer crewai[chromadb]; o padrão é "qdrant"
             "config": {
                 # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
                 # from qdrant_client.models import VectorParams, Distance

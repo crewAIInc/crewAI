@@ -165,6 +165,9 @@ Se você ainda não instalou o `uv`, siga o **passo 1** para instalá-lo rapidam
       ```shell
       uv add <package-name>
       ```
+      <Note>
+        O ChromaDB é uma dependência opcional. Instale-o apenas se você usar o banco vetorial ChromaDB ou um provedor de embeddings baseado nele (Bedrock, Cohere, Google Generative AI, Hugging Face, Instructor, Jina, Ollama, ONNX, OpenCLIP, Roboflow, Sentence Transformers, Text2Vec): `uv add "crewai[chromadb]"`.
+      </Note>
     - Para rodar seu crew, execute o seguinte comando na raiz do seu projeto:
       ```bash
       crewai run
