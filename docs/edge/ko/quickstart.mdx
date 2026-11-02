@@ -20,7 +20,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
 ## 사전 요건
 
 - Python 환경과 CrewAI CLI([설치](/ko/installation) 참고)
-- 올바른 API 키로 설정한 LLM — [LLM](/ko/concepts/llms#setting-up-your-llm) 참고
+- 올바른 API 키로 설정한 LLM — [LLM](/ko/concepts/llms#llm-설정하기) 참고
 - 이 튜토리얼의 웹 검색용 [Serper.dev](https://serper.dev/) API 키(`SERPER_API_KEY`)
 
 ## 첫 번째 Flow 만들기
@@ -155,7 +155,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
   프로젝트 루트의 `.env`에 다음을 설정합니다.
 
     - `SERPER_API_KEY` — [Serper.dev](https://serper.dev/)에서 발급
-    - 모델 제공자 키 — [LLM 설정](/ko/concepts/llms#setting-up-your-llm) 참고
+    - 모델 제공자 키 — [LLM 설정](/ko/concepts/llms#llm-설정하기) 참고
   </Step>
 
   <Step title="설치 및 실행">
@@ -198,7 +198,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
 2. **Crew** — `kickoff_content_crew`가 `crew.jsonc`를 로드하고 에이전트 한 명·작업 하나로 실행합니다. 연구원이 **Serper**로 웹을 검색하고 구조화된 보고서를 씁니다.
 3. **결과물** — 작업의 `output_file`이 `output/report.md`에 보고서를 씁니다.
 
-Flow 패턴(라우팅, 지속성, human-in-the-loop)을 더 보려면 [첫 Flow 만들기](/ko/guides/flows/first-flow)와 [Flows](/ko/concepts/flows)를 참고하세요. Flow 없이 crew만 쓰려면 [Crews](/ko/concepts/crews)를, 작업 없이 단일 `Agent`의 `kickoff()`만 쓰려면 [Agents](/ko/concepts/agents#direct-agent-interaction-with-kickoff)를 참고하세요.
+Flow 패턴(라우팅, 지속성, human-in-the-loop)을 더 보려면 [첫 Flow 만들기](/ko/guides/flows/first-flow)와 [Flows](/ko/concepts/flows)를 참고하세요. Flow 없이 crew만 쓰려면 [Crews](/ko/concepts/crews)를, 작업 없이 단일 `Agent`의 `kickoff()`만 쓰려면 [Agents](/ko/concepts/agents#kickoff-을-사용한-에이전트-직접-상호작용)를 참고하세요.
 
 <Check>
 에이전트 crew와 저장된 보고서까지 이어진 Flow를 완성했습니다. 이제 단계·crew·도구를 더해 확장할 수 있습니다.

@@ -20,7 +20,7 @@ Se ainda não instalou o CrewAI, siga primeiro o [guia de instalação](/pt-BR/i
 ## Pré-requisitos
 
 - Ambiente Python e a CLI do CrewAI (veja [instalação](/pt-BR/installation))
-- Um LLM configurado com as chaves corretas — veja [LLMs](/pt-BR/concepts/llms#setting-up-your-llm)
+- Um LLM configurado com as chaves corretas — veja [LLMs](/pt-BR/concepts/llms#configurando-seu-llm)
 - Uma chave de API do [Serper.dev](https://serper.dev/) (`SERPER_API_KEY`) para busca na web neste tutorial
 
 ## Construa seu primeiro Flow
@@ -155,7 +155,7 @@ Se ainda não instalou o CrewAI, siga primeiro o [guia de instalação](/pt-BR/i
   Na raiz do projeto, no arquivo `.env`, defina:
 
     - `SERPER_API_KEY` — obtida em [Serper.dev](https://serper.dev/)
-    - As chaves do provedor de modelo conforme necessário — veja [configuração de LLM](/pt-BR/concepts/llms#setting-up-your-llm)
+    - As chaves do provedor de modelo conforme necessário — veja [configuração de LLM](/pt-BR/concepts/llms#configurando-seu-llm)
   </Step>
 
   <Step title="Instalar e executar">
@@ -198,7 +198,7 @@ Se ainda não instalou o CrewAI, siga primeiro o [guia de instalação](/pt-BR/i
 2. **Crew** — `kickoff_content_crew` carrega `crew.jsonc` e executa uma tarefa com um agente: o pesquisador usa **Serper** na web e escreve o relatório.
 3. **Artefato** — O `output_file` da tarefa grava o relatório em `output/report.md`.
 
-Para ir além em Flows (roteamento, persistência, human-in-the-loop), veja [Construa seu primeiro Flow](/pt-BR/guides/flows/first-flow) e [Flows](/pt-BR/concepts/flows). Para crews sem Flow, veja [Crews](/pt-BR/concepts/crews). Para um único `Agent` com `kickoff()` sem tarefas, veja [Agents](/pt-BR/concepts/agents#direct-agent-interaction-with-kickoff).
+Para ir além em Flows (roteamento, persistência, human-in-the-loop), veja [Construa seu primeiro Flow](/pt-BR/guides/flows/first-flow) e [Flows](/pt-BR/concepts/flows). Para crews sem Flow, veja [Crews](/pt-BR/concepts/crews). Para um único `Agent` com `kickoff()` sem tarefas, veja [Agents](/pt-BR/concepts/agents).
 
 <Check>
 Você tem um Flow ponta a ponta com um crew de agente e um relatório salvo — uma base sólida para novas etapas, crews ou ferramentas.

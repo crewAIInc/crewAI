@@ -20,7 +20,7 @@ mode: "wide"
 ## المتطلبات الأساسية
 
 - بيئة Python وواجهة سطر أوامر CrewAI (راجع [التثبيت](/ar/installation))
-- نموذج لغوي مهيأ بالمفاتيح الصحيحة — راجع [LLMs](/ar/concepts/llms#setting-up-your-llm)
+- نموذج لغوي مهيأ بالمفاتيح الصحيحة — راجع [LLMs](/ar/concepts/llms#إعداد-llm-الخاص-بك)
 - مفتاح API من [Serper.dev](https://serper.dev/) (`SERPER_API_KEY`) للبحث على الويب في هذا الدرس
 
 ## ابنِ أول Flow لك
@@ -155,7 +155,7 @@ mode: "wide"
   في جذر المشروع، ضبط `.env`:
 
     - `SERPER_API_KEY` — من [Serper.dev](https://serper.dev/)
-    - مفاتيح مزوّد النموذج حسب الحاجة — راجع [إعداد LLM](/ar/concepts/llms#setting-up-your-llm)
+    - مفاتيح مزوّد النموذج حسب الحاجة — راجع [إعداد LLM](/ar/concepts/llms#إعداد-llm-الخاص-بك)
   </Step>
 
   <Step title="التثبيت والتشغيل">
@@ -198,7 +198,7 @@ mode: "wide"
 2. **الطاقم** — يحمّل `kickoff_content_crew` ملف `crew.jsonc` ويشغّل مهمة واحدة بوكيل واحد: الباحث يستخدم **Serper** للبحث على الويب ثم يكتب التقرير.
 3. **المُخرَج** — يكتب `output_file` للمهمة التقرير في `output/report.md`.
 
-للتعمق في أنماط Flow (التوجيه، الاستمرارية، الإنسان في الحلقة)، راجع [ابنِ أول Flow](/ar/guides/flows/first-flow) و[Flows](/ar/concepts/flows). للطواقم دون Flow، راجع [Crews](/ar/concepts/crews). لوكيل `Agent` واحد و`kickoff()` بلا مهام، راجع [Agents](/ar/concepts/agents#direct-agent-interaction-with-kickoff).
+للتعمق في أنماط Flow (التوجيه، الاستمرارية، الإنسان في الحلقة)، راجع [ابنِ أول Flow](/ar/guides/flows/first-flow) و[Flows](/ar/concepts/flows). للطواقم دون Flow، راجع [Crews](/ar/concepts/crews). لوكيل `Agent` واحد و`kickoff()` بلا مهام، راجع [Agents](/ar/concepts/agents).
 
 <Check>
 أصبح لديك Flow كامل مع طاقم وكيل وتقرير محفوظ — قاعدة قوية لإضافة خطوات أو طواقم أو أدوات.
