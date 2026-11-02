@@ -247,11 +247,11 @@ agent_collection_name = agent.role  # e.g., "Technical Specialist"
 # Crew knowledge storage  
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
-# Path: ~/.local/share/CrewAI/{project}/knowledge/
-#   ├── crew/                    # Crew knowledge collection
-#   ├── Technical Specialist/    # Agent knowledge collection
-#   └── Another Agent Role/      # Another agent's collection
+# Both stored in the same Qdrant storage but different collections
+# Path: ~/.local/share/CrewAI/{project}/qdrant/collection/
+#   ├── knowledge_crew/                    # Crew knowledge collection
+#   ├── knowledge_Technical Specialist/    # Agent knowledge collection
+#   └── knowledge_Another Agent Role/      # Another agent's collection
 ```
 
 ### 전체 작동 예제
@@ -408,8 +408,18 @@ knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 �
 ## 지식 저장 투명성
 
 <Info>
-**지식 저장 이해하기**: CrewAI는 ChromaDB를 사용하여 벡터 저장소에 지식 소스를 플랫폼별 디렉토리에 자동으로 저장합니다. 이러한 위치와 기본값을 이해하면 프로덕션 배포, 디버깅, 저장소 관리에 도움이 됩니다.
+**지식 저장 이해하기**: CrewAI는 로컬 Qdrant 데이터베이스를 벡터 저장소로 사용하여 지식 소스를 플랫폼별 디렉토리에 자동으로 저장합니다. 이러한 위치와 기본값을 이해하면 프로덕션 배포, 디버깅, 저장소 관리에 도움이 됩니다.
 </Info>
+
+<Warning>
+**Knowledge의 기본 저장소가 ChromaDB에서 Qdrant로 변경되었습니다.** 이전 버전에서 ChromaDB로 인덱싱한 Knowledge는 자동으로 읽히지 않으며, 마이그레이션도 수행되지 않습니다. crew를 다시 실행하여 지식 소스를 Qdrant로 인덱싱하세요(다시 임베딩되므로 임베더가 다시 호출됩니다). 또는 `pip install "crewai[chromadb]"`로 설치한 뒤 `set_rag_config(ChromaDBConfig())`로 ChromaDB를 계속 사용할 수 있습니다.
+</Warning>
+
+<Note>
+로컬 Qdrant 저장소에는 두 가지 제한이 있습니다.
+- **폴더당 하나의 프로세스.** 같은 저장소 폴더를 두 번째 프로세스가 열면 실패합니다. 여러 프로세스가 폴더를 공유할 수 있었던 ChromaDB와 다른 점입니다.
+- **스레드에서의 동시 쓰기는 안전하지 않습니다.** 여러 스레드에서의 검색은 안전하지만, 병렬 작업에서 쓰지 말고 crew 설정 단계에서 knowledge를 기록하세요.
+</Note>
 
 ### CrewAI가 Knowledge 파일을 저장하는 위치
 
@@ -420,28 +430,28 @@ knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 �
 **macOS:**
 ```
 ~/Library/Application Support/CrewAI/{project_name}/
-└── knowledge/                    # Knowledge ChromaDB files
-    ├── chroma.sqlite3           # ChromaDB metadata
-    ├── {collection_id}/         # Vector embeddings
-    └── knowledge_{collection}/  # Named collections
+└── qdrant/                       # Local Qdrant database (Knowledge)
+    ├── meta.json                # Qdrant metadata
+    └── collection/
+        └── knowledge_{collection}/  # One folder per collection (storage.sqlite)
 ```
 
 **Linux:**
 ```
 ~/.local/share/CrewAI/{project_name}/
-└── knowledge/
-    ├── chroma.sqlite3
-    ├── {collection_id}/
-    └── knowledge_{collection}/
+└── qdrant/
+    ├── meta.json
+    └── collection/
+        └── knowledge_{collection}/
 ```
 
 **Windows:**
 ```
 C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
-└── knowledge\
-    ├── chroma.sqlite3
-    ├── {collection_id}\
-    └── knowledge_{collection}\
+└── qdrant\
+    ├── meta.json
+    └── collection\
+        └── knowledge_{collection}\
 ```
 
 ### 지식 저장 위치 찾기
@@ -453,14 +463,15 @@ from crewai.utilities.paths import db_storage_path
 import os
 
 # Get the knowledge storage path
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
+knowledge_path = os.path.join(db_storage_path(), "qdrant")
 print(f"Knowledge storage location: {knowledge_path}")
 
 # List knowledge collections and files
 if os.path.exists(knowledge_path):
     print("\nKnowledge storage contents:")
-    for item in os.listdir(knowledge_path):
-        item_path = os.path.join(knowledge_path, item)
+    collections_path = os.path.join(knowledge_path, "collection")
+    for item in os.listdir(collections_path):
+        item_path = os.path.join(collections_path, item)
         if os.path.isdir(item_path):
             print(f"📁 Collection: {item}/")
             # Show collection contents
@@ -785,7 +796,7 @@ from crewai.utilities.paths import db_storage_path
 
 # Check storage structure
 storage_path = db_storage_path()
-knowledge_path = os.path.join(storage_path, "knowledge")
+knowledge_path = os.path.join(storage_path, "qdrant", "collection")
 
 if os.path.exists(knowledge_path):
     print("Knowledge collections found:")
@@ -814,25 +825,26 @@ if hasattr(agent, 'knowledge') and agent.knowledge:
 
 #### 지식 컬렉션 검사하기
 ```python
-import chromadb
+from qdrant_client import QdrantClient
 from crewai.utilities.paths import db_storage_path
 import os
 
-# Connect to CrewAI's knowledge ChromaDB
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
+# Connect to CrewAI's local knowledge database.
+# Local Qdrant allows one process per folder, so stop your crew first.
+knowledge_path = os.path.join(db_storage_path(), "qdrant")
 
 if os.path.exists(knowledge_path):
-    client = chromadb.PersistentClient(path=knowledge_path)
-    collections = client.list_collections()
-    
+    client = QdrantClient(path=knowledge_path)
+
     print("Knowledge Collections:")
-    for collection in collections:
-        print(f"  - {collection.name}: {collection.count()} documents")
-        
+    for collection in client.get_collections().collections:
+        count = client.count(collection.name).count
+        print(f"  - {collection.name}: {count} documents")
+
         # Sample a few documents to verify content
-        if collection.count() > 0:
-            sample = collection.peek(limit=2)
-            print(f"    Sample content: {sample['documents'][0][:100]}...")
+        if count > 0:
+            points, _ = client.scroll(collection.name, limit=2, with_payload=True)
+            print(f"    Sample content: {points[0].payload['content'][:100]}...")
 else:
     print("No knowledge storage found")
 ```
@@ -892,7 +904,7 @@ crew = Crew(
 )
 ```
 
-**"ChromaDB permission denied" 오류:**
+**Knowledge 저장소 "Permission denied" 오류:**
 ```bash
 # Fix storage permissions
 chmod -R 755 ~/.local/share/CrewAI/
@@ -906,7 +918,7 @@ from crewai.utilities.paths import db_storage_path
 
 print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
 print("Computed storage path:", db_storage_path())
-print("Knowledge path:", os.path.join(db_storage_path(), "knowledge"))
+print("Knowledge path:", os.path.join(db_storage_path(), "qdrant"))
 ```
 
 ### 지식 초기화 명령어

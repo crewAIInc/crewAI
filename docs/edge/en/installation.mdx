@@ -289,6 +289,9 @@ If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on
       uv add <package-name>
       ```
       <Note>
+        ChromaDB is an optional dependency. Install it only if you use the ChromaDB vector store or an embedding provider backed by it (Bedrock, Cohere, Google Generative AI, Hugging Face, Instructor, Jina, Ollama, ONNX, OpenCLIP, Roboflow, Sentence Transformers, Text2Vec): `uv add "crewai[chromadb]"`.
+      </Note>
+      <Note>
         As a supply-chain security measure, CrewAI's internal packages use `exclude-newer = "3 days"` in their `pyproject.toml` files. This means transitive dependencies pulled in by CrewAI won't resolve packages released less than 3 days ago. Your own direct dependencies are not affected by this policy. If you notice a transitive dependency is behind, you can pin the version you want explicitly in your project's dependencies.
       </Note>
     - To run your crew, execute the following command in the root of your project:

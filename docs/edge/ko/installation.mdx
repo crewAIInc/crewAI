@@ -163,6 +163,9 @@ CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다
       ```shell
       uv add <package-name>
       ```
+      <Note>
+        ChromaDB는 선택적 의존성입니다. ChromaDB 벡터 스토어 또는 ChromaDB 기반 임베딩 프로바이더(Bedrock, Cohere, Google Generative AI, Hugging Face, Instructor, Jina, Ollama, ONNX, OpenCLIP, Roboflow, Sentence Transformers, Text2Vec)를 사용할 때만 `uv add "crewai[chromadb]"`로 설치하세요.
+      </Note>
     - crew를 실행하려면 프로젝트 루트에서 아래 명령을 실행하세요:
       ```bash
       crewai run
