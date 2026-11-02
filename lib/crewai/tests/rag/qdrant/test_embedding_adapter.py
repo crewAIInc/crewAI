@@ -97,14 +97,6 @@ def test_plain_embedding_function_keeps_default_dimension():
     assert qdrant.create_collection.call_args.kwargs["vectors_config"].size == 384
 
 
-def test_plain_embedding_function_keeps_default_dimension():
-    client, qdrant = _client_with(lambda text: [0.1])
-
-    client.create_collection(collection_name="c")
-
-    assert qdrant.create_collection.call_args.kwargs["vectors_config"].size == 384
-
-
 def test_embed_batch_makes_one_call_for_many_texts():
     embedder = FakeEmbedder(4)
     vectors = QdrantEmbeddingAdapter(embedder).embed_batch(["a", "b", "c"])
