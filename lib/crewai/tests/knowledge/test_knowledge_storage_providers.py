@@ -26,7 +26,7 @@ class TopicEmbedder:
 @pytest.fixture(autouse=True)
 def _isolated_rag_state(tmp_path, monkeypatch):
     """Keep Qdrant data in tmp_path and start with no explicit RAG config."""
-    monkeypatch.setattr("crewai.rag.qdrant.config.DEFAULT_STORAGE_PATH", str(tmp_path))
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", str(tmp_path))
     monkeypatch.setattr("crewai.rag.qdrant.factory._local_clients", {})
     clear_rag_config()
     yield
@@ -119,7 +119,9 @@ def test_chromadb_is_used_when_configured():
 
 
 def test_chromadb_without_the_extra_explains_how_to_install(monkeypatch):
-    monkeypatch.setitem(sys.modules, "crewai.rag.chromadb.config", None)
+    monkeypatch.setitem(sys.modules, "chromadb", None)
+    for name in [m for m in sys.modules if m.startswith("crewai.rag.chromadb")]:
+        monkeypatch.delitem(sys.modules, name)
 
     with (
         patch(
