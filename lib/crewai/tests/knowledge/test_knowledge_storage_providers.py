@@ -1,13 +1,23 @@
 """KnowledgeStorage backend selection: Qdrant by default, Chroma when configured."""
 
 import sys
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
-from crewai.rag.config.utils import clear_rag_config, get_rag_provider, set_rag_config
+from crewai.rag.config.utils import (
+    clear_rag_config,
+    get_rag_config,
+    get_rag_provider,
+    set_rag_config,
+)
+from crewai.rag.embeddings.providers.openai.embedding_callable import (
+    OpenAIEmbeddingFunction,
+)
 from crewai.rag.qdrant.config import QdrantConfig
+from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
 
 
 TOPICS = ["python", "cooking", "football"]
@@ -135,3 +145,43 @@ def test_chromadb_without_the_extra_explains_how_to_install(monkeypatch):
         pytest.raises(ImportError, match=r"pip install crewai\[chromadb\]"),
     ):
         _storage()
+
+
+def test_global_default_embeds_with_openai_like_knowledge_always_did(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    embedder = get_rag_config().embedding_function
+
+    assert isinstance(embedder, QdrantEmbeddingAdapter)
+    assert isinstance(embedder._embedding_function, OpenAIEmbeddingFunction)
+    assert embedder._embedding_function.model_name == "text-embedding-3-small"
+
+
+def test_qdrant_config_keeps_its_local_fastembed_default(monkeypatch):
+    """Existing QdrantConfig() users get the same keyless local embedder as before."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    created: list[str] = []
+
+    class FakeTextEmbedding:
+        def __init__(self, model_name: str) -> None:
+            created.append(model_name)
+
+        def embed(self, texts: list[str]):
+            return [np.zeros(384, dtype=np.float32) for _ in texts]
+
+    fake_fastembed = ModuleType("fastembed")
+    fake_fastembed.TextEmbedding = FakeTextEmbedding
+    monkeypatch.setitem(sys.modules, "fastembed", fake_fastembed)
+
+    vector = QdrantConfig().embedding_function("hello")
+
+    assert created == ["sentence-transformers/all-MiniLM-L6-v2"]
+    assert len(vector) == 384
+
+
+def test_qdrant_config_default_without_fastembed_explains_how_to_install(monkeypatch):
+    monkeypatch.setitem(sys.modules, "fastembed", None)
+
+    with pytest.raises(ImportError, match=r"pip install crewai\[qdrant\]"):
+        QdrantConfig()
+
