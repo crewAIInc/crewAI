@@ -564,6 +564,7 @@ def test_file_path_validation():
         PDFKnowledgeSource()
 
 
+@pytest.mark.requires_chromadb
 def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     """Test that documents without doc_id generate hash-based IDs. Duplicates are deduplicated before upsert."""
     import hashlib
@@ -611,6 +612,7 @@ def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     assert duplicate_result.ids[0] == expected_hash, "Deduplicated ID should match expected hash"
 
 
+@pytest.mark.requires_chromadb
 def test_hash_based_id_generation_with_doc_id_in_metadata(mock_vector_db):
     """Test that documents with doc_id in metadata use the doc_id directly, not hash-based."""
     from crewai.rag.chromadb.utils import _prepare_documents_for_chromadb

@@ -92,6 +92,7 @@ class TestModelKeyBackwardCompatibility:
 
         assert provider.model_name == "text-embedding-3-large"
 
+    @pytest.mark.requires_chromadb
     def test_cohere_provider_accepts_model_key(self):
         """Test Cohere provider accepts 'model' as alias for 'model_name'."""
         provider = CohereProvider(
@@ -100,6 +101,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "embed-english-v3.0"
 
+    @pytest.mark.requires_chromadb
     def test_google_generativeai_provider_accepts_model_key(self):
         """Test Google Generative AI provider accepts 'model' as alias."""
         provider = GenerativeAiProvider(
@@ -125,6 +127,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "text-embedding-ada-002"
 
+    @pytest.mark.requires_chromadb
     def test_jina_provider_accepts_model_key(self):
         """Test Jina provider accepts 'model' as alias for 'model_name'."""
         provider = JinaProvider(
@@ -133,6 +136,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "jina-embeddings-v3"
 
+    @pytest.mark.requires_chromadb
     def test_ollama_provider_accepts_model_key(self):
         """Test Ollama provider accepts 'model' as alias for 'model_name'."""
         provider = OllamaProvider(
@@ -140,6 +144,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "nomic-embed-text"
 
+    @pytest.mark.requires_chromadb
     def test_text2vec_provider_accepts_model_key(self):
         """Test Text2Vec provider accepts 'model' as alias for 'model_name'."""
         provider = Text2VecProvider(
@@ -147,6 +152,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "shibing624/text2vec-base-multilingual"
 
+    @pytest.mark.requires_chromadb
     def test_sentence_transformer_provider_accepts_model_key(self):
         """Test SentenceTransformer provider accepts 'model' as alias."""
         provider = SentenceTransformerProvider(
@@ -154,6 +160,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "all-mpnet-base-v2"
 
+    @pytest.mark.requires_chromadb
     def test_instructor_provider_accepts_model_key(self):
         """Test Instructor provider accepts 'model' as alias for 'model_name'."""
         provider = InstructorProvider(
@@ -161,6 +168,7 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "hkunlp/instructor-xl"
 
+    @pytest.mark.requires_chromadb
     def test_openclip_provider_accepts_model_key(self):
         """Test OpenCLIP provider accepts 'model' as alias for 'model_name'."""
         provider = OpenCLIPProvider(
@@ -172,6 +180,7 @@ class TestModelKeyBackwardCompatibility:
 class TestTaskTypeConfiguration:
     """Test that task_type configuration works correctly."""
 
+    @pytest.mark.requires_chromadb
     def test_google_provider_accepts_lowercase_task_type(self):
         """Test Google provider accepts lowercase task_type."""
         provider = GenerativeAiProvider(
@@ -180,6 +189,7 @@ class TestTaskTypeConfiguration:
         )
         assert provider.task_type == "retrieval_document"
 
+    @pytest.mark.requires_chromadb
     def test_google_provider_accepts_uppercase_task_type(self):
         """Test Google provider accepts uppercase task_type."""
         provider = GenerativeAiProvider(
@@ -188,6 +198,7 @@ class TestTaskTypeConfiguration:
         )
         assert provider.task_type == "RETRIEVAL_QUERY"
 
+    @pytest.mark.requires_chromadb
     def test_google_provider_default_task_type(self):
         """Test Google provider has correct default task_type."""
         provider = GenerativeAiProvider(
@@ -281,6 +292,7 @@ class TestDocumentationCodeSnippets:
         assert provider.model_name == "text-embedding-3-small"
         assert provider.api_type == "azure"
 
+    @pytest.mark.requires_chromadb
     def test_memory_google_generativeai_config(self):
         """Test Google Generative AI config from memory.mdx documentation."""
         provider = GenerativeAiProvider(
@@ -289,6 +301,7 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "gemini-embedding-001"
 
+    @pytest.mark.requires_chromadb
     def test_memory_cohere_config(self):
         """Test Cohere config from memory.mdx documentation."""
         provider = CohereProvider(
@@ -297,6 +310,7 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "embed-english-v3.0"
 
+    @pytest.mark.requires_chromadb
     def test_knowledge_agent_embedder_config(self):
         """Test agent embedder config from knowledge.mdx documentation."""
         provider = GenerativeAiProvider(
@@ -312,6 +326,7 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "text-embedding-3-small"
 
+    @pytest.mark.requires_chromadb
     def test_ragtool_cohere_config(self):
         """Test RagTool Cohere config from ragtool.mdx documentation."""
         provider = CohereProvider(
@@ -320,6 +335,7 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "embed-english-v3.0"
 
+    @pytest.mark.requires_chromadb
     def test_ragtool_ollama_config(self):
         """Test RagTool Ollama config from ragtool.mdx documentation."""
         provider = OllamaProvider(
@@ -341,6 +357,7 @@ class TestDocumentationCodeSnippets:
         assert provider.model_name == "text-embedding-ada-002"
         assert provider.deployment_id == "your-deployment-id"
 
+    @pytest.mark.requires_chromadb
     def test_ragtool_google_generativeai_config(self):
         """Test RagTool Google Generative AI config from ragtool.mdx."""
         provider = GenerativeAiProvider(
@@ -351,6 +368,7 @@ class TestDocumentationCodeSnippets:
         assert provider.model_name == "gemini-embedding-001"
         assert provider.task_type == "RETRIEVAL_DOCUMENT"
 
+    @pytest.mark.requires_chromadb
     def test_ragtool_jina_config(self):
         """Test RagTool Jina config from ragtool.mdx documentation."""
         provider = JinaProvider(
@@ -359,6 +377,7 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "jina-embeddings-v3"
 
+    @pytest.mark.requires_chromadb
     @pytest.mark.parametrize("device", ["cpu", "cuda", "mps", "xpu"])
     def test_ragtool_openclip_config(self, device: str):
         """Test documented OpenCLIP device strings are preserved."""
@@ -371,6 +390,7 @@ class TestDocumentationCodeSnippets:
         assert provider.checkpoint == "laion2b_s34b_b79k"
         assert provider.device == device
 
+    @pytest.mark.requires_chromadb
     @pytest.mark.parametrize("device", ["cpu", "cuda", "mps", "xpu"])
     def test_ragtool_sentence_transformer_config(self, device: str):
         """Test RagTool SentenceTransformer config from ragtool.mdx.
@@ -390,6 +410,7 @@ class TestDocumentationCodeSnippets:
 class TestLegacyConfigurationFormats:
     """Test legacy configuration formats that should still work."""
 
+    @pytest.mark.requires_chromadb
     def test_legacy_google_with_model_key(self):
         """Test legacy Google config using 'model' instead of 'model_name'."""
         provider = GenerativeAiProvider(
@@ -408,6 +429,7 @@ class TestLegacyConfigurationFormats:
         )
         assert provider.model_name == "text-embedding-ada-002"
 
+    @pytest.mark.requires_chromadb
     def test_legacy_cohere_with_model_key(self):
         """Test legacy Cohere config using 'model' instead of 'model_name'."""
         provider = CohereProvider(

@@ -2,9 +2,12 @@
 
 from unittest.mock import AsyncMock, Mock
 
+import pytest
+
+pytest.importorskip("chromadb")
+
 from crewai.rag.chromadb.client import ChromaDBClient
 from crewai.rag.types import BaseRecord
-import pytest
 
 
 @pytest.fixture
