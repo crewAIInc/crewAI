@@ -1557,3 +1557,61 @@ def test_nested_agent_execution_preserves_parent_tool_results():
         assert manager_results[0]["result"] == "Manager Report: 100"
         manager_output = process_tool_results(manager, "Manager final summary")
         assert manager_output == "Manager Report: 100"
+
+
+def test_delegated_execute_task_keeps_manager_result_as_answer():
+    """A coworker's execute_task, run mid-task by the manager, leaves the manager's answer alone."""
+
+    class CoworkerAmountTool(BaseTool):
+        name: str = "coworker_amount_tool"
+        description: str = "Reports the coworker's amount."
+        result_as_answer: bool = True
+
+        def _run(self) -> str:
+            return "amount: 200"
+
+    manager = _amount_agent()
+    coworker = Agent(
+        role="Auditor",
+        goal="Report audited amounts",
+        backstory="You audit amounts.",
+        tools=[CoworkerAmountTool()],
+    )
+    manager_task = Task(description="Report", expected_output="Amount", agent=manager)
+    coworker_task = Task(description="Audit", expected_output="Amount", agent=coworker)
+    coworker_outputs = []
+
+    def fake_llm_loop(agent: Agent, task_prompt: str, task: Task) -> str:
+        if agent is coworker:
+            execute_tool_and_check_finality(
+                agent_action=AgentAction(
+                    thought="",
+                    tool="coworker_amount_tool",
+                    tool_input="{}",
+                    text="Action: coworker_amount_tool\nAction Input: {}",
+                ),
+                tools=[CoworkerAmountTool().to_structured_tool()],
+                tools_handler=ToolsHandler(cache=CacheHandler()),
+                agent=coworker,
+            )
+            return "coworker raw answer"
+
+        execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=manager,
+        )
+        # Delegation runs the coworker's whole execute_task inside the manager's.
+        coworker_outputs.append(coworker.execute_task(coworker_task))
+        return "manager raw answer"
+
+    with patch.object(
+        Agent, "_execute_without_timeout", autospec=True, side_effect=fake_llm_loop
+    ):
+        # Task execution opens a collector around the agent, as Task._execute_core does.
+        with tool_results_collector():
+            manager_output = manager.execute_task(manager_task)
+
+    assert coworker_outputs == ["amount: 200"]
+    assert manager_output == "amount: 100"
