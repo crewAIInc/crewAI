@@ -6,11 +6,11 @@ from typing import Literal, cast
 import warnings
 
 from chromadb.config import Settings
+from crewai_core.paths import db_storage_path
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.chromadb.constants import (
     DEFAULT_DATABASE,
-    DEFAULT_STORAGE_PATH,
     DEFAULT_TENANT,
 )
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
@@ -35,10 +35,11 @@ def _default_settings() -> Settings:
     """Create default ChromaDB settings.
 
     Returns:
-        Settings with persistent storage and reset enabled.
+        Settings with persistent storage and reset enabled. The path is
+        resolved when the config is created, so it follows ``CREWAI_STORAGE_DIR``.
     """
     return Settings(
-        persist_directory=DEFAULT_STORAGE_PATH,
+        persist_directory=db_storage_path(),
         allow_reset=True,
         is_persistent=True,
         anonymized_telemetry=False,
