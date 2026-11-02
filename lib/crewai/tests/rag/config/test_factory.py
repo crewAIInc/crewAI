@@ -11,18 +11,16 @@ def test_create_client_chromadb():
     mock_config = Mock()
     mock_config.provider = "chromadb"
 
-    with patch("crewai.rag.factory.require") as mock_require:
+    with patch("crewai.rag.factory.importlib.import_module") as mock_import:
         mock_module = Mock()
         mock_client = Mock()
         mock_module.create_client.return_value = mock_client
-        mock_require.return_value = mock_module
+        mock_import.return_value = mock_module
 
         result = create_client(mock_config)
 
         assert result == mock_client
-        mock_require.assert_called_once_with(
-            "crewai.rag.chromadb.factory", purpose="The 'chromadb' provider"
-        )
+        mock_import.assert_called_once_with("crewai.rag.chromadb.factory")
         mock_module.create_client.assert_called_once_with(mock_config)
 
 

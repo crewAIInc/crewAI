@@ -28,13 +28,7 @@ def _build_rag_config(provider: str, embedding_function: Any) -> RagConfigType:
         ValueError: If ``provider`` is not supported.
     """
     if provider == "chromadb":
-        try:
-            from crewai.rag.chromadb.config import ChromaDBConfig
-        except ImportError as e:
-            raise ImportError(
-                "The 'chromadb' provider requires chromadb. "
-                "Install it with: pip install crewai[chromadb]"
-            ) from e
+        from crewai.rag.chromadb.config import ChromaDBConfig
 
         warnings.filterwarnings(
             "ignore",
