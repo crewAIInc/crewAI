@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import traceback
 from typing import Any
 from unittest.mock import patch
 
@@ -27,6 +28,7 @@ from crewai.llms.providers.azure.completion import AzureCompletion
 from crewai.llms.providers.gemini.completion import GeminiCompletion
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.llms.providers.openai_compatible.completion import (
+    OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
 )
 from crewai_cli.deploy.validate import DeployValidator
@@ -350,12 +352,32 @@ def test_task_failure_reports_missing_key_as_its_type() -> None:
     assert [event.error_type for event in failed] == [MissingAPIKeyError]
 
 
+# Every OpenAI-compatible provider that needs a key, with a model id it routes natively.
+COMPATIBLE_MODELS = {
+    "openrouter": "openrouter/anthropic/claude-3-opus",
+    "deepseek": "deepseek/deepseek-chat",
+    "cerebras": "cerebras/llama3.1-8b",
+    "dashscope": "dashscope/qwen-turbo",
+    "deepinfra": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct",
+}
+
+
+def test_every_keyed_compatible_provider_is_covered() -> None:
+    required = {
+        name
+        for name, config in OPENAI_COMPATIBLE_PROVIDERS.items()
+        if config.api_key_required
+    }
+    assert required == set(COMPATIBLE_MODELS)
+
+
 class TestOpenAICompatible:
     """These providers check the key while the model is validated, not on first call.
 
-    Pydantic wraps any ``ValueError`` from a validator in a ``ValidationError``, and
-    ``LLM(...)`` wraps construction errors in an ``ImportError``, so the
-    ``MissingAPIKeyError`` arrives inside those, with its message intact.
+    Pydantic wraps any ``ValueError`` from a validator in a ``ValidationError``, so
+    direct construction raises that, with the ``MissingAPIKeyError`` as its cause.
+    ``LLM(...)`` takes it back out and raises it as itself, rather than inside the
+    ``ImportError`` it wraps every other construction failure in.
     """
 
     MESSAGE = (
@@ -373,10 +395,28 @@ class TestOpenAICompatible:
         assert isinstance(cause, MissingAPIKeyError)
         assert cause.env_var == "DEEPSEEK_API_KEY"
 
-    @pytest.mark.parametrize("env", [{}, {"DEEPSEEK_API_KEY": PLACEHOLDER}])
-    def test_llm_construction(self, env: dict[str, str]) -> None:
+    @pytest.mark.parametrize("provider", sorted(COMPATIBLE_MODELS))
+    @pytest.mark.parametrize("key", [None, PLACEHOLDER], ids=["unset", "placeholder"])
+    def test_llm_construction(self, provider: str, key: str | None) -> None:
+        env_var = OPENAI_COMPATIBLE_PROVIDERS[provider].api_key_env
+        model = COMPATIBLE_MODELS[provider].split("/", 1)[1]
+        env = {} if key is None else {env_var: key}
         with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ImportError, match=self.MESSAGE):
+            with pytest.raises(MissingAPIKeyError) as exc_info:
+                LLM(model=COMPATIBLE_MODELS[provider])
+
+        assert str(exc_info.value) == (
+            f"{env_var} is required for model '{model}' but is not set or is still "
+            f"the placeholder 'YOUR_API_KEY'. Add {env_var}=<your-api-key> to the "
+            f".env file in your project root, then run `crewai run` again."
+        )
+        assert exc_info.value.env_var == env_var
+        assert exc_info.value.model == model
+        assert exc_info.value.__suppress_context__
+
+    def test_llm_construction_is_still_a_value_error(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match=self.MESSAGE):
                 LLM(model="deepseek/deepseek-chat")
 
     def test_explicit_placeholder(self) -> None:
@@ -385,12 +425,21 @@ class TestOpenAICompatible:
                 OpenAICompatibleCompletion(
                     model="deepseek-chat", provider="deepseek", api_key=PLACEHOLDER
                 )
+            with pytest.raises(MissingAPIKeyError, match=self.MESSAGE):
+                LLM(model="deepseek/deepseek-chat", api_key=PLACEHOLDER)
 
-    def test_valid_key_is_used_unchanged(self) -> None:
-        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "sk-real-key"}, clear=True):
-            llm = LLM(model="deepseek/deepseek-chat")
+    @pytest.mark.parametrize("provider", sorted(COMPATIBLE_MODELS))
+    def test_valid_key_is_used_unchanged(self, provider: str) -> None:
+        env_var = OPENAI_COMPATIBLE_PROVIDERS[provider].api_key_env
+        with patch.dict(os.environ, {env_var: "sk-env-key"}, clear=True):
+            from_env = LLM(model=COMPATIBLE_MODELS[provider])
+        with patch.dict(os.environ, {}, clear=True):
+            explicit = LLM(model=COMPATIBLE_MODELS[provider], api_key="sk-explicit")
 
-        assert llm.api_key == "sk-real-key"
+        assert isinstance(from_env, OpenAICompatibleCompletion)
+        assert from_env.api_key == "sk-env-key"
+        assert isinstance(explicit, OpenAICompatibleCompletion)
+        assert explicit.api_key == "sk-explicit"
 
     def test_keyless_provider_ignores_placeholder(self) -> None:
         """Ollama needs no key, so the placeholder falls back to its default."""
@@ -399,14 +448,58 @@ class TestOpenAICompatible:
 
         assert llm.api_key == "ollama"
 
+    def test_other_construction_errors_are_still_import_errors(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(
+                ImportError, match="Error importing native provider: (?s:.*)temperature"
+            ) as exc_info:
+                LLM(model="deepseek/deepseek-chat", api_key="sk-key", temperature="hot")
+
+        assert isinstance(exc_info.value.__cause__, ValidationError)
+
+    def test_agent_built_from_a_model_string(self) -> None:
+        """``Agent`` builds the LLM in its own validator, so pydantic wraps it again.
+
+        Pinned so a change here is a decision: the error is a ``ValueError`` that
+        names the key, no longer an ``ImportError``.
+        """
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValidationError, match=self.MESSAGE) as exc_info:
+                Agent(role="r", goal="g", backstory="b", llm="deepseek/deepseek-chat")
+
+        assert isinstance(exc_info.value.errors()[0]["ctx"]["error"], MissingAPIKeyError)
+
     def test_deploy_validator_reads_the_missing_variable(self, tmp_path: Path) -> None:
         """``crewai deploy`` turns this import-time failure into a targeted warning."""
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ImportError) as exc_info:
+            with pytest.raises(MissingAPIKeyError) as exc_info:
                 LLM(model="deepseek/deepseek-chat")
 
         validator = DeployValidator(project_root=tmp_path)
-        validator._classify_import_error("ImportError", str(exc_info.value), tb="")
+        validator._classify_import_error(
+            type(exc_info.value).__name__,
+            str(exc_info.value),
+            tb="".join(traceback.format_exception(exc_info.value)),
+        )
+
+        assert [r.code for r in validator.results] == ["llm_init_missing_key"]
+        assert "DEEPSEEK_API_KEY" in validator.results[0].title
+
+    def test_deploy_validator_reads_the_missing_variable_from_an_agent(
+        self, tmp_path: Path
+    ) -> None:
+        """An ``Agent`` built from a model string wraps the key error in its own
+        ``ValidationError``; ``crewai deploy`` must still name the variable."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValidationError) as exc_info:
+                Agent(role="r", goal="g", backstory="b", llm="deepseek/deepseek-chat")
+
+        validator = DeployValidator(project_root=tmp_path)
+        validator._classify_import_error(
+            type(exc_info.value).__name__,
+            str(exc_info.value),
+            tb="".join(traceback.format_exception(exc_info.value)),
+        )
 
         assert [r.code for r in validator.results] == ["llm_init_missing_key"]
         assert "DEEPSEEK_API_KEY" in validator.results[0].title

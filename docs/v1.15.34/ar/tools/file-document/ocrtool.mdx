@@ -1,0 +1,88 @@
+---
+title: أداة OCR
+description: تستخرج `OCRTool` النص من الصور المحلية أو عناوين URL للصور باستخدام نموذج LLM مزود بالرؤية.
+icon: image
+mode: "wide"
+---
+
+# `OCRTool`
+
+## الوصف
+
+استخراج النص من الصور (مسار محلي أو عنوان URL). تستخدم نموذج LLM مزوداً بالرؤية عبر واجهة LLM الخاصة بـ CrewAI.
+
+## التثبيت
+
+لا حاجة لتثبيت إضافي بخلاف `crewai-tools`. تأكد من أن النموذج المحدد يدعم الرؤية.
+
+## المعاملات
+
+### معاملات التشغيل
+
+- `image_path_url` (str, مطلوب): مسار صورة محلية أو عنوان URL بروتوكول HTTP(S).
+
+## أمثلة
+
+### الاستخدام المباشر
+
+```python Code
+from crewai_tools import OCRTool
+
+print(OCRTool().run(image_path_url="/tmp/receipt.png"))
+```
+
+### مع وكيل
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import OCRTool
+
+ocr = OCRTool()
+
+agent = Agent(
+    role="OCR",
+    goal="Extract text",
+    tools=[ocr],
+)
+
+task = Task(
+    description="Extract text from https://example.com/invoice.jpg",
+    expected_output="All detected text in plain text",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## ملاحظات
+
+- تأكد من أن النموذج المحدد يدعم مدخلات الصور.
+- للصور الكبيرة، فكر في تصغير الحجم لتقليل استهلاك الرموز.
+ - يمكنك تمرير نسخة LLM محددة للأداة (مثل `LLM(model="gpt-4o")`) إذا لزم الأمر، وفقاً لتوجيهات README.
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import OCRTool
+
+tool = OCRTool()
+
+agent = Agent(
+    role="OCR Specialist",
+    goal="Extract text from images",
+    backstory="Vision‑enabled analyst",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Extract text from https://example.com/receipt.png",
+    expected_output="All detected text in plain text",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
