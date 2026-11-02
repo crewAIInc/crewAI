@@ -68,7 +68,7 @@ tool = TXTSearchTool(
 
         # Required: vector database config
         "vectordb": {
-            "provider": "chromadb",  # or "qdrant"
+            "provider": "chromadb",  # requires crewai[chromadb]; default is "qdrant"
             "config": {
                 # Chroma settings (optional persistence)
                 # "settings": Settings(

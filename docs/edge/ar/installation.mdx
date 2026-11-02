@@ -170,6 +170,9 @@ python3 --version
       ```shell
       uv add <package-name>
       ```
+      <Note>
+        ChromaDB اعتمادية اختيارية. ثبّته فقط إذا كنت تستخدم مخزن المتجهات ChromaDB أو مزود تضمين يعتمد عليه (Bedrock وCohere وGoogle Generative AI وHugging Face وInstructor وJina وOllama وONNX وOpenCLIP وRoboflow وSentence Transformers وText2Vec): `uv add "crewai[chromadb]"`.
+      </Note>
     - لتشغيل الـ Crew، نفّذ الأمر التالي في جذر مشروعك:
       ```bash
       crewai run

@@ -27,24 +27,25 @@ mode: "wide"
 
 ### إعداد عميل المتجه (RAG)
 
-يوفر CrewAI تجريدًا لعميل RAG محايد بالنسبة للمزود لمتاجر المتجهات. المزود الافتراضي هو ChromaDB، ويتم دعم Qdrant أيضًا. يمكنك التبديل بين المزودين باستخدام أدوات الإعداد.
+يوفر CrewAI تجريدًا لعميل RAG محايد بالنسبة للمزود لمتاجر المتجهات. المزود الافتراضي هو Qdrant، ويُخزَّن محليًا على القرص دون الحاجة إلى تشغيل خادم. يتم دعم ChromaDB كإضافة اختيارية (`pip install "crewai[chromadb]"`). يمكنك التبديل بين المزودين باستخدام أدوات الإعداد.
 
 المدعوم حاليًا:
-- ChromaDB (افتراضي)
-- Qdrant
+- Qdrant (افتراضي)
+- ChromaDB (يتطلب `crewai[chromadb]`)
 
 ```python Code
 from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
 
-# ChromaDB (default)
-from crewai.rag.chromadb.config import ChromaDBConfig
-set_rag_config(ChromaDBConfig())
-chromadb_client = get_rag_client()
-
-# Qdrant
+# Qdrant (default). QdrantConfig() embeds locally with fastembed
+# (pip install "crewai[qdrant]"); pass embedding_function to use another embedder.
 from crewai.rag.qdrant.config import QdrantConfig
 set_rag_config(QdrantConfig())
 qdrant_client = get_rag_client()
+
+# ChromaDB (requires: pip install "crewai[chromadb]")
+from crewai.rag.chromadb.config import ChromaDBConfig
+set_rag_config(ChromaDBConfig())
+chromadb_client = get_rag_client()
 
 # Example operations (same API for any provider)
 client = qdrant_client  # or chromadb_client
@@ -58,7 +59,7 @@ results = client.search(collection_name="docs", query="collaborative agents", li
 clear_rag_config()  # optional reset
 ```
 
-عميل RAG هذا منفصل عن التخزين المدمج في المعرفة. استخدمه عندما تحتاج إلى تحكم مباشر في متجر المتجهات أو خطوط أنابيب استرجاع مخصصة.
+يستخدم التخزين المدمج في المعرفة المزود المحدد هنا: Qdrant ما لم تضبط إعداد ChromaDB. استخدم العميل مباشرة عندما تحتاج إلى تحكم في متجر المتجهات أو خطوط أنابيب استرجاع مخصصة.
 
 ### مثال المعرفة النصية الأساسية
 
@@ -281,11 +282,11 @@ agent_collection_name = agent.role  # e.g., "Technical Specialist"
 # Crew knowledge storage
 crew_collection_name = "crew"
 
-# Both stored in same ChromaDB instance but different collections
-# Path: ~/.local/share/CrewAI/{project}/knowledge/
-#   ├── crew/                    # Crew knowledge collection
-#   ├── Technical Specialist/    # Agent knowledge collection
-#   └── Another Agent Role/      # Another agent's collection
+# Both stored in the same Qdrant storage but different collections
+# Path: ~/.local/share/CrewAI/{project}/qdrant/collection/
+#   ├── knowledge_crew/                    # Crew knowledge collection
+#   ├── knowledge_Technical Specialist/    # Agent knowledge collection
+#   └── knowledge_Another Agent Role/      # Another agent's collection
 ```
 
 ### أمثلة عملية كاملة
@@ -441,8 +442,18 @@ agent = Agent(
 ## شفافية تخزين المعرفة
 
 <Info>
-**فهم تخزين المعرفة**: يخزّن CrewAI مصادر المعرفة تلقائيًا في مجلدات خاصة بالمنصة باستخدام ChromaDB للتخزين المتجهي. فهم هذه المواقع والإعدادات الافتراضية يساعد في النشر في بيئة الإنتاج وتصحيح الأخطاء وإدارة التخزين.
+**فهم تخزين المعرفة**: يخزّن CrewAI مصادر المعرفة تلقائيًا في مجلدات خاصة بالمنصة باستخدام قاعدة بيانات Qdrant محلية للتخزين المتجهي. فهم هذه المواقع والإعدادات الافتراضية يساعد في النشر في بيئة الإنتاج وتصحيح الأخطاء وإدارة التخزين.
 </Info>
+
+<Warning>
+**تستخدم المعرفة الآن Qdrant افتراضيًا بدلاً من ChromaDB.** لا تتم قراءة المعرفة التي تمت فهرستها باستخدام ChromaDB في إصدار سابق تلقائيًا، ولا يتم ترحيل أي شيء. شغّل طاقمك مرة أخرى لفهرسة مصادر المعرفة في Qdrant (تتم إعادة تضمينها، مما يستدعي أداة التضمين لديك مرة أخرى)، أو عد إلى ChromaDB باستخدام `pip install "crewai[chromadb]"` و`set_rag_config(ChromaDBConfig())`.
+</Warning>
+
+<Note>
+لتخزين Qdrant المحلي قيدان يجب أخذهما في الاعتبار:
+- **عملية واحدة لكل مجلد.** تفشل عملية ثانية تفتح مجلد التخزين نفسه. يختلف هذا عن ChromaDB الذي كان يسمح لعدة عمليات بمشاركة مجلد واحد.
+- **غير آمن للكتابة المتزامنة من عدة خيوط.** عمليات البحث من عدة خيوط آمنة، لكن اكتب المعرفة أثناء إعداد الطاقم بدلاً من كتابتها من مهام متوازية.
+</Note>
 
 ### أين يخزّن CrewAI ملفات المعرفة
 
@@ -453,28 +464,28 @@ agent = Agent(
 **macOS:**
 ```
 ~/Library/Application Support/CrewAI/{project_name}/
-└── knowledge/                    # Knowledge ChromaDB files
-    ├── chroma.sqlite3           # ChromaDB metadata
-    ├── {collection_id}/         # Vector embeddings
-    └── knowledge_{collection}/  # Named collections
+└── qdrant/                       # Local Qdrant database (Knowledge)
+    ├── meta.json                # Qdrant metadata
+    └── collection/
+        └── knowledge_{collection}/  # One folder per collection (storage.sqlite)
 ```
 
 **Linux:**
 ```
 ~/.local/share/CrewAI/{project_name}/
-└── knowledge/
-    ├── chroma.sqlite3
-    ├── {collection_id}/
-    └── knowledge_{collection}/
+└── qdrant/
+    ├── meta.json
+    └── collection/
+        └── knowledge_{collection}/
 ```
 
 **Windows:**
 ```
 C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
-└── knowledge\
-    ├── chroma.sqlite3
-    ├── {collection_id}\
-    └── knowledge_{collection}\
+└── qdrant\
+    ├── meta.json
+    └── collection\
+        └── knowledge_{collection}\
 ```
 
 ### معرفة موقع تخزين المعرفة
@@ -486,14 +497,15 @@ from crewai.utilities.paths import db_storage_path
 import os
 
 # Get the knowledge storage path
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
+knowledge_path = os.path.join(db_storage_path(), "qdrant")
 print(f"Knowledge storage location: {knowledge_path}")
 
 # List knowledge collections and files
 if os.path.exists(knowledge_path):
     print("\nKnowledge storage contents:")
-    for item in os.listdir(knowledge_path):
-        item_path = os.path.join(knowledge_path, item)
+    collections_path = os.path.join(knowledge_path, "collection")
+    for item in os.listdir(collections_path):
+        item_path = os.path.join(collections_path, item)
         if os.path.isdir(item_path):
             print(f"📁 Collection: {item}/")
             # Show collection contents
@@ -918,7 +930,7 @@ from crewai.utilities.paths import db_storage_path
 
 # Check storage structure
 storage_path = db_storage_path()
-knowledge_path = os.path.join(storage_path, "knowledge")
+knowledge_path = os.path.join(storage_path, "qdrant", "collection")
 
 if os.path.exists(knowledge_path):
     print("Knowledge collections found:")
@@ -947,25 +959,26 @@ if hasattr(agent, 'knowledge') and agent.knowledge:
 
 #### فحص مجموعات المعرفة
 ```python
-import chromadb
+from qdrant_client import QdrantClient
 from crewai.utilities.paths import db_storage_path
 import os
 
-# Connect to CrewAI's knowledge ChromaDB
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
+# Connect to CrewAI's local knowledge database.
+# Local Qdrant allows one process per folder, so stop your crew first.
+knowledge_path = os.path.join(db_storage_path(), "qdrant")
 
 if os.path.exists(knowledge_path):
-    client = chromadb.PersistentClient(path=knowledge_path)
-    collections = client.list_collections()
+    client = QdrantClient(path=knowledge_path)
 
     print("Knowledge Collections:")
-    for collection in collections:
-        print(f"  - {collection.name}: {collection.count()} documents")
+    for collection in client.get_collections().collections:
+        count = client.count(collection.name).count
+        print(f"  - {collection.name}: {count} documents")
 
         # Sample a few documents to verify content
-        if collection.count() > 0:
-            sample = collection.peek(limit=2)
-            print(f"    Sample content: {sample['documents'][0][:100]}...")
+        if count > 0:
+            points, _ = client.scroll(collection.name, limit=2, with_payload=True)
+            print(f"    Sample content: {points[0].payload['content'][:100]}...")
 else:
     print("No knowledge storage found")
 ```
@@ -1025,7 +1038,7 @@ crew = Crew(
 )
 ```
 
-**أخطاء "رفض إذن ChromaDB":**
+**أخطاء "رفض الإذن" في تخزين المعرفة:**
 ```bash
 # Fix storage permissions
 chmod -R 755 ~/.local/share/CrewAI/
@@ -1039,7 +1052,7 @@ from crewai.utilities.paths import db_storage_path
 
 print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
 print("Computed storage path:", db_storage_path())
-print("Knowledge path:", os.path.join(db_storage_path(), "knowledge"))
+print("Knowledge path:", os.path.join(db_storage_path(), "qdrant"))
 ```
 
 ### أوامر إعادة تعيين المعرفة
