@@ -97,8 +97,13 @@ class ContentTypeNegotiationError(Exception):
 
 
 def _normalize_mime_type(mime_type: str) -> str:
-    """Normalize MIME type for comparison (lowercase, strip whitespace)."""
-    return mime_type.lower().strip()
+    """Normalize MIME type for comparison (lowercase, no parameters).
+
+    Parameters such as ``charset=utf-8`` are not part of the media type
+    (RFC 2045 section 5.1), so ``text/plain; charset=utf-8`` matches a
+    ``text/plain`` mode.
+    """
+    return mime_type.split(";", 1)[0].strip().lower()
 
 
 def _mime_types_compatible(client_type: str, server_type: str) -> bool:
