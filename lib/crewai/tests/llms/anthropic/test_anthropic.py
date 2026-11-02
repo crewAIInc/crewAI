@@ -1390,8 +1390,23 @@ def test_tool_search_false_disables():
 
 def test_tool_search_invalid_dict_raises():
     """Invalid tool_search dicts fail loudly instead of silently disabling tool search."""
-    with pytest.raises(ImportError, match="tool_search"):
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError) as excinfo:
+        AnthropicCompletion(model="claude-sonnet-4-5", tool_search={"type": "bogus"})
+
+    assert excinfo.value.errors()[0]["loc"] == ("tool_search", "type")
+
+
+def test_tool_search_invalid_dict_raises_via_llm_factory():
+    """Via the LLM factory the same failure surfaces as ImportError caused by the ValidationError."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ImportError) as excinfo:
         LLM(model="anthropic/claude-sonnet-4-5", tool_search={"type": "bogus"})
+
+    assert isinstance(excinfo.value.__cause__, ValidationError)
 
 
 def test_tool_search_disabled_by_default():
