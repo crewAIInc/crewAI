@@ -34,6 +34,16 @@ def set_rag_config(config: RagConfigType) -> None:
     _rag_context.set(context)
 
 
+def get_active_rag_config() -> RagConfigType | None:
+    """Get the active RAG configuration without building a default one.
+
+    Returns:
+        The configuration set with :func:`set_rag_config`, or None if unset.
+    """
+    context = _rag_context.get()
+    return context.config if context else None
+
+
 def get_rag_provider() -> str:
     """Get the provider name of the active RAG configuration.
 
