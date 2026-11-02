@@ -169,6 +169,24 @@ class TestResolveCheckpoint:
             _write_json_checkpoint(d)
             assert _resolve_checkpoint(d, "nonexistent") is None
 
+    def test_json_location_with_glob_characters(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            location = os.path.join(d, "runs[1]")
+            path = _write_json_checkpoint(
+                location, name="20260101T000000_aaaa1111_p-none.json"
+            )
+            # As a glob pattern, "runs[1]" matches this directory instead
+            _write_json_checkpoint(
+                os.path.join(d, "runs1"), name="20260102T000000_bbbb2222_p-none.json"
+            )
+            assert [item["path"] for item in _list_json(location)] == [path]
+            meta = _resolve_checkpoint(location, None)
+            assert meta is not None
+            assert meta["path"] == path
+            meta = _resolve_checkpoint(location, "aaaa1111")
+            assert meta is not None
+            assert meta["path"] == path
+
     def test_sqlite_latest(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             db_path = os.path.join(d, "test.db")
@@ -354,6 +372,28 @@ class TestPruneJson:
             os.utime(path, (0, 0))
             _prune_json(d, keep=None, older_than=timedelta(days=1))
             assert not os.path.exists(os.path.join(d, "feature"))
+
+    def test_location_with_glob_characters(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            location = os.path.join(d, "runs[1]")
+            path = _write_json_checkpoint(
+                location, name="20260101T000000_aaaa1111_p-none.json"
+            )
+            # As a glob pattern, "runs[1]" matches this directory instead
+            others = [
+                _write_json_checkpoint(
+                    os.path.join(d, "runs1"),
+                    name=f"2026010{i + 2}T000000_bbbb{i}222_p-none.json",
+                )
+                for i in range(2)
+            ]
+            prune_checkpoints(location, keep=0, older_than=None, dry_run=True)
+            assert "Would prune from 1 checkpoint(s)" in capsys.readouterr().out
+            assert _prune_json(location, keep=0, older_than=None) == 1
+            assert not os.path.exists(path)
+            assert all(os.path.exists(other) for other in others)
 
 
 class TestPruneSqlite:

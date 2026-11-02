@@ -84,7 +84,7 @@ Delegue tarefas complexas para Crews. Um Crew deve ser focado em um objetivo esp
 Aproveite as primitivas de controle do CrewAI para adicionar robustez e controle aos seus Crews.
 
 ### 1. Task Guardrails
-Use [Task Guardrails](/pt-BR/concepts/tasks#task-guardrails) para validar as saídas das tarefas antes que sejam aceitas. Isso garante que seus agentes produzam resultados de alta qualidade.
+Use [Task Guardrails](/pt-BR/concepts/tasks#guardrails-em-tarefas) para validar as saídas das tarefas antes que sejam aceitas. Isso garante que seus agentes produzam resultados de alta qualidade.
 
 ```python
 def validate_content(result: TaskOutput) -> Tuple[bool, Any]:

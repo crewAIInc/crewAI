@@ -1,7 +1,9 @@
 import contextvars
 from datetime import datetime, timezone
+import json
 import time
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock
 
 from crewai.events.event_bus import crewai_event_bus
@@ -34,7 +36,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai_cli import crew_run_tui, run_crew
-from crewai_cli.command import AuthenticationRequiredError
+from crewai_cli.authentication.token import AuthError
+from crewai_cli.command import AuthenticationRequiredError, PlusAPIMixin
 from crewai_cli.crew_run_tui import (
     _LOG_ARGS_TEXT_LIMIT,
     _LOG_RESULT_TEXT_LIMIT,
@@ -46,6 +49,7 @@ from crewai_cli.crew_run_tui import (
 import httpx
 import pytest
 from rich.text import Text
+from textual.pilot import Pilot
 
 
 @pytest.fixture(autouse=True)
@@ -312,10 +316,11 @@ def test_an_evaluation_that_stopped_can_be_tried_again(monkeypatch) -> None:
     assert started == ["run-this-app"]
 
 
-def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch) -> None:
+def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch, tmp_path) -> None:
     """A credential that exists but cannot be read stops the evaluation, and
     the sentence has to reach the screen: printing it would land under the
     layout, and exiting would take it away."""
+    monkeypatch.chdir(tmp_path)  # a stopped evaluation is noted in .crewai/
     from crewai_cli.experimental import eval_crew
 
     app = CrewRunApp()
@@ -336,9 +341,10 @@ def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch) -> None:
     assert "crewai login" in app._evaluation["error"]
 
 
-def test_an_exit_with_no_reason_says_that_rather_than_its_code(monkeypatch) -> None:
+def test_an_exit_with_no_reason_says_that_rather_than_its_code(monkeypatch, tmp_path) -> None:
     """Nothing on this path should exit any more, but an exit carries a code
     and `1` on screen is not an answer."""
+    monkeypatch.chdir(tmp_path)  # a stopped evaluation is noted in .crewai/
     app = CrewRunApp()
     app._evaluation = {"state": "starting"}
     monkeypatch.setattr(
@@ -396,23 +402,172 @@ def test_an_evaluation_that_stopped_says_so_where_it_was_running() -> None:
 
 
 @pytest.mark.parametrize("why", ["not traced at all", "another run replaced the record"])
-def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, why) -> None:
+def test_evaluate_on_a_run_that_was_not_traced_runs_it_again_traced(monkeypatch, why) -> None:
     """A run with no session of its own, or whose trace never reached AMP, has
     nothing to grade — and a record naming a DIFFERENT run is not evidence that
-    this one was traced."""
+    this one was traced. Tracing is on for the project, so nothing is asked:
+    the app closes and the run happens again, traced, and is evaluated
+    (`run_crew._chain_traced_rerun`)."""
+    # tracing not turned off (the suite's `.env.test` turns it off), and on
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
+    # A token the project's `.env` brought (a conversational flow loads it with
+    # `load_dotenv`) does not decide anything: only the AMP the run traces to.
+    monkeypatch.setenv("CREWAI_USER_PAT", "the-projects-own")
+    monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
     app = CrewRunApp()
     app._status = "completed"
+    app._crew_result = object()
     app._telemetry = Mock()
     app._execution_uuid = None if why == "not traced at all" else "run-this-app"
-    notices: list[str] = []
-    app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
-    app.exit = lambda result=None: pytest.fail("the TUI must not leave for nothing")  # type: ignore[method-assign]
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    app.notify = lambda *a, **k: pytest.fail("no notice: it just runs again")  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
 
     app.action_evaluate_crew()
 
+    assert app._want_traced_rerun is True
+    assert exits == [app._crew_result]
     assert app._evaluation is None
-    assert "not traced" in notices[0]
+
+
+def test_a_run_crewai_eval_started_is_traced_with_nobody_at_the_screen(
+    monkeypatch, tmp_path
+) -> None:
+    """The run `crewai eval` started to grade: running the command was the yes,
+    whatever the terminal, the suite or the project's `.env` say."""
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    app = CrewRunApp()
+
+    assert app._tracing_was_asked_for() is False
+    with crew_run_tui.evaluating_after_run():
+        assert app._tracing_was_asked_for() is True
+    assert app._tracing_was_asked_for() is False
+
+
+def test_the_token_this_app_sets_is_the_one_crewais_tracing_reads(
+    monkeypatch, tmp_path
+) -> None:
+    """The run app keeps its own copy of the handshake (it also runs against a
+    project's older crewai-core), so the two are pinned to one variable and one
+    folder: a run `crewai eval` started is approved for upload in the child."""
+    from crewai_core import eval_handshake
+
+    monkeypatch.undo()  # the real folders, not the per-test ones
+    assert crew_run_tui._AWAITING_EVAL_ENV == eval_handshake.AWAITING_ENV
+    assert crew_run_tui._awaiting_dir() == eval_handshake.awaiting_dir()
+    # both pinned to the account's home: a `.env` moving HOME moves neither
+    monkeypatch.setenv("HOME", str(tmp_path / "planted-home"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "planted-data"))
+    assert crew_run_tui._awaiting_dir() == eval_handshake.awaiting_dir()
+    assert not str(eval_handshake.awaiting_dir()).startswith(str(tmp_path))
+
+    folder = tmp_path / "eval-awaiting"
+    monkeypatch.setattr(crew_run_tui, "_awaiting_dir", lambda: folder)
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: folder)
+    assert eval_handshake.run_awaited_by_evaluation() is False
+    with crew_run_tui.evaluating_after_run(
+        trusted_amp_origins=["https://app.crewai.com"], tracing_turned_on=True
+    ):
+        assert eval_handshake.awaited_evaluation() == {
+            "trusted_amp_origins": ["https://app.crewai.com"],
+            "tracing_turned_on": True,
+        }
+    assert eval_handshake.run_awaited_by_evaluation() is False
+
+
+@pytest.mark.parametrize(
+    "opened_for", ["an evaluation that turned tracing on", "an evaluation", "nothing"]
+)
+def test_the_app_says_where_the_trace_goes_only_when_its_evaluation_turned_tracing_on(
+    monkeypatch, opened_for
+) -> None:
+    """Said once, plainly, the time the yes is inferred and tracing turned on
+    for the project; after that the project traces and nothing more is said."""
+    notices: list[tuple[str, dict[str, object]]] = []
+
+    def mount() -> None:
+        app = CrewRunApp()
+        app._subscribe = lambda: None  # type: ignore[method-assign]
+        app.set_interval = lambda *a, **k: None  # type: ignore[method-assign]
+        app.notify = lambda message, **kwargs: notices.append((message, kwargs))  # type: ignore[method-assign]
+        app.on_mount()
+
+    if opened_for == "nothing":
+        mount()
+    else:
+        with crew_run_tui.evaluating_after_run(
+            tracing_turned_on=opened_for == "an evaluation that turned tracing on"
+        ):
+            mount()
+
+    if opened_for == "an evaluation that turned tracing on":
+        assert notices == [
+            (
+                "Tracing is now on for this project, so this run can be evaluated: "
+                "its trace is sent to CrewAI AMP, which grades it.",
+                {"title": "Evaluate", "timeout": 10},
+            )
+        ]
+    else:
+        assert notices == []
+
+
+def test_a_child_app_reads_the_note_off_the_token_file(monkeypatch) -> None:
+    """In a child process there is no holder: the file the command wrote says it."""
+    notices: list[str] = []
+    with crew_run_tui.evaluating_after_run(tracing_turned_on=True):
+        token = crew_run_tui._AUTO_EVAL.set(None)  # as a child process sees it
+        try:
+            app = CrewRunApp()
+            app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
+            app._say_this_run_will_be_evaluated()
+        finally:
+            crew_run_tui._AUTO_EVAL.reset(token)
+
+    assert notices == [crew_run_tui.EVALUATION_NOTICE]
+
+
+def test_a_crew_that_sets_tracing_false_is_never_told_its_trace_is_sent() -> None:
+    notices: list[str] = []
+    with crew_run_tui.evaluating_after_run(tracing_turned_on=True):
+        app = CrewRunApp()
+        app._crew = SimpleNamespace(tracing=False)
+        app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
+        app._say_this_run_will_be_evaluated()
+
+    assert notices == []
+
+
+@pytest.mark.parametrize("what", ["crew", "flow"])
+def test_evaluate_on_a_run_that_sets_tracing_false_says_why_and_runs_nothing(
+    monkeypatch, what
+) -> None:
+    """Running it again could not make a trace: nothing to pay for."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    if what == "crew":
+        app._crew = SimpleNamespace(tracing=False)
+    else:
+        app._flow = SimpleNamespace(tracing=False)
+    app.exit = lambda result=None: pytest.fail("nothing to run again")  # type: ignore[method-assign]
+    notices: list[tuple[str, dict[str, object]]] = []
+    app.notify = lambda message, **kwargs: notices.append((message, kwargs))  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    message, kwargs = notices[0]
+    assert "sets tracing=False, so its runs are not traced and cannot be evaluated" in message
+    assert kwargs["severity"] == "warning" and app._want_traced_rerun is False
 
 
 def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
@@ -1437,6 +1592,17 @@ async def test_crew_done_does_not_timeout_memory_save() -> None:
     assert app._log_entries[1]["error"] == "No result received before crew completed"
 
 
+async def _seconds_until_unsubscribed(
+    app: CrewRunApp, pilot: Pilot[Any], since: float
+) -> float:
+    # Assert only a lower bound on the result: a loaded machine can make the
+    # drain timer seconds late, but Textual fires it at most ~0.5ms early. The
+    # 30s cap stays under the suite's --timeout=60 and costs only on failure.
+    while app._event_handlers and time.monotonic() - since < 30:
+        await pilot.pause(0.01)
+    return time.monotonic() - since
+
+
 @pytest.mark.asyncio
 async def test_crew_done_keeps_memory_save_subscription_until_completion(
     monkeypatch: pytest.MonkeyPatch,
@@ -1463,6 +1629,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
             assert app._log_entries[0]["status"] == "running"
             assert app._event_handlers
 
+            completed_at = time.monotonic()
             _emit_event(
                 MemorySaveCompletedEvent(
                     value="9 memories saved",
@@ -1472,10 +1639,11 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
                     started_event_id=started_event.event_id,
                 )
             )
-            await pilot.pause()
 
+            # The handler ran on the bus's thread and the app's loop has not
+            # run since: only an unsubscribe the handler made itself shows here.
             assert app._event_handlers
-            await pilot.pause(0.08)
+            waited = await _seconds_until_unsubscribed(app, pilot, completed_at)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
@@ -1486,6 +1654,7 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
@@ -1511,12 +1680,17 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                 source_type="unified_memory",
                 parent_event_id="manual-parent",
             )
+            # No pause before the completion: the drain timer _on_crew_done
+            # armed must still be pending when it arrives. If it has already
+            # woken, its callback runs before the completion's re-arm and the
+            # app unsubscribes without a fresh grace. That is a product race,
+            # not a test artifact; remove this note once the app handles it.
             _emit_event(started_event)
-            await pilot.pause()
 
             assert app._log_entries[0]["tool_name"] == "memory_save"
             assert app._log_entries[0]["status"] == "running"
 
+            completed_at = time.monotonic()
             _emit_event(
                 MemorySaveCompletedEvent(
                     value="9 memories saved",
@@ -1527,10 +1701,11 @@ async def test_crew_done_waits_for_queued_memory_save_events(
                     started_event_id=started_event.event_id,
                 )
             )
-            await pilot.pause()
 
+            # The handler ran on the bus's thread and the app's loop has not
+            # run since: only an unsubscribe the handler made itself shows here.
             assert app._event_handlers
-            await pilot.pause(0.08)
+            waited = await _seconds_until_unsubscribed(app, pilot, completed_at)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
@@ -1542,6 +1717,7 @@ async def test_crew_done_waits_for_queued_memory_save_events(
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3
     assert auto_unsubscribed is True
+    assert waited >= 0.045
 
 
 @pytest.mark.asyncio
@@ -2228,6 +2404,24 @@ def test_format_json_in_text_survives_deep_nesting() -> None:
     assert isinstance(_format_json_in_text(deep), str)
 
 
+def test_json_the_render_encoder_cannot_walk_is_left_as_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python 3.12's C decoder accepts nesting its indent encoder cannot walk.
+    The decoder here does that on every version, with an input `ast` cannot
+    rescue (`null`), so the render path must keep the text as it was."""
+    too_deep: list[Any] = []
+    for _ in range(100_000):
+        too_deep = [too_deep]
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._json",
+        SimpleNamespace(loads=lambda _text: too_deep, dumps=json.dumps),
+    )
+
+    assert _try_parse_structured('{"a": null}') is None
+    assert _format_json_in_text('data: {"a": null}') == 'data: {"a": null}'
+
+
 def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
     assert _format_json_in_text('data: {"a": 1} and [...]') == (
         "data: " + '{\n  "a": 1\n}' + " and [...]"
@@ -2316,7 +2510,11 @@ def test_still_not_logged_in_after_the_prompt_counts_why_and_says_so(
 
 @pytest.mark.parametrize(
     ("raised", "reason"),
-    [(KeyboardInterrupt(), "login_abandoned"), (httpx.HTTPError("access_denied"), "login_failed")],
+    [
+        (KeyboardInterrupt(), "login_abandoned"),
+        (httpx.HTTPError("access_denied"), "login_failed"),
+        (SystemExit(1), "login_timed_out"),
+    ],
 )
 def test_a_login_that_ends_badly_is_counted_and_still_raised(
     monkeypatch, deploy_usage, raised, reason
@@ -2354,6 +2552,106 @@ def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> 
     assert "Deploy failed: authentication is still required." in capsys.readouterr().out
 
 
+def _amp_deploy_doubles(monkeypatch, *, statuses):
+    """A deploy whose creates get these AMP statuses, through the real
+    response check, and a login that succeeds."""
+    calls: list[str] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            calls.append("create")
+            status = statuses.pop(0)
+            if status != 200:
+                PlusAPIMixin._validate_response(
+                    self,
+                    httpx.Response(
+                        status,
+                        json={"error": "bad_credentials", "message": "Bad credentials"},
+                    ),
+                )
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+    return calls
+
+
+def test_a_saved_login_amp_rejects_is_replaced_and_the_deploy_retried(
+    monkeypatch, deploy_usage
+) -> None:
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[401, 200])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == ["cli_usage:deploy_login_prompted"]
+
+
+def test_amp_rejecting_a_fresh_login_stops_after_one_login(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    """A 401 a new login cannot fix (no AMP user, not activated) must not loop."""
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[401, 401])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
+    output = capsys.readouterr().out
+    assert "Bad credentials" in output
+    assert "Deploy failed: authentication is still required." in output
+
+
+def test_a_deploy_amp_refuses_for_another_reason_does_not_ask_for_login(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    calls = _amp_deploy_doubles(monkeypatch, statuses=[403])
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create"]
+    assert deploy_usage == []
+    assert "Deploy failed" in capsys.readouterr().out
+
+
+def test_the_real_logged_out_deploy_still_prompts_a_login_then_says_so(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    """The login error now exits 1; the chained deploy still matches it by type."""
+    calls: list[str] = []
+
+    def no_saved_login() -> str:
+        raise AuthError("No token")
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", no_saved_login)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["login"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
 # --- why an evaluation asked for on this screen never reached a verdict ------
 
 
@@ -2373,27 +2671,133 @@ def stops(monkeypatch) -> list[str]:
     return features
 
 
-def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_why_it_stopped(
+@pytest.mark.parametrize("answer", [True, False])
+@pytest.mark.parametrize(
+    ("tracing", "asked_on"),
+    [
+        ("turned off", crew_run_tui.TurnTracingOnScreen),
+        ("never turned on", crew_run_tui.TraceConsentScreen),
+    ],
+)
+def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
+    monkeypatch, tmp_path, stops, answer, tracing, asked_on
+) -> None:
+    """The project said no to tracing, or nobody ever turned it on: only a yes
+    turns it on (in its .env) and runs the crew again; a no leaves everything
+    as it was. A project that never turned it on is asked on the screen a
+    run's trace is shared from."""
+    monkeypatch.chdir(tmp_path)
+    if tracing == "turned off":
+        (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
+    monkeypatch.setattr(
+        "crewai_core.user_data.is_tracing_enabled",
+        lambda: os.environ.get("CREWAI_TRACING_ENABLED") == "true",
+    )
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    pushed: list[tuple[object, object]] = []
+    app.push_screen = lambda screen, callback=None: pushed.append((screen, callback))  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    screen, answered = pushed[0]
+    assert type(screen) is asked_on and exits == []
+    answered(answer)
+    env = (tmp_path / ".env").read_text() if (tmp_path / ".env").exists() else ""
+    if answer:
+        assert "CREWAI_TRACING_ENABLED=true" in env
+        assert app._want_traced_rerun is True and exits == [app._crew_result]
+        assert stops == []
+    else:
+        assert env == ("CREWAI_TRACING_ENABLED=false\n" if tracing == "turned off" else "")
+        assert app._want_traced_rerun is False and exits == []
+        assert stops == ["cli_usage:eval_stopped:declined"]
+
+
+@pytest.mark.parametrize("tracing", ["turned off", "never turned on", "on"])
+def test_evaluate_toward_an_untrusted_amp_asks_nothing_and_writes_nothing(
+    monkeypatch, tmp_path, stops, tracing
+) -> None:
+    """The project's `.env` names an AMP this machine does not trust with its
+    login, logged in or not yet: `crewai eval` would refuse the re-run, so
+    nothing is asked, `.env` is left as it was, and the app says why instead
+    of closing."""
+    from crewai_cli.experimental import eval_crew
+
+    monkeypatch.chdir(tmp_path)
+    env = "CREWAI_PLUS_URL=https://evil.example\n"
+    if tracing == "turned off":
+        env += "CREWAI_TRACING_ENABLED=false\n"
+    if tracing == "on":
+        env += "CREWAI_TRACING_ENABLED=true\n"
+    (tmp_path / ".env").write_text(env)
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")  # the run's own load
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    monkeypatch.setattr(
+        eval_crew,
+        "Settings",
+        lambda: SimpleNamespace(enterprise_base_url="https://app.crewai.com"),
+    )
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    app.push_screen = lambda *a, **k: pytest.fail("nothing is asked")  # type: ignore[method-assign]
+    notices: list[str] = []
+    app.notify = lambda message, **k: notices.append(message)  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    assert exits == [] and app._want_traced_rerun is False
+    assert (tmp_path / ".env").read_text() == env
+    assert notices and "its trace would go to https://evil.example" in notices[0]
+    assert stops == ["cli_usage:eval_stopped:untrusted_amp"]
+
+
+def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
     monkeypatch, stops
 ) -> None:
+    """It is not a stop: the run happens again, and `crewai eval` counts why it
+    ran the crew (`eval_ran_crew:run_again`) and how that ended."""
+    # tracing not turned off (the suite's `.env.test` turns it off)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()
     app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    app.exit = lambda result=None: None  # type: ignore[method-assign]
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
-    monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
 
     app.action_evaluate_crew()
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
-    assert stops == ["cli_usage:eval_stopped:untraced"]
+    assert stops == []
 
 
 def test_a_run_started_by_crewai_eval_leaves_the_untraced_count_to_the_command(
-    monkeypatch, stops
+    monkeypatch, tmp_path, stops
 ) -> None:
     """The command waiting behind this screen says "not traced" and counts it;
     counting it here as well would count one stop twice."""
+    monkeypatch.chdir(tmp_path)  # the app leaves its word in the project's .crewai/
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
     monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
     with crew_run_tui.evaluating_after_run():
@@ -2458,3 +2862,192 @@ def test_an_evaluation_that_finishes_counts_no_stop(monkeypatch, stops) -> None:
     app._evaluate_now("run-this-app")
 
     assert stops == []
+
+
+# --- AMP refuses the saved login while this screen evaluates -----------------
+
+_REJECTED_LOGIN = httpx.Response(
+    401, json={"error": "bad_credentials", "message": "Bad credentials"}
+)
+_STARTED = httpx.Response(202, json={"id": "ev-1", "url": "https://optimize.example/e/1"})
+_DONE = httpx.Response(
+    200,
+    json={"id": "ev-1", "status": "done", "verdict": {"gate": "passed", "grades": {"goal": 5}}},
+)
+
+
+@pytest.fixture
+def rejected_login(monkeypatch, tmp_path, stops):
+    """The run app evaluating against a scripted AMP that refuses the saved
+    login first; `crewai login` and the app's suspend are scripted too."""
+    from contextlib import contextmanager
+
+    from crewai_cli.experimental import eval_crew
+
+    monkeypatch.chdir(tmp_path)  # the app leaves its word in the project's .crewai/
+    token = {"value": "login-token"}
+    starts: list[str | None] = []
+    answers = {"create": [_REJECTED_LOGIN, _STARTED]}
+    logins: list[str] = []
+    outcome: dict[str, BaseException | None] = {"raise": None}
+    suspended: list[str] = []
+
+    class FakeAMP:
+        def __init__(self, api_key=None, base_url=None):
+            self.api_key = api_key
+            self.base_url = "https://amp.test"
+            self.headers: dict[str, str] = {}
+
+        def create_evaluation(self, execution_id, *, eval_config=None, project_id=None):
+            starts.append(self.api_key)
+            create = answers["create"]
+            return create.pop(0) if len(create) > 1 else create[0]
+
+        def get_evaluation(self, evaluation_id):
+            return _DONE
+
+    class FakeLogin:
+        def login(self) -> None:
+            logins.append("login")
+            if outcome["raise"] is not None:
+                raise outcome["raise"]
+            token["value"] = "new-login-token"
+
+    @contextmanager
+    def suspend(self):
+        suspended.append("suspended")
+        yield
+        # Textual resumes the app only after a block that ended without raising.
+        suspended.append("resumed")
+
+    monkeypatch.setattr(eval_crew, "PlusAPI", FakeAMP)
+    monkeypatch.setattr(eval_crew, "saved_login", lambda: token["value"])
+    monkeypatch.setattr(eval_crew, "_machine_amp_origins", lambda: {"https://amp.test"})
+    monkeypatch.setattr(eval_crew, "get_project_id", lambda: None)
+    monkeypatch.setattr(eval_crew.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr("crewai_cli.authentication.main.AuthenticationCommand", FakeLogin)
+    monkeypatch.setattr(CrewRunApp, "suspend", suspend)
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: None)
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    return SimpleNamespace(
+        app=app,
+        starts=starts,
+        answers=answers,
+        logins=logins,
+        outcome=outcome,
+        suspended=suspended,
+        stops=stops,
+    )
+
+
+def test_a_rejected_login_hands_the_terminal_to_a_login_and_evaluates_once_more(
+    rejected_login,
+) -> None:
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == ["login"]
+    assert rejected_login.suspended == ["suspended", "resumed"]
+    assert rejected_login.starts == ["login-token", "new-login-token"]
+    assert app._evaluation["state"] == "done"
+    assert rejected_login.stops == [
+        "cli_usage:eval_login_prompted",
+        "cli_usage:eval",
+        "cli_usage:eval_finished:passed",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason", "said"),
+    [
+        (KeyboardInterrupt(), "login_abandoned", "The login was cancelled, so the run was not evaluated. Run `crewai login`"),
+        (SystemExit(1), "login_timed_out", "The login code expired before sign-in finished"),
+        (httpx.HTTPError("access_denied"), "login_failed", "The login failed (HTTPError: access_denied)"),
+    ],
+)
+def test_a_login_that_does_not_complete_comes_back_to_the_app_and_says_why(
+    rejected_login, raised, reason, said
+) -> None:
+    rejected_login.outcome["raise"] = raised
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.suspended == ["suspended", "resumed"]
+    assert rejected_login.starts == ["login-token"]
+    assert app._evaluation["state"] == "failed"
+    assert app._evaluation["error"].startswith(said)
+    assert rejected_login.stops == [
+        "cli_usage:eval_login_prompted",
+        f"cli_usage:eval_stopped:{reason}",
+    ]
+
+
+def test_a_login_amp_still_refuses_on_this_screen_is_not_offered_twice(
+    rejected_login,
+) -> None:
+    rejected_login.answers["create"] = [_REJECTED_LOGIN]
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == ["login"]
+    assert rejected_login.starts == ["login-token", "new-login-token"]
+    assert app._evaluation["error"].startswith(
+        "CrewAI AMP still refused the login after signing in again: Bad credentials."
+    )
+    assert rejected_login.stops == [
+        "cli_usage:eval_login_prompted",
+        "cli_usage:eval_stopped:login_still_required",
+    ]
+
+
+def test_a_terminal_that_cannot_be_handed_over_shows_the_refusal_as_before(
+    rejected_login, monkeypatch
+) -> None:
+    from textual.app import SuspendNotSupported
+
+    def cannot_suspend(self):
+        raise SuspendNotSupported("App.suspend is not supported in this environment.")
+
+    monkeypatch.setattr(CrewRunApp, "suspend", cannot_suspend)
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == []
+    assert app._evaluation["error"] == (
+        "Bad credentials. Log in with `crewai login` and try again."
+    )
+    assert rejected_login.stops == ["cli_usage:eval_stopped:amp_401"]
+
+
+@pytest.mark.parametrize(
+    ("refusal", "reason"),
+    [
+        (httpx.Response(403, json={"error": "bad_credentials", "message": "Forbidden"}), "amp_403"),
+        (httpx.Response(404, json={"error": "trace_not_found", "message": "No spans"}), "amp_404"),
+    ],
+)
+def test_other_refusals_on_this_screen_offer_no_login(
+    rejected_login, monkeypatch, refusal, reason
+) -> None:
+    from crewai_cli.experimental import eval_crew
+
+    # The run app waits out a 404 for a run that just ended; that wait is not
+    # what this test is about.
+    monkeypatch.setattr(eval_crew, "SPANS_WAIT_SECONDS", 0)
+    rejected_login.answers["create"] = [refusal]
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == []
+    assert rejected_login.suspended == []
+    assert app._evaluation["state"] == "failed"
+    assert rejected_login.stops == [f"cli_usage:eval_stopped:{reason}"]

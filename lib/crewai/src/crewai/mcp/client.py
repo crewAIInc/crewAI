@@ -27,6 +27,7 @@ from crewai.events.types.mcp_events import (
     MCPToolExecutionFailedEvent,
     MCPToolExecutionStartedEvent,
 )
+from crewai.mcp.content import content_blocks_to_text
 from crewai.mcp.exceptions import (
     MCPConnectionError,
     error_for_status,
@@ -621,12 +622,7 @@ class MCPClient:
         is_error = getattr(result, "isError", False) or False
 
         if hasattr(result, "content") and result.content:
-            if isinstance(result.content, list) and len(result.content) > 0:
-                content_item = result.content[0]
-                if hasattr(content_item, "text"):
-                    return _MCPToolResult(str(content_item.text), is_error)
-                return _MCPToolResult(str(content_item), is_error)
-            return _MCPToolResult(str(result.content), is_error)
+            return _MCPToolResult(content_blocks_to_text(result.content), is_error)
 
         return _MCPToolResult(str(result), is_error)
 
