@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.config.base import BaseRagConfig
-from crewai.rag.qdrant.constants import DEFAULT_EMBEDDING_MODEL, DEFAULT_STORAGE_PATH
+from crewai.rag.qdrant.constants import DEFAULT_STORAGE_PATH
+from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
 from crewai.rag.qdrant.types import QdrantClientParams, QdrantEmbeddingFunctionWrapper
 
 
@@ -31,25 +32,19 @@ def _default_embedding_function() -> QdrantEmbeddingFunctionWrapper:
     """Create default Qdrant embedding function.
 
     Returns:
-        Default embedding function using fastembed with all-MiniLM-L6-v2.
+        Default embedding function using OpenAI's text-embedding-3-small. The
+        collection's vector size is taken from the embedder.
     """
-    from fastembed import TextEmbedding
+    from crewai.rag.embeddings.providers.openai.embedding_callable import (
+        OpenAIEmbeddingFunction,
+    )
 
-    model = TextEmbedding(model_name=DEFAULT_EMBEDDING_MODEL)
-
-    def embed_fn(text: str) -> list[float]:
-        """Embed a single text string.
-
-        Args:
-            text: Text to embed.
-
-        Returns:
-            Embedding vector as list of floats.
-        """
-        embeddings = list(model.embed([text]))
-        return embeddings[0].tolist() if embeddings else []
-
-    return cast(QdrantEmbeddingFunctionWrapper, embed_fn)
+    return cast(
+        QdrantEmbeddingFunctionWrapper,
+        QdrantEmbeddingAdapter(
+            OpenAIEmbeddingFunction(model_name="text-embedding-3-small")
+        ),
+    )
 
 
 @pyd_dataclass(frozen=True)
