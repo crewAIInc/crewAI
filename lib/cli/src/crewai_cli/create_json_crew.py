@@ -89,14 +89,16 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("claude-haiku-4-5", "Claude Haiku 4.5"),
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
     ],
+    # Re-verified 2026-10-31. Gemini 2.5 is left out: Google serves it only to
+    # accounts that used it before, and this list is shown to people with no key.
     "gemini": [
         ("gemini-3.8-flash", "Gemini 3.8 Flash"),
+        ("gemini-4-argon", "Gemini 4 Argon"),
+        ("gemini-3.6-flash", "Gemini 3.6 Flash"),
         ("gemini-3.5-flash", "Gemini 3.5 Flash"),
+        ("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite"),
         ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
         ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
-        ("gemini-2.5-pro", "Gemini 2.5 Pro"),
-        ("gemini-2.5-flash", "Gemini 2.5 Flash"),
-        ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite"),
     ],
     "groq": [
         ("meta-llama/llama-4-maverick-17b-128e-instruct", "Llama 4 Maverick"),
