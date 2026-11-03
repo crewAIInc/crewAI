@@ -1249,12 +1249,19 @@ Follow these guidelines:
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
 
-        return self.__class__(
+        copied = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        # model_dump() omits private attributes, so a copy would keep this
+        # task's interpolated text without the template it was built from and
+        # could never re-interpolate with new inputs. Carry the templates.
+        copied._original_description = self._original_description
+        copied._original_expected_output = self._original_expected_output
+        copied._original_output_file = self._original_output_file
+        return copied
 
     def _export_output(
         self, result: str | BaseModel
