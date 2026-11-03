@@ -43,6 +43,30 @@ def test_copy_state_retries_after_concurrent_resize(monkeypatch):
     assert calls["count"] == 2
 
 
+def test_copy_state_retry_keeps_shallow_fallback_for_unpickleable_values(monkeypatch):
+    """If the retried deepcopy of the snapshot hits unpickleable values
+    (TypeError), the shallow snapshot is returned instead of raising."""
+    flow = DictStateFlow(initial_state={"answer_0": 0, "answer_1": 1})
+
+    real_deepcopy = copy.deepcopy
+    calls = {"count": 0}
+
+    def flaky_deepcopy(obj, *args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("dictionary changed size during iteration")
+        raise TypeError("cannot pickle '_thread.RLock' object")
+
+    monkeypatch.setattr("crewai.flow.runtime.copy.deepcopy", flaky_deepcopy)
+
+    copied = flow._copy_state()
+
+    assert isinstance(copied, dict)
+    assert copied["answer_0"] == 0
+    assert copied["answer_1"] == 1
+    assert calls["count"] == 2
+
+
 def test_copy_state_survives_concurrent_state_writes():
     """Repeated _copy_state calls while another thread grows the state never raise."""
     flow = DictStateFlow(initial_state={})

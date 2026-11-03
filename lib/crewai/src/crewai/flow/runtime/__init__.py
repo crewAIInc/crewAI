@@ -1852,6 +1852,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         attempts += 1
                         snapshot = dict(self._state)
                         return cast(T, copy.deepcopy(snapshot))
+                    except (TypeError, AttributeError):
+                        # The snapshot may also hold unpickleable values; keep
+                        # the shallow snapshot, matching the fallback of the
+                        # first attempt above.
+                        return cast(T, snapshot)
                     except RuntimeError:  # noqa: PERF203 - retry loop for a tiny race window
                         if attempts >= _STATE_COPY_RETRIES:
                             raise
