@@ -1,11 +1,46 @@
 """Factory functions for creating Qdrant clients from configuration."""
 
+from collections.abc import Callable
+import functools
+import os
 import threading
+from typing import Any
 
 from qdrant_client import QdrantClient as SyncQdrantClientBase
 
 from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.qdrant.config import QdrantConfig
+
+
+class _LockedQdrantClient(SyncQdrantClientBase):
+    """Qdrant client whose public methods run one at a time.
+
+    Local (on-disk) Qdrant keeps a single SQLite-backed store, which is not safe
+    for concurrent use from several threads: simultaneous writes (or a read during
+    a write) raise ``InterfaceError`` and lose points. Clients that share a local
+    path also share this one object, so every call goes through one lock.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        # Set before the base class runs, which may already call public methods.
+        self._call_lock = threading.RLock()
+        super().__init__(**kwargs)
+
+    def __getattribute__(self, name: str) -> Any:
+        attr = super().__getattribute__(name)
+        if name.startswith("_") or not callable(attr):
+            return attr
+        lock = super().__getattribute__("_call_lock")
+        return _with_lock(lock, attr)
+
+
+def _with_lock(lock: threading.RLock, method: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(method)
+    def locked(*args: Any, **kwargs: Any) -> Any:
+        with lock:
+            return method(*args, **kwargs)
+
+    return locked
 
 
 # Qdrant's local (on-disk) mode locks its storage folder, so a second client on
@@ -16,15 +51,22 @@ _local_clients_lock = threading.Lock()
 
 
 def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
-    """Return the Qdrant client for the config, reusing local clients per path."""
+    """Return the Qdrant client for the config, reusing local clients per path.
+
+    The path is normalized (``~`` expanded, symlinks and relative parts resolved)
+    so different spellings of the same folder share one client.
+    """
     path = config.options.get("path")
     if path is None:
         return SyncQdrantClientBase(**config.options)
 
+    normalized = os.path.realpath(os.path.expanduser(os.fspath(path)))
     with _local_clients_lock:
-        if path not in _local_clients:
-            _local_clients[path] = SyncQdrantClientBase(**config.options)
-        return _local_clients[path]
+        if normalized not in _local_clients:
+            _local_clients[normalized] = _LockedQdrantClient(
+                **{**config.options, "path": normalized}
+            )
+        return _local_clients[normalized]
 
 
 def create_client(config: QdrantConfig) -> QdrantClient:
