@@ -1,8 +1,10 @@
 """Utility functions for Qdrant operations."""
 
 import asyncio
+from collections.abc import Mapping
+import json
 from typing import TypeGuard
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import (
     AsyncQdrantClient,
@@ -204,6 +206,18 @@ def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     return results
 
 
+def _default_doc_id(content: str, metadata: Mapping[str, object]) -> str:
+    """Derive a stable point ID from a document's content and metadata.
+
+    Saving the same document again then overwrites its point instead of adding a
+    duplicate, matching how the ChromaDB client identifies documents.
+    """
+    key = content
+    if metadata:
+        key = f"{content}|{json.dumps(metadata, sort_keys=True, default=str)}"
+    return str(uuid5(NAMESPACE_URL, key))
+
+
 def _create_point_from_document(
     doc: BaseRecord, embedding: QueryEmbedding
 ) -> PointStruct:
@@ -211,12 +225,12 @@ def _create_point_from_document(
 
     Args:
         doc: Document dictionary containing content, metadata, and optional doc_id.
+            Without a doc_id, a deterministic ID is derived from content and metadata.
         embedding: The embedding vector for the document content.
 
     Returns:
         PointStruct ready to be upserted to Qdrant.
     """
-    doc_id = doc.get("doc_id", str(uuid4()))
     vector = _ensure_list_embedding(embedding)
 
     metadata = doc.get("metadata", {})
@@ -224,6 +238,8 @@ def _create_point_from_document(
         metadata = metadata[0] if metadata else {}
     elif not isinstance(metadata, dict):
         metadata = dict(metadata) if metadata else {}
+
+    doc_id = doc.get("doc_id") or _default_doc_id(doc["content"], metadata)
 
     return PointStruct(
         id=doc_id,

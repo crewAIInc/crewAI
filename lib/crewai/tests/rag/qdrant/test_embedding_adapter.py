@@ -135,3 +135,24 @@ def test_add_documents_keeps_per_document_calls_for_plain_embedders():
     )
 
     assert calls == ["a", "b"]
+
+
+def test_same_document_gets_the_same_point_id():
+    from crewai.rag.qdrant.utils import _create_point_from_document
+
+    doc = {"content": "Brandon likes red", "metadata": {"source": "a"}}
+
+    first = _create_point_from_document(doc, [0.1])
+    second = _create_point_from_document(dict(doc), [0.1])
+    other = _create_point_from_document({"content": "Brandon likes blue"}, [0.1])
+
+    assert first.id == second.id
+    assert first.id != other.id
+
+
+def test_explicit_doc_id_is_kept():
+    from crewai.rag.qdrant.utils import _create_point_from_document
+
+    point = _create_point_from_document({"content": "x", "doc_id": "my-id"}, [0.1])
+
+    assert point.id == "my-id"
