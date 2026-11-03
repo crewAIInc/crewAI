@@ -39,20 +39,14 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
         Add JSON file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        content_str = (
-            str(self.content) if isinstance(self.content, dict) else self.content
-        )
-        new_chunks = self._chunk_text(content_str)
-        self.chunks.extend(new_chunks)
+        for text in self.content.values():
+            self.chunks.extend(self._chunk_text(text))
         self._save_documents()
 
     async def aadd(self) -> None:
         """Add JSON file content asynchronously."""
-        content_str = (
-            str(self.content) if isinstance(self.content, dict) else self.content
-        )
-        new_chunks = self._chunk_text(content_str)
-        self.chunks.extend(new_chunks)
+        for text in self.content.values():
+            self.chunks.extend(self._chunk_text(text))
         await self._asave_documents()
 
     def _chunk_text(self, text: str) -> list[str]:
