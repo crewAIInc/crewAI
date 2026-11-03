@@ -1466,6 +1466,11 @@ class Crew(FlowTrackable, BaseModel):
     def _handle_crew_planning(self) -> None:
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
+        # Drop the plan appended by an earlier kickoff before planning again,
+        # so neither the new description nor the planner's task summary keeps
+        # growing by one plan per run.
+        for task in self.tasks:
+            task.clear_plan()
         result = CrewPlanner(
             tasks=self.tasks, planning_agent_llm=self.planning_llm
         )._handle_crew_planning()
@@ -1484,7 +1489,7 @@ class Crew(FlowTrackable, BaseModel):
         for idx, task in enumerate(self.tasks):
             task_number = idx + 1
             if task_number in plan_map:
-                task.description += plan_map[task_number]
+                task.apply_plan(plan_map[task_number])
             else:
                 self._logger.log(
                     "warning",
