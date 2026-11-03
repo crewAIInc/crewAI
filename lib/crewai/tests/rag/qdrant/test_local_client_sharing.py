@@ -87,3 +87,26 @@ def test_concurrent_writes_and_searches_do_not_lose_points(tmp_path):
 
     assert errors == []
     assert clients[0].client.count("shared").count == threads_count * writes_each
+
+
+def test_folder_in_use_by_another_client_gives_a_clear_error(tmp_path):
+    folder = tmp_path / "q"
+    holder = SyncQdrantClient(path=str(folder))
+
+    try:
+        with pytest.raises(RuntimeError, match="already in use by another process") as info:
+            create_client(_config(folder))
+    finally:
+        holder.close()
+
+    assert str(folder) in str(info.value)
+    assert "Qdrant server" in str(info.value)
+
+
+def test_unreadable_storage_metadata_gives_a_clear_error(tmp_path):
+    folder = tmp_path / "q"
+    folder.mkdir()
+    (folder / "meta.json").write_text("")
+
+    with pytest.raises(RuntimeError, match="Could not read the local Qdrant storage"):
+        create_client(_config(folder))
