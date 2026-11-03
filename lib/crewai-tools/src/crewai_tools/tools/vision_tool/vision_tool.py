@@ -1,4 +1,5 @@
 import base64
+import mimetypes
 from pathlib import Path
 from typing import Any, Literal
 
@@ -150,7 +151,10 @@ class VisionTool(BaseTool):
             else:
                 try:
                     base64_image = self._encode_image(image_path_url)
-                    image_data = f"data:image/jpeg;base64,{base64_image}"
+                    # Use the real media type so PNG/GIF/WebP files are not
+                    # announced as JPEG in the data URI.
+                    mime_type = mimetypes.guess_type(image_path_url)[0] or "image/jpeg"
+                    image_data = f"data:{mime_type};base64,{base64_image}"
                 except Exception as e:
                     return f"Error processing image: {e!s}"
 

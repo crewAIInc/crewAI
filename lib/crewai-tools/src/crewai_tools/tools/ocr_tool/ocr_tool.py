@@ -4,6 +4,7 @@ This tool provides functionality for extracting text from images using supported
 """
 
 import base64
+import mimetypes
 from typing import Any
 
 from crewai.llm import LLM
@@ -70,7 +71,10 @@ class OCRTool(BaseTool):
             image_data = image_path_url
         else:
             base64_image = self._encode_image(image_path_url)
-            image_data = f"data:image/jpeg;base64,{base64_image}"
+            # Use the real media type so PNG/GIF/WebP files are not announced
+            # as JPEG in the data URI.
+            mime_type = mimetypes.guess_type(image_path_url)[0] or "image/jpeg"
+            image_data = f"data:{mime_type};base64,{base64_image}"
 
         messages: list[LLMMessage] = [
             {
