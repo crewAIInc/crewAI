@@ -2148,6 +2148,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
+        if current_flow_id.get() is None:
+            # A top-level kickoff owns its run: drop entities accumulated in
+            # this context by earlier runs (and by flow construction), so this
+            # run's checkpoints serialize only the flow being executed.
+            crewai_event_bus.reset_runtime_state()
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
@@ -2214,6 +2219,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
+        if current_flow_id.get() is None:
+            # Top-level kickoffs must not inherit the constructing context's
+            # runtime state: asyncio.run() executes the coroutine in a copied
+            # context, so the synced scope below ends only that copy. Clearing
+            # here keeps earlier flows out of this run's checkpoints.
+            crewai_event_bus.reset_runtime_state()
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
