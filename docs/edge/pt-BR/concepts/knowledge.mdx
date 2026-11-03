@@ -450,9 +450,7 @@ Configuração de armazenamento personalizada para gerenciar como o knowledge é
 </Warning>
 
 <Note>
-O armazenamento local do Qdrant tem dois limites a considerar:
-- **Um processo por pasta.** Um segundo processo que abra a mesma pasta de armazenamento falha. Isso difere do ChromaDB, que permitia vários processos compartilharem uma pasta.
-- **Não é seguro para escritas concorrentes entre threads.** Buscas feitas por várias threads são seguras, mas grave o knowledge durante a configuração do crew, e não em tarefas paralelas.
+O armazenamento local do Qdrant permite **um processo por pasta**. Um segundo processo que abra a mesma pasta de armazenamento falha com um erro que sugere as opções abaixo. Isso difere do ChromaDB, que permitia vários processos compartilharem uma pasta. Para compartilhar o armazenamento entre processos, workers ou réplicas, use um servidor Qdrant (`set_rag_config(QdrantConfig(options={"url": "http://localhost:6333"}))`) ou o ChromaDB (`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`). Threads no mesmo processo são seguras: as chamadas ao cliente local compartilhado são executadas uma de cada vez.
 </Note>
 
 ### Onde o CrewAI Armazena Arquivos de Knowledge

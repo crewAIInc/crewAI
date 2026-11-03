@@ -452,9 +452,7 @@ knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 �
 </Warning>
 
 <Note>
-로컬 Qdrant 저장소에는 두 가지 제한이 있습니다.
-- **폴더당 하나의 프로세스.** 같은 저장소 폴더를 두 번째 프로세스가 열면 실패합니다. 여러 프로세스가 폴더를 공유할 수 있었던 ChromaDB와 다른 점입니다.
-- **스레드에서의 동시 쓰기는 안전하지 않습니다.** 여러 스레드에서의 검색은 안전하지만, 병렬 작업에서 쓰지 말고 crew 설정 단계에서 knowledge를 기록하세요.
+로컬 Qdrant 저장소는 **폴더당 하나의 프로세스**만 허용합니다. 같은 저장소 폴더를 두 번째 프로세스가 열면 아래 옵션을 안내하는 오류와 함께 실패합니다. 여러 프로세스가 폴더를 공유할 수 있었던 ChromaDB와 다른 점입니다. 여러 프로세스, 워커 또는 레플리카에서 저장소를 공유하려면 Qdrant 서버(`set_rag_config(QdrantConfig(options={"url": "http://localhost:6333"}))`) 또는 ChromaDB(`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`)를 사용하세요. 같은 프로세스 안의 스레드는 안전합니다. 공유 로컬 클라이언트에 대한 호출은 한 번에 하나씩 실행됩니다.
 </Note>
 
 ### CrewAI가 Knowledge 파일을 저장하는 위치
