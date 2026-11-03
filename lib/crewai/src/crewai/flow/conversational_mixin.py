@@ -37,6 +37,7 @@ from crewai.events.types.flow_events import (
 )
 from crewai.flow.async_feedback import HumanFeedbackPending
 from crewai.flow.conversation import (
+    _coerce_user_message_text,
     append_message as _append_conversation_message,
     get_conversation_messages,
     receive_user_message as _receive_user_message,
@@ -60,6 +61,7 @@ from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowDefinition, FlowMethodDefinition
 from crewai.flow.types import FlowMethodName
 from crewai.project.crew_definition import PythonReferenceDefinition
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.types import LLMMessage
 
 
@@ -1173,7 +1175,7 @@ class _ConversationalMixin:
         if self._pending_user_message is None:
             return
 
-        text = self._coerce_user_message_text(self._pending_user_message)
+        text = _coerce_user_message_text(self._pending_user_message)
         if not text.strip():
             return
 
@@ -1582,14 +1584,6 @@ class _ConversationalMixin:
         )
 
     @staticmethod
-    def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
-        if isinstance(user_message, str):
-            return user_message
-        if isinstance(user_message, dict) and user_message.get("content") is not None:
-            return str(user_message["content"])
-        return str(user_message)
-
-    @staticmethod
     def _stringify_result(result: Any) -> str:
         if hasattr(result, "raw"):
             return str(result.raw)
@@ -1600,7 +1594,8 @@ class _ConversationalMixin:
     @staticmethod
     def _format_messages(messages: Sequence[Mapping[str, Any]]) -> str:
         return "\n".join(
-            f"{message.get('role', 'user')}: {message.get('content', '')}"
+            f"{message.get('role', 'user')}: "
+            f"{message_content_text(cast(LLMMessage, message))}"
             for message in messages
         )
 
