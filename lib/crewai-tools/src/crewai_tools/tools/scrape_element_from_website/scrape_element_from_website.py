@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -56,6 +55,9 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
+        if cookies is not None:
+            self.cookies = cookies
+
         if website_url is not None:
             self.website_url = website_url
             self.css_element = css_element
@@ -64,8 +66,6 @@ class ScrapeElementFromWebsiteTool(BaseTool):
             )
             self.args_schema = FixedScrapeElementFromWebsiteToolSchema
             self._generate_description()
-            if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,

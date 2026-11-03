@@ -1,4 +1,3 @@
-import os
 import re
 from typing import Any
 
@@ -56,6 +55,9 @@ class ScrapeWebsiteTool(BaseTool):
                 "beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`"
             )
 
+        if cookies is not None:
+            self.cookies = cookies
+
         if website_url is not None:
             self.website_url = website_url
             self.description = (
@@ -63,8 +65,6 @@ class ScrapeWebsiteTool(BaseTool):
             )
             self.args_schema = FixedScrapeWebsiteToolSchema
             self._generate_description()
-            if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,
