@@ -369,7 +369,7 @@ class _ConversationalMixin:
 
     @listen("converse")
     @_conversational_only
-    def converse_turn(self) -> str:
+    def converse_turn(self) -> Any:
         """Built-in chat handler over canonical conversation history."""
         llm = self._default_conversation_llm()
         if llm is None:

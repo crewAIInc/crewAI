@@ -31,6 +31,7 @@ def test_history_is_retained_and_kickoff_stays_independent(monkeypatch):
     agent = make_agent(conversational=True)
     assert agent.handle_turn("Remember Cedar Finch").raw == "Public answer"
     assert agent.handle_turn("What is the codename?").raw == "Public answer"
+    assert agent.as_flow().state.last_intent == "converse"
     assert "Cedar Finch" in str(agent.llm.received[1])
     assert agent.as_flow().conversation_messages == [
         {"role": "user", "content": "Remember Cedar Finch"},
@@ -48,6 +49,43 @@ def test_ordinary_agent_requires_explicit_opt_in():
     assert agent.conversational is False
     with pytest.raises(ValueError, match="conversational=True"):
         agent.handle_turn("Hello")
+
+
+def test_converse_route_executes_agent_tools(monkeypatch):
+    from unittest.mock import Mock
+
+    from crewai.tools import BaseTool
+
+    calls = []
+
+    class SupportHours(BaseTool):
+        name: str = "support_hours"
+        description: str = "Get support hours."
+
+        def _run(self) -> str:
+            calls.append("support_hours")
+            return "09:00–17:00 UTC"
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True, tools=[SupportHours()])
+    monkeypatch.setattr(
+        agent.llm,
+        "call",
+        Mock(side_effect=[
+            'Thought: Check support hours.\nAction: support_hours\nAction Input: {}',
+            "Final Answer: Support is available 09:00–17:00 UTC.",
+        ]),
+    )
+
+    result = agent.handle_turn("What are your support hours?")
+
+    assert calls == ["support_hours"]
+    assert result.raw == "Support is available 09:00–17:00 UTC."
+    assert agent.as_flow().state.last_intent == "converse"
+    assert agent.as_flow().conversation_messages == [
+        {"role": "user", "content": "What are your support hours?"},
+        {"role": "assistant", "content": result.raw},
+    ]
 
 
 def test_agent_instances_have_independent_sessions(monkeypatch):

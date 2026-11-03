@@ -44,10 +44,10 @@ def agent_flow(
         _skip_auto_memory = True
 
         def route_turn(self, context: dict[str, Any]) -> str:
-            return "agent_turn"
+            return "converse"
 
-        @(listen("agent_turn") if conversation_enabled else start())
-        async def run_agent(self) -> Any:
+        @(listen("converse") if conversation_enabled else start())
+        async def converse_turn(self) -> Any:
             messages = [
                 cast(
                     LLMMessage,
