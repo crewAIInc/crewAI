@@ -4,6 +4,7 @@ from crewai.rag.chromadb.types import PreparedDocuments
 from crewai.rag.chromadb.utils import (
     MAX_COLLECTION_LENGTH,
     MIN_COLLECTION_LENGTH,
+    _convert_chromadb_results_to_search_results,
     _create_batch_slice,
     _is_ipv4_pattern,
     _prepare_documents_for_chromadb,
@@ -300,3 +301,24 @@ class TestCreateBatchSlice:
         assert batch_ids == ["id2"]
         assert batch_texts == ["doc2"]
         assert batch_metadatas == [{"b": 2}]
+
+
+class TestSearchResultScores:
+    """Test suite for score normalization across ChromaDB distance metrics."""
+
+    def test_inner_product_collection_scores_are_normalized(self) -> None:
+        """A collection created with ``hnsw:space="ip"`` must not fail search."""
+        results = {
+            "ids": [["doc-1", "doc-2"]],
+            "documents": [["alpha", "beta"]],
+            "metadatas": [[{}, {}]],
+            "distances": [[0.0, 1.0]],
+        }
+
+        hits = _convert_chromadb_results_to_search_results(
+            results=results,
+            include=["documents", "metadatas", "distances"],
+            distance_metric="ip",
+        )
+
+        assert [hit["score"] for hit in hits] == [1.0, 0.5]
