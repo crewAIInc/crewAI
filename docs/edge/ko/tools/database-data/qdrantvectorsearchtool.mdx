@@ -23,7 +23,8 @@ uv add qdrant-client
 
 ```python
 from crewai import Agent
-from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+from crewai_tools import QdrantVectorSearchTool
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 # QdrantConfig로 도구 초기화
 qdrant_tool = QdrantVectorSearchTool(
@@ -122,7 +123,7 @@ pdf_path = "path/to/your/document.pdf"
 load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
 
 # Initialize Qdrant search tool
-from crewai_tools import QdrantConfig
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 qdrant_tool = QdrantVectorSearchTool(
     qdrant_config=QdrantConfig(
@@ -220,7 +221,8 @@ QdrantVectorSearchTool은 검색 결과를 세밀하게 조정할 수 있는 강
 
 ```python
 from qdrant_client.http import models as qmodels
-from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+from crewai_tools import QdrantVectorSearchTool
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 # 특정 조건에 대한 필터 생성
 preset_filter = qmodels.Filter(
@@ -315,7 +317,7 @@ def custom_embeddings(text: str) -> list[float]:
     return embeddings[0].tolist()
 
 # Use custom embeddings with the tool
-from crewai_tools import QdrantConfig
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 tool = QdrantVectorSearchTool(
     qdrant_config=QdrantConfig(
