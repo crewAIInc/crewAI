@@ -6,6 +6,7 @@ import threading
 import numpy as np
 import pytest
 from qdrant_client import QdrantClient as SyncQdrantClient
+from qdrant_client.models import PointStruct
 
 from crewai.rag.qdrant.config import QdrantConfig
 from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
@@ -99,7 +100,7 @@ def test_folder_in_use_by_another_client_gives_a_clear_error(tmp_path):
     finally:
         holder.close()
 
-    assert str(folder) in str(info.value)
+    assert os.path.realpath(folder) in str(info.value)
     assert "Qdrant server" in str(info.value)
 
 
@@ -110,3 +111,30 @@ def test_unreadable_storage_metadata_gives_a_clear_error(tmp_path):
 
     with pytest.raises(RuntimeError, match="Could not read the local Qdrant storage"):
         create_client(_config(folder))
+
+
+def test_client_works_from_another_thread_when_sqlite_checks_threads(
+    tmp_path, monkeypatch
+):
+    from qdrant_client.local.persistence import CollectionPersistence
+
+    monkeypatch.setattr(CollectionPersistence, "CHECK_SAME_THREAD", True)
+    client = create_client(_config(tmp_path / "q"))
+    client.client.create_collection(
+        "c", vectors_config={"size": 3, "distance": "Cosine"}
+    )
+    errors: list[Exception] = []
+
+    def use_from_other_thread():
+        try:
+            client.client.upsert(
+                "c", [PointStruct(id=1, vector=[1.0, 0.5, 0.2], payload={})]
+            )
+        except Exception as e:
+            errors.append(e)
+
+    thread = threading.Thread(target=use_from_other_thread)
+    thread.start()
+    thread.join()
+
+    assert errors == []

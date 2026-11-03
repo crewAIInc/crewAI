@@ -65,8 +65,15 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
     with _local_clients_lock:
         if normalized not in _local_clients:
             try:
+                # Every call runs under the client's lock, so using the SQLite
+                # connection from other threads is safe. Without this flag,
+                # builds where SQLite is not THREADSAFE=1 reject those threads.
                 _local_clients[normalized] = _LockedQdrantClient(
-                    **{**config.options, "path": normalized}
+                    **{
+                        **config.options,
+                        "path": normalized,
+                        "force_disable_check_same_thread": True,
+                    }
                 )
             except RuntimeError as e:
                 if "already accessed by another instance" not in str(e):
