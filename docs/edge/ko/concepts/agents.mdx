@@ -678,7 +678,16 @@ reply = agent.handle_turn("What is my project's name?")
 print(reply.raw)
 ```
 
-하나의 대화에는 같은 Agent 인스턴스를 재사용하세요. `agent.as_flow()`는 기반 대화형 Flow 세션을 제공합니다. 기록은 기본적으로 메모리에 유지되며 프로세스 간 복구에는 명시적인 Flow 영속성 설정이 필요합니다. 독립적인 대화에는 별도의 Agent 인스턴스를 사용하세요. `session_id`는 Flow 세션을 식별하거나 복원하며 하나의 Agent에서 동시 다중 세션 격리를 제공하지는 않습니다.
+대화형 세션에는 대화형 Flow와 동일한 `chat()` 메서드를 사용하세요:
+
+```python
+agent.chat()          # Plain terminal REPL
+agent.chat(tui=True)  # Full terminal UI
+```
+
+`tui=True`에는 대화형 터미널과 호환되는 CLI 빌드가 필요합니다. 두 모드 모두 `session_id`, `exit_commands` 및 `handle_turn()`에 전달할 옵션을 받습니다. 사용자 지정 프롬프트, 입출력 함수와 `skip_empty`는 REPL 전용 옵션입니다. 대화를 시작하기 위해 Flow를 생성하거나 전달할 필요가 없습니다.
+
+하나의 대화에는 같은 Agent 인스턴스를 재사용하세요. 고급 영속성 설정에는 `agent.as_flow()`로 기반 대화형 Flow 세션에 접근할 수 있습니다. 기록은 기본적으로 메모리에 유지되며 프로세스 간 복구에는 명시적인 Flow 영속성 설정이 필요합니다. 독립적인 대화에는 별도의 Agent 인스턴스를 사용하세요. `session_id`는 Flow 세션을 식별하거나 복원하며 하나의 Agent에서 동시 다중 세션 격리를 제공하지는 않습니다.
 
 일반 Agent의 기본값은 `conversational=False`입니다. 대화가 활성화되어도 직접 호출하는 `kickoff()`와 `kickoff_async()`는 독립적인 실행으로 유지됩니다. 세션 기록을 유지하려면 `handle_turn()`을 사용하세요. 기존 Crew/Task 실행은 현재 동작을 유지합니다.
 

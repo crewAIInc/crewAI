@@ -51,6 +51,28 @@ def test_ordinary_agent_requires_explicit_opt_in():
         agent.handle_turn("Hello")
 
 
+def test_chat_retains_history_and_uses_flow_repl_options(monkeypatch):
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True)
+    inputs = iter(["Remember Cedar Finch", "", "What is the codename?", "bye"])
+    outputs = []
+    agent.chat(
+        input_fn=lambda _: next(inputs),
+        output_fn=outputs.append,
+        assistant_prefix="Reply: ",
+        exit_commands=("bye",),
+    )
+    assert outputs == ["Reply: Public answer", "Reply: Public answer"]
+    assert len(agent.llm.received) == 2
+    assert "Cedar Finch" in str(agent.llm.received[1])
+
+
+@pytest.mark.parametrize("tui", [False, True])
+def test_chat_requires_conversational_opt_in(tui):
+    with pytest.raises(ValueError, match="conversational=True"):
+        make_agent().chat(tui=tui)
+
+
 def test_converse_route_executes_agent_tools(monkeypatch):
     from unittest.mock import Mock
 

@@ -281,9 +281,13 @@ flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```python
 def kickoff() -> None:
     SupportFlow().chat()
+    # Or open the full terminal UI:
+    SupportFlow().chat(tui=True)
 ```
 
 يلف `chat()` استدعاءات `handle_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً. مع `trace_scope="turn"` تنهي كل جولة trace الخاص بها تلقائياً. دون نطاق صريح، تبقى دورة حياة الجلسة والإنهاء التلقائي عند الخروج من REPL دون تغيير.
+
+يفتح `chat(tui=True)` واجهة الطرفية نفسها التي يستخدمها `crewai run`، ويتطلب طرفية تفاعلية. يحافظ على `session_id` و`exit_commands` وتأجيل trace والخيارات الممررة إلى `handle_turn()`. تقتصر المطالبات المخصصة ودوال الإدخال والإخراج و`skip_empty` على REPL، وتُرفض في وضع TUI. توفر Agents التي تدعم المحادثة الطريقتين نفسيهما: `agent.chat()` و`agent.chat(tui=True)`.
 
 ### `ConversationConfig`
 

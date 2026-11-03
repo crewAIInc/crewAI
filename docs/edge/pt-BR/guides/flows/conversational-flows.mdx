@@ -281,9 +281,13 @@ Para um chat local no terminal, use `chat()`:
 ```python
 def kickoff() -> None:
     SupportFlow().chat()
+    # Or open the full terminal UI:
+    SupportFlow().chat(tui=True)
 ```
 
 `chat()` envolve `handle_turn()` em um REPL, sai com `exit` / `quit` e ignora linhas em branco por padrão. Com `trace_scope="turn"`, cada turno finaliza seu trace automaticamente. Sem escopo explícito, o ciclo da sessão inteira e a limpeza automática ao sair do REPL permanecem inalterados.
+
+`chat(tui=True)` abre a mesma interface de terminal usada por `crewai run` e requer um terminal interativo. Preserva `session_id`, `exit_commands`, o adiamento dos traces e as opções encaminhadas a `handle_turn()`. Prompts personalizados, funções de entrada/saída e `skip_empty` são exclusivos do REPL e são rejeitados no modo TUI. Agents conversacionais expõem os mesmos métodos `agent.chat()` e `agent.chat(tui=True)`.
 
 ### `ConversationConfig`
 

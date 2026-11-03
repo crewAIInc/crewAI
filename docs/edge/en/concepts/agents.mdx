@@ -674,7 +674,16 @@ reply = agent.handle_turn("What is my project's name?")
 print(reply.raw)
 ```
 
-Reuse the same Agent instance for a conversation. `agent.as_flow()` exposes its underlying conversational Flow session. History is in memory by default; process recovery requires explicit Flow persistence. Use separate Agent instances for independent conversations. A `session_id` identifies or restores a Flow session; it does not provide concurrent multi-session isolation within one Agent.
+For interactive conversations, use the same `chat()` convention as conversational Flows:
+
+```python
+agent.chat()          # Plain terminal REPL
+agent.chat(tui=True)  # Full terminal UI
+```
+
+`tui=True` requires an interactive terminal and a matching CLI build. Both modes accept `session_id`, `exit_commands`, and options forwarded to `handle_turn()`. Custom prompts, input/output callables, and `skip_empty` are REPL-only options. You do not need to create or pass a Flow to start chatting.
+
+Reuse the same Agent instance for a conversation. For advanced persistence configuration, `agent.as_flow()` exposes its underlying conversational Flow session. History is in memory by default; process recovery requires explicit Flow persistence. Use separate Agent instances for independent conversations. A `session_id` identifies or restores a Flow session; it does not provide concurrent multi-session isolation within one Agent.
 
 Ordinary Agents default to `conversational=False`. Direct `kickoff()` and `kickoff_async()` calls remain independent executions even when conversation is enabled; use `handle_turn()` to retain the session history. Existing Crew/Task execution keeps its current behavior.
 

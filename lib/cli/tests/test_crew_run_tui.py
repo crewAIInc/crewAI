@@ -749,11 +749,15 @@ def test_conversation_turn_done_records_assistant_message() -> None:
 
 
 @pytest.mark.asyncio
-async def test_conversation_input_submits_turn() -> None:
+@pytest.mark.parametrize("defer_trace_finalization", [False, True])
+async def test_conversation_input_submits_turn(defer_trace_finalization) -> None:
+    calls = []
+
     class FakeFlow:
         defer_trace_finalization = False
 
-        def handle_turn(self, message: str) -> str:
+        def handle_turn(self, message: str, **kwargs) -> str:
+            calls.append((message, kwargs))
             return f"reply: {message}"
 
         def finalize_session_traces(self) -> None:
@@ -761,19 +765,33 @@ async def test_conversation_input_submits_turn() -> None:
 
     app = CrewRunApp(crew_name="Demo", conversational=True)
     app._flow = FakeFlow()
+    app._conversation_defer_trace_finalization = defer_trace_finalization
+    app._conversation_turn_kwargs = {"session_id": "session-1"}
+    app._conversation_exit_commands = {"bye"}
 
     async with app.run_test() as pilot:
-        await pilot.click("#conversation-input")
-        await pilot.press("h", "i", "enter")
-        for _ in range(50):
-            await pilot.pause(0.05)
-            if app._conversation_messages[-1:] == [("assistant", "reply: hi")]:
-                break
+        assert app._flow.defer_trace_finalization is defer_trace_finalization
+        for message in ("hi", "again"):
+            app.query_one("#conversation-input").value = message
+            await pilot.press("enter")
+            for _ in range(50):
+                await pilot.pause(0.05)
+                if app._conversation_messages[-1:] == [("assistant", f"reply: {message}")]:
+                    break
+        app.query_one("#conversation-input").value = "bye"
+        await pilot.press("enter")
 
     assert app._conversation_messages == [
         ("user", "hi"),
         ("assistant", "reply: hi"),
+        ("user", "again"),
+        ("assistant", "reply: again"),
     ]
+    assert calls == [
+        ("hi", {"session_id": "session-1"}),
+        ("again", {"session_id": "session-1"}),
+    ]
+    assert app._flow.defer_trace_finalization is False
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:

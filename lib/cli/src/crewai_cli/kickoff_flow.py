@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 import importlib
 import inspect
 from pathlib import Path
@@ -134,7 +135,13 @@ def _exit_without_chat_terminal() -> NoReturn:
 
 
 def _run_conversational_flow_tui(
-    flow: Any, definition: str | Path | None = None
+    flow: Any,
+    definition: str | Path | None = None,
+    *,
+    session_id: str | None = None,
+    exit_commands: Sequence[str] = ("exit", "quit"),
+    defer_trace_finalization: bool = True,
+    **handle_turn_kwargs: Any,
 ) -> Any:
     from crewai.events.event_listener import EventListener
 
@@ -147,6 +154,11 @@ def _run_conversational_flow_tui(
         conversational=True,
     )
     app._flow = flow
+    app._conversation_turn_kwargs = dict(handle_turn_kwargs)
+    if session_id is not None:
+        app._conversation_turn_kwargs["session_id"] = session_id
+    app._conversation_exit_commands = {command.lower() for command in exit_commands}
+    app._conversation_defer_trace_finalization = defer_trace_finalization
     app.run()
 
     if getattr(app, "_want_traced_rerun", False):

@@ -1835,6 +1835,14 @@ class Agent(BaseAgent):
         """
         return self.as_flow().handle_turn(message, **kwargs)
 
+    def chat(self, *, tui: bool = False, **kwargs: Any) -> None:
+        """Start an experimental conversation using the same options as Flow.chat.
+
+        Requires ``conversational=True``. Use ``tui=True`` for the terminal UI,
+        or omit it for a plain REPL. Other options are forwarded to Flow.chat.
+        """
+        self.as_flow().chat(tui=tui, **kwargs)
+
     def kickoff(
         self,
         messages: str | list[LLMMessage],

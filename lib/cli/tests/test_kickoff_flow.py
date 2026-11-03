@@ -110,7 +110,19 @@ def test_kickoff_flow_conversational_flow_in_a_terminal_opens_the_tui(
     assert reached == ["tui"]
 
 
-def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {
+            "session_id": "session-1",
+            "exit_commands": ("BYE",),
+            "defer_trace_finalization": False,
+            "restore_from_state_id": "previous-session",
+        },
+    ],
+)
+def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch, options) -> None:
     calls: list[str] = []
 
     class FakeEventListener:
@@ -128,6 +140,12 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> 
 
         def run(self) -> None:
             calls.append("run")
+            assert self._conversation_exit_commands == ({"bye"} if options else {"exit", "quit"})
+            assert self._conversation_defer_trace_finalization is options.get("defer_trace_finalization", True)
+            assert self._conversation_turn_kwargs == (
+                {"session_id": "session-1", "restore_from_state_id": "previous-session"}
+                if options else {}
+            )
 
     class DemoFlow:
         name = "Demo"
@@ -141,7 +159,7 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> 
         FakeCrewRunApp,
     )
 
-    result = kickoff_flow._run_conversational_flow_tui(DemoFlow())
+    result = kickoff_flow._run_conversational_flow_tui(DemoFlow(), **options)
 
     assert result == "done"
     assert calls == ["listener", "app", "run"]

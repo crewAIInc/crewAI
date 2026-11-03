@@ -633,6 +633,7 @@ class _ConversationalMixin:
     def chat(
         self,
         *,
+        tui: bool = False,
         session_id: str | None = None,
         prompt: str = "\nYou: ",
         assistant_prefix: str = "\nAssistant: ",
@@ -646,13 +647,44 @@ class _ConversationalMixin:
         """Run an interactive terminal chat loop for a conversational Flow.
 
         ``chat()`` is a convenience wrapper around ``handle_turn()`` for local
-        REPLs. For web apps, tests, and custom transports, call
+        REPLs. Use ``tui=True`` for the shared terminal UI, which requires an
+        interactive terminal. Prompt formatting and input/output callables are
+        REPL-only options. For web apps, tests, and custom transports, call
         ``handle_turn()`` directly. The input/output callables are injectable so
         callers can customize prompts or exercise the loop without patching
         builtins.
         """
         if not self._is_conversational_enabled():
             raise ValueError("Flow.chat() is only available on conversational flows")
+
+        if tui:
+            from crewai_cli.input_prompt import is_interactive
+            from crewai_cli.kickoff_flow import _run_conversational_flow_tui
+
+            if not is_interactive():
+                raise ValueError(
+                    "chat(tui=True) needs an interactive terminal; use chat() "
+                    "for a plain REPL or handle_turn() for one turn"
+                )
+            if (
+                prompt != "\nYou: "
+                or assistant_prefix != "\nAssistant: "
+                or input_fn is not input
+                or output_fn is not print
+                or not skip_empty
+            ):
+                raise ValueError(
+                    "Prompt formatting, input_fn, output_fn and skip_empty "
+                    "are only configurable in the plain chat() REPL"
+                )
+            _run_conversational_flow_tui(
+                self,
+                session_id=session_id,
+                exit_commands=exit_commands,
+                defer_trace_finalization=defer_trace_finalization,
+                **handle_turn_kwargs,
+            )
+            return
 
         exit_set = {command.lower() for command in exit_commands}
         previous_defer = getattr(self, "defer_trace_finalization", False)

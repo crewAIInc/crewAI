@@ -281,9 +281,13 @@ flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```python
 def kickoff() -> None:
     SupportFlow().chat()
+    # Or open the full terminal UI:
+    SupportFlow().chat(tui=True)
 ```
 
 `chat()`은 `handle_turn()`을 REPL로 감싸고 `exit` / `quit`에서 종료하며 기본적으로 빈 줄을 건너뜁니다. `trace_scope="turn"`이면 각 턴의 trace가 자동으로 종료됩니다. 범위를 지정하지 않으면 기존 세션 전체 수명 주기와 REPL 종료 시 자동 정리 동작은 바뀌지 않습니다.
+
+`chat(tui=True)`는 `crewai run`과 동일한 터미널 UI를 열며 대화형 터미널이 필요합니다. `session_id`, `exit_commands`, trace 종료 지연 및 `handle_turn()`에 전달할 옵션을 유지합니다. 사용자 지정 프롬프트, 입출력 함수와 `skip_empty`는 REPL 전용이며 TUI 모드에서는 거부됩니다. 대화형 Agent도 동일한 `agent.chat()` 및 `agent.chat(tui=True)` 메서드를 제공합니다.
 
 ### `ConversationConfig`
 
