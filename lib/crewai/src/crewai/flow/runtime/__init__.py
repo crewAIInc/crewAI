@@ -3388,8 +3388,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
-                # During resumption, skip execution but continue listeners
-                await self._execute_listeners(listener_name, None)
+                # During resumption, skip execution but continue listeners with the
+                # output recorded in the checkpoint, so downstream methods receive
+                # the value the completed method actually returned instead of None.
+                recorded = next(
+                    (
+                        entry.get("output")
+                        for entry in reversed(self._method_outputs)
+                        if isinstance(entry, dict)
+                        and entry.get("method") == str(listener_name)
+                    ),
+                    None,
+                )
+                await self._execute_listeners(listener_name, recorded)
 
                 # For routers, also check if any conditional starts they triggered are completed
                 # If so, continue their chains
