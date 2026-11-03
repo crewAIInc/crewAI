@@ -52,6 +52,8 @@ from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
     LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
     llm_call_context,
 )
 from crewai.llms.hooks.base import BaseInterceptor
@@ -551,10 +553,11 @@ class OpenAICompletion(BaseLLM):
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
 
+        self.api_key = _without_placeholder(self.api_key)
         if self.api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("OPENAI_API_KEY"))
             if self.api_key is None:
-                raise ValueError("OPENAI_API_KEY is required")
+                raise MissingAPIKeyError("OPENAI_API_KEY", self.model)
 
         base_params = {
             "api_key": self.api_key,
@@ -3017,7 +3020,10 @@ class OpenAICompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, OPENAI_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+            self.model,
+            OPENAI_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
         )
 
     def _effective_max_tokens(self) -> int | float | None:

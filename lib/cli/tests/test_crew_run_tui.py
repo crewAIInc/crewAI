@@ -2862,3 +2862,192 @@ def test_an_evaluation_that_finishes_counts_no_stop(monkeypatch, stops) -> None:
     app._evaluate_now("run-this-app")
 
     assert stops == []
+
+
+# --- AMP refuses the saved login while this screen evaluates -----------------
+
+_REJECTED_LOGIN = httpx.Response(
+    401, json={"error": "bad_credentials", "message": "Bad credentials"}
+)
+_STARTED = httpx.Response(202, json={"id": "ev-1", "url": "https://optimize.example/e/1"})
+_DONE = httpx.Response(
+    200,
+    json={"id": "ev-1", "status": "done", "verdict": {"gate": "passed", "grades": {"goal": 5}}},
+)
+
+
+@pytest.fixture
+def rejected_login(monkeypatch, tmp_path, stops):
+    """The run app evaluating against a scripted AMP that refuses the saved
+    login first; `crewai login` and the app's suspend are scripted too."""
+    from contextlib import contextmanager
+
+    from crewai_cli.experimental import eval_crew
+
+    monkeypatch.chdir(tmp_path)  # the app leaves its word in the project's .crewai/
+    token = {"value": "login-token"}
+    starts: list[str | None] = []
+    answers = {"create": [_REJECTED_LOGIN, _STARTED]}
+    logins: list[str] = []
+    outcome: dict[str, BaseException | None] = {"raise": None}
+    suspended: list[str] = []
+
+    class FakeAMP:
+        def __init__(self, api_key=None, base_url=None):
+            self.api_key = api_key
+            self.base_url = "https://amp.test"
+            self.headers: dict[str, str] = {}
+
+        def create_evaluation(self, execution_id, *, eval_config=None, project_id=None):
+            starts.append(self.api_key)
+            create = answers["create"]
+            return create.pop(0) if len(create) > 1 else create[0]
+
+        def get_evaluation(self, evaluation_id):
+            return _DONE
+
+    class FakeLogin:
+        def login(self) -> None:
+            logins.append("login")
+            if outcome["raise"] is not None:
+                raise outcome["raise"]
+            token["value"] = "new-login-token"
+
+    @contextmanager
+    def suspend(self):
+        suspended.append("suspended")
+        yield
+        # Textual resumes the app only after a block that ended without raising.
+        suspended.append("resumed")
+
+    monkeypatch.setattr(eval_crew, "PlusAPI", FakeAMP)
+    monkeypatch.setattr(eval_crew, "saved_login", lambda: token["value"])
+    monkeypatch.setattr(eval_crew, "_machine_amp_origins", lambda: {"https://amp.test"})
+    monkeypatch.setattr(eval_crew, "get_project_id", lambda: None)
+    monkeypatch.setattr(eval_crew.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr("crewai_cli.authentication.main.AuthenticationCommand", FakeLogin)
+    monkeypatch.setattr(CrewRunApp, "suspend", suspend)
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: None)
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    return SimpleNamespace(
+        app=app,
+        starts=starts,
+        answers=answers,
+        logins=logins,
+        outcome=outcome,
+        suspended=suspended,
+        stops=stops,
+    )
+
+
+def test_a_rejected_login_hands_the_terminal_to_a_login_and_evaluates_once_more(
+    rejected_login,
+) -> None:
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == ["login"]
+    assert rejected_login.suspended == ["suspended", "resumed"]
+    assert rejected_login.starts == ["login-token", "new-login-token"]
+    assert app._evaluation["state"] == "done"
+    assert rejected_login.stops == [
+        "cli_usage:eval_login_prompted",
+        "cli_usage:eval",
+        "cli_usage:eval_finished:passed",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason", "said"),
+    [
+        (KeyboardInterrupt(), "login_abandoned", "The login was cancelled, so the run was not evaluated. Run `crewai login`"),
+        (SystemExit(1), "login_timed_out", "The login code expired before sign-in finished"),
+        (httpx.HTTPError("access_denied"), "login_failed", "The login failed (HTTPError: access_denied)"),
+    ],
+)
+def test_a_login_that_does_not_complete_comes_back_to_the_app_and_says_why(
+    rejected_login, raised, reason, said
+) -> None:
+    rejected_login.outcome["raise"] = raised
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.suspended == ["suspended", "resumed"]
+    assert rejected_login.starts == ["login-token"]
+    assert app._evaluation["state"] == "failed"
+    assert app._evaluation["error"].startswith(said)
+    assert rejected_login.stops == [
+        "cli_usage:eval_login_prompted",
+        f"cli_usage:eval_stopped:{reason}",
+    ]
+
+
+def test_a_login_amp_still_refuses_on_this_screen_is_not_offered_twice(
+    rejected_login,
+) -> None:
+    rejected_login.answers["create"] = [_REJECTED_LOGIN]
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == ["login"]
+    assert rejected_login.starts == ["login-token", "new-login-token"]
+    assert app._evaluation["error"].startswith(
+        "CrewAI AMP still refused the login after signing in again: Bad credentials."
+    )
+    assert rejected_login.stops == [
+        "cli_usage:eval_login_prompted",
+        "cli_usage:eval_stopped:login_still_required",
+    ]
+
+
+def test_a_terminal_that_cannot_be_handed_over_shows_the_refusal_as_before(
+    rejected_login, monkeypatch
+) -> None:
+    from textual.app import SuspendNotSupported
+
+    def cannot_suspend(self):
+        raise SuspendNotSupported("App.suspend is not supported in this environment.")
+
+    monkeypatch.setattr(CrewRunApp, "suspend", cannot_suspend)
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == []
+    assert app._evaluation["error"] == (
+        "Bad credentials. Log in with `crewai login` and try again."
+    )
+    assert rejected_login.stops == ["cli_usage:eval_stopped:amp_401"]
+
+
+@pytest.mark.parametrize(
+    ("refusal", "reason"),
+    [
+        (httpx.Response(403, json={"error": "bad_credentials", "message": "Forbidden"}), "amp_403"),
+        (httpx.Response(404, json={"error": "trace_not_found", "message": "No spans"}), "amp_404"),
+    ],
+)
+def test_other_refusals_on_this_screen_offer_no_login(
+    rejected_login, monkeypatch, refusal, reason
+) -> None:
+    from crewai_cli.experimental import eval_crew
+
+    # The run app waits out a 404 for a run that just ended; that wait is not
+    # what this test is about.
+    monkeypatch.setattr(eval_crew, "SPANS_WAIT_SECONDS", 0)
+    rejected_login.answers["create"] = [refusal]
+    app = rejected_login.app
+
+    app._evaluate_now("run-this-app")
+
+    assert rejected_login.logins == []
+    assert rejected_login.suspended == []
+    assert app._evaluation["state"] == "failed"
+    assert rejected_login.stops == [f"cli_usage:eval_stopped:{reason}"]

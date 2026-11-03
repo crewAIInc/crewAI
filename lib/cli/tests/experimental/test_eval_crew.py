@@ -1696,7 +1696,9 @@ def test_the_comparison_is_counted_with_the_models_and_nothing_that_names_it(dep
     monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
     install(monkeypatch, FakeModelsAMP(statuses=[compared()]))
 
-    eval_module.eval_models(MODELS)
+    # The second model is under a vendor that is not public, so it stays
+    # `<provider>/other` however much the model catalog grows.
+    eval_module.eval_models("openai/gpt-4o-mini, openrouter/acme-corp/support-bot-v3")
 
     assert spans == [("cli_usage:eval_models", {
         "authenticated": "true",
@@ -2107,6 +2109,165 @@ def test_a_refused_start_counts_why_and_says_what_it_always_said(
     assert expected in capsys.readouterr().out
 
 
+# --- AMP refuses the saved login: one new login, one more try ----------------
+
+REJECTED_LOGIN = httpx.Response(401, json={"error": "bad_credentials", "message": "Bad credentials"})
+
+
+@pytest.fixture
+def logins(monkeypatch):
+    """`crewai login`, scripted: each call records itself, then does what the
+    test says (complete, which saves a new token, or raise)."""
+    token = {"value": "login-token"}
+    calls: list[str] = []
+    outcome: dict[str, BaseException | None] = {"raise": None}
+
+    class FakeLogin:
+        def login(self) -> None:
+            calls.append("login")
+            if outcome["raise"] is not None:
+                raise outcome["raise"]
+            token["value"] = "new-login-token"
+
+    monkeypatch.setattr("crewai_cli.authentication.main.AuthenticationCommand", FakeLogin)
+    monkeypatch.setattr(eval_module, "saved_login", lambda: token["value"])
+    return SimpleNamespace(calls=calls, outcome=outcome, token=token)
+
+
+def test_a_rejected_login_at_a_terminal_logs_in_once_and_evaluates(project, monkeypatch, capsys, usage, logins):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    amp = install(monkeypatch, FakeAMP(create=[REJECTED_LOGIN, httpx.Response(202, json={"id": "ev-1", "url": URL})], statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert logins.calls == ["login"]
+    assert amp.calls == [("create", EXECUTION_ID), ("create", EXECUTION_ID), ("get", "ev-1")]
+    assert amp.api_key == "new-login-token"  # the retry went with the new login
+    assert usage == ["cli_usage:eval_login_prompted", "cli_usage:eval", "cli_usage:eval_finished:passed"]
+    out = capsys.readouterr().out
+    assert "CrewAI AMP did not accept the saved login. Log in again" in out
+    assert "Goal gate: PASSED" in out
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason", "said"),
+    [
+        (KeyboardInterrupt(), "login_abandoned", "The login was cancelled, so the run was not evaluated. Run `crewai login`"),
+        (SystemExit(1), "login_timed_out", "The login code expired before sign-in finished, so the run was not evaluated. Run `crewai login`"),
+        (httpx.HTTPError("access_denied"), "login_failed", "The login failed (HTTPError: access_denied), so the run was not evaluated. Run `crewai login`"),
+    ],
+)
+def test_a_login_that_does_not_complete_stops_with_why(project, monkeypatch, capsys, usage, logins, raised, reason, said):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.outcome["raise"] = raised
+    amp = install(monkeypatch, FakeAMP(create=REJECTED_LOGIN))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert amp.calls == [("create", EXECUTION_ID)]  # nothing retried without a login
+    assert usage == ["cli_usage:eval_login_prompted", f"cli_usage:eval_stopped:{reason}"]
+    assert said in capsys.readouterr().out
+
+
+def test_a_login_amp_still_refuses_is_not_offered_twice(project, monkeypatch, capsys, usage, logins):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    amp = install(monkeypatch, FakeAMP(create=REJECTED_LOGIN))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert logins.calls == ["login"]
+    assert amp.calls == [("create", EXECUTION_ID), ("create", EXECUTION_ID)]
+    assert usage == ["cli_usage:eval_login_prompted", "cli_usage:eval_stopped:login_still_required"]
+    assert (
+        "CrewAI AMP still refused the login after signing in again: Bad credentials. Log in with `crewai login`"
+        in capsys.readouterr().out
+    )
+
+
+@pytest.mark.parametrize(
+    ("tty", "dmn"),
+    [(False, False), (True, True)],
+    ids=["no terminal", "enterprise non-interactive mode"],
+)
+def test_with_nobody_to_confirm_a_login_a_rejected_one_stops_and_says_crewai_login(
+    project, monkeypatch, capsys, usage, logins, tty, dmn
+):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: tty)
+    monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: dmn)
+    install(monkeypatch, FakeAMP(create=REJECTED_LOGIN))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert logins.calls == []
+    assert usage == ["cli_usage:eval_stopped:amp_401"]
+    assert "Bad credentials. Log in with `crewai login` and try again." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("refusal", "reason"),
+    [
+        (httpx.Response(403, json={"error": "bad_credentials", "message": "Forbidden"}), "amp_403"),
+        (httpx.Response(404, json={"error": "trace_not_found", "message": "No spans"}), "amp_404"),
+    ],
+)
+def test_other_refusals_at_a_terminal_offer_no_login(project, monkeypatch, usage, logins, refusal, reason):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    install(monkeypatch, FakeAMP(create=refusal))
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    assert logins.calls == []
+    assert usage == [f"cli_usage:eval_stopped:{reason}"]
+
+
+def test_a_401_to_a_request_without_a_login_offers_none(project, monkeypatch, usage, logins):
+    """Only the login AMP rejected is offered again: an anonymous read was not one."""
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.token["value"] = None
+    install(monkeypatch, FakeAMP(create=REJECTED_LOGIN))
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    assert logins.calls == []
+    assert usage == ["cli_usage:eval_stopped:amp_401"]
+
+
+def test_the_run_apps_door_offers_the_login_only_through_the_callers_hook(project, monkeypatch, logins):
+    """`evaluate_run` prints nothing of its own: without LOG_IN a 401 is the
+    stop it always was, and a LOG_IN that cannot be offered changes nothing."""
+    install(monkeypatch, FakeAMP(create=REJECTED_LOGIN))
+    monkeypatch.setattr(eval_module, "get_project_id", lambda: None)
+
+    with pytest.raises(eval_module.EvaluationStoppedError, match="Bad credentials. Log in with `crewai login`") as stopped:
+        eval_module.evaluate_run(EXECUTION_ID, on_started=lambda started: None)
+    assert stopped.value.reason == "amp_401"
+
+    with pytest.raises(eval_module.EvaluationStoppedError, match="Bad credentials") as stopped:
+        eval_module.evaluate_run(EXECUTION_ID, on_started=lambda started: None, log_in=lambda: False)
+    assert stopped.value.reason == "amp_401"
+    assert logins.calls == []
+
+
 def test_an_unreachable_amp_at_the_start_counts_as_a_network_error(project, monkeypatch, usage):
     directory, _ = project
     record_last_run(directory)
@@ -2262,6 +2423,14 @@ def test_a_start_the_run_app_was_refused_is_not_tried_again_by_the_command(
     monkeypatch.setattr(
         CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
     )
+
+    def no_terminal_to_hand_over(self):
+        from textual.app import SuspendNotSupported
+
+        raise SuspendNotSupported("App.suspend is not supported in this environment.")
+
+    # A 401 the app could hand to a login is retried; this one it cannot.
+    monkeypatch.setattr(CrewRunApp, "suspend", no_terminal_to_hand_over)
     shown: list[str] = []
     monkeypatch.setattr(CrewRunApp, "_evaluation_failed", lambda self, message: shown.append(message))
     holder: dict[str, str | None] = {"execution_id": None}

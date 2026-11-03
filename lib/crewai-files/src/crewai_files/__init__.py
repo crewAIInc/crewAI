@@ -152,4 +152,4 @@ __all__ = [
     "wrap_file_source",
 ]
 
-__version__ = "1.15.32"
+__version__ = "1.15.34"

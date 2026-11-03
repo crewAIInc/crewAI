@@ -2804,20 +2804,16 @@ def test_get_platform_tools_warns_when_token_is_missing(monkeypatch, capsys):
     assert "No Enterprise Action Auth Token found" in capsys.readouterr().out
 
 
-def test_get_platform_tools_warning_names_the_renamed_token(monkeypatch):
+def test_get_platform_tools_supports_legacy_platform_integration_token(monkeypatch):
     monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "old-token")
     agent = Agent(role="Old Token Agent", goal="g", backstory="b", apps=["gmail"])
 
-    with pytest.warns(
-        UserWarning,
-        match=r"Cause: CREWAI_PLATFORM_INTEGRATION_TOKEN is set, but CrewAI now "
-        r"reads the Enterprise Action Auth Token only from "
-        r"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
-    ):
+    resolved_tools = [MagicMock()]
+    with patch("crewai_tools.CrewaiPlatformTools", return_value=resolved_tools):
         result = agent.get_platform_tools(agent.apps)
 
-    assert result == []
+    assert result == resolved_tools
 
 
 def test_get_platform_tools_warning_includes_the_resolution_error(monkeypatch):
