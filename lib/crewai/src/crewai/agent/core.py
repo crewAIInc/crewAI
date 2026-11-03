@@ -133,6 +133,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.flow.flow import Flow
     from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
@@ -251,6 +252,11 @@ class Agent(BaseAgent):
     _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _conversation_flow: Any = PrivateAttr(default=None)
+    conversational: bool = Field(
+        default=False,
+        description="Experimental: enable standalone conversations through a Flow session.",
+    )
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time in seconds for an agent to execute a task",
@@ -1805,6 +1811,29 @@ class Agent(BaseAgent):
             inputs["trailing"] = trailing
 
         return executor, inputs, agent_info, parsed_tools
+
+    def as_flow(self) -> Flow[Any]:
+        """Return this Agent's experimental conversational Flow session.
+
+        Requires ``conversational=True``. Reuse the returned Flow for multiple
+        turns, or configure its persistence to restore sessions across processes.
+        Direct ``kickoff`` calls remain independent executions.
+        """
+        if not self.conversational:
+            raise ValueError("Agent conversations require conversational=True")
+        if self._conversation_flow is None:
+            from crewai.agent.conversation import agent_flow
+
+            self._conversation_flow = agent_flow(lambda: self, name=self.role)()
+        return cast("Flow[Any]", self._conversation_flow)
+
+    def handle_turn(self, message: str, **kwargs: Any) -> Any:
+        """Run a turn with the history of this experimental Agent conversation.
+
+        ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
+        persistence restore options. Separate Agent instances own separate sessions.
+        """
+        return self.as_flow().handle_turn(message, **kwargs)
 
     def kickoff(
         self,

@@ -654,6 +654,34 @@ asyncio.run(main())
 `kickoff()` 메서드는 crew 안의 에이전트가 쓰는 것과 같은 `AgentExecutor`로 작업이나 crew 없이 에이전트를 실행하며, 모든 agent 설정(역할, 목표, 백스토리, 도구 등)을 유지합니다.
 </Note>
 
+## 대화형 Agent (실험적)
+
+직접 사용하는 Agent에 대화형 Flow 세션을 제공하려면 `conversational=True`를 설정하세요. `handle_turn()`은 매 턴 세션의 사용자/어시스턴트 기록을 설정된 Agent와 도구에 전달하고 일반 Agent 출력을 반환합니다.
+
+<Warning>
+이 API는 실험적이며 호환되는 SDK 빌드가 필요합니다. 릴리스 전에 계약이 변경될 수 있습니다.
+</Warning>
+
+```python
+from crewai import Agent, LLM
+
+agent = Agent(
+    role="Assistant",
+    goal="Help the user accurately.",
+    backstory="A general-purpose assistant.",
+    llm=LLM(model="openai/gpt-6.1-sol", api="responses"),
+    conversational=True,
+)
+
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+하나의 대화에는 같은 Agent 인스턴스를 재사용하세요. `agent.as_flow()`는 기반 대화형 Flow 세션을 제공합니다. 기록은 기본적으로 메모리에 유지되며 프로세스 간 복구에는 명시적인 Flow 영속성 설정이 필요합니다. 독립적인 대화에는 별도의 Agent 인스턴스를 사용하세요. `session_id`는 Flow 세션을 식별하거나 복원하며 하나의 Agent에서 동시 다중 세션 격리를 제공하지는 않습니다.
+
+일반 Agent의 기본값은 `conversational=False`입니다. 대화가 활성화되어도 직접 호출하는 `kickoff()`와 `kickoff_async()`는 독립적인 실행으로 유지됩니다. 세션 기록을 유지하려면 `handle_turn()`을 사용하세요. 기존 Crew/Task 실행은 현재 동작을 유지합니다.
+
 ## 이전 릴리스에서 에이전트 업그레이드
 
 1.15.29 릴리스는 `CrewAgentExecutor`를 제거했고, 모든 에이전트가 큰 도구 결과, 긴 대화, 반복되는 도구 호출을 처리하는 방식을 바꾸었습니다. 이 변경 사항은 crew 안의 에이전트, Flow 안의 에이전트, `kickoff()`로 호출한 에이전트 모두에 적용됩니다. 예외는 [계획](/ko/concepts/planning)을 세우는 에이전트의 계획 단계입니다. 이 단계에서는 도구 결과가 미뤄지지 않고, 대화가 요약되지 않으며, 반복 호출 횟수는 단계마다 새로 셉니다. 1.15.28 이하에서 옮겨 오는 경우 아래 항목을 하나씩 확인하세요.

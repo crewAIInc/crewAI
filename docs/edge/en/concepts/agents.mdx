@@ -650,6 +650,34 @@ asyncio.run(main())
   configuration (role, goal, backstory, tools, etc.).
 </Note>
 
+## Conversational Agents (Experimental)
+
+Enable `conversational=True` to give a directly used Agent a conversational Flow session. `handle_turn()` passes the session's user/assistant history to the configured Agent and tools on each turn and returns the usual Agent output.
+
+<Warning>
+This API is experimental and requires a matching SDK build. Its contract may change before release.
+</Warning>
+
+```python
+from crewai import Agent, LLM
+
+agent = Agent(
+    role="Assistant",
+    goal="Help the user accurately.",
+    backstory="A general-purpose assistant.",
+    llm=LLM(model="openai/gpt-6.1-sol", api="responses"),
+    conversational=True,
+)
+
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+Reuse the same Agent instance for a conversation. `agent.as_flow()` exposes its underlying conversational Flow session. History is in memory by default; process recovery requires explicit Flow persistence. Use separate Agent instances for independent conversations. A `session_id` identifies or restores a Flow session; it does not provide concurrent multi-session isolation within one Agent.
+
+Ordinary Agents default to `conversational=False`. Direct `kickoff()` and `kickoff_async()` calls remain independent executions even when conversation is enabled; use `handle_turn()` to retain the session history. Existing Crew/Task execution keeps its current behavior.
+
 ## Upgrading Agents from Earlier Releases
 
 Release 1.15.29 removed `CrewAgentExecutor` and changed how every agent handles large tool results, long conversations, and repeated tool calls. These changes apply to agents in a crew, in a Flow, and called with `kickoff()`. The exception is the plan steps of an agent that [plans](/en/concepts/planning): their tool results are not deferred, their conversation is not summarized, and the repeated-call count restarts for each step. If you are moving from 1.15.28 or earlier, check each one below.
