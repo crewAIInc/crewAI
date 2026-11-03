@@ -1011,3 +1011,34 @@ class TestConcurrentStreamIsolation:
 
         _unregister_handler(state_a.handler)
         _unregister_handler(state_b.handler)
+
+
+class TestStreamingStateLoopAcquisition:
+    def test_use_async_acquires_running_loop_without_deprecation(self) -> None:
+        """create_streaming_state(use_async=True) inside a coroutine must not
+        rely on the deprecated asyncio.get_event_loop() (#8912)."""
+        import warnings
+
+        from crewai.utilities.streaming import (
+            TaskInfo,
+            _unregister_handler,
+            create_streaming_state,
+        )
+
+        async def _create_in_running_loop() -> Any:
+            task_info: TaskInfo = {
+                "index": 0,
+                "name": "task_loop",
+                "id": "task-loop",
+                "agent_role": "Researcher",
+                "agent_id": "agent-loop",
+            }
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", DeprecationWarning)
+                state = create_streaming_state(task_info, [], use_async=True)
+            assert state.loop is asyncio.get_running_loop()
+            return state
+
+        state = asyncio.run(_create_in_running_loop())
+        _unregister_handler(state.handler)
+        assert state.async_queue is not None

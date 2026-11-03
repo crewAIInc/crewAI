@@ -430,7 +430,7 @@ def create_streaming_state(
 
     if use_async:
         async_queue = asyncio.Queue()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
     stream_id = str(uuid.uuid4())
 
