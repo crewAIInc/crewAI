@@ -194,16 +194,14 @@ def test_crew_bootstrap_ignores_agent_inputs(tmp_path):
 
 def test_bare_run_opens_conversation_tui(tmp_path, monkeypatch):
     import crewai.project
-    import crewai_cli.kickoff_flow
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(runner, "is_interactive", lambda: True)
-    flow = SimpleNamespace(conversational=True)
-    monkeypatch.setattr(crewai.project, "load_agent_project", lambda: SimpleNamespace(as_flow=lambda: flow))
     calls = []
-    monkeypatch.setattr(crewai_cli.kickoff_flow, "_run_conversational_flow_tui", calls.append)
+    agent = SimpleNamespace(chat=lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(crewai.project, "load_agent_project", lambda: agent)
     runner.run_agent()
-    assert calls == [flow]
+    assert calls == [{"tui": True}]
 
 
 def test_bare_run_needs_terminal_before_loading_project(monkeypatch):

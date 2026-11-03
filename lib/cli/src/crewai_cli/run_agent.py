@@ -102,9 +102,7 @@ def run_agent(inputs: str | None = None) -> None:
 
         agent = load_agent_project()
         if inputs is None:
-            from crewai_cli.kickoff_flow import _run_conversational_flow_tui
-
-            _run_conversational_flow_tui(agent.as_flow())
+            agent.chat(tui=True)
             return
         result = asyncio.run(agent.kickoff_async(messages=messages))
     except Exception as exc:
