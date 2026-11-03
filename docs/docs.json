@@ -98,7 +98,8 @@
                         "group": "Agents",
                         "icon": "user",
                         "pages": [
-                          "edge/en/guides/agents/crafting-effective-agents"
+                          "edge/en/guides/agents/crafting-effective-agents",
+                          "edge/en/guides/agents/standalone-agent-projects"
                         ]
                       },
                       {
@@ -21094,7 +21095,8 @@
                         "group": "Agentes",
                         "icon": "user",
                         "pages": [
-                          "edge/pt-BR/guides/agents/crafting-effective-agents"
+                          "edge/pt-BR/guides/agents/crafting-effective-agents",
+                          "edge/pt-BR/guides/agents/standalone-agent-projects"
                         ]
                       },
                       {
@@ -40379,7 +40381,8 @@
                         "group": "에이전트 (Agents)",
                         "icon": "user",
                         "pages": [
-                          "edge/ko/guides/agents/crafting-effective-agents"
+                          "edge/ko/guides/agents/crafting-effective-agents",
+                          "edge/ko/guides/agents/standalone-agent-projects"
                         ]
                       },
                       {
@@ -60312,7 +60315,8 @@
                         "group": "الوكلاء",
                         "icon": "user",
                         "pages": [
-                          "edge/ar/guides/agents/crafting-effective-agents"
+                          "edge/ar/guides/agents/crafting-effective-agents",
+                          "edge/ar/guides/agents/standalone-agent-projects"
                         ]
                       },
                       {
