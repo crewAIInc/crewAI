@@ -125,6 +125,8 @@ class ScrapegraphScrapeTool(BaseTool):
         if user_prompt is not None:
             self.user_prompt = user_prompt
 
+        self.enable_logging = enable_logging
+
         if self.enable_logging:
             sgai_logger.set_logging(level="INFO")
 
