@@ -453,7 +453,9 @@ from pydantic import BaseModel
 class MarketState(BaseModel):
     sentiment: str = "neutral"
     confidence: float = 0.0
-    recommendations: list = []
+    from pydantic import Field
+
+recommendations: list[str] = Field(default_factory=list)
 
 class AdvancedAnalysisFlow(Flow[MarketState]):
     @start()
