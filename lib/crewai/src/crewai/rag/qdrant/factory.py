@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 import functools
+import json
 import os
 import threading
 from typing import Any
@@ -63,9 +64,32 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
     normalized = os.path.realpath(os.path.expanduser(os.fspath(path)))
     with _local_clients_lock:
         if normalized not in _local_clients:
-            _local_clients[normalized] = _LockedQdrantClient(
-                **{**config.options, "path": normalized}
-            )
+            try:
+                _local_clients[normalized] = _LockedQdrantClient(
+                    **{**config.options, "path": normalized}
+                )
+            except RuntimeError as e:
+                if "already accessed by another instance" not in str(e):
+                    raise
+                raise RuntimeError(
+                    f"Local Qdrant storage at '{normalized}' is already in use by "
+                    "another process. Local Qdrant allows one process per storage "
+                    "folder (this can happen with multiple workers or replicas, or "
+                    "when another script, notebook or server is running in the same "
+                    "project). Use a Qdrant server instead, for example "
+                    "QdrantConfig(options={'url': 'http://localhost:6333'}), or keep "
+                    "ChromaDB with set_rag_config(ChromaDBConfig())."
+                ) from e
+            except json.JSONDecodeError as e:
+                raise RuntimeError(
+                    f"Could not read the local Qdrant storage at '{normalized}'. "
+                    "This happens when another process is creating the same folder "
+                    "at the same time (local Qdrant allows one process per storage "
+                    "folder), or when its meta.json is corrupted. Use a Qdrant "
+                    "server instead, for example "
+                    "QdrantConfig(options={'url': 'http://localhost:6333'}), or keep "
+                    "ChromaDB with set_rag_config(ChromaDBConfig())."
+                ) from e
         return _local_clients[normalized]
 
 
