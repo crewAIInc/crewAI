@@ -310,7 +310,10 @@ def _serialize_persistence(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
     if isinstance(value, FlowPersistence):
-        return value.model_dump(mode="json")
+        data = value.model_dump(mode="json")
+        if data.get("persistence_type") == "base":
+            data["persistence_type"] = type(value).__name__
+        return data
     raise TypeError(
         f"Cannot serialize Flow.persistence of type {type(value).__name__}: "
         "expected FlowPersistence or None."
