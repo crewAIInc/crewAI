@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sqlite3
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -708,6 +709,15 @@ class Quote(BaseModel):
     amount: int
 
 
+def _write_remote_type_module(tmp_path: Path) -> None:
+    """Create an importable module defining ``Remote`` outside the repo tree."""
+    source = (
+        "from pydantic import BaseModel\n\n\n"
+        "class Remote(BaseModel):\n    amount: int\n"
+    )
+    (tmp_path / "remote_checkpoint_types.py").write_text(source)
+
+
 class TestRestoredMethodOutputTypes:
     """Structured outputs recorded with type paths rebuild on restore."""
 
@@ -776,6 +786,61 @@ class TestRestoredMethodOutputTypes:
 
         assert restored.method_outputs == [{"amount": 42}]
         assert "Could not import" in caplog.text
+
+    def test_unloaded_type_path_not_imported_without_opt_in(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        _write_remote_type_module(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d,
+                [
+                    {
+                        "method": "price",
+                        "output": {"amount": 42},
+                        "output_type": "remote_checkpoint_types.Remote",
+                    }
+                ],
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            with caplog.at_level(logging.WARNING):
+                restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == [{"amount": 42}]
+        assert "Could not import" in caplog.text
+        # Restore must not execute a checkpoint-named module's code unless
+        # the deserialization opt-in is set.
+        assert "remote_checkpoint_types" not in sys.modules
+
+    def test_opt_in_imports_unloaded_type_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _write_remote_type_module(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d,
+                [
+                    {
+                        "method": "price",
+                        "output": {"amount": 42},
+                        "output_type": "remote_checkpoint_types.Remote",
+                    }
+                ],
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            try:
+                restored = Flow.from_checkpoint(cfg)
+            finally:
+                # Drop the gated import so later tests see a clean sys.modules.
+                sys.modules.pop("remote_checkpoint_types", None)
+
+        (rebuilt,) = restored.method_outputs
+        assert type(rebuilt).__name__ == "Remote"
+        assert rebuilt.amount == 42
 
 
 class TestRestoredFlowListenerInputs:
@@ -939,6 +1004,36 @@ class TestRestoredFlowListenerInputs:
 
         assert received == ["HumanFeedbackResult", "HumanFeedbackResult"]
         assert restored.state.get("feedback") == "ship it"
+
+    def test_dict_human_feedback_yields_collapsed_outcome(self) -> None:
+        flow = Flow()
+        flow._method_outputs = [
+            {
+                "method": "review",
+                "output": {"status": "draft"},
+                "human_feedback": {
+                    "output": {"status": "draft"},
+                    "feedback": "tighten copy",
+                    "outcome": "revised",
+                },
+            }
+        ]
+        found, recorded = flow._recorded_listener_input("review")
+        assert found is True
+        assert recorded == "revised"
+
+    def test_dict_human_feedback_without_outcome_yields_feedback(self) -> None:
+        flow = Flow()
+        flow._method_outputs = [
+            {
+                "method": "review",
+                "output": "draft",
+                "human_feedback": {"feedback": "tighten copy"},
+            }
+        ]
+        found, recorded = flow._recorded_listener_input("review")
+        assert found is True
+        assert recorded == {"feedback": "tighten copy"}
 
 
 class TestAgentCheckpoint:

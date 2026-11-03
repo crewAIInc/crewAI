@@ -12,9 +12,12 @@ from __future__ import annotations
 import dataclasses
 import importlib
 import logging
+import sys
 from typing import Any
 
 from pydantic import BaseModel, TypeAdapter
+
+from crewai.types.callback import _trusted_deserialize
 
 
 logger = logging.getLogger(__name__)
@@ -70,20 +73,33 @@ def annotate_method_output_types(entry: Any) -> Any:
 
 
 def _resolve_type_path(type_path: str) -> Any:
-    """Import a class recorded by :func:`structured_type_path`, or None.
+    """Resolve a class recorded by :func:`structured_type_path`, or None.
 
     Tolerant by design: a checkpoint may reference a class that is no longer
     importable (a script's or notebook's locals, renamed code), and restore
     must degrade to the plain JSON value instead of failing the run.
+
+    Resolution is limited to modules the running application already
+    imported, so a checkpoint cannot make CrewAI import a module of its
+    choosing: rebuilding a resumed flow's own models needs no import, because
+    the module that defines the flow already imported them. Importing an
+    unloaded path stays behind ``CREWAI_DESERIALIZE_CALLBACKS``, like every
+    other dotted path read from a checkpoint.
     """
     parts = type_path.split(".")
     if not parts:
         return None
+    trusted = _trusted_deserialize()
     for split in range(len(parts), 0, -1):
-        try:
-            obj: Any = importlib.import_module(".".join(parts[:split]))
-        except ImportError:
-            continue
+        name = ".".join(parts[:split])
+        obj: Any = sys.modules.get(name)
+        if obj is None:
+            if not trusted:
+                continue
+            try:
+                obj = importlib.import_module(name)
+            except ImportError:
+                continue
         try:
             for part in parts[split:]:
                 obj = getattr(obj, part)

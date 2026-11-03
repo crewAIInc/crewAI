@@ -1878,7 +1878,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if isinstance(entry, dict) and entry.get("method") == str(method_name):
                 feedback = entry.get("human_feedback")
                 if feedback is not None:
-                    outcome = getattr(feedback, "outcome", None)
+                    # Checkpoints may hold the feedback as a plain dict —
+                    # legacy entries, or a rebuild that degraded to JSON.
+                    if isinstance(feedback, dict):
+                        outcome = feedback.get("outcome")
+                    else:
+                        outcome = getattr(feedback, "outcome", None)
                     return True, outcome if outcome is not None else feedback
                 return True, entry.get("output")
         return False, None
