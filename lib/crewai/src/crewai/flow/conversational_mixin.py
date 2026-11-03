@@ -17,7 +17,7 @@ Import surface:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from enum import Enum
 import json
@@ -65,6 +65,7 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.execution import ExecutionTrace
+    from crewai.lite_agent_output import LiteAgentOutput
     from crewai.llms.base_llm import BaseLLM
 
 
@@ -369,7 +370,9 @@ class _ConversationalMixin:
 
     @listen("converse")
     @_conversational_only
-    def converse_turn(self) -> Any:
+    def converse_turn(
+        self,
+    ) -> str | LiteAgentOutput | Awaitable[str | LiteAgentOutput]:
         """Built-in chat handler over canonical conversation history."""
         llm = self._default_conversation_llm()
         if llm is None:

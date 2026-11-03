@@ -10,6 +10,7 @@ from pydantic import field_validator
 
 from crewai.agent.core import Agent
 from crewai.flow import ConversationConfig, ConversationState, Flow, listen, start
+from crewai.lite_agent_output import LiteAgentOutput
 from crewai.utilities.types import LLMMessage
 
 
@@ -47,7 +48,7 @@ def agent_flow(
             return "converse"
 
         @(listen("converse") if conversation_enabled else start())
-        async def converse_turn(self) -> Any:
+        async def converse_turn(self) -> LiteAgentOutput:
             messages = [
                 cast(
                     LLMMessage,
