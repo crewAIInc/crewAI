@@ -450,9 +450,7 @@ Custom storage configuration for managing how the knowledge is stored and retrie
 </Warning>
 
 <Note>
-Local Qdrant storage has two limits to keep in mind:
-- **One process per folder.** A second process opening the same storage folder fails. This differs from ChromaDB, which allowed several processes to share a folder.
-- **Not safe for concurrent writes from threads.** Searches from several threads are safe, but write knowledge during crew setup instead of from parallel tasks.
+Local Qdrant storage allows **one process per folder**. A second process opening the same storage folder fails with an error that suggests the options below. This differs from ChromaDB, which allowed several processes to share a folder. To share storage across processes, workers or replicas, use a Qdrant server (`set_rag_config(QdrantConfig(options={"url": "http://localhost:6333"}))`) or ChromaDB (`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`). Threads in the same process are safe: calls to the shared local client run one at a time.
 </Note>
 
 ### Where CrewAI Stores Knowledge Files
