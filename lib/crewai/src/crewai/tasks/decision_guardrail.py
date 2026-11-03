@@ -32,12 +32,30 @@ class PredicateAnswer(BaseModel):
     probability: float = Field(ge=0.0, le=1.0)
 
 
+class PredicateAnswerLike(Protocol):
+    """What :class:`DecisionGuardrail` reads from a predicate answer.
+
+    Adapters may return :class:`PredicateAnswer` or their own answer type, as
+    long as it exposes these read-only attributes.
+    """
+
+    @property
+    def name(self) -> str:
+        """The question name echoed back by the decider."""
+        ...
+
+    @property
+    def probability(self) -> float:
+        """Estimated probability, from 0 to 1, that the predicate holds."""
+        ...
+
+
 class PredicateDecider(Protocol):
     """What :class:`DecisionGuardrail` needs from a decisions adapter."""
 
     def predicate(
         self, input: str, *, name: str, instructions: str
-    ) -> PredicateAnswer | None:
+    ) -> PredicateAnswerLike | None:
         """Ask one predicate question about ``input``.
 
         Returns:
@@ -105,7 +123,7 @@ class DecisionGuardrail:
         self.decider = decider
         self.threshold = float(threshold)
         self.name = name
-        self.last_answer: PredicateAnswer | None = None
+        self.last_answer: PredicateAnswerLike | None = None
 
     @property
     def description(self) -> str:

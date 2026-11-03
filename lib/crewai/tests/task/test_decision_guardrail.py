@@ -1,5 +1,6 @@
 """Tests for DecisionGuardrail, the threshold-based predicate guardrail."""
 
+from dataclasses import dataclass
 import math
 from types import SimpleNamespace
 from typing import Any
@@ -173,6 +174,22 @@ def test_last_answer_tracks_latest_evaluation(task_output):
     assert guardrail.last_answer is None
 
 
+@dataclass(frozen=True)
+class AdapterAnswer:
+    """An adapter's own answer type, unrelated to PredicateAnswer."""
+
+    name: str
+    probability: float
+
+
+def test_accepts_answer_types_other_than_predicate_answer(task_output):
+    answer = AdapterAnswer(name="task_output_check", probability=0.9)
+    guardrail = make_guardrail(answer)
+
+    assert guardrail(task_output) == (True, "Hello there")
+    assert guardrail.last_answer is answer
+
+
 def test_decider_receives_raw_output_name_and_instructions(task_output):
     decider = FakeDecider(0.9)
     guardrail = DecisionGuardrail(
@@ -285,13 +302,15 @@ def test_started_event_classifies_decision_guardrail(task_output):
 async def test_async_task_with_decision_guardrail(mock_execute: AsyncMock) -> None:
     mock_execute.return_value = "Hello there"
     agent = Agent(role="Greeter", goal="Greet", backstory="Friendly", llm="gpt-4o-mini")
+    decider = FakeDecider(0.9)
     task = Task(
         description="Greet",
         expected_output="A greeting",
         agent=agent,
-        guardrail=DecisionGuardrail(INSTRUCTIONS, FakeDecider(0.9), threshold=0.5),
+        guardrail=DecisionGuardrail(INSTRUCTIONS, decider, threshold=0.5),
     )
 
     result = await task.aexecute_sync()
 
     assert result.raw == "Hello there"
+    assert len(decider.calls) == 1
