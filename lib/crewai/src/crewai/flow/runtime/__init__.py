@@ -868,6 +868,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             and flow_persist.enabled
         ):
             self.persistence = self._persist_backend_for(flow_persist)
+        if self.persistence is None:
+            self.persistence = self._method_level_persistence()
 
         if self._state is None:
             self._state = self._create_initial_state()
@@ -3129,6 +3131,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         PersistenceDecorator.persist_state(
             self, method_name, backend, verbose=persist_definition.verbose
         )
+
+    def _method_level_persistence(self) -> FlowPersistence | None:
+        """Return the backend shared by every method-level `@persist`, if any.
+
+        Lets `kickoff(inputs={"id": ...})` and `restore_from_state_id` load the
+        state those methods saved. Returns `None` when no method persists or
+        when methods persist to different backends, since there is then no
+        single place to restore from.
+        """
+        backends = [
+            self._persist_backend_for(method.persist)
+            for method in self._definition.methods.values()
+            if method.persist is not None and method.persist.enabled
+        ]
+        if not backends or any(backend != backends[0] for backend in backends):
+            return None
+        return backends[0]
 
     def _persist_backend_for(
         self, persist_definition: FlowPersistenceDefinition
