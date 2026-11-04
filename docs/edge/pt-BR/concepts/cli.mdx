@@ -195,6 +195,16 @@ crewai run
   flows.
 </Note>
 
+Antes de um crew ou um flow em Python começar, o `crewai run` verifica se a chave de API de que cada um dos seus modelos precisa está definida, no seu ambiente ou no `.env` que o crewAI carrega: o do próprio projeto ou, se não houver, o mais próximo em uma pasta acima. Em um crew JSON, ele lê os campos `llm`, `manager_llm` e `function_calling_llm` do `crew.jsonc` e dos arquivos de agentes que ele lista; um agente sem `llm` roda com `MODEL` ou, se não houver, com o modelo padrão do crewAI, `gpt-4.1-mini`, então esse modelo também é verificado. Para um crew ou flow em Python, ele lê `MODEL` e qualquer `llm:` em `config/agents.yaml`, e verifica `gpt-4.1-mini` quando nenhum dos dois indica um modelo. Um valor vazio ou o placeholder `YOUR_API_KEY` conta como ausente.
+
+Em um terminal, o CLI pede cada chave ausente. O que você cola fica oculto, é salvo no `.env` do projeto e é usado pela execução que começa em seguida. Pressione Enter para pular uma chave. Sem um terminal, por exemplo sob um agente de código ou em CI, o CLI imprime a linha a adicionar e inicia a execução mesmo assim. Ele também imprime a linha, em vez de salvar, quando o `.env` está em uma pasta acima ou é um link simbólico:
+
+```text
+OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.env, then run `crewai run` again.
+```
+
+A verificação cobre provedores que usam uma única chave de API, como OpenAI, Anthropic, Gemini e Groq. Ela ignora Azure, Bedrock e watsonx, modelos locais como Ollama e flows declarativos. Ela não lê um `llm` definido em código Python e, quando o código do projeto define um, também não verifica o modelo padrão. Um `.env` que não é um arquivo comum, como um named pipe servido por um gerenciador de segredos, fica para a execução ler e não é verificado. Antes de salvar uma chave, o CLI deixa o `.env` legível apenas por você; quando não consegue, ele usa a chave só nesta execução e avisa, em vez de salvá-la. Quando o `.env` do projeto envia requisições para outro host por meio de uma configuração que o seu próprio ambiente não define, como `OPENAI_BASE_URL`, `OPENAI_API_BASE` ou `HTTPS_PROXY`, ou quando os arquivos de um crew JSON definem `base_url`, `api_base` ou `endpoint` em qualquer lugar, como em um `llm`, no seu `client_params`, em um `planning_llm` ou no `config` de um embedder, o prompt mostra cada host antes de pedir a chave. Cole uma chave apenas se você confiar nesse host.
+
 <Note>
   Certifique-se de executar estes comandos a partir do diretório onde seu
   projeto CrewAI está configurado. Alguns comandos podem exigir configuração ou

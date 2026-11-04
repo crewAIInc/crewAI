@@ -2,6 +2,8 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+import os
+
 from click.testing import CliRunner
 from crewai_cli.authentication.token import AuthError
 from crewai_cli.cli import (
@@ -761,3 +763,13 @@ def test_commands_that_need_a_login_exit_1_when_logged_out(runner, args):
     assert result.exit_code == 1, result.output
     assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
     assert "Run 'crewai login' to sign up/login." in result.output
+
+
+def test_crewai_drops_a_paste_marker_it_inherited(monkeypatch):
+    """Only a key pasted at this process's prompt may outlast a `.env` that
+    holds no key; a launcher must not be able to claim one was."""
+    monkeypatch.setenv("CREWAI_PASTED_API_KEYS", "OPENAI_API_KEY")
+
+    CliRunner().invoke(crewai, ["version"])
+
+    assert "CREWAI_PASTED_API_KEYS" not in os.environ

@@ -176,6 +176,16 @@ crewai run
   적절한 명령을 실행합니다. 이제 crew와 flow 모두를 실행하는 권장 방법입니다.
 </Note>
 
+crew나 Python flow가 시작되기 전에 `crewai run`은 각 모델에 필요한 API 키가 환경 변수나 crewAI가 불러오는 `.env`(프로젝트 자체의 `.env`, 없으면 상위 폴더에서 가장 가까운 `.env`)에 설정되어 있는지 확인합니다. JSON crew의 경우 `crew.jsonc`와 여기에 나열된 agent 파일의 `llm`, `manager_llm`, `function_calling_llm` 필드를 읽습니다. `llm`이 없는 agent는 `MODEL`로, 없으면 crewAI의 기본 모델인 `gpt-4.1-mini`로 실행되므로 이 모델도 확인합니다. Python crew나 flow의 경우 `MODEL`과 `config/agents.yaml`의 `llm:` 값을 읽고, 둘 다 모델을 지정하지 않으면 `gpt-4.1-mini`를 확인합니다. 빈 값이나 `YOUR_API_KEY` 플레이스홀더는 누락된 것으로 간주합니다.
+
+터미널에서는 CLI가 누락된 키를 하나씩 요청합니다. 붙여 넣은 값은 화면에 표시되지 않고 프로젝트의 `.env`에 저장되며, 이어서 시작되는 실행에서 사용됩니다. 키를 건너뛰려면 Enter를 누르세요. 코딩 에이전트나 CI처럼 터미널이 없는 환경에서는 CLI가 추가할 줄을 출력하고 실행은 그대로 시작합니다. `.env`가 상위 폴더에 있거나 심볼릭 링크인 경우에도 저장하지 않고 이 줄을 출력합니다:
+
+```text
+OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.env, then run `crewai run` again.
+```
+
+이 확인은 OpenAI, Anthropic, Gemini, Groq처럼 API 키 하나만 받는 provider를 대상으로 합니다. Azure, Bedrock, watsonx, Ollama 같은 로컬 모델, 선언형 flow는 확인하지 않습니다. Python 코드에서 설정한 `llm`은 읽지 않으며, 프로젝트 코드가 `llm`을 설정하면 기본 모델도 확인하지 않습니다. 시크릿 관리자가 제공하는 named pipe처럼 일반 파일이 아닌 `.env`는 실행이 읽도록 그대로 두며 확인하지 않습니다. CLI는 키를 저장하기 전에 `.env`를 본인만 읽을 수 있도록 바꿉니다. 바꿀 수 없으면 키를 저장하지 않고 이번 실행에만 사용하며, 그 사실을 알려 줍니다. 프로젝트의 `.env`가 `OPENAI_BASE_URL`, `OPENAI_API_BASE`, `HTTPS_PROXY`처럼 본인 환경에는 없는 설정으로 요청을 다른 호스트에 보내거나, JSON crew 파일이 어느 위치에서든(`llm`, 그 `client_params`, `planning_llm`, 임베더의 `config` 등) `base_url`, `api_base` 또는 `endpoint`를 설정하면, 프롬프트는 키를 묻기 전에 각 호스트를 알려 줍니다. 그 호스트를 신뢰할 때만 키를 붙여 넣으세요.
+
 <Note>
   이 명령들은 CrewAI 프로젝트가 설정된 디렉터리에서 실행해야 합니다. 일부 명령은
   프로젝트 구조 내에서 추가 구성 또는 설정이 필요할 수 있습니다.

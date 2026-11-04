@@ -9,6 +9,7 @@ from crewai_cli.constants import (
     PROVIDERS,
     crewai_extras_for_model,
     provider_for_model,
+    required_key_names,
 )
 
 
@@ -386,6 +387,26 @@ def test_classic_provider_extra_covers_every_model_it_lists() -> None:
         for model in models:
             if LLM._resolve_route(model, {}).native_class is None:
                 assert PROVIDER_EXTRAS.get(provider) == "litellm", model
+
+
+@pytest.mark.parametrize(
+    ("provider", "names"),
+    [
+        ("openai", ["OPENAI_API_KEY"]),
+        ("huggingface", ["HF_TOKEN"]),
+        # The deployment name fills MODEL and the API version has a default.
+        ("azure", ["AZURE_API_KEY", "AZURE_API_BASE"]),
+        ("cerebras", ["CEREBRAS_API_KEY"]),
+        ("bedrock", ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]),
+        ("watson", ["WATSONX_URL", "WATSONX_APIKEY", "WATSONX_PROJECT_ID"]),
+        ("ollama", []),
+        ("openrouter", []),
+    ],
+)
+def test_required_key_names_lists_what_a_provider_cannot_run_without(
+    provider, names
+) -> None:
+    assert required_key_names(provider) == names
 
 
 def test_wizard_offers_a_curated_list_for_every_provider() -> None:

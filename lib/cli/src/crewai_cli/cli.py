@@ -12,6 +12,7 @@ import click
 import crewai_core.plus_api  # noqa: F401
 from crewai_core.token_manager import TokenManager
 
+from crewai_cli.api_keys import PASTED_KEYS_ENV
 from crewai_cli.config import Settings
 from crewai_cli.user_data import (
     _load_user_data,
@@ -126,6 +127,9 @@ def _get_cli_version() -> str:
 @click.version_option(_get_cli_version())
 def crewai() -> None:
     """Top-level command group for crewai."""
+    # Only a paste at this process's own prompt counts: a marker inherited from
+    # whatever launched `crewai` could keep a shell key for a redirected project.
+    os.environ.pop(PASTED_KEYS_ENV, None)
 
 
 @crewai.command(

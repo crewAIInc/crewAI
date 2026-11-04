@@ -226,6 +226,16 @@ crewai run
   recommended way to run both crews and flows.
 </Note>
 
+Before a crew or a Python flow starts, `crewai run` checks that the API key each of its models needs is set, either in your environment or in the `.env` crewAI loads: the project's own, or else the nearest one in a parent folder. For a JSON crew, it reads the `llm`, `manager_llm` and `function_calling_llm` fields of `crew.jsonc` and of the agent files it lists; an agent without an `llm` runs on `MODEL`, or else on crewAI's default model, `gpt-4.1-mini`, so that model is checked too. For a Python crew or flow, it reads `MODEL` and any `llm:` in `config/agents.yaml`, and checks `gpt-4.1-mini` when neither names a model. An empty value or the `YOUR_API_KEY` placeholder counts as missing.
+
+At a terminal, the CLI asks for each missing key. What you paste is hidden, saved to the project's `.env`, and used by the run that starts next. Press Enter to skip a key. Without a terminal, for example under a coding agent or in CI, the CLI prints the line to add and starts the run anyway. It also prints the line, rather than saving, when the `.env` is in a parent folder or is a symbolic link:
+
+```text
+OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.env, then run `crewai run` again.
+```
+
+The check covers providers that take a single API key, such as OpenAI, Anthropic, Gemini and Groq. It skips Azure, Bedrock and watsonx, local models such as Ollama, and declarative flows. It does not read an `llm` set in Python code, and when a project's code sets one, it does not check the default model either. A `.env` that is not a regular file, such as a named pipe a secrets manager serves, is left for the run to read and is not checked. Before the CLI saves a key, it makes `.env` readable by you only; when it cannot, it uses the key for this run only and says so instead of saving it. When the project's `.env` sends requests to another host through a setting your own environment does not have, such as `OPENAI_BASE_URL`, `OPENAI_API_BASE` or `HTTPS_PROXY`, or a JSON crew's files set a `base_url`, `api_base` or `endpoint` anywhere, such as in an `llm`, its `client_params`, a `planning_llm` or an embedder's `config`, the prompt names each host before it asks. Paste a key only if you trust that host.
+
 <Note>
   Make sure to run these commands from the directory where your CrewAI project
   is set up. Some commands may require additional configuration or setup within
