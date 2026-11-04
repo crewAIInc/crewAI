@@ -165,6 +165,9 @@ _PROVIDER_ALIASES: dict[str, str] = {
     "google": "gemini",
     "aws": "bedrock",
     "azure_openai": "azure",
+    # Not a crewAI alias: models run as `watsonx/...`, and the CLI keys the
+    # provider `watson`.
+    "watsonx": "watson",
 }
 
 

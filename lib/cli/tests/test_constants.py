@@ -123,6 +123,7 @@ def test_provider_for_model_reads_the_prefix(model: str, provider: str) -> None:
         ("google/gemini-3.8-flash", "gemini"),
         ("aws/us.amazon.nova-pro-v1:0", "bedrock"),
         ("azure_openai/gpt-4o", "azure"),
+        ("watsonx/ibm/granite-4-h-small", "watson"),
     ],
 )
 def test_provider_for_model_applies_crewai_prefix_aliases(
@@ -324,10 +325,10 @@ def test_every_model_the_wizard_lists_gets_the_extras_crewai_needs_to_run_it() -
 ):
     from crewai.llm import LLM
 
-    from crewai_cli.create_json_crew import _PROVIDER_MODELS
+    from crewai_cli.create_json_crew import _MODEL_PREFIXES, _PROVIDER_MODELS
 
     listed = [
-        f"{provider}/{model_id}"
+        f"{_MODEL_PREFIXES.get(provider, provider)}/{model_id}"
         for provider, models in _PROVIDER_MODELS.items()
         for model_id, _ in models
     ]
