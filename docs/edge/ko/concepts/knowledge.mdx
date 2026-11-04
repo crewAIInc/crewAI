@@ -444,7 +444,7 @@ knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 �
 ## 지식 저장 투명성
 
 <Info>
-**지식 저장 이해하기**: CrewAI는 로컬 Qdrant 데이터베이스를 벡터 저장소로 사용하여 지식 소스를 플랫폼별 디렉토리에 자동으로 저장합니다. 이러한 위치와 기본값을 이해하면 프로덕션 배포, 디버깅, 저장소 관리에 도움이 됩니다.
+**지식 저장 이해하기**: CrewAI는 로컬 Qdrant 데이터베이스를 벡터 저장소로 사용하여 지식 소스를 플랫폼별 디렉토리에 자동으로 저장합니다. 이러한 위치와 기본값을 이해하면 프로덕션 배포, 디버깅, 저장소 관리에 도움이 됩니다. 기본적으로 각 프로세스는 자체 임시 폴더를 사용하므로, 고정 경로를 지정하지 않으면 Knowledge가 실행 간에 유지되지 않습니다(아래 참고 사항 참조).
 </Info>
 
 <Warning>
@@ -452,12 +452,12 @@ knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 �
 </Warning>
 
 <Note>
-로컬 Qdrant 저장소는 **폴더당 하나의 프로세스**만 허용합니다. 같은 저장소 폴더를 두 번째 프로세스가 열면 아래 옵션을 안내하는 오류와 함께 실패합니다. 여러 프로세스가 폴더를 공유할 수 있었던 ChromaDB와 다른 점입니다. 여러 프로세스, 워커 또는 레플리카에서 저장소를 공유하려면 Qdrant 서버(`set_rag_config(QdrantConfig(options={"url": "http://localhost:6333"}))`) 또는 ChromaDB(`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`)를 사용하세요. 같은 프로세스 안의 스레드는 안전합니다. 공유 로컬 클라이언트에 대한 호출은 한 번에 하나씩 실행됩니다.
+기본적으로 각 프로세스는 자체 임시 Qdrant 폴더(저장소 디렉터리의 `qdrant-pid<PID>`)를 사용하며, 프로세스가 종료되면 삭제됩니다. 여러 프로세스, 워커 또는 레플리카가 충돌하지 않지만 실행 간에 아무것도 유지되지 않습니다. Knowledge는 모든 프로세스에서 다시 임베딩됩니다. Knowledge를 디스크에 유지하려면 고정 경로를 지정하세요(`set_rag_config(QdrantConfig(options={"path": "./knowledge_db"}))`). 고정 폴더는 **한 번에 하나의 프로세스**만 허용하며, 두 번째 프로세스는 아래 옵션을 안내하는 오류와 함께 실패합니다. 여러 프로세스가 하나의 저장소를 공유하려면 Qdrant 서버(`QdrantConfig(options={"url": "http://localhost:6333"})`) 또는 ChromaDB(`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`)를 사용하세요. `QdrantConfig(...)`는 생성될 때 기본 로컬 임베더를 만들기 때문에 `crewai[qdrant]`를 설치하거나 `embedding_function`을 전달해야 합니다. Knowledge는 여전히 에이전트의 임베더로 임베딩합니다. 같은 프로세스의 스레드는 안전합니다. 공유 로컬 클라이언트에 대한 호출은 한 번에 하나씩 실행됩니다.
 </Note>
 
 ### CrewAI가 Knowledge 파일을 저장하는 위치
 
-기본적으로 CrewAI는 memory와 동일한 저장 시스템을 사용하여, knowledge를 플랫폼별 디렉터리에 저장합니다.
+로컬 Qdrant 폴더는 아래와 같은 구조를 가집니다. 기본적으로 각 프로세스는 이 디렉터리에 `qdrant` 대신 `qdrant-pid<PID>`를 만들고 종료할 때 삭제합니다. 고정 `path`를 지정하면 같은 구조가 해당 경로에 만들어집니다.
 
 #### 플랫폼별 기본 저장 위치
 
@@ -497,7 +497,9 @@ from crewai.utilities.paths import db_storage_path
 import os
 
 # Get the knowledge storage path
-knowledge_path = os.path.join(db_storage_path(), "qdrant")
+# Default folder of this process (removed when the process exits). Set a fixed
+# path with QdrantConfig(options={"path": ...}) to keep Knowledge on disk.
+knowledge_path = os.path.join(db_storage_path(), f"qdrant-pid{os.getpid()}")
 print(f"Knowledge storage location: {knowledge_path}")
 
 # List knowledge collections and files
@@ -829,8 +831,8 @@ import os
 from crewai.utilities.paths import db_storage_path
 
 # Check storage structure
-storage_path = db_storage_path()
-knowledge_path = os.path.join(storage_path, "qdrant", "collection")
+# The fixed path you set with QdrantConfig(options={"path": "./knowledge_db"})
+knowledge_path = os.path.join("./knowledge_db", "collection")
 
 if os.path.exists(knowledge_path):
     print("Knowledge collections found:")
@@ -865,7 +867,8 @@ import os
 
 # Connect to CrewAI's local knowledge database.
 # Local Qdrant allows one process per folder, so stop your crew first.
-knowledge_path = os.path.join(db_storage_path(), "qdrant")
+# Use the fixed path you set with QdrantConfig(options={"path": ...}).
+knowledge_path = "./knowledge_db"
 
 if os.path.exists(knowledge_path):
     client = QdrantClient(path=knowledge_path)
@@ -952,7 +955,7 @@ from crewai.utilities.paths import db_storage_path
 
 print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
 print("Computed storage path:", db_storage_path())
-print("Knowledge path:", os.path.join(db_storage_path(), "qdrant"))
+print("Default Knowledge folder:", os.path.join(db_storage_path(), f"qdrant-pid{os.getpid()}"))
 ```
 
 ### 지식 초기화 명령어

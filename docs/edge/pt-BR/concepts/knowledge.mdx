@@ -442,7 +442,7 @@ Configuração de armazenamento personalizada para gerenciar como o knowledge é
 ## Transparência do Armazenamento de Knowledge
 
 <Info>
-**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena automaticamente as fontes de knowledge em diretórios específicos da plataforma usando um banco de dados Qdrant local para armazenamento vetorial. Entender essas localizações e padrões ajuda com implantações de produção, depuração e gerenciamento de armazenamento.
+**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena automaticamente as fontes de knowledge em diretórios específicos da plataforma usando um banco de dados Qdrant local para armazenamento vetorial. Entender essas localizações e padrões ajuda com implantações de produção, depuração e gerenciamento de armazenamento. Por padrão, cada processo usa sua própria pasta temporária, então o Knowledge não é mantido entre execuções, a menos que você defina um caminho fixo (veja a nota abaixo).
 </Info>
 
 <Warning>
@@ -450,12 +450,12 @@ Configuração de armazenamento personalizada para gerenciar como o knowledge é
 </Warning>
 
 <Note>
-O armazenamento local do Qdrant permite **um processo por pasta**. Um segundo processo que abra a mesma pasta de armazenamento falha com um erro que sugere as opções abaixo. Isso difere do ChromaDB, que permitia vários processos compartilharem uma pasta. Para compartilhar o armazenamento entre processos, workers ou réplicas, use um servidor Qdrant (`set_rag_config(QdrantConfig(options={"url": "http://localhost:6333"}))`) ou o ChromaDB (`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`). Threads no mesmo processo são seguras: as chamadas ao cliente local compartilhado são executadas uma de cada vez.
+Por padrão, cada processo usa sua própria pasta temporária do Qdrant (`qdrant-pid<PID>` no diretório de armazenamento), removida quando o processo termina. Vários processos, workers ou réplicas nunca colidem, mas nada é mantido entre execuções: o Knowledge é processado novamente em cada processo. Para manter o Knowledge em disco, defina um caminho fixo (`set_rag_config(QdrantConfig(options={"path": "./knowledge_db"}))`). Uma pasta fixa permite **um processo por vez**, e um segundo processo falha com um erro que sugere as opções abaixo. Para compartilhar um armazenamento entre processos, use um servidor Qdrant (`QdrantConfig(options={"url": "http://localhost:6333"})`) ou o ChromaDB (`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`). `QdrantConfig(...)` cria seu embedder local padrão ao ser criado, então instale `crewai[qdrant]` ou passe `embedding_function`. O Knowledge continua usando o embedder do seu agente. Threads no mesmo processo são seguras: as chamadas ao cliente local compartilhado são executadas uma de cada vez.
 </Note>
 
 ### Onde o CrewAI Armazena Arquivos de Knowledge
 
-Por padrão, o CrewAI usa o mesmo sistema de armazenamento que a memória, armazenando knowledge em diretórios específicos da plataforma:
+Uma pasta local do Qdrant tem a estrutura abaixo. Por padrão, cada processo cria `qdrant-pid<PID>` nesses diretórios (em vez de `qdrant`) e a remove ao terminar. Com um `path` fixo, a mesma estrutura é criada nesse caminho.
 
 #### Localizações de Armazenamento Padrão por Plataforma
 
@@ -495,7 +495,9 @@ from crewai.utilities.paths import db_storage_path
 import os
 
 # Get the knowledge storage path
-knowledge_path = os.path.join(db_storage_path(), "qdrant")
+# Default folder of this process (removed when the process exits). Set a fixed
+# path with QdrantConfig(options={"path": ...}) to keep Knowledge on disk.
+knowledge_path = os.path.join(db_storage_path(), f"qdrant-pid{os.getpid()}")
 print(f"Knowledge storage location: {knowledge_path}")
 
 # List knowledge collections and files
@@ -927,8 +929,8 @@ import os
 from crewai.utilities.paths import db_storage_path
 
 # Check storage structure
-storage_path = db_storage_path()
-knowledge_path = os.path.join(storage_path, "qdrant", "collection")
+# The fixed path you set with QdrantConfig(options={"path": "./knowledge_db"})
+knowledge_path = os.path.join("./knowledge_db", "collection")
 
 if os.path.exists(knowledge_path):
     print("Knowledge collections found:")
@@ -963,7 +965,8 @@ import os
 
 # Connect to CrewAI's local knowledge database.
 # Local Qdrant allows one process per folder, so stop your crew first.
-knowledge_path = os.path.join(db_storage_path(), "qdrant")
+# Use the fixed path you set with QdrantConfig(options={"path": ...}).
+knowledge_path = "./knowledge_db"
 
 if os.path.exists(knowledge_path):
     client = QdrantClient(path=knowledge_path)
@@ -1050,7 +1053,7 @@ from crewai.utilities.paths import db_storage_path
 
 print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
 print("Computed storage path:", db_storage_path())
-print("Knowledge path:", os.path.join(db_storage_path(), "qdrant"))
+print("Default Knowledge folder:", os.path.join(db_storage_path(), f"qdrant-pid{os.getpid()}"))
 ```
 
 ### Comandos de Reset de Knowledge

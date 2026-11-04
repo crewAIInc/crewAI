@@ -442,7 +442,7 @@ agent = Agent(
 ## شفافية تخزين المعرفة
 
 <Info>
-**فهم تخزين المعرفة**: يخزّن CrewAI مصادر المعرفة تلقائيًا في مجلدات خاصة بالمنصة باستخدام قاعدة بيانات Qdrant محلية للتخزين المتجهي. فهم هذه المواقع والإعدادات الافتراضية يساعد في النشر في بيئة الإنتاج وتصحيح الأخطاء وإدارة التخزين.
+**فهم تخزين المعرفة**: يخزّن CrewAI مصادر المعرفة تلقائيًا في مجلدات خاصة بالمنصة باستخدام قاعدة بيانات Qdrant محلية للتخزين المتجهي. فهم هذه المواقع والإعدادات الافتراضية يساعد في النشر في بيئة الإنتاج وتصحيح الأخطاء وإدارة التخزين. افتراضيًا تستخدم كل عملية مجلدًا مؤقتًا خاصًا بها، لذا لا تُحفظ المعرفة بين التشغيلات ما لم تحدّد مسارًا ثابتًا (انظر الملاحظة أدناه).
 </Info>
 
 <Warning>
@@ -450,12 +450,12 @@ agent = Agent(
 </Warning>
 
 <Note>
-يسمح تخزين Qdrant المحلي بـ**عملية واحدة لكل مجلد**. تفشل عملية ثانية تفتح مجلد التخزين نفسه برسالة خطأ تقترح الخيارات أدناه. يختلف هذا عن ChromaDB الذي كان يسمح لعدة عمليات بمشاركة مجلد واحد. لمشاركة التخزين بين عدة عمليات أو عمّال أو نسخ، استخدم خادم Qdrant (`set_rag_config(QdrantConfig(options={"url": "http://localhost:6333"}))`) أو ChromaDB (`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`). الخيوط داخل العملية نفسها آمنة: تُنفَّذ استدعاءات العميل المحلي المشترك واحدًا تلو الآخر.
+افتراضيًا، تستخدم كل عملية مجلد Qdrant مؤقتًا خاصًا بها (`qdrant-pid<PID>` داخل مجلد التخزين) ويُحذف عند انتهاء العملية. لا تتعارض عدة عمليات أو عمّال أو نسخ، لكن لا يُحفظ شيء بين التشغيلات: تتم إعادة تضمين المعرفة في كل عملية. للاحتفاظ بالمعرفة على القرص، حدّد مسارًا ثابتًا (`set_rag_config(QdrantConfig(options={"path": "./knowledge_db"}))`). يسمح المجلد الثابت بـ**عملية واحدة في كل مرة**، وتفشل عملية ثانية برسالة خطأ تقترح الخيارات أدناه. لمشاركة مخزن واحد بين عدة عمليات، استخدم خادم Qdrant (`QdrantConfig(options={"url": "http://localhost:6333"})`) أو ChromaDB (`pip install "crewai[chromadb]"` + `set_rag_config(ChromaDBConfig())`). ينشئ `QdrantConfig(...)` أداة التضمين المحلية الافتراضية عند إنشائه، لذا ثبّت `crewai[qdrant]` أو مرّر `embedding_function`. وتظل المعرفة تُضمَّن بأداة التضمين الخاصة بوكيلك. الخيوط داخل العملية نفسها آمنة: تُنفَّذ استدعاءات العميل المحلي المشترك واحدًا تلو الآخر.
 </Note>
 
 ### أين يخزّن CrewAI ملفات المعرفة
 
-بشكل افتراضي، يستخدم CrewAI نفس نظام التخزين مثل الذاكرة، حيث يخزّن المعرفة في مجلدات خاصة بالمنصة:
+لمجلد Qdrant المحلي البنية التالية. افتراضيًا تنشئ كل عملية `qdrant-pid<PID>` في هذه المجلدات (بدلاً من `qdrant`) وتحذفه عند انتهائها. وعند تحديد `path` ثابت تُنشأ البنية نفسها في ذلك المسار.
 
 #### مواقع التخزين الافتراضية حسب المنصة
 
@@ -495,7 +495,9 @@ from crewai.utilities.paths import db_storage_path
 import os
 
 # Get the knowledge storage path
-knowledge_path = os.path.join(db_storage_path(), "qdrant")
+# Default folder of this process (removed when the process exits). Set a fixed
+# path with QdrantConfig(options={"path": ...}) to keep Knowledge on disk.
+knowledge_path = os.path.join(db_storage_path(), f"qdrant-pid{os.getpid()}")
 print(f"Knowledge storage location: {knowledge_path}")
 
 # List knowledge collections and files
@@ -927,8 +929,8 @@ import os
 from crewai.utilities.paths import db_storage_path
 
 # Check storage structure
-storage_path = db_storage_path()
-knowledge_path = os.path.join(storage_path, "qdrant", "collection")
+# The fixed path you set with QdrantConfig(options={"path": "./knowledge_db"})
+knowledge_path = os.path.join("./knowledge_db", "collection")
 
 if os.path.exists(knowledge_path):
     print("Knowledge collections found:")
@@ -963,7 +965,8 @@ import os
 
 # Connect to CrewAI's local knowledge database.
 # Local Qdrant allows one process per folder, so stop your crew first.
-knowledge_path = os.path.join(db_storage_path(), "qdrant")
+# Use the fixed path you set with QdrantConfig(options={"path": ...}).
+knowledge_path = "./knowledge_db"
 
 if os.path.exists(knowledge_path):
     client = QdrantClient(path=knowledge_path)
@@ -1050,7 +1053,7 @@ from crewai.utilities.paths import db_storage_path
 
 print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
 print("Computed storage path:", db_storage_path())
-print("Knowledge path:", os.path.join(db_storage_path(), "qdrant"))
+print("Default Knowledge folder:", os.path.join(db_storage_path(), f"qdrant-pid{os.getpid()}"))
 ```
 
 ### أوامر إعادة تعيين المعرفة
