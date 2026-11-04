@@ -224,6 +224,7 @@ def test_provider_for_model_matches_every_prefix_crewai_routes() -> None:
         ("ollama/llama3.3", set()),
         ("cerebras/llama3.1-8b", set()),
         ("deepseek/deepseek-chat", set()),
+        ("deepinfra/meta-llama/llama-4-scout-17b-16e-instruct", set()),
     ],
 )
 def test_crewai_extras_for_a_model_its_provider_runs_natively(
@@ -259,7 +260,6 @@ def test_crewai_extras_add_litellm_for_a_name_the_native_provider_does_not_take(
         ("claude-sonnet-5", {"anthropic"}),
         ("gemini-3.8-flash", {"google-genai"}),
         ("my-model", set()),
-        ("custom/my-model", set()),
         ("", set()),
     ],
 )
@@ -267,6 +267,17 @@ def test_crewai_extras_for_a_bare_or_unknown_model(
     model: str, extras: set[str]
 ) -> None:
     assert crewai_extras_for_model(model) == extras
+
+
+@pytest.mark.parametrize(
+    "model", ["mistral/mistral-large", "xai/grok-4", "custom/my-model"]
+)
+def test_crewai_extras_add_litellm_for_a_prefix_crewai_has_no_native_provider_for(
+    model: str,
+) -> None:
+    """crewAI sends these to LiteLLM, so a project created without the extra
+    fails on its first run."""
+    assert crewai_extras_for_model(model) == {"litellm"}
 
 
 _SAMPLE_MODEL_NAMES = [
@@ -289,12 +300,38 @@ _SAMPLE_MODEL_NAMES = [
 ]
 
 
-def test_litellm_extra_matches_crewai_routing_for_every_native_prefix() -> None:
-    """The CLI copies crewAI's rule for which names a native provider takes; a
-    name crewAI sends to LiteLLM must get the litellm extra, and no other."""
+# Prefixes people write, with and without a native crewAI provider. Listed
+# rather than only read from PROVIDER_ALIASES, so a prefix crewAI stops routing
+# natively is still checked.
+_SAMPLE_PREFIXES = [
+    "mistral",
+    "deepseek",
+    "openrouter",
+    "together_ai",
+    "xai",
+    "fireworks_ai",
+    "cohere",
+    "perplexity",
+    "hosted_vllm",
+    "dashscope",
+    "ollama",
+    "cerebras",
+    "groq",
+    "sambanova",
+    "nvidia_nim",
+    "huggingface",
+    "watson",
+    "watsonx",
+]
+
+
+def test_litellm_extra_matches_crewai_routing_for_every_prefix() -> None:
+    """The CLI copies crewAI's rule for which prefixes have a native provider
+    and which names it takes; a model crewAI sends to LiteLLM must get the
+    litellm extra, and no other model may."""
     from crewai.llm import LLM, PROVIDER_ALIASES
 
-    for prefix in PROVIDER_ALIASES:
+    for prefix in dict.fromkeys([*PROVIDER_ALIASES, *_SAMPLE_PREFIXES]):
         if prefix == "deepinfra":
             # crewAI raises on an id that is not org/model instead of routing it.
             continue

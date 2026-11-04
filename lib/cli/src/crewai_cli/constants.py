@@ -209,8 +209,7 @@ def required_key_names(provider: str) -> list[str]:
 
 # The model names each native provider takes after its prefix, copied from
 # LLM._matches_provider_pattern in crewai/llm.py. crewAI sends any other name
-# under that prefix to LiteLLM. Bedrock takes any name with a "."; Azure, Ollama
-# and Cerebras take every name.
+# under that prefix to LiteLLM. Bedrock takes any name with a ".".
 _NATIVE_MODEL_PREFIXES: dict[str, tuple[str, ...]] = {
     "openai": ("gpt-", "o1", "o3", "o4", "whisper-"),
     "anthropic": ("claude-", "anthropic."),
@@ -218,14 +217,34 @@ _NATIVE_MODEL_PREFIXES: dict[str, tuple[str, ...]] = {
     "deepseek": ("deepseek",),
 }
 
+# The other native providers in crewAI's PROVIDER_ALIASES, which take every
+# name (DeepInfra raises on one that is not org/model, so no extra helps there).
+# crewAI sends a prefix it has no native provider for, such as `mistral/`, to
+# LiteLLM.
+_NATIVE_ANY_MODEL_PROVIDERS = frozenset(
+    {
+        "azure",
+        "cerebras",
+        "dashscope",
+        "deepinfra",
+        "hosted_vllm",
+        "ollama",
+        "ollama_chat",
+        "openrouter",
+        "snowflake",
+    }
+)
+
 
 def crewai_extras_for_model(model: str) -> set[str]:
     """Return the crewai extras, besides ``tools``, a project needs to run ``model``.
 
     That is the provider's extra from ``PROVIDER_EXTRAS``, plus ``litellm`` when
-    crewAI sends a ``provider/model`` string to LiteLLM because the native
+    crewAI sends a ``provider/model`` string to LiteLLM: because the native
     provider does not take that name, as with
-    ``bedrock/claude-sonnet-4-5-20250929-v1:0`` or ``anthropic/my-finetune``.
+    ``bedrock/claude-sonnet-4-5-20250929-v1:0`` or ``anthropic/my-finetune``, or
+    because crewAI has no native provider for the prefix, as with
+    ``mistral/mistral-large``.
     """
     provider = provider_for_model(model)
     extras: set[str] = set()
@@ -240,7 +259,7 @@ def crewai_extras_for_model(model: str) -> set[str]:
     elif provider in _NATIVE_MODEL_PREFIXES:
         native = name.startswith(_NATIVE_MODEL_PREFIXES[provider])
     else:
-        native = True
+        native = provider in _NATIVE_ANY_MODEL_PROVIDERS
     if not native:
         extras.add("litellm")
     return extras

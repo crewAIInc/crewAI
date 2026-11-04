@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sys
 from typing import Any, Literal
 
 import click
@@ -267,9 +268,24 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 
 
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """Writes environment variables to a gitignored .env file for local use."""
+    """Writes environment variables to a gitignored .env file for local use.
+
+    The file holds API keys, so it is written owner-only, an existing one is
+    made owner-only, and a symlink in its place is never written through.
+
+    Raises:
+        click.ClickException: ``.env`` is a symlink.
+    """
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
+    if env_file_path.is_symlink():
+        raise click.ClickException(
+            f"Not writing API keys to {env_file_path}: it is a symlink."
+        )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(env_file_path, flags, 0o600), "w") as file:
+        if sys.platform != "win32":
+            # os.open's mode applies only when it creates the file.
+            os.fchmod(file.fileno(), 0o600)
         for key, value in env_vars.items():
             # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")

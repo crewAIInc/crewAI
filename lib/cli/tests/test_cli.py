@@ -327,7 +327,21 @@ def test_create_flow_declarative_uses_declarative_scaffold(create_flow, runner):
     result = runner.invoke(create, ["flow", "My Flow", "--declarative"])
 
     assert result.exit_code == 0
-    create_flow.assert_called_once_with("My Flow", declarative=True)
+    create_flow.assert_called_once_with(
+        "My Flow", declarative=True, provider=None, skip_provider=False
+    )
+
+
+@mock.patch("crewai_cli.create_flow.create_flow")
+def test_create_flow_passes_provider_and_skip_provider_through(create_flow, runner):
+    result = runner.invoke(
+        create, ["flow", "My Flow", "--provider", "anthropic", "--skip-provider"]
+    )
+
+    assert result.exit_code == 0, result.output
+    create_flow.assert_called_once_with(
+        "My Flow", declarative=False, provider="anthropic", skip_provider=True
+    )
 
 
 @mock.patch("crewai_cli.create_json_crew.create_json_crew")
