@@ -21,6 +21,7 @@ from typing import (
 )
 import warnings
 
+from crewai_core.printer import set_suppress_console_output
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -1833,7 +1834,10 @@ class Agent(BaseAgent):
         ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
         persistence restore options. Separate Agent instances own separate sessions.
         """
-        return self.as_flow().handle_turn(message, **kwargs)
+        context = contextvars.copy_context()
+        if not self.verbose:
+            context.run(set_suppress_console_output, True)
+        return context.run(self.as_flow().handle_turn, message, **kwargs)
 
     def chat(self, *, tui: bool = False, **kwargs: Any) -> None:
         """Start an experimental conversation using the same options as Flow.chat.
@@ -1841,7 +1845,10 @@ class Agent(BaseAgent):
         Requires ``conversational=True``. Use ``tui=True`` for the terminal UI,
         or omit it for a plain REPL. Other options are forwarded to Flow.chat.
         """
-        self.as_flow().chat(tui=tui, **kwargs)
+        context = contextvars.copy_context()
+        if not self.verbose and not tui:
+            context.run(set_suppress_console_output, True)
+        context.run(self.as_flow().chat, tui=tui, **kwargs)
 
     def kickoff(
         self,

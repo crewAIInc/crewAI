@@ -67,6 +67,70 @@ def test_chat_retains_history_and_uses_flow_repl_options(monkeypatch):
     assert "Cedar Finch" in str(agent.llm.received[1])
 
 
+@pytest.mark.parametrize("entrypoint", ["chat", "handle_turn"])
+@pytest.mark.parametrize("verbose", [False, True])
+def test_conversation_console_output_respects_verbose(monkeypatch, capsys, entrypoint, verbose):
+    from crewai_core.printer import should_suppress_console_output
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_listener import EventListener
+    import crewai.events.utils.console_formatter as formatter
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    monkeypatch.setenv("CREWAI_DISABLE_VERSION_CHECK", "false")
+    monkeypatch.setenv("CI", "false")
+    monkeypatch.setattr(formatter, "is_newer_version_available", lambda: (True, "1.0", "2.0"))
+    monkeypatch.setattr(formatter, "is_current_version_yanked", lambda: (False, None))
+    EventListener()
+    previous_suppression = should_suppress_console_output()
+    agent = make_agent(conversational=True, verbose=verbose)
+    capsys.readouterr()
+    if entrypoint == "chat":
+        messages = iter(["Remember Cedar Finch", "What is the codename?", "exit"])
+        agent.chat(input_fn=lambda _: next(messages))
+    else:
+        assert agent.handle_turn("Remember Cedar Finch").raw == "Public answer"
+    crewai_event_bus.flush()
+
+    output = capsys.readouterr().out
+    assert ("Flow Execution" in output) is verbose
+    assert ("LiteAgent Started" in output) is verbose
+    assert ("Update Available" in output) is verbose
+    if entrypoint == "chat":
+        assert output.count("Assistant: Public answer") == 2
+        assert "Cedar Finch" in str(agent.llm.received[1])
+    assert should_suppress_console_output() is previous_suppression
+
+
+def test_quiet_turn_preserves_events_and_propagates_errors(monkeypatch):
+    from unittest.mock import Mock
+    from crewai_core.printer import should_suppress_console_output
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.agent_events import LiteAgentExecutionCompletedEvent
+    from crewai.events.types.flow_events import MethodExecutionStartedEvent
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True, verbose=False, max_retry_limit=0)
+    events = []
+    def record(_, event):
+        events.append(event.type)
+    event_types = (LiteAgentExecutionCompletedEvent, MethodExecutionStartedEvent)
+    for event_type in event_types:
+        crewai_event_bus.on(event_type)(record)
+    try:
+        agent.handle_turn("Hello")
+        crewai_event_bus.flush()
+        assert "lite_agent_execution_completed" in events
+        assert "method_execution_started" in events
+        monkeypatch.setattr(agent.llm, "call", Mock(side_effect=RuntimeError("model unavailable")))
+        with pytest.raises(RuntimeError, match="model unavailable"):
+            agent.handle_turn("Try again")
+        assert should_suppress_console_output() is False
+    finally:
+        crewai_event_bus.flush()
+        for event_type in event_types:
+            crewai_event_bus.off(event_type, record)
+
+
 @pytest.mark.parametrize("tui", [False, True])
 def test_chat_requires_conversational_opt_in(tui):
     with pytest.raises(ValueError, match="conversational=True"):
