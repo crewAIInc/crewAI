@@ -155,12 +155,37 @@ def test_provider_for_model_applies_crewai_prefix_aliases(
         ("claude-sonnet-5", "anthropic"),
         ("claude-haiku-4-5-20251001", "anthropic"),
         ("gemini-3.8-flash", "gemini"),
+        ("gemma-3-27b-it", "gemini"),
+        ("learnlm-2.0-flash", "gemini"),
+        ("anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock"),
+        ("us.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock"),
     ],
 )
 def test_provider_for_model_recognizes_bare_model_names(
     model: str, provider: str
 ) -> None:
     assert provider_for_model(model) == provider
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gpt-5.6-luna",
+        "o3-mini",
+        "claude-sonnet-5",
+        "gemini-3.8-flash",
+        "gemma-3-27b-it",
+        "learnlm-2.0-flash",
+        "anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    ],
+)
+def test_provider_for_model_infers_bare_names_as_crewai_does(model: str) -> None:
+    """A bare name the CLI recognizes must land on the provider crewAI infers,
+    or `crewai create` adds the wrong extra and the first run fails."""
+    from crewai.llm import LLM
+
+    assert provider_for_model(model) == LLM._infer_provider_from_model(model)
 
 
 @pytest.mark.parametrize(
