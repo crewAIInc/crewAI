@@ -54,6 +54,25 @@ crewai create flow my_new_flow
 
 افتراضيًا، ينشئ `crewai create crew` مشروعًا JSON-first يحتوي على `crew.jsonc` و `agents/*.jsonc`. استخدم `crewai create crew my_new_crew --classic` فقط إذا أردت البنية القديمة Python/YAML مع `crew.py` و `config/agents.yaml` و `config/tasks.yaml`.
 
+بعد اختيار مزود LLM والنموذج، يطلب منك CLI مفاتيح API. في الطرفية، لا يظهر ما تكتبه لمفتاح أو سرّ على الشاشة، بينما تبقى القيم الأخرى ظاهرة، مثل عنوان URL لنقطة النهاية أو المنطقة أو اسم نشر Azure. اضغط على Enter لتخطي أي حقل.
+
+لا يُحفظ المفتاح الذي تتخطاه. وما لم يكن المفتاح معيّنًا مسبقًا في بيئتك، يطبع CLI السطر الدقيق الذي يجب إضافته إلى `.env` قبل `crewai run`:
+
+```text
+  API key not saved. Add this line to my_new_crew/.env before `crewai run`:
+    OPENAI_API_KEY=<your key>
+```
+
+لا تُدرج القيم التي لها قيمة افتراضية، مثل منطقة AWS وإصدار Azure API.
+
+إذا كان الوكلاء يستخدمون نماذج من أكثر من مزود، يطلب CLI مفاتيح كل مزود مرة واحدة فقط، ويحفظ نموذج الوكيل الأول في `MODEL`.
+
+مع `--skip-provider`، أو مع `CREWAI_DMN=true`، لا يطلب CLI أي مفاتيح ولا يحفظ أيًا منها. وفي طاقم JSON الافتراضي، يستخدم الوكلاء `openai/gpt-6-luna` ما لم تمرر `--provider`، وتذكر الخطوات التالية كل متغير غير معيّن بعد في بيئتك:
+
+```text
+  Set OPENAI_API_KEY in .env before `crewai run`
+```
+
 #### أسماء مستعار قديمة للأعلام (مهملة)
 
 لا تزال أعلام snake_case القديمة تعمل، لكنها مخفية من `--help`. يُفضّل استخدام صيغ kebab-case الموثّقة في أقسام الأوامر أدناه.
