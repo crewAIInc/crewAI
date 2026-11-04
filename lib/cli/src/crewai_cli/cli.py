@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from importlib.metadata import version as get_version
 import os
 from pathlib import Path
@@ -11,7 +12,7 @@ import click
 
 # Imported first so AMP requests pin the machine's proxy and CA settings before
 # any command loads a project's .env (see crewai_core.plus_api).
-import crewai_core.plus_api  # noqa: F401
+from crewai_core.plus_api import restore_machine_transport
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.config import Settings
@@ -316,13 +317,21 @@ def create(
         if click.confirm("  Run it now?", default=True):
             # A new process started in the project, not run_crew() here: `crewai run`
             # reads the project from the cwd, and telemetry caches the project id
-            # once per process.
-            result = subprocess.run(  # noqa: S603 - fixed argv, no shell
-                [sys.executable, "-m", "crewai_cli.cli", "run"],
-                cwd=project,
-                check=False,
+            # once per process. It gets the proxy and CA settings crewAI started
+            # with, as in a new shell: a classic crew's provider fetch replaces
+            # SSL_CERT_FILE.
+            env = dict(os.environ)
+            restore_machine_transport(env)
+            run = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+                [sys.executable, "-m", "crewai_cli.cli", "run"], cwd=project, env=env
             )
-            raise SystemExit(result.returncode)
+            # Ctrl-C reaches the run too. Wait for it as a shell would, so it can
+            # stop and flush its telemetry; subprocess.run would kill it after 0.25s.
+            returncode: int | None = None
+            while returncode is None:
+                with contextlib.suppress(KeyboardInterrupt):
+                    returncode = run.wait()
+            raise SystemExit(returncode)
         click.echo(f"  Run it later: cd {project} && crewai run")
 
 

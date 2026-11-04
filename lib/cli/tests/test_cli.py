@@ -7,6 +7,7 @@ from unittest import mock
 import click
 import pytest
 from click.testing import CliRunner
+from crewai_core import plus_api
 from crewai_cli.authentication.token import AuthError
 from crewai_cli.cli import (
     create,
@@ -408,19 +409,45 @@ def _at_a_terminal(
     monkeypatch.setattr(sys.stdout, "isatty", lambda: stdout)
 
 
-def _record_runs(monkeypatch, returncode: int = 0) -> list[dict[str, object]]:
-    """Record each `crewai run` that create starts, and end it with
-    ``returncode``. Other commands, such as git, run for real."""
-    real_run = subprocess.run
-    runs: list[dict[str, object]] = []
+class _StartedRun:
+    """A `crewai run` that create started. Ctrl-C interrupts create's wait for it
+    ``interrupts`` times, then the run ends with ``returncode``."""
 
-    def fake_run(args, **kwargs):
+    def __init__(self, args, kwargs, returncode: int, interrupts: int) -> None:
+        self.args = args
+        self.cwd = kwargs.get("cwd")
+        self.env = kwargs.get("env")
+        self.killed = False
+        self._returncode = returncode
+        self._interrupts = interrupts
+
+    def wait(self) -> int:
+        if self._interrupts:
+            self._interrupts -= 1
+            raise KeyboardInterrupt
+        return self._returncode
+
+    def kill(self) -> None:
+        self.killed = True
+
+    terminate = kill
+
+
+def _record_runs(
+    monkeypatch, returncode: int = 0, interrupts: int = 0
+) -> list[_StartedRun]:
+    """Record each `crewai run` that create starts. Other commands, such as git,
+    run for real."""
+    real_popen = subprocess.Popen
+    runs: list[_StartedRun] = []
+
+    def fake_popen(args, **kwargs):
         if args != RUN_ARGV:
-            return real_run(args, **kwargs)
-        runs.append({"args": args, **kwargs})
-        return subprocess.CompletedProcess(args, returncode)
+            return real_popen(args, **kwargs)
+        runs.append(_StartedRun(args, kwargs, returncode, interrupts))
+        return runs[-1]
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
     return runs
 
 
@@ -446,7 +473,7 @@ def test_create_at_a_terminal_runs_the_new_project_when_enter_is_pressed(
         _create(args)
 
     assert exit_info.value.code == 0
-    assert runs == [{"args": RUN_ARGV, "cwd": Path("my_project"), "check": False}]
+    assert [(run.args, run.cwd) for run in runs] == [(RUN_ARGV, Path("my_project"))]
     assert "Run it now? [Y/n]" in _output(capsys)
 
 
@@ -466,6 +493,56 @@ def test_create_exits_with_the_exit_code_of_the_run_it_started(
 
     assert exit_info.value.code == returncode
     assert len(runs) == 1
+
+
+def test_create_waits_for_the_run_to_handle_ctrl_c_and_exits_with_its_code(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_json_crew.create_json_crew",
+        lambda *_args: Path("my_crew"),
+    )
+    # The terminal sends Ctrl-C to create and the run alike; the run stops with 130.
+    runs = _record_runs(monkeypatch, returncode=130, interrupts=2)
+    _at_a_terminal(monkeypatch, "\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(["crew", "My Crew"])
+
+    assert exit_info.value.code == 130
+    [run] = runs
+    assert not run.killed
+
+
+@pytest.mark.parametrize(
+    "ca_bundle", ["/etc/corp/ca.pem", None], ids=["shell-ca-bundle", "no-ca-bundle"]
+)
+def test_create_runs_the_project_with_the_ca_bundle_crewai_started_with(
+    monkeypatch, ca_bundle
+):
+    # The proxy and CA variables crewAI started with, as crewai_core pinned them.
+    monkeypatch.setattr(
+        plus_api,
+        "_MACHINE_TRANSPORT_ENV",
+        {"SSL_CERT_FILE": ca_bundle} if ca_bundle else {},
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+
+    def classic_create(*_args):
+        # As fetching the provider list does in crewai_cli.provider.
+        monkeypatch.setenv("SSL_CERT_FILE", "/venv/certifi/cacert.pem")
+        return Path("my_crew")
+
+    monkeypatch.setattr("crewai_cli.create_crew.create_crew", classic_create)
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "\n")
+
+    with pytest.raises(SystemExit):
+        _create(["crew", "My Crew", "--classic"])
+
+    [run] = runs
+    assert run.env.get("SSL_CERT_FILE") == ca_bundle
+    assert run.env["OPENAI_API_KEY"] == "sk-from-the-shell"
 
 
 @pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
@@ -566,7 +643,7 @@ def test_create_runs_the_flow_it_just_created_from_its_folder(
 
     [run_started] = runs
     # A flow folder keeps the ".", which a crew folder would drop.
-    assert run_started["cwd"] == Path("news_v2.0")
+    assert run_started.cwd == Path("news_v2.0")
     assert (tmp_path / "news_v2.0" / "pyproject.toml").is_file()
 
 
