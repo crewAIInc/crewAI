@@ -16,9 +16,11 @@ import tomli
 from crewai_cli import create_json_crew as json_crew
 from crewai_cli.cli import crewai
 import crewai_cli.create_flow as create_flow_module
-from crewai_cli.create_flow import create_flow
 from crewai_cli.utils import get_project_id
 from crewai_cli.version import get_crewai_dependency_range
+
+
+create_flow = create_flow_module.create_flow
 
 
 @pytest.fixture(autouse=True)
