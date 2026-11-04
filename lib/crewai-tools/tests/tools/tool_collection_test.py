@@ -229,3 +229,46 @@ class TestToolCollection(unittest.TestCase):
         self.assertEqual(len(filtered), 2)
         self.assertEqual(filtered[0], self.calculator_tool)
         self.assertEqual(filtered[1], self.translator_tool)
+
+    def test_iadd_updates_name_lookup(self):
+        new_tool = self._create_mock_tool("new", "New Tool")
+        tools = self.tools
+        tools += [new_tool]
+
+        self.assertIs(tools, self.tools)
+        self.assertIsInstance(tools, ToolCollection)
+        self.assertEqual(len(self.tools), 4)
+        self.assertEqual(self.tools["new"], new_tool)
+
+    def test_delitem_updates_name_lookup(self):
+        del self.tools[0]
+
+        self.assertEqual(len(self.tools), 2)
+        self.assertNotIn("search", self.tools._name_cache)
+        with self.assertRaises(KeyError):
+            _ = self.tools["search"]
+
+    def test_delitem_slice_updates_name_lookup(self):
+        del self.tools[1:]
+
+        self.assertEqual(len(self.tools), 1)
+        self.assertEqual(self.tools["search"], self.search_tool)
+        with self.assertRaises(KeyError):
+            _ = self.tools["calculator"]
+
+    def test_setitem_updates_name_lookup(self):
+        new_tool = self._create_mock_tool("new", "New Tool")
+        self.tools[1] = new_tool
+
+        self.assertEqual(self.tools["new"], new_tool)
+        with self.assertRaises(KeyError):
+            _ = self.tools["calculator"]
+
+    def test_setitem_slice_updates_name_lookup(self):
+        new_tool = self._create_mock_tool("new", "New Tool")
+        self.tools[1:] = [new_tool]
+
+        self.assertEqual(len(self.tools), 2)
+        self.assertEqual(self.tools["new"], new_tool)
+        with self.assertRaises(KeyError):
+            _ = self.tools["translator"]
