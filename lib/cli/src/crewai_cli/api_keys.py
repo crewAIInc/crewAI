@@ -66,10 +66,11 @@ def ask_for_missing_api_keys(
 
     At a terminal a pasted key is saved to the project's ``.env`` and exported
     to this process, so the run started next inherits it. Elsewhere, and when
-    saving would replace a link or a pipe or hide a ``.env`` above the
-    project, each missing key is named with the line to add. Either way the
-    run goes on: the models found here are a guess, and a run this check
-    doubts may still work.
+    saving would replace a link or hide a ``.env`` above the project, each
+    missing key is named with the line to add. A ``.env`` that is not a
+    regular file, such as a pipe, is left for the run and not checked. Either
+    way the run goes on: the models found here are a guess, and a run this
+    check doubts may still work.
 
     Returns:
         What happened, or ``None`` when no key was missing.
