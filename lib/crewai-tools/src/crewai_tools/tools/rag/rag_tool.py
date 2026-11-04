@@ -293,6 +293,21 @@ class RagTool(BaseTool):
             except ValueError as e:
                 raise ValueError(f"Blocked unsafe {label}: {e}") from e
 
+        def _looks_like_path(value: str) -> bool:
+            """Return True when *value* names a file rather than prose.
+
+            Content routinely contains "/" ("Use a/b testing") or starts with
+            "." (".NET is ...").  Treating every such string as a path rewrote
+            the stored text to an absolute real path.  A value is a path when
+            it is absolute, when it attempts parent traversal (still rejected
+            by ``validate_file_path`` when it escapes), or when it exists.
+            """
+            if os.path.isabs(value):
+                return True
+            if ".." in value.replace("\\", "/").split("/"):
+                return True
+            return os.path.exists(value)
+
         validated_args: list[ContentItem] = []
         for arg in args:
             source_ref = (
@@ -316,15 +331,9 @@ class RagTool(BaseTool):
                 validated_args.append(arg)
                 continue
 
-            # Check if it looks like a file path (not a plain text string).
-            # Check both os.sep (backslash on Windows) and "/" so that
-            # forward-slash paths like "sub/file.txt" are caught on all platforms.
-            if (
-                os.path.sep in source_ref
-                or "/" in source_ref
-                or source_ref.startswith(".")
-                or os.path.isabs(source_ref)
-            ):
+            # Resolve file paths, but leave plain text alone: prose can contain
+            # "/" or start with "." without naming a file.
+            if _looks_like_path(source_ref):
                 try:
                     resolved_ref = validate_file_path(source_ref)
                 except ValueError as e:

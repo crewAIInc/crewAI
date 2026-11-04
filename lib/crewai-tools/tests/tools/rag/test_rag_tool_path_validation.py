@@ -39,6 +39,26 @@ class TestPositionalArgValidation:
             tool.add("file:///etc/passwd")
 
 
+class TestPlainTextIsNotRewritten:
+    def test_slash_in_plain_text_is_preserved(self, tool):
+        with patch.object(type(tool.adapter), "add", autospec=True) as adapter_add:
+            tool.add("Use a/b testing to compare variants")
+
+        assert adapter_add.call_args.args[1] == "Use a/b testing to compare variants"
+
+    def test_explicit_text_type_keeps_slashes(self, tool):
+        with patch.object(type(tool.adapter), "add", autospec=True) as adapter_add:
+            tool.add("Use a/b testing to compare variants", data_type="text")
+
+        assert adapter_add.call_args.args[1] == "Use a/b testing to compare variants"
+
+    def test_dot_prefixed_plain_text_is_preserved(self, tool):
+        with patch.object(type(tool.adapter), "add", autospec=True) as adapter_add:
+            tool.add(".NET is a software framework")
+
+        assert adapter_add.call_args.args[1] == ".NET is a software framework"
+
+
 class TestKwargPathValidation:
     def test_blocks_traversal_via_path_kwarg(self, tool):
         with pytest.raises(ValueError, match="Blocked unsafe path"):
