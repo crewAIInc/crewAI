@@ -95,3 +95,23 @@ def test_json_log_appends_serializable_metadata(tmp_path: Path) -> None:
     assert records[0]["metadata"] == {"count": 1}
     assert records[1]["metadata"] == {"labels": ["a", "b"]}
     assert path.read_text(encoding="utf-8").endswith("\n")
+
+
+@pytest.mark.parametrize("existing_content", ['{"already": "an object"}', '"a bare string"'])
+def test_json_log_recovers_when_existing_file_is_not_a_record_list(
+    tmp_path: Path, existing_content: str
+) -> None:
+    """A valid-JSON file that is not a record list must be replaced, not crash every later log call.
+
+    Before this fix, json.load succeeded and .append raised AttributeError, which the
+    outer handler converted into ValueError for every subsequent log() call.
+    """
+    path = tmp_path / "logs.json"
+    path.write_text(existing_content, encoding="utf-8")
+
+    handler = FileHandler(str(path))
+    handler.log(message="first record")
+    handler.log(message="second record")
+
+    records = json.loads(path.read_text(encoding="utf-8"))
+    assert [record["message"] for record in records] == ["first record", "second record"]

@@ -93,9 +93,15 @@ class FileHandler:
                     try:
                         with open(self._path, encoding="utf-8") as read_file:
                             existing_data = json.load(read_file)
-                            existing_data.append(log_entry)
                     except (json.JSONDecodeError, FileNotFoundError):
-                        existing_data = [log_entry]
+                        existing_data = []
+                    if not isinstance(existing_data, list):
+                        # A valid-JSON file that is not a record list (e.g. an
+                        # object or a bare string) cannot be appended to; start
+                        # a fresh list instead of raising AttributeError, which
+                        # would fail every subsequent log() call.
+                        existing_data = []
+                    existing_data.append(log_entry)
 
                     serialized = json.dumps(existing_data, indent=4)
                     with open(self._path, "w", encoding="utf-8") as write_file:
