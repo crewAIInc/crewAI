@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from importlib.metadata import version as get_version
 import os
+from pathlib import Path
 import subprocess
+import sys
 from typing import TYPE_CHECKING, Any
 
 import click
@@ -13,6 +15,7 @@ import crewai_core.plus_api  # noqa: F401
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.config import Settings
+from crewai_cli.input_prompt import is_interactive
 from crewai_cli.user_data import (
     _load_user_data,
     is_tracing_enabled,
@@ -259,6 +262,7 @@ def create(
         raise click.UsageError("--no-project can only be used with skill projects.")
     if output_dir is not None and type != "template":
         raise click.UsageError("--output-dir can only be used with template projects.")
+    project: Path | None = None
     if type == "tool":
         if declarative or classic or provider is not None or skip_provider:
             raise click.UsageError(
@@ -288,15 +292,15 @@ def create(
         if classic:
             from crewai_cli.create_crew import create_crew
 
-            create_crew(name, provider, skip_provider)
+            project = create_crew(name, provider, skip_provider)
         else:
             from crewai_cli.create_json_crew import create_json_crew
 
-            create_json_crew(name, provider, skip_provider)
+            project = create_json_crew(name, provider, skip_provider)
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
-        create_flow(
+        project = create_flow(
             name,
             declarative=declarative,
             provider=provider,
@@ -307,6 +311,19 @@ def create(
             "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
             fg="red",
         )
+
+    if project is not None and is_interactive() and sys.stdout.isatty():
+        if click.confirm("  Run it now?", default=True):
+            # A new process started in the project, not run_crew() here: `crewai run`
+            # reads the project from the cwd, and telemetry caches the project id
+            # once per process.
+            result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+                [sys.executable, "-m", "crewai_cli.cli", "run"],
+                cwd=project,
+                check=False,
+            )
+            raise SystemExit(result.returncode)
+        click.echo(f"  Run it later: cd {project} && crewai run")
 
 
 @crewai.command()

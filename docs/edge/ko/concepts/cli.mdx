@@ -54,6 +54,22 @@ crewai create flow my_new_flow
 
 기본적으로 `crewai create crew`는 `crew.jsonc`와 `agents/*.jsonc`가 있는 JSON-first 프로젝트를 만듭니다. `crew.py`, `config/agents.yaml`, `config/tasks.yaml`을 사용하는 기존 Python/YAML 스캐폴드가 필요할 때만 `crewai create crew my_new_crew --classic`을 사용하세요.
 
+#### 바로 실행하기
+
+터미널에서 crew나 flow를 만들면 `crewai create`가 새 프로젝트를 바로 실행할지 묻습니다:
+
+```text
+  Run it now? [Y/n]:
+```
+
+Enter를 누르면 프로젝트 폴더에서 `crewai run`을 시작합니다. 그런 다음 `crewai create`는 실행의 종료 코드로 종료합니다. 첫 실행에서는 프로젝트의 의존성도 설치합니다. `n`으로 답하면 실행을 건너뛰고, CLI가 나중에 실행할 명령을 출력합니다:
+
+```text
+  Run it later: cd my_new_crew && crewai run
+```
+
+`CREWAI_DMN=true`이거나 stdin 또는 stdout이 터미널이 아니면, 예를 들어 코딩 에이전트나 CI 작업이 실행할 때는 `crewai create`가 묻지 않습니다. tool, skill, template을 만들 때는 절대 묻지 않습니다.
+
 #### 사용 중단된 플래그 별칭
 
 이전 snake_case 플래그는 여전히 동작하지만 `--help`에는 표시되지 않습니다. 아래 각 명령 섹션에 문서화된 kebab-case 형식을 사용하세요.

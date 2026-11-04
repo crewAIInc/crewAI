@@ -1,6 +1,10 @@
+import io
 from pathlib import Path
+import subprocess
+import sys
 from unittest import mock
 
+import click
 import pytest
 from click.testing import CliRunner
 from crewai_cli.authentication.token import AuthError
@@ -366,6 +370,204 @@ def test_create_requires_name_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "NAME is required when CREWAI_DMN is set" in result.output
+
+
+RUN_ARGV = [sys.executable, "-m", "crewai_cli.cli", "run"]
+
+PROJECT_CREATES = [
+    pytest.param(
+        ["crew", "My Crew"], "crewai_cli.create_json_crew.create_json_crew", id="crew"
+    ),
+    pytest.param(
+        ["crew", "My Crew", "--classic"],
+        "crewai_cli.create_crew.create_crew",
+        id="classic-crew",
+    ),
+    pytest.param(["flow", "My Flow"], "crewai_cli.create_flow.create_flow", id="flow"),
+    pytest.param(
+        ["flow", "My Flow", "--declarative"],
+        "crewai_cli.create_flow.create_flow",
+        id="declarative-flow",
+    ),
+]
+
+
+class _Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def _at_a_terminal(
+    monkeypatch, typed: str, *, stdin: bool = True, stdout: bool = True
+) -> None:
+    """Run `crewai create` as a person who types ``typed``, with stdin and stdout
+    terminals unless a test says otherwise. Call it in the test body: pytest gives
+    the test a different captured stdout than its fixtures see."""
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr("sys.stdin", _Terminal(typed) if stdin else io.StringIO(typed))
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: stdout)
+
+
+def _record_runs(monkeypatch, returncode: int = 0) -> list[dict[str, object]]:
+    """Record each `crewai run` that create starts, and end it with
+    ``returncode``. Other commands, such as git, run for real."""
+    real_run = subprocess.run
+    runs: list[dict[str, object]] = []
+
+    def fake_run(args, **kwargs):
+        if args != RUN_ARGV:
+            return real_run(args, **kwargs)
+        runs.append({"args": args, **kwargs})
+        return subprocess.CompletedProcess(args, returncode)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return runs
+
+
+def _create(args: list[str]) -> None:
+    """Run `crewai create` outside CliRunner, which would swap in its own
+    non-terminal stdin and stdout."""
+    create.main(args, prog_name="crewai create", standalone_mode=False)
+
+
+def _output(capsys) -> str:
+    return click.unstyle(capsys.readouterr().out)
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_at_a_terminal_runs_the_new_project_when_enter_is_pressed(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: Path("my_project"))
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(args)
+
+    assert exit_info.value.code == 0
+    assert runs == [{"args": RUN_ARGV, "cwd": Path("my_project"), "check": False}]
+    assert "Run it now? [Y/n]" in _output(capsys)
+
+
+@pytest.mark.parametrize("returncode", [1, 130])
+def test_create_exits_with_the_exit_code_of_the_run_it_started(
+    monkeypatch, returncode
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_json_crew.create_json_crew",
+        lambda *_args: Path("my_crew"),
+    )
+    runs = _record_runs(monkeypatch, returncode)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(["crew", "My Crew"])
+
+    assert exit_info.value.code == returncode
+    assert len(runs) == 1
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_at_a_terminal_prints_how_to_run_later_when_declined(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: Path("my_project"))
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "n\n")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it later: cd my_project && crewai run\n" in _output(capsys)
+
+
+@pytest.mark.parametrize(
+    ("stdin", "stdout"),
+    [(False, True), (True, False), (False, False)],
+    ids=["piped-stdin", "piped-stdout", "no-terminal"],
+)
+def test_create_without_a_terminal_does_not_offer_a_run(
+    monkeypatch, capsys, stdin, stdout
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_flow.create_flow",
+        lambda *_args, **_kwargs: Path("my_flow"),
+    )
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n", stdin=stdin, stdout=stdout)
+
+    _create(["flow", "My Flow"])
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_in_dmn_mode_does_not_offer_a_run_at_a_terminal(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: Path("my_project"))
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+    monkeypatch.setenv("CREWAI_DMN", "true")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_does_not_offer_a_run_when_nothing_runnable_was_created(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: None)
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+@pytest.mark.parametrize(
+    ("args", "command"),
+    [
+        (["tool", "my_tool"], "crewai_cli.tools.main.ToolCommand"),
+        (["skill", "my-skill"], "crewai_cli.skills.main.SkillCommand"),
+        (["template", "my-template"], "crewai_cli.cli.TemplateCommand"),
+    ],
+    ids=["tool", "skill", "template"],
+)
+def test_create_tool_skill_or_template_does_not_offer_a_run(
+    monkeypatch, capsys, args, command
+):
+    monkeypatch.setattr(command, mock.MagicMock())
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+def test_create_runs_the_flow_it_just_created_from_its_folder(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    with pytest.raises(SystemExit):
+        _create(["flow", "News v2.0", "--declarative"])
+
+    [run_started] = runs
+    # A flow folder keeps the ".", which a crew folder would drop.
+    assert run_started["cwd"] == Path("news_v2.0")
+    assert (tmp_path / "news_v2.0" / "pyproject.toml").is_file()
 
 
 @mock.patch("crewai_cli.cli.AuthenticationCommand")

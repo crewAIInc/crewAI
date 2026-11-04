@@ -2349,6 +2349,52 @@ def test_classic_create_with_skip_provider_keeps_the_tools_only_dependency(
     assert _crewai_dependency(tmp_path / "plain_crew") == get_crewai_tools_dependency()
 
 
+def test_json_create_returns_the_folder_it_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    project = json_crew.create_json_crew("News v2.0", skip_provider=True)
+
+    # A crew folder drops the ".", which a flow folder would keep.
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "crew.jsonc").is_file()
+
+
+def test_classic_create_returns_the_folder_it_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+
+    project = create_crew("News v2.0", skip_provider=True)
+
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "pyproject.toml").is_file()
+
+
+def test_classic_create_returns_none_when_it_adds_a_crew_to_a_project(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    project = create_crew("Writer", skip_provider=True, parent_folder="crews")
+
+    assert project is None
+    assert (tmp_path / "crews" / "writer" / "crew.py").is_file()
+
+
+@pytest.mark.parametrize("provider", [None, "openai"])
+def test_classic_create_returns_none_when_the_provider_list_is_unavailable(
+    tmp_path, monkeypatch, provider
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr("crewai_cli.create_crew.get_provider_data", lambda: None)
+
+    project = create_crew("Offline Crew", provider)
+
+    assert project is None
+    assert not (tmp_path / "offline_crew" / "pyproject.toml").exists()
+
+
 def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     create_crew("my-crew", skip_provider=True)
