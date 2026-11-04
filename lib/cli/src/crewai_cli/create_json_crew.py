@@ -68,59 +68,81 @@ _PROVIDERS: list[tuple[str, str]] = [
 # Curated offline fallback / label source. The picker prefers models pulled
 # live from the vendor's own API via ``model_catalog.get_provider_models``;
 # this list is the hand-verified backstop used when no API key is available.
-# Keep entries to real, current model ids — last verified against each vendor's
-# official model docs on 2026-08-17. The first entry is the `--provider` default
-# and what people with no key see first, so lead with small, current models.
+# Each provider lists only its current models, last verified against the
+# vendor's own docs on 2026-11-03. The first entry is the `--provider` default
+# and what people with no key see first, so it is a small, current, generally
+# available model. A preview model is labeled as one and goes last.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
-        ("gpt-5.6-luna", "GPT-5.6 Luna"),
-        ("gpt-5.6-terra", "GPT-5.6 Terra"),
-        ("gpt-5.6-sol", "GPT-5.6 Sol"),
-        ("gpt-5.6", "GPT-5.6"),
-        ("gpt-5.5", "GPT-5.5"),
-        ("gpt-5.5-pro", "GPT-5.5 Pro"),
-        ("gpt-5.4", "GPT-5.4"),
-        ("gpt-5.2", "GPT-5.2"),
-        ("gpt-4.1", "GPT-4.1"),
+        ("gpt-6-luna", "GPT-6 Luna"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-astra", "GPT-6 Astra"),
     ],
     "anthropic": [
-        ("claude-sonnet-5", "Claude Sonnet 5"),
-        ("claude-haiku-4-5", "Claude Haiku 4.5"),
-        ("claude-opus-4-8", "Claude Opus 4.8"),
-        ("claude-fable-5", "Claude Fable 5"),
-        ("claude-opus-4-7", "Claude Opus 4.7"),
-        ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+        ("claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("claude-haiku-5-5", "Claude Haiku 5.5"),
+        ("claude-opus-5-5", "Claude Opus 5.5"),
+        ("claude-fable-5-1", "Claude Fable 5.1"),
     ],
-    # Re-verified 2026-10-31. Gemini 2.5 is left out: Google serves it only to
-    # accounts that used it before, and this list is shown to people with no key.
+    # Gemini 4 Argon has no free tier, so it is never the default.
     "gemini": [
         ("gemini-3.8-flash", "Gemini 3.8 Flash"),
-        ("gemini-4-argon", "Gemini 4 Argon"),
-        ("gemini-3.6-flash", "Gemini 3.6 Flash"),
-        ("gemini-3.5-flash", "Gemini 3.5 Flash"),
         ("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite"),
-        ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
-        ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
+        ("gemini-4-argon", "Gemini 4 Argon"),
     ],
     "groq": [
-        ("meta-llama/llama-4-maverick-17b-128e-instruct", "Llama 4 Maverick"),
-        ("meta-llama/llama-4-scout-17b-16e-instruct", "Llama 4 Scout"),
+        ("openai/gpt-oss-20b", "GPT-OSS 20B"),
         ("openai/gpt-oss-120b", "GPT-OSS 120B"),
-        ("qwen/qwen3-32b", "Qwen3 32B"),
-        ("moonshotai/kimi-k2-instruct-0905", "Kimi K2"),
-        ("llama-3.3-70b-versatile", "Llama 3.3 70B"),
+        ("qwen/qwen3.8-27b", "Qwen3.8 27B (preview)"),
     ],
     "ollama": [
-        ("llama3.3", "Llama 3.3"),
-        ("qwen3", "Qwen 3"),
-        ("deepseek-r1", "DeepSeek R1"),
-        ("gpt-oss", "GPT-OSS"),
-        ("gemma3", "Gemma 3"),
-        ("mistral", "Mistral"),
+        ("qwen3.5:9b", "Qwen 3.5 9B"),
+        ("gemma4:26b", "Gemma 4 26B"),
+        ("qwen3.8:27b", "Qwen 3.8 27B"),
+        ("gpt-oss:120b", "GPT-OSS 120B"),
+    ],
+    "bedrock": [
+        ("global.anthropic.claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("global.anthropic.claude-haiku-5-5", "Claude Haiku 5.5"),
+        ("global.anthropic.claude-opus-5-5", "Claude Opus 5.5"),
+    ],
+    # Deployment names: these match the name Azure AI Foundry suggests when
+    # deploying each model.
+    "azure": [
+        ("gpt-6-luna", "GPT-6 Luna"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-astra", "GPT-6 Astra"),
+    ],
+    "nvidia_nim": [
+        ("nvidia/nemotron-3.5-super-vl-120b-a12b", "Nemotron 3.5 Super VL 120B"),
+        ("nvidia/nemotron-3-ultra-550b-a55b", "Nemotron 3 Ultra 550B"),
+        (
+            "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "Nemotron 3.5 Lightning 30B (preview)",
+        ),
+    ],
+    "huggingface": [
+        ("zai-org/GLM-5.3-Flash", "GLM-5.3 Flash"),
+        ("deepseek-ai/DeepSeek-V4.1-Flash", "DeepSeek V4.1 Flash"),
+        ("zai-org/GLM-5.3", "GLM-5.3"),
+    ],
+    "cerebras": [
+        ("gpt-oss-120b", "GPT-OSS 120B"),
+        ("qwen-3.8-27b", "Qwen 3.8 27B"),
+    ],
+    "sambanova": [
+        ("gpt-oss-120b", "GPT-OSS 120B"),
+        ("DeepSeek-V3.1", "DeepSeek V3.1"),
+        ("gemma-4-31B-it", "Gemma 4 31B (preview)"),
+    ],
+    "watson": [
+        ("ibm/granite-4-h-small", "Granite 4 H Small"),
+        ("meta-llama/llama-4-maverick-17b-128e-instruct-fp8", "Llama 4 Maverick"),
+        ("openai/gpt-oss-120b", "GPT-OSS 120B"),
     ],
 }
 
-_FALLBACK_LLM = "openai/gpt-5.6-luna"
+_FALLBACK_LLM = "openai/gpt-6-luna"
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
