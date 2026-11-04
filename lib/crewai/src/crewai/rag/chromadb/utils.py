@@ -146,6 +146,12 @@ def _extract_search_params(
     Returns:
         ExtractedSearchParams with all extracted parameters.
     """
+    include = list(kwargs.get("include") or ["metadatas", "documents", "distances"])
+    # Every SearchResult carries a similarity score, and ChromaDB only returns
+    # the distances that score is computed from when they are requested.
+    if "distances" not in include:
+        include.append("distances")
+
     return ExtractedSearchParams(
         collection_name=kwargs["collection_name"],
         query=kwargs["query"],
@@ -154,13 +160,7 @@ def _extract_search_params(
         score_threshold=kwargs.get("score_threshold"),
         where=kwargs.get("where"),
         where_document=kwargs.get("where_document"),
-        include=cast(
-            Include,
-            kwargs.get(
-                "include",
-                ["metadatas", "documents", "distances"],
-            ),
-        ),
+        include=cast(Include, include),
     )
 
 
