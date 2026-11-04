@@ -3,6 +3,7 @@ import asyncio
 import builtins
 import keyword
 import itertools
+import os
 import re
 import shlex
 import shutil
@@ -11,16 +12,19 @@ import threading
 import warnings
 from pathlib import Path
 from unittest import mock
+from uuid import UUID
 
 import click
+import httpx
 import pytest
 import tomli
 from click.testing import CliRunner
-from crewai_core.platform_apps import PLATFORM_APPS
+from crewai_core.platform_apps import PLATFORM_APP_CATEGORIES, PLATFORM_APPS
 from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli import __version__ as crewai_cli_version
 from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.utils import copy_assistant_instructions, render_template
@@ -524,7 +528,7 @@ def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     assert len(action_indices) >= 4
     # Only the common tools section is visible beyond the category rows
     assert len(labels) == 1 + 5 + len(action_indices)
-    assert any(label == "▸ CrewAI Platform  (125 applications)" for label in labels)
+    assert f"▸ CrewAI Platform  ({len(PLATFORM_APPS)} applications)" in labels
 
 
 def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
@@ -740,17 +744,18 @@ def test_platform_applications_expand_in_the_main_tool_picker(monkeypatch):
     assert json_crew._select_tools() == ["platform:github"]
     labels = picker_calls[1][1]
     assert labels[0] == "── Common tools ──"
-    assert any(
-        label == "  ▸ Google Workspace & Google Cloud  (17 applications)"
-        for label in labels
-    )
-    assert any(
-        label == "  ▸ Engineering, data & infrastructure  (11 applications)"
-        for label in labels
-    )
+    for category in PLATFORM_APP_CATEGORIES:
+        assert f"  ▸ {category.name}  ({len(category.apps)} applications)" in labels
     assert picker_calls[1][2]["initial_cursor"] == next(
         index for index, label in enumerate(labels) if "CrewAI Platform" in label
     )
+    assert picker_calls[1][2]["searchable"] is True
+    github_index = next(
+        index
+        for index, label in enumerate(labels)
+        if label.strip().startswith("GitHub Integration")
+    )
+    assert github_index in picker_calls[1][2]["collapsed_indices"]
     assert all(title != "Platform applications (space to toggle, enter to return):" for title, *_ in picker_calls)
 
 
@@ -783,18 +788,202 @@ def test_platform_validation_deduplicates_actions_by_application() -> None:
     assert apps == ["github", "gmail"]
 
 
-def test_platform_token_prompts_show_entered_values(monkeypatch) -> None:
-    prompt_options: list[dict[str, object]] = []
+def test_platform_revalidation_requires_confirmation(monkeypatch) -> None:
+    confirm_options: list[dict[str, object]] = []
 
-    def prompt(_label: str, **kwargs: object) -> str:
-        prompt_options.append(kwargs)
-        return "token"
+    def confirm(_label: str, **kwargs: object) -> bool:
+        confirm_options.append(kwargs)
+        return True
 
-    monkeypatch.setattr(json_crew.click, "prompt", prompt)
+    monkeypatch.setattr(json_crew.click, "confirm", confirm)
 
-    assert json_crew._prompt_platform_token() == "token"
-    assert json_crew._prompt_platform_revalidation_token() == "token"
-    assert [options["hide_input"] for options in prompt_options] == [False, False]
+    assert json_crew._confirm_platform_revalidation()
+    assert confirm_options == [{"default": True}]
+
+
+def test_platform_validation_guidance_links_to_amp(capsys) -> None:
+    json_crew._show_platform_validation_guidance(
+        ["whatsapp"], False, "https://app.crewai.com/"
+    )
+
+    output = capsys.readouterr().out
+    assert "Connect the WhatsApp integration in CrewAI AMP" in output
+    assert "https://app.crewai.com" in output
+
+
+def test_get_logged_in_platform_token_uses_saved_login_and_organization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = mock.Mock()
+    client.get_integration_token.return_value = "integration-token"
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://fake.crewai.com")
+    monkeypatch.setattr(
+        json_crew,
+        "Settings",
+        lambda: mock.Mock(
+            org_uuid="organization-id",
+            enterprise_base_url="https://app.crewai.com",
+        ),
+    )
+    plus_api = mock.Mock(return_value=client)
+    monkeypatch.setattr(json_crew, "PlusAPI", plus_api)
+
+    assert json_crew._get_logged_in_platform_token() == "integration-token"
+
+    plus_api.assert_called_once_with(
+        api_key="login-token",
+        organization_id="organization-id",
+        base_url="https://app.crewai.com",
+    )
+    client.get_integration_token.assert_called_once_with()
+
+
+def test_get_logged_in_platform_token_requires_selected_organization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setattr(json_crew, "Settings", lambda: mock.Mock(org_uuid=None))
+
+    with pytest.raises(RuntimeError, match="No CrewAI organization is selected"):
+        json_crew._get_logged_in_platform_token()
+
+
+def test_get_platform_token_from_login_signs_in_then_retries(monkeypatch) -> None:
+    tokens = iter([json_crew.AuthError("No token found"), "integration-token"])
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(
+        json_crew,
+        "_get_logged_in_platform_token",
+        get_token,
+    )
+
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command.login.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_stops_when_the_login_times_out(
+    monkeypatch,
+) -> None:
+    """A timed-out login exits cleanly instead of retrying into an AuthError."""
+    attempts: list[bool] = []
+
+    def get_token() -> str:
+        attempts.append(True)
+        raise json_crew.AuthError("No token found")
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    authentication_command.login.side_effect = SystemExit(1)
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        json_crew._get_platform_token_from_login()
+
+    assert exc_info.value.code == 1
+    assert attempts == [True]
+
+
+def test_get_platform_token_from_login_reauthenticates_an_expired_login(
+    monkeypatch,
+) -> None:
+    response = mock.Mock(status_code=401)
+    tokens = iter(
+        [
+            httpx.HTTPStatusError(
+                "Unauthorized", request=mock.Mock(), response=response
+            ),
+            "integration-token",
+        ]
+    )
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command.login.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_reports_forbidden_organization(monkeypatch) -> None:
+    response = mock.Mock(status_code=403)
+    error = httpx.HTTPStatusError("Forbidden", request=mock.Mock(), response=response)
+    monkeypatch.setattr(
+        json_crew,
+        "_get_logged_in_platform_token",
+        mock.Mock(side_effect=error),
+    )
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(click.ClickException, match="does not have access"):
+        json_crew._get_platform_token_from_login()
+
+    authentication_command.login.assert_not_called()
+
+
+def test_get_platform_token_from_login_selects_missing_organization(monkeypatch) -> None:
+    tokens = iter(
+        [json_crew._NoOrganizationSelectedError(), "integration-token"]
+    )
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command._select_organization.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_requires_organization_selection(monkeypatch) -> None:
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setattr(json_crew, "Settings", lambda: mock.Mock(org_uuid=None))
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(
+        click.ClickException,
+        match="A CrewAI organization must be selected",
+    ):
+        json_crew._get_platform_token_from_login()
+
+    authentication_command._select_organization.assert_called_once_with()
 
 
 def test_platform_auth_suppresses_warnings_only_while_importing_tools(
@@ -809,7 +998,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     fake_client.get_actions.return_value = [object()]
     fake_integrations_client = mock.Mock(
         ApplicationSelector=FakeApplicationSelector,
-        client_for_selector=lambda _selector: fake_client,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
     )
     original_import = builtins.__import__
 
@@ -821,6 +1010,8 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
 
     monkeypatch.setattr(builtins, "__import__", import_with_warning)
     monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+    get_token = mock.Mock()
+    monkeypatch.setattr(json_crew, "_get_platform_token_from_login", get_token)
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
@@ -836,6 +1027,37 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         "Enterprise Action Auth Token found via "
         "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable" in output
     )
+    get_token.assert_not_called()
+
+
+def test_platform_auth_fetches_token_from_login_when_env_is_missing(monkeypatch) -> None:
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_integrations(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_integrations)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    get_token = mock.Mock(return_value="login-token")
+    monkeypatch.setattr(json_crew, "_get_platform_token_from_login", get_token)
+
+    assert json_crew._setup_platform_auth([{"tools": ["platform:github"]}]) == "login-token"
+
+    get_token.assert_called_once_with()
+    assert os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] == "login-token"
 
 
 def test_platform_validation_checks_apps_concurrently():
@@ -855,7 +1077,7 @@ def test_platform_validation_checks_apps_concurrently():
         json_crew._check_platform_apps_concurrently(
             ["github", "gmail"],
             FakeApplicationSelector,
-            lambda _selector: FakeClient(),
+            lambda _selector, **_kwargs: FakeClient(),
         )
     )
 
@@ -875,13 +1097,38 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     failed_apps, token_invalid = json_crew._validate_platform_apps(
         ["github", "gmail", "google_calendar"],
         FakeApplicationSelector,
-        lambda _selector: FakeClient(),
+        lambda _selector, **_kwargs: FakeClient(),
     )
 
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
     assert "Checking Enterprise Action Auth Token and GitHub" not in output
+
+
+def test_platform_validation_passes_configured_amp_url_to_client_factory() -> None:
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    received_base_urls: list[str | None] = []
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            return [object()]
+
+    def client_factory(_selector, *, base_url=None):
+        received_base_urls.append(base_url)
+        return FakeClient()
+
+    assert json_crew._validate_platform_apps(
+        ["github"],
+        FakeApplicationSelector,
+        client_factory,
+        "https://app.crewai.com",
+    ) == ([], False)
+    assert received_base_urls == ["https://app.crewai.com"]
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -905,7 +1152,7 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     failed_apps, token_invalid = json_crew._validate_platform_apps(
         ["github", "gmail"],
         FakeApplicationSelector,
-        lambda app: FakeClient(app),
+        lambda app, **_kwargs: FakeClient(app),
     )
 
     assert (failed_apps, token_invalid) == ([], False)
@@ -1057,12 +1304,15 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
     assert dependency == get_crewai_tools_dependency()
-    assert Version("1.15.0") in Requirement(dependency).specifier
-    assert Version("2.0.0") not in Requirement(dependency).specifier
+    current = Version(crewai_cli_version)
+    assert current in Requirement(dependency).specifier
+    assert Version(f"{current.major + 1}.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
-    assert pyproject["tool"]["crewai"] == {
+    crewai_table = pyproject["tool"]["crewai"]
+    UUID(crewai_table.pop("project_id"))
+    assert crewai_table == {
         "type": "crew",
         "definition": "crew.jsonc",
     }
@@ -1266,7 +1516,8 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )
-    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+    default_model = json_crew._default_model_for_provider("anthropic")
+    assert f'"llm": "{default_model}"' in agent_template
 
 
 def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
@@ -1362,6 +1613,22 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     assert "crewai-eval:" not in agents_md  # the markers never reach a project
 
 
+def test_scaffolded_agents_md_evaluates_logged_out_without_skipping_the_login(
+    tmp_path, monkeypatch
+):
+    """Logged out, agents evaluate right away and still start the login; measured 10-19,
+    "don't wait on a login" alone made agents stop offering to log in."""
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "`crewai eval`, logged in or out, with or without a terminal" in agents_md
+    assert "start the login hand-off" in agents_md
+    assert "evaluate without waiting for it" in agents_md
+    assert "Stop when the goal gate passes or after three rounds" in agents_md
+    assert "report the first and latest grades with both report links" in agents_md
+
+
 def _cli_args(line: str) -> list[str]:
     """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
     words = shlex.split(line.split("#", 1)[0])[1:]
@@ -1442,6 +1709,8 @@ def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
     assert "AMP builds from GitHub" not in agents_md
     assert "AMP builds from that remote, on GitHub or another git host" in agents_md
     assert "With no git `origin` it uploads a ZIP" in agents_md
+    assert "There's no flag to upload a ZIP" not in agents_md
+    assert "`crewai deploy create -y --zip`" in agents_md
     assert "uploads `.env` as its environment variables" in agents_md
 
 
@@ -1539,7 +1808,7 @@ DOCS = Path(__file__).resolve().parents[3] / "docs"
 # deprecated option to say what replaces it is allowed.
 AGENTS_MD_NEVER = (
     r"CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
-    r"from crewai\.flow\.flow import persist",  # raises ImportError; persist lives in crewai.flow
+    r"from crewai\.flow\.flow import persist",  # ImportError on crewai<=1.15.30; use crewai.flow
     r"(?<!replaces `)reasoning=True",  # deprecated for planning_config
     r"multimodal=True",  # deprecated: pass files natively
     r"allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone

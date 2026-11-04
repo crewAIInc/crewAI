@@ -1088,7 +1088,7 @@ mode: "wide"
     ```
 
     <Tip>
-      [انقر هنا](/ar/concepts/event-listener#event-listeners) لمزيد من التفاصيل
+      [انقر هنا](/ar/concepts/event-listener#إنشاء-مستمع-أحداث-مخصص) لمزيد من التفاصيل
     </Tip>
   </Tab>
 
@@ -1242,6 +1242,17 @@ print(response)
       3. استخدم التقسيم للمستندات الكبيرة
       4. راقب استخدام الرموز لتحسين التكاليف
     </Info>
+
+    **النماذج التي لا يعرفها CrewAI.** يبحث CrewAI عن نافذة السياق لكل نموذج في كتالوج مدمج ويستخدم 85% منها، ويترك الباقي هامشًا احتياطيًا. يحدد هذا الحجم متى تُحفظ نتيجة أداة كبيرة في ملف بدلًا من إضافتها إلى المحادثة، ومتى تُلخَّص المحادثة. إذا لم يكن نموذجك مدرجًا في الكتالوج، يفترض CrewAI نافذة افتراضية (8,192 رمزًا لمعظم المزوّدين) ويسجّل تحذيرًا يذكر اسم النموذج. اضبط `context_window_size` على نافذة السياق الكاملة للنموذج بالرموز. تكون لها الأولوية على الكتالوج لدى كل المزوّدين، وتُطبَّق عليها نسبة 85% نفسها:
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/google/gemini-4-argon",
+        context_window_size=1_048_576,  # the model's full context window, in tokens
+    )
+    ```
   </Accordion>
 
   <Accordion title="تحسين الأداء">
@@ -1358,6 +1369,8 @@ llm = LLM(
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
+
+    إذا كان مفتاح المزوّد غير موجود، أو كان لا يزال القيمة المؤقتة `YOUR_API_KEY` التي يكتبها `crewai create flow` في `.env`، فإن crewAI يرفع الخطأ `MissingAPIKeyError` مع ذكر اسم المتغير الذي يجب تعيينه. أضف المفتاح إلى ملف `.env` في مشروعك ثم شغّل `crewai run` مرة أخرى. هذا الخطأ صنف فرعي من `ValueError`، ويمكن استيراده من `crewai.llms.base_llm`.
   </Tab>
   <Tab title="أسماء النماذج">
     <Check>
@@ -1403,6 +1416,30 @@ llm = LLM(
     <Warning>
       إن استخدام `response_model` كبير أو متداخل بعمق يزيد احتمال انتهاء مهلة المزود. تعامل مع هذه الحالات كأعطال مؤقتة في المزود، وليس كإنتاج النموذج مخرجات منظمة تالفة.
     </Warning>
+  </Tab>
+  <Tab title="الاستجابات الفارغة">
+    <Tip>
+      قد تكون الإجابة الفارغة مؤقتة، لذلك يعيد الوكيل إرسال الطلب نفسه مرة واحدة قبل الفشل.
+    </Tip>
+
+    إذا أعاد النموذج مرة أخرى استجابة بلا محتوى ولا استدعاءات أدوات، يُطلق الوكيل `EmptyLLMResponseError`. وهو صنف فرعي من `ValueError`، لذلك تظل معالجات `except ValueError` الحالية تلتقطه:
+
+    ```python
+    from crewai import Agent
+    from crewai.llms.base_llm import EmptyLLMResponseError
+
+    agent = Agent(
+        role="Analyst",
+        goal="Summarize incidents",
+        backstory="You write short incident summaries.",
+        llm="openai/gpt-4o",
+    )
+
+    try:
+        result = agent.kickoff("Summarize the incident")
+    except EmptyLLMResponseError as e:
+        print(f"{e.model} returned no content twice: {e}")
+    ```
   </Tab>
   <Tab title="طول السياق">
     <Tip>

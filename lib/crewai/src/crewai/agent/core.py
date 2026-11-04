@@ -99,10 +99,10 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
-    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
+from crewai.utilities.config import process_config
 from crewai.utilities.constants import (
     CREWAI_TRAINED_AGENTS_FILE_ENV,
     TRAINED_AGENTS_DATA_FILE,
@@ -114,6 +114,7 @@ from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_fo
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -402,7 +403,13 @@ class Agent(BaseAgent):
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
         """Merge repository agent config with provided values before validation."""
-        if v is not None and (from_repository := v.get("from_repository")):
+        if v is None:
+            return v
+        # Flatten ``config`` first so a ``from_repository`` set in agents.yaml is
+        # seen here, and its config fields override the repository's values.
+        # Copy so the caller's mapping keeps its ``config`` key.
+        v = process_config(dict(v), cls)
+        if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
         return v
 
@@ -1368,6 +1375,7 @@ class Agent(BaseAgent):
             ``UserWarning`` naming the agent and its apps.
         """
         platform_tools: list[BaseTool] = []
+        cause = ""
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
@@ -1376,6 +1384,7 @@ class Agent(BaseAgent):
             platform_tools = CrewaiPlatformTools(apps=apps)
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
+            cause = f" Cause: {e!s}"
 
         if apps and not platform_tools:
             # Logger.log above is verbose-gated; without a warning a bad `apps`
@@ -1385,7 +1394,8 @@ class Agent(BaseAgent):
                 f"Agent '{self.role}' declares apps [{app_names}] but none "
                 "resolved to any tools; the agent will run without them and may "
                 "be unable to complete its goal. Check that these apps exist and "
-                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
+                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set."
+                f"{cause}",
                 UserWarning,
                 stacklevel=2,
             )
