@@ -57,6 +57,7 @@ _YAML_LLM = re.compile(r"""^[ \t]+llm:[ \t]*["']?([^"'#\s]+)""", re.MULTILINE)
 # whose value is on the next line. PyYAML is not a CLI dependency. A value it
 # cannot take is still reported, as unreadable, rather than skipped.
 _YAML_SUFFIXES = (".yaml", ".yml")
+_YAML_EXPLICIT_KEY = re.compile(r"^[ \t-]*\?(?:[ \t]|$)", re.MULTILINE)
 _YAML_SETTING = re.compile(
     r"""(?:^|[\s{,])["']?([A-Za-z_][\w-]*)["']?[ \t]*:"""
     r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}#]*)""",
@@ -259,6 +260,17 @@ def _project_endpoints(
             for key, value in _YAML_SETTING.findall(_text(path))
             if _sets_endpoint(key) or key.lower() == "endpoint"
         ]
+        # YAML's explicit `? key` / `: value` form can override what the scan
+        # reads, and PyYAML is not a CLI dependency: name the file instead.
+        found += [
+            ("", f"explicit YAML keys in {path.relative_to(project_dir)}")
+            for path in sorted(
+                p
+                for p in (project_dir / "src").rglob("*")
+                if p.suffix in _YAML_SUFFIXES
+            )
+            if _YAML_EXPLICIT_KEY.search(_text(path))
+        ]
     # Escaped: a control character the project put in a setting could move the
     # cursor and print over the host.
     return list(
@@ -417,7 +429,7 @@ def _json_crew_models(crew_file: Path, saved: Mapping[str, str | None]) -> list[
     ]
     # An agent that names no llm runs on the model crewAI picks for it.
     if any(agent and agent.get("llm") is None for agent in agents):
-        models.append(_configured_model(saved) or DEFAULT_LLM_MODEL)
+        models.append(_configured_model(saved, env_file_wins=True) or DEFAULT_LLM_MODEL)
     return models
 
 
@@ -472,7 +484,7 @@ def _python_models(project_dir: Path, saved: Mapping[str, str | None]) -> list[s
         for path in sorted(source.glob("**/config/agents.yaml"))
         for model in _YAML_LLM.findall(_text(path))
     ]
-    configured = _configured_model(saved)
+    configured = _configured_model(saved, env_file_wins=False)
     if configured:
         models.append(configured)
     # With no model named anywhere, agents run on crewAI's default, unless the
@@ -491,15 +503,18 @@ def _text(path: Path) -> str:
         return ""  # the run's own loader reports a file it cannot read
 
 
-def _configured_model(saved: Mapping[str, str | None]) -> str | None:
-    return next(
-        (
-            value
-            for name in _MODEL_ENV
-            if (value := os.environ.get(name) or saved.get(name))
-        ),
-        None,
-    )
+def _configured_model(
+    saved: Mapping[str, str | None], env_file_wins: bool
+) -> str | None:
+    """The model `MODEL` and its aliases name for the run. A JSON crew's run
+    applies the `.env` over the environment (`run_crew.load_project_env`); a
+    Python crew's own `load_dotenv` leaves the environment's value."""
+
+    def configured(name: str) -> str | None:
+        first, second = (saved, os.environ) if env_file_wins else (os.environ, saved)
+        return first.get(name) or second.get(name)
+
+    return next((value for name in _MODEL_ENV if (value := configured(name))), None)
 
 
 def _missing_keys(models: Iterable[str], saved: Mapping[str, str | None]) -> list[str]:
