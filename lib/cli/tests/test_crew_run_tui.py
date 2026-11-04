@@ -751,17 +751,20 @@ def test_conversation_turn_done_records_assistant_message() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("defer_trace_finalization", [False, True])
 async def test_conversation_input_submits_turn(defer_trace_finalization) -> None:
+    from crewai.flow import ConversationState, Flow, listen
+
     calls = []
 
-    class FakeFlow:
-        defer_trace_finalization = False
+    class FakeFlow(Flow[ConversationState]):
+        conversational = True
 
-        def handle_turn(self, message: str, **kwargs) -> str:
+        def stream_turn(self, message: str, **kwargs):
             calls.append((message, kwargs))
-            return f"reply: {message}"
+            return super().stream_turn(message, **kwargs)
 
-        def finalize_session_traces(self) -> None:
-            pass
+        @listen("converse")
+        def converse_turn(self) -> str:
+            return f"reply: {self.state.current_user_message}"
 
     app = CrewRunApp(crew_name="Demo", conversational=True)
     app._flow = FakeFlow()
@@ -788,8 +791,8 @@ async def test_conversation_input_submits_turn(defer_trace_finalization) -> None
         ("assistant", "reply: again"),
     ]
     assert calls == [
-        ("hi", {"session_id": "session-1"}),
-        ("again", {"session_id": "session-1"}),
+        ("hi", {"session_id": "session-1", "stream": None}),
+        ("again", {"session_id": "session-1", "stream": None}),
     ]
     assert app._flow.defer_trace_finalization is False
 

@@ -289,6 +289,8 @@ def kickoff() -> None:
 
 `chat(tui=True)` abre a mesma interface de terminal usada por `crewai run` e requer um terminal interativo. Preserva `session_id`, `exit_commands`, o adiamento dos traces e as opções encaminhadas a `handle_turn()`. Prompts personalizados, funções de entrada/saída e `skip_empty` são exclusivos do REPL e são rejeitados no modo TUI. Agents conversacionais expõem os mesmos métodos `agent.chat()` e `agent.chat(tui=True)`.
 
+O streaming de tokens da TUI fica ativo por padrão, a menos que o LLM o desative explicitamente. Use `flow.chat(tui=True, stream=False)` ou `LLM(stream=False)` para desativá-lo; um `stream=True` explícito no chat tem prioridade. A TUI consome frames de `stream_turn()` e mantém o resultado completo do turno. As substituições de streaming valem apenas para o turno e não alteram configurações compartilhadas do LLM. Para transportes próprios, `stream_turn(message, stream=None)` aplica o mesmo padrão automático; o padrão existente `stream=True` continua solicitando streaming de tokens explicitamente. `stream=False` mantém os frames de ciclo de vida e mensagens enquanto desativa os tokens do LLM. O REPL simples de `chat()` permanece inalterado; sua opção `stream` é reservada ao modo TUI.
+
 ### `ConversationConfig`
 
 Decorador de classe que anexa os defaults de chat por classe.

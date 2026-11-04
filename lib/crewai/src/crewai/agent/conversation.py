@@ -59,13 +59,14 @@ def agent_flow(
             if not messages:
                 raise ValueError("messages must be a non-empty string or message list")
             agent = load_agent()
-            result = await agent.kickoff_async(
-                messages=messages,
-                input_files=cast(
-                    "dict[str, Any] | None",
-                    baggage.get_baggage("flow_input_files") or None,
-                ),
-            )
+            with self._conversation_streaming_enabled(agent.llm):
+                result = await agent.kickoff_async(
+                    messages=messages,
+                    input_files=cast(
+                        "dict[str, Any] | None",
+                        baggage.get_baggage("flow_input_files") or None,
+                    ),
+                )
             if conversation_enabled:
                 self.append_assistant_message(result.raw)
             return result

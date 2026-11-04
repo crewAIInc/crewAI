@@ -289,6 +289,8 @@ def kickoff() -> None:
 
 `chat(tui=True)` opens the same terminal UI used by `crewai run` and requires an interactive terminal. It preserves `session_id`, `exit_commands`, trace deferral, and options forwarded to `handle_turn()`. Custom prompts, input/output callables, and `skip_empty` are REPL-only options and are rejected in TUI mode. Conversational Agents expose the same `agent.chat()` and `agent.chat(tui=True)` methods.
 
+TUI token streaming defaults on when the LLM does not explicitly disable it. Use `flow.chat(tui=True, stream=False)` or `LLM(stream=False)` to opt out; an explicit chat `stream=True` takes precedence. The TUI consumes `stream_turn()` frames and retains the completed turn result. Streaming overrides are scoped to the turn and leave shared LLM settings unchanged. For custom transports, `stream_turn(message, stream=None)` applies the same automatic default; its existing `stream=True` default still explicitly requests token streaming. `stream=False` keeps lifecycle/message frames while disabling LLM token chunks. The plain `chat()` REPL remains unchanged; its `stream` option is reserved for TUI mode.
+
 ### `ConversationConfig`
 
 Class decorator that attaches per-class chat defaults.

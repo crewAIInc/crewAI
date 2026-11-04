@@ -118,6 +118,7 @@ def test_kickoff_flow_conversational_flow_in_a_terminal_opens_the_tui(
             "session_id": "session-1",
             "exit_commands": ("BYE",),
             "defer_trace_finalization": False,
+            "stream": False,
             "restore_from_state_id": "previous-session",
         },
     ],
@@ -142,6 +143,7 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch, opt
             calls.append("run")
             assert self._conversation_exit_commands == ({"bye"} if options else {"exit", "quit"})
             assert self._conversation_defer_trace_finalization is options.get("defer_trace_finalization", True)
+            assert self._conversation_stream is options.get("stream")
             assert self._conversation_turn_kwargs == (
                 {"session_id": "session-1", "restore_from_state_id": "previous-session"}
                 if options else {}

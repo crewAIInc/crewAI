@@ -616,6 +616,8 @@ agent.chat(tui=True)  # Full terminal UI
 
 `tui=True` requer um terminal interativo e um build compatível da CLI. Os dois modos aceitam `session_id`, `exit_commands` e opções encaminhadas a `handle_turn()`. Prompts personalizados, funções de entrada/saída e `skip_empty` são opções exclusivas do REPL. Não é necessário criar nem passar um Flow para começar a conversar.
 
+A TUI transmite respostas automaticamente; não é necessário definir `LLM(stream=True)`. Desative o streaming de tokens com `agent.chat(tui=True, stream=False)` ou com `LLM(stream=False)` explícito. Um `stream=True` explícito no chat tem prioridade sobre a configuração do LLM. O streaming vale apenas para cada turno e não altera a configuração do LLM nem o comportamento independente de `kickoff()`.
+
 Reutilize a mesma instância de Agent em uma conversa. Para configuração avançada de persistência, `agent.as_flow()` expõe sua sessão conversacional de Flow. O histórico fica em memória por padrão; a recuperação entre processos requer persistência de Flow configurada explicitamente. Use instâncias separadas de Agent para conversas independentes. Um `session_id` identifica ou restaura uma sessão de Flow; ele não fornece isolamento concorrente de várias sessões em um Agent.
 
 Agents comuns usam `conversational=False` por padrão. Chamadas diretas a `kickoff()` e `kickoff_async()` continuam sendo execuções independentes mesmo com a conversa ativada; use `handle_turn()` para manter o histórico da sessão. A execução existente de Crew/Task mantém seu comportamento atual.

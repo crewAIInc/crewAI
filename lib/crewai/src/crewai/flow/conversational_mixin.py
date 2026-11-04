@@ -526,9 +526,14 @@ class _ConversationalMixin:
         session_id: str | None = None,
         intents: Sequence[str] | None = None,
         intent_llm: str | BaseLLM | None = None,
+        stream: bool | None = True,
         **kickoff_kwargs: Any,
     ) -> Any:
-        """Append a user message and stream one conversational turn as frames."""
+        """Stream a turn as frames, optionally controlling LLM token streaming.
+
+        ``stream=None`` enables LLM streaming unless the LLM explicitly sets
+        ``stream=False``. Frame delivery remains active when token streaming is off.
+        """
         if not self._is_conversational_enabled():
             raise ValueError(
                 "Flow.stream_turn() is only available on conversational flows"
@@ -570,14 +575,19 @@ class _ConversationalMixin:
                 original_streaming_turn = getattr(
                     self, "_streaming_conversation_turn", False
                 )
+                original_stream_mode = getattr(self, "_conversation_stream_mode", True)
                 try:
                     object.__setattr__(self, "stream", False)
                     object.__setattr__(self, "_streaming_conversation_turn", True)
+                    object.__setattr__(self, "_conversation_stream_mode", stream)
                     result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
                 finally:
                     object.__setattr__(self, "stream", original_stream)
                     object.__setattr__(
                         self, "_streaming_conversation_turn", original_streaming_turn
+                    )
+                    object.__setattr__(
+                        self, "_conversation_stream_mode", original_stream_mode
                     )
                 if isinstance(result, HumanFeedbackPending):
                     return result
@@ -634,6 +644,7 @@ class _ConversationalMixin:
         self,
         *,
         tui: bool = False,
+        stream: bool | None = None,
         session_id: str | None = None,
         prompt: str = "\nYou: ",
         assistant_prefix: str = "\nAssistant: ",
@@ -649,7 +660,8 @@ class _ConversationalMixin:
         ``chat()`` is a convenience wrapper around ``handle_turn()`` for local
         REPLs. Use ``tui=True`` for the shared terminal UI, which requires an
         interactive terminal. Prompt formatting and input/output callables are
-        REPL-only options. For web apps, tests, and custom transports, call
+        REPL-only options. TUI token streaming defaults on unless explicitly
+        disabled on the LLM or with ``stream=False``. For web apps, tests, and custom transports, call
         ``handle_turn()`` directly. The input/output callables are injectable so
         callers can customize prompts or exercise the loop without patching
         builtins.
@@ -679,12 +691,18 @@ class _ConversationalMixin:
                 )
             _run_conversational_flow_tui(
                 self,
+                stream=stream,
                 session_id=session_id,
                 exit_commands=exit_commands,
                 defer_trace_finalization=defer_trace_finalization,
                 **handle_turn_kwargs,
             )
             return
+
+        if stream is not None:
+            raise ValueError(
+                "The chat stream option requires tui=True; use stream_turn() for streaming transports"
+            )
 
         exit_set = {command.lower() for command in exit_commands}
         previous_defer = getattr(self, "defer_trace_finalization", False)
@@ -1679,7 +1697,13 @@ class _ConversationalMixin:
 
         from crewai.llms.base_llm import call_stream_override
 
-        with call_stream_override(llm, True):
+        stream = getattr(self, "_conversation_stream_mode", True)
+        if stream is None:
+            stream = not (
+                llm.stream is False
+                and "stream" in getattr(llm, "model_fields_set", set())
+            )
+        with call_stream_override(llm, stream):
             yield
 
     def finalize_session_traces(self, *, discard: bool = False) -> None:

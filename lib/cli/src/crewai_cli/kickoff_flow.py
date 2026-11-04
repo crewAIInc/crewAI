@@ -138,6 +138,7 @@ def _run_conversational_flow_tui(
     flow: Any,
     definition: str | Path | None = None,
     *,
+    stream: bool | None = None,
     session_id: str | None = None,
     exit_commands: Sequence[str] = ("exit", "quit"),
     defer_trace_finalization: bool = True,
@@ -154,6 +155,7 @@ def _run_conversational_flow_tui(
         conversational=True,
     )
     app._flow = flow
+    app._conversation_stream = stream
     app._conversation_turn_kwargs = dict(handle_turn_kwargs)
     if session_id is not None:
         app._conversation_turn_kwargs["session_id"] = session_id
