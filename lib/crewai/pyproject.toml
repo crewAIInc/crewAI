@@ -119,7 +119,7 @@ a2a = [
      "aiocache[redis,memcached]~=0.12.3",
 ]
 file-processing = [
-    "crewai-files==1.15.34",
+    "crewai-files==1.15.35",
 ]
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
