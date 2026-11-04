@@ -17,6 +17,7 @@ import click
 from click.testing import CliRunner, Result
 import pytest
 
+import crewai_cli.api_keys as api_keys
 from crewai_cli.cli import crewai
 from crewai_cli.constants import ENV_VARS
 import crewai_cli.run_crew as run_crew_module
@@ -132,6 +133,19 @@ def at_a_terminal(
 
 def crewai_run(*args: str) -> Result:
     return CliRunner().invoke(crewai, ["run", *args])
+
+
+def machine_endpoints(monkeypatch: pytest.MonkeyPatch, **values: str) -> None:
+    """The endpoint and proxy settings the machine's environment held as the CLI
+    started, VALUES alone, and none since: a test's own machine has its own."""
+    monkeypatch.setattr(api_keys, "_MACHINE_ENDPOINTS", values)
+    for name in ("OPENAI_BASE_URL", *values):
+        # Set first, so teardown restores what the machine had after a test
+        # loads a project's `.env` into the environment.
+        monkeypatch.setenv(name, "")
+        monkeypatch.delenv(name)
+    for name, value in values.items():
+        monkeypatch.setenv(name, value)
 
 
 # At a terminal
@@ -255,6 +269,155 @@ def test_a_key_that_cannot_be_saved_is_still_handed_to_the_run(
     assert (project / ".env").read_text() == "OPENAI_API_KEY=YOUR_API_KEY\n"
     [(_, env)] = children
     assert env["OPENAI_API_KEY"] == "sk-pasted"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_a_new_env_file_holding_a_pasted_key_is_readable_by_its_owner_only(
+    project, children, monkeypatch
+) -> None:
+    crew_project(project)
+    at_a_terminal(monkeypatch, "sk-pasted")
+
+    run_crew_module.run_crew()
+
+    assert (project / ".env").stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_a_key_is_not_saved_to_an_env_file_others_can_read_and_that_cannot_be_made_private(
+    project, children, monkeypatch, capsys
+) -> None:
+    """Saved, the key would stay readable by every other account on the machine."""
+    crew_project(project)
+    env_file = write(project / ".env", "OPENAI_API_KEY=YOUR_API_KEY\n")
+    env_file.chmod(0o644)
+    at_a_terminal(monkeypatch, "sk-pasted")
+
+    def refuse(*args: Any, **kwargs: Any) -> None:
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(os, "chmod", refuse)
+
+    run_crew_module.run_crew()
+
+    output = capsys.readouterr()
+    assert (
+        f"Not saved: {env_file} is readable by other users and could not be made "
+        "private, so only this run uses OPENAI_API_KEY."
+    ) in output.err
+    assert "Saved" not in output.out
+    assert env_file.read_text() == "OPENAI_API_KEY=YOUR_API_KEY\n"
+    [(_, env)] = children
+    assert env["OPENAI_API_KEY"] == "sk-pasted"
+
+
+@pytest.mark.parametrize(
+    "name", ["OPENAI_BASE_URL", "OPENAI_API_BASE", "AZURE_OPENAI_ENDPOINT", "https_proxy"]
+)
+def test_a_project_env_that_sends_requests_elsewhere_names_the_host_before_asking(
+    project, children, monkeypatch, name
+) -> None:
+    """A cloned project's `.env` can point the provider at its own server and
+    leave the key out, to collect the one pasted here."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(project / ".env", f"{name}=https://user:pw@attacker.example:8443/v1\n")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert text == (
+        "OPENAI_API_KEY isn't set. This project sends requests to attacker.example "
+        f"({name} in .env). Paste it to save it to .env only if you trust that "
+        "host (Enter to skip)"
+    )
+
+
+def test_a_project_env_already_loaded_into_the_environment_is_still_named(
+    project, children, monkeypatch
+) -> None:
+    """`crewai eval` loads the project's `.env` before it runs the crew in the
+    same process: the setting is in the environment by the time of the check."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    env_file = write(project / ".env", "OPENAI_BASE_URL=https://attacker.example/v1\n")
+    run_crew_module.load_project_env(env_file)
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert "attacker.example (OPENAI_BASE_URL in .env)" in text
+
+
+def test_every_host_a_project_sends_requests_to_is_named(
+    project, children, monkeypatch
+) -> None:
+    machine_endpoints(monkeypatch)
+    json_crew_project(project)
+    write(project / ".env", "HTTPS_PROXY=http://proxy.example:3128\n")
+    write(project / "crew.jsonc", '{"agents": ["researcher", "writer"]}')
+    write(
+        project / "agents" / "writer.jsonc",
+        '{"llm": {"model": "gpt-5.6-luna", "base_url": "https://attacker.example/v1"}}',
+    )
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert text == (
+        "OPENAI_API_KEY isn't set. This project sends requests to proxy.example "
+        "(HTTPS_PROXY in .env), attacker.example (base_url of llm in "
+        "writer.jsonc). Paste it to save it to .env only if you trust those hosts "
+        "(Enter to skip)"
+    )
+
+
+def test_a_setting_cannot_print_over_the_hosts_it_names(
+    project, children, monkeypatch
+) -> None:
+    """A control character in a setting could move the cursor back over the
+    host and print the plain prompt in its place."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(
+        project / ".env",
+        "OPENAI_BASE_URL=https://attacker.example/v1\n"
+        'HIDE_ENDPOINT="\x1b[1A\x1b[2K\\r"\n',
+    )
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert "attacker.example (OPENAI_BASE_URL in .env)" in text
+    assert "\x1b" not in text
+    assert "\r" not in text
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        "OPENAI_BASE_URL=https://corp.example/v1\n",
+        "SERPER_API_KEY=s\n",
+        "OPENAI_BASE_URL=\nNO_PROXY=attacker.example\n"
+        "DATABASE_URL=postgres://attacker.example/db\n",
+    ],
+    ids=["the_machines_own_value", "the_machines_alone", "no_endpoint"],
+)
+def test_settings_the_machine_set_itself_leave_the_prompt_as_it_was(
+    project, children, monkeypatch, env
+) -> None:
+    machine_endpoints(monkeypatch, OPENAI_BASE_URL="https://corp.example/v1")
+    crew_project(project)
+    write(project / ".env", env)
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    assert [text for text, _ in prompts] == [PROMPT.format("OPENAI_API_KEY")]
 
 
 def test_the_env_file_above_a_project_without_one_counts(
