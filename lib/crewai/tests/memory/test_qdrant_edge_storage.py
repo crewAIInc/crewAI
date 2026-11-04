@@ -338,3 +338,13 @@ def test_memory_string_storage_qdrant_edge(tmp_path: Path) -> None:
         m.close()
     finally:
         os.environ.pop("CREWAI_STORAGE_DIR", None)
+
+
+# --- #7684: liveness probe must not crash (or kill) on Windows -----------------
+def test_process_is_alive_does_not_signal_the_process() -> None:
+    import os
+
+    from crewai.memory.storage.qdrant_edge_storage import _process_is_alive
+
+    assert _process_is_alive(os.getpid()) is True
+    assert _process_is_alive(99999999) is False

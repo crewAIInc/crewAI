@@ -43,6 +43,51 @@ from crewai.memory.types import MemoryRecord, ScopeInfo
 
 _logger = logging.getLogger(__name__)
 
+
+def _process_is_alive(pid: int) -> bool:
+    """Return whether *pid* is running, without signalling the process.
+
+    ``os.kill(pid, 0)`` is a POSIX-only liveness probe. On Windows any signal
+    other than CTRL_C_EVENT / CTRL_BREAK_EVENT is handed to TerminateProcess,
+    so probing would kill a live worker, and a dead pid raises a bare OSError
+    rather than ProcessLookupError.
+    """
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.GetExitCodeProcess.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+
+    process_query_limited_information = 0x1000
+    still_active = 259
+    handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+    if not handle:
+        return False
+    try:
+        exit_code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            # Unknown: keep the shard rather than risk dropping live data.
+            return True
+        return exit_code.value == still_active
+    finally:
+        kernel32.CloseHandle(handle)
+
 VECTOR_NAME: Final[str] = "memory"
 
 DEFAULT_VECTOR_DIM: Final[int] = 3072
@@ -829,13 +874,9 @@ class QdrantEdgeStorage:
                 continue
             if pid == os.getpid():
                 continue
-            try:
-                os.kill(pid, 0)
+            if _process_is_alive(pid):
                 continue
-            except ProcessLookupError:
-                _logger.debug("Worker %d is dead, shard is orphaned", pid)
-            except PermissionError:
-                continue
+            _logger.debug("Worker %d is dead, shard is orphaned", pid)
 
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
             try:
