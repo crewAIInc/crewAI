@@ -76,12 +76,12 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-# Models learned at runtime to need the Responses API, keyed by the model string
-# as configured: not served by /v1/chat/completions at all (a 404), or not for
-# function tools (GPT-6 Astra and GPT-6.1 Sol). Populated by
-# `_remember_responses_only_model` so the wasted round trips are paid once per
-# model per process rather than on every call.
-_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+# (endpoint, model) pairs learned at runtime to need the Responses API: not
+# served by /v1/chat/completions at all (a 404), or not for function tools
+# (GPT-6 Astra and GPT-6.1 Sol). Populated by `_remember_responses_only_model`
+# so the wasted round trips are paid once per model per process rather than on
+# every call. Keyed by endpoint so one gateway's answer never reroutes another.
+_LEARNED_RESPONSES_ONLY_MODELS: set[tuple[str, str]] = set()
 
 # (endpoint, model) pairs a 400 has shown to reject `reasoning_effort` in this
 # process, so the rejected call is paid once rather than on every request. Keyed
@@ -1096,6 +1096,14 @@ class OpenAICompletion(BaseLLM):
 
         if self.store is not None:
             params["store"] = self.store
+        elif (
+            self.api == "completions"
+            and not (self.auto_chain or self.previous_response_id)
+            and not self._on_compatible_server()
+        ):
+            # Moved here from chat completions, which stores nothing by default;
+            # unset, OpenAI would store the call. Chaining needs it stored.
+            params["store"] = False
 
         # Handle response chaining: explicit previous_response_id takes precedence
         if self.previous_response_id:
@@ -1577,6 +1585,19 @@ class OpenAICompletion(BaseLLM):
 
             return parsed_result
 
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+                usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            return function_calls
+
         if function_calls and available_functions:
             for call in function_calls:
                 function_name = call.get("name", "")
@@ -1713,6 +1734,19 @@ class OpenAICompletion(BaseLLM):
             )
 
             return parsed_result
+
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+                usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            return function_calls
 
         if function_calls and available_functions:
             for call in function_calls:
@@ -1962,7 +1996,7 @@ class OpenAICompletion(BaseLLM):
 
     def _remember_responses_only_model(self) -> None:
         """Record that this model must use the Responses API."""
-        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self._reasoning_effort_key())
 
     def _model_not_found_message(self, error: Exception) -> str:
         """Build a 404 message that says what to do about it.
@@ -2043,11 +2077,11 @@ class OpenAICompletion(BaseLLM):
         return "unsupported value" in str(source.get("message") or "").lower()
 
     def _remember_tools_need_responses(self) -> None:
-        """Send this model's later calls straight to the Responses API.
+        """Send this model's later calls on this endpoint to the Responses API.
 
-        Not on a compatible server: `_effective_api` never upgrades one, since
-        most don't implement /v1/responses, so each of its tool calls pays the
-        rejected round trip instead.
+        Not with ``custom_openai=True``: `_effective_api` never upgrades those,
+        since most don't implement /v1/responses, so each of their tool calls
+        pays the rejected round trip instead.
         """
         logging.debug(
             "Calling %r on the Responses API: /v1/chat/completions does not serve "
@@ -2196,7 +2230,7 @@ class OpenAICompletion(BaseLLM):
         if (
             self.api == "completions"
             and not self.custom_openai
-            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
+            and self._reasoning_effort_key() in _LEARNED_RESPONSES_ONLY_MODELS
         ):
             return "responses"
         return self.api

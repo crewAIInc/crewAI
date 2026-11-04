@@ -34,8 +34,10 @@ import pytest
 from openai import BadRequestError
 
 from crewai import Agent, Crew, Task
-import crewai.llms.providers.openai.completion as completion_module
-from crewai.llms.providers.openai.completion import OpenAICompletion
+from crewai.llms.providers.openai.completion import (
+    _LEARNED_RESPONSES_ONLY_MODELS,
+    OpenAICompletion,
+)
 from crewai.tools import tool
 
 
@@ -129,9 +131,9 @@ def responses_only_tools_error() -> BadRequestError:
 @pytest.fixture(autouse=True)
 def _clear_learned_models():
     """Keep the process-wide learned set from leaking between tests."""
-    completion_module._LEARNED_RESPONSES_ONLY_MODELS.clear()
+    _LEARNED_RESPONSES_ONLY_MODELS.clear()
     yield
-    completion_module._LEARNED_RESPONSES_ONLY_MODELS.clear()
+    _LEARNED_RESPONSES_ONLY_MODELS.clear()
 
 
 class TestErrorDetection:
@@ -368,6 +370,7 @@ class TestToolsOnlyOnResponses:
         assert llm._call_completions(MESSAGES, tools=TOOLS) == "391"
         assert [p.get("reasoning_effort") for p in chat] == [None, "none"]
         assert [t["name"] for t in responses[0]["tools"]] == ["multiply"]
+        assert responses[0]["store"] is False, "chat completions stores nothing"
         assert llm._effective_api() == "responses"
 
     @pytest.mark.asyncio
@@ -537,6 +540,138 @@ class TestToolsOnlyOnResponses:
         assert llm._effective_api() == "completions"
 
 
+class TestLearnedPerEndpoint:
+    """What one endpoint taught never reroutes the same model name elsewhere."""
+
+    GATEWAY = "https://gateway.example/v1"
+
+    def test_a_gateway_lesson_stays_on_that_gateway(self):
+        build("gpt-6.1-sol", base_url=self.GATEWAY)._remember_responses_only_model()
+
+        assert build("gpt-6.1-sol", base_url=self.GATEWAY)._effective_api() == (
+            "responses"
+        )
+        assert build("gpt-6.1-sol")._effective_api() == "completions"
+        assert (
+            build("gpt-6.1-sol", base_url="https://other.example/v1")._effective_api()
+            == "completions"
+        )
+
+    def test_an_openai_lesson_does_not_reroute_a_gateway(self):
+        build("gpt-6.1-sol")._remember_responses_only_model()
+
+        assert build("gpt-6.1-sol", base_url=self.GATEWAY)._effective_api() == (
+            "completions"
+        )
+
+
+class TestStoreOnTheMoveToResponses:
+    """Chat completions stores nothing by default, and the move must not change that."""
+
+    def test_an_implicit_move_asks_openai_not_to_store(self):
+        params = build("gpt-6.1-sol")._prepare_responses_params(MESSAGES)
+
+        assert params["store"] is False
+
+    @pytest.mark.parametrize("store", [True, False])
+    def test_an_explicit_store_wins(self, store):
+        params = build("gpt-6.1-sol", store=store)._prepare_responses_params(MESSAGES)
+
+        assert params["store"] is store
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"api": "responses"},
+            {"auto_chain": True},
+            {"previous_response_id": "resp_1"},
+            {"base_url": "https://gateway.example/v1"},
+        ],
+        ids=["asked-for-responses", "auto-chain", "chained", "compatible-server"],
+    )
+    def test_leaves_store_to_the_server_otherwise(self, kwargs):
+        """Chaining needs a stored response, and a gateway may not know the field."""
+        params = build("gpt-6.1-sol", **kwargs)._prepare_responses_params(MESSAGES)
+
+        assert "store" not in params
+
+
+def _streamed_function_call() -> list[SimpleNamespace]:
+    """The Responses API events for one streamed `multiply` call."""
+    item = SimpleNamespace(
+        type="function_call",
+        call_id="call_1",
+        name="multiply",
+        arguments='{"a": 17, "b": 23}',
+    )
+    return [
+        SimpleNamespace(type="response.created", response=SimpleNamespace(id="resp_1")),
+        SimpleNamespace(type="response.output_item.done", item=item),
+    ]
+
+
+class TestStreamedToolCalls:
+    """A native agent passes no `available_functions` and runs the calls itself."""
+
+    def test_sync_stream_returns_the_tool_calls(self, monkeypatch):
+        llm = build("gpt-6.1-sol", api="responses", stream=True)
+        events = _streamed_function_call()
+        monkeypatch.setattr(
+            llm,
+            "_get_sync_client",
+            lambda: SimpleNamespace(
+                responses=SimpleNamespace(create=lambda **kwargs: iter(events))
+            ),
+        )
+
+        result = llm._handle_streaming_responses({"input": MESSAGES})
+
+        assert result == [
+            {"id": "call_1", "name": "multiply", "arguments": '{"a": 17, "b": 23}'}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_async_stream_returns_the_tool_calls(self, monkeypatch):
+        llm = build("gpt-6.1-sol", api="responses", stream=True)
+        events = _streamed_function_call()
+
+        async def stream():
+            for event in events:
+                yield event
+
+        async def create(**kwargs):
+            return stream()
+
+        monkeypatch.setattr(
+            llm,
+            "_get_async_client",
+            lambda: SimpleNamespace(responses=SimpleNamespace(create=create)),
+        )
+
+        result = await llm._ahandle_streaming_responses({"input": MESSAGES})
+
+        assert result == [
+            {"id": "call_1", "name": "multiply", "arguments": '{"a": 17, "b": 23}'}
+        ]
+
+    def test_given_the_functions_it_still_runs_them(self, monkeypatch):
+        llm = build("gpt-6.1-sol", api="responses", stream=True)
+        events = _streamed_function_call()
+        monkeypatch.setattr(
+            llm,
+            "_get_sync_client",
+            lambda: SimpleNamespace(
+                responses=SimpleNamespace(create=lambda **kwargs: iter(events))
+            ),
+        )
+
+        result = llm._handle_streaming_responses(
+            {"input": MESSAGES}, available_functions={"multiply": lambda a, b: a * b}
+        )
+
+        assert result == "391"
+
+
 @pytest.fixture(scope="module")
 def vcr_config(vcr_config):
     """Record 400s too: the cassette below exists to show the recovery from two.
@@ -565,9 +700,12 @@ def vcr_config(vcr_config):
 def test_gpt_6_1_sol_agent_runs_its_tool(caplog):
     """Recorded live: two refused chat calls, then the tool round trip on /v1/responses."""
 
+    looked_up: list[str] = []
+
     @tool("lookup_code")
     def lookup_code(name: str) -> str:
         """Look up the access code for a project by name."""
+        looked_up.append(name)
         return f"{name.upper()}-ZETA-7741"
 
     agent = Agent(
@@ -586,7 +724,45 @@ def test_gpt_6_1_sol_agent_runs_its_tool(caplog):
     with caplog.at_level(logging.ERROR):
         result = Crew(agents=[agent], tasks=[task]).kickoff()
 
+    # Cassettes match on path alone, so a reply could be played to the wrong
+    # call; the tool having run is what proves the round trip.
+    assert looked_up == ["orion"]
     assert "ORION-ZETA-7741" in str(result)
+    assert caplog.records == [], "a recovered call must not log an error"
+
+
+@pytest.mark.vcr()
+def test_gpt_6_1_sol_streaming_agent_runs_its_tool(caplog):
+    """Recorded live with stream=True: the streamed tool call reaches the agent."""
+
+    looked_up: list[str] = []
+
+    @tool("lookup_code")
+    def lookup_code(name: str) -> str:
+        """Look up the access code for a project by name."""
+        looked_up.append(name)
+        return f"{name.upper()}-ZETA-7741"
+
+    agent = Agent(
+        role="Records clerk",
+        goal="Report access codes exactly as the lookup tool returns them",
+        backstory="You never guess a code.",
+        llm=OpenAICompletion(model="gpt-6.1-sol", stream=True),
+        tools=[lookup_code],
+    )
+    task = Task(
+        description="What is the access code for the project named 'vega'?",
+        expected_output="The access code, exactly as the tool returned it",
+        agent=agent,
+    )
+
+    with caplog.at_level(logging.ERROR):
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+    # Cassettes match on path alone, so a reply could be played to the wrong
+    # call; the tool having run is what proves the round trip.
+    assert looked_up == ["vega"]
+    assert "VEGA-ZETA-7741" in str(result)
     assert caplog.records == [], "a recovered call must not log an error"
 
 

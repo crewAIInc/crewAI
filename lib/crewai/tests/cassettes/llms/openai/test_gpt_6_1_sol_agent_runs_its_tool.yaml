@@ -61,11 +61,11 @@ interactions:
       content-type:
       - application/json
       date:
-      - Wed, 04 Nov 2026 06:27:07 GMT
+      - Wed, 04 Nov 2026 07:12:47 GMT
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '171'
+      - '286'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -214,7 +214,7 @@ interactions:
       final answer: The access code, exactly as the tool returned it\nyou MUST return
       the actual complete content as the final answer, not a summary."}],"instructions":"You
       are Records clerk. You never guess a code.\nYour personal goal is: Report access
-      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","store":false,"tools":[{"type":"function","name":"lookup_code","description":"Look
       up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
     headers:
       User-Agent:
@@ -228,7 +228,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '715'
+      - '729'
       content-type:
       - application/json
       cookie:
@@ -257,24 +257,24 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_074e216c6d78f558006aead03ba2f087d0a62700fecc4ce9ef\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1793773627,\n  \"status\":
+      string: "{\n  \"id\": \"resp_00c80b8bc9c693e2016aeadaefe8b087d0932673fffe1f3049\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1793776367,\n  \"status\":
         \"completed\",\n  \"access_programs\": null,\n  \"background\": false,\n  \"billing\":
-        {\n    \"payer\": \"developer\"\n  },\n  \"completed_at\": 1793773628,\n  \"error\":
+        {\n    \"payer\": \"developer\"\n  },\n  \"completed_at\": 1793776369,\n  \"error\":
         null,\n  \"frequency_penalty\": 0.0,\n  \"image\": {\n    \"context_compression\":
         \"disabled\"\n  },\n  \"incomplete_details\": null,\n  \"instructions\": \"You
         are Records clerk. You never guess a code.\\nYour personal goal is: Report
         access codes exactly as the lookup tool returns them\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-6.1-sol\",\n  \"moderation\":
-        null,\n  \"output\": [\n    {\n      \"id\": \"fc_074e216c6d78f558006aead03c7a8c87d0b07878d63250ca1a\",\n
+        null,\n  \"output\": [\n    {\n      \"id\": \"fc_00c80b8bc9c693e2016aeadaf0e85087d09020bf71a7b1d888\",\n
         \     \"type\": \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
-        \"{\\\"name\\\":\\\"orion\\\"}\",\n      \"call_id\": \"call_gOtRjMx8lYgEPA0gmBFIH70L\",\n
+        \"{\\\"name\\\":\\\"orion\\\"}\",\n      \"call_id\": \"call_DQM23qIJtyJM12fCoAt8Ao8C\",\n
         \     \"name\": \"lookup_code\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
         \ \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
         null,\n  \"prompt_cache_retention\": \"24h\",\n  \"reasoning\": {\n    \"context\":
         \"all_turns\",\n    \"effort\": \"medium\",\n    \"mode\": \"standard\",\n
         \   \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
-        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \"default\",\n  \"store\": false,\n  \"temperature\": 1.0,\n  \"text\": {\n
         \   \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\": \"medium\"\n
         \ },\n  \"tool_choice\": \"auto\",\n  \"tool_usage\": {\n    \"image_gen\":
         {\n      \"input_tokens\": 0,\n      \"input_tokens_details\": {\n        \"image_tokens\":
@@ -307,11 +307,11 @@ interactions:
       content-type:
       - application/json
       date:
-      - Wed, 04 Nov 2026 06:27:08 GMT
+      - Wed, 04 Nov 2026 07:12:49 GMT
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1159'
+      - '1414'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -399,11 +399,11 @@ interactions:
       content-type:
       - application/json
       date:
-      - Wed, 04 Nov 2026 06:27:09 GMT
+      - Wed, 04 Nov 2026 07:12:49 GMT
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '74'
+      - '88'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -425,7 +425,7 @@ interactions:
     body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
       code for the project named ''orion''?\n\nThis is the expected criteria for your
       final answer: The access code, exactly as the tool returned it\nyou MUST return
-      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_gOtRjMx8lYgEPA0gmBFIH70L","name":"lookup_code","arguments":"{\"name\":\"orion\"}"},{"type":"function_call_output","call_id":"call_gOtRjMx8lYgEPA0gmBFIH70L","output":"ORION-ZETA-7741"}],"instructions":"You
+      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","name":"lookup_code","arguments":"{\"name\":\"orion\"}"},{"type":"function_call_output","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","output":"ORION-ZETA-7741"}],"instructions":"You
       are Records clerk. You never guess a code.\nYour personal goal is: Report access
       codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
       up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
@@ -485,11 +485,11 @@ interactions:
       content-type:
       - application/json
       date:
-      - Wed, 04 Nov 2026 06:27:09 GMT
+      - Wed, 04 Nov 2026 07:12:49 GMT
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '93'
+      - '92'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -511,9 +511,9 @@ interactions:
     body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
       code for the project named ''orion''?\n\nThis is the expected criteria for your
       final answer: The access code, exactly as the tool returned it\nyou MUST return
-      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_gOtRjMx8lYgEPA0gmBFIH70L","name":"lookup_code","arguments":"{\"name\":\"orion\"}"},{"type":"function_call_output","call_id":"call_gOtRjMx8lYgEPA0gmBFIH70L","output":"ORION-ZETA-7741"}],"instructions":"You
+      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","name":"lookup_code","arguments":"{\"name\":\"orion\"}"},{"type":"function_call_output","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","output":"ORION-ZETA-7741"}],"instructions":"You
       are Records clerk. You never guess a code.\nYour personal goal is: Report access
-      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","store":false,"tools":[{"type":"function","name":"lookup_code","description":"Look
       up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
     headers:
       User-Agent:
@@ -527,7 +527,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '939'
+      - '953'
       content-type:
       - application/json
       cookie:
@@ -556,16 +556,16 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_01078231d3fc8f7b006aead03d48bc87d0a1d27e0a9a3bdd45\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1793773629,\n  \"status\":
+      string: "{\n  \"id\": \"resp_06509424d49b4b0b016aeadaf1e48c87d0957c29c70e1cb216\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1793776369,\n  \"status\":
         \"completed\",\n  \"access_programs\": null,\n  \"background\": false,\n  \"billing\":
-        {\n    \"payer\": \"developer\"\n  },\n  \"completed_at\": 1793773630,\n  \"error\":
+        {\n    \"payer\": \"developer\"\n  },\n  \"completed_at\": 1793776371,\n  \"error\":
         null,\n  \"frequency_penalty\": 0.0,\n  \"image\": {\n    \"context_compression\":
         \"disabled\"\n  },\n  \"incomplete_details\": null,\n  \"instructions\": \"You
         are Records clerk. You never guess a code.\\nYour personal goal is: Report
         access codes exactly as the lookup tool returns them\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-6.1-sol\",\n  \"moderation\":
-        null,\n  \"output\": [\n    {\n      \"id\": \"msg_01078231d3fc8f7b006aead03e181487d090cf4e300547a252\",\n
+        null,\n  \"output\": [\n    {\n      \"id\": \"msg_06509424d49b4b0b016aeadaf2e66087d081d99a53c21272b2\",\n
         \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
         [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
         [],\n          \"logprobs\": [],\n          \"text\": \"ORION-ZETA-7741\"\n
@@ -574,7 +574,7 @@ interactions:
         \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\":
         \"24h\",\n  \"reasoning\": {\n    \"context\": \"all_turns\",\n    \"effort\":
         \"medium\",\n    \"mode\": \"standard\",\n    \"summary\": null\n  },\n  \"safety_identifier\":
-        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": false,\n  \"temperature\":
         1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    },\n
         \   \"verbosity\": \"medium\"\n  },\n  \"tool_choice\": \"auto\",\n  \"tool_usage\":
         {\n    \"image_gen\": {\n      \"input_tokens\": 0,\n      \"input_tokens_details\":
@@ -607,11 +607,11 @@ interactions:
       content-type:
       - application/json
       date:
-      - Wed, 04 Nov 2026 06:27:10 GMT
+      - Wed, 04 Nov 2026 07:12:51 GMT
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1403'
+      - '1369'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
