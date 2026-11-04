@@ -683,7 +683,7 @@ agent.chat(tui=True)  # Full terminal UI
 
 `tui=True` requires an interactive terminal and a matching CLI build. Both modes accept `session_id`, `exit_commands`, and options forwarded to `handle_turn()`. Custom prompts, input/output callables, and `skip_empty` are REPL-only options. You do not need to create or pass a Flow to start chatting.
 
-The TUI streams responses automatically; you do not need `LLM(stream=True)`. Disable token streaming with `agent.chat(tui=True, stream=False)` or an explicit `LLM(stream=False)`. An explicit chat `stream=True` overrides the LLM setting. Streaming is scoped to each turn and does not change the LLM's configuration or independent `kickoff()` behavior.
+Both the plain REPL and TUI stream responses automatically; you do not need `LLM(stream=True)`. Disable token streaming with `agent.chat(stream=False)` (also supported with `tui=True`) or an explicit `LLM(stream=False)`. An explicit chat `stream=True` overrides the LLM setting. Streaming is scoped to each turn and does not change the LLM configuration or independent `kickoff()` behavior. A custom `output_fn` receives one completed response per turn; use `stream_turn()` for custom streaming transports.
 
 Reuse the same Agent instance for a conversation. For advanced persistence configuration, `agent.as_flow()` exposes its underlying conversational Flow session. History is in memory by default; process recovery requires explicit Flow persistence. Use separate Agent instances for independent conversations. A `session_id` identifies or restores a Flow session; it does not provide concurrent multi-session isolation within one Agent.
 

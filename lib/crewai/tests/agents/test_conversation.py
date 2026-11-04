@@ -80,7 +80,7 @@ def test_conversation_console_output_respects_verbose(monkeypatch, capsys, entry
     monkeypatch.setenv("CI", "false")
     monkeypatch.setattr(formatter, "is_newer_version_available", lambda: (True, "1.0", "2.0"))
     monkeypatch.setattr(formatter, "is_current_version_yanked", lambda: (False, None))
-    EventListener()
+    monkeypatch.setattr(EventListener().formatter, "verbose", True)
     previous_suppression = should_suppress_console_output()
     agent = make_agent(conversational=True, verbose=verbose)
     capsys.readouterr()

@@ -23,6 +23,7 @@ from enum import Enum
 import json
 import logging
 from pathlib import Path
+import sys
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
@@ -657,12 +658,13 @@ class _ConversationalMixin:
     ) -> None:
         """Run an interactive terminal chat loop for a conversational Flow.
 
-        ``chat()`` is a convenience wrapper around ``handle_turn()`` for local
+        ``chat()`` consumes ``stream_turn()`` for local
         REPLs. Use ``tui=True`` for the shared terminal UI, which requires an
         interactive terminal. Prompt formatting and input/output callables are
-        REPL-only options. TUI token streaming defaults on unless explicitly
-        disabled on the LLM or with ``stream=False``. For web apps, tests, and custom transports, call
-        ``handle_turn()`` directly. The input/output callables are injectable so
+        REPL-only options. Token streaming defaults on unless explicitly
+        disabled on the LLM or with ``stream=False``. Custom ``output_fn``
+        callbacks receive one completed response per turn. For custom streaming
+        transports, use ``stream_turn()``. The input/output callables are injectable so
         callers can customize prompts or exercise the loop without patching
         builtins.
         """
@@ -699,11 +701,6 @@ class _ConversationalMixin:
             )
             return
 
-        if stream is not None:
-            raise ValueError(
-                "The chat stream option requires tui=True; use stream_turn() for streaming transports"
-            )
-
         exit_set = {command.lower() for command in exit_commands}
         previous_defer = getattr(self, "defer_trace_finalization", False)
         if defer_trace_finalization:
@@ -722,12 +719,41 @@ class _ConversationalMixin:
                 if skip_empty and not message:
                     continue
 
-                result = self.handle_turn(
-                    message,
-                    session_id=session_id,
-                    **handle_turn_kwargs,
-                )
-                output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
+                printed_chunks = False
+                public_events: set[str] = set()
+                try:
+                    with self.stream_turn(
+                        message,
+                        stream=stream,
+                        session_id=session_id,
+                        **handle_turn_kwargs,
+                    ) as turn:
+                        for frame in turn:
+                            if frame.parent_id in public_events or (
+                                frame.type == "method_execution_started"
+                                and frame.data.get("method_name")
+                                in {"converse_turn", "answer_from_history_turn"}
+                            ):
+                                public_events.add(frame.id)
+                            if (
+                                output_fn is print
+                                and frame.id in public_events
+                                and frame.type == "llm_stream_chunk"
+                                and frame.content
+                                and not frame.data.get("tool_call")
+                                and frame.data.get("call_type") != "tool_call"
+                            ):
+                                prefix = assistant_prefix if not printed_chunks else ""
+                                sys.stdout.write(prefix + frame.content)
+                                sys.stdout.flush()
+                                printed_chunks = True
+                        result = turn.result
+                    if not printed_chunks:
+                        output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
+                finally:
+                    if printed_chunks:
+                        sys.stdout.write("\n")
+                        sys.stdout.flush()
         finally:
             self.finalize_session_traces()
             if defer_trace_finalization:
