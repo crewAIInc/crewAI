@@ -454,7 +454,13 @@ def _missing_keys(models: Iterable[str], saved: Mapping[str, str | None]) -> lis
 
 
 def _is_set(name: str, saved: Mapping[str, str | None]) -> bool:
-    return any(
-        value and value.strip() not in ("", PLACEHOLDER_API_KEY)
-        for value in (os.environ.get(name), saved.get(name))
-    )
+    """Whether the run will have NAME once `run_crew.load_project_env` applies
+    the `.env`: its line wins, unless that line holds no key and NAME was
+    pasted at a prompt in this run."""
+    line = saved.get(name)
+    pasted = name in os.environ.get(PASTED_KEYS_ENV, "").split(",")
+    if line is None or (pasted and line.strip() in ("", PLACEHOLDER_API_KEY)):
+        value = os.environ.get(name)
+    else:
+        value = line
+    return value is not None and value.strip() not in ("", PLACEHOLDER_API_KEY)
