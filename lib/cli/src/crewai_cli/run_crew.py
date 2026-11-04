@@ -14,7 +14,11 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
-from crewai_cli.api_keys import PLACEHOLDER_API_KEY, ask_for_missing_api_keys
+from crewai_cli.api_keys import (
+    PLACEHOLDER_API_KEY,
+    ask_for_missing_api_keys,
+    sets_endpoint,
+)
 from crewai_cli.input_prompt import (
     closest_name,
     is_interactive,
@@ -682,16 +686,27 @@ def load_project_env(env_file: Path) -> None:
     A blank line, or one still holding the `YOUR_API_KEY` placeholder, never
     replaces a value this process has: it holds no key, and the process may
     have the real one, from the shell or pasted when `crewai run` asked for it.
+    Unless the `.env` also points a base URL or proxy somewhere the process
+    does not: the kept key would be sent there, so it is replaced as before.
     """
     from dotenv import dotenv_values
 
     kept = os.environ.get(EVAL_TOKEN_ENV)
     # Read once: a `.env` a secrets manager serves through a pipe hands its
     # content to one reader. This applies it as load_dotenv(override=True) would.
-    for name, value in dotenv_values(env_file).items():
+    values = dotenv_values(env_file)
+    redirects = any(
+        value and sets_endpoint(name) and value != os.environ.get(name)
+        for name, value in values.items()
+    )
+    for name, value in values.items():
         if value is None:
             continue  # a bare name with no `=` sets nothing, as in load_dotenv
-        if value.strip() in ("", PLACEHOLDER_API_KEY) and os.environ.get(name):
+        if (
+            not redirects
+            and value.strip() in ("", PLACEHOLDER_API_KEY)
+            and os.environ.get(name)
+        ):
             continue
         os.environ[name] = value
     if kept is None:

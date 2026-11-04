@@ -56,11 +56,14 @@ _YAML_SETTING = re.compile(
     r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}#]*)""",
     re.MULTILINE,
 )
-# An endpoint set in a crew's Python code: a keyword such as `base_url="..."`
-# or a dict entry such as `"base_url": "..."`, as `LLM(...)` and its
-# `client_params` take them. A value that is no string literal is unreadable.
+# An endpoint a crew's Python code sets to a string literal: a keyword such as
+# `base_url="..."`, a dict entry such as `"base_url": "..."` (`client_params`),
+# or an environment variable, `os.environ["OPENAI_BASE_URL"] = "..."` or
+# `setdefault`/`putenv("OPENAI_BASE_URL", "...")`. Code that computes the value
+# is not read: it runs with the key and could send it anywhere regardless.
 _CODE_SETTING = re.compile(
-    r"""["']?\b([A-Za-z_]\w*)["']?[ \t]*(?:=(?!=)|:)[ \t]*(?:[rRuU]?["']([^"'\n]*)["'])?"""
+    r"""\b([A-Za-z_]\w*)[ \t]*=(?!=)[ \t]*[rRuU]?["']([^"'\n]*)["']"""
+    r"""|["']([A-Za-z_]\w*)["'][ \t]*(?::|\][ \t]*=|,)[ \t]*[rRuU]?["']([^"'\n]*)["']"""
 )
 # An llm passed in Python code, whose model this check cannot read.
 _CODE_LLM = re.compile(r"\bllm\s*=|\bLLM\(")
@@ -73,7 +76,9 @@ _ENDPOINT_NAMES = frozenset(
 _ENDPOINT_SUFFIXES = ("_BASE_URL", "_API_BASE", "_ENDPOINT")
 
 
-def _sets_endpoint(name: str) -> bool:
+def sets_endpoint(name: str) -> bool:
+    """Whether setting ``name`` sends requests to another host: a base URL,
+    an API base, an endpoint or a proxy."""
     upper = name.upper()
     return upper in _ENDPOINT_NAMES or upper.endswith(_ENDPOINT_SUFFIXES)
 
@@ -84,7 +89,7 @@ def _sets_endpoint(name: str) -> bool:
 def _endpoint_settings(environ: Mapping[str, str]) -> dict[str, str]:
     """ENVIRON's endpoint and proxy settings, keyed by upper-case name."""
     return {
-        name.upper(): value for name, value in environ.items() if _sets_endpoint(name)
+        name.upper(): value for name, value in environ.items() if sets_endpoint(name)
     }
 
 
@@ -220,7 +225,7 @@ def _project_endpoints(
         (value, f"{name} in .env")
         for name, value in saved.items()
         if value
-        and _sets_endpoint(name)
+        and sets_endpoint(name)
         # httpx reads `https_proxy` and `HTTPS_PROXY` alike.
         and value != _MACHINE_ENDPOINTS.get(name.upper())
     ]
@@ -235,13 +240,16 @@ def _project_endpoints(
             (value, f"{key} in {path.relative_to(project_dir)}")
             for path in sorted((project_dir / "src").glob("**/config/agents.yaml"))
             for key, value in _YAML_SETTING.findall(_text(path))
-            if _sets_endpoint(key) or key.lower() == "endpoint"
+            if sets_endpoint(key) or key.lower() == "endpoint"
         ]
         found += [
             (value, f"{key} in {path.relative_to(project_dir)}")
             for path in sorted((project_dir / "src").glob("**/*.py"))
-            for key, value in _CODE_SETTING.findall(_text(path))
-            if _sets_endpoint(key) or key.lower() == "endpoint"
+            for keyword, literal, entry, entry_literal in _CODE_SETTING.findall(
+                _text(path)
+            )
+            for key, value in ((keyword or entry, literal or entry_literal),)
+            if sets_endpoint(key) or key.lower() == "endpoint"
         ]
     # Escaped: a control character the project put in a setting could move the
     # cursor and print over the host.
@@ -267,7 +275,7 @@ def _json_endpoints(value: object, where: str) -> Iterator[tuple[str, str]]:
             path = f"{where}.{key}" if where else str(key)
             # `endpoint` is how Azure's provider takes its host.
             if isinstance(item, str) and (
-                _sets_endpoint(key) or key.lower() == "endpoint"
+                sets_endpoint(key) or key.lower() == "endpoint"
             ):
                 if item:
                     yield item, path

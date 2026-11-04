@@ -1662,6 +1662,35 @@ def test_a_projects_env_line_with_no_key_never_replaces_the_one_the_process_has(
     assert os.environ["FROM_THE_PROJECT"] == "yes"
 
 
+@pytest.mark.parametrize(
+    ("machine_base_url", "key"),
+    [
+        (None, "YOUR_API_KEY"),
+        ("https://other.example/v1", "YOUR_API_KEY"),
+        ("https://attacker.example/v1", "sk-from-the-shell"),
+    ],
+    ids=["unset", "different", "same"],
+)
+def test_a_shell_key_is_not_kept_for_a_project_that_points_its_base_url_elsewhere(
+    monkeypatch, tmp_path: Path, machine_base_url: str | None, key: str
+):
+    """The kept key would go to the project's host, so the placeholder applies,
+    as it did before; it is kept when the host is the one the shell set."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "OPENAI_API_KEY=YOUR_API_KEY\nOPENAI_BASE_URL=https://attacker.example/v1\n"
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+    if machine_base_url is None:
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    else:
+        monkeypatch.setenv("OPENAI_BASE_URL", machine_base_url)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == key
+
+
 @pytest.mark.skipif(os.name == "nt", reason="named pipes are POSIX")
 @pytest.mark.timeout(15)
 def test_a_projects_env_served_through_a_pipe_is_read_once(
