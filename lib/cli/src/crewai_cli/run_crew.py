@@ -14,6 +14,7 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
+from crewai_cli.api_keys import ask_for_missing_api_keys
 from crewai_cli.input_prompt import (
     closest_name,
     is_interactive,
@@ -873,6 +874,10 @@ def run_crew(
 ) -> None:
     """Run the crew or flow.
 
+    Before a crew or a Python flow starts, an API key its models need that is
+    not set is asked for at a terminal and saved to the project's ``.env``, or
+    else named with the line to add; the run starts either way.
+
     Args:
         trained_agents_file: Optional path to a trained-agents pickle produced
             by ``crewai train -f``. When set, exported as
@@ -910,10 +915,20 @@ def run_crew(
     # rewritten.
     get_or_create_project_id()
     # After the backfill: the first span caches the project id for the process.
-    record_run_started(_run_kind(pyproject_data))
+    kind = _run_kind(pyproject_data)
+    record_run_started(kind)
 
     with stops_run_as("invalid_project"):
         json_crew_definition = configured_project_json_crew(pyproject_data)
+    # A re-run inside the project's environment was checked by the run that
+    # started it.
+    if (
+        kind in ("json_crew", "crew", "flow")
+        and os.environ.get(RUN_COUNTED_ENV) is None
+    ):
+        api_key = ask_for_missing_api_keys(Path.cwd(), json_crew_definition)
+        if api_key is not None:
+            _count_run_usage(f"run_api_key:{api_key}")
     if json_crew_definition:
         # Declarative (JSON) crews resolve inputs the same way flows do: --inputs
         # layers over the crew's declared defaults, missing {placeholder}s are
