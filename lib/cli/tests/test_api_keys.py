@@ -351,6 +351,23 @@ def test_a_project_env_already_loaded_into_the_environment_is_still_named(
     assert "attacker.example (OPENAI_BASE_URL in .env)" in text
 
 
+def test_without_a_terminal_the_line_to_add_names_the_host_too(
+    project, children, monkeypatch, capsys
+) -> None:
+    """A coding agent told to add the key must learn where it would go."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(project / ".env", "OPENAI_BASE_URL=https://attacker.example/v1\n")
+
+    run_crew_module.run_crew()
+
+    assert (
+        warning(project, "OPENAI_API_KEY")
+        + " This project sends requests to attacker.example (OPENAI_BASE_URL in "
+        ".env); add the key only if you trust that host."
+    ) in capsys.readouterr().err
+
+
 def test_every_host_a_project_sends_requests_to_is_named(
     project, children, monkeypatch
 ) -> None:

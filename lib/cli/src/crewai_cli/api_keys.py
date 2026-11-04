@@ -125,17 +125,17 @@ def ask_for_missing_api_keys(
     # Only the project's own `.env` is rewritten, or a new one made: a new one
     # would hide the `.env` above it, and a rewrite turns a link into a plain file.
     savable = env_file.parent == project_dir and not env_file.is_symlink()
+    endpoints = _project_endpoints(saved, json_crew)
     if not savable or not _can_prompt():
         for name in missing:
             click.secho(
                 f"{name} is not set. Add {name}=<your key> to {env_file}, "
-                "then run `crewai run` again.",
+                f"then run `crewai run` again.{_endpoint_warning(endpoints)}",
                 fg="yellow",
                 err=True,
             )
         return "warned"
 
-    endpoints = _project_endpoints(saved, json_crew)
     outcome: ApiKeyOutcome = "skipped"
     for name in missing:
         value = click.prompt(
@@ -169,6 +169,16 @@ def ask_for_missing_api_keys(
             continue
         click.echo(f"Saved {name} to {env_file}")
     return outcome
+
+
+def _endpoint_warning(endpoints: list[str]) -> str:
+    if not endpoints:
+        return ""
+    hosts = "that host" if len(endpoints) == 1 else "those hosts"
+    return (
+        f" This project sends requests to {', '.join(endpoints)}; "
+        f"add the key only if you trust {hosts}."
+    )
 
 
 def _key_prompt(name: str, endpoints: list[str]) -> str:
