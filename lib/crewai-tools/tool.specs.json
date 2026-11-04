@@ -8919,7 +8919,20 @@
             "type": "string"
           }
         },
+        "description": "A tool for recursively listing a directory's files.\n\nDirectories supplied at runtime must resolve inside ``base_dir`` (the\ncurrent working directory by default), since they are typically chosen by\nan LLM. A ``directory`` given at construction time is developer-declared\nintent and is always allowed, even outside ``base_dir``, matching\n``FileReadTool``. It is pinned at construction, so a later chdir cannot\nrepoint it.\n\nArgs:\n    directory (Optional[str]): Directory to list. If provided, it becomes\n        the only directory the tool lists.\n    base_dir (Optional[str]): Directory that runtime paths must stay\n        inside. Defaults to the current working directory.\n    **kwargs: Additional keyword arguments passed to BaseTool.",
         "properties": {
+          "base_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Dir"
+          },
           "directory": {
             "anyOf": [
               {
