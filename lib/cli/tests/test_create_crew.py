@@ -1739,7 +1739,7 @@ def test_json_setup_env_lists_each_missing_key_of_a_multi_key_provider(
 ):
     _record_key_prompts(monkeypatch, ["https://us-south.ml.cloud.ibm.com", "", ""])
 
-    json_crew._setup_env(tmp_path, ["watson/ibm/granite-3-8b-instruct"])
+    json_crew._setup_env(tmp_path, ["watsonx/ibm/granite-4-h-small"])
 
     output = capsys.readouterr().out
     assert (
@@ -1752,6 +1752,34 @@ def test_json_setup_env_lists_each_missing_key_of_a_multi_key_provider(
     assert "saved to .env file" not in output
     env_file = (tmp_path / ".env").read_text()
     assert "WATSONX_URL=https://us-south.ml.cloud.ibm.com" in env_file
+
+
+def test_json_watsonx_models_use_the_prefix_crewai_can_run(
+    monkeypatch, no_provider_keys
+):
+    """LiteLLM rejects `watson/`; it knows the provider only as `watsonx`."""
+    watson = [key for key, _ in json_crew._PROVIDERS].index("watson")
+    picks = iter([watson, 0])
+    monkeypatch.setattr(json_crew, "pick_one", lambda *_a, **_k: next(picks))
+
+    assert json_crew._select_model() == "watsonx/ibm/granite-4-h-small"
+    assert json_crew._default_model_for_provider("watson") == (
+        "watsonx/ibm/granite-4-h-small"
+    )
+
+
+def test_json_dmn_next_steps_name_the_watsonx_keys(
+    tmp_path, monkeypatch, capsys, no_provider_keys
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    json_crew.create_json_crew("DMN Crew", provider="watson", skip_provider=True)
+
+    assert (
+        "Set WATSONX_URL, WATSONX_APIKEY, WATSONX_PROJECT_ID in .env before "
+        "`crewai run`"
+    ) in capsys.readouterr().out
 
 
 def test_json_setup_env_lists_neither_azure_deployment_name_nor_api_version(
@@ -1821,7 +1849,7 @@ def test_json_setup_env_blank_key_already_exported_prints_no_line_to_add(
             ],
         ),
         (
-            "watson/ibm/granite-3-8b-instruct",
+            "watsonx/ibm/granite-4-h-small",
             [
                 ("Enter your WATSONX URL (press Enter to skip)", False),
                 ("Enter your WATSONX API Key (press Enter to skip)", True),
