@@ -207,7 +207,13 @@ def create_crew(
     provider: str | None = None,
     skip_provider: bool = False,
     parent_folder: str | None = None,
-) -> None:
+) -> Path | None:
+    """Scaffold a classic Python/YAML crew project.
+
+    Returns:
+        The crew's folder, or None when nothing runnable was created: the crew
+        was added to ``parent_folder``, or the provider step stopped early.
+    """
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
     extras: list[str] = []
@@ -228,7 +234,7 @@ def create_crew(
                 f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
             ):
                 click.secho("Keeping existing provider configuration.", fg="yellow")
-                return
+                return None
 
         # Without the LiteLLM catalog, the curated PROVIDERS and MODELS still
         # work; only the "other" list loses the providers they do not name.
@@ -339,3 +345,4 @@ def create_crew(
         initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)
+    return None if parent_folder else folder_path

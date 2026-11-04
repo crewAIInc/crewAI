@@ -61,6 +61,22 @@ crewai create flow my_new_flow
 crewai create flow my_new_flow --declarative
 ```
 
+#### Run it now
+
+When you create a crew or a flow in a terminal, `crewai create` offers to run the new project:
+
+```text
+  Run it now? [Y/n]:
+```
+
+Press Enter to start `crewai run` in the project folder. `crewai create` then exits with the run's exit code. The first run also installs the project's dependencies. Answer `n` to skip the run, and the CLI prints the command for later:
+
+```text
+  Run it later: cd my_new_crew && crewai run
+```
+
+`crewai create` does not ask with `CREWAI_DMN=true`, or when stdin or stdout is not a terminal, as when a coding agent or a CI job runs it. Creating a tool, a skill or a template never asks.
+
 #### Tool
 
 Scaffold a custom tool repository:

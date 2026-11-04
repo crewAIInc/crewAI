@@ -1,19 +1,23 @@
 from __future__ import annotations
 
+import contextlib
 from importlib.metadata import version as get_version
 import os
+from pathlib import Path
 import subprocess
+import sys
 from typing import TYPE_CHECKING, Any
 
 import click
 
 # Imported first so AMP requests pin the machine's proxy and CA settings before
 # any command loads a project's .env (see crewai_core.plus_api).
-import crewai_core.plus_api  # noqa: F401
+from crewai_core.plus_api import restore_machine_transport
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.api_keys import PASTED_KEYS_ENV
 from crewai_cli.config import Settings
+from crewai_cli.input_prompt import is_interactive
 from crewai_cli.user_data import (
     _load_user_data,
     is_tracing_enabled,
@@ -263,6 +267,7 @@ def create(
         raise click.UsageError("--no-project can only be used with skill projects.")
     if output_dir is not None and type != "template":
         raise click.UsageError("--output-dir can only be used with template projects.")
+    project: Path | None = None
     if type == "tool":
         if declarative or classic or provider is not None or skip_provider:
             raise click.UsageError(
@@ -292,15 +297,15 @@ def create(
         if classic:
             from crewai_cli.create_crew import create_crew
 
-            create_crew(name, provider, skip_provider)
+            project = create_crew(name, provider, skip_provider)
         else:
             from crewai_cli.create_json_crew import create_json_crew
 
-            create_json_crew(name, provider, skip_provider)
+            project = create_json_crew(name, provider, skip_provider)
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
-        create_flow(
+        project = create_flow(
             name,
             declarative=declarative,
             provider=provider,
@@ -311,6 +316,28 @@ def create(
             "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
             fg="red",
         )
+
+    if project is not None and is_interactive() and sys.stdout.isatty():
+        if click.confirm("  Run it now?", default=True):
+            # A new process started in the project, not run_crew() here: `crewai run`
+            # reads the project from the cwd, and telemetry caches the project id
+            # once per process. It gets the proxy and CA settings crewAI started
+            # with, as in a new shell: a classic crew's provider fetch replaces
+            # SSL_CERT_FILE.
+            env = dict(os.environ)
+            restore_machine_transport(env)
+            run = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+                [sys.executable, "-m", "crewai_cli.cli", "run"], cwd=project, env=env
+            )
+            # Ctrl-C reaches the run too. Wait for it as a shell would, so it can
+            # stop and flush its telemetry; subprocess.run would kill it after 0.25s.
+            returncode: int | None = None
+            while returncode is None:
+                with contextlib.suppress(KeyboardInterrupt):
+                    returncode = run.wait()
+            # wait() reports a run killed by signal N as -N; a shell reports 128 + N.
+            raise SystemExit(128 - returncode if returncode < 0 else returncode)
+        click.echo(f"  Run it later: cd {project} && crewai run")
 
 
 @crewai.command()

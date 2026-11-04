@@ -55,6 +55,22 @@ crewai create flow my_new_flow
 
 Por padrão, `crewai create crew` cria um projeto JSON-first com `crew.jsonc` e `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` somente quando quiser o scaffold antigo em Python/YAML com `crew.py`, `config/agents.yaml` e `config/tasks.yaml`.
 
+#### Executar agora
+
+Quando você cria um crew ou um flow em um terminal, o `crewai create` oferece executar o novo projeto:
+
+```text
+  Run it now? [Y/n]:
+```
+
+Pressione Enter para iniciar o `crewai run` na pasta do projeto. Em seguida, o `crewai create` sai com o código de saída da execução. A primeira execução também instala as dependências do projeto. Responda `n` para pular a execução, e o CLI imprime o comando para depois:
+
+```text
+  Run it later: cd my_new_crew && crewai run
+```
+
+O `crewai create` não pergunta com `CREWAI_DMN=true`, nem quando stdin ou stdout não é um terminal, como quando um agente de programação ou um job de CI o executa. Criar uma ferramenta, uma skill ou um template nunca pergunta.
+
 #### Aliases de flags obsoletas
 
 As flags antigas em snake_case ainda funcionam, mas ficam ocultas no `--help`. Prefira as formas em kebab-case documentadas em cada seção de comando abaixo.

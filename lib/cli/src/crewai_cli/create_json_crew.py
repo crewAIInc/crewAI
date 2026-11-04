@@ -1356,8 +1356,12 @@ def create_json_crew(
     name: str,
     provider: str | None = None,
     skip_provider: bool = False,
-) -> None:
-    """Scaffold a new JSON-first crew project."""
+) -> Path:
+    """Scaffold a new JSON-first crew project.
+
+    Returns:
+        The crew's folder.
+    """
     import keyword
     import shutil
 
@@ -1504,3 +1508,4 @@ def create_json_crew(
     click.echo("    crew.jsonc        Configure tasks and optional input defaults")
     click.echo("    tools/            Add custom tools (Python)")
     click.echo()
+    return folder_path
