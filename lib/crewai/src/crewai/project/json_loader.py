@@ -238,6 +238,33 @@ def _instantiate_agent_from_data(
         raise JSONProjectError(f"{source_label}: failed to load agent: {exc}") from exc
 
 
+def _read_agent_definition(path: Path) -> dict[str, Any]:
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise JSONProjectError(f"{path}: invalid YAML: {exc}") from exc
+    else:
+        data = load_jsonc_file(path)
+    return _expect_object(data, path)
+
+
+def validate_agent_definition(source: str | Path, *, project_root: str | Path) -> None:
+    """Check a JSON/JSONC or YAML Agent without executing project Python.
+
+    Check fields, Python-reference syntax and tool declarations without importing
+    referenced classes, constructing tools, or initializing an Agent or providers.
+    """
+    path = Path(source)
+    _agent_kwargs_from_definition(
+        _read_agent_definition(path),
+        path,
+        resolve_tools=False,
+        resolve_python_refs=False,
+        project_root=Path(project_root).resolve(),
+    )
+
+
 def load_agent(source: str | Path, *, project_root: str | Path | None = None) -> Any:
     """Load an ``Agent`` from a JSON/JSONC or YAML constructor definition.
 
@@ -246,14 +273,7 @@ def load_agent(source: str | Path, *, project_root: str | Path | None = None) ->
     Definitions contain Agent fields; kickoff messages are supplied separately.
     """
     path = Path(source)
-    if path.suffix.lower() in {".yaml", ".yml"}:
-        try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        except yaml.YAMLError as exc:
-            raise JSONProjectError(f"{path}: invalid YAML: {exc}") from exc
-    else:
-        data = load_jsonc_file(path)
-    defn = _expect_object(data, path)
+    defn = _read_agent_definition(path)
     root = (
         Path(project_root).resolve()
         if project_root is not None

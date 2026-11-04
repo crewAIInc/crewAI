@@ -16,6 +16,7 @@ from crewai_cli.run_crew import (
     _project_run_command,
     _project_runner_code,
     load_project_env,
+    record_run_stopped,
     stops_run_as,
 )
 from crewai_cli.utils import build_env_with_all_tool_credentials
@@ -71,7 +72,8 @@ def run_agent_in_project_env(inputs: str | None) -> None:
     with stops_run_as("invalid_inputs"):
         if inputs is not None:
             _agent_messages(inputs)
-        elif not is_interactive():
+    if inputs is None and not is_interactive():
+        with stops_run_as("no_terminal"):
             raise click.UsageError(
                 "Agent chat needs an interactive terminal; use --inputs for a single kickoff"
             )
@@ -86,7 +88,11 @@ def run_agent_in_project_env(inputs: str | None) -> None:
     try:
         subprocess.run(command, check=True, env=env)  # noqa: S603
     except subprocess.CalledProcessError as exc:
+        record_run_stopped("script_failed")
         raise SystemExit(exc.returncode) from exc
+    except OSError as exc:
+        record_run_stopped("launch_failed")
+        raise click.ClickException(f"Could not launch agent: {exc}") from exc
 
 
 def run_agent(inputs: str | None = None) -> None:

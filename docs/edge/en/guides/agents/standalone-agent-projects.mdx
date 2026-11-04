@@ -222,7 +222,7 @@ print(result.raw)
 crewai deploy validate
 ```
 
-Validation loads the selected Agent without running a kickoff. It can execute project imports and initialize tools or provider clients. The normal archive pipeline includes the definition, tools, skills, and lockfile while excluding `.env` and `.venv`.
+YAML/JSON validation checks fields, Python-reference syntax, and tool declarations without executing project Python or constructing Agents, tools, or provider clients. Python entrypoints are imported and can execute project code. Validation does not run a kickoff. The normal archive pipeline includes the definition, tools, skills, and lockfile while excluding `.env` and `.venv`.
 
 For a deployment with a compatible preview Enterprise runtime, use the existing deployment workflow described in the [CLI reference](/edge/en/concepts/cli). The managed API accepts the same input:
 

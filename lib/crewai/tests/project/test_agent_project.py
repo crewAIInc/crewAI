@@ -2,10 +2,19 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 
 from crewai.project import load_agent_project
-from crewai.project.json_loader import JSONProjectError, load_agent
+from crewai.project.json_loader import JSONProjectError, load_agent, validate_agent_definition
 from crewai_core.project import ProjectDefinitionError
 import yaml
 import pytest
+
+
+def test_validation_does_not_construct_repository_agents(tmp_path, monkeypatch):
+    from crewai import Agent
+
+    monkeypatch.setattr(Agent, "__init__", lambda *args, **kwargs: pytest.fail("constructed an Agent during validation"))
+    definition = tmp_path / "agent.json"
+    definition.write_text(json.dumps({"from_repository": "remote-agent"}))
+    validate_agent_definition(definition, project_root=tmp_path)
 
 
 @pytest.fixture

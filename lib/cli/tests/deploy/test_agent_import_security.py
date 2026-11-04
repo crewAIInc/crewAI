@@ -104,3 +104,48 @@ def test_agent_validation_does_not_import_project_cli_or_core(project, import_pr
 
     assert not marker.exists()
     assert validator.ok, validator.results
+
+
+@pytest.mark.parametrize("reference", ["custom", "import", "serialized", "callback", "agent_type"])
+def test_declarative_agent_validation_does_not_execute_python(project, import_probe, reference):
+    definition = next(project.glob("agent.*"))
+    data = yaml.safe_load(definition.read_text())
+    marker = project / "python-executed"
+    malicious = (
+        "from pathlib import Path\n"
+        f"Path({str(marker)!r}).touch()\n"
+        "raise RuntimeError('validation executed project Python')\n"
+    )
+    (project / "danger.py").write_text(malicious)
+    tool = project / "tools" / "danger.py"
+    tool.write_text(malicious)
+    if reference == "custom":
+        data["tools"] = ["custom:danger"]
+    elif reference == "import":
+        data["tools"] = ["danger:Tool"]
+    elif reference == "serialized":
+        data["tools"] = [{"tool_type": "danger.Tool"}]
+    elif reference == "callback":
+        data["step_callback"] = {"python": "danger.callback"}
+    else:
+        data["type"] = {"python": "danger.Agent"}
+    definition.write_text(json.dumps(data))
+
+    validator = DeployValidator(project)
+    assert validator._check_pyproject()
+    validator._check_module_imports()
+
+    assert not marker.exists()
+    assert validator.ok, validator.results
+
+
+def test_declarative_agent_validation_reports_missing_tools(project, import_probe):
+    definition = next(project.glob("agent.*"))
+    data = yaml.safe_load(definition.read_text())
+    data["tools"] = ["custom:missing"]
+    definition.write_text(json.dumps(data))
+    validator = DeployValidator(project)
+    assert validator._check_pyproject()
+    validator._check_module_imports()
+    assert not validator.ok
+    assert "custom:missing" in str(validator.results)

@@ -1,4 +1,5 @@
 import json
+import subprocess
 from types import SimpleNamespace
 
 import click
@@ -6,6 +7,37 @@ import pytest
 
 import crewai_cli.run_agent as runner
 import crewai_cli.run_crew as dispatcher
+
+
+def test_headless_chat_reports_no_terminal(monkeypatch):
+    stopped = []
+    monkeypatch.setattr(dispatcher, "record_run_stopped", stopped.append)
+    monkeypatch.setattr(runner, "is_interactive", lambda: False)
+    with pytest.raises(click.UsageError, match="interactive terminal"):
+        runner.run_agent_in_project_env(None)
+    assert stopped == ["no_terminal"]
+
+
+@pytest.mark.parametrize("error,reason,exception", [
+    (FileNotFoundError("uv unavailable"), "launch_failed", click.ClickException),
+    (PermissionError("launch denied"), "launch_failed", click.ClickException),
+    (subprocess.CalledProcessError(7, ["uv"]), "script_failed", SystemExit),
+])
+def test_agent_launch_failures_are_reported(monkeypatch, error, reason, exception):
+    stopped = []
+    monkeypatch.setattr(runner, "record_run_stopped", stopped.append)
+    monkeypatch.setattr(runner, "_install_project_dependencies_if_needed", lambda: None)
+    monkeypatch.setattr(runner, "build_env_with_all_tool_credentials", lambda: {})
+
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(runner.subprocess, "run", fail)
+    with pytest.raises(exception) as caught:
+        runner.run_agent_in_project_env('{"messages":"hello"}')
+    assert stopped == [reason]
+    if reason == "script_failed":
+        assert caught.value.code == 7
 
 
 @pytest.mark.parametrize(
