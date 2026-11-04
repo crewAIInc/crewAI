@@ -128,3 +128,21 @@ class TestCSVLoader:
 
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/notfound.csv"))
+
+
+# --- #7466: a UTF-8 BOM must not corrupt headers ------------------------------
+def test_inline_csv_with_utf8_bom() -> None:
+    csv_text = '\ufeff"last, first",age\n"Doe, Jane",30\n'
+    result = CSVLoader().load(SourceContent(csv_text))
+
+    assert result.metadata["columns"] == ["last, first", "age"]
+    assert "Row 1: last, first: Doe, Jane | age: 30" in result.content
+
+
+def test_utf8_bom_csv_file(tmp_path) -> None:
+    path = tmp_path / "bom.csv"
+    path.write_text('\ufeff"last, first",age\n"Doe, Jane",30\n', encoding="utf-8")
+    result = CSVLoader().load(SourceContent(str(path)))
+
+    assert result.metadata["columns"] == ["last, first", "age"]
+    assert "Row 1: last, first: Doe, Jane | age: 30" in result.content

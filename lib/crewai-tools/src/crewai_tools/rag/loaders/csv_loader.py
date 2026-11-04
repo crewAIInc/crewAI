@@ -30,6 +30,9 @@ class CSVLoader(BaseLoader):
             return file.read()
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:
+        # A UTF-8 BOM would otherwise become part of the first column name and
+        # stop csv from recognising a quoted first header.
+        content = content.removeprefix("\ufeff")
         try:
             csv_reader = csv.DictReader(StringIO(content))
 
