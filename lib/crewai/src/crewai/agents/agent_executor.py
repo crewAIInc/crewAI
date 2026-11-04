@@ -8,6 +8,7 @@ import contextvars
 from datetime import datetime
 import inspect
 import json
+import re
 import threading
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 from uuid import uuid4
@@ -160,6 +161,30 @@ def _fit_response_model(model: type[BaseModel], text: str) -> BaseModel | None:
         return model.model_validate(json.loads(candidate, strict=False))
     except (json.JSONDecodeError, ValidationError):
         return None
+
+
+_JSON_OUTPUT_RE = re.compile(r"\bjson\b", re.IGNORECASE)
+
+
+def _expected_output_requests_json(expected_output: str) -> bool:
+    """Return True when the task's expected_output explicitly asks for JSON."""
+    return bool(_JSON_OUTPUT_RE.search(expected_output))
+
+
+def _result_satisfies_json_output(text: str) -> bool:
+    """Return True when text parses as a JSON object or array.
+
+    Tolerates a surrounding markdown code fence, which agents commonly add.
+    """
+    candidate = text.strip()
+    if candidate.startswith("```"):
+        candidate = re.sub(r"^```(?:json)?\s*", "", candidate)
+        candidate = re.sub(r"\s*```$", "", candidate)
+    try:
+        parsed = json.loads(candidate)
+    except (ValueError, TypeError):
+        return False
+    return isinstance(parsed, (dict, list))
 
 
 class AgentExecutorState(BaseModel):
@@ -2759,6 +2784,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ):
             return False
 
+        # Keep synthesis when the task's expected output explicitly requests
+        # JSON and the raw step result does not already satisfy it - returning
+        # the step result as-is would drop the requested format (issue #9048).
+        expected_output = getattr(self.task, "expected_output", None)
+        if (
+            isinstance(expected_output, str)
+            and _expected_output_requests_json(expected_output)
+            and not _result_satisfies_json_output(last_result)
+        ):
+            return False
+
         word_count = len(last_result.split())
         has_sentence_punctuation = any(ch in last_result for ch in ".!?")
         return (
@@ -2800,7 +2836,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if "\n\nPlanning:\n" in task_description:
             task_description = task_description.split("\n\nPlanning:\n")[0]
 
-        # Build synthesis prompt
+        # Build synthesis prompt. Carry the task's expected output so format
+        # requirements stated there (for example "return one JSON object")
+        # survive finalization in the Plan-and-Execute path (issue #9048).
+        task_expected_output = ""
+        if self.task:
+            raw_expected_output = getattr(self.task, "expected_output", "")
+            if isinstance(raw_expected_output, str):
+                task_expected_output = raw_expected_output
+
         role = self.agent.role if self.agent else "Assistant"
 
         system_prompt = I18N_DEFAULT.retrieve(
@@ -2808,6 +2852,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ).format(role=role)
         user_prompt = I18N_DEFAULT.retrieve("planning", "synthesis_user_prompt").format(
             task_description=task_description,
+            expected_output=task_expected_output or "(none specified)",
             combined_steps=combined_steps,
         )
 
