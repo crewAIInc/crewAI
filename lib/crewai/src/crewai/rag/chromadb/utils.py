@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 import hashlib
 import json
-from typing import Literal, TypeGuard, cast
+from typing import Any, Literal, TypeGuard, cast
 
 from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.models.AsyncCollection import AsyncCollection
@@ -133,6 +133,25 @@ def _create_batch_slice(
         batch_metadatas = None
 
     return batch_ids, batch_texts, batch_metadatas
+
+
+def _with_default_collection_metadata(
+    metadata: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Return a copy of ``metadata`` with ChromaDB's cosine space default.
+
+    An explicit ``None`` is treated like an omitted argument, and the caller's
+    mapping is never modified.
+
+    Args:
+        metadata: Metadata supplied by the caller, if any.
+
+    Returns:
+        A new metadata mapping that always declares ``hnsw:space``.
+    """
+    prepared = dict(metadata or {})
+    prepared.setdefault("hnsw:space", "cosine")
+    return prepared
 
 
 def _extract_search_params(

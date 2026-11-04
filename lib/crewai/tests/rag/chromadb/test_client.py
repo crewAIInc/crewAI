@@ -102,10 +102,26 @@ class TestChromaDBClient:
         mock_chromadb_client.create_collection.assert_called_once_with(
             name="test_collection",
             configuration=mock_config,
-            metadata=mock_metadata,
+            metadata={"key": "value", "hnsw:space": "cosine"},
             embedding_function=mock_embedding_func,
             data_loader=mock_data_loader,
             get_or_create=True,
+        )
+        assert mock_metadata == {"key": "value"}
+
+    def test_create_collection_accepts_none_metadata(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """An explicit metadata=None must behave like an omitted argument."""
+        client.create_collection(collection_name="test_collection", metadata=None)
+
+        mock_chromadb_client.create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=None,
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=client.embedding_function,
+            data_loader=None,
+            get_or_create=False,
         )
 
     @pytest.mark.asyncio
@@ -150,10 +166,31 @@ class TestChromaDBClient:
         mock_async_chromadb_client.create_collection.assert_called_once_with(
             name="test_collection",
             configuration=mock_config,
-            metadata=mock_metadata,
+            metadata={"key": "value", "hnsw:space": "cosine"},
             embedding_function=mock_embedding_func,
             data_loader=mock_data_loader,
             get_or_create=True,
+        )
+        assert mock_metadata == {"key": "value"}
+
+    @pytest.mark.asyncio
+    async def test_acreate_collection_accepts_none_metadata(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """An explicit metadata=None must behave like an omitted argument."""
+        mock_async_chromadb_client.create_collection = AsyncMock(return_value=None)
+
+        await async_client.acreate_collection(
+            collection_name="test_collection", metadata=None
+        )
+
+        mock_async_chromadb_client.create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=None,
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=async_client.embedding_function,
+            data_loader=None,
+            get_or_create=False,
         )
 
     def test_get_or_create_collection(self, client, mock_chromadb_client):
@@ -194,11 +231,31 @@ class TestChromaDBClient:
         mock_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             configuration=mock_config,
-            metadata=mock_metadata,
+            metadata={"key": "value", "hnsw:space": "cosine"},
             embedding_function=mock_embedding_func,
             data_loader=mock_data_loader,
         )
+        assert mock_metadata == {"key": "value"}
         assert result == mock_collection
+
+    def test_get_or_create_collection_accepts_none_metadata(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """An explicit metadata=None must behave like an omitted argument."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+
+        client.get_or_create_collection(
+            collection_name="test_collection", metadata=None
+        )
+
+        mock_chromadb_client.get_or_create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=None,
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=client.embedding_function,
+            data_loader=None,
+        )
 
     @pytest.mark.asyncio
     async def test_aget_or_create_collection(
@@ -248,11 +305,34 @@ class TestChromaDBClient:
         mock_async_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             configuration=mock_config,
-            metadata=mock_metadata,
+            metadata={"key": "value", "hnsw:space": "cosine"},
             embedding_function=mock_embedding_func,
             data_loader=mock_data_loader,
         )
+        assert mock_metadata == {"key": "value"}
         assert result == mock_collection
+
+    @pytest.mark.asyncio
+    async def test_aget_or_create_collection_accepts_none_metadata(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """An explicit metadata=None must behave like an omitted argument."""
+        mock_collection = Mock()
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+            return_value=mock_collection
+        )
+
+        await async_client.aget_or_create_collection(
+            collection_name="test_collection", metadata=None
+        )
+
+        mock_async_chromadb_client.get_or_create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=None,
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=async_client.embedding_function,
+            data_loader=None,
+        )
 
     def test_add_documents(self, client, mock_chromadb_client) -> None:
         """Test that add_documents adds documents to collection."""
