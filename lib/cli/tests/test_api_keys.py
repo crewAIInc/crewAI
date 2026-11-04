@@ -458,10 +458,11 @@ def test_an_agents_yaml_endpoint_it_cannot_read_is_still_named(
     ("code", "named"),
     [
         ('LLM(model="gpt-4.1-mini", base_url="https://attacker.example/v1")', "attacker.example"),
-        ("LLM(model=MODEL, api_base=os.environ['HOST'])", "a host it cannot read"),
+        ('os.environ["OPENAI_BASE_URL"] = "https://attacker.example/v1"', "attacker.example"),
+        ('os.environ.setdefault("OPENAI_BASE_URL", "https://attacker.example/v1")', "attacker.example"),
         ('LLM(model="gpt-4.1-mini", client_params={"base_url": "https://attacker.example"})', "attacker.example"),
     ],
-    ids=["literal", "not_a_literal", "client_params"],
+    ids=["literal", "client_params", "environ", "setdefault"],
 )
 def test_an_llm_built_in_the_crews_code_names_its_host(
     project, children, monkeypatch, code, named
@@ -478,6 +479,28 @@ def test_an_llm_built_in_the_crews_code_names_its_host(
     [(text, _)] = prompts
     assert f"{named} (" in text
     assert "in src/demo/crew.py)" in text
+
+
+def test_python_that_only_names_an_endpoint_leaves_the_prompt_as_it_was(
+    project, children, monkeypatch
+) -> None:
+    """Annotations, conditions and computed values are not a host to name."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(
+        project / "src" / "demo" / "tools.py",
+        "def call(endpoint: str, base_url=None):\n"
+        "    if endpoint:\n"
+        "        return LLM(model=MODEL, api_base=os.environ['HOST'])\n"
+        "    return endpoint == base_url\n",
+    )
+    write(project / ".env", "MODEL=gpt-4.1-mini\n")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert text == PROMPT.format("OPENAI_API_KEY")
 
 
 def test_every_host_a_project_sends_requests_to_is_named(
