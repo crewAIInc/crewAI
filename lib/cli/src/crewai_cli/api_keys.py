@@ -66,9 +66,10 @@ _YAML_SETTING = re.compile(
 # or an environment variable, `os.environ["OPENAI_BASE_URL"] = "..."` or
 # `setdefault`/`putenv("OPENAI_BASE_URL", "...")`. Code that computes the value
 # is not read: it runs with the key and could send it anywhere regardless.
+# A literal in parentheses, or an f-string with no `{field}`, is still a literal.
 _CODE_SETTING = re.compile(
-    r"""\b([A-Za-z_]\w*)[ \t]*=(?!=)[ \t]*[rRuU]?["']([^"'\n]*)["']"""
-    r"""|["']([A-Za-z_]\w*)["'][ \t]*(?::|\][ \t]*=|,)[ \t]*[rRuU]?["']([^"'\n]*)["']"""
+    r"""\b([A-Za-z_]\w*)[ \t]*=(?!=)[ \t]*\(?[ \t]*(?:[rRuUfF]{1,2})?["']([^"'\n{]*)["']"""
+    r"""|["']([A-Za-z_]\w*)["'][ \t]*(?::|\][ \t]*=|,)[ \t]*\(?[ \t]*(?:[rRuUfF]{1,2})?["']([^"'\n{]*)["']"""
 )
 # An llm passed in Python code, whose model this check cannot read.
 _CODE_LLM = re.compile(r"\bllm\s*=|\bLLM\(")
