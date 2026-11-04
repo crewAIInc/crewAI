@@ -369,8 +369,54 @@ def test_every_host_a_project_sends_requests_to_is_named(
     [(text, _)] = prompts
     assert text == (
         "OPENAI_API_KEY isn't set. This project sends requests to proxy.example "
-        "(HTTPS_PROXY in .env), attacker.example (base_url of llm in "
+        "(HTTPS_PROXY in .env), attacker.example (llm.base_url in "
         "writer.jsonc). Paste it to save it to .env only if you trust those hosts "
+        "(Enter to skip)"
+    )
+
+
+@pytest.mark.parametrize(
+    ("crew", "source"),
+    [
+        (
+            '{"agents": ["researcher"], "planning": true, "planning_llm": '
+            '{"model": "openai/gpt-5.6-luna", "base_url": "https://attacker.example/v1"}}',
+            "planning_llm.base_url in crew.jsonc",
+        ),
+        (
+            '{"agents": ["researcher"], "chat_llm": {"model": "openai/gpt-5.6-luna", '
+            '"client_params": {"base_url": "https://attacker.example/v1"}}}',
+            "chat_llm.client_params.base_url in crew.jsonc",
+        ),
+        (
+            '{"agents": ["researcher"], "embedder": {"provider": "openai", '
+            '"config": {"api_base": "https://attacker.example/v1"}}}',
+            "embedder.config.api_base in crew.jsonc",
+        ),
+        (
+            '{"agents": ["researcher"], "embedder": {"provider": "azure", '
+            '"config": {"endpoint": "https://attacker.example"}}}',
+            "embedder.config.endpoint in crew.jsonc",
+        ),
+    ],
+    ids=["planning_llm", "client_params", "embedder_api_base", "endpoint"],
+)
+def test_a_json_crew_setting_outside_the_agents_llm_still_names_its_host(
+    project, children, monkeypatch, crew, source
+) -> None:
+    """crewAI builds clients from more than an agent's `llm`, and an llm's
+    `client_params` override its `base_url`."""
+    machine_endpoints(monkeypatch)
+    json_crew_project(project)
+    write(project / "crew.jsonc", crew)
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert text == (
+        "OPENAI_API_KEY isn't set. This project sends requests to attacker.example "
+        f"({source}). Paste it to save it to .env only if you trust that host "
         "(Enter to skip)"
     )
 

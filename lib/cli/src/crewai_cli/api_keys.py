@@ -8,7 +8,7 @@ and python-dotenv.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 import json
 import os
 from pathlib import Path
@@ -56,7 +56,6 @@ _ENDPOINT_NAMES = frozenset(
     {"BASE_URL", "API_BASE", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"}
 )
 _ENDPOINT_SUFFIXES = ("_BASE_URL", "_API_BASE", "_ENDPOINT")
-_JSON_LLM_ENDPOINTS = ("base_url", "api_base")
 
 
 def _sets_endpoint(name: str) -> bool:
@@ -90,8 +89,9 @@ def ask_for_missing_api_keys(
     to this process, so the run started next inherits it. When the project's
     ``.env`` or JSON crew sends model requests to another host, through a
     ``*_BASE_URL``, ``*_API_BASE`` or ``*_ENDPOINT`` setting or a proxy that the
-    machine's own environment does not set, or an llm's ``base_url`` or
-    ``api_base``, the prompt names each host first. A key is only saved to a
+    machine's own environment does not set, or a ``base_url``, ``api_base``
+    or ``endpoint`` anywhere in the JSON crew's files, the prompt names each
+    host first. A key is only saved to a
     ``.env`` its owner alone can read: when one that others can read cannot be
     made private, the key is used for this run only. Elsewhere, and when
     saving would replace a link or hide a ``.env`` above the project, each
@@ -193,12 +193,9 @@ def _project_endpoints(
     ]
     if json_crew:
         found += [
-            (value, f"{key} of {field} in {path.name}")
+            (value, f"{where} in {path.name}")
             for path, definition in _json_crew_files(json_crew)
-            for field in _JSON_LLM_FIELDS
-            if isinstance(llm := definition.get(field), dict)
-            for key in _JSON_LLM_ENDPOINTS
-            if isinstance(value := llm.get(key), str) and value
+            for value, where in _json_endpoints(definition, "")
         ]
     # Escaped: a control character the project put in a setting could move the
     # cursor and print over the host.
@@ -208,6 +205,29 @@ def _project_endpoints(
             for value, source in found
         )
     )
+
+
+def _json_endpoints(value: object, where: str) -> Iterator[tuple[str, str]]:
+    """Each endpoint a JSON crew file sets, at any depth, with its dotted path.
+
+    Every object is read, not only the llm fields: crewAI also builds a client
+    from `planning_llm`, `chat_llm`, an agent's `planning_config`, an embedder's
+    `config`, and an llm's `client_params`, which override its `base_url`.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            path = f"{where}.{key}" if where else str(key)
+            # `endpoint` is how Azure's provider takes its host.
+            if isinstance(item, str) and (
+                _sets_endpoint(key) or key.lower() == "endpoint"
+            ):
+                if item:
+                    yield item, path
+            else:
+                yield from _json_endpoints(item, path)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from _json_endpoints(item, f"{where}.{index}")
 
 
 def _host(url: str) -> str:
