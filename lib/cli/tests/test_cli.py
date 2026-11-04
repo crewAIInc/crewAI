@@ -495,6 +495,23 @@ def test_create_exits_with_the_exit_code_of_the_run_it_started(
     assert len(runs) == 1
 
 
+@pytest.mark.parametrize(("returncode", "exit_code"), [(-2, 130), (-15, 143)])
+def test_create_exits_as_a_shell_would_when_a_signal_kills_the_run(
+    monkeypatch, returncode, exit_code
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_json_crew.create_json_crew",
+        lambda *_args: Path("my_crew"),
+    )
+    _record_runs(monkeypatch, returncode)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(["crew", "My Crew"])
+
+    assert exit_info.value.code == exit_code
+
+
 def test_create_waits_for_the_run_to_handle_ctrl_c_and_exits_with_its_code(
     monkeypatch,
 ):

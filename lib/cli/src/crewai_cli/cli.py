@@ -331,7 +331,8 @@ def create(
             while returncode is None:
                 with contextlib.suppress(KeyboardInterrupt):
                     returncode = run.wait()
-            raise SystemExit(returncode)
+            # wait() reports a run killed by signal N as -N; a shell reports 128 + N.
+            raise SystemExit(128 - returncode if returncode < 0 else returncode)
         click.echo(f"  Run it later: cd {project} && crewai run")
 
 
