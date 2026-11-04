@@ -226,7 +226,14 @@ class QdrantClient(BaseClient):
             return self.client.get_collection(collection_name)
 
         params = self._build_collection_params(kwargs)
-        self.client.create_collection(**params)
+        try:
+            self.client.create_collection(**params)
+        except Exception as e:
+            # Another caller may have created it between the check and the create.
+            if not self.client.collection_exists(collection_name):
+                raise RuntimeError(
+                    f"Could not create Qdrant collection '{collection_name}': {e}"
+                ) from e
 
         return self.client.get_collection(collection_name)
 
@@ -270,7 +277,14 @@ class QdrantClient(BaseClient):
             return await self.client.get_collection(collection_name)
 
         params = self._build_collection_params(kwargs)
-        await self.client.create_collection(**params)
+        try:
+            await self.client.create_collection(**params)
+        except Exception as e:
+            # Another caller may have created it between the check and the create.
+            if not await self.client.collection_exists(collection_name):
+                raise RuntimeError(
+                    f"Could not create Qdrant collection '{collection_name}': {e}"
+                ) from e
 
         return await self.client.get_collection(collection_name)
 

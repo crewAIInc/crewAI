@@ -192,3 +192,49 @@ def test_explicit_path_is_used_as_given(tmp_path, monkeypatch):
     assert os.path.isdir(folder)
     assert not os.path.exists(f"{os.path.realpath(folder)}-pid{os.getpid()}")
     assert registered == []
+
+
+def test_get_or_create_collection_is_safe_when_two_callers_race(tmp_path):
+    import time
+
+    client = create_client(_config(tmp_path / "q"))
+    original = client.client.collection_exists
+
+    def slow_exists(*args, **kwargs):
+        result = original(*args, **kwargs)
+        time.sleep(0.2)  # keep both callers between the check and the create
+        return result
+
+    client.client.collection_exists = slow_exists
+    errors: list[Exception] = []
+    barrier = threading.Barrier(2)
+
+    def get_or_create():
+        barrier.wait()
+        try:
+            client.get_or_create_collection(collection_name="shared")
+        except Exception as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=get_or_create) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+
+
+def test_get_or_create_collection_names_the_collection_when_creation_fails(tmp_path):
+    client = create_client(_config(tmp_path / "q"))
+
+    def fail(**kwargs):
+        raise ValueError("disk is full")
+
+    client.client.create_collection = fail
+
+    with pytest.raises(RuntimeError, match="Could not create Qdrant collection 'k'") as info:
+        client.get_or_create_collection(collection_name="k")
+
+    assert "disk is full" in str(info.value)
+    assert isinstance(info.value.__cause__, ValueError)
