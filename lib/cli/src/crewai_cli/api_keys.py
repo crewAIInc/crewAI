@@ -55,6 +55,7 @@ _YAML_LLM = re.compile(r"""^[ \t]+llm:[ \t]*["']?([^"'#\s]+)""", re.MULTILINE)
 # block mapping, a flow mapping `{base_url: ...}`, or a block scalar `>-`/`|`
 # whose value is on the next line. PyYAML is not a CLI dependency. A value it
 # cannot take is still reported, as unreadable, rather than skipped.
+_YAML_SUFFIXES = (".yaml", ".yml")
 _YAML_SETTING = re.compile(
     r"""(?:^|[\s{,])["']?([A-Za-z_][\w-]*)["']?[ \t]*:"""
     r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}#]*)""",
@@ -248,7 +249,13 @@ def _project_endpoints(
     else:
         found += [
             (value, f"{key} in {path.relative_to(project_dir)}")
-            for path in sorted((project_dir / "src").glob("**/config/agents.yaml"))
+            # Any YAML: a crew's `agents_config` can name a file other than
+            # config/agents.yaml.
+            for path in sorted(
+                p
+                for p in (project_dir / "src").rglob("*")
+                if p.suffix in _YAML_SUFFIXES
+            )
             for key, value in _YAML_SETTING.findall(_text(path))
             if _sets_endpoint(key) or key.lower() == "endpoint"
         ]
