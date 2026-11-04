@@ -53,8 +53,14 @@ _YAML_LLM = re.compile(r"""^[ \t]+llm:[ \t]*["']?([^"'#\s]+)""", re.MULTILINE)
 # cannot take is still reported, as unreadable, rather than skipped.
 _YAML_SETTING = re.compile(
     r"""(?:^|[\s{,])["']?([A-Za-z_][\w-]*)["']?[ \t]*:"""
-    r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}\[\]#]*)""",
+    r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}#]*)""",
     re.MULTILINE,
+)
+# An endpoint set in a crew's Python code: a keyword such as `base_url="..."`
+# or a dict entry such as `"base_url": "..."`, as `LLM(...)` and its
+# `client_params` take them. A value that is no string literal is unreadable.
+_CODE_SETTING = re.compile(
+    r"""["']?\b([A-Za-z_]\w*)["']?[ \t]*(?:=(?!=)|:)[ \t]*(?:[rRuU]?["']([^"'\n]*)["'])?"""
 )
 # An llm passed in Python code, whose model this check cannot read.
 _CODE_LLM = re.compile(r"\bllm\s*=|\bLLM\(")
@@ -229,6 +235,12 @@ def _project_endpoints(
             (value, f"{key} in {path.relative_to(project_dir)}")
             for path in sorted((project_dir / "src").glob("**/config/agents.yaml"))
             for key, value in _YAML_SETTING.findall(_text(path))
+            if _sets_endpoint(key) or key.lower() == "endpoint"
+        ]
+        found += [
+            (value, f"{key} in {path.relative_to(project_dir)}")
+            for path in sorted((project_dir / "src").glob("**/*.py"))
+            for key, value in _CODE_SETTING.findall(_text(path))
             if _sets_endpoint(key) or key.lower() == "endpoint"
         ]
     # Escaped: a control character the project put in a setting could move the
