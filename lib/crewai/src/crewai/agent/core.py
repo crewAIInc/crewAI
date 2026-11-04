@@ -241,6 +241,9 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
+    # Task that owns ``_times_executed``; retries re-enter execute_task with the
+    # same object, so identity tells a retry apart from the next task.
+    _retry_task: Task | None = PrivateAttr(default=None)
     # The construction-time ``llm_overlay`` read happened; see post_init_setup.
     _overlay_read: bool = PrivateAttr(default=False)
     # The llm the agent was declared with, resolved before any overlay read: what
@@ -701,6 +704,11 @@ class Agent(BaseAgent):
         get_env_context()
 
         self.reset_tool_failures()
+        # max_retry_limit is per task. Retries re-enter execute_task with the
+        # same Task object, so only a different task resets the counter.
+        if self._retry_task is not task:
+            self._retry_task = task
+            self._times_executed = 0
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
@@ -839,6 +847,11 @@ class Agent(BaseAgent):
         Returns:
             The processed result.
         """
+        # A completed task ends its retry budget; a later run of the same Task
+        # object starts fresh.
+        self._retry_task = None
+        self._times_executed = 0
+
         if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
