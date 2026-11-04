@@ -29,3 +29,39 @@ def test_github_loader_preserves_repository_source(content_types: list[str]) -> 
     assert result.source == result.metadata["source"]
     assert result.metadata["repo"] == "example/project"
     assert result.doc_id == GithubLoader.generate_doc_id(url, result.content)
+
+
+def test_github_loader_finds_issues_after_many_pull_requests() -> None:
+    url = "https://github.com/example/project"
+    pull_requests = [
+        SimpleNamespace(
+            number=number,
+            title=f"PR {number}",
+            body="",
+            pull_request={"url": "https://example.com"},
+        )
+        for number in range(1, 11)
+    ]
+    issues = [
+        SimpleNamespace(number=101, title="First real issue", body="", pull_request=None),
+        SimpleNamespace(number=102, title="Second real issue", body="", pull_request=None),
+    ]
+    repository = SimpleNamespace(
+        full_name="example/project",
+        description="An offline repository",
+        language="Python",
+        stargazers_count=1,
+        forks_count=0,
+        get_readme=lambda: SimpleNamespace(decoded_content=b"Repository README"),
+        get_contents=lambda path: [],
+        get_issues=lambda state: pull_requests + issues,
+    )
+    with patch("crewai_tools.rag.loaders.github_loader.Github") as github:
+        github.return_value.get_repo.return_value = repository
+        result = GithubLoader().load(
+            SourceContent(url), metadata={"content_types": ["issue"]}
+        )
+
+    assert "Issue #101: First real issue" in result.content
+    assert "Issue #102: Second real issue" in result.content
+    assert "PR 1" not in result.content
