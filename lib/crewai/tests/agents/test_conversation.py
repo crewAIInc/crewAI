@@ -67,12 +67,28 @@ def test_chat_retains_history_and_uses_flow_repl_options(monkeypatch):
     assert "Cedar Finch" in str(agent.llm.received[1])
 
 
-@pytest.mark.parametrize("entrypoint", ["chat", "handle_turn"])
-@pytest.mark.parametrize("verbose", [False, True])
-def test_conversation_console_output_respects_verbose(monkeypatch, capsys, entrypoint, verbose):
-    from crewai_core.printer import should_suppress_console_output
+@pytest.fixture
+def console_listener(monkeypatch):
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.event_listener import EventListener
+    from crewai.events.utils.console_formatter import ConsoleFormatter
+
+    crewai_event_bus.flush()
+    with crewai_event_bus.scoped_handlers():
+        listener = EventListener()
+        monkeypatch.setattr(listener, "formatter", ConsoleFormatter(verbose=True))
+        listener.setup_listeners(crewai_event_bus)
+        try:
+            yield listener
+        finally:
+            crewai_event_bus.flush()
+
+
+@pytest.mark.parametrize("entrypoint", ["chat", "handle_turn"])
+@pytest.mark.parametrize("verbose", [False, True])
+def test_conversation_console_output_respects_verbose(monkeypatch, capsys, console_listener, entrypoint, verbose):
+    from crewai_core.printer import should_suppress_console_output
+    from crewai.events.event_bus import crewai_event_bus
     import crewai.events.utils.console_formatter as formatter
 
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
@@ -80,7 +96,6 @@ def test_conversation_console_output_respects_verbose(monkeypatch, capsys, entry
     monkeypatch.setenv("CI", "false")
     monkeypatch.setattr(formatter, "is_newer_version_available", lambda: (True, "1.0", "2.0"))
     monkeypatch.setattr(formatter, "is_current_version_yanked", lambda: (False, None))
-    monkeypatch.setattr(EventListener().formatter, "verbose", True)
     previous_suppression = should_suppress_console_output()
     agent = make_agent(conversational=True, verbose=verbose)
     capsys.readouterr()
