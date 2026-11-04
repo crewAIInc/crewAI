@@ -16,6 +16,22 @@ from crewai.utilities.errors import DatabaseError, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
 
+# Columns persisted as JSON by add() and decoded by load().
+_JSON_FIELDS = frozenset({"output", "inputs"})
+
+
+def _decode_json_field(value: Any) -> Any:
+    """Decode a JSON column, tolerating NULL and legacy raw values."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, (str, bytes, bytearray)):
+        return value
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        # Rows written by older versions stored plain strings unencoded.
+        return value
+
 
 class KickoffTaskOutputsSQLiteStorage:
     """
@@ -153,7 +169,7 @@ class KickoffTaskOutputsSQLiteStorage:
                         fields.append(f"{key} = ?")
                         values.append(
                             json.dumps(value, cls=CrewJSONEncoder)
-                            if isinstance(value, dict)
+                            if key in _JSON_FIELDS and value is not None
                             else value
                         )
 
@@ -199,9 +215,9 @@ class KickoffTaskOutputsSQLiteStorage:
                         "task_id": row[0],
                         "task_key": row[1],
                         "expected_output": row[2],
-                        "output": json.loads(row[3]),
+                        "output": _decode_json_field(row[3]),
                         "task_index": row[4],
-                        "inputs": json.loads(row[5]),
+                        "inputs": _decode_json_field(row[5]),
                         "was_replayed": row[6],
                         "timestamp": row[7],
                     }
