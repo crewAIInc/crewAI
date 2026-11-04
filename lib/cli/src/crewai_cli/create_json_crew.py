@@ -144,6 +144,11 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
 
 _FALLBACK_LLM = "openai/gpt-6-luna"
 
+# crewAI hands watsonx models to LiteLLM, which knows the provider only as
+# `watsonx`; ENV_VARS and the classic picker key it `watson`.
+_MODEL_PREFIXES: dict[str, str] = {"watson": "watsonx"}
+_ENV_PROVIDERS: dict[str, str] = {v: k for k, v in _MODEL_PREFIXES.items()}
+
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
 
@@ -965,6 +970,7 @@ def _select_model() -> str:
         return custom.strip()
 
     provider_key, provider_name = _PROVIDERS[p_idx]
+    prefix = _MODEL_PREFIXES.get(provider_key, provider_key)
     click.secho(f"  → {provider_name}", fg="green")
 
     # Prefer the latest models pulled live from the vendor / LiteLLM; the
@@ -972,29 +978,29 @@ def _select_model() -> str:
     models = get_provider_models(provider_key, _PROVIDER_MODELS.get(provider_key, []))
     if not models:
         custom = click.prompt(
-            click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
+            click.style(f"  Enter model name for {prefix}/", fg="cyan"),
             type=str,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
-        return f"{provider_key}/{custom.strip()}"
+        return f"{prefix}/{custom.strip()}"
 
     model_labels = [f"{label}  ({model_id})" for model_id, label in models]
     model_labels.append("Other (enter model name)")
 
     m_idx = pick_one(f"{provider_name} Model:", model_labels)
     if m_idx < 0:
-        return f"{provider_key}/{models[0][0]}"
+        return f"{prefix}/{models[0][0]}"
 
     if m_idx == len(models):
         custom = click.prompt(
-            click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
+            click.style(f"  Enter model name for {prefix}/", fg="cyan"),
             type=str,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
-        result = f"{provider_key}/{custom.strip()}"
+        result = f"{prefix}/{custom.strip()}"
     else:
         model_id = models[m_idx][0]
-        result = f"{provider_key}/{model_id}"
+        result = f"{prefix}/{model_id}"
 
     click.secho(f"  → {result}", fg="green")
     return result
@@ -1012,7 +1018,7 @@ def _default_model_for_provider(provider: str | None) -> str | None:
     models = _PROVIDER_MODELS.get(normalized)
     if not models:
         return None
-    return f"{normalized}/{models[0][0]}"
+    return f"{_MODEL_PREFIXES.get(normalized, normalized)}/{models[0][0]}"
 
 
 # ── Helpers ─────────────────────────────────────────────────────
@@ -1470,7 +1476,10 @@ def create_json_crew(
     if not skip_provider and not dmn_mode:
         _setup_env(folder_path, [a["llm"] for a in agents])
     else:
-        for provider in dict.fromkeys(a["llm"].split("/")[0] for a in agents):
+        for provider in dict.fromkeys(
+            _ENV_PROVIDERS.get(prefix, prefix)
+            for prefix in (a["llm"].split("/")[0] for a in agents)
+        ):
             keys_to_set += missing_provider_keys(provider, {})
 
     # Minted at creation so the project has a stable identity from run one.
