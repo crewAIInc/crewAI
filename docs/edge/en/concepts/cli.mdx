@@ -428,6 +428,8 @@ Values that have a default, such as the AWS region and the Azure API version, ar
 
 If your agents use models from more than one provider, the CLI asks once for each provider's keys, and the first agent's model is saved as `MODEL`.
 
+The generated `pyproject.toml` also depends on the crewai extra that each provider you pick from the list needs, for example `crewai[tools,anthropic]` for Anthropic, `crewai[tools,google-genai]` for Gemini, or `crewai[tools,litellm]` for providers that crewAI reaches through LiteLLM, such as Groq. `crewai install`, or the first `crewai run`, installs it. An OpenAI-only project depends on `crewai[tools]` alone. If you type in a model from another provider, or later switch an agent to one, add that provider's extra yourself, for example `uv add "crewai[anthropic]"`.
+
 With `--skip-provider`, or with `CREWAI_DMN=true`, the CLI asks for no keys and writes none. In the default JSON crew, agents use `openai/gpt-5.6-luna` unless you pass `--provider`, and the next steps name each variable that is not already set in your environment:
 
 ```text

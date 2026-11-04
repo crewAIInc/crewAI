@@ -377,6 +377,8 @@ Valores que têm um padrão, como a região da AWS e a versão da API do Azure, 
 
 Se seus agentes usam modelos de mais de um provedor, o CLI pede as chaves uma vez por provedor, e o modelo do primeiro agente é salvo como `MODEL`.
 
+O `pyproject.toml` gerado também depende do extra do crewai que cada provedor escolhido na lista precisa, por exemplo `crewai[tools,anthropic]` para Anthropic, `crewai[tools,google-genai]` para Gemini, ou `crewai[tools,litellm]` para provedores que o crewAI acessa via LiteLLM, como o Groq. O `crewai install`, ou o primeiro `crewai run`, o instala. Um projeto que usa apenas OpenAI depende só de `crewai[tools]`. Se você digitar um modelo de outro provedor, ou depois trocar um agente para ele, adicione o extra desse provedor você mesmo, por exemplo `uv add "crewai[anthropic]"`.
+
 Com `--skip-provider`, ou com `CREWAI_DMN=true`, o CLI não pede nem salva nenhuma chave. Na crew JSON padrão, os agentes usam `openai/gpt-5.6-luna`, a menos que você passe `--provider`, e os próximos passos indicam cada variável que ainda não está definida no seu ambiente:
 
 ```text

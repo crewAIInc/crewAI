@@ -1,4 +1,14 @@
-from crewai_cli.constants import ENV_VARS, MODELS, PROVIDERS
+from importlib.metadata import metadata
+
+import pytest
+
+from crewai_cli.constants import (
+    ENV_VARS,
+    MODELS,
+    PROVIDER_EXTRAS,
+    PROVIDERS,
+    provider_for_model,
+)
 
 
 def test_huggingface_in_providers():
@@ -97,3 +107,90 @@ def test_wizard_lists_lead_with_current_small_models() -> None:
         "claude-opus-4-7",
         "claude-sonnet-4-6",
     ]
+
+
+@pytest.mark.parametrize(
+    ("model", "provider"),
+    [
+        ("openai/gpt-5.6-luna", "openai"),
+        ("anthropic/claude-sonnet-5", "anthropic"),
+        ("gemini/gemini-3.8-flash", "gemini"),
+        ("bedrock/us.amazon.nova-pro-v1:0", "bedrock"),
+        ("azure/my-deployment", "azure"),
+        ("groq/meta-llama/llama-4-scout-17b-16e-instruct", "groq"),
+        ("ollama/llama3.3", "ollama"),
+        ("watson/ibm/granite-3-8b-instruct", "watson"),
+        ("Anthropic/claude-sonnet-5", "anthropic"),
+        ("  openai/gpt-5.6-luna  ", "openai"),
+    ],
+)
+def test_provider_for_model_reads_the_prefix(model: str, provider: str) -> None:
+    assert provider_for_model(model) == provider
+
+
+@pytest.mark.parametrize(
+    ("model", "provider"),
+    [
+        ("claude/claude-sonnet-5", "anthropic"),
+        ("google/gemini-3.8-flash", "gemini"),
+        ("aws/us.amazon.nova-pro-v1:0", "bedrock"),
+        ("azure_openai/gpt-4o", "azure"),
+    ],
+)
+def test_provider_for_model_applies_crewai_prefix_aliases(
+    model: str, provider: str
+) -> None:
+    assert provider_for_model(model) == provider
+
+
+@pytest.mark.parametrize(
+    ("model", "provider"),
+    [
+        ("gpt-5.6-luna", "openai"),
+        ("o1", "openai"),
+        ("o3-mini", "openai"),
+        ("o4-mini", "openai"),
+        ("chatgpt-4o-latest", "openai"),
+        ("claude-sonnet-5", "anthropic"),
+        ("claude-haiku-4-5-20251001", "anthropic"),
+        ("gemini-3.8-flash", "gemini"),
+    ],
+)
+def test_provider_for_model_recognizes_bare_model_names(
+    model: str, provider: str
+) -> None:
+    assert provider_for_model(model) == provider
+
+
+@pytest.mark.parametrize(
+    "model", ["", "   ", "llama3.3", "my-model", "mistral-large", "/gpt-5.6-luna"]
+)
+def test_provider_for_model_returns_none_for_an_unknown_model(model: str) -> None:
+    assert provider_for_model(model) is None
+
+
+def test_every_provider_extra_is_a_crewai_extra() -> None:
+    """A name crewai does not publish makes `uv sync` warn and install nothing."""
+    published = set(metadata("crewai").get_all("Provides-Extra") or [])
+
+    assert set(PROVIDER_EXTRAS.values()) <= published
+
+
+def test_every_provider_create_offers_is_mapped_or_needs_no_extra() -> None:
+    """A provider added to either picker has to be checked against crewai's
+    routing: openai, ollama and cerebras run on `crewai[tools]` alone."""
+    from crewai_cli.create_json_crew import _PROVIDERS
+
+    offered = set(PROVIDERS) | {key for key, _ in _PROVIDERS}
+
+    assert offered - set(PROVIDER_EXTRAS) == {"openai", "ollama", "cerebras"}
+    assert set(PROVIDER_EXTRAS) <= offered
+
+
+def test_provider_for_model_matches_every_prefix_crewai_routes() -> None:
+    """The CLI keeps its own copy of crewAI's prefix aliases; a prefix crewAI
+    adds or renames must not make `crewai create` pick the wrong extra."""
+    from crewai.llm import PROVIDER_ALIASES
+
+    for prefix, provider in PROVIDER_ALIASES.items():
+        assert provider_for_model(f"{prefix}/some-model") == provider, prefix

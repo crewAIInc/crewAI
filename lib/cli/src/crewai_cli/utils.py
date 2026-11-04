@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 import os
 from pathlib import Path
 import re
@@ -161,16 +161,21 @@ def copy_assistant_instructions(destination: Path, *, evaluation: bool = True) -
 
 
 def copy_template(
-    src: Path, dst: Path, name: str, class_name: str, folder_name: str
+    src: Path,
+    dst: Path,
+    name: str,
+    class_name: str,
+    folder_name: str,
+    extras: Iterable[str] = (),
 ) -> None:
-    """Copy a file from src to dst."""
+    """Copy a file from src to dst; ``extras`` go into its crewai dependency."""
     content = render_template(
         src,
         {
             "name": name,
             "crew_name": class_name,
             "folder_name": folder_name,
-            "crewai_tools_dependency": get_crewai_tools_dependency(),
+            "crewai_tools_dependency": get_crewai_tools_dependency(extras=extras),
         },
     )
 

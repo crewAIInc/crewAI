@@ -29,7 +29,7 @@ from rich.text import Text
 
 from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.authentication.token import AuthError, get_auth_token
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.constants import ENV_VARS, PROVIDER_EXTRAS, provider_for_model
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
 from crewai_cli.plus_api import PlusAPI
@@ -1401,13 +1401,18 @@ def create_json_crew(
     )
 
     # Write pyproject.toml
+    extras = {
+        PROVIDER_EXTRAS[provider]
+        for provider in map(provider_for_model, (agent["llm"] for agent in agents))
+        if provider in PROVIDER_EXTRAS
+    }
     (folder_path / "pyproject.toml").write_text(
         _render_json_crew_template(
             "pyproject.toml",
             {
                 "folder_name": folder_name,
                 "name": name,
-                "crewai_tools_dependency": get_crewai_tools_dependency(),
+                "crewai_tools_dependency": get_crewai_tools_dependency(extras=extras),
             },
         ),
         encoding="utf-8",

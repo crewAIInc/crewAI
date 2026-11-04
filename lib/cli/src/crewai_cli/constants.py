@@ -142,6 +142,51 @@ PROVIDERS: list[str] = [
     "sambanova",
 ]
 
+# The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
+# project's crewai dependency; a provider not listed here (openai, ollama,
+# cerebras) runs on what `crewai[tools]` installs.
+PROVIDER_EXTRAS: dict[str, str] = {
+    "anthropic": "anthropic",
+    "gemini": "google-genai",
+    "bedrock": "bedrock",
+    "azure": "azure-ai-inference",
+    # crewAI has no native provider for these and falls back to LiteLLM.
+    "groq": "litellm",
+    "huggingface": "litellm",
+    "nvidia_nim": "litellm",
+    "sambanova": "litellm",
+    "watson": "litellm",
+}
+
+# The other prefixes crewAI routes to a native provider (PROVIDER_ALIASES in
+# crewai/llm.py). The CLI does not depend on crewai, so it keeps this copy.
+_PROVIDER_ALIASES: dict[str, str] = {
+    "claude": "anthropic",
+    "google": "gemini",
+    "aws": "bedrock",
+    "azure_openai": "azure",
+}
+
+
+def provider_for_model(model: str) -> str | None:
+    """Return the provider crewAI runs ``model`` on, or ``None`` if it is unknown.
+
+    A ``provider/model`` string names its provider by prefix, with crewAI's
+    aliases applied (``claude/`` is Anthropic). A bare name is recognized only
+    by an OpenAI, Anthropic or Gemini model prefix.
+    """
+    prefix, separator, _ = model.strip().lower().partition("/")
+    if separator:
+        return _PROVIDER_ALIASES.get(prefix, prefix) or None
+    if prefix.startswith(("gpt-", "o1", "o3", "o4", "chatgpt-")):
+        return "openai"
+    if prefix.startswith("claude-"):
+        return "anthropic"
+    if prefix.startswith("gemini-"):
+        return "gemini"
+    return None
+
+
 MODELS: dict[str, list[str]] = {
     "openai": [
         "gpt-5.6-luna",
