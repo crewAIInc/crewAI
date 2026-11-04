@@ -138,3 +138,57 @@ def test_client_works_from_another_thread_when_sqlite_checks_threads(
     thread.join()
 
     assert errors == []
+
+
+def _default_config(monkeypatch, tmp_path):
+    """A config that uses the default storage folder, placed under tmp_path."""
+    monkeypatch.setattr("appdirs.user_data_dir", lambda name, *_: str(tmp_path / name))
+    config = QdrantConfig(embedding_function=_config(tmp_path).embedding_function)
+    return config, os.path.realpath(config.options["path"])
+
+
+def test_default_folder_gets_the_process_id_and_is_removed_at_exit(
+    tmp_path, monkeypatch
+):
+    registered = []
+    monkeypatch.setattr(
+        "atexit.register", lambda fn, *a, **k: registered.append((fn, a))
+    )
+    config, default_path = _default_config(monkeypatch, tmp_path)
+
+    create_client(config)
+
+    private = f"{default_path}-pid{os.getpid()}"
+    assert os.path.isdir(private)
+    assert not os.path.exists(default_path)
+    cleanup, args = registered[-1]
+    assert cleanup.__name__ == "rmtree"
+    assert args == (private,)
+
+
+def test_processes_using_the_default_folder_do_not_collide(tmp_path, monkeypatch):
+    config, _ = _default_config(monkeypatch, tmp_path)
+    monkeypatch.setattr("atexit.register", lambda *a, **k: None)
+
+    monkeypatch.setattr(os, "getpid", lambda: 1)
+    first = create_client(config)
+    monkeypatch.setattr("crewai.rag.qdrant.factory._local_clients", {})
+    monkeypatch.setattr(os, "getpid", lambda: 2)
+    second = create_client(config)
+
+    assert first.client is not second.client
+
+
+def test_explicit_path_is_used_as_given(tmp_path, monkeypatch):
+    registered = []
+    monkeypatch.setattr(
+        "atexit.register", lambda fn, *a, **k: registered.append((fn, a))
+    )
+    _default_config(monkeypatch, tmp_path)
+    folder = tmp_path / "mine"
+
+    create_client(_config(folder))
+
+    assert os.path.isdir(folder)
+    assert not os.path.exists(f"{os.path.realpath(folder)}-pid{os.getpid()}")
+    assert registered == []
