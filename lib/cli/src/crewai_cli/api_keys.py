@@ -250,7 +250,7 @@ def _keep_private(env_file: Path) -> bool:
     if not env_file.exists() or not env_file.stat().st_mode & 0o077:
         return True
     try:
-        env_file.chmod(0o600)
+        os.chmod(env_file, 0o600)
     except OSError:
         return False
     return True
