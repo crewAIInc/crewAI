@@ -8,23 +8,23 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager, nullcontext
+import json
 import os
 from pathlib import Path
 import subprocess
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from typing import Any, get_args
 from unittest.mock import MagicMock
 import uuid
 
 import click
 from click.testing import CliRunner, Result
-from crewai_core import telemetry as core_telemetry
-import pytest
-
 from crewai_cli import api_keys
 from crewai_cli.cli import crewai
 import crewai_cli.run_crew as run_crew_module
+from crewai_core import telemetry as core_telemetry
+import pytest
 
 
 ALLOWED_EVENTS = (
@@ -123,7 +123,14 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def usage(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+def error_classes() -> list[str | None]:
+    """The error class each `load_failed` stop the `usage` fixture saw carried,
+    None for one sent without."""
+    return []
+
+
+@pytest.fixture
+def usage(monkeypatch: pytest.MonkeyPatch, error_classes: list[str | None]) -> list[str]:
     sent: list[str] = []
 
     class FakeTelemetry:
@@ -132,7 +139,11 @@ def usage(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
         def feature_usage_span(self, feature: str, attributes: Any = None) -> None:
             assert feature in ALLOWED_EVENTS, feature
-            assert attributes is None
+            if feature == stopped("load_failed"):
+                assert attributes is None or set(attributes) == {"error_class"}
+                error_classes.append(None if attributes is None else attributes["error_class"])
+            else:
+                assert attributes is None, feature
             sent.append(feature)
 
     monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
@@ -411,25 +422,54 @@ def test_a_json_crew_without_the_crewai_package(usage, monkeypatch) -> None:
     assert usage == [stopped("crewai_missing")]
 
 
-def test_a_declarative_flow_definition_that_cannot_be_loaded(project, usage) -> None:
+def test_a_declarative_flow_definition_that_cannot_be_loaded(
+    project, usage, error_classes
+) -> None:
     result = crewai_run("--definition", f"{SECRET}/missing.yaml")
 
     assert result.exit_code == 1
     assert "does not exist" in result.output
     assert usage == [started("declarative_flow"), stopped("load_failed")]
     assert_events_are_anonymous(usage)
+    # The loader exits for a missing file with nothing behind the SystemExit.
+    assert error_classes == ["SystemExit"]
 
 
-def test_a_json_crew_definition_that_cannot_be_loaded(project, usage) -> None:
+def test_a_json_crew_definition_that_cannot_be_loaded(
+    project, usage, error_classes
+) -> None:
     crew_path = write(project / "crew.jsonc", '{"agents": "not a list"')
 
     with pytest.raises(Exception):  # noqa: B017 - whatever load_crew raises escapes
         run_crew_module._load_json_crew(crew_path)
 
     assert usage == [stopped("load_failed")]
+    # What the loader's JSONProjectError was raised for.
+    assert error_classes == ["JSONDecodeError"]
 
 
-def test_a_python_flow_module_that_does_not_import(project, usage, monkeypatch) -> None:
+def test_an_error_class_that_cannot_be_read_never_replaces_the_load_error(
+    project, usage, error_classes, monkeypatch
+) -> None:
+    """Counting is best effort: the run must stop with its own error."""
+    crew_path = write(project / "crew.jsonc", '{"agents": "not a list"')
+
+    def unreadable(error: BaseException) -> str:
+        raise RuntimeError("classifying failed")
+
+    monkeypatch.setattr(run_crew_module, "_error_class", unreadable)
+
+    with pytest.raises(Exception) as raised:  # noqa: B017 - the loader's own error
+        run_crew_module._load_json_crew(crew_path)
+
+    assert "classifying failed" not in str(raised.value)
+    assert usage == [stopped("load_failed")]
+    assert error_classes == [None]
+
+
+def test_a_python_flow_module_that_does_not_import(
+    project, usage, error_classes, monkeypatch
+) -> None:
     monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
     write(
         project / "pyproject.toml",
@@ -447,6 +487,7 @@ def test_a_python_flow_module_that_does_not_import(project, usage, monkeypatch) 
 
     assert isinstance(result.exception, ModuleNotFoundError)
     assert usage == [started("flow"), stopped("load_failed")]
+    assert error_classes == ["ModuleNotFoundError"]
 
 
 @pytest.fixture
@@ -472,7 +513,7 @@ def flow_package(project: Path, request: pytest.FixtureRequest) -> str:
     ids=["with_inputs", "conversational"],
 )
 def test_a_python_flow_that_cannot_be_constructed(
-    project, usage, monkeypatch, flow_package, class_body, args
+    project, usage, error_classes, monkeypatch, flow_package, class_body, args
 ) -> None:
     monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
     write(
@@ -489,6 +530,7 @@ def test_a_python_flow_that_cannot_be_constructed(
     assert isinstance(result.exception, RuntimeError)
     assert str(result.exception) == "the flow could not be built"
     assert usage == [started("flow"), stopped("load_failed")]
+    assert error_classes == ["RuntimeError"]
 
 
 def test_a_python_flow_whose_kickoff_raises_counts_no_stop(
@@ -509,6 +551,382 @@ def test_a_python_flow_whose_kickoff_raises_counts_no_stop(
     assert isinstance(result.exception, RuntimeError)
     assert str(result.exception) == "the flow failed"
     assert usage == [started("flow")]
+
+
+# A `load_failed` stop carries the class of the error the project failed to
+# load with: by name when Python, crewAI or a library crewAI loads projects with
+# defines it, else `other`. Never the message.
+
+INVALID_FLOW_YAML = """\
+schema: crewai.flow/v1
+name: InvalidFlow
+methods:
+  begin:
+    start: true
+    do:
+      call: not_a_call_kind
+"""
+
+
+def raised_from(error: BaseException, cause: BaseException | None) -> BaseException:
+    """ERROR as `raise ERROR from CAUSE` leaves it."""
+    try:
+        raise error from cause
+    except BaseException as raised:
+        return raised
+
+
+def raised_while_handling(error: BaseException, context: BaseException) -> BaseException:
+    """ERROR raised, without `from`, in the handler for CONTEXT."""
+    try:
+        try:
+            raise context
+        except BaseException:
+            raise error  # noqa: B904 - what `raise SystemExit(1)` in a handler does
+    except BaseException as raised:
+        return raised
+
+
+def json_project_error(cause: BaseException | None = None) -> BaseException:
+    from crewai.project.json_loader import JSONProjectError
+
+    return raised_from(JSONProjectError(f"{SECRET}/crew.jsonc: failed to load"), cause)
+
+
+def validation_error(raised_by_validator: Exception | None) -> Exception:
+    """Pydantic's ValidationError, for the error a validator raised, or, given
+    None, for a field that is missing."""
+    from pydantic import BaseModel, ValidationError, field_validator
+
+    class Agent(BaseModel):
+        llm: str
+
+        @field_validator("llm")
+        @classmethod
+        def build(cls, value: str) -> str:
+            raise raised_by_validator
+
+    with pytest.raises(ValidationError) as raised:
+        Agent.model_validate({"llm": SECRET} if raised_by_validator else {})
+    return raised.value
+
+
+def projects_own_error(
+    module: str = f"{SECRET}.main", qualname: str = "AcmeSecretProjectError"
+) -> Exception:
+    namespace = {"__module__": module, "__qualname__": qualname}
+    return type("AcmeSecretProjectError", (Exception,), namespace)(SECRET)
+
+
+def a_projects_error_claiming(module: str, qualname: str = "AcmeSecretProjectError") -> Exception:
+    """A project's own error whose class says openai's MODULE defines it, with
+    openai loaded, so the claim is checked against the real package."""
+    import openai  # noqa: F401
+
+    return projects_own_error(module, qualname)
+
+
+def an_openai_error() -> Exception:
+    import openai
+
+    return openai.OpenAIError(SECRET)
+
+
+def a_library_error() -> Exception:
+    import httpx
+
+    return httpx.ConnectError(f"{SECRET}.example.com refused")
+
+
+def a_yaml_error() -> Exception:
+    import yaml
+
+    return yaml.YAMLError(SECRET)
+
+
+def json_decode_error() -> Exception:
+    return json.JSONDecodeError(f"{SECRET} is not JSON", SECRET, 0)
+
+
+@pytest.mark.parametrize(
+    ("make_error", "error_class"),
+    [
+        (lambda: ModuleNotFoundError(f"No module named '{SECRET}'"), "ModuleNotFoundError"),
+        (lambda: raised_from(SystemExit(1), ValueError(SECRET)), "ValueError"),
+        (lambda: raised_while_handling(SystemExit(1), KeyError(SECRET)), "KeyError"),
+        (lambda: SystemExit(1), "SystemExit"),
+        (lambda: json_project_error(json_decode_error()), "JSONDecodeError"),
+        (lambda: json_project_error(), "JSONProjectError"),
+        (lambda: validation_error(ValueError(SECRET)), "ValueError"),
+        (lambda: validation_error(None), "ValidationError"),
+        (
+            lambda: raised_from(
+                SystemExit(1), json_project_error(validation_error(json_decode_error()))
+            ),
+            "JSONDecodeError",
+        ),
+        (
+            lambda: json_project_error(raised_from(ImportError(SECRET), None)),
+            "ImportError",
+        ),
+        (
+            lambda: json_project_error(
+                raised_from(ImportError(SECRET), validation_error(None))
+            ),
+            "ValidationError",
+        ),
+        (a_library_error, "ConnectError"),
+        (a_yaml_error, "YAMLError"),
+        (an_openai_error, "OpenAIError"),
+        (projects_own_error, "other"),
+        (lambda: projects_own_error("crewai_acme.errors"), "other"),
+        (lambda: a_projects_error_claiming("openai"), "other"),
+        (lambda: a_projects_error_claiming("openai.errors"), "other"),
+        (lambda: a_projects_error_claiming("openai", "OpenAIError"), "other"),
+        (lambda: raised_from(SystemExit(1), projects_own_error()), "other"),
+        (lambda: json_project_error(projects_own_error()), "other"),
+        (lambda: raised_from(ImportError(SECRET), projects_own_error()), "other"),
+    ],
+    ids=[
+        "module_not_found",
+        "system_exit_from_its_cause",
+        "system_exit_while_handling_another",
+        "system_exit_alone",
+        "json_project_error_from_its_cause",
+        "json_project_error_alone",
+        "validation_error_from_a_validator",
+        "validation_error_of_a_missing_field",
+        "each_wrapper_in_turn",
+        "an_import_error_raised_from_none_behind_json_project_error",
+        "an_import_error_raised_from_another_behind_json_project_error",
+        "a_library_error",
+        "a_yaml_error",
+        "an_openai_error_whose_module_openai_rewrites",
+        "a_projects_own_error",
+        "a_package_named_like_crewai",
+        "a_projects_own_error_claiming_openai",
+        "a_projects_own_error_claiming_an_openai_module_that_does_not_exist",
+        "a_projects_own_error_claiming_an_openai_class_by_its_qualname",
+        "a_projects_own_error_behind_system_exit",
+        "a_projects_own_error_behind_json_project_error",
+        "a_projects_own_error_behind_an_import_error",
+    ],
+)
+def test_a_load_failed_stop_names_the_error_behind_it_and_nothing_of_the_project(
+    project, usage, error_classes, make_error, error_class
+) -> None:
+    run_crew_module.record_run_stopped("load_failed", make_error())
+
+    assert usage == [stopped("load_failed")]
+    assert error_classes == [error_class]
+
+
+def test_a_json_project_error_that_is_its_own_cause_is_named_once(
+    project, usage, error_classes
+) -> None:
+    """crewAI's providers re-raise with `raise e from e`; the walk ends there."""
+    error = json_project_error()
+    error.__cause__ = error
+
+    run_crew_module.record_run_stopped("load_failed", error)
+
+    assert error_classes == ["JSONProjectError"]
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [reason for reason in get_args(run_crew_module.RunStopReason) if reason != "load_failed"],
+)
+def test_no_other_stop_carries_an_error_class(project, usage, reason) -> None:
+    """The `usage` fixture fails any other stop sent with attributes."""
+    run_crew_module.record_run_stopped(reason, ImportError(SECRET))
+
+    assert usage == [stopped(reason)]
+
+
+def test_counting_the_class_imports_neither_crewai_nor_pydantic(
+    project, usage, error_classes, monkeypatch
+) -> None:
+    """A `crewai run` whose crewAI is missing or broken still counts the class:
+    the loader's and pydantic's errors are looked up only where already loaded."""
+    monkeypatch.setitem(sys.modules, "crewai.project.json_loader", None)
+    monkeypatch.setitem(sys.modules, "pydantic_core", None)
+
+    run_crew_module.record_run_stopped(
+        "load_failed",
+        raised_from(SystemExit(1), ModuleNotFoundError("No module named 'crewai'")),
+    )
+
+    assert error_classes == ["ModuleNotFoundError"]
+
+
+def test_checking_a_class_claim_runs_no_lazy_module_getattr(
+    project, usage, error_classes, monkeypatch
+) -> None:
+    """crewai's and pydantic's module `__getattr__` import on a miss (crewai's
+    `Memory` loads lancedb): checking where a class says it is defined calls none."""
+    looked_up: list[str] = []
+
+    def lazy_getattr(name: str) -> object:
+        looked_up.append(name)
+        raise AttributeError(name)
+
+    lazy = ModuleType("crewai.usage_lazy_module")
+    vars(lazy)["__getattr__"] = lazy_getattr
+    monkeypatch.setitem(sys.modules, "crewai.usage_lazy_module", lazy)
+
+    run_crew_module.record_run_stopped(
+        "load_failed", projects_own_error("crewai.usage_lazy_module")
+    )
+
+    assert error_classes == ["other"]
+    assert looked_up == []
+
+
+@pytest.mark.parametrize(
+    ("llm", "openai_api_key", "error_class"),
+    [
+        ({"model": "openai/gpt-4o-mini", "temperature": "hot"}, "sk-test", "ValidationError"),
+        ("openai/gpt-4o-mini", "", "OpenAIError"),
+        ("anthropic/claude-sonnet-4-5", "sk-test", "ImportError"),
+    ],
+    ids=["a_setting_its_model_rejects", "a_blank_key", "a_provider_sdk_not_installed"],
+)
+def test_a_json_crew_whose_model_cannot_be_built_counts_why(
+    project, usage, error_classes, monkeypatch, llm, openai_api_key, error_class
+) -> None:
+    """crewAI raises any failure to build a model as an ImportError, which the
+    JSON loader wraps in a JSONProjectError naming the agent's file: the class
+    counted is the one behind both, and a missing SDK's ImportError has none."""
+    from crewai.project.json_loader import JSONProjectError
+
+    crew_path = buildable_json_crew(project, llm)
+    monkeypatch.setenv("OPENAI_API_KEY", openai_api_key)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.setitem(sys.modules, "anthropic", None)
+    monkeypatch.delitem(
+        sys.modules, "crewai.llms.providers.anthropic.completion", raising=False
+    )
+
+    with pytest.raises(JSONProjectError, match="failed to load agent"):
+        run_crew_module._load_json_crew(crew_path)
+
+    assert usage == [stopped("load_failed")]
+    assert error_classes == [error_class]
+
+
+@pytest.mark.parametrize(
+    ("definition", "error_class"),
+    [
+        (INVALID_FLOW_YAML, "ValidationError"),
+        ("schema: crewai.flow/v1\nname: BrokenFlow\nmethods: [\n", "ParserError"),
+    ],
+    ids=["exits_for_a_validation_error", "raises_a_yaml_error"],
+)
+def test_a_declarative_flow_definition_that_does_not_validate(
+    project, usage, error_classes, definition, error_class
+) -> None:
+    write(project / "flow.yaml", definition)
+
+    result = crewai_run("--definition", "flow.yaml")
+
+    assert result.exit_code == 1
+    assert usage == [started("declarative_flow"), stopped("load_failed")]
+    assert error_classes == [error_class]
+
+
+@pytest.mark.parametrize(
+    ("raise_at", "class_body", "args"),
+    [
+        ("module", "", ["--inputs", '{"topic": "AI"}']),
+        ("init", "", ["--inputs", '{"topic": "AI"}']),
+        ("init", "    conversational = True\n", []),
+    ],
+    ids=["as_it_imports", "as_it_is_built_with_inputs", "as_a_conversational_flow_is_built"],
+)
+def test_a_python_flow_that_raises_its_own_error_counts_it_as_other(
+    project, usage, error_classes, monkeypatch, flow_package, raise_at, class_body, args
+) -> None:
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    raise_it = f"raise AcmeSecretProjectError('{SECRET} could not load')\n"
+    write(
+        project / "src" / flow_package / "main.py",
+        "from crewai.flow.flow import Flow\n\n\n"
+        "class AcmeSecretProjectError(Exception):\n"
+        "    pass\n\n\n"
+        + (raise_it if raise_at == "module" else "")
+        + "class UsageFlow(Flow):\n"
+        f"{class_body}"
+        "    def __init__(self, **kwargs):\n"
+        f"        {raise_it}",
+    )
+
+    result = crewai_run(*args)
+
+    assert type(result.exception).__name__ == "AcmeSecretProjectError"
+    assert usage == [started("flow"), stopped("load_failed")]
+    assert error_classes == ["other"]
+
+
+def test_a_python_flow_module_without_exactly_one_flow_counts_no_error_class(
+    project, usage, error_classes, monkeypatch, flow_package
+) -> None:
+    """Nothing raised there: the stop is counted without a class."""
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    write(project / "src" / flow_package / "main.py", "def kickoff():\n    pass\n")
+
+    result = crewai_run("--inputs", '{"topic": "AI"}')
+
+    assert result.exit_code == 2
+    assert "--inputs needs exactly one Flow class" in result.output
+    assert usage == [started("flow"), stopped("load_failed")]
+    assert error_classes == [None]
+
+
+def test_a_project_crewai_core_that_takes_no_attributes_still_counts_the_stop(
+    project, monkeypatch
+) -> None:
+    """The JSON crew's runner imports the project's crewai-core, whose
+    `feature_usage_span` took no attributes before 1.15.23."""
+    sent: list[str] = []
+
+    class TelemetryWithoutAttributes:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature: str) -> None:
+            sent.append(feature)
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", TelemetryWithoutAttributes)
+    crew_path = write(project / "crew.jsonc", '{"agents": "not a list"')
+
+    with pytest.raises(Exception, match=r"crew\.jsonc"):
+        run_crew_module._load_json_crew(crew_path)
+    run_crew_module.record_run_stopped("invalid_project")
+
+    assert sent == [stopped("load_failed"), stopped("invalid_project")]
+
+
+def test_the_error_class_reaches_the_span_the_real_telemetry_sends(
+    project, monkeypatch
+) -> None:
+    """crewai-core keeps the attribute only for the feature it lists it under:
+    this is the CLI's feature string meeting that list."""
+    span = replace_the_exporter(monkeypatch)
+    for name in OPT_OUT_FLAGS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(core_telemetry.Telemetry, "_instance", None)
+    write(project / "flow.yaml", INVALID_FLOW_YAML)
+
+    assert crewai_run("--definition", "flow.yaml").exit_code == 1
+
+    sent = [tuple(call.args) for call in span.set_attribute.call_args_list]
+    assert [(key, value) for key, value in sent if key in {"feature", "error_class"}] == [
+        ("feature", started("declarative_flow")),
+        ("feature", stopped("load_failed")),
+        ("error_class", "ValidationError"),
+    ]
+    assert SECRET not in str(sent)
 
 
 def test_a_conversational_flow_without_a_terminal(project, usage, monkeypatch) -> None:
@@ -647,6 +1065,21 @@ def test_a_failing_count_never_changes_the_outcome(
     assert type(broken.exception) is type(working.exception)
 
 
+def replace_the_exporter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Keep the real `Telemetry` from exporting; returns the span every count
+    it sends sets its attributes on."""
+    provider = MagicMock()
+    monkeypatch.setattr(core_telemetry, "TracerProvider", lambda **kwargs: provider)
+    monkeypatch.setattr(core_telemetry, "SafeOTLPSpanExporter", MagicMock())
+    monkeypatch.setattr(core_telemetry, "BatchSpanProcessor", MagicMock())
+    # Cached for the process; reading it here would pin this folder's id.
+    monkeypatch.setattr(core_telemetry, "common_span_attributes", dict)
+    monkeypatch.setattr(
+        core_telemetry.Telemetry, "_register_shutdown_handlers", lambda self: None
+    )
+    return provider.get_tracer.return_value.start_span.return_value
+
+
 @pytest.mark.parametrize("script_fails", [False, True])
 @pytest.mark.parametrize("flag", OPT_OUT_FLAGS)
 def test_an_opted_out_process_sends_nothing(
@@ -657,16 +1090,7 @@ def test_an_opted_out_process_sends_nothing(
     write(project / "pyproject.toml", CREW_PYPROJECT)
     if script_fails:
         fail_project_scripts(monkeypatch)
-    provider = MagicMock()
-    span = provider.get_tracer.return_value.start_span.return_value
-    monkeypatch.setattr(core_telemetry, "TracerProvider", lambda **kwargs: provider)
-    monkeypatch.setattr(core_telemetry, "SafeOTLPSpanExporter", MagicMock())
-    monkeypatch.setattr(core_telemetry, "BatchSpanProcessor", MagicMock())
-    # Cached for the process; reading it here would pin this folder's id.
-    monkeypatch.setattr(core_telemetry, "common_span_attributes", lambda: {})
-    monkeypatch.setattr(
-        core_telemetry.Telemetry, "_register_shutdown_handlers", lambda self: None
-    )
+    span = replace_the_exporter(monkeypatch)
 
     def sent() -> list[str]:
         return [
@@ -832,22 +1256,29 @@ def test_quitting_at_the_key_prompt_counts_where_the_run_stopped(
 PROMPT = "{} isn't set. Paste it to save it to .env (Enter to skip)"
 
 
-def keyless_json_crew(folder: Path, monkeypatch: pytest.MonkeyPatch, llm: str) -> None:
-    """A JSON crew crewAI builds for real, with no key set for LLM's provider."""
-    # crewAI loads a `.env` when it is first imported: import it before the keys go.
+def buildable_json_crew(folder: Path, llm: str | dict[str, str]) -> Path:
+    """A JSON crew crewAI builds for real, its one agent on LLM."""
+    # crewAI loads a `.env` when it is first imported: import it before a test
+    # sets the keys.
     import crewai.project.crew_loader  # noqa: F401
 
     write(folder / "pyproject.toml", JSON_CREW_PYPROJECT)
     write(
+        folder / "agents" / "researcher.jsonc",
+        json.dumps(
+            {"role": "Researcher", "goal": "Research", "backstory": "Curious", "llm": llm}
+        ),
+    )
+    return write(
         folder / "crew.jsonc",
         '{"name": "Demo", "agents": ["researcher"], "memory": false, "tasks": '
         '[{"description": "Say hi", "expected_output": "hi", "agent": "researcher"}]}',
     )
-    write(
-        folder / "agents" / "researcher.jsonc",
-        '{"role": "Researcher", "goal": "Research", "backstory": "Curious", '
-        f'"llm": "{llm}"}}',
-    )
+
+
+def keyless_json_crew(folder: Path, monkeypatch: pytest.MonkeyPatch, llm: str) -> None:
+    """A JSON crew crewAI builds for real, with no key set for LLM's provider."""
+    buildable_json_crew(folder, llm)
     without_api_keys(monkeypatch, "OPENAI_API_KEY", "DEEPSEEK_API_KEY")
 
 
@@ -1001,7 +1432,7 @@ def test_a_json_crew_that_fails_at_kickoff_for_another_reason_raises_as_before(
 
 
 def test_a_json_crew_that_does_not_load_for_another_reason_counts_load_failed(
-    project, usage
+    project, usage, error_classes
 ) -> None:
     write(project / "pyproject.toml", JSON_CREW_PYPROJECT)
     write(project / "crew.jsonc", '{"agents": "not a list"')
@@ -1010,11 +1441,12 @@ def test_a_json_crew_that_does_not_load_for_another_reason_counts_load_failed(
         run_crew_module._run_json_crew()
 
     assert usage == [stopped("load_failed")]
+    assert error_classes == ["JSONDecodeError"]
 
 
 @pytest.mark.parametrize("terminal", [False, True], ids=["headless", "at_a_terminal"])
 def test_a_json_crew_that_does_not_load_for_an_error_that_is_its_own_cause_counts_load_failed(
-    project, usage, monkeypatch, terminal
+    project, usage, error_classes, monkeypatch, terminal
 ) -> None:
     from crewai.project import crew_loader
 
@@ -1036,6 +1468,7 @@ def test_a_json_crew_that_does_not_load_for_an_error_that_is_its_own_cause_count
 
     assert raised.value is error
     assert usage == [stopped("load_failed")]
+    assert error_classes == ["RuntimeError"]
 
 
 @pytest.mark.parametrize("where", ["at_kickoff", "as_it_loads"])
