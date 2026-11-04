@@ -8,6 +8,7 @@ and python-dotenv.
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Iterable, Iterator, Mapping
 import json
 import os
@@ -60,16 +61,6 @@ _YAML_SETTING = re.compile(
     r"""(?:^|[\s{,])["']?([A-Za-z_][\w-]*)["']?[ \t]*:"""
     r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}#]*)""",
     re.MULTILINE,
-)
-# An endpoint a crew's Python code sets to a string literal: a keyword such as
-# `base_url="..."`, a dict entry such as `"base_url": "..."` (`client_params`),
-# or an environment variable, `os.environ["OPENAI_BASE_URL"] = "..."` or
-# `setdefault`/`putenv("OPENAI_BASE_URL", "...")`. Code that computes the value
-# is not read: it runs with the key and could send it anywhere regardless.
-# A literal in parentheses, or an f-string with no `{field}`, is still a literal.
-_CODE_SETTING = re.compile(
-    r"""\b([A-Za-z_]\w*)[ \t]*=(?!=)[ \t]*\(?[ \t]*(?:[rRuUfF]{1,2})?["']([^"'\n{]*)["']"""
-    r"""|["']([A-Za-z_]\w*)["'][ \t]*(?::|\][ \t]*=|,)[ \t]*\(?[ \t]*(?:[rRuUfF]{1,2})?["']([^"'\n{]*)["']"""
 )
 # An llm passed in Python code, whose model this check cannot read.
 _CODE_LLM = re.compile(r"\bllm\s*=|\bLLM\(")
@@ -241,6 +232,14 @@ def _project_endpoints(
         # httpx reads `https_proxy` and `HTTPS_PROXY` alike.
         and value != _MACHINE_ENDPOINTS.get(name.upper())
     ]
+    # Python the run imports: a crew's or flow's sources, or a JSON crew's
+    # custom tools, which load before its agents build their llm.
+    code_root = project_dir / ("tools" if json_crew else "src")
+    found += [
+        (value, f"{name} in {path.relative_to(project_dir)}")
+        for path in sorted(code_root.rglob("*.py"))
+        for name, value in _code_endpoints(_text(path))
+    ]
     if json_crew:
         found += [
             (value, f"{where} in {path.name}")
@@ -260,15 +259,6 @@ def _project_endpoints(
             for key, value in _YAML_SETTING.findall(_text(path))
             if _sets_endpoint(key) or key.lower() == "endpoint"
         ]
-        found += [
-            (value, f"{key} in {path.relative_to(project_dir)}")
-            for path in sorted((project_dir / "src").glob("**/*.py"))
-            for keyword, literal, entry, entry_literal in _CODE_SETTING.findall(
-                _text(path)
-            )
-            for key, value in ((keyword or entry, literal or entry_literal),)
-            if _sets_endpoint(key) or key.lower() == "endpoint"
-        ]
     # Escaped: a control character the project put in a setting could move the
     # cursor and print over the host.
     return list(
@@ -279,6 +269,72 @@ def _project_endpoints(
             for value, source in found
         )
     )
+
+
+def _code_endpoints(source: str) -> Iterator[tuple[str, str]]:
+    """Each endpoint Python source sets to a constant string, as (name, value):
+    a keyword argument (`LLM(base_url=...)`), a dict entry (`client_params`),
+    an assignment, `os.environ[...] = ...` included, or `setdefault`/`putenv`.
+
+    Parsed, not matched, so line breaks, parentheses and annotations do not
+    hide one. A computed value is not read: that code runs with the key and
+    could send it anywhere regardless.
+    """
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return  # crewAI cannot import it either
+    for node in ast.walk(tree):
+        pairs: list[tuple[str | None, ast.expr | None]] = []
+        if isinstance(node, ast.keyword):
+            pairs.append((node.arg, node.value))
+        elif isinstance(node, ast.Dict):
+            pairs += [
+                (_constant(key), value)
+                for key, value in zip(node.keys, node.values, strict=True)
+            ]
+        elif isinstance(node, ast.Assign | ast.AnnAssign):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            pairs += [(_target_name(target), node.value) for target in targets]
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in ("setdefault", "putenv")
+            and len(node.args) >= 2
+        ):
+            pairs.append((_constant(node.args[0]), node.args[1]))
+        for name, value in pairs:
+            literal = _constant(value)
+            if (
+                name
+                and literal is not None
+                and (_sets_endpoint(name) or name.lower() == "endpoint")
+            ):
+                yield name, literal
+
+
+def _constant(node: ast.expr | None) -> str | None:
+    """NODE's value when it is a string constant, or an f-string with no field."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr) and all(
+        isinstance(part, ast.Constant) for part in node.values
+    ):
+        return "".join(
+            str(part.value) for part in node.values if isinstance(part, ast.Constant)
+        )
+    return None
+
+
+def _target_name(target: ast.expr) -> str | None:
+    """The name an assignment sets: `x`, `obj.x`, or `mapping["x"]`."""
+    if isinstance(target, ast.Name):
+        return target.id
+    if isinstance(target, ast.Attribute):
+        return target.attr
+    if isinstance(target, ast.Subscript):
+        return _constant(target.slice)
+    return None
 
 
 def _json_endpoints(value: object, where: str) -> Iterator[tuple[str, str]]:
