@@ -503,6 +503,20 @@ def test_python_that_only_names_an_endpoint_leaves_the_prompt_as_it_was(
     assert text == PROMPT.format("OPENAI_API_KEY")
 
 
+def test_a_pasted_key_is_marked_for_the_run_that_follows(
+    project, children, monkeypatch
+) -> None:
+    """Only a key pasted here outlasts a `.env` line that holds no key."""
+    machine_endpoints(monkeypatch)
+    monkeypatch.delenv("CREWAI_PASTED_API_KEYS", raising=False)
+    crew_project(project)
+    at_a_terminal(monkeypatch, "sk-pasted")
+
+    run_crew_module.run_crew()
+
+    assert os.environ["CREWAI_PASTED_API_KEYS"] == "OPENAI_API_KEY"
+
+
 def test_every_host_a_project_sends_requests_to_is_named(
     project, children, monkeypatch
 ) -> None:

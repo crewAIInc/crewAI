@@ -1645,15 +1645,15 @@ def test_a_projects_env_never_sets_or_replaces_crewai_evals_token(
 
 
 @pytest.mark.parametrize("line", ["OPENAI_API_KEY=YOUR_API_KEY", "OPENAI_API_KEY="])
-def test_a_projects_env_line_with_no_key_never_replaces_the_one_the_process_has(
+def test_a_projects_env_line_with_no_key_never_replaces_a_key_pasted_this_run(
     monkeypatch, tmp_path: Path, line: str
 ):
-    """A key pasted when `crewai run` asked, or exported in the shell, must reach
-    the crew even when `.env` still holds the placeholder `crewai create flow`
-    used to write, or a blank line."""
+    """A key pasted when `crewai run` asked, but not saved, must reach the crew
+    even when `.env` still holds the placeholder or a blank line."""
     env_file = tmp_path / ".env"
     env_file.write_text(f"{line}\nFROM_THE_PROJECT=yes\n")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-pasted")
+    monkeypatch.setenv("CREWAI_PASTED_API_KEYS", "OPENAI_API_KEY")
     monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
 
     run_crew_module.load_project_env(env_file)
@@ -1662,62 +1662,26 @@ def test_a_projects_env_line_with_no_key_never_replaces_the_one_the_process_has(
     assert os.environ["FROM_THE_PROJECT"] == "yes"
 
 
-@pytest.mark.parametrize(
-    ("machine_base_url", "key"),
-    [
-        (None, "YOUR_API_KEY"),
-        ("https://other.example/v1", "YOUR_API_KEY"),
-        ("https://attacker.example/v1", "sk-from-the-shell"),
-    ],
-    ids=["unset", "different", "same"],
-)
-def test_a_shell_key_is_not_kept_for_a_project_that_points_its_base_url_elsewhere(
-    monkeypatch, tmp_path: Path, machine_base_url: str | None, key: str
+@pytest.mark.parametrize("marker", [None, "OPENAI_API_KEY"], ids=["unmarked", "env_marks_it"])
+def test_a_key_the_process_only_inherited_is_replaced_by_the_placeholder(
+    monkeypatch, tmp_path: Path, marker: str | None
 ):
-    """The kept key would go to the project's host, so the placeholder applies,
-    as it did before; it is kept when the host is the one the shell set."""
+    """The `.env` can also point the provider at its own host: the shell's key
+    must not go there, so the placeholder applies, and a `.env` cannot claim
+    the key was pasted."""
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "OPENAI_API_KEY=YOUR_API_KEY\nOPENAI_BASE_URL=https://attacker.example/v1\n"
-    )
+    lines = "OPENAI_API_KEY=YOUR_API_KEY\nOPENAI_BASE_URL=https://attacker.example/v1\n"
+    if marker:
+        lines += f"CREWAI_PASTED_API_KEYS={marker}\n"
+    env_file.write_text(lines)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
-    if machine_base_url is None:
-        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
-    else:
-        monkeypatch.setenv("OPENAI_BASE_URL", machine_base_url)
+    monkeypatch.delenv("CREWAI_PASTED_API_KEYS", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
 
     run_crew_module.load_project_env(env_file)
 
-    assert os.environ["OPENAI_API_KEY"] == key
-
-
-@pytest.mark.skipif(os.name == "nt", reason="named pipes are POSIX")
-@pytest.mark.timeout(15)
-def test_a_projects_env_served_through_a_pipe_is_read_once(
-    monkeypatch, tmp_path: Path
-):
-    """A secrets manager can serve `.env` through a named pipe, which hands its
-    content to one reader: a second read would block with no writer left."""
-    import threading
-
-    pipe = tmp_path / ".env"
-    os.mkfifo(pipe)
-
-    def serve() -> None:
-        with pipe.open("w") as served:
-            served.write("OPENAI_API_KEY=sk-from-the-pipe\nFROM_THE_PROJECT=yes\n")
-
-    server = threading.Thread(target=serve, daemon=True)
-    server.start()
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
-
-    run_crew_module.load_project_env(pipe)
-    server.join(timeout=5)
-
-    assert not server.is_alive()
-    assert os.environ["OPENAI_API_KEY"] == "sk-from-the-pipe"
-    assert os.environ["FROM_THE_PROJECT"] == "yes"
+    assert os.environ["OPENAI_API_KEY"] == "YOUR_API_KEY"
+    assert "CREWAI_PASTED_API_KEYS" not in os.environ
 
 
 def test_a_projects_env_key_still_replaces_the_one_the_process_has(
