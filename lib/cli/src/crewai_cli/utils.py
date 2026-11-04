@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sys
 from typing import Any, Literal
 
 import click
@@ -21,7 +22,7 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.constants import required_key_names
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -267,9 +268,24 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 
 
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """Writes environment variables to a gitignored .env file for local use."""
+    """Writes environment variables to a gitignored .env file for local use.
+
+    The file holds API keys, so it is written owner-only, an existing one is
+    made owner-only, and a symlink in its place is never written through.
+
+    Raises:
+        click.ClickException: ``.env`` is a symlink.
+    """
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
+    if env_file_path.is_symlink():
+        raise click.ClickException(
+            f"Not writing API keys to {env_file_path}: it is a symlink."
+        )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(env_file_path, flags, 0o600), "w") as file:
+        if sys.platform != "win32":
+            # os.open's mode applies only when it creates the file.
+            os.fchmod(file.fileno(), 0o600)
         for key, value in env_vars.items():
             # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")
@@ -279,17 +295,10 @@ def missing_provider_keys(provider: str, env_vars: Mapping[str, object]) -> list
     """Return the names ``provider`` needs that neither ``env_vars`` nor the
     environment sets. Entries with a runtime default are not needed."""
     saved = {key.upper() for key, value in env_vars.items() if value}
-    names = [
-        str(details["key_name"]).upper()
-        for details in ENV_VARS.get(provider, [])
-        if "key_name" in details and not details.get("optional", False)
-    ]
-    # azure and cerebras also prompt for the model under key_name "model"; that
-    # fills MODEL, which is not a credential.
     return [
         name
-        for name in names
-        if name != "MODEL" and name not in saved and not os.environ.get(name)
+        for name in required_key_names(provider)
+        if name not in saved and not os.environ.get(name)
     ]
 
 

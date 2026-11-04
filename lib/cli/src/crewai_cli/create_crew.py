@@ -220,11 +220,6 @@ def create_crew(
     if is_dmn_mode_enabled():
         skip_provider = True
     if not skip_provider:
-        if not provider:
-            provider_models = get_provider_data()
-            if not provider_models:
-                return None
-
         existing_provider = None
         for provider, env_keys in ENV_VARS.items():
             if any(
@@ -241,9 +236,9 @@ def create_crew(
                 click.secho("Keeping existing provider configuration.", fg="yellow")
                 return None
 
-        provider_models = get_provider_data()
-        if not provider_models:
-            return None
+        # Without the LiteLLM catalog, the curated PROVIDERS and MODELS still
+        # work; only the "other" list loses the providers they do not name.
+        provider_models = get_provider_data() or {}
 
         while True:
             selected_provider = select_provider(provider_models)

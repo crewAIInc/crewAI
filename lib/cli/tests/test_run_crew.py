@@ -1644,6 +1644,78 @@ def test_a_projects_env_never_sets_or_replaces_crewai_evals_token(
     assert os.environ["FROM_THE_PROJECT"] == "yes"
 
 
+@pytest.mark.parametrize("line", ["OPENAI_API_KEY=YOUR_API_KEY", "OPENAI_API_KEY="])
+def test_a_projects_env_line_with_no_key_never_replaces_the_one_the_process_has(
+    monkeypatch, tmp_path: Path, line: str
+):
+    """A key pasted when `crewai run` asked, or exported in the shell, must reach
+    the crew even when `.env` still holds the placeholder `crewai create flow`
+    used to write, or a blank line."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(f"{line}\nFROM_THE_PROJECT=yes\n")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-pasted")
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="named pipes are POSIX")
+@pytest.mark.timeout(15)
+def test_a_projects_env_served_through_a_pipe_is_read_once(
+    monkeypatch, tmp_path: Path
+):
+    """A secrets manager can serve `.env` through a named pipe, which hands its
+    content to one reader: a second read would block with no writer left."""
+    import threading
+
+    pipe = tmp_path / ".env"
+    os.mkfifo(pipe)
+
+    def serve() -> None:
+        with pipe.open("w") as served:
+            served.write("OPENAI_API_KEY=sk-from-the-pipe\nFROM_THE_PROJECT=yes\n")
+
+    server = threading.Thread(target=serve, daemon=True)
+    server.start()
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(pipe)
+    server.join(timeout=5)
+
+    assert not server.is_alive()
+    assert os.environ["OPENAI_API_KEY"] == "sk-from-the-pipe"
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+def test_a_projects_env_key_still_replaces_the_one_the_process_has(
+    monkeypatch, tmp_path: Path
+):
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=sk-from-the-project\n")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "sk-from-the-project"
+
+
+def test_a_projects_placeholder_is_loaded_when_the_process_has_no_key(
+    monkeypatch, tmp_path: Path
+):
+    """crewAI then names the missing key, as it always has."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=YOUR_API_KEY\n")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "YOUR_API_KEY"
+
+
 def test_the_three_names_for_the_eval_token_are_one() -> None:
     from crewai_core import eval_handshake
 

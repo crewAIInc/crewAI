@@ -4,6 +4,7 @@ import builtins
 import io
 import keyword
 import itertools
+import json
 import os
 import re
 import shlex
@@ -27,6 +28,7 @@ import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli import __version__ as crewai_cli_version
 from crewai_cli.cli import crewai
+from crewai_cli.constants import MODELS, PROVIDERS
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.utils import copy_assistant_instructions, render_template
 from crewai_cli.version import (
@@ -2167,6 +2169,8 @@ def _crewai_dependency(project_root: Path) -> str:
         ("groq/llama-3.3-70b-versatile", "crewai[tools,litellm]"),
         ("anthropic/my-finetune", "crewai[tools,anthropic,litellm]"),
         ("openai/chatgpt-4o-latest", "crewai[tools,litellm]"),
+        ("mistral/mistral-large", "crewai[tools,litellm]"),
+        ("custom/my-model", "crewai[tools,litellm]"),
     ],
 )
 def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
@@ -2185,9 +2189,7 @@ def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
     )
 
 
-@pytest.mark.parametrize(
-    "provider", [None, "openai", "ollama", "cerebras/llama3.1-8b", "custom/my-model"]
-)
+@pytest.mark.parametrize("provider", [None, "openai", "ollama", "cerebras/llama3.1-8b"])
 def test_json_create_keeps_the_tools_only_dependency_when_no_extra_is_needed(
     tmp_path, monkeypatch, provider
 ):
@@ -2409,18 +2411,82 @@ def test_classic_create_returns_none_when_it_adds_a_crew_to_a_project(
     assert (tmp_path / "crews" / "writer" / "crew.py").is_file()
 
 
-@pytest.mark.parametrize("provider", [None, "openai"])
-def test_classic_create_returns_none_when_the_provider_list_is_unavailable(
-    tmp_path, monkeypatch, provider
+def test_classic_create_returns_the_folder_when_the_provider_list_is_unavailable(
+    tmp_path, monkeypatch
 ):
+    """The curated lists stand in for the catalog, so the crew is still created."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("CREWAI_DMN", raising=False)
     monkeypatch.setattr("crewai_cli.create_crew.get_provider_data", lambda: None)
+    monkeypatch.setattr("crewai_cli.create_crew.select_provider", lambda *_: "openai")
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.select_model", lambda *_: "gpt-6-luna"
+    )
+    monkeypatch.setattr("crewai_cli.create_crew.click.prompt", lambda *_a, **_k: "")
 
-    project = create_crew("Offline Crew", provider)
+    project = create_crew("Offline Crew")
 
-    assert project is None
-    assert not (tmp_path / "offline_crew" / "pyproject.toml").exists()
+    assert project == Path("offline_crew")
+    assert (tmp_path / "offline_crew" / "pyproject.toml").is_file()
+
+
+@pytest.fixture
+def classic_create(tmp_path, monkeypatch, runner):
+    """Run `crewai create crew my_crew --classic` in ``tmp_path`` with
+    ``tmp_path`` as home, so the LiteLLM cache starts cold."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    def run(answers: list[str]):
+        return runner.invoke(
+            crewai,
+            ["create", "crew", "my_crew", "--classic"],
+            input="".join(f"{answer}\n" for answer in answers),
+        )
+
+    return run
+
+
+def _catalog_unreachable(*_args, **_kwargs):
+    raise httpx.ConnectError("[Errno 8] nodename nor servname provided")
+
+
+@pytest.mark.parametrize("provider", list(MODELS))
+def test_classic_create_offers_curated_models_when_the_catalog_is_unreachable(
+    provider, classic_create, tmp_path, monkeypatch
+):
+    monkeypatch.setattr("crewai_cli.provider.httpx.stream", _catalog_unreachable)
+
+    result = classic_create([str(PROVIDERS.index(provider) + 1), "1", "", "", ""])
+
+    assert result.exit_code == 0, result.output
+    assert "Error fetching provider data: [Errno 8]" in result.output
+    for number, model in enumerate(MODELS[provider], start=1):
+        assert f"{number}. {model}\n" in result.output
+    assert "Crew my_crew created successfully!" in result.output
+    project = tmp_path / "my_crew"
+    assert f"MODEL={MODELS[provider][0]}" in (project / ".env").read_text()
+    assert (project / "src" / "my_crew" / "crew.py").is_file()
+
+
+def test_classic_create_other_lists_catalog_providers_when_the_catalog_loads(
+    classic_create, tmp_path, monkeypatch
+):
+    cache = tmp_path / ".crewai" / "provider_cache.json"
+    cache.parent.mkdir()
+    cache.write_text(json.dumps({"xai/grok-5": {"litellm_provider": "xai"}}))
+    monkeypatch.setattr(
+        "crewai_cli.provider.httpx.stream",
+        lambda *_a, **_k: pytest.fail("a fresh cache must not be refetched"),
+    )
+    xai_number = sorted({*PROVIDERS, "xai"}).index("xai") + 1
+
+    result = classic_create([str(len(PROVIDERS) + 1), str(xai_number)])
+
+    assert result.exit_code == 0, result.output
+    _, full_list = result.output.split("Select a provider from the full list:\n")
+    assert f"{xai_number}. xai\n" in full_list
+    assert "Crew my_crew created successfully!" in result.output
 
 
 def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
