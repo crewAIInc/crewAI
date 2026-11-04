@@ -14,6 +14,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 import concurrent.futures
 import contextvars
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -40,6 +41,9 @@ if TYPE_CHECKING:
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 MESSAGE_SPLIT_BUDGET_RATIO: Final[float] = 0.75
+
+logger = logging.getLogger(__name__)
+_fallback_warned_models: set[str] = set()
 
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
 _AZURE_PROVIDERS: Final[frozenset[str]] = frozenset({"azure", "azure_ai"})
