@@ -1,12 +1,15 @@
 """Factory functions for creating Qdrant clients from configuration."""
 
+import atexit
 from collections.abc import Callable
 import functools
 import json
 import os
+import shutil
 import threading
 from typing import Any
 
+from crewai_core.paths import db_storage_path
 from qdrant_client import QdrantClient as SyncQdrantClientBase
 
 from crewai.rag.qdrant.client import QdrantClient
@@ -56,14 +59,24 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
 
     The path is normalized (``~`` expanded, symlinks and relative parts resolved)
     so different spellings of the same folder share one client.
+
+    Local Qdrant allows one process per folder, so the default folder gets the
+    process ID added and is removed when the process exits. Several processes
+    (workers, replicas, scripts) then never collide, at the cost of embedding
+    documents again in each process. A folder chosen with ``path`` is used as
+    given and stays one process per folder.
     """
     path = config.options.get("path")
     if path is None:
         return SyncQdrantClientBase(**config.options)
 
     normalized = os.path.realpath(os.path.expanduser(os.fspath(path)))
+    is_default = normalized == os.path.realpath(
+        os.path.join(db_storage_path(), "qdrant")
+    )
     with _local_clients_lock:
         if normalized not in _local_clients:
+            folder = f"{normalized}-pid{os.getpid()}" if is_default else normalized
             try:
                 # Every call runs under the client's lock, so using the SQLite
                 # connection from other threads is safe. Without this flag,
@@ -71,7 +84,7 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
                 _local_clients[normalized] = _LockedQdrantClient(
                     **{
                         **config.options,
-                        "path": normalized,
+                        "path": folder,
                         "force_disable_check_same_thread": True,
                     }
                 )
@@ -79,17 +92,17 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
                 if "already accessed by another instance" not in str(e):
                     raise
                 raise RuntimeError(
-                    f"Local Qdrant storage at '{normalized}' is already in use by "
+                    f"Local Qdrant storage at '{folder}' is already in use by "
                     "another process. Local Qdrant allows one process per storage "
-                    "folder (this can happen with multiple workers or replicas, or "
-                    "when another script, notebook or server is running in the same "
-                    "project). Use a Qdrant server instead, for example "
-                    "QdrantConfig(options={'url': 'http://localhost:6333'}), or keep "
-                    "ChromaDB with set_rag_config(ChromaDBConfig())."
+                    "folder (this can happen when another script, notebook or "
+                    "server uses the same path). Use a different path for each "
+                    "process, a Qdrant server, for example "
+                    "QdrantConfig(options={'url': 'http://localhost:6333'}), or "
+                    "keep ChromaDB with set_rag_config(ChromaDBConfig())."
                 ) from e
             except json.JSONDecodeError as e:
                 raise RuntimeError(
-                    f"Could not read the local Qdrant storage at '{normalized}'. "
+                    f"Could not read the local Qdrant storage at '{folder}'. "
                     "This happens when another process is creating the same folder "
                     "at the same time (local Qdrant allows one process per storage "
                     "folder), or when its meta.json is corrupted. Use a Qdrant "
@@ -97,6 +110,8 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
                     "QdrantConfig(options={'url': 'http://localhost:6333'}), or keep "
                     "ChromaDB with set_rag_config(ChromaDBConfig())."
                 ) from e
+            if is_default:
+                atexit.register(shutil.rmtree, folder, ignore_errors=True)
         return _local_clients[normalized]
 
 
