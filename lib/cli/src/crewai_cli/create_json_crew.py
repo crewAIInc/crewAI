@@ -1021,11 +1021,13 @@ def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
                     if key not in ["prompt", "key_name", "default"]:
                         env_vars[key] = value
             elif "key_name" in details:
+                # Hidden input goes through getpass, which reads the terminal
+                # and not piped stdin, so hide it only at a terminal.
                 api_key_value = click.prompt(
                     click.style(f"  {details['prompt']}", fg="cyan"),
                     default="",
                     show_default=False,
-                    hide_input=True,
+                    hide_input=details.get("secret", True) and sys.stdin.isatty(),
                     prompt_suffix=click.style(" > ", fg="bright_white"),
                 )
                 if api_key_value.strip():

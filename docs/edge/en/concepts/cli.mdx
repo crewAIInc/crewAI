@@ -415,16 +415,20 @@ Notes:
 
 When running the `crewai create crew` command, the CLI shows a list of available LLM providers, followed by model selection for your chosen provider. The selected model is saved in the generated `.env` file and each generated agent JSONC file can set its own `llm`.
 
-Once you've selected an LLM provider and model, you will be prompted for API keys. Input is hidden, and you can press Enter to skip a key. A skipped key is not saved, and the CLI prints the exact line to add to `.env` before `crewai run`:
+Once you've selected an LLM provider and model, you will be prompted for API keys. At a terminal, what you type for a key or secret is hidden; other values, such as an endpoint URL, a region, or an Azure deployment name, stay visible. Press Enter to skip a prompt.
+
+A skipped key is not saved. Unless the key is already set in your environment, the CLI prints the exact line to add to `.env` before `crewai run`:
 
 ```text
   API key not saved. Add this line to my_new_crew/.env before `crewai run`:
     OPENAI_API_KEY=<your key>
 ```
 
+Values that have a default, such as the AWS region and the Azure API version, are not listed.
+
 If your agents use models from more than one provider, the CLI asks once for each provider's keys, and the first agent's model is saved as `MODEL`.
 
-With `--skip-provider`, or with `CREWAI_DMN=true`, the CLI asks for no keys and writes none. In the default JSON crew, agents use `openai/gpt-5.6-luna` unless you pass `--provider`, and the next steps name the variable to set:
+With `--skip-provider`, or with `CREWAI_DMN=true`, the CLI asks for no keys and writes none. In the default JSON crew, agents use `openai/gpt-5.6-luna` unless you pass `--provider`, and the next steps name each variable that is not already set in your environment:
 
 ```text
   Set OPENAI_API_KEY in .env before `crewai run`

@@ -1,6 +1,7 @@
 import ast
 import asyncio
 import builtins
+import io
 import keyword
 import itertools
 import os
@@ -1552,6 +1553,44 @@ def _record_key_prompts(monkeypatch, answers: list[str]) -> list[dict[str, objec
     return calls
 
 
+class _Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+@pytest.fixture
+def terminal_stdin(monkeypatch):
+    """Prompt as a person at a terminal would be prompted."""
+    monkeypatch.setattr("sys.stdin", _Terminal())
+
+
+def _pipe_to_stdin(monkeypatch, text: str) -> None:
+    """Pipe ``text`` to the real ``click.prompt``; a hidden prompt fails the test,
+    because outside pytest it reads the terminal and never sees the pipe."""
+    monkeypatch.setattr("sys.stdin", io.StringIO(text))
+    monkeypatch.setattr(
+        click.termui,
+        "hidden_prompt_func",
+        lambda _prompt: pytest.fail("a hidden prompt does not read piped stdin"),
+    )
+
+
+def _wizard_result(*agents: dict[str, object]):
+    return (
+        list(agents),
+        [
+            {
+                "name": "research_task",
+                "description": "Research",
+                "expected_output": "Findings",
+                "agent": agents[0]["name"],
+                "context": [],
+            }
+        ],
+        {"process": "sequential", "memory": False, "inputs": {}},
+    )
+
+
 def test_json_wizard_agent_falls_back_to_current_small_model_when_provider_is_skipped(
     monkeypatch,
 ):
@@ -1579,7 +1618,7 @@ def test_json_model_picker_falls_back_to_current_small_model_on_escape(monkeypat
     ],
 )
 def test_json_create_dmn_mode_next_steps_name_the_key_the_model_needs(
-    tmp_path, monkeypatch, capsys, provider, model, key_name
+    tmp_path, monkeypatch, capsys, no_provider_keys, provider, model, key_name
 ):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CREWAI_DMN", "True")
@@ -1596,7 +1635,7 @@ def test_json_create_dmn_mode_next_steps_name_the_key_the_model_needs(
 
 
 def test_json_create_dmn_mode_next_steps_name_each_key_of_a_multi_key_provider(
-    tmp_path, monkeypatch, capsys
+    tmp_path, monkeypatch, capsys, no_provider_keys
 ):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CREWAI_DMN", "True")
@@ -1605,10 +1644,11 @@ def test_json_create_dmn_mode_next_steps_name_each_key_of_a_multi_key_provider(
         "DMN Crew", provider="bedrock/anthropic.claude-sonnet-5", skip_provider=True
     )
 
+    output = capsys.readouterr().out
     assert (
-        "  Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION "
-        "in .env before `crewai run`\n"
-    ) in capsys.readouterr().out
+        "  Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY in .env before `crewai run`\n"
+    ) in output
+    assert "AWS_DEFAULT_REGION" not in output
 
 
 def test_json_create_dmn_mode_with_ollama_names_no_key(tmp_path, monkeypatch, capsys):
@@ -1622,8 +1662,47 @@ def test_json_create_dmn_mode_with_ollama_names_no_key(tmp_path, monkeypatch, ca
     assert "in .env before `crewai run`" not in output
 
 
+def test_json_create_dmn_mode_next_steps_skip_a_key_already_exported(
+    tmp_path, monkeypatch, capsys, no_provider_keys
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-shell")
+
+    json_crew.create_json_crew("DMN Crew", skip_provider=True)
+
+    output = capsys.readouterr().out
+    assert "Run your crew:" in output
+    assert "OPENAI_API_KEY" not in output
+    assert not (tmp_path / "dmn_crew" / ".env").exists()
+
+
+def test_json_create_skip_provider_names_the_key_in_next_steps_without_dmn(
+    tmp_path, monkeypatch, capsys, no_provider_keys
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: _wizard_result(_agent("researcher", FALLBACK_LLM)),
+    )
+    monkeypatch.setattr(
+        json_crew.click,
+        "prompt",
+        lambda *_args, **_kwargs: pytest.fail("--skip-provider asks for no key"),
+    )
+
+    json_crew.create_json_crew("Skip Crew", skip_provider=True)
+
+    output = capsys.readouterr().out
+    assert "  Set OPENAI_API_KEY in .env before `crewai run`\n" in output
+    assert output.index("cd skip_crew") < output.index("Set OPENAI_API_KEY")
+    assert not (tmp_path / "skip_crew" / ".env").exists()
+
+
 def test_json_setup_env_blank_key_prints_the_line_to_add_and_claims_no_save(
-    tmp_path, monkeypatch, capsys
+    tmp_path, monkeypatch, capsys, no_provider_keys, terminal_stdin
 ):
     calls = _record_key_prompts(monkeypatch, [""])
 
@@ -1642,7 +1721,7 @@ def test_json_setup_env_blank_key_prints_the_line_to_add_and_claims_no_save(
 
 
 def test_json_setup_env_saved_key_keeps_the_success_message(
-    tmp_path, monkeypatch, capsys
+    tmp_path, monkeypatch, capsys, terminal_stdin
 ):
     calls = _record_key_prompts(monkeypatch, ["sk-test"])
 
@@ -1656,26 +1735,27 @@ def test_json_setup_env_saved_key_keeps_the_success_message(
 
 
 def test_json_setup_env_lists_each_missing_key_of_a_multi_key_provider(
-    tmp_path, monkeypatch, capsys
+    tmp_path, monkeypatch, capsys, no_provider_keys
 ):
-    _record_key_prompts(monkeypatch, ["AKIATEST", "", ""])
+    _record_key_prompts(monkeypatch, ["https://us-south.ml.cloud.ibm.com", "", ""])
 
-    json_crew._setup_env(tmp_path, ["bedrock/anthropic.claude-sonnet-5"])
+    json_crew._setup_env(tmp_path, ["watson/ibm/granite-3-8b-instruct"])
 
     output = capsys.readouterr().out
     assert (
         f"  API keys not saved. Add these lines to {tmp_path / '.env'} "
         "before `crewai run`:\n"
-        "    AWS_SECRET_ACCESS_KEY=<your key>\n"
-        "    AWS_DEFAULT_REGION=<your key>\n"
+        "    WATSONX_APIKEY=<your key>\n"
+        "    WATSONX_PROJECT_ID=<your key>\n"
     ) in output
-    assert "AWS_ACCESS_KEY_ID=<your key>" not in output
+    assert "WATSONX_URL=<your key>" not in output
     assert "saved to .env file" not in output
-    assert "AWS_ACCESS_KEY_ID=AKIATEST" in (tmp_path / ".env").read_text()
+    env_file = (tmp_path / ".env").read_text()
+    assert "WATSONX_URL=https://us-south.ml.cloud.ibm.com" in env_file
 
 
-def test_json_setup_env_does_not_list_azure_deployment_name_as_a_key(
-    tmp_path, monkeypatch, capsys
+def test_json_setup_env_lists_neither_azure_deployment_name_nor_api_version(
+    tmp_path, monkeypatch, capsys, no_provider_keys
 ):
     _record_key_prompts(monkeypatch, ["", "", "", ""])
 
@@ -1683,12 +1763,99 @@ def test_json_setup_env_does_not_list_azure_deployment_name_as_a_key(
 
     output = capsys.readouterr().out
     assert (
-        "    AZURE_API_KEY=<your key>\n"
-        "    AZURE_API_BASE=<your key>\n"
-        "    AZURE_API_VERSION=<your key>\n"
+        "    AZURE_API_KEY=<your key>\n    AZURE_API_BASE=<your key>\n"
     ) in output
+    assert "AZURE_API_VERSION" not in output
     assert "MODEL=<your key>" not in output
     assert "MODEL=azure/my-deployment" in (tmp_path / ".env").read_text()
+
+
+def test_json_setup_env_blank_region_still_reports_the_keys_saved(
+    tmp_path, monkeypatch, capsys, no_provider_keys
+):
+    _record_key_prompts(monkeypatch, ["AKIATEST", "aws-secret", ""])
+
+    json_crew._setup_env(tmp_path, ["bedrock/anthropic.claude-sonnet-5"])
+
+    output = capsys.readouterr().out
+    assert "  API keys and model saved to .env file" in output
+    assert "not saved" not in output
+    assert "AWS_DEFAULT_REGION" not in output
+    env_file = (tmp_path / ".env").read_text()
+    assert "AWS_SECRET_ACCESS_KEY=aws-secret" in env_file
+    assert "AWS_DEFAULT_REGION" not in env_file
+
+
+def test_json_setup_env_blank_key_already_exported_prints_no_line_to_add(
+    tmp_path, monkeypatch, capsys, no_provider_keys
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-shell")
+    _record_key_prompts(monkeypatch, [""])
+
+    json_crew._setup_env(tmp_path, [FALLBACK_LLM])
+
+    output = capsys.readouterr().out
+    assert "<your key>" not in output
+    assert "not saved" not in output
+    assert "OPENAI_API_KEY" not in (tmp_path / ".env").read_text()
+
+
+@pytest.mark.parametrize(
+    ("model", "prompts"),
+    [
+        (
+            "azure/my-deployment",
+            [
+                ("Enter your Azure deployment name (must start with 'azure/')", False),
+                ("Enter your AZURE API key (press Enter to skip)", True),
+                ("Enter your AZURE API base URL (press Enter to skip)", False),
+                ("Enter your AZURE API version (press Enter to skip)", False),
+            ],
+        ),
+        (
+            "bedrock/anthropic.claude-sonnet-5",
+            [
+                ("Enter your AWS Access Key ID (press Enter to skip)", True),
+                ("Enter your AWS Secret Access Key (press Enter to skip)", True),
+                ("Enter your AWS Region Name (press Enter to skip)", False),
+            ],
+        ),
+        (
+            "watson/ibm/granite-3-8b-instruct",
+            [
+                ("Enter your WATSONX URL (press Enter to skip)", False),
+                ("Enter your WATSONX API Key (press Enter to skip)", True),
+                ("Enter your WATSONX Project Id (press Enter to skip)", False),
+            ],
+        ),
+        (
+            "cerebras/llama3.1-8b",
+            [
+                ("Enter your Cerebras model name (must start with 'cerebras/')", False),
+                ("Enter your Cerebras API version (press Enter to skip)", True),
+            ],
+        ),
+    ],
+)
+def test_json_setup_env_hides_only_secrets_at_a_terminal(
+    tmp_path, monkeypatch, terminal_stdin, model, prompts
+):
+    calls = _record_key_prompts(monkeypatch, [""] * len(prompts))
+
+    json_crew._setup_env(tmp_path, [model])
+
+    assert [(str(call["text"]).strip(), call["hide_input"]) for call in calls] == (
+        prompts
+    )
+
+
+def test_json_setup_env_reads_a_piped_key_from_stdin(tmp_path, monkeypatch, capsys):
+    _pipe_to_stdin(monkeypatch, "sk-piped\n")
+
+    json_crew._setup_env(tmp_path, [FALLBACK_LLM])
+
+    assert "OPENAI_API_KEY=sk-piped" in (tmp_path / ".env").read_text()
+    assert "  API keys and model saved to .env file" in capsys.readouterr().out
 
 
 def test_json_setup_env_ollama_needs_no_key_and_prints_nothing_extra(
@@ -1717,22 +1884,10 @@ def test_json_create_prompts_once_per_provider_and_first_agent_sets_model(
     monkeypatch.setattr(
         json_crew,
         "_wizard_agents_and_tasks",
-        lambda **_: (
-            [
-                _agent("researcher", FALLBACK_LLM),
-                _agent("writer", "anthropic/claude-sonnet-5"),
-                _agent("editor", "openai/gpt-5.5"),
-            ],
-            [
-                {
-                    "name": "research_task",
-                    "description": "Research",
-                    "expected_output": "Findings",
-                    "agent": "researcher",
-                    "context": [],
-                }
-            ],
-            {"process": "sequential", "memory": False, "inputs": {}},
+        lambda **_: _wizard_result(
+            _agent("researcher", FALLBACK_LLM),
+            _agent("writer", "anthropic/claude-sonnet-5"),
+            _agent("editor", "openai/gpt-5.5"),
         ),
     )
     calls = _record_key_prompts(monkeypatch, ["sk-openai", "sk-anthropic"])
@@ -1769,6 +1924,8 @@ def test_classic_create_blank_key_prints_the_line_to_add_and_claims_no_save(
     mock_create_folder_structure,
     tmp_path,
     capsys,
+    no_provider_keys,
+    terminal_stdin,
 ):
     crew_path = tmp_path / "test_crew"
     crew_path.mkdir()
@@ -1807,6 +1964,7 @@ def test_classic_create_saved_key_keeps_the_success_message(
     mock_create_folder_structure,
     tmp_path,
     capsys,
+    terminal_stdin,
 ):
     crew_path = tmp_path / "test_crew"
     crew_path.mkdir()
@@ -1823,6 +1981,108 @@ def test_classic_create_saved_key_keeps_the_success_message(
     assert "not saved" not in output
     assert "ANTHROPIC_API_KEY=sk-ant-test" in (crew_path / ".env").read_text()
     assert mock_prompt.call_args.kwargs["hide_input"] is True
+
+
+@mock.patch("crewai_cli.create_crew.create_folder_structure")
+@mock.patch("crewai_cli.create_crew.copy_template")
+@mock.patch("crewai_cli.create_crew.get_provider_data")
+@mock.patch("crewai_cli.create_crew.select_provider")
+@mock.patch("crewai_cli.create_crew.select_model")
+@mock.patch("click.prompt")
+def test_classic_create_blank_region_still_reports_the_keys_saved(
+    mock_prompt,
+    mock_select_model,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+    capsys,
+    no_provider_keys,
+    terminal_stdin,
+):
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+    mock_get_provider_data.return_value = {"bedrock": ["bedrock/amazon.nova-pro"]}
+    mock_select_provider.return_value = "bedrock"
+    mock_select_model.return_value = "bedrock/amazon.nova-pro"
+    mock_prompt.side_effect = ["AKIATEST", "aws-secret", ""]
+
+    create_crew("Test Crew")
+
+    output = capsys.readouterr().out
+    assert "API keys and model saved to .env file" in output
+    assert "AWS_DEFAULT_REGION" not in output
+    assert [call.kwargs["hide_input"] for call in mock_prompt.call_args_list] == [
+        True,
+        True,
+        False,
+    ]
+
+
+@mock.patch("crewai_cli.create_crew.create_folder_structure")
+@mock.patch("crewai_cli.create_crew.copy_template")
+@mock.patch("crewai_cli.create_crew.get_provider_data")
+@mock.patch("crewai_cli.create_crew.select_provider")
+@mock.patch("crewai_cli.create_crew.select_model")
+@mock.patch("click.prompt")
+def test_classic_create_blank_key_already_exported_prints_no_line_to_add(
+    mock_prompt,
+    mock_select_model,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+    monkeypatch,
+    capsys,
+    no_provider_keys,
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-shell")
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+    mock_get_provider_data.return_value = {"openai": ["gpt-5.6-luna"]}
+    mock_select_provider.return_value = "openai"
+    mock_select_model.return_value = "gpt-5.6-luna"
+    mock_prompt.return_value = ""
+
+    create_crew("Test Crew")
+
+    output = capsys.readouterr().out
+    assert "<your key>" not in output
+    assert "not saved" not in output
+    assert "OPENAI_API_KEY" not in (crew_path / ".env").read_text()
+
+
+@mock.patch("crewai_cli.create_crew.create_folder_structure")
+@mock.patch("crewai_cli.create_crew.copy_template")
+@mock.patch("crewai_cli.create_crew.get_provider_data")
+@mock.patch("crewai_cli.create_crew.select_provider")
+@mock.patch("crewai_cli.create_crew.select_model")
+def test_classic_create_reads_a_piped_key_from_stdin(
+    mock_select_model,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    _pipe_to_stdin(monkeypatch, "sk-piped\n")
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+    mock_get_provider_data.return_value = {"openai": ["gpt-5.6-luna"]}
+    mock_select_provider.return_value = "openai"
+    mock_select_model.return_value = "gpt-5.6-luna"
+
+    create_crew("Test Crew")
+
+    assert "OPENAI_API_KEY=sk-piped" in (crew_path / ".env").read_text()
+    assert "API keys and model saved to .env file" in capsys.readouterr().out
 
 
 def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):

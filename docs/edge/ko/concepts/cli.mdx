@@ -343,16 +343,20 @@ CLI를 사용하여 [CrewAI AMP](https://app.crewai.com)에 crew를 배포하는
 
 `crewai create crew` 명령어를 실행하면, CLI에서 선택할 수 있는 LLM 제공업체 목록이 표시되고, 그 다음으로 선택한 제공업체에 대한 모델 선택이 이어집니다. 선택한 모델은 생성된 `.env`에 저장되며 각 에이전트 JSONC 파일은 자체 `llm`을 설정할 수 있습니다.
 
-LLM 제공업체와 모델을 선택하면, API 키를 입력하라는 메시지가 표시됩니다. 입력 내용은 화면에 표시되지 않으며, Enter를 눌러 키를 건너뛸 수 있습니다. 건너뛴 키는 저장되지 않으며, CLI는 `crewai run` 전에 `.env`에 추가할 정확한 줄을 출력합니다:
+LLM 제공업체와 모델을 선택하면, API 키를 입력하라는 메시지가 표시됩니다. 터미널에서는 키나 시크릿으로 입력하는 내용이 화면에 표시되지 않으며, 엔드포인트 URL, 리전, Azure 배포 이름 같은 다른 값은 그대로 표시됩니다. Enter를 눌러 항목을 건너뛸 수 있습니다.
+
+건너뛴 키는 저장되지 않습니다. 해당 키가 환경에 이미 설정되어 있지 않으면, CLI는 `crewai run` 전에 `.env`에 추가할 정확한 줄을 출력합니다:
 
 ```text
   API key not saved. Add this line to my_new_crew/.env before `crewai run`:
     OPENAI_API_KEY=<your key>
 ```
 
+AWS 리전과 Azure API 버전처럼 기본값이 있는 값은 목록에 표시되지 않습니다.
+
 에이전트들이 여러 제공업체의 모델을 사용하는 경우, CLI는 제공업체마다 한 번씩만 키를 묻고, 첫 번째 에이전트의 모델을 `MODEL`로 저장합니다.
 
-`--skip-provider`를 사용하거나 `CREWAI_DMN=true`로 실행하면, CLI는 키를 묻지도 저장하지도 않습니다. 기본 JSON 크루에서는 `--provider`를 지정하지 않으면 에이전트가 `openai/gpt-5.6-luna`를 사용하며, 다음 단계 안내에 설정해야 할 변수가 표시됩니다:
+`--skip-provider`를 사용하거나 `CREWAI_DMN=true`로 실행하면, CLI는 키를 묻지도 저장하지도 않습니다. 기본 JSON 크루에서는 `--provider`를 지정하지 않으면 에이전트가 `openai/gpt-5.6-luna`를 사용하며, 다음 단계 안내에 환경에 아직 설정되지 않은 변수가 각각 표시됩니다:
 
 ```text
   Set OPENAI_API_KEY in .env before `crewai run`

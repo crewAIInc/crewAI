@@ -7,6 +7,9 @@ CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE = "client_01JNJQWBJ4SPFN3SWJM5T7BDG8"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID = "client_01JYT06R59SP0NXYGD994NFXXX"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN = "login.crewai.com"
 
+# `crewai create` hides what is typed at a prompt unless its entry sets
+# "secret": False. An entry with "optional": True has a runtime default, so
+# leaving it blank is not reported as a missing key.
 ENV_VARS: dict[str, list[dict[str, Any]]] = {
     "openai": [
         {
@@ -42,6 +45,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
         {
             "prompt": "Enter your WATSONX URL (press Enter to skip)",
             "key_name": "WATSONX_URL",
+            "secret": False,
         },
         {
             "prompt": "Enter your WATSONX API Key (press Enter to skip)",
@@ -50,6 +54,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
         {
             "prompt": "Enter your WATSONX Project Id (press Enter to skip)",
             "key_name": "WATSONX_PROJECT_ID",
+            "secret": False,
         },
     ],
     "ollama": [
@@ -70,12 +75,15 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
         {
             "prompt": "Enter your AWS Region Name (press Enter to skip)",
             "key_name": "AWS_DEFAULT_REGION",
+            "secret": False,
+            "optional": True,  # BedrockCompletion falls back to us-east-1.
         },
     ],
     "azure": [
         {
             "prompt": "Enter your Azure deployment name (must start with 'azure/')",
             "key_name": "model",
+            "secret": False,
         },
         {
             "prompt": "Enter your AZURE API key (press Enter to skip)",
@@ -84,16 +92,20 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
         {
             "prompt": "Enter your AZURE API base URL (press Enter to skip)",
             "key_name": "AZURE_API_BASE",
+            "secret": False,
         },
         {
             "prompt": "Enter your AZURE API version (press Enter to skip)",
             "key_name": "AZURE_API_VERSION",
+            "secret": False,
+            "optional": True,  # AzureCompletion falls back to 2024-06-01.
         },
     ],
     "cerebras": [
         {
             "prompt": "Enter your Cerebras model name (must start with 'cerebras/')",
             "key_name": "model",
+            "secret": False,
         },
         {
             "prompt": "Enter your Cerebras API version (press Enter to skip)",

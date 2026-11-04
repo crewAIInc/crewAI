@@ -271,16 +271,21 @@ def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
 
 
 def missing_provider_keys(provider: str, env_vars: Mapping[str, object]) -> list[str]:
-    """Return the credential names ``provider`` needs that have no value in ``env_vars``."""
+    """Return the names ``provider`` needs that neither ``env_vars`` nor the
+    environment sets. Entries with a runtime default are not needed."""
     saved = {key.upper() for key, value in env_vars.items() if value}
     names = [
         str(details["key_name"]).upper()
         for details in ENV_VARS.get(provider, [])
-        if "key_name" in details
+        if "key_name" in details and not details.get("optional", False)
     ]
     # azure and cerebras also prompt for the model under key_name "model"; that
     # fills MODEL, which is not a credential.
-    return [name for name in names if name != "MODEL" and name not in saved]
+    return [
+        name
+        for name in names
+        if name != "MODEL" and name not in saved and not os.environ.get(name)
+    ]
 
 
 def echo_missing_keys(folder_path: Path, key_names: list[str]) -> None:

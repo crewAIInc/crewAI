@@ -273,8 +273,13 @@ def create_crew(
                 elif "key_name" in details:
                     prompt = details["prompt"]
                     key_name = details["key_name"]
+                    # Hidden input goes through getpass, which reads the
+                    # terminal and not piped stdin, so hide it only at a terminal.
                     api_key_value = click.prompt(
-                        prompt, default="", show_default=False, hide_input=True
+                        prompt,
+                        default="",
+                        show_default=False,
+                        hide_input=details.get("secret", True) and sys.stdin.isatty(),
                     )
 
                     if api_key_value.strip():

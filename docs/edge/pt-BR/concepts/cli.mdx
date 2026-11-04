@@ -364,16 +364,20 @@ Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantaçã
 
 Ao executar o comando `crewai create crew`, o CLI mostrará provedores de LLM disponíveis e depois a seleção de modelo para o provedor escolhido. O modelo selecionado é salvo no `.env` gerado, e cada agente JSONC pode definir seu próprio `llm`.
 
-Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API. O que você digita fica oculto, e você pode pressionar Enter para pular uma chave. Uma chave pulada não é salva, e o CLI mostra a linha exata a adicionar ao `.env` antes de `crewai run`:
+Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API. Em um terminal, o que você digita para uma chave ou um segredo fica oculto; outros valores, como uma URL de endpoint, uma região ou o nome de um deployment do Azure, continuam visíveis. Pressione Enter para pular um campo.
+
+Uma chave pulada não é salva. A menos que a chave já esteja definida no seu ambiente, o CLI mostra a linha exata a adicionar ao `.env` antes de `crewai run`:
 
 ```text
   API key not saved. Add this line to my_new_crew/.env before `crewai run`:
     OPENAI_API_KEY=<your key>
 ```
 
+Valores que têm um padrão, como a região da AWS e a versão da API do Azure, não são listados.
+
 Se seus agentes usam modelos de mais de um provedor, o CLI pede as chaves uma vez por provedor, e o modelo do primeiro agente é salvo como `MODEL`.
 
-Com `--skip-provider`, ou com `CREWAI_DMN=true`, o CLI não pede nem salva nenhuma chave. Na crew JSON padrão, os agentes usam `openai/gpt-5.6-luna`, a menos que você passe `--provider`, e os próximos passos indicam a variável a definir:
+Com `--skip-provider`, ou com `CREWAI_DMN=true`, o CLI não pede nem salva nenhuma chave. Na crew JSON padrão, os agentes usam `openai/gpt-5.6-luna`, a menos que você passe `--provider`, e os próximos passos indicam cada variável que ainda não está definida no seu ambiente:
 
 ```text
   Set OPENAI_API_KEY in .env before `crewai run`
