@@ -1,0 +1,140 @@
+---
+title: "نظرة عامة على الأدوات"
+description: "اكتشف مكتبة CrewAI الواسعة التي تضم أكثر من 40 أداة لتعزيز قدرات وكلاء الذكاء الاصطناعي"
+icon: "toolbox"
+mode: "wide"
+---
+
+توفر CrewAI مكتبة واسعة من الأدوات الجاهزة لتعزيز قدرات وكلائك. من معالجة الملفات إلى استخراج بيانات الويب، ومن استعلامات قواعد البيانات إلى خدمات الذكاء الاصطناعي - لدينا ما تحتاجه.
+
+## **فئات الأدوات**
+
+<CardGroup cols={2}>
+  <Card
+    title="الملفات والمستندات"
+    icon="folder-open"
+    href="/ar/tools/file-document/overview"
+    color="#3B82F6"
+  >
+    قراءة وكتابة والبحث في صيغ ملفات متنوعة بما في ذلك PDF و DOCX و JSON و CSV والمزيد. مثالية لسير عمل معالجة المستندات.
+  </Card>
+
+  <Card
+    title="استخراج بيانات الويب والتصفح"
+    icon="globe"
+    href="/ar/tools/web-scraping/overview"
+    color="#10B981"
+  >
+    استخراج البيانات من المواقع، أتمتة تفاعلات المتصفح، واستخراج المحتوى على نطاق واسع باستخدام أدوات مثل Firecrawl و Selenium والمزيد.
+  </Card>
+
+  <Card
+    title="البحث والاستكشاف"
+    icon="magnifying-glass"
+    href="/ar/tools/search-research/overview"
+    color="#F59E0B"
+  >
+    إجراء عمليات بحث على الويب، العثور على مستودعات الكود، استكشاف محتوى YouTube، واكتشاف المعلومات عبر الإنترنت.
+  </Card>
+
+  <Card
+    title="قواعد البيانات والبيانات"
+    icon="database"
+    href="/ar/tools/database-data/overview"
+    color="#8B5CF6"
+  >
+    الاتصال بقواعد بيانات SQL ومخازن المتجهات ومستودعات البيانات. الاستعلام عن MySQL و PostgreSQL و Snowflake و Qdrant و Weaviate.
+  </Card>
+
+  <Card
+    title="الذكاء الاصطناعي والتعلم الآلي"
+    icon="brain"
+    href="/ar/tools/ai-ml/overview"
+    color="#EF4444"
+  >
+    توليد الصور باستخدام DALL-E، معالجة مهام الرؤية، التكامل مع LangChain، بناء أنظمة RAG، والاستفادة من مفسرات الكود.
+  </Card>
+
+  <Card
+    title="السحابة والتخزين"
+    icon="cloud"
+    href="/ar/tools/cloud-storage/overview"
+    color="#06B6D4"
+  >
+    التفاعل مع الخدمات السحابية بما في ذلك AWS S3 و Amazon Bedrock وخدمات التخزين السحابي والذكاء الاصطناعي الأخرى.
+  </Card>
+
+  <Card
+    title="الأتمتة"
+    icon="bolt"
+    href="/ar/tools/automation/overview"
+    color="#84CC16"
+  >
+    أتمتة سير العمل مع Apify و Composio ومنصات أخرى لربط وكلائك بالخدمات الخارجية.
+  </Card>
+
+  <Card
+    title="التكاملات"
+    icon="plug"
+    href="/ar/tools/tool-integrations/overview"
+    color="#0891B2"
+  >
+    دمج CrewAI مع الأنظمة الخارجية مثل Amazon Bedrock ومجموعة أدوات أتمتة CrewAI.
+  </Card>
+</CardGroup>
+
+## **الوصول السريع**
+
+هل تحتاج إلى أداة محددة؟ إليك بعض الخيارات الشائعة:
+
+<CardGroup cols={3}>
+  <Card title="أداة RAG" icon="image" href="/ar/tools/ai-ml/ragtool">
+    تنفيذ الاسترجاع المعزز بالتوليد
+  </Card>
+  <Card title="Serper Dev" icon="book-atlas" href="/ar/tools/search-research/serperdevtool">
+    واجهة برمجة تطبيقات بحث Google
+  </Card>
+  <Card title="قراءة الملفات" icon="file" href="/ar/tools/file-document/filereadtool">
+    قراءة أي نوع ملف
+  </Card>
+  <Card title="استخراج الموقع" icon="globe" href="/ar/tools/web-scraping/scrapewebsitetool">
+    استخراج محتوى الويب
+  </Card>
+  <Card title="مفسر الكود" icon="code" href="/ar/tools/ai-ml/codeinterpretertool">
+    تنفيذ كود Python
+  </Card>
+  <Card title="قارئ S3" icon="cloud" href="/ar/tools/cloud-storage/s3readertool">
+    الوصول إلى ملفات AWS S3
+  </Card>
+</CardGroup>
+
+## **البدء**
+
+لاستخدام أي أداة في مشروع CrewAI الخاص بك:
+
+1. **استيراد** الأداة في تكوين طاقمك
+2. **إضافتها** إلى قائمة أدوات وكيلك
+3. **تكوين** أي مفاتيح API أو إعدادات مطلوبة
+
+```python
+from crewai_tools import FileReadTool, SerperDevTool
+
+# Add tools to your agent
+agent = Agent(
+    role="Research Analyst",
+    tools=[FileReadTool(), SerperDevTool()],
+    # ... other configuration
+)
+```
+
+## **الحد الأقصى لعدد الاستخدامات**
+
+يمكنك تعيين حد أقصى لعدد استخدامات الأداة لمنع استخدامها أكثر من عدد معين من المرات. بشكل افتراضي، الحد الأقصى لعدد الاستخدامات غير محدود.
+
+```python
+from crewai_tools import FileReadTool
+
+tool = FileReadTool(max_usage_count=5, ...)
+```
+
+هل أنت مستعد للاستكشاف؟ اختر فئة أعلاه لاكتشاف الأدوات التي تناسب حالة استخدامك!

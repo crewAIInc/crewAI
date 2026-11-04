@@ -51,17 +51,22 @@ mode: "wide"
 - **실시간 분석**: 의사 결정에 필요한 실시간 데이터 접근
 
 ```python
-from crewai_tools import MySQLTool, QdrantVectorSearchTool, NL2SQLTool
+from crewai_tools import MySQLTool, MongoDBVectorSearchTool, QdrantVectorSearchTool, NL2SQLTool
 
 # Create database tools
 mysql_db = MySQLTool()
-vector_search = QdrantVectorSearchTool()
+mongodb_vector_search = MongoDBVectorSearchTool(
+    connection_string="<MONGODB_URI>",
+    database_name="<database>",
+    collection_name="<collection>",
+)
+qdrant_vector_search = QdrantVectorSearchTool()
 nl_to_sql = NL2SQLTool()
 
 # Add to your agent
 agent = Agent(
     role="Data Analyst",
-    tools=[mysql_db, vector_search, nl_to_sql],
+    tools=[mysql_db, mongodb_vector_search, qdrant_vector_search, nl_to_sql],
     goal="Extract insights from various data sources"
 )
 ```

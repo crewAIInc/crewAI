@@ -52,6 +52,8 @@ from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
     LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
     llm_call_context,
 )
 from crewai.llms.hooks.base import BaseInterceptor
@@ -551,10 +553,11 @@ class OpenAICompletion(BaseLLM):
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
 
+        self.api_key = _without_placeholder(self.api_key)
         if self.api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("OPENAI_API_KEY"))
             if self.api_key is None:
-                raise ValueError("OPENAI_API_KEY is required")
+                raise MissingAPIKeyError("OPENAI_API_KEY", self.model)
 
         base_params = {
             "api_key": self.api_key,
@@ -577,6 +580,48 @@ class OpenAICompletion(BaseLLM):
             client_params.update(self.client_params)
 
         return client_params
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with OpenAI's Responses API.
+
+        The count endpoint uses the configured model but is independent of the
+        generation endpoint selected by :attr:`api`. This lets Chat Completions
+        users preflight an equivalent Responses payload without changing their
+        subsequent generation request.
+        """
+        if self._on_compatible_server():
+            return super().get_input_tokens_count(messages, tools, response_model)
+
+        formatted_messages = self._format_messages(messages, file_api="responses")
+        response_params = self._prepare_responses_params(
+            messages=formatted_messages,
+            tools=tools,
+            response_model=response_model,
+        )
+        count_params = {
+            key: response_params[key]
+            for key in (
+                "model",
+                "input",
+                "instructions",
+                "text",
+                "tools",
+                "previous_response_id",
+            )
+            if key in response_params
+        }
+        try:
+            response = self._get_sync_client().responses.input_tokens.count(
+                **count_params
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response.input_tokens)
 
     def call(
         self,
@@ -2962,7 +3007,7 @@ class OpenAICompletion(BaseLLM):
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         model_lower = self.model.lower() if self.model else ""
-        if "gpt-5" in model_lower:
+        if re.search(r"gpt-[5-9](?!\d)", model_lower):
             return False
         return not self.is_o1_model
 
@@ -2975,7 +3020,10 @@ class OpenAICompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, OPENAI_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+            self.model,
+            OPENAI_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
         )
 
     def _effective_max_tokens(self) -> int | float | None:
@@ -3028,9 +3076,11 @@ class OpenAICompletion(BaseLLM):
             return result
         return {"total_tokens": 0}
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Format messages for OpenAI API."""
-        base_formatted = super()._format_messages(messages)
+        base_formatted = super()._format_messages(messages, file_api=file_api)
 
         formatted_messages: list[LLMMessage] = []
 

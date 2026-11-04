@@ -28,7 +28,7 @@ def traces(monkeypatch):
     for name in (
         "OTEL_SDK_DISABLED",
         "CREWAI_USER_PAT",
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
@@ -72,7 +72,9 @@ def traces(monkeypatch):
     return buffers, grants, recorders, prompt
 
 
-@pytest.mark.parametrize("disabled", ["flag", "env", "sdk"])
+# `OTEL_SDK_DISABLED` is not among them: it is the telemetry opt-out
+# (test_the_telemetry_opt_out_does_not_turn_tracing_off).
+@pytest.mark.parametrize("disabled", ["flag", "env"])
 @pytest.mark.parametrize("finalize_only", [False, True])
 def test_disabling_deferred_trace_discards_without_consent(
     traces, monkeypatch, disabled, finalize_only
@@ -97,10 +99,8 @@ def test_disabling_deferred_trace_discards_without_consent(
         assert old_lifetime is not None and buffers[0]._spans
         if disabled == "flag":
             flow.tracing = False
-        elif disabled == "env":
-            monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
         else:
-            monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+            monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
         if not finalize_only:
             assert flow.kickoff() == "private draft"
             assert sessions[1] is None
@@ -176,6 +176,178 @@ def test_where_the_prompt_could_not_be_shown_nothing_is_uploaded(
     assert crewai_event_bus.flush()
 
     assert not grants and not recorders  # nothing left the machine
+
+
+@pytest.mark.parametrize(
+    "closed", ["no terminal", "under test", "messages suppressed"]
+)
+def test_a_run_crewai_eval_started_is_uploaded_with_nobody_to_ask(
+    traces, monkeypatch, tmp_path, closed
+):
+    """`crewai eval` ran the crew to grade it, and the grade is read off the
+    trace: running the command was the yes. A coding agent with no terminal
+    gets its run uploaded."""
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
+    monkeypatch.setattr(
+        f"{utils}.should_suppress_tracing_messages",
+        lambda: closed == "messages suppressed",
+    )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "graded"
+
+    with eval_handshake.awaiting_evaluation() as told:
+        assert told
+        assert Conversation().kickoff() == "graded"
+        assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()
+    assert grants and recorders  # the trace reached AMP
+
+
+@pytest.mark.parametrize("off", ["false", "0"])
+def test_a_project_that_turned_tracing_off_is_not_traced_even_for_crewai_eval(
+    traces, monkeypatch, tmp_path, off
+):
+    """An explicit no is the project's; `crewai eval` asks to turn tracing on
+    before it runs anything, and nothing here overrules it."""
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", off)
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+    )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "kept here"
+
+    with eval_handshake.awaiting_evaluation():
+        assert Conversation().kickoff() == "kept here"
+        assert crewai_event_bus.flush()
+
+    assert not buffers and not grants and not recorders  # never even traced
+
+
+@pytest.mark.parametrize(
+    ("amp", "tier"),
+    [("https://app.crewai.com", "authenticated"), ("https://evil.example", "ephemeral")],
+)
+def test_the_saved_login_goes_only_to_an_amp_crewai_eval_trusted(
+    traces, monkeypatch, tmp_path, amp, tier
+):
+    """`crewai eval` decides which AMP may receive the saved login before the
+    project's `.env` is loaded; an AMP that `.env` chose gets an anonymous
+    grant for the run the command started, never the login."""
+    from crewai.telemetry.tracing.grants import TraceGrantClient
+    from crewai_core import eval_handshake
+
+    # `traces` installs the scripted grants and exporters
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    monkeypatch.setenv("CREWAI_PLUS_URL", amp)
+    monkeypatch.setattr(
+        "crewai.telemetry.tracing.grants.resolve_tracing_credential",
+        lambda: ("login", "the-saved-login"),
+    )
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+    )
+    tiers: list[str] = []
+    real_create = TraceGrantClient.create
+    monkeypatch.setattr(
+        TraceGrantClient,
+        "create",
+        lambda client, execution_uuid: tiers.append(client._tier)
+        or real_create(client, execution_uuid),
+    )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "graded"
+
+    with eval_handshake.awaiting_evaluation(
+        trusted_amp_origins=["https://app.crewai.com"]
+    ):
+        assert Conversation().kickoff() == "graded"
+        assert crewai_event_bus.flush()
+
+    assert tiers == [tier]
+
+
+def test_a_token_a_dotenv_could_set_approves_nothing(traces, monkeypatch, tmp_path):
+    """The variable alone is what a project's `.env` could carry; without the
+    file `crewai eval` writes, it counts for nothing."""
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.setenv(eval_handshake.AWAITING_ENV, "0" * 32)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    prompt.return_value = False
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "in a container"
+
+    assert Conversation(tracing=True).kickoff() == "in a container"
+    assert crewai_event_bus.flush()
+
+    assert not grants and not recorders  # nothing left the machine
+
+
+@pytest.mark.parametrize("anonymous", [True, False])
+def test_the_telemetry_opt_out_does_not_turn_tracing_off(traces, monkeypatch, anonymous):
+    """`OTEL_SDK_DISABLED` is the telemetry opt-out, a separate setting: a run
+    with tracing on is still traced and uploaded, every span recorded."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
+    if not anonymous:
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.grants.resolve_tracing_credential",
+            lambda: ("a-login", "login"),
+        )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "traced"
+
+    assert Conversation(tracing=True).kickoff() == "traced"
+    assert crewai_event_bus.flush()
+
+    assert grants and recorders
+    assert any(recorder.get_finished_spans() for recorder in recorders)
+
+
+def test_crewais_trace_provider_records_with_the_sdk_switched_off(monkeypatch):
+    """Pins the SDK detail the provider relies on (its private `_disabled`)."""
+    from crewai.telemetry.tracing.session import _trace_provider
+    from opentelemetry.sdk.resources import Resource
+
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+    span = _trace_provider(Resource({"service.name": "crewai"})).get_tracer("t").start_span("s")
+    assert span.is_recording()
+    span.end()
 
 
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):

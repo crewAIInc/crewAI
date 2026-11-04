@@ -121,6 +121,54 @@ class LLMCallFailedEvent(LLMEventBase):
     type: Literal["llm_call_failed"] = "llm_call_failed"
 
 
+class ContextWindowSummarizationEvent(BaseEvent):
+    """Base event for proactive context-window summarization."""
+
+    from_task: Any | None = None
+    from_agent: Any | None = None
+    model: str | None = None
+
+    def __init__(self, **data: Any) -> None:
+        if data.get("from_task"):
+            task = data["from_task"]
+            data["task_id"] = str(task.id)
+            data["task_name"] = task.name or task.description
+            data["from_task"] = None
+
+        if data.get("from_agent"):
+            agent = data["from_agent"]
+            data["agent_id"] = str(agent.id)
+            data["agent_role"] = agent.role
+            data["from_agent"] = None
+
+        super().__init__(**data)
+
+
+class ContextWindowSummarizationStartedEvent(ContextWindowSummarizationEvent):
+    """Event emitted before proactively summarizing a pending request."""
+
+    type: Literal["context_window_summarization_started"] = (
+        "context_window_summarization_started"
+    )
+
+
+class ContextWindowSummarizationCompletedEvent(ContextWindowSummarizationEvent):
+    """Event emitted after proactively summarizing a pending request."""
+
+    type: Literal["context_window_summarization_completed"] = (
+        "context_window_summarization_completed"
+    )
+
+
+class ContextWindowSummarizationFailedEvent(ContextWindowSummarizationEvent):
+    """Event emitted when proactive context summarization fails."""
+
+    error: str
+    type: Literal["context_window_summarization_failed"] = (
+        "context_window_summarization_failed"
+    )
+
+
 class FunctionCall(BaseModel):
     arguments: str
     name: str | None = None

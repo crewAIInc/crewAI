@@ -139,6 +139,106 @@ def test_gemini_completion_initialization_parameters():
     assert llm.top_k == 40
 
 
+def test_gemini_input_token_count_forwards_generation_context_for_vertex():
+    """Vertex Count Tokens receives the same prompt context as completion."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = True
+    client.models.count_tokens.return_value = MagicMock(total_tokens=42)
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is CrewAI?"},
+    ]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    count_kwargs = client.models.count_tokens.call_args.kwargs
+    assert count_kwargs["model"] == "gemini-2.0-flash-001"
+    assert count_kwargs["contents"][0].role == "user"
+    assert count_kwargs["config"].system_instruction.parts[0].text == "Be concise."
+    assert count_kwargs["config"].tools[0].function_declarations[0].name == "search_docs"
+
+
+def test_gemini_developer_token_count_uses_character_fallback_for_unrepresentable_context():
+    """Unsupported Developer API context falls back to the character estimate."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = False
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(
+            [
+                {"role": "system", "content": "Be concise."},
+                {"role": "user", "content": "What is CrewAI?"},
+            ],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_docs",
+                        "description": "Search the documentation.",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                }
+            ],
+        ) == 7
+
+
+def test_gemini_developer_token_count_forwards_supported_content():
+    """Developer API counting succeeds when the prompt has no unsupported context."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = False
+    client.models.count_tokens.return_value = MagicMock(total_tokens=42)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("What is CrewAI?") == 42
+
+    count_kwargs = client.models.count_tokens.call_args.kwargs
+    assert count_kwargs["model"] == "gemini-2.0-flash-001"
+    assert count_kwargs["contents"][0].role == "user"
+    assert count_kwargs["contents"][0].parts[0].text == "What is CrewAI?"
+
+
+@pytest.mark.vcr()
+def test_gemini_developer_input_token_count(monkeypatch):
+    """Gemini Developer API counts input tokens through its native endpoint."""
+    llm = LLM(model="gemini/gemini-2.5-flash")
+    models = llm._get_sync_client().models
+    native_count_tokens = models.count_tokens
+    calls = []
+    errors = []
+
+    def count_tokens(*args, **kwargs):
+        calls.append((args, kwargs))
+        try:
+            return native_count_tokens(*args, **kwargs)
+        except Exception as error:
+            errors.append(error)
+            raise
+
+    monkeypatch.setattr(models, "count_tokens", count_tokens)
+
+    token_count = llm.get_input_tokens_count(
+        "CrewAI coordinates autonomous AI agents to complete a shared task."
+    )
+
+    assert len(calls) == 1
+    assert not errors
+    assert token_count > 0
+
+
 def test_gemini_started_event_surfaces_max_output_tokens():
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallStartedEvent
@@ -822,7 +922,7 @@ def test_gemini_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Gemini API."""
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client.models, 'generate_content') as mock_generate:

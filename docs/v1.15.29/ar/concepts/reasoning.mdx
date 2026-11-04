@@ -1,0 +1,148 @@
+---
+title: الاستدلال
+description: "تعرّف على كيفية تفعيل واستخدام استدلال الوكيل لتحسين تنفيذ المهام."
+icon: brain
+mode: "wide"
+---
+
+## نظرة عامة
+
+استدلال الوكيل هو ميزة تتيح للوكلاء التأمل في المهمة وإنشاء خطة قبل التنفيذ. يساعد هذا الوكلاء على التعامل مع المهام بشكل أكثر منهجية ويضمن استعدادهم لأداء العمل المطلوب.
+
+## الاستخدام
+
+لتفعيل الاستدلال لوكيل، ما عليك سوى تعيين `reasoning=True` عند إنشاء الوكيل:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    reasoning=True,  # تفعيل الاستدلال
+    max_reasoning_attempts=3  # اختياري: تعيين حد أقصى لمحاولات الاستدلال
+)
+```
+
+## كيف يعمل
+
+عند تفعيل الاستدلال، قبل تنفيذ المهمة، سيقوم الوكيل بما يلي:
+
+1. التأمل في المهمة وإنشاء خطة مفصلة
+2. تقييم ما إذا كان مستعدًا لتنفيذ المهمة
+3. تحسين الخطة حسب الحاجة حتى يصبح مستعدًا أو يصل إلى max_reasoning_attempts
+4. حقن خطة الاستدلال في وصف المهمة قبل التنفيذ
+
+تساعد هذه العملية الوكيل على تقسيم المهام المعقدة إلى خطوات يمكن إدارتها وتحديد التحديات المحتملة قبل البدء.
+
+## خيارات التهيئة
+
+<ParamField body="reasoning" type="bool" default="False">
+    تفعيل أو تعطيل الاستدلال
+</ParamField>
+
+<ParamField body="max_reasoning_attempts" type="int" default="None">
+    الحد الأقصى لعدد المحاولات لتحسين الخطة قبل المتابعة بالتنفيذ. إذا كانت القيمة None (الافتراضي)، سيستمر الوكيل في التحسين حتى يصبح مستعدًا.
+</ParamField>
+
+## مثال
+
+إليك مثالًا كاملًا:
+
+```python
+from crewai import Agent, Task, Crew
+
+# إنشاء وكيل مع تفعيل الاستدلال
+analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst.",
+    reasoning=True,
+    max_reasoning_attempts=3  # اختياري: تعيين حد لمحاولات الاستدلال
+)
+
+# إنشاء مهمة
+analysis_task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=analyst
+)
+
+# إنشاء طاقم وتشغيل المهمة
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+result = crew.kickoff()
+
+print(result)
+```
+
+## معالجة الأخطاء
+
+صُممت عملية الاستدلال لتكون متينة، مع معالجة أخطاء مدمجة. إذا حدث خطأ أثناء الاستدلال، سيتابع الوكيل تنفيذ المهمة بدون خطة الاستدلال. يضمن هذا إمكانية تنفيذ المهام حتى في حالة فشل عملية الاستدلال.
+
+إليك كيفية التعامل مع الأخطاء المحتملة في الكود الخاص بك:
+
+```python
+from crewai import Agent, Task
+import logging
+
+# إعداد التسجيل لالتقاط أي أخطاء في الاستدلال
+logging.basicConfig(level=logging.INFO)
+
+# إنشاء وكيل مع تفعيل الاستدلال
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    reasoning=True,
+    max_reasoning_attempts=3
+)
+
+# إنشاء مهمة
+task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=agent
+)
+
+# تنفيذ المهمة
+# إذا حدث خطأ أثناء الاستدلال، سيتم تسجيله وسيستمر التنفيذ
+result = agent.execute_task(task)
+```
+
+## مثال على مخرجات الاستدلال
+
+إليك مثالًا على شكل خطة الاستدلال لمهمة تحليل البيانات:
+
+```
+Task: Analyze the provided sales data and identify key trends.
+
+Reasoning Plan:
+I'll analyze the sales data to identify the top 3 trends.
+
+1. Understanding of the task:
+   I need to analyze sales data to identify key trends that would be valuable for business decision-making.
+
+2. Key steps I'll take:
+   - First, I'll examine the data structure to understand what fields are available
+   - Then I'll perform exploratory data analysis to identify patterns
+   - Next, I'll analyze sales by time periods to identify temporal trends
+   - I'll also analyze sales by product categories and customer segments
+   - Finally, I'll identify the top 3 most significant trends
+
+3. Approach to challenges:
+   - If the data has missing values, I'll decide whether to fill or filter them
+   - If the data has outliers, I'll investigate whether they're valid data points or errors
+   - If trends aren't immediately obvious, I'll apply statistical methods to uncover patterns
+
+4. Use of available tools:
+   - I'll use data analysis tools to explore and visualize the data
+   - I'll use statistical tools to identify significant patterns
+   - I'll use knowledge retrieval to access relevant information about sales analysis
+
+5. Expected outcome:
+   A concise report highlighting the top 3 sales trends with supporting evidence from the data.
+
+READY: I am ready to execute the task.
+```
+
+تساعد خطة الاستدلال هذه الوكيل على تنظيم نهجه تجاه المهمة، والنظر في التحديات المحتملة، وضمان تقديم المخرجات المتوقعة.

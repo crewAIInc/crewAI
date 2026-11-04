@@ -490,6 +490,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         return model_class
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        """Allow an extension to record output before execution tracing closes."""
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
         return False
@@ -569,11 +572,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _listener_methods(
         self,
     ) -> Iterator[tuple[FlowMethodName, FlowMethodDefinition, FlowDefinitionCondition]]:
-        # (name, definition, condition) for every non-start method that listens.
+        # (name, definition, condition) for every method that listens, start
+        # methods included: `start: true` plus `listen` runs at kickoff and again
+        # on each listen event (e.g. a review step re-drafting on request_changes).
         # Routers are included (they listen too); callers wanting only plain
         # listeners filter on definition.router.
         for method_name, method_definition in self._definition.methods.items():
-            if method_definition.listen is not None and not method_definition.is_start:
+            if method_definition.listen is not None:
                 yield (
                     FlowMethodName(method_name),
                     method_definition,
@@ -814,6 +819,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
     _instance_persistence: bool = PrivateAttr(default=False)
+    # Live adapters restore before admission; kickoff must not replace their state.
+    _skip_persistence_restore: bool = PrivateAttr(default=False)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1494,6 +1501,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # The serialized context carries the full LLM config (a dict, or a
             # legacy model string) — the single source for cross- and
             # same-process resume.
+            previous_feedback = self.last_human_feedback
             result = await self._finalize_human_feedback(
                 method_name=context.method_name,
                 method_output=context.method_output,
@@ -1509,6 +1517,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if emit and isinstance(result, HumanFeedbackResult)
                 else result
             )
+
+            feedback_definition = self._definition.methods[
+                context.method_name
+            ].human_feedback
+            if feedback_definition is not None:
+                # A reply that resumes a paused flow (e.g. email review on AMP)
+                # teaches the same lessons as one that arrives during the run.
+                try:
+                    await self._store_feedback_lessons(
+                        feedback_definition,
+                        context.method_name,
+                        context.method_output,
+                        feedback,
+                        context.llm,
+                    )
+                except Exception:
+                    # learn_strict re-raised and the review stays pending: undo the
+                    # recorded reply so a retry on this instance records it once.
+                    self.human_feedback_history.pop()
+                    self.last_human_feedback = previous_feedback
+                    raise
 
             self._completed_methods.add(FlowMethodName(context.method_name))
 
@@ -2070,6 +2099,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         output_holder.append(stream_session)
         return stream_session
 
+    def _reset_tool_action_usage_budgets(self) -> None:
+        """Give every tool action a fresh usage budget for this run.
+
+        Tool actions build their tools once (``_flow_post_init``) and reuse
+        them across kickoffs, so ``current_usage_count`` would otherwise
+        survive runs. Agents zero the counter each time they prepare tools
+        (``parse_tools``); flows reset at the kickoff boundary instead. A
+        budget exhausted in an earlier kickoff must not fail later ones.
+        """
+        for tool in getattr(self, "_tool_action_tools", None) or ():
+            reset = getattr(tool, "reset_usage_count", None)
+            if callable(reset):
+                reset()
+
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
@@ -2182,6 +2225,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 restore_from_state_id=restore_from_state_id,
             )
 
+        self._reset_tool_action_usage_budgets()
         self._cel_now = datetime.now(timezone.utc)
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
@@ -2345,6 +2389,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     "id" in inputs
                     and self.persistence is not None
                     and not fork_succeeded
+                    and not self._skip_persistence_restore
                 ):
                     restore_uuid = inputs["id"]
                     stored_state = self.persistence.load_state(restore_uuid)
@@ -2487,6 +2532,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
+            self._record_kickoff_output(final_output)
 
             if self._event_futures:
                 await asyncio.gather(
@@ -3152,6 +3198,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         current_trigger = trigger_method
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
+        # Methods already run per trigger, so a conditional start that also
+        # listens to the same event is not run a second time below.
+        ran_for_trigger: dict[str, set[FlowMethodName]] = {}
 
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -3159,6 +3208,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             if not routers_triggered:
                 break
+            ran_for_trigger.setdefault(str(current_trigger), set()).update(
+                routers_triggered
+            )
 
             for router_name in routers_triggered:
                 # For routers triggered by a router outcome, pass the HumanFeedbackResult
@@ -3207,6 +3259,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 listeners_triggered = self._find_triggered_methods(
                     current_trigger, router_only=False
                 )
+                ran_for_trigger.setdefault(str(current_trigger), set()).update(
+                    listeners_triggered
+                )
                 if listeners_triggered:
                     listener_result = router_result_payloads.get(
                         str(current_trigger), result
@@ -3242,6 +3297,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     for method_name in self._start_method_names():
                         if self._start_condition_triggered_by(
                             method_name, current_trigger
+                        ) and method_name not in ran_for_trigger.get(
+                            str(current_trigger), set()
                         ):
                             if method_name in self._completed_methods:
                                 # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
@@ -3655,17 +3712,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=metadata or {},
         )
 
-        if learn and raw_feedback.strip():
-            await asyncio.to_thread(
-                _distill_and_store_lessons,
-                self,
-                method_name,
-                method_output,
-                raw_feedback,
-                llm=llm_instance,
-                learn_source=feedback_definition.learn_source,
-                learn_strict=feedback_definition.learn_strict,
-            )
+        await self._store_feedback_lessons(
+            feedback_definition, method_name, method_output, raw_feedback, llm_instance
+        )
 
         if emit:
             # Stash the feedback result: the collapsed outcome routes listeners,
@@ -3674,6 +3723,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._human_feedback_method_outputs[method_name] = result
             return result.outcome
         return result
+
+    async def _store_feedback_lessons(
+        self,
+        feedback_definition: FlowHumanFeedbackDefinition,
+        method_name: str,
+        method_output: Any,
+        raw_feedback: str,
+        llm: Any,
+    ) -> None:
+        if not (
+            feedback_definition.learn
+            and self.memory is not None
+            and raw_feedback.strip()
+        ):
+            return
+        await asyncio.to_thread(
+            _distill_and_store_lessons,
+            self,
+            method_name,
+            method_output,
+            raw_feedback,
+            llm=llm,
+            learn_source=feedback_definition.learn_source,
+            learn_strict=feedback_definition.learn_strict,
+        )
 
     async def _finalize_human_feedback(
         self,

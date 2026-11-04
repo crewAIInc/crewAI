@@ -44,7 +44,7 @@ def get_platform_integration_token() -> str | None:
     """
     token = _platform_integration_token.get()
     if token is None:
-        token = os.getenv("CREWAI_PLATFORM_INTEGRATION_TOKEN")
+        token = os.getenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN")
     return token
 
 
