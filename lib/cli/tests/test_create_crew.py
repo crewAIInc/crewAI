@@ -2134,6 +2134,8 @@ def _crewai_dependency(project_root: Path) -> str:
         ("groq/llama-3.3-70b-versatile", "crewai[tools,litellm]"),
         ("anthropic/my-finetune", "crewai[tools,anthropic,litellm]"),
         ("openai/chatgpt-4o-latest", "crewai[tools,litellm]"),
+        ("mistral/mistral-large", "crewai[tools,litellm]"),
+        ("custom/my-model", "crewai[tools,litellm]"),
     ],
 )
 def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
@@ -2152,9 +2154,7 @@ def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
     )
 
 
-@pytest.mark.parametrize(
-    "provider", [None, "openai", "ollama", "cerebras/llama3.1-8b", "custom/my-model"]
-)
+@pytest.mark.parametrize("provider", [None, "openai", "ollama", "cerebras/llama3.1-8b"])
 def test_json_create_keeps_the_tools_only_dependency_when_no_extra_is_needed(
     tmp_path, monkeypatch, provider
 ):
