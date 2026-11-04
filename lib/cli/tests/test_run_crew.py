@@ -60,10 +60,10 @@ def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
         fake_run_json_crew_in_project_env,
     )
 
-    run_crew_module.run_crew(trained_agents_file="some.pkl")
+    run_crew_module.run_crew(trained_agents_file="some.json")
 
     assert called == {
-        "trained_agents_file": "some.pkl",
+        "trained_agents_file": "some.json",
         "crew_path": Path("crew.jsonc"),
         "inputs": None,
     }
@@ -94,7 +94,7 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
 
     crew_path = tmp_path / "crew.jsonc"
     run_crew_module._run_json_crew_in_project_env(
-        trained_agents_file="trained.pkl",
+        trained_agents_file="trained.json",
         crew_path=crew_path,
     )
 
@@ -103,7 +103,7 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
         run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV: str(
             Path(run_crew_module.__file__).resolve().parent
         ),
-        CREWAI_TRAINED_AGENTS_FILE_ENV: "trained.pkl",
+        CREWAI_TRAINED_AGENTS_FILE_ENV: "trained.json",
         run_crew_module._CREWAI_JSON_CREW_DEFINITION_ENV: str(crew_path),
     }
     if local_crewai_source_dir := run_crew_module._find_local_crewai_source_dir():
@@ -222,7 +222,7 @@ def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: P
     env[run_crew_module._CREWAI_RUNNER_SOURCE_DIR_ENV] = str(
         tmp_path / "current_crewai_src"
     )
-    env[CREWAI_TRAINED_AGENTS_FILE_ENV] = "trained.pkl"
+    env[CREWAI_TRAINED_AGENTS_FILE_ENV] = "trained.json"
 
     subprocess.run(
         [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
@@ -231,7 +231,7 @@ def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: P
         cwd=tmp_path,
     )
 
-    assert marker.read_text() == "current:trained.pkl"
+    assert marker.read_text() == "current:trained.json"
 
 
 def test_json_runner_pins_the_machines_proxy_before_the_project_env_loads(
@@ -442,12 +442,12 @@ def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path)
 
     assert (
         run_crew_module._run_json_crew_in_project_env(
-            trained_agents_file="trained.pkl"
+            trained_agents_file="trained.json"
         )
         == "result"
     )
     assert called == {
-        "trained_agents_file": "trained.pkl",
+        "trained_agents_file": "trained.json",
         "crew_path": None,
         "inputs": None,
     }
@@ -593,7 +593,7 @@ def test_json_run_install_failure_exits_nonzero(monkeypatch, tmp_path: Path):
 
 
 def test_run_json_crew_exports_trained_agents_env(monkeypatch, tmp_path: Path):
-    """JSON crews run in-process, so the pickle path must land in the env var."""
+    """JSON crews run in-process, so the trained-agents path must land in the env var."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(CREWAI_TRAINED_AGENTS_FILE_ENV, raising=False)
 
@@ -601,8 +601,8 @@ def test_run_json_crew_exports_trained_agents_env(monkeypatch, tmp_path: Path):
         # No crew.json(c) in tmp_path: the loader fails *after* the env var
         # export, which is the part under test.
         with pytest.raises(FileNotFoundError):
-            run_crew_module._run_json_crew(trained_agents_file="some.pkl")
-        assert os.environ[CREWAI_TRAINED_AGENTS_FILE_ENV] == "some.pkl"
+            run_crew_module._run_json_crew(trained_agents_file="some.json")
+        assert os.environ[CREWAI_TRAINED_AGENTS_FILE_ENV] == "some.json"
     finally:
         os.environ.pop(CREWAI_TRAINED_AGENTS_FILE_ENV, None)
 
@@ -1144,7 +1144,7 @@ def test_run_crew_inputs_without_definition_resolves_configured_flow(monkeypatch
 def test_run_crew_rejects_filename_with_explicit_definition():
     with pytest.raises(click.UsageError) as exc_info:
         run_crew_module.run_crew(
-            trained_agents_file="trained.pkl",
+            trained_agents_file="trained.json",
             definition="flow.yaml",
         )
 
@@ -1183,13 +1183,13 @@ def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
         lambda script_name, **kwargs: calls.append((script_name, kwargs)),
     )
 
-    run_crew_module.run_crew(trained_agents_file="trained.pkl")
+    run_crew_module.run_crew(trained_agents_file="trained.json")
 
     assert capsys.readouterr().out == ""
     assert calls == [
         (
             "run_crew",
-            {"entity_type": "crew", "trained_agents_file": "trained.pkl"},
+            {"entity_type": "crew", "trained_agents_file": "trained.json"},
         )
     ]
 
@@ -1582,7 +1582,7 @@ def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
     )
 
     with pytest.raises(click.UsageError) as exc_info:
-        run_crew_module.run_crew(trained_agents_file="trained.pkl")
+        run_crew_module.run_crew(trained_agents_file="trained.json")
 
     assert "--filename can only be used when running crews" in exc_info.value.message
 
