@@ -37,6 +37,13 @@ logger = logging.getLogger(__name__)
 _handlers_registered = False
 _register_lock = threading.Lock()
 
+# The event bus runs sync handlers on a thread pool, so consecutive events can
+# checkpoint concurrently. Holding this lock across the snapshot and the write
+# keeps the persisted order equal to the snapshot order, so the newest row is
+# always the newest state. Re-entrant because a handler for the start event may
+# checkpoint again on the same thread.
+_write_lock = threading.RLock()
+
 _SENTINEL = object()
 
 
@@ -140,18 +147,19 @@ def _do_checkpoint(
 
     start: float = time.perf_counter()
     try:
-        _prepare_entities(state.root)
-        payload = state.model_dump(mode="json")
-        if event is not None:
-            payload["trigger"] = event.type
-        data = json.dumps(payload)
-        location = cfg.provider.checkpoint(
-            data,
-            cfg.location,
-            parent_id=parent_id_snapshot,
-            branch=branch_snapshot,
-        )
-        state._chain_lineage(cfg.provider, location)
+        with _write_lock:
+            _prepare_entities(state.root)
+            payload = state.model_dump(mode="json")
+            if event is not None:
+                payload["trigger"] = event.type
+            data = json.dumps(payload)
+            location = cfg.provider.checkpoint(
+                data,
+                cfg.location,
+                parent_id=parent_id_snapshot,
+                branch=branch_snapshot,
+            )
+            state._chain_lineage(cfg.provider, location)
         checkpoint_id: str = cfg.provider.extract_id(location)
     except Exception as exc:
         crewai_event_bus.emit(
