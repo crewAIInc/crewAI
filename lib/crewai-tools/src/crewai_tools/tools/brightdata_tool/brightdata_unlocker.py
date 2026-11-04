@@ -36,10 +36,10 @@ class BrightDataUnlockerToolSchema(BaseModel):
 
     url: str = Field(..., description="URL to perform the web scraping")
     format: str | None = Field(
-        default="raw", description="Response format (raw is standard)"
+        default=None, description="Response format (raw is standard)"
     )
     data_format: str | None = Field(
-        default="markdown", description="Response data format (html by default)"
+        default=None, description="Response data format (html by default)"
     )
 
 

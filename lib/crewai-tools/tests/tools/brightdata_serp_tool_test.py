@@ -44,6 +44,25 @@ class TestBrightDataSearchTool(unittest.TestCase):
         result = self.tool._run(query="AI", search_engine="google")
         self.assertIn("Error", result)
 
+    @patch.dict(
+        "os.environ",
+        {"BRIGHT_DATA_API_KEY": "test_api_key", "BRIGHT_DATA_ZONE": "test_zone"},
+    )
+    @patch("requests.post")
+    def test_run_uses_constructor_options(self, mock_post):
+        mock_post.return_value = MagicMock(text="mock response text")
+        tool = BrightDataSearchTool(
+            search_engine="bing", country="gb", language="fr", device_type="mobile"
+        )
+
+        tool.run(query="ai news")
+
+        url = mock_post.call_args.kwargs["json"]["url"]
+        self.assertTrue(url.startswith("https://www.bing.com/search?q=ai%20news"))
+        self.assertIn("gl=gb", url)
+        self.assertIn("hl=fr", url)
+        self.assertIn("brd_mobile=1", url)
+
     def tearDown(self):
         pass
 
