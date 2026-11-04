@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 
 import pytest
 
@@ -186,6 +186,69 @@ def test_agent_instances_have_independent_sessions(monkeypatch):
     copied = first.copy()
     assert copied.conversational is True
     assert copied.as_flow().conversation_messages == []
+
+
+@pytest.mark.parametrize("clone", [copy, deepcopy, lambda a: a.model_copy(), lambda a: a.model_copy(deep=True)])
+def test_pydantic_and_python_copies_start_separate_conversations(monkeypatch, clone):
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    original = make_agent(conversational=True)
+    original.handle_turn("Private original history")
+    copied = clone(original)
+    assert copied.as_flow().conversation_messages == []
+    assert copied.as_flow().state.id != original.as_flow().state.id
+    copied.llm = RecordingLLM()
+    copied.handle_turn("Separate conversation")
+    assert len(original.llm.received) == 1
+    assert len(copied.llm.received) == 1
+    assert "Private original history" not in str(copied.llm.received)
+    assert len(original.as_flow().conversation_messages) == 2
+
+
+def test_model_copy_update_uses_clones_llm_and_tools(monkeypatch):
+    from crewai.tools import tool
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    original = make_agent(conversational=True)
+    original.handle_turn("Private original history")
+
+    @tool
+    def clone_only() -> str:
+        """Return the clone's permitted tool result."""
+        return "clone result"
+
+    llm = RecordingLLM()
+    copied = original.model_copy(update={"llm": llm, "tools": [clone_only]})
+    assert copied.as_flow().conversation_messages == []
+    copied.handle_turn("Separate conversation")
+    assert len(original.llm.received) == 1
+    assert len(llm.received) == 1
+    assert "Private original history" not in str(llm.received)
+    assert "clone_only" in str(llm.received)
+    assert original.tools == []
+
+
+@pytest.mark.parametrize("kind", ["agent", "flow"])
+def test_tui_failures_are_catchable_exceptions(monkeypatch, kind):
+    from crewai.flow import ConversationState, Flow
+
+    class FailedApp:
+        _status = "failed"
+        _error = "Provider unavailable"
+
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self):
+            pass
+
+    class ChatFlow(Flow[ConversationState]):
+        conversational = True
+
+    monkeypatch.setattr("crewai_cli.input_prompt.is_interactive", lambda: True)
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", FailedApp)
+    chat = make_agent(conversational=True) if kind == "agent" else ChatFlow()
+    with pytest.raises(Exception, match="Provider unavailable"):
+        chat.chat(tui=True)
 
 
 def test_non_conversational_bridge_runs_once(monkeypatch):

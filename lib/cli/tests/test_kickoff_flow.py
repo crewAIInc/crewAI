@@ -2,9 +2,33 @@ from __future__ import annotations
 
 import sys
 
+import click
+from click.testing import CliRunner
 import pytest
 
 from crewai_cli import kickoff_flow
+
+
+def test_failed_chat_cli_exits_nonzero_without_traceback(monkeypatch):
+    from types import SimpleNamespace
+
+    class FailedApp:
+        _status = "failed"
+        _error = "Provider unavailable"
+
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr(kickoff_flow, "is_interactive", lambda: True)
+    monkeypatch.setattr(kickoff_flow, "_load_conversational_flow_from_kickoff_script", lambda: SimpleNamespace(name="Chat"))
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", FailedApp)
+    result = CliRunner().invoke(click.command()(kickoff_flow.kickoff_flow))
+    assert result.exit_code == 1
+    assert "Error: Provider unavailable" in result.output
+    assert "Traceback" not in result.output
 
 
 def test_loads_conversational_flow_from_kickoff_script(tmp_path, monkeypatch) -> None:

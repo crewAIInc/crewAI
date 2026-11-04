@@ -171,7 +171,9 @@ def _run_conversational_flow_tui(
         _chain_traced_rerun({"definition": str(definition) if definition else None})
 
     if app._status == "failed":
-        raise SystemExit(1)
+        raise click.ClickException(
+            getattr(app, "_error", None) or "Conversation failed"
+        )
 
     return app._crew_result
 

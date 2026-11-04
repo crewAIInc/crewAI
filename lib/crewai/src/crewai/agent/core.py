@@ -1813,6 +1813,15 @@ class Agent(BaseAgent):
 
         return executor, inputs, agent_info, parsed_tools
 
+    def __copy__(self) -> Self:
+        copied = super().__copy__()
+        copied._conversation_flow = None
+        return copied
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        # Sessions contain locks and a loader bound to their original Agent.
+        return BaseModel.__deepcopy__(self.__copy__(), memo)
+
     def as_flow(self) -> Flow[Any]:
         """Return this Agent's experimental conversational Flow session.
 
