@@ -85,8 +85,8 @@ def test_create_flow_depends_on_crewai_with_tools_only(
     )
 
 
-SONNET = "anthropic/claude-sonnet-5"
-LUNA = "openai/gpt-5.6-luna"
+SONNET = "anthropic/claude-sonnet-5-5"
+LUNA = "openai/gpt-6-luna"
 
 
 class _Terminal(io.StringIO):
@@ -382,7 +382,7 @@ def test_create_flow_provider_without_a_terminal_saves_only_the_model(
             "Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY in .env before `crewai run`",
         ),
     ],
-    ids=["aliased-prefix", "provider-without-a-listed-model"],
+    ids=["aliased-prefix", "unlisted-model"],
 )
 def test_create_flow_provider_model_names_the_key_of_the_provider_it_runs_on(
     tmp_path: Path,
@@ -427,8 +427,35 @@ def test_create_flow_aliased_provider_at_a_terminal_asks_for_its_key(
     assert "  API keys and model saved to .env file\n" in _output(capsys)
 
 
+@pytest.mark.parametrize(
+    ("provider", "model", "extras"),
+    [
+        ("bedrock", "bedrock/global.anthropic.claude-sonnet-5-5", "tools,bedrock"),
+        ("azure", "azure/gpt-6-luna", "tools,azure-ai-inference"),
+    ],
+)
+def test_create_flow_provider_uses_its_first_listed_model(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    no_provider_keys: None,
+    provider: str,
+    model: str,
+    extras: str,
+):
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow", provider=provider)
+
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == f"MODEL={model}\n"
+    assert _crewai_dependency(project_root) == (
+        f"crewai[{extras}]{get_crewai_dependency_range()}"
+    )
+
+
 @pytest.mark.parametrize("at_a_terminal", [False, True], ids=["no-terminal", "terminal"])
-@pytest.mark.parametrize("provider", ["bedrock", "azure", "unknown"])
+@pytest.mark.parametrize("provider", ["mistral", "unknown"])
 def test_create_flow_rejects_a_provider_with_no_listed_model(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -445,7 +472,8 @@ def test_create_flow_rejects_a_provider_with_no_listed_model(
         click.BadParameter,
         match=(
             f"^'{provider}' has no default model. Pass one of openai, anthropic, "
-            "gemini, groq, ollama, or a provider/model string.$"
+            "gemini, groq, ollama, bedrock, azure, nvidia_nim, huggingface, "
+            "cerebras, sambanova, watson, or a provider/model string.$"
         ),
     ):
         create_flow("Research Flow", provider=provider)
@@ -461,12 +489,12 @@ def test_crewai_create_flow_with_a_provider_with_no_listed_model_exits_two(
     _forbid_prompts(monkeypatch)
 
     result = CliRunner().invoke(
-        crewai, ["create", "flow", "Research Flow", "--provider", "bedrock"]
+        crewai, ["create", "flow", "Research Flow", "--provider", "mistral"]
     )
 
     assert result.exit_code == 2, result.output
     assert (
-        "Invalid value for '--provider': 'bedrock' has no default model."
+        "Invalid value for '--provider': 'mistral' has no default model."
     ) in result.output
     assert not (tmp_path / "research_flow").exists()
 
