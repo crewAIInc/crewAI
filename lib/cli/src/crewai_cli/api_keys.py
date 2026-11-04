@@ -33,6 +33,10 @@ ApiKeyOutcome = Literal["saved", "skipped", "warned"]
 
 # crewAI treats this value, which `crewai create flow` used to write, as no key.
 PLACEHOLDER_API_KEY = "YOUR_API_KEY"
+# The keys pasted at a prompt in this run, comma-separated, so the run that
+# follows keeps them over a `.env` that still holds no key. Only this process
+# sets it: `run_crew.load_project_env` never takes it from a `.env`.
+PASTED_KEYS_ENV = "CREWAI_PASTED_API_KEYS"
 # crewAI's Gemini provider takes GOOGLE_API_KEY too, and with
 # GOOGLE_CLOUD_PROJECT it can use Vertex AI credentials instead of a key.
 _ALTERNATIVE_KEYS: dict[str, tuple[str, ...]] = {
@@ -76,7 +80,7 @@ _ENDPOINT_NAMES = frozenset(
 _ENDPOINT_SUFFIXES = ("_BASE_URL", "_API_BASE", "_ENDPOINT")
 
 
-def sets_endpoint(name: str) -> bool:
+def _sets_endpoint(name: str) -> bool:
     """Whether setting ``name`` sends requests to another host: a base URL,
     an API base, an endpoint or a proxy."""
     upper = name.upper()
@@ -89,7 +93,7 @@ def sets_endpoint(name: str) -> bool:
 def _endpoint_settings(environ: Mapping[str, str]) -> dict[str, str]:
     """ENVIRON's endpoint and proxy settings, keyed by upper-case name."""
     return {
-        name.upper(): value for name, value in environ.items() if sets_endpoint(name)
+        name.upper(): value for name, value in environ.items() if _sets_endpoint(name)
     }
 
 
@@ -172,6 +176,7 @@ def ask_for_missing_api_keys(
         if not value:
             continue
         os.environ[name] = value
+        _mark_pasted(name)
         outcome = "saved"
         try:
             if not _keep_private(env_file):
@@ -206,6 +211,11 @@ def _endpoint_warning(endpoints: list[str]) -> str:
     )
 
 
+def _mark_pasted(name: str) -> None:
+    pasted = set(filter(None, os.environ.get(PASTED_KEYS_ENV, "").split(",")))
+    os.environ[PASTED_KEYS_ENV] = ",".join(sorted(pasted | {name}))
+
+
 def _key_prompt(name: str, endpoints: list[str]) -> str:
     if not endpoints:
         return f"{name} isn't set. Paste it to save it to .env (Enter to skip)"
@@ -225,7 +235,7 @@ def _project_endpoints(
         (value, f"{name} in .env")
         for name, value in saved.items()
         if value
-        and sets_endpoint(name)
+        and _sets_endpoint(name)
         # httpx reads `https_proxy` and `HTTPS_PROXY` alike.
         and value != _MACHINE_ENDPOINTS.get(name.upper())
     ]
@@ -240,7 +250,7 @@ def _project_endpoints(
             (value, f"{key} in {path.relative_to(project_dir)}")
             for path in sorted((project_dir / "src").glob("**/config/agents.yaml"))
             for key, value in _YAML_SETTING.findall(_text(path))
-            if sets_endpoint(key) or key.lower() == "endpoint"
+            if _sets_endpoint(key) or key.lower() == "endpoint"
         ]
         found += [
             (value, f"{key} in {path.relative_to(project_dir)}")
@@ -249,7 +259,7 @@ def _project_endpoints(
                 _text(path)
             )
             for key, value in ((keyword or entry, literal or entry_literal),)
-            if sets_endpoint(key) or key.lower() == "endpoint"
+            if _sets_endpoint(key) or key.lower() == "endpoint"
         ]
     # Escaped: a control character the project put in a setting could move the
     # cursor and print over the host.
@@ -275,7 +285,7 @@ def _json_endpoints(value: object, where: str) -> Iterator[tuple[str, str]]:
             path = f"{where}.{key}" if where else str(key)
             # `endpoint` is how Azure's provider takes its host.
             if isinstance(item, str) and (
-                sets_endpoint(key) or key.lower() == "endpoint"
+                _sets_endpoint(key) or key.lower() == "endpoint"
             ):
                 if item:
                     yield item, path
