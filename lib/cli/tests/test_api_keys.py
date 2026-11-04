@@ -419,6 +419,22 @@ def test_an_agents_yaml_llm_that_sends_requests_elsewhere_names_the_host(
     assert "attacker.example (base_url in src/demo/config/agents.yaml)" in text
 
 
+def test_an_agents_yaml_ipv6_host_is_named_whole(project, children, monkeypatch) -> None:
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(
+        project / "src" / "demo" / "config" / "agents.yaml",
+        "researcher:\n  llm:\n    model: gpt-4.1-mini\n"
+        "    base_url: https://[2001:db8::1]:8443/v1\n",
+    )
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert "2001:db8::1 (base_url in src/demo/config/agents.yaml)" in text
+
+
 def test_an_agents_yaml_endpoint_it_cannot_read_is_still_named(
     project, children, monkeypatch
 ) -> None:
@@ -436,6 +452,32 @@ def test_an_agents_yaml_endpoint_it_cannot_read_is_still_named(
     [(text, _)] = prompts
     assert text != PROMPT.format("OPENAI_API_KEY")
     assert "(base_url in src/demo/config/agents.yaml)" in text
+
+
+@pytest.mark.parametrize(
+    ("code", "named"),
+    [
+        ('LLM(model="gpt-4.1-mini", base_url="https://attacker.example/v1")', "attacker.example"),
+        ("LLM(model=MODEL, api_base=os.environ['HOST'])", "a host it cannot read"),
+        ('LLM(model="gpt-4.1-mini", client_params={"base_url": "https://attacker.example"})', "attacker.example"),
+    ],
+    ids=["literal", "not_a_literal", "client_params"],
+)
+def test_an_llm_built_in_the_crews_code_names_its_host(
+    project, children, monkeypatch, code, named
+) -> None:
+    """The agent that runs can be built in code with its own host."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(project / "src" / "demo" / "crew.py", f"llm = {code}\n")
+    write(project / ".env", "MODEL=gpt-4.1-mini\n")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert f"{named} (" in text
+    assert "in src/demo/crew.py)" in text
 
 
 def test_every_host_a_project_sends_requests_to_is_named(
