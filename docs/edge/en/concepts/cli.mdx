@@ -415,7 +415,7 @@ Notes:
 
 When running the `crewai create crew` command, the CLI shows a list of available LLM providers, followed by model selection for your chosen provider. The selected model is saved in the generated `.env` file and each generated agent JSONC file can set its own `llm`.
 
-`crewai create flow` asks the same questions in a terminal and saves the model as `MODEL` in the flow's `.env`, which the starter crew's agents use. With `--provider`, it skips the provider and model questions and uses that provider's first listed model. A declarative flow (`--declarative`) asks nothing, because its starter calls no model.
+`crewai create flow` asks the same questions in a terminal and saves the model as `MODEL` in the flow's `.env`, which the starter crew's agents use. With `--provider`, it skips the provider and model questions. Pass `openai`, `anthropic`, `gemini`, `groq` or `ollama` to use that provider's first listed model, or a full `provider/model` string for any other provider. A declarative flow (`--declarative`) asks nothing and names no key in its next steps, because its starter calls no model.
 
 Once you've selected an LLM provider and model, you will be prompted for API keys. At a terminal, what you type for a key or secret is hidden; other values, such as an endpoint URL, a region, or an Azure deployment name, stay visible. Press Enter to skip a prompt.
 

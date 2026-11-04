@@ -15,8 +15,17 @@ import tomli
 
 from crewai_cli import create_json_crew as json_crew
 from crewai_cli.cli import crewai
+import crewai_cli.create_flow as create_flow_module
 from crewai_cli.create_flow import create_flow
+from crewai_cli.utils import get_project_id
 from crewai_cli.version import get_crewai_dependency_range
+
+
+@pytest.fixture(autouse=True)
+def _stdin_is_not_a_terminal(monkeypatch: MonkeyPatch) -> None:
+    """Run `crewai create flow` without a terminal unless a test asks for one, so
+    `pytest -s` at a terminal does not open the model picker and wait for keys."""
+    monkeypatch.setattr("sys.stdin", io.StringIO())
 
 
 def test_create_flow_declarative_project_can_run(
@@ -326,20 +335,25 @@ def test_create_flow_declarative_asks_nothing_at_a_terminal(
     assert _crewai_dependency(project_root) == (
         f"crewai[tools]{get_crewai_dependency_range()}"
     )
-    _assert_next_steps(
-        _output(capsys),
-        "research_flow",
-        key_line="Set OPENAI_API_KEY in .env before `crewai run`",
-    )
+    # Its starter runs without a key, so the next steps name none.
+    _assert_next_steps(_output(capsys), "research_flow", key_line=None)
 
 
-@pytest.mark.parametrize("declarative", [False, True])
+@pytest.mark.parametrize(
+    ("declarative", "key_line"),
+    [
+        (False, "Set ANTHROPIC_API_KEY in .env before `crewai run`"),
+        (True, None),
+    ],
+    ids=["python", "declarative"],
+)
 def test_create_flow_provider_without_a_terminal_saves_only_the_model(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     no_provider_keys: None,
     declarative: bool,
+    key_line: str | None,
 ):
     monkeypatch.chdir(tmp_path)
     _forbid_prompts(monkeypatch)
@@ -351,11 +365,146 @@ def test_create_flow_provider_without_a_terminal_saves_only_the_model(
     assert _crewai_dependency(project_root) == (
         f"crewai[tools,anthropic]{get_crewai_dependency_range()}"
     )
-    _assert_next_steps(
-        _output(capsys),
-        "research_flow",
-        key_line="Set ANTHROPIC_API_KEY in .env before `crewai run`",
+    _assert_next_steps(_output(capsys), "research_flow", key_line=key_line)
+
+
+@pytest.mark.parametrize(
+    ("provider", "extras", "key_line"),
+    [
+        (
+            "claude/claude-sonnet-5",
+            "tools,anthropic",
+            "Set ANTHROPIC_API_KEY in .env before `crewai run`",
+        ),
+        (
+            "bedrock/anthropic.claude-sonnet-5",
+            "tools,bedrock",
+            "Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY in .env before `crewai run`",
+        ),
+    ],
+    ids=["aliased-prefix", "provider-without-a-listed-model"],
+)
+def test_create_flow_provider_model_names_the_key_of_the_provider_it_runs_on(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+    provider: str,
+    extras: str,
+    key_line: str,
+):
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow", provider=provider)
+
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == f"MODEL={provider}\n"
+    assert _crewai_dependency(project_root) == (
+        f"crewai[{extras}]{get_crewai_dependency_range()}"
     )
+    _assert_next_steps(_output(capsys), "research_flow", key_line=key_line)
+
+
+def test_create_flow_aliased_provider_at_a_terminal_asks_for_its_key(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    calls = _answer_key_prompts(monkeypatch, ["sk-ant-test"])
+
+    create_flow("Research Flow", provider="claude/claude-sonnet-5")
+
+    assert [call["text"] for call in calls] == [
+        "  Enter your ANTHROPIC API key (press Enter to skip)"
+    ]
+    assert (tmp_path / "research_flow" / ".env").read_text() == (
+        "MODEL=claude/claude-sonnet-5\nANTHROPIC_API_KEY=sk-ant-test\n"
+    )
+    assert "  API keys and model saved to .env file\n" in _output(capsys)
+
+
+@pytest.mark.parametrize("at_a_terminal", [False, True], ids=["no-terminal", "terminal"])
+@pytest.mark.parametrize("provider", ["bedrock", "azure", "unknown"])
+def test_create_flow_rejects_a_provider_with_no_listed_model(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    provider: str,
+    at_a_terminal: bool,
+):
+    if at_a_terminal:
+        _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    with pytest.raises(
+        click.BadParameter,
+        match=(
+            f"^'{provider}' has no default model. Pass one of openai, anthropic, "
+            "gemini, groq, ollama, or a provider/model string.$"
+        ),
+    ):
+        create_flow("Research Flow", provider=provider)
+
+    assert list(tmp_path.iterdir()) == []
+    assert "Creating flow" not in _output(capsys)
+
+
+def test_crewai_create_flow_with_a_provider_with_no_listed_model_exits_two(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    result = CliRunner().invoke(
+        crewai, ["create", "flow", "Research Flow", "--provider", "bedrock"]
+    )
+
+    assert result.exit_code == 2, result.output
+    assert (
+        "Invalid value for '--provider': 'bedrock' has no default model."
+    ) in result.output
+    assert not (tmp_path / "research_flow").exists()
+
+
+def test_create_flow_ctrl_c_at_the_key_prompt_leaves_a_complete_project(
+    tmp_path: Path, monkeypatch: MonkeyPatch, no_provider_keys: None
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    _pick_model(monkeypatch, SONNET)
+
+    def ctrl_c(*_args: object, **_kwargs: object) -> str:
+        raise click.Abort()
+
+    monkeypatch.setattr(json_crew.click, "prompt", ctrl_c)
+    spans: list[tuple[str, ...]] = []
+
+    class _Telemetry:
+        def flow_creation_span(self, flow_name: str) -> None:
+            spans.append(("flow_creation", flow_name))
+
+        def project_created_span(self, kind: str, project_id: str | None) -> None:
+            spans.append(("project_created", kind, str(project_id)))
+
+    monkeypatch.setattr(create_flow_module, "Telemetry", _Telemetry)
+
+    with pytest.raises(click.Abort):
+        create_flow("Research Flow")
+
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == f"MODEL={SONNET}\n"
+    project_id = get_project_id(project_root / "pyproject.toml")
+    assert project_id
+    assert spans == [
+        ("flow_creation", "ResearchFlow"),
+        ("project_created", "flow", project_id),
+    ]
+    assert (project_root / ".git").is_dir()
 
 
 def test_create_flow_with_a_keyless_provider_names_no_key(

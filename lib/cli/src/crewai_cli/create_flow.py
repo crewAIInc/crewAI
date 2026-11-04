@@ -4,7 +4,7 @@ import sys
 import click
 from crewai_core.telemetry import Telemetry
 
-from crewai_cli.constants import crewai_extras_for_model
+from crewai_cli.constants import crewai_extras_for_model, provider_for_model
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.input_prompt import is_interactive
 from crewai_cli.utils import (
@@ -32,7 +32,7 @@ def create_flow(
 
     At a terminal, a Python flow asks for a model and its API keys and saves
     them to ``.env``. A declarative flow, whose starter calls no model, never
-    asks, and neither does a run without a terminal.
+    asks or names a key, and a run without a terminal never asks.
 
     Args:
         name: The flow's name.
@@ -40,12 +40,25 @@ def create_flow(
         provider: A provider, such as ``anthropic``, whose first listed model
             the flow uses, or a ``provider/model`` string.
         skip_provider: Ask for no model or API keys.
+
+    Raises:
+        click.BadParameter: ``provider`` is neither a provider with a listed
+            model nor a ``provider/model`` string.
     """
     from crewai_cli.create_json_crew import (
+        _PROVIDER_MODELS,
         _default_model_for_provider,
         _select_model,
         _setup_env,
     )
+
+    model = _default_model_for_provider(provider)
+    if provider and model is None:
+        raise click.BadParameter(
+            f"{provider!r} has no default model. Pass one of "
+            f"{', '.join(_PROVIDER_MODELS)}, or a provider/model string.",
+            param_hint="'--provider'",
+        )
 
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
@@ -57,7 +70,6 @@ def create_flow(
         click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
         return
 
-    model = _default_model_for_provider(provider)
     ask = (
         not declarative
         and not skip_provider
@@ -84,21 +96,28 @@ def create_flow(
             name, class_name, folder_name, project_root, crewai_dependency
         )
 
-    keys_to_set: list[str] = []
-    if model is None:
-        # With no MODEL, crewAI runs the flow on its default OpenAI model.
-        keys_to_set = missing_provider_keys("openai", {})
-    elif ask:
-        _setup_env(project_root, [model])
-    else:
+    if model is not None:
         write_env_file(project_root, {"MODEL": model})
-        keys_to_set = missing_provider_keys(model.split("/")[0], {})
 
     # Minted at creation so the project has a stable identity from run one.
     project_id = get_or_create_project_id(project_root / "pyproject.toml")
     # After the mint, unlike flow_creation_span above, which fires before the id exists.
     telemetry.project_created_span("flow", project_id)
     initialize_if_git_available(project_root)
+
+    # The declarative starter calls no model, so it needs no key.
+    keys_to_set: list[str] = []
+    if ask and model is not None:
+        # Last, so Ctrl-C at a key prompt leaves a complete project with MODEL saved.
+        _setup_env(project_root, [model])
+    elif not declarative:
+        if model is None:
+            # With no MODEL, crewAI runs the flow on its default OpenAI model.
+            keys_to_set = missing_provider_keys("openai", {})
+        else:
+            keys_to_set = missing_provider_keys(
+                provider_for_model(model) or model.split("/")[0], {}
+            )
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
     click.echo()

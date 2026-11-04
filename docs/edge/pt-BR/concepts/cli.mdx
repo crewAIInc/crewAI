@@ -364,7 +364,7 @@ Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantaçã
 
 Ao executar o comando `crewai create crew`, o CLI mostrará provedores de LLM disponíveis e depois a seleção de modelo para o provedor escolhido. O modelo selecionado é salvo no `.env` gerado, e cada agente JSONC pode definir seu próprio `llm`.
 
-O `crewai create flow` faz as mesmas perguntas em um terminal e salva o modelo como `MODEL` no `.env` do flow, que os agentes da crew inicial usam. Com `--provider`, ele pula as perguntas de provedor e modelo e usa o primeiro modelo listado desse provedor. Um flow declarativo (`--declarative`) não pergunta nada, porque o seu ponto de partida não chama nenhum modelo.
+O `crewai create flow` faz as mesmas perguntas em um terminal e salva o modelo como `MODEL` no `.env` do flow, que os agentes da crew inicial usam. Com `--provider`, ele pula as perguntas de provedor e modelo. Passe `openai`, `anthropic`, `gemini`, `groq` ou `ollama` para usar o primeiro modelo listado desse provedor, ou uma string `provider/model` completa para qualquer outro provedor. Um flow declarativo (`--declarative`) não pergunta nada nem indica nenhuma chave nos próximos passos, porque o seu ponto de partida não chama nenhum modelo.
 
 Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API. Em um terminal, o que você digita para uma chave ou um segredo fica oculto; outros valores, como uma URL de endpoint, uma região ou o nome de um deployment do Azure, continuam visíveis. Pressione Enter para pular um campo.
 
