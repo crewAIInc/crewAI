@@ -683,16 +683,17 @@ def load_project_env(env_file: Path) -> None:
     replaces a value this process has: it holds no key, and the process may
     have the real one, from the shell or pasted when `crewai run` asked for it.
     """
-    from dotenv import dotenv_values, load_dotenv
+    from dotenv import dotenv_values
 
     kept = os.environ.get(EVAL_TOKEN_ENV)
-    held = {
-        name: os.environ[name]
-        for name, value in dotenv_values(env_file).items()
-        if (value or "").strip() in ("", PLACEHOLDER_API_KEY) and os.environ.get(name)
-    }
-    load_dotenv(env_file, override=True)
-    os.environ.update(held)
+    # Read once: a `.env` a secrets manager serves through a pipe hands its
+    # content to one reader. This applies it as load_dotenv(override=True) would.
+    for name, value in dotenv_values(env_file).items():
+        if value is None:
+            continue  # a bare name with no `=` sets nothing, as in load_dotenv
+        if value.strip() in ("", PLACEHOLDER_API_KEY) and os.environ.get(name):
+            continue
+        os.environ[name] = value
     if kept is None:
         os.environ.pop(EVAL_TOKEN_ENV, None)
     else:

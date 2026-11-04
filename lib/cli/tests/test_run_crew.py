@@ -1662,6 +1662,35 @@ def test_a_projects_env_line_with_no_key_never_replaces_the_one_the_process_has(
     assert os.environ["FROM_THE_PROJECT"] == "yes"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="named pipes are POSIX")
+@pytest.mark.timeout(15)
+def test_a_projects_env_served_through_a_pipe_is_read_once(
+    monkeypatch, tmp_path: Path
+):
+    """A secrets manager can serve `.env` through a named pipe, which hands its
+    content to one reader: a second read would block with no writer left."""
+    import threading
+
+    pipe = tmp_path / ".env"
+    os.mkfifo(pipe)
+
+    def serve() -> None:
+        with pipe.open("w") as served:
+            served.write("OPENAI_API_KEY=sk-from-the-pipe\nFROM_THE_PROJECT=yes\n")
+
+    server = threading.Thread(target=serve, daemon=True)
+    server.start()
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(pipe)
+    server.join(timeout=5)
+
+    assert not server.is_alive()
+    assert os.environ["OPENAI_API_KEY"] == "sk-from-the-pipe"
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
 def test_a_projects_env_key_still_replaces_the_one_the_process_has(
     monkeypatch, tmp_path: Path
 ):
