@@ -14,7 +14,7 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
-from crewai_cli.api_keys import ask_for_missing_api_keys
+from crewai_cli.api_keys import PLACEHOLDER_API_KEY, ask_for_missing_api_keys
 from crewai_cli.input_prompt import (
     closest_name,
     is_interactive,
@@ -672,14 +672,27 @@ EVAL_TOKEN_ENV = "CREWAI_EVAL_AWAITING_RUN"  # noqa: S105 - a variable name, not
 
 
 def load_project_env(env_file: Path) -> None:
-    """The project's `.env` over this process's environment, `crewai eval`'s
-    token excepted: the token this process was started with is kept, and a
-    `.env` never sets one. Otherwise a `.env` could unmark a run `crewai eval`
-    started, and its tracing would no longer apply the command's rules."""
-    from dotenv import load_dotenv
+    """The project's `.env` over this process's environment, with two
+    exceptions.
+
+    `crewai eval`'s token: the token this process was started with is kept,
+    and a `.env` never sets one. Otherwise a `.env` could unmark a run `crewai
+    eval` started, and its tracing would no longer apply the command's rules.
+
+    A blank line, or one still holding the `YOUR_API_KEY` placeholder, never
+    replaces a value this process has: it holds no key, and the process may
+    have the real one, from the shell or pasted when `crewai run` asked for it.
+    """
+    from dotenv import dotenv_values, load_dotenv
 
     kept = os.environ.get(EVAL_TOKEN_ENV)
+    held = {
+        name: os.environ[name]
+        for name, value in dotenv_values(env_file).items()
+        if (value or "").strip() in ("", PLACEHOLDER_API_KEY) and os.environ.get(name)
+    }
     load_dotenv(env_file, override=True)
+    os.environ.update(held)
     if kept is None:
         os.environ.pop(EVAL_TOKEN_ENV, None)
     else:

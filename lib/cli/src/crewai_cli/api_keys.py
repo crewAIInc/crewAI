@@ -31,7 +31,7 @@ from crewai_cli.constants import (
 ApiKeyOutcome = Literal["saved", "skipped", "warned"]
 
 # crewAI treats this value, which `crewai create flow` used to write, as no key.
-_PLACEHOLDER = "YOUR_API_KEY"
+PLACEHOLDER_API_KEY = "YOUR_API_KEY"
 # crewAI's Gemini provider takes GOOGLE_API_KEY too, and with
 # GOOGLE_CLOUD_PROJECT it can use Vertex AI credentials instead of a key.
 _ALTERNATIVE_KEYS: dict[str, tuple[str, ...]] = {
@@ -275,6 +275,6 @@ def _missing_keys(models: Iterable[str], saved: Mapping[str, str | None]) -> lis
 
 def _is_set(name: str, saved: Mapping[str, str | None]) -> bool:
     return any(
-        value and value.strip() not in ("", _PLACEHOLDER)
+        value and value.strip() not in ("", PLACEHOLDER_API_KEY)
         for value in (os.environ.get(name), saved.get(name))
     )
