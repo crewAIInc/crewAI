@@ -1768,9 +1768,10 @@ def test_json_watsonx_models_use_the_prefix_crewai_can_run(
     monkeypatch.setattr(json_crew, "pick_one", lambda *_a, **_k: next(picks))
 
     assert json_crew._select_model() == "watsonx/ibm/granite-4-h-small"
-    assert json_crew._default_model_for_provider("watson") == (
-        "watsonx/ibm/granite-4-h-small"
-    )
+    for provider in ("watson", "watsonx"):
+        assert json_crew._default_model_for_provider(provider) == (
+            "watsonx/ibm/granite-4-h-small"
+        )
 
 
 def test_json_dmn_next_steps_name_the_watsonx_keys(

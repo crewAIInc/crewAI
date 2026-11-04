@@ -1015,10 +1015,11 @@ def _default_model_for_provider(provider: str | None) -> str | None:
         return None
     if "/" in normalized:
         return normalized
-    models = _PROVIDER_MODELS.get(normalized)
+    provider = _ENV_PROVIDERS.get(normalized, normalized)
+    models = _PROVIDER_MODELS.get(provider)
     if not models:
         return None
-    return f"{_MODEL_PREFIXES.get(normalized, normalized)}/{models[0][0]}"
+    return f"{_MODEL_PREFIXES.get(provider, provider)}/{models[0][0]}"
 
 
 # ── Helpers ─────────────────────────────────────────────────────
