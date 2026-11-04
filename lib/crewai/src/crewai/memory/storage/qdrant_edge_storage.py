@@ -44,6 +44,19 @@ from crewai.memory.types import MemoryRecord, ScopeInfo
 _logger = logging.getLogger(__name__)
 
 
+def _win_pid_is_gone(error_code: int) -> bool:
+    """Whether a failed ``OpenProcess`` proves the worker no longer exists.
+
+    Only ``ERROR_INVALID_PARAMETER`` (87) means the pid is invalid. In
+    particular ``ERROR_ACCESS_DENIED`` (5) means the process is still running
+    but we may not open a handle to it, and any other error is inconclusive.
+    Those cases must keep the shard rather than delete a live worker's data.
+
+    Kept as a pure function so the decision can be unit-tested on any platform.
+    """
+    return error_code == 87
+
+
 def _process_is_alive(pid: int) -> bool:
     """Return whether *pid* is running, without signalling the process.
 
@@ -78,7 +91,10 @@ def _process_is_alive(pid: int) -> bool:
     still_active = 259
     handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
     if not handle:
-        return False
+        # use_last_error=True makes ctypes capture the Win32 error for this
+        # thread; get_last_error() is the matching accessor. Treat anything
+        # short of proof that the pid is invalid as "alive".
+        return not _win_pid_is_gone(ctypes.get_last_error())
     try:
         exit_code = wintypes.DWORD()
         if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
