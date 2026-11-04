@@ -28,7 +28,7 @@ class ArcmiraSearchToolSchema(BaseModel):
         default=5,
         ge=1,
         le=20,
-        description="Maximum transcript passages to return. Each result uses account usage.",
+        description="Maximum passages to return. The first five per search are free.",
     )
 
 
@@ -40,7 +40,9 @@ class ArcmiraSearchTool(BaseTool):
         "Search indexed YouTube transcript passages for one topic or phrase. "
         "Use the returned timestamps and source links when citing what was said. "
         "Report partial results and access limits. An empty result means no match "
-        "in the index, not that nobody discussed the topic. Calls use Arcmira account usage."
+        "in the index, not that nobody discussed the topic. "
+        "Passages beyond the first five can use credits from your plan, then your "
+        "on-demand budget."
     )
     args_schema: type[BaseModel] = ArcmiraSearchToolSchema
     api_key: SecretStr = Field(
