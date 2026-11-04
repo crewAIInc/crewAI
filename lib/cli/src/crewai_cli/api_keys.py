@@ -47,10 +47,13 @@ _JSONC_STRING_OR_COMMENT = re.compile(
 )
 _JSONC_STRING_OR_TRAILING_COMMA = re.compile(r'("(?:\\.|[^"\\])*")|,(?=\s*[}\]])')
 _YAML_LLM = re.compile(r"""^[ \t]+llm:[ \t]*["']?([^"'#\s]+)""", re.MULTILINE)
-# Any `key: value` line of a crew's YAML config, at any depth, so an llm
-# mapping's `client_params` is read too. Flow-style `{...}` mappings are not.
+# Any `key: value` of a crew's YAML config, at any depth and in any style: a
+# block mapping, a flow mapping `{base_url: ...}`, or a block scalar `>-`/`|`
+# whose value is on the next line. PyYAML is not a CLI dependency. A value it
+# cannot take is still reported, as unreadable, rather than skipped.
 _YAML_SETTING = re.compile(
-    r"""^[ \t]*["']?([A-Za-z_][\w-]*)["']?[ \t]*:[ \t]*["']?([^"'#\s]+)""",
+    r"""(?:^|[\s{,])["']?([A-Za-z_][\w-]*)["']?[ \t]*:"""
+    r"""(?:[ \t]*[>|][-+0-9]*[ \t]*(?:\#[^\n]*)?\n)?[ \t]*["']?([^"'\s,{}\[\]#]*)""",
     re.MULTILINE,
 )
 # An llm passed in Python code, whose model this check cannot read.
@@ -232,7 +235,9 @@ def _project_endpoints(
     # cursor and print over the host.
     return list(
         dict.fromkeys(
-            f"{_host(value)} ({source})".encode("unicode_escape").decode("ascii")
+            f"{_host(value) if value else 'a host it cannot read'} ({source})".encode(
+                "unicode_escape"
+            ).decode("ascii")
             for value, source in found
         )
     )
