@@ -241,9 +241,6 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
-    # Task that owns ``_times_executed``; retries re-enter execute_task with the
-    # same object, so identity tells a retry apart from the next task.
-    _retry_task: Task | None = PrivateAttr(default=None)
     # The construction-time ``llm_overlay`` read happened; see post_init_setup.
     _overlay_read: bool = PrivateAttr(default=False)
     # The llm the agent was declared with, resolved before any overlay read: what
@@ -704,11 +701,6 @@ class Agent(BaseAgent):
         get_env_context()
 
         self.reset_tool_failures()
-        # max_retry_limit is per task. Retries re-enter execute_task with the
-        # same Task object, so only a different task resets the counter.
-        if self._retry_task is not task:
-            self._retry_task = task
-            self._times_executed = 0
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
@@ -849,7 +841,6 @@ class Agent(BaseAgent):
         """
         # A completed task ends its retry budget; a later run of the same Task
         # object starts fresh.
-        self._retry_task = None
         self._times_executed = 0
 
         if self.max_rpm and self._rpm_controller:
@@ -879,12 +870,16 @@ class Agent(BaseAgent):
 
         return result
 
-    def _check_execution_error(self, e: Exception, task: Task) -> None:
+    def _check_execution_error(self, e: Exception, task: Task, retry_count: int) -> int:
         """Check if an execution error should be re-raised immediately.
 
         Args:
             e: The exception that occurred.
             task: The task being executed.
+            retry_count: Failed attempts already made by this execution chain.
+
+        Returns:
+            The failed-attempt count including this one.
 
         Raises:
             Exception: If the error is from litellm, a passthrough, or retries are exhausted.
@@ -903,9 +898,10 @@ class Agent(BaseAgent):
         )
         if e.__class__.__module__.startswith("litellm"):
             raise e
-        self._times_executed += 1
+        self._times_executed = retry_count + 1
         if self._times_executed > self.max_retry_limit:
             raise e
+        return self._times_executed
 
     def _handle_execution_error(
         self,
@@ -913,6 +909,7 @@ class Agent(BaseAgent):
         task: Task,
         context: str | None,
         tools: list[BaseTool] | None,
+        retry_count: int,
     ) -> Any:
         """Handle execution errors with retry logic (sync path).
 
@@ -921,12 +918,13 @@ class Agent(BaseAgent):
             task: The task being executed.
             context: Task context.
             tools: Task tools.
+            retry_count: Failed attempts already made by this execution chain.
 
         Returns:
             Result from retried execution.
         """
-        self._check_execution_error(e, task)
-        return self.execute_task(task, context, tools)
+        next_retry_count = self._check_execution_error(e, task, retry_count)
+        return self.execute_task(task, context, tools, _retry_count=next_retry_count)
 
     async def _handle_execution_error_async(
         self,
@@ -934,6 +932,7 @@ class Agent(BaseAgent):
         task: Task,
         context: str | None,
         tools: list[BaseTool] | None,
+        retry_count: int,
     ) -> Any:
         """Handle execution errors with retry logic (async path).
 
@@ -942,12 +941,15 @@ class Agent(BaseAgent):
             task: The task being executed.
             context: Task context.
             tools: Task tools.
+            retry_count: Failed attempts already made by this execution chain.
 
         Returns:
             Result from retried execution.
         """
-        self._check_execution_error(e, task)
-        return await self.aexecute_task(task, context, tools)
+        next_retry_count = self._check_execution_error(e, task, retry_count)
+        return await self.aexecute_task(
+            task, context, tools, _retry_count=next_retry_count
+        )
 
     def message(self, content: str, **kwargs: Any) -> str:
         """Send a single message and get a response.
@@ -979,6 +981,7 @@ class Agent(BaseAgent):
         task: Task,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
+        _retry_count: int = 0,
     ) -> Any:
         """Execute a task with the agent.
 
@@ -986,6 +989,8 @@ class Agent(BaseAgent):
             task: Task to execute.
             context: Context to execute the task in.
             tools: Tools to use for the task.
+            _retry_count: Failed attempts already made for this task. Retries
+                pass it through; external callers should leave it at 0.
 
         Returns:
             Output of the agent
@@ -995,6 +1000,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        self._times_executed = _retry_count
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1042,7 +1048,7 @@ class Agent(BaseAgent):
             raise e
         except Exception as e:
             # The retry runs a whole execute_task of its own, result already finalized.
-            return self._handle_execution_error(e, task, context, tools)
+            return self._handle_execution_error(e, task, context, tools, _retry_count)
 
         return self._finalize_task_execution(task, result)
 
@@ -1121,6 +1127,7 @@ class Agent(BaseAgent):
         task: Task,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
+        _retry_count: int = 0,
     ) -> Any:
         """Execute a task with the agent asynchronously.
 
@@ -1128,6 +1135,8 @@ class Agent(BaseAgent):
             task: Task to execute.
             context: Context to execute the task in.
             tools: Tools to use for the task.
+            _retry_count: Failed attempts already made for this task. Retries
+                pass it through; external callers should leave it at 0.
 
         Returns:
             Output of the agent.
@@ -1137,6 +1146,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        self._times_executed = _retry_count
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1177,7 +1187,9 @@ class Agent(BaseAgent):
             raise e
         except Exception as e:
             # The retry runs a whole aexecute_task of its own, result already finalized.
-            return await self._handle_execution_error_async(e, task, context, tools)
+            return await self._handle_execution_error_async(
+                e, task, context, tools, _retry_count
+            )
 
         return self._finalize_task_execution(task, result)
 
