@@ -7,9 +7,11 @@ run; elsewhere it prints the line to add. It never stops the run.
 from __future__ import annotations
 
 import importlib
+import os
 from pathlib import Path
 import subprocess
 import sys
+import threading
 from typing import Any
 
 import click
@@ -196,6 +198,7 @@ def test_enter_skips_the_key_and_the_run_goes_on(
 
 def test_each_providers_key_is_asked_for_once(project, children, monkeypatch) -> None:
     json_crew_project(project, llm="anthropic/claude-sonnet-5")
+    write(project / "crew.jsonc", '{"agents": ["editor", "researcher", "writer"]}')
     write(project / "agents" / "writer.jsonc", '{"llm": "anthropic/claude-haiku-4-5"}')
     write(project / "agents" / "editor.jsonc", '{"llm": "gpt-5.6-luna"}')
     prompts = at_a_terminal(monkeypatch, "sk-openai", "")
@@ -210,6 +213,113 @@ def test_each_providers_key_is_asked_for_once(project, children, monkeypatch) ->
     [(_, env)] = children
     assert env["OPENAI_API_KEY"] == "sk-openai"
     assert "ANTHROPIC_API_KEY" not in env
+
+
+@pytest.mark.skipif(
+    os.name == "nt" or os.geteuid() == 0,
+    reason="a folder's write permission binds neither Windows nor root",
+)
+def test_a_key_that_cannot_be_saved_is_still_handed_to_the_run(
+    project, children, monkeypatch, capsys
+) -> None:
+    crew_project(project)
+    write(project / ".env", "OPENAI_API_KEY=YOUR_API_KEY\n")
+    at_a_terminal(monkeypatch, "sk-pasted")
+    project.chmod(0o555)
+    try:
+        run_crew_module.run_crew()
+    finally:
+        project.chmod(0o755)
+
+    assert (
+        f"Couldn't save OPENAI_API_KEY to {project / '.env'} (Permission denied), "
+        "so only this run uses it."
+    ) in capsys.readouterr().err
+    assert (project / ".env").read_text() == "OPENAI_API_KEY=YOUR_API_KEY\n"
+    [(_, env)] = children
+    assert env["OPENAI_API_KEY"] == "sk-pasted"
+
+
+def test_the_env_file_above_a_project_without_one_counts(
+    project, children, monkeypatch, capsys
+) -> None:
+    """crewAI loads the nearest `.env` at or above the project."""
+    crew_project(project)
+    write(
+        project.parent / ".env",
+        "MODEL=anthropic/claude-sonnet-5\nANTHROPIC_API_KEY=sk-above\n",
+    )
+    prompts = at_a_terminal(monkeypatch)
+
+    run_crew_module.run_crew()
+
+    assert prompts == []
+    assert "is not set" not in capsys.readouterr().err
+    assert not (project / ".env").exists()
+
+
+def test_a_key_missing_from_the_env_file_above_is_named_there_not_saved(
+    project, children, monkeypatch, capsys
+) -> None:
+    """A `.env` made in the project would hide the one above from crewAI."""
+    crew_project(project)
+    write(project.parent / ".env", "MODEL=anthropic/claude-sonnet-5\nSERPER_API_KEY=s\n")
+    prompts = at_a_terminal(monkeypatch)
+
+    run_crew_module.run_crew()
+
+    assert prompts == []
+    assert (
+        "ANTHROPIC_API_KEY is not set. Add ANTHROPIC_API_KEY=<your key> to "
+        f"{project.parent / '.env'}, then run `crewai run` again."
+    ) in capsys.readouterr().err
+    assert not (project / ".env").exists()
+    assert children
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symbolic links need privileges on Windows")
+def test_a_linked_env_file_is_never_replaced(
+    project, children, monkeypatch, capsys
+) -> None:
+    crew_project(project)
+    shared = write(project.parent / "shared.env", "# shared\nOPENAI_API_KEY=YOUR_API_KEY\n")
+    (project / ".env").symlink_to(shared)
+    prompts = at_a_terminal(monkeypatch)
+
+    run_crew_module.run_crew()
+
+    assert prompts == []
+    assert warning(project, "OPENAI_API_KEY") in capsys.readouterr().err
+    assert (project / ".env").is_symlink()
+    assert shared.read_text() == "# shared\nOPENAI_API_KEY=YOUR_API_KEY\n"
+    assert children
+
+
+@pytest.mark.skipif(os.name == "nt", reason="named pipes are POSIX")
+def test_a_piped_env_file_is_read_but_never_replaced(
+    project, children, monkeypatch, capsys
+) -> None:
+    """A secrets manager can serve `.env` through a named pipe."""
+    crew_project(project)
+    pipe = project / ".env"
+    os.mkfifo(pipe)
+
+    def serve() -> None:
+        with pipe.open("w") as served:
+            served.write("OPENAI_API_KEY=YOUR_API_KEY\n")
+
+    server = threading.Thread(target=serve, daemon=True)
+    server.start()
+    prompts = at_a_terminal(monkeypatch)
+
+    run_crew_module.run_crew()
+    server.join(timeout=5)
+
+    assert not server.is_alive()  # the check read what the pipe served
+    assert prompts == []
+    assert warning(project, "OPENAI_API_KEY") in capsys.readouterr().err
+    assert pipe.is_fifo()
+    assert children
 
 
 def test_a_terminal_whose_output_is_captured_gets_the_line_instead(
@@ -353,6 +463,41 @@ def test_a_declarative_flow_is_not_checked(project, children, no_prompt) -> None
     assert "is not set" not in result.output
 
 
+@pytest.mark.parametrize(
+    "pyproject",
+    [
+        '[project]\nname = "webapp"\n',
+        '[project]\nname = "demo"\n\n[tool.crewai]\ntype = "tool"\n',
+    ],
+    ids=["no_tool_crewai", "tool"],
+)
+def test_a_project_that_is_not_a_crewai_crew_or_flow_is_not_checked(
+    project, children, monkeypatch, capsys, pyproject
+) -> None:
+    write(project / "pyproject.toml", pyproject)
+    prompts = at_a_terminal(monkeypatch, "sk-pasted")
+
+    run_crew_module.run_crew()
+
+    assert prompts == []
+    assert "is not set" not in capsys.readouterr().err
+    assert not (project / ".env").exists()
+    assert children
+
+
+def test_an_env_file_that_cannot_be_read_is_left_to_the_run(
+    project, children, no_prompt
+) -> None:
+    crew_project(project)
+    (project / ".env").write_bytes("OPENAI_API_KEY=YOUR_API_KEY\n".encode("utf-16"))
+
+    result = crewai_run()
+
+    assert result.exit_code == 0, result.output
+    assert "is not set" not in result.output
+    assert children
+
+
 # Which models a project uses
 
 
@@ -397,6 +542,7 @@ def test_a_json_crew_file_that_does_not_parse_is_left_to_the_run(
     project, children, no_prompt
 ) -> None:
     json_crew_project(project)
+    write(project / "crew.jsonc", '{"agents": ["researcher", "broken"]}')
     write(project / "agents" / "broken.jsonc", '{"llm": "anthropic/claude-sonnet-5"')
 
     result = crewai_run()
@@ -407,7 +553,9 @@ def test_a_json_crew_file_that_does_not_parse_is_left_to_the_run(
     assert children
 
 
-def test_a_json_crew_without_any_llm_asks_nothing(project, children, no_prompt) -> None:
+def test_an_object_form_llm_in_a_json_crew_is_not_checked(
+    project, children, no_prompt
+) -> None:
     json_crew_project(project)
     write(
         project / "agents" / "researcher.jsonc",
@@ -417,6 +565,50 @@ def test_a_json_crew_without_any_llm_asks_nothing(project, children, no_prompt) 
     result = crewai_run()
 
     assert "is not set" not in result.output
+
+
+@pytest.mark.parametrize(
+    ("env", "key"),
+    [("", "OPENAI_API_KEY"), ("MODEL=anthropic/claude-sonnet-5\n", "ANTHROPIC_API_KEY")],
+    ids=["default_model", "model_in_env_file"],
+)
+def test_a_json_agent_without_an_llm_is_checked_against_the_model_crewai_picks(
+    project, children, no_prompt, env, key
+) -> None:
+    json_crew_project(project, llm="groq/llama-3.3-70b-versatile")
+    write(project / "crew.jsonc", '{"agents": ["researcher", "writer"]}')
+    write(project / "agents" / "writer.jsonc", '{"role": "Writer"}')
+    write(project / ".env", env)
+
+    result = crewai_run()
+
+    assert warning(project, "GROQ_API_KEY") in result.output
+    assert warning(project, key) in result.output
+
+
+def test_a_json_crews_manager_agent_and_json_agent_files_are_read(
+    project, children, no_prompt
+) -> None:
+    json_crew_project(project)
+    write(project / "crew.jsonc", '{"agents": ["researcher"], "manager_agent": "lead"}')
+    write(project / "agents" / "lead.json", '{"llm": "groq/llama-3.3-70b-versatile"}')
+
+    result = crewai_run()
+
+    assert warning(project, "OPENAI_API_KEY") in result.output
+    assert warning(project, "GROQ_API_KEY") in result.output
+
+
+def test_an_agent_file_the_crew_does_not_list_is_not_read(
+    project, children, no_prompt
+) -> None:
+    json_crew_project(project)
+    write(project / "agents" / "retired.jsonc", '{"llm": "anthropic/claude-sonnet-5"}')
+
+    result = crewai_run()
+
+    assert warning(project, "OPENAI_API_KEY") in result.output
+    assert "ANTHROPIC_API_KEY" not in result.output
 
 
 def test_a_python_crew_reads_model_from_the_env_file(
@@ -469,10 +661,42 @@ def test_without_a_model_crewais_default_model_is_checked(
     project, children, no_prompt
 ) -> None:
     flow_project(project)
+    # The scaffold's own main.py: `eval_llm=` passes no agent an llm.
+    write(
+        project / "src" / "demo" / "main.py",
+        "Demo().crew().test(n_iterations=2, eval_llm=sys.argv[2], inputs=inputs)\n",
+    )
 
     result = crewai_run()
 
     assert warning(project, "OPENAI_API_KEY") in result.output
+
+
+@pytest.mark.parametrize(
+    ("setup", "path", "code"),
+    [
+        (
+            crew_project,
+            "crew.py",
+            'Agent(config=self.agents_config["researcher"],\n'
+            '      llm=LLM(model="anthropic/claude-sonnet-5"))\n',
+        ),
+        (flow_project, "main.py", 'answer = LLM("anthropic/claude-sonnet-5").call(q)\n'),
+    ],
+    ids=["crew", "flow"],
+)
+def test_a_project_whose_code_passes_an_llm_is_not_checked_against_the_default(
+    project, children, no_prompt, setup, path, code
+) -> None:
+    """The model in code is unread, so crewAI's default may be in no use."""
+    setup(project)
+    write(project / "src" / "demo" / path, code)
+
+    result = crewai_run()
+
+    assert result.exit_code == 0, result.output
+    assert "is not set" not in result.output
+    assert children
 
 
 def test_model_name_is_read_when_model_is_not_set(project, children, no_prompt) -> None:

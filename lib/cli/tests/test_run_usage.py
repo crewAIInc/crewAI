@@ -800,3 +800,24 @@ def test_a_project_env_opt_out_covers_the_key_count(
 
     assert "OPENAI_API_KEY is not set" in result.output
     assert usage == []
+
+
+def test_quitting_at_the_key_prompt_counts_where_the_run_stopped(
+    project, usage, commands, monkeypatch
+) -> None:
+    """Ctrl-C or Ctrl-D at the prompt: the run stopped there, before kickoff."""
+    write(project / "pyproject.toml", CREW_PYPROJECT)
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    monkeypatch.setattr("crewai_cli.input_prompt.is_interactive", lambda: True)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+
+    def quit_at_the_prompt(*args: Any, **kwargs: Any) -> str:
+        raise click.Abort
+
+    monkeypatch.setattr(click, "prompt", quit_at_the_prompt)
+
+    with pytest.raises(click.Abort):
+        run_crew_module.run_crew()
+
+    assert usage == [started("crew"), stopped("api_key_prompt")]
+    assert commands == []

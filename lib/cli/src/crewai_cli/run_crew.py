@@ -569,6 +569,7 @@ RunKind = Literal["crew", "json_crew", "flow", "declarative_flow", "unknown"]
 RunStopReason = Literal[
     "no_project",
     "invalid_project",
+    "api_key_prompt",
     "unsupported_option",
     "invalid_inputs",
     "missing_inputs",
@@ -920,13 +921,17 @@ def run_crew(
 
     with stops_run_as("invalid_project"):
         json_crew_definition = configured_project_json_crew(pyproject_data)
-    # A re-run inside the project's environment was checked by the run that
-    # started it.
+    project_type = get_crewai_project_type(pyproject_data)
+    # A crewAI crew or Python flow only: `kind` is "crew" for any other
+    # project too. A re-run inside the project's environment was checked by
+    # the run that started it.
     if (
-        kind in ("json_crew", "crew", "flow")
+        project_type in ("crew", "flow")
+        and kind != "declarative_flow"
         and os.environ.get(RUN_COUNTED_ENV) is None
     ):
-        api_key = ask_for_missing_api_keys(Path.cwd(), json_crew_definition)
+        with stops_run_as("api_key_prompt"):
+            api_key = ask_for_missing_api_keys(Path.cwd(), json_crew_definition)
         if api_key is not None:
             _count_run_usage(f"run_api_key:{api_key}")
     if json_crew_definition:
@@ -941,7 +946,6 @@ def run_crew(
         return
 
     _warn_if_old_poetry_project(pyproject_data)
-    project_type = get_crewai_project_type(pyproject_data)
 
     if project_type == "flow":
         # No --definition: resolve the configured [tool.crewai] flow — the same
