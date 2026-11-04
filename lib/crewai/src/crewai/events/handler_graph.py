@@ -66,8 +66,13 @@ class HandlerGraph:
             in_degree[handler] = 0
 
         for handler, deps in self.handlers.items():
-            in_degree[handler] = len(deps)
-            for dep in deps:
+            # `Depends` objects for the same handler are equal, so a provider
+            # is only recorded once in `dependents`. Count the unique
+            # dependencies as well, otherwise duplicates leave the in-degree
+            # above zero and we report a cycle that doesn't exist.
+            unique_deps = set(deps)
+            in_degree[handler] = len(unique_deps)
+            for dep in unique_deps:
                 dependents[dep.handler].add(handler)
 
         queue: deque[Handler] = deque([h for h, deg in in_degree.items() if deg == 0])
