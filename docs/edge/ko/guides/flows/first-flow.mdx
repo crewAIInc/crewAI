@@ -370,7 +370,7 @@ if __name__ == "__main__":
 
 ## 6단계: 환경 변수 설정하기
 
-프로젝트 루트에 `.env` 파일을 생성하고 API 키를 입력하세요. 공급자 구성에 대한 자세한 내용은 [LLM 설정 가이드](/ko/concepts/llms#llm-설정하기)를 참고하세요.
+터미널에서 `crewai create flow`를 실행했다면, CLI가 제공업체, 모델, API 키를 묻고 프로젝트 루트의 `.env` 파일에 저장했습니다. 키를 건너뛰었다면 지금 `.env`에 추가하세요. 이 가이드의 개요 단계는 `openai/gpt-4o-mini`를 호출하므로, 어떤 모델을 골랐든 `.env`에 `OPENAI_API_KEY`도 필요합니다. 공급자 구성에 대한 자세한 내용은 [LLM 설정 가이드](/ko/concepts/llms#llm-설정하기)를 참고하세요.
 
 ```sh .env
 OPENAI_API_KEY=your_openai_api_key

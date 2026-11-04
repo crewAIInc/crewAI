@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 import importlib
+import io
 from pathlib import Path
 import sys
 from types import ModuleType
 
+import click
 from click.testing import CliRunner, Result
 import pytest
 from pytest import MonkeyPatch
 import tomli
 
+from crewai_cli import create_json_crew as json_crew
 from crewai_cli.cli import crewai
 from crewai_cli.create_flow import create_flow
 from crewai_cli.version import get_crewai_dependency_range
@@ -71,6 +74,335 @@ def test_create_flow_depends_on_crewai_with_tools_only(
     assert pyproject["project"]["dependencies"][0] == (
         f"crewai[tools]{get_crewai_dependency_range()}"
     )
+
+
+SONNET = "anthropic/claude-sonnet-5"
+LUNA = "openai/gpt-5.6-luna"
+
+
+class _Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def _at_a_terminal(monkeypatch: MonkeyPatch) -> None:
+    """Run `crewai create flow` as a person at a terminal: stdin and stdout are
+    terminals and CREWAI_DMN is unset. Call it in the test body: pytest gives the
+    test a different captured stdout than its fixtures see."""
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr("sys.stdin", _Terminal())
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+
+
+def _output(capsys: pytest.CaptureFixture[str]) -> str:
+    """What was printed, without the colors click adds at a terminal."""
+    return click.unstyle(capsys.readouterr().out)
+
+
+def _pick_model(monkeypatch: MonkeyPatch, model: str) -> None:
+    monkeypatch.setattr(json_crew, "_select_model", lambda: model)
+
+
+def _answer_key_prompts(
+    monkeypatch: MonkeyPatch, answers: list[str]
+) -> list[dict[str, object]]:
+    """Answer API-key prompts in order and record each prompt's text and options."""
+    calls: list[dict[str, object]] = []
+    replies = iter(answers)
+
+    def fake_prompt(text: str, **kwargs: object) -> str:
+        calls.append({"text": click.unstyle(text), **kwargs})
+        return next(replies)
+
+    monkeypatch.setattr(json_crew.click, "prompt", fake_prompt)
+    return calls
+
+
+def _forbid_prompts(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        json_crew, "_select_model", lambda: pytest.fail("asked for a model")
+    )
+    monkeypatch.setattr(
+        json_crew.click,
+        "prompt",
+        lambda *_args, **_kwargs: pytest.fail("asked for an API key"),
+    )
+
+
+def _crewai_dependency(project_root: Path) -> str:
+    pyproject = tomli.loads((project_root / "pyproject.toml").read_text())
+    return str(pyproject["project"]["dependencies"][0])
+
+
+def _assert_next_steps(output: str, folder_name: str, key_line: str | None) -> None:
+    steps = output[output.index("Next steps:") :]
+    assert f"    cd {folder_name}\n" in steps
+    assert "  Run your flow:\n    crewai run\n" in steps
+    if key_line is None:
+        assert "in .env before `crewai run`" not in steps
+    else:
+        assert f"  {key_line}\n" in steps
+        assert steps.index(f"cd {folder_name}") < steps.index(key_line)
+        assert steps.index(key_line) < steps.index("Run your flow:")
+
+
+def test_create_flow_at_a_terminal_saves_the_picked_model_and_key(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    _pick_model(monkeypatch, SONNET)
+    calls = _answer_key_prompts(monkeypatch, ["sk-ant-test"])
+
+    create_flow("Research Flow")
+
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == (
+        f"MODEL={SONNET}\nANTHROPIC_API_KEY=sk-ant-test\n"
+    )
+    assert [call["text"] for call in calls] == [
+        "  Enter your ANTHROPIC API key (press Enter to skip)"
+    ]
+    assert [call["hide_input"] for call in calls] == [True]
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools,anthropic]{get_crewai_dependency_range()}"
+    )
+    output = _output(capsys)
+    assert "  API keys and model saved to .env file\n" in output
+    _assert_next_steps(output, "research_flow", key_line=None)
+
+
+def test_create_flow_at_a_terminal_blank_key_prints_the_line_to_add(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    _pick_model(monkeypatch, LUNA)
+    _answer_key_prompts(monkeypatch, [""])
+
+    create_flow("Research Flow")
+
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == f"MODEL={LUNA}\n"
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools]{get_crewai_dependency_range()}"
+    )
+    output = _output(capsys)
+    assert (
+        f"  API key not saved. Add this line to {Path('research_flow') / '.env'} "
+        "before `crewai run`:\n    OPENAI_API_KEY=<your key>\n"
+    ) in output
+    assert "saved to .env file" not in output
+    _assert_next_steps(output, "research_flow", key_line=None)
+
+
+def test_create_flow_provider_preselects_the_model_and_still_asks_for_the_key(
+    tmp_path: Path, monkeypatch: MonkeyPatch, no_provider_keys: None
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        json_crew, "_select_model", lambda: pytest.fail("--provider picks the model")
+    )
+    calls = _answer_key_prompts(monkeypatch, ["sk-ant-test"])
+
+    create_flow("Research Flow", provider="anthropic")
+
+    assert [call["text"] for call in calls] == [
+        "  Enter your ANTHROPIC API key (press Enter to skip)"
+    ]
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == (
+        f"MODEL={SONNET}\nANTHROPIC_API_KEY=sk-ant-test\n"
+    )
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools,anthropic]{get_crewai_dependency_range()}"
+    )
+
+
+def test_create_flow_skip_provider_asks_nothing_at_a_terminal(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow", skip_provider=True)
+
+    project_root = tmp_path / "research_flow"
+    assert not (project_root / ".env").exists()
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools]{get_crewai_dependency_range()}"
+    )
+    _assert_next_steps(
+        _output(capsys),
+        "research_flow",
+        key_line="Set OPENAI_API_KEY in .env before `crewai run`",
+    )
+
+
+@pytest.mark.parametrize(
+    ("stdin_is_terminal", "stdout_is_terminal", "dmn"),
+    [
+        (False, False, False),
+        (False, True, False),
+        (True, False, False),
+        (True, True, True),
+    ],
+    ids=["no-terminal", "piped-stdin", "piped-stdout", "crewai-dmn"],
+)
+def test_create_flow_without_a_terminal_asks_nothing_and_writes_no_placeholder(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+    stdin_is_terminal: bool,
+    stdout_is_terminal: bool,
+    dmn: bool,
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "sys.stdin", _Terminal() if stdin_is_terminal else io.StringIO()
+    )
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: stdout_is_terminal)
+    if dmn:
+        monkeypatch.setenv("CREWAI_DMN", "true")
+    else:
+        monkeypatch.delenv("CREWAI_DMN", raising=False)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow")
+
+    assert not (tmp_path / "research_flow" / ".env").exists()
+    _assert_next_steps(
+        _output(capsys),
+        "research_flow",
+        key_line="Set OPENAI_API_KEY in .env before `crewai run`",
+    )
+
+
+def test_crewai_create_flow_without_a_terminal_exits_zero_with_next_steps(
+    tmp_path: Path, monkeypatch: MonkeyPatch, no_provider_keys: None
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    _forbid_prompts(monkeypatch)
+
+    result = CliRunner().invoke(crewai, ["create", "flow", "Research Flow"])
+
+    assert result.exit_code == 0, result.output
+    assert "Flow Research Flow created successfully!" in result.output
+    _assert_next_steps(
+        result.output,
+        "research_flow",
+        key_line="Set OPENAI_API_KEY in .env before `crewai run`",
+    )
+    assert not (tmp_path / "research_flow" / ".env").exists()
+
+
+def test_create_flow_declarative_asks_nothing_at_a_terminal(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow", declarative=True)
+
+    project_root = tmp_path / "research_flow"
+    assert not (project_root / ".env").exists()
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools]{get_crewai_dependency_range()}"
+    )
+    _assert_next_steps(
+        _output(capsys),
+        "research_flow",
+        key_line="Set OPENAI_API_KEY in .env before `crewai run`",
+    )
+
+
+@pytest.mark.parametrize("declarative", [False, True])
+def test_create_flow_provider_without_a_terminal_saves_only_the_model(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+    declarative: bool,
+):
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow", declarative=declarative, provider="anthropic")
+
+    project_root = tmp_path / "research_flow"
+    assert (project_root / ".env").read_text() == f"MODEL={SONNET}\n"
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools,anthropic]{get_crewai_dependency_range()}"
+    )
+    _assert_next_steps(
+        _output(capsys),
+        "research_flow",
+        key_line="Set ANTHROPIC_API_KEY in .env before `crewai run`",
+    )
+
+
+def test_create_flow_with_a_keyless_provider_names_no_key(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    monkeypatch.chdir(tmp_path)
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow", provider="ollama/llama3.3")
+
+    env_file = tmp_path / "research_flow" / ".env"
+    assert env_file.read_text() == "MODEL=ollama/llama3.3\n"
+    _assert_next_steps(_output(capsys), "research_flow", key_line=None)
+
+
+def test_create_flow_next_steps_skip_a_key_already_exported(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_provider_keys: None,
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-shell")
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow")
+
+    _assert_next_steps(_output(capsys), "research_flow", key_line=None)
+
+
+def test_create_flow_into_an_existing_folder_asks_nothing(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    _at_a_terminal(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "research_flow").mkdir()
+    _forbid_prompts(monkeypatch)
+
+    create_flow("Research Flow")
+
+    assert "Error: Folder research_flow already exists." in _output(capsys)
+    assert list((tmp_path / "research_flow").iterdir()) == []
 
 
 def test_create_flow_scaffolds_assistant_instructions(
