@@ -17705,9 +17705,16 @@
                 "title": "Completion Cost"
               },
               "context_window_size": {
-                "default": 0,
-                "title": "Context Window Size",
-                "type": "integer"
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Context Window Size"
               },
               "frequency_penalty": {
                 "anyOf": [
