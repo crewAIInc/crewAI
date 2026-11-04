@@ -1,0 +1,44 @@
+---
+title: Reasoning
+description: "O reasoning do agente agora faz parte do planejamento do agente. Aprenda como migrar de reasoning=True para planning_config."
+icon: brain
+mode: "wide"
+---
+
+## Visão Geral
+
+O reasoning do agente permite que ele reflita sobre uma tarefa e escreva um plano antes de agir. Ele agora faz parte do planejamento do agente, que também executa o plano passo a passo, verifica cada passo e pode replanejar quando um passo falha.
+
+Os parâmetros `reasoning` e `max_reasoning_attempts` ainda funcionam, mas estão obsoletos. `reasoning=True` emite um `DeprecationWarning`, que os filtros de aviso padrão do Python ocultam, e `max_reasoning_attempts` só tem efeito junto com `reasoning=True`. Configure o planejamento com `planning_config`. Veja [Planejamento](/edge/pt-BR/concepts/planning) para o guia completo.
+
+## Migrando de `reasoning=True`
+
+Substitua `reasoning=True` por `planning_config=PlanningConfig()` e mova `max_reasoning_attempts` para `PlanningConfig(max_attempts=...)`:
+
+```python
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    planning_config=PlanningConfig(max_attempts=3),
+)
+```
+
+| Obsoleto | Substituto |
+| --- | --- |
+| `reasoning=True` | `planning_config=PlanningConfig()` |
+| `reasoning=True, max_reasoning_attempts=3` | `planning_config=PlanningConfig(max_attempts=3)` |
+
+Esses substitutos mantêm o mesmo comportamento: esforço de raciocínio médio e refinamento até o plano ficar pronto ou até atingir `max_attempts`. Sem `max_attempts`, o planejador continua refinando até marcar o plano como pronto, por isso recomendamos definir um limite.
+
+<Warning>
+`planning=True` não é o mesmo que `reasoning=True`. Ele usa `PlanningConfig(reasoning_effort="low", max_attempts=1)`: uma tentativa de planejamento e nenhuma revisão por LLM depois de cada passo. Use-o quando quiser um planejamento mais barato, não como substituto direto.
+</Warning>
+
+## Como funciona
+
+O plano fica no estado de execução do agente e não é adicionado à descrição da tarefa. Cada passo do plano roda como um item de todo próprio, e o agente verifica o resultado antes de seguir. Se o planejamento falhar, o agente executa a tarefa sem plano.
+
+Para níveis de esforço de raciocínio, limites de passos, um LLM de planejamento separado, prompts personalizados e planejamento com `Agent.kickoff()`, veja [Planejamento](/edge/pt-BR/concepts/planning).
