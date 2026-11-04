@@ -11,7 +11,6 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import threading
 from typing import Any
 
 import click
@@ -168,6 +167,24 @@ def test_a_pasted_key_is_saved_and_handed_to_the_run(
     assert "DEMO_SETTING" not in env
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_a_pasted_key_leaves_the_env_file_readable_by_its_owner_only(
+    project, children, monkeypatch
+) -> None:
+    """A `.env` `crewai create` wrote takes the umask's group and world bits."""
+    crew_project(project)
+    env_file = write(project / ".env", "# keys for this crew\nSERPER_API_KEY=s\n")
+    env_file.chmod(0o644)
+    at_a_terminal(monkeypatch, "sk-pasted")
+
+    run_crew_module.run_crew()
+
+    assert env_file.stat().st_mode & 0o777 == 0o600
+    assert env_file.read_text() == (
+        "# keys for this crew\nSERPER_API_KEY=s\nOPENAI_API_KEY=sk-pasted\n"
+    )
+
+
 def test_a_pasted_key_creates_the_env_file(project, children, monkeypatch) -> None:
     crew_project(project)
     at_a_terminal(monkeypatch, "sk-pasted")
@@ -296,28 +313,21 @@ def test_a_linked_env_file_is_never_replaced(
 
 
 @pytest.mark.skipif(os.name == "nt", reason="named pipes are POSIX")
-def test_a_piped_env_file_is_read_but_never_replaced(
+def test_a_piped_env_file_is_left_for_the_run_to_read(
     project, children, monkeypatch, capsys
 ) -> None:
-    """A secrets manager can serve `.env` through a named pipe."""
+    """A secrets manager can serve `.env` through a named pipe. Opening it with
+    no writer blocks, and what it serves goes to one reader, which is the run."""
     crew_project(project)
     pipe = project / ".env"
     os.mkfifo(pipe)
-
-    def serve() -> None:
-        with pipe.open("w") as served:
-            served.write("OPENAI_API_KEY=YOUR_API_KEY\n")
-
-    server = threading.Thread(target=serve, daemon=True)
-    server.start()
     prompts = at_a_terminal(monkeypatch)
 
+    # With no writer on the pipe, an open would block until the test times out.
     run_crew_module.run_crew()
-    server.join(timeout=5)
 
-    assert not server.is_alive()  # the check read what the pipe served
     assert prompts == []
-    assert warning(project, "OPENAI_API_KEY") in capsys.readouterr().err
+    assert "is not set" not in capsys.readouterr().err
     assert pipe.is_fifo()
     assert children
 

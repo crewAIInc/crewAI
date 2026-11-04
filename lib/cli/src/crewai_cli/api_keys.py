@@ -75,6 +75,10 @@ def ask_for_missing_api_keys(
         What happened, or ``None`` when no key was missing.
     """
     env_file = _env_file(project_dir)
+    if env_file.exists() and not env_file.is_file():
+        # A pipe a secrets manager serves `.env` through blocks an open that has
+        # no writer, and hands what it serves to one reader, which must be the run.
+        return None
     try:
         saved = dotenv_values(env_file) if env_file.exists() else {}
     except (OSError, ValueError):
@@ -89,14 +93,9 @@ def ask_for_missing_api_keys(
     if not missing:
         return None
 
-    # Only a regular `.env` of the project's own is rewritten, or a new one
-    # made: a new one would hide the `.env` above it, and a rewrite turns a
-    # link, or a pipe a secrets manager serves, into a plain file.
-    savable = (
-        env_file.parent == project_dir
-        and not env_file.is_symlink()
-        and (env_file.is_file() or not env_file.exists())
-    )
+    # Only the project's own `.env` is rewritten, or a new one made: a new one
+    # would hide the `.env` above it, and a rewrite turns a link into a plain file.
+    savable = env_file.parent == project_dir and not env_file.is_symlink()
     if not savable or not _can_prompt():
         for name in missing:
             click.secho(
@@ -130,8 +129,24 @@ def ask_for_missing_api_keys(
                 err=True,
             )
         else:
+            _keep_private(env_file)
             click.echo(f"Saved {name} to {env_file}")
     return outcome
+
+
+def _keep_private(env_file: Path) -> None:
+    """Make a `.env` that now holds a key readable by its owner only.
+
+    A new `.env` is already private, but one `crewai create` wrote, or the user
+    made, takes the umask's group and world read bits.
+    """
+    try:
+        if env_file.stat().st_mode & 0o077:
+            env_file.chmod(0o600)
+    except OSError:
+        # The key is saved and the run has it; a mode we cannot change, as on
+        # some network or Windows file systems, is not worth stopping for.
+        return
 
 
 def _can_prompt() -> bool:
