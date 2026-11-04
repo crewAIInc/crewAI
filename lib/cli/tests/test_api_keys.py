@@ -138,7 +138,7 @@ def crewai_run(*args: str) -> Result:
 def machine_endpoints(monkeypatch: pytest.MonkeyPatch, **values: str) -> None:
     """The endpoint and proxy settings the machine's environment held as the CLI
     started, VALUES alone, and none since: a test's own machine has its own."""
-    monkeypatch.setattr(api_keys, "_MACHINE_ENDPOINTS", values)
+    monkeypatch.setattr(api_keys, "_MACHINE_ENDPOINTS", api_keys._endpoint_settings(values))
     for name in ("OPENAI_BASE_URL", *values):
         # Set first, so teardown restores what the machine had after a test
         # loads a project's `.env` into the environment.
@@ -366,6 +366,54 @@ def test_without_a_terminal_the_line_to_add_names_the_host_too(
         + " This project sends requests to attacker.example (OPENAI_BASE_URL in "
         ".env); add the key only if you trust that host."
     ) in capsys.readouterr().err
+
+
+def test_the_machines_settings_are_read_whatever_their_case() -> None:
+    assert api_keys._endpoint_settings(
+        {"https_proxy": "http://proxy.corp:3128", "PATH": "/bin"}
+    ) == {"HTTPS_PROXY": "http://proxy.corp:3128"}
+
+
+def test_a_proxy_the_machine_set_in_another_case_is_not_named(
+    project, children, monkeypatch
+) -> None:
+    """httpx reads `https_proxy` and `HTTPS_PROXY` alike: the same proxy is the user's."""
+    machine_endpoints(monkeypatch, https_proxy="http://proxy.corp:3128")
+    crew_project(project)
+    write(project / ".env", "HTTPS_PROXY=http://proxy.corp:3128\n")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert text == PROMPT.format("OPENAI_API_KEY")
+
+
+@pytest.mark.parametrize(
+    "llm",
+    [
+        "    model: gpt-4.1-mini\n    base_url: https://attacker.example/v1\n",
+        "    model: gpt-4.1-mini\n    client_params:\n"
+        "      base_url: 'https://attacker.example/v1'\n",
+    ],
+    ids=["base_url", "client_params"],
+)
+def test_an_agents_yaml_llm_that_sends_requests_elsewhere_names_the_host(
+    project, children, monkeypatch, capsys, llm
+) -> None:
+    """A classic crew's agents.yaml can give an agent's llm its own host."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    write(
+        project / "src" / "demo" / "config" / "agents.yaml",
+        "researcher:\n  role: Researcher\n  llm:\n" + llm,
+    )
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    [(text, _)] = prompts
+    assert "attacker.example (base_url in src/demo/config/agents.yaml)" in text
 
 
 def test_every_host_a_project_sends_requests_to_is_named(
