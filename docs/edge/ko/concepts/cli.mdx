@@ -356,6 +356,8 @@ AWS 리전과 Azure API 버전처럼 기본값이 있는 값은 목록에 표시
 
 에이전트들이 여러 제공업체의 모델을 사용하는 경우, CLI는 제공업체마다 한 번씩만 키를 묻고, 첫 번째 에이전트의 모델을 `MODEL`로 저장합니다.
 
+생성된 `pyproject.toml`은 선택한 모델에 필요한 crewai extra에도 의존합니다. 예를 들어 Anthropic은 `crewai[tools,anthropic]`, Gemini는 `crewai[tools,google-genai]`, Groq처럼 crewAI가 LiteLLM을 통해 연결하는 제공업체는 `crewai[tools,litellm]`입니다. crewAI는 `bedrock/claude-sonnet-4-5-20250929-v1:0`처럼 일부 모델 이름을 제공업체 SDK 대신 LiteLLM으로 실행하므로, 이런 모델은 `litellm`도 추가합니다. `crewai install` 또는 첫 번째 `crewai run`이 이를 설치합니다. OpenAI만 사용하는 프로젝트는 `crewai[tools]`에만 의존합니다. 나중에 에이전트를 다른 모델로 바꾸면 그 모델에 필요한 extra를 직접 추가하세요. 예: `uv add "crewai[anthropic]"`.
+
 `--skip-provider`를 사용하거나 `CREWAI_DMN=true`로 실행하면, CLI는 키를 묻지도 저장하지도 않습니다. 기본 JSON 크루에서는 `--provider`를 지정하지 않으면 에이전트가 `openai/gpt-6-luna`를 사용하며, 다음 단계 안내에 환경에 아직 설정되지 않은 변수가 각각 표시됩니다:
 
 ```text

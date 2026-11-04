@@ -13,6 +13,7 @@ import tomli
 
 from crewai_cli.cli import crewai
 from crewai_cli.create_flow import create_flow
+from crewai_cli.version import get_crewai_dependency_range
 
 
 def test_create_flow_declarative_project_can_run(
@@ -55,6 +56,21 @@ def test_create_flow_declarative_project_can_run(
     assert result.exit_code == 0
     assert "Running the Flow" not in result.output
     assert "AI agents" in result.output
+
+
+@pytest.mark.parametrize("declarative", [False, True])
+def test_create_flow_depends_on_crewai_with_tools_only(
+    tmp_path: Path, monkeypatch: MonkeyPatch, declarative: bool
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow", declarative=declarative)
+
+    pyproject = tomli.loads(
+        (tmp_path / "research_flow" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert pyproject["project"]["dependencies"][0] == (
+        f"crewai[tools]{get_crewai_dependency_range()}"
+    )
 
 
 def test_create_flow_scaffolds_assistant_instructions(

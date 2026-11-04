@@ -67,6 +67,8 @@ crewai create flow my_new_flow
 
 إذا كان الوكلاء يستخدمون نماذج من أكثر من مزود، يطلب CLI مفاتيح كل مزود مرة واحدة فقط، ويحفظ نموذج الوكيل الأول في `MODEL`.
 
+يعتمد ملف `pyproject.toml` المُنشأ أيضًا على إضافات crewai التي تحتاجها النماذج التي تختارها، مثل `crewai[tools,anthropic]` لـ Anthropic، أو `crewai[tools,google-genai]` لـ Gemini، أو `crewai[tools,litellm]` للمزودين الذين يصل إليهم crewAI عبر LiteLLM، مثل Groq. ويشغّل crewAI أيضًا بعض أسماء النماذج عبر LiteLLM بدلًا من SDK المزود، مثل `bedrock/claude-sonnet-4-5-20250929-v1:0`، لذا تضيف هذه النماذج `litellm` أيضًا. يثبّتها `crewai install` أو أول تشغيل لـ `crewai run`. أما المشروع الذي يستخدم OpenAI وحده فيعتمد على `crewai[tools]` فقط. إذا نقلت أحد الوكلاء لاحقًا إلى نموذج آخر، فأضف الإضافة التي يحتاجها بنفسك، مثل `uv add "crewai[anthropic]"`.
+
 مع `--skip-provider`، أو مع `CREWAI_DMN=true`، لا يطلب CLI أي مفاتيح ولا يحفظ أيًا منها. وفي طاقم JSON الافتراضي، يستخدم الوكلاء `openai/gpt-6-luna` ما لم تمرر `--provider`، وتذكر الخطوات التالية كل متغير غير معيّن بعد في بيئتك:
 
 ```text

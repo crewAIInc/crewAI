@@ -31,7 +31,10 @@ from crewai_cli.cli import crewai
 from crewai_cli.constants import MODELS, PROVIDERS
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.utils import copy_assistant_instructions, render_template
-from crewai_cli.version import get_crewai_tools_dependency
+from crewai_cli.version import (
+    get_crewai_dependency_range,
+    get_crewai_tools_dependency,
+)
 
 
 @pytest.fixture
@@ -2114,6 +2117,234 @@ def test_classic_create_reads_a_piped_key_from_stdin(
 
     assert "OPENAI_API_KEY=sk-piped" in (crew_path / ".env").read_text()
     assert "API keys and model saved to .env file" in capsys.readouterr().out
+
+
+def _crewai_dependency(project_root: Path) -> str:
+    pyproject = tomli.loads((project_root / "pyproject.toml").read_text())
+    dependencies = pyproject["project"]["dependencies"]
+    assert len(dependencies) == 1
+    return dependencies[0]
+
+
+@pytest.mark.parametrize(
+    ("llm", "crewai_with_extras"),
+    [
+        ("anthropic/claude-sonnet-5", "crewai[tools,anthropic]"),
+        ("claude/claude-sonnet-5", "crewai[tools,anthropic]"),
+        ("gemini/gemini-3.8-flash", "crewai[tools,google-genai]"),
+        ("bedrock/us.amazon.nova-pro-v1:0", "crewai[tools,bedrock]"),
+        ("azure/my-deployment", "crewai[tools,azure-ai-inference]"),
+        ("groq/llama-3.3-70b-versatile", "crewai[tools,litellm]"),
+        ("anthropic/my-finetune", "crewai[tools,anthropic,litellm]"),
+        ("openai/chatgpt-4o-latest", "crewai[tools,litellm]"),
+        ("mistral/mistral-large", "crewai[tools,litellm]"),
+        ("custom/my-model", "crewai[tools,litellm]"),
+    ],
+)
+def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
+    tmp_path, monkeypatch, llm, crewai_with_extras
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    json_crew.create_json_crew("Provider Crew", provider=llm, skip_provider=True)
+
+    project_root = tmp_path / "provider_crew"
+    agent_file = project_root / "agents" / "researcher.jsonc"
+    assert f'"llm": "{llm}"' in agent_file.read_text()
+    assert _crewai_dependency(project_root) == (
+        f"{crewai_with_extras}{get_crewai_dependency_range()}"
+    )
+
+
+@pytest.mark.parametrize("provider", [None, "openai", "ollama", "cerebras/llama3.1-8b"])
+def test_json_create_keeps_the_tools_only_dependency_when_no_extra_is_needed(
+    tmp_path, monkeypatch, provider
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    json_crew.create_json_crew("Plain Crew", provider=provider, skip_provider=True)
+
+    assert _crewai_dependency(tmp_path / "plain_crew") == (
+        f"crewai[tools]{get_crewai_dependency_range()}"
+    )
+
+
+def test_json_create_with_a_bare_unknown_model_adds_no_extra(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: _wizard_result(_agent("researcher", "my-model")),
+    )
+
+    json_crew.create_json_crew("Bare Crew", skip_provider=True)
+
+    assert _crewai_dependency(tmp_path / "bare_crew") == get_crewai_tools_dependency()
+
+
+def test_json_create_lists_each_agent_provider_extra_once_and_sorted(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: _wizard_result(
+            _agent("researcher", "openai/gpt-5.6-luna"),
+            _agent("writer", "gemini/gemini-3.8-flash"),
+            _agent("editor", "anthropic/claude-sonnet-5"),
+            _agent("reviewer", "claude-haiku-4-5"),
+            _agent("checker", "my-model"),
+        ),
+    )
+
+    json_crew.create_json_crew("Mixed Crew", skip_provider=True)
+
+    assert _crewai_dependency(tmp_path / "mixed_crew") == (
+        f"crewai[tools,anthropic,google-genai]{get_crewai_dependency_range()}"
+    )
+
+
+def test_json_create_adds_litellm_for_a_listed_bedrock_model_crewai_runs_through_it(
+    tmp_path, monkeypatch
+):
+    """Bedrock's picker lists LiteLLM feed ids; crewAI runs one with no "." in
+    its name through LiteLLM, so the project needs that extra as well."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        json_crew,
+        "get_provider_models",
+        lambda _provider, _fallback: [
+            ("us.anthropic.claude-haiku-4-5-20251001-v1:0", "Claude Haiku 4.5"),
+            ("claude-sonnet-4-5-20250929-v1:0", "Claude Sonnet 4.5"),
+        ],
+    )
+    bedrock = [key for key, _ in json_crew._PROVIDERS].index("bedrock")
+    picks = iter([bedrock, 1])
+    monkeypatch.setattr(json_crew, "pick_one", lambda *_args, **_kwargs: next(picks))
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: _wizard_result(_agent("researcher", json_crew._select_model())),
+    )
+
+    json_crew.create_json_crew("Bedrock Crew", skip_provider=True)
+
+    project_root = tmp_path / "bedrock_crew"
+    agent_file = project_root / "agents" / "researcher.jsonc"
+    assert '"llm": "bedrock/claude-sonnet-4-5-20250929-v1:0"' in agent_file.read_text()
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools,bedrock,litellm]{get_crewai_dependency_range()}"
+    )
+
+
+def test_json_create_adds_the_extra_when_the_key_is_entered_at_the_prompt(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: _wizard_result(_agent("researcher", "anthropic/claude-sonnet-5")),
+    )
+    calls = _record_key_prompts(monkeypatch, ["sk-ant-test"])
+
+    json_crew.create_json_crew("Claude Crew", skip_provider=False)
+
+    project_root = tmp_path / "claude_crew"
+    assert [call["text"] for call in calls] == [
+        "  Enter your ANTHROPIC API key (press Enter to skip)"
+    ]
+    assert "ANTHROPIC_API_KEY=sk-ant-test" in (project_root / ".env").read_text()
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools,anthropic]{get_crewai_dependency_range()}"
+    )
+    assert "API keys and model saved to .env file" in capsys.readouterr().out
+
+
+def _pick_classic_provider(
+    monkeypatch, provider: str, model: str | None, answers: list[str]
+) -> None:
+    """Choose ``provider`` and ``model`` in the classic pickers and answer its
+    key prompts in order."""
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.get_provider_data",
+        lambda: {provider: [model] if model else []},
+    )
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.select_provider", lambda _provider_models: provider
+    )
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.select_model",
+        lambda _provider, _provider_models: model,
+    )
+    replies = iter(answers)
+    monkeypatch.setattr(click, "prompt", lambda *_args, **_kwargs: next(replies))
+
+
+@pytest.mark.parametrize(
+    ("provider", "model", "answers", "crewai_with_extras"),
+    [
+        ("anthropic", "claude-sonnet-5", ["sk-ant"], "crewai[tools,anthropic]"),
+        (
+            "gemini",
+            "gemini/gemini-3.8-flash",
+            ["gemini-key"],
+            "crewai[tools,google-genai]",
+        ),
+        (
+            "bedrock",
+            "bedrock/us.amazon.nova-pro-v1:0",
+            ["AKIATEST", "aws-secret", ""],
+            "crewai[tools,bedrock]",
+        ),
+        (
+            "azure",
+            None,
+            ["azure/my-deployment", "azure-key", "https://example.azure.com", ""],
+            "crewai[tools,azure-ai-inference]",
+        ),
+        ("groq", "groq/llama-3.1-8b-instant", ["gsk"], "crewai[tools,litellm]"),
+        ("openai", "gpt-5.6-luna", ["sk-openai"], "crewai[tools]"),
+        ("ollama", "ollama/llama3.1", [], "crewai[tools]"),
+        ("cerebras", None, ["cerebras/llama3.1-8b", "csk"], "crewai[tools]"),
+    ],
+)
+def test_classic_create_adds_the_selected_provider_extra_to_the_crewai_dependency(
+    tmp_path, monkeypatch, provider, model, answers, crewai_with_extras
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    _pick_classic_provider(monkeypatch, provider, model, answers)
+
+    create_crew("Provider Crew")
+
+    project_root = tmp_path / "provider_crew"
+    assert _crewai_dependency(project_root) == (
+        f"{crewai_with_extras}{get_crewai_dependency_range()}"
+    )
+    assert (project_root / ".env").exists()
+
+
+def test_classic_create_with_skip_provider_keeps_the_tools_only_dependency(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.select_provider",
+        lambda _provider_models: pytest.fail("--skip-provider picks no provider"),
+    )
+
+    create_crew("Plain Crew", skip_provider=True)
+
+    assert _crewai_dependency(tmp_path / "plain_crew") == get_crewai_tools_dependency()
 
 
 @pytest.fixture
