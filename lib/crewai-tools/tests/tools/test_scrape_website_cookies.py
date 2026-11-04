@@ -22,11 +22,16 @@ def test_scrape_website_accepts_cookie_mapping() -> None:
     assert tool.cookies == COOKIES
 
 
-def test_scrape_website_keeps_cookies_without_url() -> None:
-    """Cookies must be kept when the agent supplies the URL at runtime."""
+def test_scrape_website_ignores_cookies_without_pinned_url() -> None:
+    """Cookies are origin-scoped, so an unpinned tool must not keep them.
+
+    Without a pinned ``website_url`` the agent can name any origin at runtime;
+    attaching a developer-supplied cookie jar to that request would leak the
+    credentials to a model-chosen host.
+    """
     tool = ScrapeWebsiteTool(cookies=COOKIES)
 
-    assert tool.cookies == COOKIES
+    assert tool.cookies is None
 
 
 def test_scrape_element_accepts_cookie_mapping() -> None:
@@ -46,7 +51,7 @@ def test_scrape_website_sends_cookies(monkeypatch: pytest.MonkeyPatch) -> None:
     safe_get = MagicMock(return_value=page)
     monkeypatch.setattr(scrape_website_module, "safe_get", safe_get)
 
-    tool = ScrapeWebsiteTool(cookies=COOKIES)
-    tool.run(website_url="https://example.com")
+    tool = ScrapeWebsiteTool(website_url="https://example.com", cookies=COOKIES)
+    tool.run()
 
     assert safe_get.call_args.kwargs["cookies"] == COOKIES
