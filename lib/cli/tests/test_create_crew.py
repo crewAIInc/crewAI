@@ -2104,6 +2104,8 @@ def _crewai_dependency(project_root: Path) -> str:
         ("bedrock/us.amazon.nova-pro-v1:0", "crewai[tools,bedrock]"),
         ("azure/my-deployment", "crewai[tools,azure-ai-inference]"),
         ("groq/llama-3.3-70b-versatile", "crewai[tools,litellm]"),
+        ("anthropic/my-finetune", "crewai[tools,anthropic,litellm]"),
+        ("openai/chatgpt-4o-latest", "crewai[tools,litellm]"),
     ],
 )
 def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
@@ -2173,6 +2175,40 @@ def test_json_create_lists_each_agent_provider_extra_once_and_sorted(
 
     assert _crewai_dependency(tmp_path / "mixed_crew") == (
         f"crewai[tools,anthropic,google-genai]{get_crewai_dependency_range()}"
+    )
+
+
+def test_json_create_adds_litellm_for_a_listed_bedrock_model_crewai_runs_through_it(
+    tmp_path, monkeypatch
+):
+    """Bedrock's picker lists LiteLLM feed ids; crewAI runs one with no "." in
+    its name through LiteLLM, so the project needs that extra as well."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        json_crew,
+        "get_provider_models",
+        lambda _provider, _fallback: [
+            ("us.anthropic.claude-haiku-4-5-20251001-v1:0", "Claude Haiku 4.5"),
+            ("claude-sonnet-4-5-20250929-v1:0", "Claude Sonnet 4.5"),
+        ],
+    )
+    bedrock = [key for key, _ in json_crew._PROVIDERS].index("bedrock")
+    picks = iter([bedrock, 1])
+    monkeypatch.setattr(json_crew, "pick_one", lambda *_args, **_kwargs: next(picks))
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: _wizard_result(_agent("researcher", json_crew._select_model())),
+    )
+
+    json_crew.create_json_crew("Bedrock Crew", skip_provider=True)
+
+    project_root = tmp_path / "bedrock_crew"
+    agent_file = project_root / "agents" / "researcher.jsonc"
+    assert '"llm": "bedrock/claude-sonnet-4-5-20250929-v1:0"' in agent_file.read_text()
+    assert _crewai_dependency(project_root) == (
+        f"crewai[tools,bedrock,litellm]{get_crewai_dependency_range()}"
     )
 
 

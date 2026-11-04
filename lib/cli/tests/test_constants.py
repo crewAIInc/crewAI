@@ -7,6 +7,7 @@ from crewai_cli.constants import (
     MODELS,
     PROVIDER_EXTRAS,
     PROVIDERS,
+    crewai_extras_for_model,
     provider_for_model,
 )
 
@@ -194,3 +195,145 @@ def test_provider_for_model_matches_every_prefix_crewai_routes() -> None:
 
     for prefix, provider in PROVIDER_ALIASES.items():
         assert provider_for_model(f"{prefix}/some-model") == provider, prefix
+
+
+@pytest.mark.parametrize(
+    ("model", "extras"),
+    [
+        ("anthropic/claude-sonnet-5", {"anthropic"}),
+        ("claude/claude-sonnet-5", {"anthropic"}),
+        ("gemini/gemma-3-27b-it", {"google-genai"}),
+        ("bedrock/us.amazon.nova-pro-v1:0", {"bedrock"}),
+        ("bedrock/us-gov-east-1/anthropic.claude-haiku-4-5-20251001-v1:0", {"bedrock"}),
+        ("azure/my-deployment", {"azure-ai-inference"}),
+        ("groq/llama-3.3-70b-versatile", {"litellm"}),
+        ("openai/gpt-5.6-luna", set()),
+        ("ollama/llama3.3", set()),
+        ("cerebras/llama3.1-8b", set()),
+        ("deepseek/deepseek-chat", set()),
+    ],
+)
+def test_crewai_extras_for_a_model_its_provider_runs_natively(
+    model: str, extras: set[str]
+) -> None:
+    assert crewai_extras_for_model(model) == extras
+
+
+@pytest.mark.parametrize(
+    ("model", "extras"),
+    [
+        ("bedrock/claude-sonnet-4-5-20250929-v1:0", {"bedrock", "litellm"}),
+        ("aws/us-gov-west-1/claude-sonnet-4-5-20250929-v1:0", {"bedrock", "litellm"}),
+        ("anthropic/my-finetune", {"anthropic", "litellm"}),
+        ("claude/my-finetune", {"anthropic", "litellm"}),
+        ("gemini/aqa", {"google-genai", "litellm"}),
+        ("openai/chatgpt-4o-latest", {"litellm"}),
+        ("OpenAI/codex-mini-latest", {"litellm"}),
+        ("deepseek/my-model", {"litellm"}),
+    ],
+)
+def test_crewai_extras_add_litellm_for_a_name_the_native_provider_does_not_take(
+    model: str, extras: set[str]
+) -> None:
+    assert crewai_extras_for_model(model) == extras
+
+
+@pytest.mark.parametrize(
+    ("model", "extras"),
+    [
+        ("chatgpt-4o-latest", set()),
+        ("gpt-5.6-luna", set()),
+        ("claude-sonnet-5", {"anthropic"}),
+        ("gemini-3.8-flash", {"google-genai"}),
+        ("my-model", set()),
+        ("custom/my-model", set()),
+        ("", set()),
+    ],
+)
+def test_crewai_extras_for_a_bare_or_unknown_model(
+    model: str, extras: set[str]
+) -> None:
+    assert crewai_extras_for_model(model) == extras
+
+
+_SAMPLE_MODEL_NAMES = [
+    "gpt-5.6-luna",
+    "o4-mini",
+    "chatgpt-4o-latest",
+    "whisper-1",
+    "claude-sonnet-5",
+    "anthropic.claude-haiku-4-5-20251001-v1:0",
+    "claude-sonnet-4-5-20250929-v1:0",
+    "us-gov-east-1/claude-sonnet-4-5-20250929-v1:0",
+    "us.amazon.nova-pro-v1:0",
+    "gemini-3.8-flash",
+    "gemma-3-27b-it",
+    "learnlm-2.0-flash",
+    "aqa",
+    "deepseek-chat",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "my-finetune",
+]
+
+
+def test_litellm_extra_matches_crewai_routing_for_every_native_prefix() -> None:
+    """The CLI copies crewAI's rule for which names a native provider takes; a
+    name crewAI sends to LiteLLM must get the litellm extra, and no other."""
+    from crewai.llm import LLM, PROVIDER_ALIASES
+
+    for prefix in PROVIDER_ALIASES:
+        if prefix == "deepinfra":
+            # crewAI raises on an id that is not org/model instead of routing it.
+            continue
+        for name in _SAMPLE_MODEL_NAMES:
+            model = f"{prefix}/{name}"
+            routed_to_litellm = LLM._resolve_route(model, {}).native_class is None
+            assert ("litellm" in crewai_extras_for_model(model)) is (
+                routed_to_litellm
+            ), model
+
+
+# Bedrock has no curated wizard list, so its picker shows the LiteLLM feed.
+# These are the ids the feed put there on 2026-11-03.
+_BEDROCK_FEED_MODELS = [
+    "us-gov-east-1/anthropic.claude-haiku-4-5-20251001-v1:0",
+    "us-gov-west-1/anthropic.claude-haiku-4-5-20251001-v1:0",
+    "claude-sonnet-4-5-20250929-v1:0",
+    "us-gov-east-1/anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "us-gov-east-1/claude-sonnet-4-5-20250929-v1:0",
+    "us-gov-west-1/anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "us-gov-west-1/claude-sonnet-4-5-20250929-v1:0",
+    "eu.anthropic.claude-3-7-sonnet-20250219-v1:0",
+]
+
+
+def test_every_model_the_wizard_lists_gets_the_extras_crewai_needs_to_run_it() -> (
+    None
+):
+    from crewai.llm import LLM
+
+    from crewai_cli.create_json_crew import _PROVIDER_MODELS
+
+    listed = [
+        f"{provider}/{model_id}"
+        for provider, models in _PROVIDER_MODELS.items()
+        for model_id, _ in models
+    ]
+    listed += [f"bedrock/{model_id}" for model_id in _BEDROCK_FEED_MODELS]
+
+    for model in listed:
+        routed_to_litellm = LLM._resolve_route(model, {}).native_class is None
+        assert ("litellm" in crewai_extras_for_model(model)) is routed_to_litellm, (
+            model
+        )
+
+
+def test_classic_provider_extra_covers_every_model_it_lists() -> None:
+    """Classic create takes the extra from the provider it lists a model under,
+    so a listed model crewAI sends to LiteLLM must sit under a litellm provider."""
+    from crewai.llm import LLM
+
+    for provider, models in MODELS.items():
+        for model in models:
+            if LLM._resolve_route(model, {}).native_class is None:
+                assert PROVIDER_EXTRAS.get(provider) == "litellm", model
