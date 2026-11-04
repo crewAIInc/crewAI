@@ -1474,8 +1474,7 @@ def create_json_crew(
         _setup_env(folder_path, [a["llm"] for a in agents])
     else:
         for provider in dict.fromkeys(
-            _ENV_PROVIDERS.get(prefix, prefix)
-            for prefix in (a["llm"].split("/")[0] for a in agents)
+            provider_for_model(a["llm"]) or a["llm"].split("/")[0] for a in agents
         ):
             keys_to_set += missing_provider_keys(provider, {})
 

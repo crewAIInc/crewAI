@@ -1774,6 +1774,21 @@ def test_json_watsonx_models_use_the_prefix_crewai_can_run(
         )
 
 
+@pytest.mark.parametrize(
+    ("provider", "key_name"),
+    [("claude/claude-sonnet-5-5", "ANTHROPIC_API_KEY"), ("google/gemini-3.8-flash", "GEMINI_API_KEY")],
+)
+def test_json_dmn_next_steps_name_the_key_of_an_aliased_prefix(
+    tmp_path, monkeypatch, capsys, no_provider_keys, provider, key_name
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    json_crew.create_json_crew("DMN Crew", provider=provider, skip_provider=True)
+
+    assert f"Set {key_name}" in capsys.readouterr().out
+
+
 def test_json_dmn_next_steps_name_the_watsonx_keys(
     tmp_path, monkeypatch, capsys, no_provider_keys
 ):
