@@ -64,3 +64,36 @@ def test_default_wizard_offers_no_gemini_model_new_accounts_cannot_use() -> None
     for model in ("gemini-4-argon", "gemini-3.6-flash", "gemini-3.5-flash-lite"):
         assert model in gemini_models
     assert not [m for m in gemini_models if m.startswith(("gemini-2.", "gemini-1."))]
+
+
+def test_classic_lists_lead_with_current_small_models() -> None:
+    """`crewai create crew --classic` lists models in MODELS order."""
+    assert MODELS["openai"][0] == "gpt-5.6-luna"
+    assert "gpt-5.4-mini" not in MODELS["openai"]
+    assert MODELS["anthropic"][0] == "claude-sonnet-5"
+
+
+def test_wizard_lists_lead_with_current_small_models() -> None:
+    """With no key, the wizard shows the curated list in order; the first is the
+    `--provider` default."""
+    from crewai_cli.create_json_crew import _PROVIDER_MODELS
+
+    assert [model_id for model_id, _ in _PROVIDER_MODELS["openai"]] == [
+        "gpt-5.6-luna",
+        "gpt-5.6-terra",
+        "gpt-5.6-sol",
+        "gpt-5.6",
+        "gpt-5.5",
+        "gpt-5.5-pro",
+        "gpt-5.4",
+        "gpt-5.2",
+        "gpt-4.1",
+    ]
+    assert [model_id for model_id, _ in _PROVIDER_MODELS["anthropic"]] == [
+        "claude-sonnet-5",
+        "claude-haiku-4-5",
+        "claude-opus-4-8",
+        "claude-fable-5",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+    ]

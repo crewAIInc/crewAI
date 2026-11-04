@@ -16,9 +16,11 @@ from crewai_cli.provider import (
 from crewai_cli.utils import (
     copy_assistant_instructions,
     copy_template,
+    echo_missing_keys,
     get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
+    missing_provider_keys,
     write_env_file,
 )
 
@@ -271,13 +273,19 @@ def create_crew(
                 elif "key_name" in details:
                     prompt = details["prompt"]
                     key_name = details["key_name"]
-                    api_key_value = click.prompt(prompt, default="", show_default=False)
+                    api_key_value = click.prompt(
+                        prompt, default="", show_default=False, hide_input=True
+                    )
 
                     if api_key_value.strip():
                         env_vars[key_name] = api_key_value
 
+        missing = missing_provider_keys(selected_provider, env_vars)
         if env_vars:
             write_env_file(folder_path, env_vars)
+        if missing:
+            echo_missing_keys(folder_path, missing)
+        elif env_vars:
             click.secho("API keys and model saved to .env file", fg="green")
         else:
             click.secho(

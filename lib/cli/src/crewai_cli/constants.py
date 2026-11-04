@@ -132,15 +132,14 @@ PROVIDERS: list[str] = [
 
 MODELS: dict[str, list[str]] = {
     "openai": [
+        "gpt-5.6-luna",
         "gpt-5.6-sol",
         "gpt-5.6-terra",
-        "gpt-5.6-luna",
         "gpt-5.6",
         "gpt-5.5",
         "gpt-5.5-pro",
         "gpt-5.4",
         "gpt-5.4-pro",
-        "gpt-5.4-mini",
         "gpt-5.4-nano",
         "gpt-5.2",
         "gpt-5.2-pro",
@@ -165,9 +164,9 @@ MODELS: dict[str, list[str]] = {
         "gpt-4.1-nano-2025-04-14",
     ],
     "anthropic": [
+        "claude-sonnet-5",
         "claude-fable-5",
         "claude-opus-5",
-        "claude-sonnet-5",
         "claude-opus-4-8",
         "claude-opus-4-7",
         "claude-opus-4-6",

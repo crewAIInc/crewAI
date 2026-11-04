@@ -130,3 +130,25 @@ def test_project_id_lookups_default_to_the_cwd_pyproject(tmp_path, monkeypatch):
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.
+
+
+@pytest.mark.parametrize(
+    ("provider", "env_vars", "expected"),
+    [
+        ("openai", {}, ["OPENAI_API_KEY"]),
+        ("openai", {"OPENAI_API_KEY": ""}, ["OPENAI_API_KEY"]),
+        ("openai", {"OPENAI_API_KEY": "sk-test"}, []),
+        (
+            "bedrock",
+            {"aws_access_key_id": "AKIATEST"},
+            ["AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+        ),
+        ("azure", {}, ["AZURE_API_KEY", "AZURE_API_BASE", "AZURE_API_VERSION"]),
+        ("ollama", {}, []),
+        ("deepseek", {}, []),
+    ],
+)
+def test_missing_provider_keys_names_each_credential_without_a_value(
+    provider, env_vars, expected
+):
+    assert utils.missing_provider_keys(provider, env_vars) == expected

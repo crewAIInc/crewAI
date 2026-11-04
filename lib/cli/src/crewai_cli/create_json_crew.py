@@ -36,10 +36,12 @@ from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     copy_assistant_instructions,
+    echo_missing_keys,
     enable_prompt_line_editing,
     get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
+    missing_provider_keys,
     render_template,
     write_env_file,
 )
@@ -67,26 +69,26 @@ _PROVIDERS: list[tuple[str, str]] = [
 # live from the vendor's own API via ``model_catalog.get_provider_models``;
 # this list is the hand-verified backstop used when no API key is available.
 # Keep entries to real, current model ids — last verified against each vendor's
-# official model docs on 2026-08-17.
+# official model docs on 2026-08-17. The first entry is the `--provider` default
+# and what people with no key see first, so lead with small, current models.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
+        ("gpt-5.6-luna", "GPT-5.6 Luna"),
+        ("gpt-5.6-terra", "GPT-5.6 Terra"),
+        ("gpt-5.6-sol", "GPT-5.6 Sol"),
+        ("gpt-5.6", "GPT-5.6"),
         ("gpt-5.5", "GPT-5.5"),
         ("gpt-5.5-pro", "GPT-5.5 Pro"),
-        ("gpt-5.6-sol", "GPT-5.6 Sol"),
-        ("gpt-5.6-terra", "GPT-5.6 Terra"),
-        ("gpt-5.6-luna", "GPT-5.6 Luna"),
-        ("gpt-5.6", "GPT-5.6"),
         ("gpt-5.4", "GPT-5.4"),
-        ("gpt-5.4-mini", "GPT-5.4 Mini"),
         ("gpt-5.2", "GPT-5.2"),
         ("gpt-4.1", "GPT-4.1"),
     ],
     "anthropic": [
-        ("claude-fable-5", "Claude Fable 5"),
-        ("claude-opus-4-8", "Claude Opus 4.8"),
         ("claude-sonnet-5", "Claude Sonnet 5"),
-        ("claude-opus-4-7", "Claude Opus 4.7"),
         ("claude-haiku-4-5", "Claude Haiku 4.5"),
+        ("claude-opus-4-8", "Claude Opus 4.8"),
+        ("claude-fable-5", "Claude Fable 5"),
+        ("claude-opus-4-7", "Claude Opus 4.7"),
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
     ],
     # Re-verified 2026-10-31. Gemini 2.5 is left out: Google serves it only to
@@ -117,6 +119,8 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("mistral", "Mistral"),
     ],
 }
+
+_FALLBACK_LLM = "openai/gpt-5.6-luna"
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
@@ -613,7 +617,7 @@ def _wizard_agent(
         llm = preset_llm
         _success(llm)
     elif skip_provider:
-        llm = last_llm or "openai/gpt-4o"
+        llm = last_llm or _FALLBACK_LLM
     elif last_llm:
         reuse_labels = [
             f"Same as before  ({last_llm})",
@@ -786,7 +790,7 @@ def _default_agents_and_tasks(
     default_llm: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Return deterministic scaffold data for non-interactive project creation."""
-    llm = default_llm or "openai/gpt-4o"
+    llm = default_llm or _FALLBACK_LLM
     agents = [
         {
             "name": "researcher",
@@ -928,7 +932,7 @@ def _select_model() -> str:
 
     p_idx = pick_one("LLM Provider:", provider_labels)
     if p_idx < 0:
-        return "openai/gpt-4o"
+        return _FALLBACK_LLM
 
     if p_idx == len(_PROVIDERS):
         custom: str = click.prompt(
@@ -1003,15 +1007,15 @@ def _write_jsonc(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _setup_env(folder_path: Path, llm_model: str) -> None:
-    """Prompt for API keys based on the selected provider."""
+def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
+    """Save the first model as MODEL and prompt once for each provider's API keys."""
     click.echo()
     env_vars = load_env_vars(folder_path)
-    env_vars["MODEL"] = llm_model
+    env_vars["MODEL"] = llm_models[0]
 
-    provider = llm_model.split("/")[0] if "/" in llm_model else llm_model
-    if provider in ENV_VARS:
-        for details in ENV_VARS[provider]:
+    missing: list[str] = []
+    for provider in dict.fromkeys(model.split("/")[0] for model in llm_models):
+        for details in ENV_VARS.get(provider, []):
             if details.get("default", False):
                 for key, value in details.items():
                     if key not in ["prompt", "key_name", "default"]:
@@ -1021,13 +1025,17 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
                     click.style(f"  {details['prompt']}", fg="cyan"),
                     default="",
                     show_default=False,
+                    hide_input=True,
                     prompt_suffix=click.style(" > ", fg="bright_white"),
                 )
                 if api_key_value.strip():
                     env_vars[details["key_name"]] = api_key_value
+        missing += missing_provider_keys(provider, env_vars)
 
-    if env_vars:
-        write_env_file(folder_path, env_vars)
+    write_env_file(folder_path, env_vars)
+    if missing:
+        echo_missing_keys(folder_path, missing)
+    else:
         click.secho("  API keys and model saved to .env file", fg="green")
 
 
@@ -1425,10 +1433,12 @@ def create_json_crew(
     (folder_path / "skills" / ".gitkeep").write_text("", encoding="utf-8")
 
     # Setup .env with API keys
+    keys_to_set: list[str] = []
     if not skip_provider and not dmn_mode:
-        models = list({a["llm"] for a in agents})
-        for model in models:
-            _setup_env(folder_path, model)
+        _setup_env(folder_path, [a["llm"] for a in agents])
+    else:
+        for provider in dict.fromkeys(a["llm"].split("/")[0] for a in agents):
+            keys_to_set += missing_provider_keys(provider, {})
 
     # Minted at creation so the project has a stable identity from run one.
     # This is the default `crewai create crew` path, not just --classic.
@@ -1443,6 +1453,11 @@ def create_json_crew(
     click.echo()
     click.echo(f"    cd {folder_name}")
     click.echo()
+    if keys_to_set:
+        click.secho(
+            f"  Set {', '.join(keys_to_set)} in .env before `crewai run`", fg="cyan"
+        )
+        click.echo()
     click.secho("  Run your crew:", fg="cyan")
     click.echo("    crewai run")
     click.echo()

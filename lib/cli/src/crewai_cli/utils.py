@@ -21,6 +21,7 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
+from crewai_cli.constants import ENV_VARS
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -30,6 +31,7 @@ __all__ = [
     "copy_assistant_imports",
     "copy_assistant_instructions",
     "copy_template",
+    "echo_missing_keys",
     "enable_prompt_line_editing",
     "fetch_and_json_env_file",
     "get_or_create_project_id",
@@ -39,6 +41,7 @@ __all__ = [
     "get_project_version",
     "is_dmn_mode_enabled",
     "load_env_vars",
+    "missing_provider_keys",
     "normalize_package_name",
     "parse_toml",
     "read_toml",
@@ -265,3 +268,29 @@ def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
         for key, value in env_vars.items():
             # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")
+
+
+def missing_provider_keys(provider: str, env_vars: Mapping[str, object]) -> list[str]:
+    """Return the credential names ``provider`` needs that have no value in ``env_vars``."""
+    saved = {key.upper() for key, value in env_vars.items() if value}
+    names = [
+        str(details["key_name"]).upper()
+        for details in ENV_VARS.get(provider, [])
+        if "key_name" in details
+    ]
+    # azure and cerebras also prompt for the model under key_name "model"; that
+    # fills MODEL, which is not a credential.
+    return [name for name in names if name != "MODEL" and name not in saved]
+
+
+def echo_missing_keys(folder_path: Path, key_names: list[str]) -> None:
+    """Print the ``.env`` lines to add before ``crewai run``, one per missing key."""
+    if len(key_names) == 1:
+        heading = "API key not saved. Add this line"
+    else:
+        heading = "API keys not saved. Add these lines"
+    click.secho(
+        f"  {heading} to {folder_path / '.env'} before `crewai run`:", fg="yellow"
+    )
+    for name in key_names:
+        click.echo(f"    {name}=<your key>")
