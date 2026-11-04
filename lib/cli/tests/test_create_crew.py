@@ -1281,7 +1281,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
 
     mock_wizard.assert_called_once_with(
         skip_provider=True,
-        default_llm="openai/gpt-5.6-luna",
+        default_llm="openai/gpt-6-luna",
     )
     assert (tmp_path / "json_crew" / "crew.jsonc").exists()
     assert not (tmp_path / "json_crew" / "src").exists()
@@ -1461,9 +1461,9 @@ def test_render_template_does_not_replace_tokens_inside_replacement_values(tmp_p
 
 
 def test_json_provider_default_model_helper():
-    assert json_crew._default_model_for_provider("openai") == "openai/gpt-5.6-luna"
+    assert json_crew._default_model_for_provider("openai") == "openai/gpt-6-luna"
     assert json_crew._default_model_for_provider("anthropic") == (
-        "anthropic/claude-sonnet-5"
+        "anthropic/claude-sonnet-5-5"
     )
     assert json_crew._default_model_for_provider("anthropic/claude-custom") == (
         "anthropic/claude-custom"
@@ -1527,7 +1527,7 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert f'"llm": "{default_model}"' in agent_template
 
 
-FALLBACK_LLM = "openai/gpt-5.6-luna"
+FALLBACK_LLM = "openai/gpt-6-luna"
 
 
 def _agent(name: str, llm: str) -> dict[str, object]:
@@ -1617,7 +1617,7 @@ def test_json_model_picker_falls_back_to_current_small_model_on_escape(monkeypat
     ("provider", "model", "key_name"),
     [
         (None, FALLBACK_LLM, "OPENAI_API_KEY"),
-        ("anthropic", "anthropic/claude-sonnet-5", "ANTHROPIC_API_KEY"),
+        ("anthropic", "anthropic/claude-sonnet-5-5", "ANTHROPIC_API_KEY"),
     ],
 )
 def test_json_create_dmn_mode_next_steps_name_the_key_the_model_needs(
