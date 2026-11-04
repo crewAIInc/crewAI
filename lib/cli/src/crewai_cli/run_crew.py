@@ -760,7 +760,10 @@ _NAMED_ERROR_PACKAGES = frozenset(
         "litellm",
         "openai",
         "anthropic",
-        "google",
+        # Not `google`: it is a namespace package a project's own module can join.
+        "google.genai",
+        "google.api_core",
+        "google.auth",
         "httpx",
     }
 )
@@ -809,7 +812,11 @@ def _error_class(error: BaseException) -> str:
             break
         error = carried
     error_type = type(error)
-    if error_type.__module__.partition(".")[0] not in _NAMED_ERROR_PACKAGES:
+    module = error_type.__module__
+    if not any(
+        module == package or module.startswith(f"{package}.")
+        for package in _NAMED_ERROR_PACKAGES
+    ):
         return "other"
     # `__module__` and `__qualname__` are only what the class says, and a
     # project's class can say `openai`: name it only when that module really

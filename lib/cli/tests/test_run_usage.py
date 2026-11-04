@@ -721,6 +721,24 @@ def test_a_load_failed_stop_names_the_error_behind_it_and_nothing_of_the_project
     assert error_classes == [error_class]
 
 
+def test_a_projects_error_in_a_module_under_google_is_not_named(
+    project, usage, error_classes, monkeypatch
+) -> None:
+    """`google` is a namespace package: a project's module can live in it."""
+    module = ModuleType("google.acme_internal")
+    error_type = type(
+        "AcmeSecretProjectError",
+        (Exception,),
+        {"__module__": module.__name__, "__qualname__": "AcmeSecretProjectError"},
+    )
+    setattr(module, "AcmeSecretProjectError", error_type)
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+
+    run_crew_module.record_run_stopped("load_failed", error_type(SECRET))
+
+    assert error_classes == ["other"]
+
+
 def test_a_json_project_error_that_is_its_own_cause_is_named_once(
     project, usage, error_classes
 ) -> None:
