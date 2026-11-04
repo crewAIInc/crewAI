@@ -29,7 +29,7 @@ from rich.text import Text
 
 from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.authentication.token import AuthError, get_auth_token
-from crewai_cli.constants import ENV_VARS, crewai_extras_for_model
+from crewai_cli.constants import ENV_VARS, crewai_extras_for_model, provider_for_model
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
 from crewai_cli.plus_api import PlusAPI
@@ -1044,8 +1044,7 @@ def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
 
     missing: list[str] = []
     for provider in dict.fromkeys(
-        _ENV_PROVIDERS.get(prefix, prefix)
-        for prefix in (model.split("/")[0] for model in llm_models)
+        provider_for_model(model) or model.split("/")[0] for model in llm_models
     ):
         for details in ENV_VARS.get(provider, []):
             if details.get("default", False):

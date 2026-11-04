@@ -54,6 +54,8 @@ crewai create flow my_new_flow
 
 افتراضيًا، ينشئ `crewai create crew` مشروعًا JSON-first يحتوي على `crew.jsonc` و `agents/*.jsonc`. استخدم `crewai create crew my_new_crew --classic` فقط إذا أردت البنية القديمة Python/YAML مع `crew.py` و `config/agents.yaml` و `config/tasks.yaml`.
 
+يطرح `crewai create flow` الأسئلة نفسها في الطرفية، ويحفظ النموذج باسم `MODEL` في ملف `.env` الخاص بالتدفق، ويستخدمه وكلاء الطاقم المبدئي. ومع `--provider`، يتخطى سؤالي المزود والنموذج. مرّر مزودًا تعرضه القائمة، مثل `anthropic` أو `bedrock`، لاستخدام أول نموذج مدرج له، أو سلسلة `provider/model` كاملة لأي نموذج آخر. أما التدفق التصريحي (`--declarative`) فلا يطرح أي سؤال ولا يذكر أي مفتاح في خطواته التالية، لأن نقطة البداية فيه لا تستدعي أي نموذج.
+
 بعد اختيار مزود LLM والنموذج، يطلب منك CLI مفاتيح API. في الطرفية، لا يظهر ما تكتبه لمفتاح أو سرّ على الشاشة، بينما تبقى القيم الأخرى ظاهرة، مثل عنوان URL لنقطة النهاية أو المنطقة أو اسم نشر Azure. اضغط على Enter لتخطي أي حقل.
 
 لا يُحفظ المفتاح الذي تتخطاه. وما لم يكن المفتاح معيّنًا مسبقًا في بيئتك، يطبع CLI السطر الدقيق الذي يجب إضافته إلى `.env` قبل `crewai run`:
@@ -69,7 +71,7 @@ crewai create flow my_new_flow
 
 يعتمد ملف `pyproject.toml` المُنشأ أيضًا على إضافات crewai التي تحتاجها النماذج التي تختارها، مثل `crewai[tools,anthropic]` لـ Anthropic، أو `crewai[tools,google-genai]` لـ Gemini، أو `crewai[tools,litellm]` للمزودين الذين يصل إليهم crewAI عبر LiteLLM، مثل Groq. ويشغّل crewAI أيضًا بعض أسماء النماذج عبر LiteLLM بدلًا من SDK المزود، مثل `bedrock/claude-sonnet-4-5-20250929-v1:0`، لذا تضيف هذه النماذج `litellm` أيضًا. يثبّتها `crewai install` أو أول تشغيل لـ `crewai run`. أما المشروع الذي يستخدم OpenAI وحده فيعتمد على `crewai[tools]` فقط. إذا نقلت أحد الوكلاء لاحقًا إلى نموذج آخر، فأضف الإضافة التي يحتاجها بنفسك، مثل `uv add "crewai[anthropic]"`.
 
-مع `--skip-provider`، أو مع `CREWAI_DMN=true`، لا يطلب CLI أي مفاتيح ولا يحفظ أيًا منها. وفي طاقم JSON الافتراضي، يستخدم الوكلاء `openai/gpt-6-luna` ما لم تمرر `--provider`، وتذكر الخطوات التالية كل متغير غير معيّن بعد في بيئتك:
+مع `--skip-provider`، أو مع `CREWAI_DMN=true`، لا يطلب CLI أي مفاتيح ولا يحفظ أيًا منها. كما لا يطرح `crewai create flow` أي سؤال عندما لا يعمل في طرفية، كما يحدث عندما يشغّله وكيل برمجة أو مهمة CI. وفي طاقم JSON الافتراضي، يستخدم الوكلاء `openai/gpt-6-luna` ما لم تمرر `--provider`. أما التدفق فيحفظ نموذج `--provider` باسم `MODEL`، وإلا فإنه يعمل على نموذج OpenAI الافتراضي في crewAI. وتذكر الخطوات التالية كل متغير غير معيّن بعد في بيئتك:
 
 ```text
   Set OPENAI_API_KEY in .env before `crewai run`

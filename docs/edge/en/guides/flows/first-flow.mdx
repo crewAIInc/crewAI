@@ -371,8 +371,12 @@ This is the power of flows - combining different types of processing (user inter
 
 ## Step 6: Set Up Your Environment Variables
 
-Create a `.env` file in your project root with your API keys. See the [LLM setup
-guide](/en/concepts/llms#setting-up-your-llm) for details on configuring a provider.
+When you ran `crewai create flow` in a terminal, it asked for a provider, a model,
+and its API key, and saved them to the `.env` file in your project root. If you
+skipped the key, add it to `.env` now. This guide's outline step calls
+`openai/gpt-4o-mini`, so `.env` also needs `OPENAI_API_KEY` whichever model you
+picked. See the [LLM setup guide](/en/concepts/llms#setting-up-your-llm) for
+details on configuring a provider.
 
 ```sh .env
 OPENAI_API_KEY=your_openai_api_key

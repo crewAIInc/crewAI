@@ -415,6 +415,8 @@ Notes:
 
 When running the `crewai create crew` command, the CLI shows a list of available LLM providers, followed by model selection for your chosen provider. The selected model is saved in the generated `.env` file and each generated agent JSONC file can set its own `llm`.
 
+`crewai create flow` asks the same questions in a terminal and saves the model as `MODEL` in the flow's `.env`, which the starter crew's agents use. With `--provider`, it skips the provider and model questions. Pass a provider the picker lists, such as `anthropic` or `bedrock`, to use its first listed model, or a full `provider/model` string for any other model. A declarative flow (`--declarative`) asks nothing and names no key in its next steps, because its starter calls no model.
+
 Once you've selected an LLM provider and model, you will be prompted for API keys. At a terminal, what you type for a key or secret is hidden; other values, such as an endpoint URL, a region, or an Azure deployment name, stay visible. Press Enter to skip a prompt.
 
 A skipped key is not saved. Unless the key is already set in your environment, the CLI prints the exact line to add to `.env` before `crewai run`:
@@ -430,7 +432,7 @@ If your agents use models from more than one provider, the CLI asks once for eac
 
 The generated `pyproject.toml` also depends on the crewai extras that the models you pick need, for example `crewai[tools,anthropic]` for Anthropic, `crewai[tools,google-genai]` for Gemini, or `crewai[tools,litellm]` for providers that crewAI reaches through LiteLLM, such as Groq. crewAI also runs some model names through LiteLLM instead of the provider's SDK, such as `bedrock/claude-sonnet-4-5-20250929-v1:0`, so those add `litellm` too. `crewai install`, or the first `crewai run`, installs them. An OpenAI-only project depends on `crewai[tools]` alone. If you later switch an agent to another model, add the extra it needs yourself, for example `uv add "crewai[anthropic]"`.
 
-With `--skip-provider`, or with `CREWAI_DMN=true`, the CLI asks for no keys and writes none. In the default JSON crew, agents use `openai/gpt-6-luna` unless you pass `--provider`, and the next steps name each variable that is not already set in your environment:
+With `--skip-provider`, or with `CREWAI_DMN=true`, the CLI asks for no keys and writes none. `crewai create flow` also asks nothing when it is not running in a terminal, as when a coding agent or a CI job runs it. In the default JSON crew, agents use `openai/gpt-6-luna` unless you pass `--provider`. A flow saves the `--provider` model as `MODEL` and otherwise runs on crewAI's default OpenAI model. The next steps name each variable that is not already set in your environment:
 
 ```text
   Set OPENAI_API_KEY in .env before `crewai run`

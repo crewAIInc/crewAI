@@ -364,6 +364,8 @@ Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantaçã
 
 Ao executar o comando `crewai create crew`, o CLI mostrará provedores de LLM disponíveis e depois a seleção de modelo para o provedor escolhido. O modelo selecionado é salvo no `.env` gerado, e cada agente JSONC pode definir seu próprio `llm`.
 
+O `crewai create flow` faz as mesmas perguntas em um terminal e salva o modelo como `MODEL` no `.env` do flow, que os agentes da crew inicial usam. Com `--provider`, ele pula as perguntas de provedor e modelo. Passe um provedor da lista, como `anthropic` ou `bedrock`, para usar o primeiro modelo listado dele, ou uma string `provider/model` completa para qualquer outro modelo. Um flow declarativo (`--declarative`) não pergunta nada nem indica nenhuma chave nos próximos passos, porque o seu ponto de partida não chama nenhum modelo.
+
 Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API. Em um terminal, o que você digita para uma chave ou um segredo fica oculto; outros valores, como uma URL de endpoint, uma região ou o nome de um deployment do Azure, continuam visíveis. Pressione Enter para pular um campo.
 
 Uma chave pulada não é salva. A menos que a chave já esteja definida no seu ambiente, o CLI mostra a linha exata a adicionar ao `.env` antes de `crewai run`:
@@ -379,7 +381,7 @@ Se seus agentes usam modelos de mais de um provedor, o CLI pede as chaves uma ve
 
 O `pyproject.toml` gerado também depende dos extras do crewai que os modelos escolhidos precisam, por exemplo `crewai[tools,anthropic]` para Anthropic, `crewai[tools,google-genai]` para Gemini, ou `crewai[tools,litellm]` para provedores que o crewAI acessa via LiteLLM, como o Groq. O crewAI também executa alguns nomes de modelo via LiteLLM em vez do SDK do provedor, como `bedrock/claude-sonnet-4-5-20250929-v1:0`, então esses adicionam `litellm` também. O `crewai install`, ou o primeiro `crewai run`, os instala. Um projeto que usa apenas OpenAI depende só de `crewai[tools]`. Se depois você trocar um agente para outro modelo, adicione você mesmo o extra que ele precisa, por exemplo `uv add "crewai[anthropic]"`.
 
-Com `--skip-provider`, ou com `CREWAI_DMN=true`, o CLI não pede nem salva nenhuma chave. Na crew JSON padrão, os agentes usam `openai/gpt-6-luna`, a menos que você passe `--provider`, e os próximos passos indicam cada variável que ainda não está definida no seu ambiente:
+Com `--skip-provider`, ou com `CREWAI_DMN=true`, o CLI não pede nem salva nenhuma chave. O `crewai create flow` também não pergunta nada quando não está rodando em um terminal, como quando um agente de código ou um job de CI o executa. Na crew JSON padrão, os agentes usam `openai/gpt-6-luna`, a menos que você passe `--provider`. Um flow salva o modelo do `--provider` como `MODEL` e, sem ele, roda no modelo OpenAI padrão do crewAI. Os próximos passos indicam cada variável que ainda não está definida no seu ambiente:
 
 ```text
   Set OPENAI_API_KEY in .env before `crewai run`

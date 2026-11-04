@@ -1883,6 +1883,39 @@ def test_json_setup_env_hides_only_secrets_at_a_terminal(
     )
 
 
+@pytest.mark.parametrize(
+    ("model", "prompt", "key_name"),
+    [
+        (
+            "claude/claude-sonnet-5",
+            "Enter your ANTHROPIC API key (press Enter to skip)",
+            "ANTHROPIC_API_KEY",
+        ),
+        (
+            "google/gemini-3.8-flash",
+            "Enter your GEMINI API key from https://ai.dev/apikey (press Enter to skip)",
+            "GEMINI_API_KEY",
+        ),
+        (
+            "claude-sonnet-5",
+            "Enter your ANTHROPIC API key (press Enter to skip)",
+            "ANTHROPIC_API_KEY",
+        ),
+    ],
+    ids=["claude-prefix", "google-prefix", "bare-name"],
+)
+def test_json_setup_env_asks_for_the_key_of_the_provider_crewai_runs_the_model_on(
+    tmp_path, monkeypatch, capsys, no_provider_keys, terminal_stdin, model, prompt, key_name
+):
+    calls = _record_key_prompts(monkeypatch, [""])
+
+    json_crew._setup_env(tmp_path, [model])
+
+    assert [str(call["text"]).strip() for call in calls] == [prompt]
+    assert f"    {key_name}=<your key>\n" in capsys.readouterr().out
+    assert (tmp_path / ".env").read_text() == f"MODEL={model}\n"
+
+
 def test_json_setup_env_reads_a_piped_key_from_stdin(tmp_path, monkeypatch, capsys):
     _pipe_to_stdin(monkeypatch, "sk-piped\n")
 

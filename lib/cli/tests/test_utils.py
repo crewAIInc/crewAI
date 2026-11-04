@@ -3,6 +3,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import click
 import pytest
 from crewai_cli import utils
 
@@ -158,3 +159,46 @@ def test_missing_provider_keys_skips_a_key_set_in_the_environment(monkeypatch):
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "")
 
     assert utils.missing_provider_keys("bedrock", {}) == ["AWS_SECRET_ACCESS_KEY"]
+
+
+owner_only_files = pytest.mark.skipif(
+    os.name == "nt", reason="POSIX permission bits"
+)
+
+
+@owner_only_files
+def test_write_env_file_creates_an_env_only_its_owner_can_read(tmp_path):
+    old_umask = os.umask(0o022)
+    try:
+        utils.write_env_file(tmp_path, {"openai_api_key": "sk-test"})
+    finally:
+        os.umask(old_umask)
+
+    env_file = tmp_path / ".env"
+    assert env_file.read_text() == "OPENAI_API_KEY=sk-test\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
+@owner_only_files
+def test_write_env_file_makes_an_existing_readable_env_owner_only(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("OLD=1\n")
+    env_file.chmod(0o644)
+
+    utils.write_env_file(tmp_path, {"MODEL": "openai/gpt-6-luna"})
+
+    assert env_file.read_text() == "MODEL=openai/gpt-6-luna\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
+def test_write_env_file_never_writes_keys_through_a_symlink(tmp_path):
+    target = tmp_path / "elsewhere"
+    target.write_text("untouched\n")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".env").symlink_to(target)
+
+    with pytest.raises(click.ClickException, match="it is a symlink"):
+        utils.write_env_file(project, {"OPENAI_API_KEY": "sk-test"})
+
+    assert target.read_text() == "untouched\n"
