@@ -2140,7 +2140,7 @@ class Crew(FlowTrackable, BaseModel):
         if future is not None:
             try:
                 future.result()
-            except Exception:  # noqa: BLE001,S110
+            except Exception:  # noqa: S110
                 pass
 
         if self.process == Process.hierarchical:
@@ -2243,6 +2243,13 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            # Checkpoint resume pointers describe the run the copy came
+            # from; carried over they would make the copy resume that run
+            # instead of executing (every task skipped, checkpointed
+            # inputs shadowing the new ones).
+            "checkpoint_kickoff_event_id",
+            "checkpoint_inputs",
+            "checkpoint_train",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]

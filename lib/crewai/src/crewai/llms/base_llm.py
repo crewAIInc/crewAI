@@ -25,6 +25,7 @@ from pydantic import (
     Field,
     PrivateAttr,
     field_serializer,
+    field_validator,
     model_validator,
 )
 from typing_extensions import TypedDict
@@ -81,6 +82,62 @@ class LLMCallBlockedError(ValueError):
     absorbing it, and its own type so a provider can report it as the decision
     it is instead of letting it read as a provider outage.
     """
+
+
+# Written to .env by `crewai create flow`; it passes a presence check and only
+# fails later at the provider as an authentication error.
+_API_KEY_PLACEHOLDER: Final[str] = "YOUR_API_KEY"
+
+
+def _without_placeholder(api_key: str | None) -> str | None:
+    return None if api_key == _API_KEY_PLACEHOLDER else api_key
+
+
+class MissingAPIKeyError(ValueError):
+    """An LLM provider needs an API key and none is configured.
+
+    Raised when the key is unset or still holds the ``YOUR_API_KEY`` placeholder
+    that ``crewai create flow`` writes to ``.env``. A ``ValueError`` so existing
+    ``except ValueError`` handlers keep catching it.
+
+    Attributes:
+        env_var: The environment variable the provider reads the key from.
+        model: The model that needs the key.
+    """
+
+    def __init__(self, env_var: str, model: str, alternative: str = "") -> None:
+        """Build the message that tells the user which variable to set.
+
+        Args:
+            env_var: The environment variable the provider reads the key from.
+            model: The model that needs the key.
+            alternative: A sentence naming a keyless way to authenticate, for
+                providers that offer one.
+        """
+        self.env_var = env_var
+        self.model = model
+        message = (
+            f"{env_var} is required for model '{model}' but is not set or is "
+            f"still the placeholder '{_API_KEY_PLACEHOLDER}'. Add "
+            f"{env_var}=<your-api-key> to the .env file in your project root, "
+            f"then run `crewai run` again."
+        )
+        super().__init__(f"{message} {alternative}" if alternative else message)
+
+
+class EmptyLLMResponseError(ValueError):
+    """The provider returned no content and no tool calls for a model call.
+
+    A ``ValueError`` so existing ``except ValueError`` handlers keep catching it.
+    The agent loop retries an empty answer once before raising this.
+
+    Attributes:
+        model: The model that returned the empty response.
+    """
+
+    def __init__(self, model: str) -> None:
+        self.model = model
+        super().__init__(f"The provider returned no content for model '{model}'.")
 
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
@@ -177,6 +234,9 @@ class BaseLLM(BaseModel, ABC):
         temperature: Optional temperature setting for response generation.
         stop: A list of stop sequences that the LLM should use to stop generation.
         additional_params: Additional provider-specific parameters.
+        context_window_size: The model's full context window in tokens. When
+            set, it is used instead of CrewAI's model catalog, which matters
+            for models the catalog does not list.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
@@ -242,6 +302,20 @@ class BaseLLM(BaseModel, ABC):
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
     additional_params: dict[str, Any] = Field(default_factory=dict)
+    context_window_size: int | None = Field(default=None, strict=True)
+
+    @field_validator("context_window_size")
+    @classmethod
+    def _validate_context_window_size(cls, value: int | None) -> int | None:
+        # ``LLM`` stored 0 for "not set" through 1.15.32, and checkpoints written
+        # by those versions carry it. Remove in 2.0.
+        if value == 0:
+            return None
+        if value is not None and value < 0:
+            raise ValueError(
+                f"context_window_size must be a positive number of tokens, got {value}"
+            )
+        return value
 
     @field_serializer("response_format", when_used="json", check_fields=False)
     def _serialize_response_format(self, value: Any) -> Any:
@@ -362,6 +436,8 @@ class BaseLLM(BaseModel, ABC):
             config["base_url"] = self.base_url
         if self.stop:
             config["stop"] = self.stop
+        if self.context_window_size is not None:
+            config["context_window_size"] = self.context_window_size
 
         return config
 
@@ -392,7 +468,7 @@ class BaseLLM(BaseModel, ABC):
             "token per four characters because a native token count is unavailable.",
             self.model,
         )
-        from crewai.utilities.agent_utils import message_content_text
+        from crewai.utilities.message_utils import message_content_text
 
         if isinstance(messages, str):
             character_count = len(messages)
@@ -447,6 +523,17 @@ class BaseLLM(BaseModel, ABC):
         """
         input_tokens = self.get_input_tokens_count(messages, tools, response_model)
         return input_tokens > self.get_context_window_size()
+
+    def summarize_messages(
+        self,
+        messages: list[LLMMessage],
+        callbacks: list[Any],
+        verbose: bool = True,
+    ) -> None:
+        """Compact a mutable conversation history to fit this model's context window."""
+        from crewai.llms.context_window import summarize_messages
+
+        summarize_messages(self, messages, callbacks, verbose)
 
     @abstractmethod
     def call(
@@ -635,8 +722,13 @@ class BaseLLM(BaseModel, ABC):
         """Get the context window size for the LLM.
 
         Returns:
-            The number of tokens/characters the model can handle.
+            The number of tokens/characters the model can handle: 85% of
+            ``context_window_size`` when it is set, else a fixed default.
         """
+        if self.context_window_size is not None:
+            from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
+
+            return int(self.context_window_size * CONTEXT_WINDOW_USAGE_RATIO)
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
     def supports_multimodal(self) -> bool:

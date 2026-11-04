@@ -618,8 +618,8 @@ def test_lite_agent_summarizes_before_calling_the_llm():
     ]
     events: list[str] = []
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
-        summarize.side_effect = lambda **_: events.append("summarize")
+    with patch.object(llm, "summarize_messages") as summarize:
+        summarize.side_effect = lambda *_args, **_kwargs: events.append("summarize")
         llm.call.side_effect = (
             lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
         )

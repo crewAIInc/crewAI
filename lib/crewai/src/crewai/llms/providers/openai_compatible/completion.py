@@ -19,6 +19,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import model_validator
 
+from crewai.llms.base_llm import MissingAPIKeyError, _without_placeholder
 from crewai.llms.providers.openai.completion import OpenAICompletion
 
 
@@ -181,7 +182,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
                 f"Supported providers: {supported}"
             )
 
-        data["api_key"] = cls._resolve_api_key(data.get("api_key"), config, provider)
+        data["api_key"] = cls._resolve_api_key(
+            data.get("api_key"), config, data.get("model", "")
+        )
         data["base_url"] = cls._resolve_base_url(data.get("base_url"), config, provider)
         data["default_headers"] = cls._resolve_headers(
             data.get("default_headers"), config
@@ -192,33 +195,31 @@ class OpenAICompatibleCompletion(OpenAICompletion):
     def _resolve_api_key(
         api_key: str | None,
         config: ProviderConfig,
-        provider: str,
+        model: str,
     ) -> str | None:
         """Resolve the API key from explicit value, env var, or default.
 
         Args:
             api_key: Explicitly provided API key.
             config: Provider configuration.
-            provider: Provider name for error messages.
+            model: Model name for error messages.
 
         Returns:
             The resolved API key.
 
         Raises:
-            ValueError: If API key is required but not found.
+            MissingAPIKeyError: If API key is required but not found.
         """
+        api_key = _without_placeholder(api_key)
         if api_key:
             return api_key
 
-        env_key = os.getenv(config.api_key_env)
+        env_key = _without_placeholder(os.getenv(config.api_key_env))
         if env_key:
             return env_key
 
         if config.api_key_required:
-            raise ValueError(
-                f"API key required for {provider}. "
-                f"Set {config.api_key_env} environment variable or pass api_key parameter."
-            )
+            raise MissingAPIKeyError(config.api_key_env, model)
 
         return config.default_api_key
 
