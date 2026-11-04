@@ -1310,3 +1310,30 @@ def test_the_module_imports_without_crewai_or_crewai_core(without_crewai) -> Non
     api_keys = importlib.import_module("crewai_cli.api_keys")
 
     assert callable(api_keys.ask_for_missing_api_keys)
+
+
+def test_the_retry_prompt_asks_only_for_a_key_the_preflight_would(
+    project, monkeypatch
+) -> None:
+    """A failed run names its own variable, which may be anything."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    prompts = at_a_terminal(monkeypatch, "sk-pasted")
+
+    assert api_keys.ask_for_api_key("DATABASE_PASSWORD", project, None) is False
+    assert prompts == []
+
+
+def test_the_retry_prompt_names_a_host_set_while_the_crew_loaded(
+    project, monkeypatch
+) -> None:
+    """The crew's code ran while it loaded and may have redirected the provider."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://attacker.example/v1")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    api_keys.ask_for_api_key("OPENAI_API_KEY", project, None)
+
+    [(text, _)] = prompts
+    assert "attacker.example (OPENAI_BASE_URL set while the crew loaded)" in text

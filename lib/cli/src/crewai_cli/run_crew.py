@@ -17,7 +17,9 @@ from packaging import version
 from crewai_cli.api_keys import (
     PASTED_KEYS_ENV,
     PLACEHOLDER_API_KEY,
+    ask_for_api_key,
     ask_for_missing_api_keys,
+    missing_key_line,
 )
 from crewai_cli.input_prompt import (
     closest_name,
@@ -118,6 +120,10 @@ try:
 except module.click.ClickException as exc:
     exc.show()
     raise SystemExit(exc.exit_code)
+except module.click.Abort:
+    # Ctrl-C or Ctrl-D at a prompt, ended as click ends its own commands.
+    module.click.echo("Aborted!", err=True)
+    raise SystemExit(1)
 """.strip()
 
 
@@ -226,7 +232,8 @@ def _resolve_crew_inputs(
     inputs = dict(default_inputs or {})
 
     for key, value in (provided or {}).items():
-        if key not in referenced:
+        # A key the crew declares is no typo, and a retry passes them all back.
+        if key not in referenced and key not in inputs:
             suggestion = closest_name(key, referenced)
             hint = f" Did you mean '{suggestion}'?" if suggestion else ""
             click.secho(
@@ -275,6 +282,56 @@ def _json_loading_status(message: str) -> AbstractContextManager[Any]:
     )
 
 
+class ApiKeyNotSetError(click.ClickException):
+    """A JSON crew's run stopped because a model's API key is not set."""
+
+    def __init__(self, env_var: str, json_crew: Path) -> None:
+        super().__init__(missing_key_line(env_var, Path.cwd(), json_crew))
+
+
+def _missing_api_key(error: BaseException | None) -> str | None:
+    """The variable a ``MissingAPIKeyError`` behind ERROR names, if one does.
+
+    Kickoff raises it as itself. The JSON loader raises it from a pydantic
+    ValidationError of the agent an OpenAI-compatible model is built for.
+    """
+    try:
+        from crewai.llms.base_llm import MissingAPIKeyError
+    except ImportError:
+        # The project's crewai predates it: the run stops as it always has.
+        return None
+    from pydantic import ValidationError
+
+    # crewAI's providers re-raise with `raise e from e`, which makes an error
+    # its own cause.
+    seen: set[int] = set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        if isinstance(error, MissingAPIKeyError):
+            return error.env_var
+        if isinstance(error, ValidationError):
+            for detail in error.errors():
+                cause = detail.get("ctx", {}).get("error")
+                if isinstance(cause, MissingAPIKeyError):
+                    return cause.env_var
+        error = error.__cause__
+    return None
+
+
+@contextmanager
+def _stops_for_a_missing_api_key(json_crew: Path) -> Iterator[None]:
+    """Stop the run with the line that sets the API key the block failed
+    without, instead of a traceback; anything else raises as it is."""
+    try:
+        yield
+    except Exception as error:
+        env_var = _missing_api_key(error)
+        if env_var is None:
+            raise
+        record_run_stopped("missing_api_key")
+        raise ApiKeyNotSetError(env_var, json_crew) from error
+
+
 def _load_json_crew(crew_path: Path) -> tuple[Any, dict[str, Any]]:
     try:
         from crewai.project.crew_loader import load_crew
@@ -285,8 +342,13 @@ def _load_json_crew(crew_path: Path) -> tuple[Any, dict[str, Any]]:
         record_run_stopped("load_failed")
         raise
 
-    with stops_run_as("load_failed"):
+    try:
         return load_crew(crew_path)
+    except (Exception, SystemExit) as exc:
+        # A missing key is counted where the run stops for it.
+        if _missing_api_key(exc) is None:
+            record_run_stopped("load_failed")
+        raise
 
 
 def _load_json_crew_for_tui(
@@ -332,6 +394,45 @@ def _run_json_crew_without_tui(crew_path: Path, provided: dict[str, Any] | None)
     return result
 
 
+def _run_json_crew_in_tui(
+    crew_path: Path, provided: dict[str, Any] | None
+) -> tuple[CrewRunApp, dict[str, Any]]:
+    """Run a JSON-defined crew in the run app; returns the app and the inputs."""
+    crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
+        _load_json_crew_for_tui(crew_path)
+    )
+    runtime_inputs = _resolve_crew_inputs(
+        crew, default_inputs, provided, interactive=True
+    )
+
+    app = crew_run_app_cls(
+        crew_name=crew.name or "Crew",
+        total_tasks=len(crew.tasks),
+        agent_names=agent_names,
+        task_names=task_names,
+    )
+    app._crew = crew
+    app._default_inputs = runtime_inputs
+
+    app.run()
+
+    _print_post_tui_summary(app)
+    return app, runtime_inputs
+
+
+def _ask_for_the_api_key(error: BaseException, crew_path: Path) -> None:
+    """Ask for the API key ERROR was raised without, and save it; raise ERROR
+    when it names none or none is pasted."""
+    env_var = _missing_api_key(error)
+    if env_var is None:
+        raise error
+    # Ctrl-C or Ctrl-D at the prompt stops the run there.
+    with stops_run_as("missing_api_key"):
+        pasted = ask_for_api_key(env_var, Path.cwd(), crew_path)
+    if not pasted:
+        raise error
+
+
 def _run_json_crew(
     trained_agents_file: str | None = None,
     crew_path: str | Path | None = None,
@@ -361,27 +462,28 @@ def _run_json_crew(
     # agent, CI, piped input, CREWAI_DMN) the crew runs on plain output and the
     # command exits when it finishes, as declarative flows do.
     if not is_interactive():
-        return _run_json_crew_without_tui(crew_path, provided)
+        with _stops_for_a_missing_api_key(crew_path):
+            return _run_json_crew_without_tui(crew_path, provided)
 
-    crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
-        _load_json_crew_for_tui(crew_path)
-    )
-    runtime_inputs = _resolve_crew_inputs(
-        crew, default_inputs, provided, interactive=True
-    )
-
-    app = crew_run_app_cls(
-        crew_name=crew.name or "Crew",
-        total_tasks=len(crew.tasks),
-        agent_names=agent_names,
-        task_names=task_names,
-    )
-    app._crew = crew
-    app._default_inputs = runtime_inputs
-
-    app.run()
-
-    _print_post_tui_summary(app)
+    # A missing key is asked for once, and the crew built again and run once
+    # more: its agents spent their retries, and a model built without the key
+    # keeps none.
+    with _stops_for_a_missing_api_key(crew_path):
+        try:
+            app, runtime_inputs = _run_json_crew_in_tui(crew_path, provided)
+        except Exception as error:
+            _ask_for_the_api_key(error, crew_path)
+            app, runtime_inputs = _run_json_crew_in_tui(crew_path, provided)
+        else:
+            failure: Exception | None = getattr(app, "_failure", None)
+            if failure is not None and _missing_api_key(failure):
+                _ask_for_the_api_key(failure, crew_path)
+                click.echo("Running the crew again from its first task.")
+                app, runtime_inputs = _run_json_crew_in_tui(crew_path, runtime_inputs)
+        # The app only shows a failure; one for a missing key stops the run.
+        failure = getattr(app, "_failure", None)
+        if failure is not None and _missing_api_key(failure):
+            raise failure
 
     if app._status == "failed":
         # Mirror the classic subprocess path: a failed crew must produce a
@@ -569,7 +671,9 @@ RunKind = Literal["crew", "json_crew", "flow", "declarative_flow", "unknown"]
 # Where `crewai run` stopped before the crew or flow kicked off; except
 # `script_failed`, a Python project's `uv run` script that exited non-zero,
 # which uv reports alike for an install, an import and a run that failed after
-# kickoff. The run's own kickoff spans tell those apart.
+# kickoff, and the run's own kickoff spans tell those apart; and
+# `missing_api_key`, a JSON crew stopped for a model's API key that is not set,
+# found as the crew loads or once kickoff calls the model.
 RunStopReason = Literal[
     "no_project",
     "invalid_project",
@@ -583,6 +687,7 @@ RunStopReason = Literal[
     "no_terminal",
     "launch_failed",
     "script_failed",
+    "missing_api_key",
 ]
 
 # Set on a `crewai run` this command re-runs inside the project's environment,
@@ -638,8 +743,9 @@ def record_run_started(kind: RunKind) -> None:
 
 
 def record_run_stopped(reason: RunStopReason) -> None:
-    """Count a `crewai run` that stopped before kickoff, and where, or whose
-    project script failed (`script_failed`).
+    """Count a `crewai run` that stopped before kickoff, and where; or whose
+    project script failed (`script_failed`); or whose JSON crew stopped, as it
+    loaded or after kickoff, for an API key that is not set (`missing_api_key`).
 
     The reason is a word from a closed list, never the error, which can carry
     a path, a project name or the project's own code.

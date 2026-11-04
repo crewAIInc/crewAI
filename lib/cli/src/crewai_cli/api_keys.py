@@ -1,4 +1,5 @@
-"""Ask for the API keys a project's models need before `crewai run` starts them.
+"""Ask for the API keys a project's models need before `crewai run` starts them,
+or once a JSON crew's run has failed without one.
 
 `run_crew.py` imports this module, and a JSON crew's runner loads `run_crew.py`
 inside the project's environment, whose crewai and crewai_core can be older
@@ -23,6 +24,7 @@ from dotenv import dotenv_values, set_key
 
 from crewai_cli.constants import (
     DEFAULT_LLM_MODEL,
+    ENV_VARS,
     provider_for_model,
     required_key_names,
 )
@@ -145,54 +147,131 @@ def ask_for_missing_api_keys(
     if not missing:
         return None
 
-    # Only the project's own `.env` is rewritten, or a new one made: a new one
-    # would hide the `.env` above it, and a rewrite turns a link into a plain file.
-    savable = env_file.parent == project_dir and not env_file.is_symlink()
-    endpoints = _project_endpoints(saved, json_crew, project_dir)
-    if not savable or not _can_prompt():
+    if not _can_ask(project_dir, env_file):
         for name in missing:
             click.secho(
-                f"{name} is not set. Add {name}=<your key> to {env_file}, "
-                f"then run `crewai run` again.{_endpoint_warning(endpoints)}",
-                fg="yellow",
-                err=True,
+                missing_key_line(name, project_dir, json_crew), fg="yellow", err=True
             )
         return "warned"
 
+    endpoints = _project_endpoints(saved, json_crew, project_dir)
     outcome: ApiKeyOutcome = "skipped"
     for name in missing:
-        value = click.prompt(
-            _key_prompt(name, endpoints),
-            hide_input=True,
-            default="",
-            show_default=False,
-        ).strip()
-        if not value:
-            continue
-        os.environ[name] = value
-        _mark_pasted(name)
-        outcome = "saved"
-        try:
-            if not _keep_private(env_file):
-                click.secho(
-                    f"Not saved: {env_file} is readable by other users and could "
-                    f"not be made private, so only this run uses {name}.",
-                    fg="yellow",
-                    err=True,
-                )
-                continue
-            set_key(env_file, name, value, quote_mode="never")
-        except OSError as error:
-            # The run has the key either way; only the next run will not.
+        if _ask_and_save(name, env_file, endpoints):
+            outcome = "saved"
+    return outcome
+
+
+def ask_for_api_key(name: str, project_dir: Path, json_crew: Path | None) -> bool:
+    """Ask for ``name``, an API key a run failed without, and save it.
+
+    The key is asked for, exported and saved as
+    :func:`ask_for_missing_api_keys` does, with the hosts the project's
+    ``.env`` and the JSON crew ``json_crew`` send requests to named first, and
+    not asked for where that function would only print the line to add.
+
+    Returns:
+        Whether a key was pasted.
+    """
+    env_file = _env_file(project_dir)
+    if not _askable(name) or not _can_ask(project_dir, env_file):
+        return False
+    saved = dotenv_values(env_file) if env_file.exists() else {}
+    from_env_file = _endpoint_settings(
+        {key: value for key, value in saved.items() if value}
+    )
+    # The crew's own code ran while it loaded, and may have pointed a provider
+    # at another host through the environment.
+    loaded = [
+        f"{_host(value)} ({key} set while the crew loaded)".encode(
+            "unicode_escape"
+        ).decode("ascii")
+        for key, value in _endpoint_settings(os.environ).items()
+        if value and value not in (_MACHINE_ENDPOINTS.get(key), from_env_file.get(key))
+    ]
+    return _ask_and_save(
+        name, env_file, _project_endpoints(saved, json_crew, project_dir) + loaded
+    )
+
+
+# crewAI's providers name the key they miss `<PROVIDER>_API_KEY`.
+_PROVIDER_KEY_NAME = re.compile(r"[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_API_KEY")
+
+
+def _askable(name: str) -> bool:
+    """Whether NAME is a provider API key the CLI may ask for. A failed run
+    names its own variable, and project code can raise that error too."""
+    if _PROVIDER_KEY_NAME.fullmatch(name):
+        return True
+    single = (required_key_names(provider) for provider in ENV_VARS)
+    return name in {names[0] for names in single if len(names) == 1} or any(
+        name in names for names in _ALTERNATIVE_KEYS.values()
+    )
+
+
+def missing_key_line(
+    name: str, project_dir: Path, json_crew: Path | None = None
+) -> str:
+    """The line that tells how to set ``name`` for the project's runs, naming
+    the hosts the project's ``.env`` and JSON crew ``json_crew`` send requests to."""
+    env_file = _env_file(project_dir)
+    try:
+        # Not a pipe: what a secrets manager serves through one is the run's.
+        saved = dotenv_values(env_file) if env_file.is_file() else {}
+    except (OSError, ValueError):
+        saved = {}
+    return (
+        f"{name} is not set. Add {name}=<your key> to {env_file}, "
+        "then run `crewai run` again."
+        f"{_endpoint_warning(_project_endpoints(saved, json_crew, project_dir))}"
+    )
+
+
+def _can_ask(project_dir: Path, env_file: Path) -> bool:
+    # Only a regular `.env` of the project's own is rewritten, or a new one
+    # made: a new one would hide the `.env` above it, and a rewrite turns a
+    # link, or a pipe a secrets manager serves, into a plain file. The
+    # preflight never gets here with a pipe; a run that failed without a key can.
+    savable = (
+        env_file.parent == project_dir
+        and not env_file.is_symlink()
+        and (env_file.is_file() or not env_file.exists())
+    )
+    return savable and _can_prompt()
+
+
+def _ask_and_save(name: str, env_file: Path, endpoints: list[str]) -> bool:
+    value = click.prompt(
+        _key_prompt(name, endpoints),
+        hide_input=True,
+        default="",
+        show_default=False,
+    ).strip()
+    if not value:
+        return False
+    os.environ[name] = value
+    _mark_pasted(name)
+    try:
+        if not _keep_private(env_file):
             click.secho(
-                f"Couldn't save {name} to {env_file} ({error.strerror or error}), "
-                "so only this run uses it.",
+                f"Not saved: {env_file} is readable by other users and could "
+                f"not be made private, so only this run uses {name}.",
                 fg="yellow",
                 err=True,
             )
-            continue
-        click.echo(f"Saved {name} to {env_file}")
-    return outcome
+            return True
+        set_key(env_file, name, value, quote_mode="never")
+    except OSError as error:
+        # The run has the key either way; only the next run will not.
+        click.secho(
+            f"Couldn't save {name} to {env_file} ({error.strerror or error}), "
+            "so only this run uses it.",
+            fg="yellow",
+            err=True,
+        )
+        return True
+    click.echo(f"Saved {name} to {env_file}")
+    return True
 
 
 def _endpoint_warning(endpoints: list[str]) -> str:

@@ -6,10 +6,13 @@ Every count is a name from a closed list (`RunKind`, `RunStopReason`); the
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 import os
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 from typing import Any, get_args
 from unittest.mock import MagicMock
 import uuid
@@ -821,3 +824,566 @@ def test_quitting_at_the_key_prompt_counts_where_the_run_stopped(
 
     assert usage == [started("crew"), stopped("api_key_prompt")]
     assert commands == []
+
+
+# A JSON crew whose model's API key is not set: the runner child stops it with
+# the line to add, or, at a terminal, asks for the key and runs it once more.
+
+PROMPT = "{} isn't set. Paste it to save it to .env (Enter to skip)"
+
+
+def keyless_json_crew(folder: Path, monkeypatch: pytest.MonkeyPatch, llm: str) -> None:
+    """A JSON crew crewAI builds for real, with no key set for LLM's provider."""
+    # crewAI loads a `.env` when it is first imported: import it before the keys go.
+    import crewai.project.crew_loader  # noqa: F401
+
+    write(folder / "pyproject.toml", JSON_CREW_PYPROJECT)
+    write(
+        folder / "crew.jsonc",
+        '{"name": "Demo", "agents": ["researcher"], "memory": false, "tasks": '
+        '[{"description": "Say hi", "expected_output": "hi", "agent": "researcher"}]}',
+    )
+    write(
+        folder / "agents" / "researcher.jsonc",
+        '{"role": "Researcher", "goal": "Research", "backstory": "Curious", '
+        f'"llm": "{llm}"}}',
+    )
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "DEEPSEEK_API_KEY")
+
+
+def line_to_add(folder: Path, name: str) -> str:
+    return (
+        f"{name} is not set. Add {name}=<your key> to {folder / '.env'}, "
+        "then run `crewai run` again."
+    )
+
+
+def at_a_terminal(
+    monkeypatch: pytest.MonkeyPatch, events: list[str], *answers: str
+) -> list[tuple[str, dict[str, Any]]]:
+    """A person at a terminal who gives ANSWERS, in order; returns the prompts.
+
+    Call it in the test itself: pytest swaps `sys.stdout` after fixtures run."""
+    prompts: list[tuple[str, dict[str, Any]]] = []
+    queued = list(answers)
+
+    def prompt(text: str, **kwargs: Any) -> str:
+        assert queued, f"prompted: {text}"
+        events.append("prompt")
+        prompts.append((text, kwargs))
+        return queued.pop(0)
+
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(click, "prompt", prompt)
+    return prompts
+
+
+def run_app_ends(
+    monkeypatch: pytest.MonkeyPatch, folder: Path, *failures: Exception | None
+) -> list[str]:
+    """The run app, opened once per FAILURES entry: that run fails with it, or
+    completes for None. Returns what happened, in order."""
+    events: list[str] = []
+    queued = list(failures)
+
+    class RunApp:
+        def __init__(self, **kwargs: Any) -> None:
+            failure = queued.pop(0)
+            self._status = "failed" if failure else "completed"
+            self._failure = failure
+            self._crew_result = None if failure else "result"
+            self._want_deploy = False
+
+        def run(self) -> None:
+            events.append("run")
+
+    def load(_path: Path) -> tuple[Any, ...]:
+        events.append("load")
+        return RunApp, SimpleNamespace(name="Demo", tasks=[], agents=[]), {}, [], []
+
+    json_crew_project(folder)
+    monkeypatch.setattr(run_crew_module, "_load_json_crew_for_tui", load)
+    monkeypatch.setattr(
+        run_crew_module, "_print_post_tui_summary", lambda app: events.append("summary")
+    )
+    return events
+
+
+def missing_key(name: str = "OPENAI_API_KEY") -> Exception:
+    from crewai.llms.base_llm import MissingAPIKeyError
+
+    return MissingAPIKeyError(name, "gpt-4.1-mini")
+
+
+def its_own_cause(error: Exception) -> Exception:
+    """ERROR as crewAI's providers re-raise a failed call: `raise e from e`."""
+    try:
+        raise error from error
+    except Exception as raised:
+        assert raised.__cause__ is raised
+        return raised
+
+
+@pytest.mark.parametrize(
+    ("llm", "name"),
+    [("openai/gpt-4.1-mini", "OPENAI_API_KEY"), ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY")],
+    ids=["at_kickoff", "as_it_loads"],
+)
+def test_a_json_crew_without_its_key_stops_with_the_line_to_add(
+    project, usage, monkeypatch, llm, name
+) -> None:
+    """OpenAI raises for its key once kickoff calls the model, after the
+    agent's retries; an OpenAI-compatible provider as the crew loads, inside
+    the agent's ValidationError inside the loader's JSONProjectError."""
+    keyless_json_crew(project, monkeypatch, llm)
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
+        run_crew_module._run_json_crew()
+
+    assert isinstance(stop.value, click.ClickException)
+    assert stop.value.message == line_to_add(project, name)
+    assert stop.value.exit_code == 1
+    assert usage == [stopped("missing_api_key")]
+    assert_events_are_anonymous(usage)
+
+
+def test_a_json_crew_stopped_for_its_key_names_the_host_its_env_sends_requests_to(
+    project, usage, monkeypatch
+) -> None:
+    """Without a terminal, the line to add is all a person or agent reads."""
+    monkeypatch.setattr(
+        api_keys, "_MACHINE_ENDPOINTS", api_keys._endpoint_settings(os.environ)
+    )
+    keyless_json_crew(project, monkeypatch, "openai/gpt-4.1-mini")
+    write(project / ".env", "OPENAI_BASE_URL=https://attacker.example/v1\n")
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
+        run_crew_module._run_json_crew()
+
+    assert stop.value.message == (
+        line_to_add(project, "OPENAI_API_KEY")
+        + " This project sends requests to attacker.example (OPENAI_BASE_URL in "
+        ".env); add the key only if you trust that host."
+    )
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError("the crew failed"),
+        # What a crewai older than MissingAPIKeyError raised for a missing key.
+        ValueError("OPENAI_API_KEY is required"),
+        # A wrong key or a rate limit, as the providers raise it.
+        its_own_cause(RuntimeError("Error code: 401 - invalid x-api-key")),
+    ],
+    ids=["failed", "older_crewai", "its_own_cause"],
+)
+def test_a_json_crew_that_fails_at_kickoff_for_another_reason_raises_as_before(
+    project, usage, monkeypatch, error
+) -> None:
+    class FailingCrew:
+        agents: list[Any] = []
+        tasks: list[Any] = []
+
+        def kickoff(self, inputs: dict[str, Any]) -> None:
+            raise error
+
+    json_crew_project(project)
+    monkeypatch.setattr(run_crew_module, "_load_json_crew", lambda _path: (FailingCrew(), {}))
+
+    with pytest.raises(type(error)) as raised:
+        run_crew_module._run_json_crew()
+
+    assert raised.value is error
+    assert usage == []
+
+
+def test_a_json_crew_that_does_not_load_for_another_reason_counts_load_failed(
+    project, usage
+) -> None:
+    write(project / "pyproject.toml", JSON_CREW_PYPROJECT)
+    write(project / "crew.jsonc", '{"agents": "not a list"')
+
+    with pytest.raises(Exception, match="crew.jsonc"):
+        run_crew_module._run_json_crew()
+
+    assert usage == [stopped("load_failed")]
+
+
+@pytest.mark.parametrize("terminal", [False, True], ids=["headless", "at_a_terminal"])
+def test_a_json_crew_that_does_not_load_for_an_error_that_is_its_own_cause_counts_load_failed(
+    project, usage, monkeypatch, terminal
+) -> None:
+    from crewai.project import crew_loader
+
+    error = its_own_cause(RuntimeError("Error code: 401 - invalid x-api-key"))
+
+    def load_crew(_path: Path) -> None:
+        raise error
+
+    json_crew_project(project)
+    monkeypatch.setattr(crew_loader, "load_crew", load_crew)
+    if terminal:
+        monkeypatch.setattr(
+            run_crew_module, "_json_loading_status", lambda _message: nullcontext()
+        )
+        at_a_terminal(monkeypatch, [])
+
+    with pytest.raises(RuntimeError, match="invalid x-api-key") as raised:
+        run_crew_module._run_json_crew()
+
+    assert raised.value is error
+    assert usage == [stopped("load_failed")]
+
+
+@pytest.mark.parametrize("where", ["at_kickoff", "as_it_loads"])
+def test_a_crewai_without_missing_api_key_error_stops_as_before(
+    project, usage, monkeypatch, where
+) -> None:
+    """The runner child imports the project's crewai, which can predate
+    MissingAPIKeyError (1.15.34): the run fails and counts as it always has."""
+    keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+    from crewai.project import crew_loader
+
+    def raises(error: Exception) -> Any:
+        def raise_it(*args: Any, **kwargs: Any) -> None:
+            raise error
+
+        return raise_it
+
+    if where == "as_it_loads":
+        # The real error, made while crewai still has MissingAPIKeyError.
+        with pytest.raises(ValueError, match="DEEPSEEK_API_KEY") as loading:
+            crew_loader.load_crew(project / "crew.jsonc")
+        error = loading.value
+        monkeypatch.setattr(crew_loader, "load_crew", raises(error))
+    else:
+        error = missing_key("DEEPSEEK_API_KEY")
+        crew = SimpleNamespace(agents=[], tasks=[], kickoff=raises(error))
+        monkeypatch.setattr(crew_loader, "load_crew", lambda _path: (crew, {}))
+    monkeypatch.setitem(sys.modules, "crewai.llms.base_llm", None)
+
+    with pytest.raises(ValueError, match="DEEPSEEK_API_KEY") as raised:
+        run_crew_module._run_json_crew()
+
+    assert raised.value is error
+    assert usage == ([stopped("load_failed")] if where == "as_it_loads" else [])
+
+
+def test_at_a_terminal_a_key_missing_at_kickoff_is_asked_for_and_the_crew_runs_once_more(
+    project, usage, monkeypatch
+) -> None:
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    events = run_app_ends(monkeypatch, project, missing_key(), None)
+    prompts = at_a_terminal(monkeypatch, events, "  sk-pasted  ")
+
+    assert run_crew_module._run_json_crew() == "result"
+
+    # Asked once the app has closed and said why the run failed; then the crew
+    # is built again, its agents' retries spent and its models keyless.
+    assert events == ["load", "run", "summary", "prompt", "load", "run", "summary"]
+    assert prompts == [
+        (
+            PROMPT.format("OPENAI_API_KEY"),
+            {"hide_input": True, "default": "", "show_default": False},
+        )
+    ]
+    assert (project / ".env").read_text() == "OPENAI_API_KEY=sk-pasted\n"
+    assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
+    assert usage == []
+
+
+def test_at_a_terminal_a_key_left_blank_stops_the_run_with_the_line_to_add(
+    project, usage, monkeypatch
+) -> None:
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    events = run_app_ends(monkeypatch, project, missing_key())
+    at_a_terminal(monkeypatch, events, "")
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
+        run_crew_module._run_json_crew()
+
+    assert stop.value.message == line_to_add(project, "OPENAI_API_KEY")
+    assert stop.value.exit_code == 1
+    assert events == ["load", "run", "summary", "prompt"]
+    assert not (project / ".env").exists()
+    assert "OPENAI_API_KEY" not in os.environ
+    assert usage == [stopped("missing_api_key")]
+
+
+def test_at_a_terminal_a_key_still_missing_after_the_one_retry_stops_the_run(
+    project, usage, monkeypatch
+) -> None:
+    """A second model's key, say: the run is retried once, never in a loop."""
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+    events = run_app_ends(
+        monkeypatch, project, missing_key(), missing_key("ANTHROPIC_API_KEY")
+    )
+    at_a_terminal(monkeypatch, events, "sk-pasted")
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
+        run_crew_module._run_json_crew()
+
+    assert stop.value.message == line_to_add(project, "ANTHROPIC_API_KEY")
+    assert events == ["load", "run", "summary", "prompt", "load", "run", "summary"]
+    assert usage == [stopped("missing_api_key")]
+
+
+def test_at_a_terminal_whose_output_is_captured_the_line_is_given_not_asked(
+    project, usage, monkeypatch
+) -> None:
+    """`crewai eval` sends a run's output to a log when nobody is watching it."""
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    events = run_app_ends(monkeypatch, project, missing_key())
+    at_a_terminal(monkeypatch, events)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
+        run_crew_module._run_json_crew()
+
+    assert stop.value.message == line_to_add(project, "OPENAI_API_KEY")
+    assert events == ["load", "run", "summary"]
+    assert usage == [stopped("missing_api_key")]
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        RuntimeError("the crew failed"),
+        its_own_cause(RuntimeError("Error code: 401 - invalid x-api-key")),
+    ],
+    ids=["failed", "its_own_cause"],
+)
+def test_at_a_terminal_any_other_failure_exits_as_before(
+    project, usage, monkeypatch, failure
+) -> None:
+    events = run_app_ends(monkeypatch, project, failure)
+    at_a_terminal(monkeypatch, events)
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._run_json_crew()
+
+    assert exited.value.code == 1
+    assert events == ["load", "run", "summary"]
+    assert usage == []
+
+
+def test_at_a_terminal_a_key_missing_as_the_crew_loads_is_asked_for_after_the_spinner(
+    project, usage, monkeypatch
+) -> None:
+    keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+    events: list[str] = []
+
+    @contextmanager
+    def spinner(message: str) -> Iterator[None]:
+        events.append("spinner")
+        try:
+            yield
+        finally:
+            events.append("spinner stopped")
+
+    class RunApp:
+        def __init__(self, **kwargs: Any) -> None:
+            self._status = "completed"
+            self._crew_result = "result"
+            self._want_deploy = False
+
+        def run(self) -> None:
+            events.append("run")
+
+    monkeypatch.setattr(run_crew_module, "_json_loading_status", spinner)
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", RunApp)
+    monkeypatch.setattr(run_crew_module, "_print_post_tui_summary", lambda _app: None)
+    at_a_terminal(monkeypatch, events, "sk-deepseek")
+
+    assert run_crew_module._run_json_crew() == "result"
+
+    assert events == [
+        "spinner",
+        "spinner stopped",
+        "prompt",
+        "spinner",
+        "spinner stopped",
+        "run",
+    ]
+    assert (project / ".env").read_text() == "DEEPSEEK_API_KEY=sk-deepseek\n"
+    # Neither load_failed for the first load nor a stop for the run.
+    assert usage == []
+
+
+@pytest.mark.parametrize("where", ["at_kickoff", "as_it_loads"])
+def test_at_a_terminal_quitting_at_the_key_prompt_counts_the_stop(
+    project, usage, monkeypatch, where
+) -> None:
+    """Ctrl-C or Ctrl-D at the prompt stops the run for the key, counted once:
+    a crew that did not load counts no load_failed for it either."""
+    if where == "at_kickoff":
+        without_api_keys(monkeypatch, "OPENAI_API_KEY")
+        events = run_app_ends(monkeypatch, project, missing_key())
+    else:
+        keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+        monkeypatch.setattr(
+            run_crew_module, "_json_loading_status", lambda _message: nullcontext()
+        )
+        events = []
+    at_a_terminal(monkeypatch, events)
+
+    def quit_at_the_prompt(*args: Any, **kwargs: Any) -> str:
+        raise click.Abort
+
+    monkeypatch.setattr(click, "prompt", quit_at_the_prompt)
+
+    with pytest.raises(click.Abort):
+        run_crew_module._run_json_crew()
+
+    assert usage == [stopped("missing_api_key")]
+    assert not (project / ".env").exists()
+
+
+def test_at_a_terminal_the_crew_runs_again_from_its_first_task_with_its_inputs(
+    project, usage, monkeypatch, capsys
+) -> None:
+    """A key pasted after kickoff runs finished tasks again: the CLI says so,
+    and does not ask again for the inputs given to the first run."""
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    events = run_app_ends(monkeypatch, project, missing_key(), None)
+    load = run_crew_module._load_json_crew_for_tui
+
+    def load_a_crew_with_a_placeholder(path: Path) -> tuple[Any, ...]:
+        run_app, *_ = load(path)
+        task = SimpleNamespace(description="Research {topic}")
+        return run_app, SimpleNamespace(name="Demo", tasks=[task], agents=[]), {}, [], []
+
+    monkeypatch.setattr(
+        run_crew_module, "_load_json_crew_for_tui", load_a_crew_with_a_placeholder
+    )
+    prompts = at_a_terminal(monkeypatch, events, "AI agents", "sk-pasted")
+
+    assert run_crew_module._run_json_crew() == "result"
+
+    assert events == [
+        "load",
+        "prompt",
+        "run",
+        "summary",
+        "prompt",
+        "load",
+        "run",
+        "summary",
+    ]
+    assert "topic" in prompts[0][0]
+    assert prompts[1][0] == PROMPT.format("OPENAI_API_KEY")
+    assert capsys.readouterr().out.endswith(
+        f"Saved OPENAI_API_KEY to {project / '.env'}\n"
+        "Running the crew again from its first task.\n"
+    )
+    assert usage == []
+
+
+def test_at_a_terminal_the_retry_prompt_names_each_host_the_project_sends_requests_to(
+    project, usage, monkeypatch
+) -> None:
+    """The runner child loads the project's `.env` before the crew, so its
+    settings are in the environment by the time the key is asked for; and an
+    agent's llm can send its requests to another host on its own."""
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "OPENAI_BASE_URL")
+    monkeypatch.setattr(
+        api_keys, "_MACHINE_ENDPOINTS", api_keys._endpoint_settings(os.environ)
+    )
+    events = run_app_ends(monkeypatch, project, missing_key(), None)
+    write(project / ".env", "OPENAI_BASE_URL=https://attacker.example/v1\n")
+    write(project / "crew.jsonc", '{"agents": ["researcher"]}')
+    write(
+        project / "agents" / "researcher.jsonc",
+        '{"llm": {"model": "gpt-4.1-mini", "api_base": "https://other.example/v1"}}',
+    )
+    prompts = at_a_terminal(monkeypatch, events, "")
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError):
+        run_crew_module._run_json_crew()
+
+    assert [text for text, _ in prompts] == [
+        "OPENAI_API_KEY isn't set. This project sends requests to attacker.example "
+        "(OPENAI_BASE_URL in .env), other.example (llm.api_base in "
+        "researcher.jsonc). Paste it to save it to .env only if you trust those "
+        "hosts (Enter to skip)"
+    ]
+    assert (project / ".env").read_text() == (
+        "OPENAI_BASE_URL=https://attacker.example/v1\n"
+    )
+
+
+def test_at_a_terminal_the_retry_prompt_names_a_host_an_llms_client_params_send_requests_to(
+    project, usage, monkeypatch
+) -> None:
+    """An llm's `client_params` override its `base_url` when crewAI builds the
+    client, so a host there gets the key as surely as one in `base_url`."""
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "OPENAI_BASE_URL")
+    monkeypatch.setattr(
+        api_keys, "_MACHINE_ENDPOINTS", api_keys._endpoint_settings(os.environ)
+    )
+    events = run_app_ends(monkeypatch, project, missing_key(), None)
+    write(project / "crew.jsonc", '{"agents": ["researcher"]}')
+    write(
+        project / "agents" / "researcher.jsonc",
+        '{"llm": {"model": "openai/gpt-4o-mini", '
+        '"client_params": {"base_url": "https://cp-attacker.example/v1"}}}',
+    )
+    prompts = at_a_terminal(monkeypatch, events, "")
+
+    with pytest.raises(run_crew_module.ApiKeyNotSetError):
+        run_crew_module._run_json_crew()
+
+    assert [text for text, _ in prompts] == [
+        "OPENAI_API_KEY isn't set. This project sends requests to "
+        "cp-attacker.example (llm.client_params.base_url in researcher.jsonc). "
+        "Paste it to save it to .env only if you trust that host (Enter to skip)"
+    ]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_at_a_terminal_a_key_pasted_for_the_retry_leaves_the_env_file_readable_by_its_owner_only(
+    project, usage, monkeypatch
+) -> None:
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "DEMO_SETTING")
+    events = run_app_ends(monkeypatch, project, missing_key(), None)
+    env_file = write(project / ".env", "DEMO_SETTING=1\n")
+    env_file.chmod(0o644)
+    at_a_terminal(monkeypatch, events, "sk-pasted")
+
+    assert run_crew_module._run_json_crew() == "result"
+
+    assert env_file.read_text() == "DEMO_SETTING=1\nOPENAI_API_KEY=sk-pasted\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_at_a_terminal_a_key_an_env_file_others_can_read_would_hold_runs_the_crew_unsaved(
+    project, usage, monkeypatch, capsys
+) -> None:
+    """Saved, the key would stay readable by every other account on the machine."""
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "DEMO_SETTING")
+    events = run_app_ends(monkeypatch, project, missing_key(), None)
+    env_file = write(project / ".env", "DEMO_SETTING=1\n")
+    env_file.chmod(0o644)
+    at_a_terminal(monkeypatch, events, "sk-pasted")
+
+    def refuse(*args: Any, **kwargs: Any) -> None:
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(os, "chmod", refuse)
+
+    assert run_crew_module._run_json_crew() == "result"
+
+    output = capsys.readouterr()
+    assert (
+        f"Not saved: {env_file} is readable by other users and could not be made "
+        "private, so only this run uses OPENAI_API_KEY."
+    ) in output.err
+    assert "Saved" not in output.out
+    assert env_file.read_text() == "DEMO_SETTING=1\n"
+    assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
+    assert events == ["load", "run", "summary", "prompt", "load", "run", "summary"]
+    assert usage == []

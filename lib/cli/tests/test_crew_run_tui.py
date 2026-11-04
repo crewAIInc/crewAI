@@ -1721,6 +1721,32 @@ async def test_crew_done_waits_for_queued_memory_save_events(
 
 
 @pytest.mark.asyncio
+async def test_a_failed_kickoff_keeps_what_it_raised_beside_its_message() -> None:
+    """`crewai run` reads the error itself once the app closes, to ask for an
+    API key the crew failed without."""
+    from crewai.llms.base_llm import MissingAPIKeyError
+
+    error = MissingAPIKeyError("OPENAI_API_KEY", "gpt-4.1-mini")
+
+    class KeylessCrew:
+        def kickoff(self, inputs: Any) -> None:
+            raise error
+
+    app = CrewRunApp(crew_name="Demo")
+    app._crew = KeylessCrew()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        for _ in range(100):
+            if app._status == "failed":
+                break
+            await pilot.pause(0.02)
+
+    assert app._status == "failed"
+    assert app._failure is error
+    assert app._error == str(error)
+
+
+@pytest.mark.asyncio
 async def test_crew_failed_does_not_timeout_memory_save() -> None:
     app = _app_with_plan()
 
