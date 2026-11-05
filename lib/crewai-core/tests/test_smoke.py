@@ -352,6 +352,53 @@ def test_core_models_span_carries_the_models_compared_and_nothing_else(
     assert "evaluation_id" not in sent and "organization_id" not in sent
 
 
+def test_core_load_failed_stop_carries_its_error_class_and_no_other_stop_does(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`crewai run` names the class a project failed to load with on a
+    `load_failed` stop, never the message; any other stop or start drops it."""
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setattr(Telemetry, "_instance", None)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
+    )
+    offered = {
+        "error_class": "ImportError",
+        "error_message": "acme_secret_project/agents/researcher.jsonc failed",
+        "project_name": "acme_secret_project",
+    }
+
+    def sent_for(feature: str) -> dict[str, str]:
+        span.set_attribute.reset_mock()
+        Telemetry().feature_usage_span(feature, offered)
+        return {
+            call.args[0]: call.args[1] for call in span.set_attribute.call_args_list
+        }
+
+    sent = sent_for("cli_usage:run_stopped:load_failed")
+    assert sent["feature"] == "cli_usage:run_stopped:load_failed"
+    assert sent["error_class"] == "ImportError"
+    assert "error_message" not in sent and "project_name" not in sent
+
+    for feature in (
+        "cli_usage:run_stopped:invalid_project",
+        "cli_usage:run_stopped:script_failed",
+        "cli_usage:run_started:json_crew",
+    ):
+        sent = sent_for(feature)
+        assert sent["feature"] == feature
+        assert set(sent) & set(offered) == set(), feature
+
+
 def test_core_telemetry_records_flow_creation_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
