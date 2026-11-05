@@ -1208,6 +1208,54 @@ def test_the_environments_model_wins_over_the_env_file(
     assert "ANTHROPIC_API_KEY" not in result.output
 
 
+def test_a_python_crew_keeps_an_empty_shell_key_over_the_env_files(
+    project, children, no_prompt, monkeypatch
+) -> None:
+    """`load_dotenv` leaves a variable the environment has, even an empty one,
+    as a CI job with an unset secret exports."""
+    crew_project(project)
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    write(project / ".env", "OPENAI_API_KEY=sk-dotenv\n")
+
+    result = crewai_run()
+
+    assert warning(project, "OPENAI_API_KEY") in result.output
+
+
+def test_a_python_crews_empty_shell_model_hides_the_env_files(
+    project, children, no_prompt, monkeypatch
+) -> None:
+    """The run keeps the shell's blank MODEL, so crewAI's default model runs."""
+    crew_project(project)
+    monkeypatch.setenv("MODEL", "")
+    write(project / ".env", "MODEL=anthropic/claude-sonnet-5\n")
+
+    result = crewai_run()
+
+    assert warning(project, "OPENAI_API_KEY") in result.output
+    assert "ANTHROPIC_API_KEY" not in result.output
+
+
+def test_a_json_crews_blank_env_model_hides_the_shells(
+    project, children, monkeypatch
+) -> None:
+    """A JSON crew's run applies the `.env`'s blank MODEL over the shell's, so
+    crewAI's default model runs."""
+    machine_endpoints(monkeypatch)
+    monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-5-5")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-shell")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    write(project / "pyproject.toml", JSON_CREW_PYPROJECT)
+    write(project / "crew.jsonc", '{"name": "Demo", "agents": ["researcher"], "tasks": []}')
+    write(project / "agents" / "researcher.jsonc", '{"role": "Researcher"}')
+    write(project / ".env", "MODEL=\n")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    assert [text for text, _ in prompts] == [PROMPT.format("OPENAI_API_KEY")]
+
+
 def test_without_a_model_crewais_default_model_is_checked(
     project, children, no_prompt
 ) -> None:

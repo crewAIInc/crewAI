@@ -512,7 +512,10 @@ def _configured_model(
 
     def configured(name: str) -> str | None:
         first, second = (saved, os.environ) if env_file_wins else (os.environ, saved)
-        return first.get(name) or second.get(name)
+        # A blank value still wins over the other source; crewAI then reads the
+        # next name.
+        value = first.get(name)
+        return value if value is not None else second.get(name)
 
     return next((value for name in _MODEL_ENV if (value := configured(name))), None)
 
@@ -543,8 +546,9 @@ def _is_set(name: str, saved: Mapping[str, str | None], env_file_wins: bool) -> 
     line = saved.get(name)
     pasted = name in os.environ.get(PASTED_KEYS_ENV, "").split(",")
     no_key = line is not None and line.strip() in ("", PLACEHOLDER_API_KEY)
-    if not env_file_wins and os.environ.get(name):
-        value = os.environ.get(name)
+    value: str | None
+    if not env_file_wins and name in os.environ:
+        value = os.environ[name]
     elif line is None or (pasted and no_key):
         value = os.environ.get(name)
     else:
