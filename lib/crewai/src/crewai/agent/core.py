@@ -87,6 +87,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
+from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
@@ -1843,10 +1844,12 @@ class Agent(BaseAgent):
         ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
         persistence restore options. Separate Agent instances own separate sessions.
         """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span("standalone_agent:handle_turn")
         context = contextvars.copy_context()
         if not self.verbose:
             context.run(set_suppress_console_output, True)
-        return context.run(self.as_flow().handle_turn, message, **kwargs)
+        return context.run(flow.handle_turn, message, **kwargs)
 
     def chat(self, *, tui: bool = False, **kwargs: Any) -> None:
         """Start an experimental conversation using the same options as Flow.chat.
@@ -1854,10 +1857,14 @@ class Agent(BaseAgent):
         Requires ``conversational=True``. Use ``tui=True`` for the terminal UI,
         or omit it for a plain REPL. Other options are forwarded to Flow.chat.
         """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span(
+            "standalone_agent:chat:tui" if tui else "standalone_agent:chat:repl"
+        )
         context = contextvars.copy_context()
         if not self.verbose and not tui:
             context.run(set_suppress_console_output, True)
-        context.run(self.as_flow().chat, tui=tui, **kwargs)
+        context.run(flow.chat, tui=tui, **kwargs)
 
     def kickoff(
         self,

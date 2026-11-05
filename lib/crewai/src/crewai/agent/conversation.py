@@ -37,6 +37,7 @@ def agent_flow(
     conversation_enabled = conversational
 
     class AgentFlow(Flow[AgentConversationState]):
+        _standalone_agent: ClassVar[bool] = True
         name: str | None = project_name
         conversational: ClassVar[bool] = conversation_enabled
         conversational_config: ClassVar[ConversationConfig] = ConversationConfig(
