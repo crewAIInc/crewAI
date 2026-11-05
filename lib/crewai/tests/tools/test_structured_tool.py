@@ -1,4 +1,5 @@
 import json
+from typing import Annotated
 
 from crewai.tools.structured_tool import CrewStructuredTool
 from pydantic import BaseModel, Field, RootModel
@@ -86,6 +87,52 @@ def test_from_function(basic_function):
     assert tool.description == "Test description"
     assert tool.func == basic_function
     assert isinstance(tool.args_schema, type(BaseModel))
+
+
+def test_from_function_preserves_annotated_field_metadata() -> None:
+    def bounded(
+        count: Annotated[int, Field(gt=0, description="Positive count")],
+    ) -> int:
+        """Return a positive count."""
+        return count
+
+    tool = CrewStructuredTool.from_function(bounded)
+
+    assert tool.args_schema.model_json_schema()["properties"]["count"] == {
+        "description": "Positive count",
+        "exclusiveMinimum": 0,
+        "title": "Count",
+        "type": "integer",
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+async def test_from_function_enforces_annotated_constraints(
+    asynchronous: bool,
+) -> None:
+    calls: list[int] = []
+
+    def bounded(count: Annotated[int, Field(gt=0)]) -> int:
+        """Return a positive count."""
+        calls.append(count)
+        return count
+
+    tool = CrewStructuredTool.from_function(bounded)
+
+    with pytest.raises(ValueError, match="Input should be greater than 0"):
+        if asynchronous:
+            await tool.ainvoke({"count": 0})
+        else:
+            tool.invoke({"count": 0})
+    assert calls == []
+
+    if asynchronous:
+        result = await tool.ainvoke({"count": "3"})
+    else:
+        result = tool.invoke({"count": "3"})
+    assert result == 3
+    assert calls == [3]
 
 
 class StructuredOutput(BaseModel):

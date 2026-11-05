@@ -313,7 +313,7 @@ class CrewStructuredTool(BaseModel):
         """
         sig = inspect.signature(func)
 
-        type_hints = get_type_hints(func)
+        type_hints = get_type_hints(func, include_extras=True)
 
         fields = {}
         for param_name, param in sig.parameters.items():
