@@ -314,5 +314,6 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             f"{self.provider}/{self.model}",
             LLM_CONTEXT_WINDOW_SIZES,
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
             extra_names=(self.model,),
         )
