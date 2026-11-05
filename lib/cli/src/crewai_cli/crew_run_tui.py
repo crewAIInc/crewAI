@@ -489,6 +489,17 @@ def _trace_was_recorded(execution_uuid: str) -> bool:
     return _recorded_run(execution_uuid) is not None
 
 
+def _trusted_trace_url(record: dict[str, Any]) -> str | None:
+    with contextlib.suppress(Exception):
+        from crewai.telemetry.tracing.grants import _trace_viewer_url
+        from crewai_core.plus_api import machine_amp_url
+
+        base_url = machine_amp_url()
+        if _trace_viewer_url(record.get("amp_base_url"), base_url):
+            return _trace_viewer_url(record.get("trace_url"), base_url)
+    return None
+
+
 class CrewRunApp(App[Any]):
     TITLE = "CrewAI"
 
@@ -1348,7 +1359,7 @@ FooterKey .footer-key--key {
         record = (
             _recorded_run(self._execution_uuid) if self._execution_uuid else None
         ) or {}
-        url = str(record.get("trace_url") or "")
+        url = _trusted_trace_url(record)
         if url:
             self._open_report(url)
             self.notify(url, title="Execution traces")

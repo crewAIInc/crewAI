@@ -174,6 +174,45 @@ def _sets_transport(key: str) -> bool:
 _MACHINE_TRANSPORT_ENV: dict[str, str] = {
     key: value for key, value in os.environ.items() if _sets_transport(key)
 }
+_AMP_ENV_NAMES = (
+    "CREWAI_PLUS_URL",
+    "CREWAI_USER_PAT",
+    "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
+    "CREWAI_TRACING_ENABLED",
+)
+_MACHINE_AMP_ENV = {
+    name: os.environ[name] for name in _AMP_ENV_NAMES if name in os.environ
+}
+
+
+def restore_machine_amp_environment(environ: MutableMapping[str, str]) -> None:
+    """Keep AMP destination, credentials and tracing consent outside project .env.
+
+    Empty values block a later load_dotenv(override=False) from filling variables
+    the machine did not set. Export these settings before starting CrewAI.
+    """
+    for name in _AMP_ENV_NAMES:
+        if name == "CREWAI_TRACING_ENABLED" and environ.get(name, "").lower() in (
+            "false",
+            "0",
+        ):
+            continue
+        environ[name] = _MACHINE_AMP_ENV.get(name, "")
+
+
+def machine_amp_url() -> str:
+    """AMP configured before project environment loading, or in saved settings."""
+    return (
+        _MACHINE_AMP_ENV.get("CREWAI_PLUS_URL")
+        or Settings().enterprise_base_url
+        or DEFAULT_CREWAI_ENTERPRISE_URL
+    )
+
+
+def record_tracing_consent() -> None:
+    """Keep an explicit tracing approval across project loads and child runs."""
+    _MACHINE_AMP_ENV["CREWAI_TRACING_ENABLED"] = "true"
+    os.environ["CREWAI_TRACING_ENABLED"] = "true"
 
 
 def restore_machine_transport(environ: MutableMapping[str, str]) -> None:
@@ -286,12 +325,7 @@ class PlusAPI:
         if organization_id := organization_id or settings.org_uuid:
             self.headers["X-Crewai-Organization-Id"] = organization_id
 
-        self.base_url = (
-            base_url
-            or os.getenv("CREWAI_PLUS_URL")
-            or settings.enterprise_base_url
-            or DEFAULT_CREWAI_ENTERPRISE_URL
-        )
+        self.base_url = base_url or machine_amp_url()
 
     @staticmethod
     def _http_client(verify: bool = True) -> httpx.Client:

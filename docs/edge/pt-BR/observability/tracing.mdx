@@ -162,13 +162,9 @@ Você também pode habilitar o rastreamento globalmente definindo uma variável 
 export CREWAI_TRACING_ENABLED=true
 ```
 
-Ou adicione-a ao seu arquivo `.env`:
+Para `crewai run`, exporte `CREWAI_TRACING_ENABLED`, `CREWAI_PLUS_URL`, `CREWAI_USER_PAT` e as credenciais de integração da plataforma no shell antes de iniciar o CrewAI, ou configure a URL do AMP com `crewai enterprise configure`. Arquivos `.env` do projeto não podem habilitar o rastreamento nem substituir essas configurações da máquina. As chaves de API dos modelos ainda podem vir do `.env` do projeto. A URL padrão do AMP é fixada antes de carregar o ambiente do projeto; integrações Python personalizadas podem passar explicitamente um `base_url` confiável para `PlusAPI`. Quando o shell habilita o rastreamento, Crews e Flows podem rastrear sem definir `tracing=True` no código.
 
-```env
-CREWAI_TRACING_ENABLED=true
-```
-
-Quando esta variável de ambiente estiver definida, todos os Crews e Flows terão automaticamente o rastreamento habilitado, mesmo sem definir explicitamente `tracing=True`.
+Projetos ainda podem desabilitar o rastreamento com `CREWAI_TRACING_ENABLED=false`. Uma aprovação explícita na tela de consentimento da CLI é preservada ao recarregar o projeto e em processos filhos.
 
 ## Visualizando rastreamentos após a primeira execução
 

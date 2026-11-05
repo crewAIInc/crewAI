@@ -162,13 +162,9 @@ result = flow.kickoff()
 export CREWAI_TRACING_ENABLED=true
 ```
 
-또는 `.env` 파일에 추가하세요:
+`crewai run`에서는 CrewAI를 시작하기 전에 셸에서 `CREWAI_TRACING_ENABLED`, `CREWAI_PLUS_URL`, `CREWAI_USER_PAT`와 플랫폼 통합 자격 증명을 내보내거나 `crewai enterprise configure`로 AMP URL을 설정하세요. 프로젝트 `.env` 파일은 추적을 활성화하거나 이러한 머신 설정을 대체할 수 없습니다. 모델 API 키는 계속 프로젝트 `.env`에서 가져올 수 있습니다. 기본 AMP URL은 프로젝트 환경을 로드하기 전에 고정됩니다. 사용자 정의 Python 통합은 신뢰하는 `base_url`을 `PlusAPI`에 명시적으로 전달할 수 있습니다. 셸에서 추적을 활성화하면 코드에 `tracing=True`를 설정하지 않아도 Crew와 Flow를 추적할 수 있습니다.
 
-```env
-CREWAI_TRACING_ENABLED=true
-```
-
-이 환경 변수가 설정되면 `tracing=True`를 명시적으로 설정하지 않아도 모든 Crews와 Flows에 자동으로 추적이 활성화됩니다.
+프로젝트는 `CREWAI_TRACING_ENABLED=false`로 추적을 비활성화할 수 있습니다. CLI 동의 화면에서 명시적으로 승인한 내용은 프로젝트를 다시 로드하거나 자식 프로세스를 실행해도 유지됩니다.
 
 ## 첫 실행 후 추적 보기
 

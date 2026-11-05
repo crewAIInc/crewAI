@@ -162,13 +162,9 @@ You can also enable tracing globally by setting an environment variable:
 export CREWAI_TRACING_ENABLED=true
 ```
 
-Or add it to your `.env` file:
+For `crewai run`, export `CREWAI_TRACING_ENABLED`, `CREWAI_PLUS_URL`, `CREWAI_USER_PAT`, and platform integration credentials in the shell before starting CrewAI, or configure the AMP URL with `crewai enterprise configure`. Project `.env` files cannot enable tracing or replace these machine settings. Model API keys can still come from the project `.env`. The default AMP URL is pinned before project environment loading; custom Python integrations can explicitly pass a trusted `base_url` to `PlusAPI`. When the shell enables tracing, Crews and Flows can trace without setting `tracing=True` in code.
 
-```env
-CREWAI_TRACING_ENABLED=true
-```
-
-When this environment variable is set, all Crews and Flows will automatically have tracing enabled, even without explicitly setting `tracing=True`.
+Projects can still disable tracing with `CREWAI_TRACING_ENABLED=false`. An explicit approval through the CLI consent screen is preserved across project reloads and child processes.
 
 ## Viewing traces after your first run
 
