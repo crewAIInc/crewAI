@@ -430,10 +430,27 @@ class PlusAPI:
         }
         return self._make_request("POST", self.SKILLS_RESOURCE, json=payload)
 
-    def list_skills(self, org: str | None = None) -> httpx.Response:
+    def list_skills(
+        self, org: str | None = None, *, search: str | None = None, page: int = 1
+    ) -> httpx.Response:
+        """List one page of the current organization's registry skills.
+
+        Args:
+            org: Sent as ``org``, which AMP ignores: it lists the organization
+                in the client's organization header.
+            search: Matches a substring of the handle or description.
+            page: 1-based page; the response's ``meta.total_pages`` says how many.
+
+        Returns:
+            The response; its JSON body is ``{"data": [...], "meta": {...}}``.
+        """
         params: dict[str, str] = {}
         if org is not None:
             params["org"] = org
+        if search:
+            params["search"] = search
+        if page != 1:
+            params["page"] = str(page)
         return self._make_request(
             "GET",
             self.SKILLS_RESOURCE,

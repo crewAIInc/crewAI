@@ -11,12 +11,16 @@ import logging
 from pathlib import Path, PureWindowsPath
 import re
 import sys
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import unquote, urlparse
 
 from pydantic import BaseModel, ValidationError
 
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_class_ref
+
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
 
 
 logger = logging.getLogger(__name__)
@@ -1812,6 +1816,13 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
     tools: list[Any] = []
     for tool_def in tool_defs:
         if isinstance(tool_def, dict):
+            tool_type = tool_def.get("tool_type")
+            if isinstance(tool_type, str):
+                # Project files are trusted, so import the class here, which
+                # registers it; BaseTool then hydrates the dict without the
+                # CREWAI_DESERIALIZE_CALLBACKS gate meant for checkpoint data.
+                module, _, name = tool_type.rpartition(".")
+                _resolve_tool_class(f"{module}:{name}")
             tools.append(tool_def)
             continue
         if not isinstance(tool_def, str):
@@ -1874,13 +1885,12 @@ def _resolve_platform_tools(selector: str) -> list[Any]:
         ) from e
 
 
-def _instantiate_tool_import_ref(ref: str) -> Any:
+def _resolve_tool_class(ref: str) -> type[BaseTool]:
     from crewai.tools import BaseTool
 
     try:
-        tool_cls = cast(
-            Callable[[], BaseTool],
-            resolve_class_ref(ref, field="tool", base_class=BaseTool),
+        return cast(
+            type[BaseTool], resolve_class_ref(ref, field="tool", base_class=BaseTool)
         )
     except InvalidRefError as e:
         message = str(e)
@@ -1892,6 +1902,10 @@ def _instantiate_tool_import_ref(ref: str) -> Any:
         raise JSONProjectError(
             f"invalid tool ref {ref!r}; expected a BaseTool class"
         ) from e
+
+
+def _instantiate_tool_import_ref(ref: str) -> Any:
+    tool_cls = cast("Callable[[], BaseTool]", _resolve_tool_class(ref))
     try:
         return tool_cls()
     except Exception as e:

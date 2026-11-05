@@ -1,0 +1,178 @@
+---
+title: MongoDB Vector Search Tool
+description: The `MongoDBVectorSearchTool` performs vector search on MongoDB Atlas with optional indexing helpers.
+icon: "leaf"
+mode: "wide"
+---
+
+# `MongoDBVectorSearchTool`
+
+## Description
+
+A `MongoDBVectorSearchTool` permite consultas de similaridade vetorial em coleções do MongoDB Atlas. O MongoDB Atlas
+oferece suporte nativo a vector search. A ferramenta também oferece auxiliares para criação de índices e inserção em massa de textos com embeddings.
+
+O MongoDB Vector Search é útil para aplicações que desejam usar um banco de dados vetorial para consultar dados
+com busca semântica, filtrar consultas em outros campos da sua coleção, ou potencializar suas
+aplicações de IA e sistemas agentic implementando retrieval-augmented generation (RAG).
+
+Saiba mais: https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/
+
+## Installation
+
+Install with the MongoDB extra:
+
+```shell
+pip install crewai-tools[mongodb]
+```
+
+or
+
+```shell
+uv add crewai-tools --extra mongodb
+```
+
+## Initialization Parameters
+
+- `connection_string` (str): Obrigatório. String de conexão do MongoDB Atlas com as credenciais para se conectar ao seu cluster.
+- `database_name` (str): Obrigatório. O nome do banco de dados MongoDB a ser utilizado.
+- `collection_name` (str): Obrigatório. A coleção dentro do banco de dados onde documentos e embeddings são armazenados.
+- `vector_index_name` (str, default: `vector_index`): Opcional. O nome do índice de MongoDB Vector Search a ser consultado (deve corresponder ao índice
+  criado no Atlas).
+- `text_key` (str, default: `text`): Opcional. O nome do campo do documento onde o texto bruto é armazenado.
+- `embedding_key` (str, default: `embedding`): Opcional. O nome do campo do documento onde o embedding vetorial é armazenado.
+- `dimensions` (int, default: `1536`): Opcional. O número de dimensões do modelo de embedding (deve corresponder ao seu modelo).
+- `query_config` (MongoDBVectorSearchConfig): Opcional. Um objeto `MongoDBVectorSearchConfig` para configurações avançadas de consulta, como `limit` e `oversampling_factor`.
+
+## MongoDBVectorSearchTool Methods
+
+- `run(query=...)`: Gera o embedding de uma consulta e realiza uma busca por similaridade vetorial, retornando os documentos correspondentes.
+  Recebe um parâmetro `query` (`str`) em linguagem natural para gerar o embedding e realizar a busca.
+- `add_texts(list of strings)`: Recebe uma lista de strings para gerar embeddings e inserir como documentos no seu banco de dados do MongoDB Atlas.
+- `create_vector_search_index(dimensions=...)`: Provisiona um índice de MongoDB Vector Search com as dimensões
+  e a similaridade corretas. Recebe um parâmetro `dimensions` (int).
+
+## Quick start
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma busca por similaridade vetorial na
+coleção especificada do MongoDB Atlas:
+
+```python Code
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+  connection_string="mongodb+srv://...",
+  database_name="mydb",
+  collection_name="docs",
+)
+
+print(tool.run(query="how to create vector index"))
+```
+
+## Common issues
+
+- Authentication failures: ensure your Atlas IP Access List allows your runner and the connection string includes credentials.
+- Index not found: create the vector index first; name must match `vector_index_name`.
+- Dimensions mismatch: align embedding model dimensions with `dimensions`.
+
+## Examples
+
+### Preload the database and create the index
+
+O exemplo a seguir demonstra como pré-carregar seu banco de dados do MongoDB Atlas com documentos
+e criar um índice de MongoDB Vector Search para consultar sua coleção:
+
+```python Code
+import os
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+    dimensions=3072,
+)
+
+# Load text content from a local folder and add to your MongoDB collection
+texts = []
+for fname in os.listdir("knowledge"):
+    path = os.path.join("knowledge", fname)
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as f:
+            texts.append(f.read())
+
+tool.add_texts(texts)
+
+# Create the MongoDB Vector Search index (e.g., 3072 dims for text-embedding-3-large)
+tool.create_vector_search_index(dimensions=3072)
+```
+
+### Custom query configuration and agent configuration
+
+O exemplo a seguir demonstra como fornecer uma configuração de consulta customizada para a `MongoDBVectorSearchTool`
+e integrá-la com um agente do CrewAI:
+
+```python Code
+from crewai_tools import MongoDBVectorSearchConfig, MongoDBVectorSearchTool
+
+query_config = MongoDBVectorSearchConfig(limit=10, oversampling_factor=2)
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+    query_config=query_config,
+    vector_index_name="my_vector_index",
+)
+
+rag_agent = Agent(
+    name="rag_agent",
+    role="You are a helpful assistant that can answer questions with the help of the MongoDBVectorSearchTool.",
+    goal="...",
+    backstory="...",
+    tools=[tool],
+)
+```
+
+### Run a CrewAI workflow
+
+O exemplo a seguir demonstra como integrar sua `MongoDBVectorSearchTool` com um Agent, Task e
+Crew para criar e executar um fluxo de trabalho agentic de RAG no CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    connection_string="mongodb+srv://...",
+    database_name="mydb",
+    collection_name="docs",
+)
+
+agent = Agent(
+    role="RAG Agent",
+    goal="Answer using MongoDB vector search",
+    backstory="Knowledge retrieval specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Find relevant content for 'indexing guidance'",
+    expected_output="A concise answer citing the most relevant matches",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+## Learn More
+
+Para saber mais sobre as integrações do CrewAI com o MongoDB, veja os seguintes guias do MongoDB:
+- [Integrate MongoDB with CrewAI](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/)
+- [Build an Agentic RAG Application with CrewAI and MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/build-agents/)
