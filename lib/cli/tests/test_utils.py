@@ -119,6 +119,14 @@ def test_is_dmn_mode_enabled_for_falsey_values(monkeypatch, value):
     assert utils.is_dmn_mode_enabled() is False
 
 
+def test_project_id_lookups_default_to_the_cwd_pyproject(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.crewai]\nproject_id = 'proj-1'\n")
+
+    assert utils.get_project_id() == "proj-1"
+    assert utils.get_or_create_project_id() == "proj-1"
+
+
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.

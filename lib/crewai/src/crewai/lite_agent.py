@@ -934,6 +934,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
                         verbose=self.verbose,
+                        request_within_rpm_limit=self.request_within_rpm_limit,
                     )
                     break
 

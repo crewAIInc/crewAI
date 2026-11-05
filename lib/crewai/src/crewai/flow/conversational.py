@@ -78,6 +78,11 @@ class ConversationConfig:
     message history without tools; override ``converse_turn`` when a separate
     history policy is required.
 
+    ``respect_context_window=True`` compacts built-in chat and router LLM
+    requests using the model's shared summarizer, without changing the public
+    transcript. A provider context-limit error gets one compact-and-retry
+    attempt. Set it to ``False`` to send requests without this handling.
+
     Set ``trace_scope="turn"`` to finish each turn's trace automatically and
     correlate turns by session id. The conversation remains resumable with a
     persistence backend. When omitted, tracing keeps the existing deferred
@@ -95,6 +100,7 @@ class ConversationConfig:
     visible_agent_outputs: Sequence[str] | Literal["all"] | None = None
     defer_trace_finalization: bool = True
     trace_scope: Literal["turn", "session"] | None = None
+    respect_context_window: bool = True
 
     def __post_init__(self) -> None:
         """Validate tracing scope and warn about deprecated history routing."""

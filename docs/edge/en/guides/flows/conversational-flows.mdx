@@ -293,6 +293,7 @@ Class decorator that attaches per-class chat defaults.
 |-------|---------|---------|
 | `system_prompt` | `slices.conversational_system_prompt` from i18n | System message used by the built-in `converse_turn`. Pass `""` to opt out entirely. |
 | `llm` | `None` | Conversation LLM (used by `converse_turn` and as router fallback). |
+| `respect_context_window` | `True` | Automatically compact built-in chat and router requests near the model's context limit, and retry once after a context-limit error. Set `False` to disable. |
 | `router` | `None` | Optional `RouterConfig` overrides. With custom listeners and a resolvable LLM, routing auto-enables even when this is omitted. |
 | `answer_from_history_prompt` | Framework default | **Deprecated.** Use the `converse` system prompt or override `converse_turn()`. |
 | `answer_from_history_llm` | `None` | **Deprecated.** Use `llm`; `converse` already receives canonical history. |
@@ -313,6 +314,8 @@ Class decorator that attaches per-class chat defaults.
 With no custom routes, turns fall through to `converse`. With custom routes and a conversation/router LLM, the framework synthesizes a default `RouterConfig`; provide one explicitly only to customize its prompt, route list, descriptions, or fallback behavior. Setting `default_intents` uses the legacy pre-classification path instead.
 
 If no conversation LLM is configured, the built-in `converse_turn` returns a configuration placeholder rather than generating an answer.
+
+For `BaseLLM` models, the built-in `converse`, `answer_from_history`, and router calls reuse the shared context summarizer. Compaction preserves system messages, repeats the latest user message verbatim after the summary, and leaves `state.messages` intact for display and persistence; each turn builds its own model request and may summarize again. Internal summaries do not stream as reply text, and the existing context-summarization events report progress. Custom objects that only implement `call()` keep their existing behavior. Legacy `intents=` / `default_intents` pre-classification and custom route handlers retain their own context handling.
 
 ### `RouterConfig` and the auto-built route catalog
 
