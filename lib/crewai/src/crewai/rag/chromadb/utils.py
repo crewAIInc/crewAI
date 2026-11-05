@@ -111,7 +111,9 @@ def _prepare_documents_for_chromadb(
 
 def _create_batch_slice(
     prepared: PreparedDocuments, start_index: int, batch_size: int
-) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool]] | None]:
+) -> tuple[
+    list[str], list[str], list[Mapping[str, str | int | float | bool] | None] | None
+]:
     """Create a batch slice from prepared documents.
 
     Args:
@@ -120,16 +122,20 @@ def _create_batch_slice(
         batch_size: Size of the batch.
 
     Returns:
-        Tuple of (batch_ids, batch_texts, batch_metadatas).
+        Tuple of (batch_ids, batch_texts, batch_metadatas). ``batch_metadatas``
+        is None when no document in the batch has metadata; otherwise documents
+        without metadata get a None entry, because ChromaDB rejects empty dicts.
     """
     batch_end = min(start_index + batch_size, len(prepared.ids))
     batch_ids = prepared.ids[start_index:batch_end]
     batch_texts = prepared.texts[start_index:batch_end]
-    batch_metadatas = (
-        prepared.metadatas[start_index:batch_end] if prepared.metadatas else None
+    batch_metadatas: list[Mapping[str, str | int | float | bool] | None] | None = (
+        [m or None for m in prepared.metadatas[start_index:batch_end]]
+        if prepared.metadatas
+        else None
     )
 
-    if batch_metadatas and not any(m for m in batch_metadatas):
+    if batch_metadatas and not any(batch_metadatas):
         batch_metadatas = None
 
     return batch_ids, batch_texts, batch_metadatas

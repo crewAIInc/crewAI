@@ -267,7 +267,30 @@ class TestCreateBatchSlice:
 
         assert batch_ids == ["id1", "id2", "id3"]
         assert batch_texts == ["doc1", "doc2", "doc3"]
-        assert batch_metadatas == [{"a": 1}, {}, {"c": 3}]
+        assert batch_metadatas == [{"a": 1}, None, {"c": 3}]
+
+    def test_create_batch_slice_mixed_metadatas_pass_chromadb_validation(
+        self,
+    ) -> None:
+        """Test a batch mixing documents with and without metadata is valid for ChromaDB.
+
+        ChromaDB rejects empty metadata dicts, so documents without metadata
+        must be sent as None when other documents in the batch have metadata.
+        """
+        from chromadb.api.types import validate_metadatas
+
+        documents: list[BaseRecord] = [
+            {"doc_id": "1", "content": "alpha"},
+            {"doc_id": "2", "content": "beta", "metadata": {"source": "local"}},
+        ]
+        prepared = _prepare_documents_for_chromadb(documents)
+
+        _, _, batch_metadatas = _create_batch_slice(
+            prepared, start_index=0, batch_size=10
+        )
+
+        assert batch_metadatas == [None, {"source": "local"}]
+        validate_metadatas(batch_metadatas)
 
     def test_create_batch_slice_zero_start_index(self) -> None:
         """Test creating a batch slice starting from index 0."""

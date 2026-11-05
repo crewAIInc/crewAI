@@ -320,7 +320,47 @@ class TestChromaDBClient:
 
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
-        assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+        assert call_args[1]["metadatas"] == [None, None, {"key": "value"}]
+
+    def test_add_documents_mixed_metadata_with_real_chromadb(self) -> None:
+        """Test a batch mixing documents with and without metadata is accepted by ChromaDB."""
+        from uuid import uuid4
+
+        import chromadb
+        from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+
+        from crewai.rag.chromadb.utils import _sanitize_collection_name
+
+        class FixedEmbeddingFunction(EmbeddingFunction[Documents]):
+            def __init__(self) -> None:
+                pass
+
+            @staticmethod
+            def name() -> str:
+                return "fixed_test_embedding"
+
+            def __call__(self, input: Documents) -> Embeddings:
+                return [[float(len(text)), 1.0] for text in input]
+
+        real_client = ChromaDBClient(
+            client=chromadb.EphemeralClient(),
+            embedding_function=FixedEmbeddingFunction(),
+        )
+        collection_name = f"test_mixed_metadata_{uuid4().hex}"
+
+        real_client.add_documents(
+            collection_name=collection_name,
+            documents=[
+                {"doc_id": "1", "content": "alpha"},
+                {"doc_id": "2", "content": "beta", "metadata": {"source": "local"}},
+            ],
+        )
+
+        stored = real_client.client.get_collection(
+            _sanitize_collection_name(collection_name)
+        ).get(ids=["1", "2"], include=["metadatas"])
+        metadatas = dict(zip(stored["ids"], stored["metadatas"], strict=True))
+        assert metadatas == {"1": None, "2": {"source": "local"}}
 
     def test_add_documents_all_without_metadata(
         self, client, mock_chromadb_client
@@ -435,7 +475,7 @@ class TestChromaDBClient:
 
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
-        assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+        assert call_args[1]["metadatas"] == [None, None, {"key": "value"}]
 
     @pytest.mark.asyncio
     async def test_aadd_documents_empty_list_raises_error(
