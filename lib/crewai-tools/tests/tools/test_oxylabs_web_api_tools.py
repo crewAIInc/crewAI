@@ -119,6 +119,17 @@ class TestInitialization:
         with pytest.raises(ValueError, match="OXYLABS_WEB_API_KEY"):
             tool_class()
 
+    def test_surrounding_whitespace_is_stripped(
+        self, tool_class: type, web_api: FakeWebAPI
+    ) -> None:
+        call(tool_class(api_key="  key-from-file\n"), web_api)
+        assert web_api.calls[-1]["headers"]["Authorization"] == "Bearer key-from-file"
+
+    def test_whitespace_inside_the_key_is_rejected(self, tool_class: type) -> None:
+        with pytest.raises(ValueError, match="whitespace") as error:
+            tool_class(api_key="secret\nkey")
+        assert "secret" not in str(error.value)
+
     def test_key_is_not_serialized(self, tool_class: type) -> None:
         tool = tool_class(api_key="secret-key")
         assert "secret-key" not in repr(tool)
@@ -193,6 +204,12 @@ class TestWebScrape:
         assert json.loads(out) == {"price": "91,99 €"}
         assert web_api.last_payload["output"] == ["json"]
         assert web_api.last_payload["json"] == {"prompt": "the price"}
+
+    def test_null_json_key_does_not_hide_the_page(self, web_api: FakeWebAPI) -> None:
+        web_api.add(
+            200, {"state": "done", "results": [{"markdown": PAGE, "json": None}]}
+        )
+        assert OxylabsWebScrapeTool().run(url="https://example.com") == PAGE
 
     def test_long_pages_are_truncated(self, web_api: FakeWebAPI) -> None:
         web_api.add(200, scrape_body(value="a" * 1000))
@@ -304,6 +321,18 @@ class TestFailures:
         assert isinstance(result, ToolFailure)
         assert result.code == "REQUEST_FAILED_AFTER_TOO_MANY_RETRIES"
         assert result.details == {"request_id": "99"}
+        assert len(web_api.calls) == 1
+
+    def test_rejected_header_never_echoes_the_key(self, web_api: FakeWebAPI) -> None:
+        web_api.fail_with(
+            requests.exceptions.InvalidHeader(
+                "Invalid leading whitespace in header value: 'Bearer test-key'"
+            )
+        )
+        result = self.run_search()
+        assert isinstance(result, ToolFailure)
+        assert result.code == "invalid_key"
+        assert "test-key" not in result.message
         assert len(web_api.calls) == 1
 
     def test_validation_error_names_the_field(self, web_api: FakeWebAPI) -> None:

@@ -107,7 +107,8 @@ class OxylabsWebScrapeTool(OxylabsWebAPIBaseTool):
             )
 
         payload: dict[str, Any] = {"url": url, "output": [output]}
-        if json_prompt and json_prompt.strip():
+        extract = bool(json_prompt and json_prompt.strip())
+        if extract:
             # The AI parser: returns the named fields under `json` instead of the page.
             payload["output"] = ["json"]
             payload["json"] = {"prompt": json_prompt}
@@ -127,7 +128,7 @@ class OxylabsWebScrapeTool(OxylabsWebAPIBaseTool):
         if isinstance(response, ToolFailure):
             return response
 
-        return self._format(response, output, run_js)
+        return self._format(response, "json" if extract else output, run_js)
 
     def _queue_and_wait(self, payload: dict[str, Any]) -> dict[str, Any] | ToolFailure:
         queued = self._request("POST", "/v1/async/scrape", payload)
@@ -169,7 +170,9 @@ class OxylabsWebScrapeTool(OxylabsWebAPIBaseTool):
                 retryable=True,
             )
 
-        if "json" in results[0]:
+        # Decided by what was asked for, not by which keys the result carries:
+        # a page scrape can still come back with an empty `json` key.
+        if output == "json":
             parsed = [r.get("json") for r in results]
             return json.dumps(parsed[0] if len(parsed) == 1 else parsed)
 

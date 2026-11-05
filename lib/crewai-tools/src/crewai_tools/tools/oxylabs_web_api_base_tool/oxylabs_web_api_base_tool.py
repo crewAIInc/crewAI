@@ -144,11 +144,19 @@ class OxylabsWebAPIBaseTool(BaseTool):
 
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        api_key = api_key or os.environ.get("OXYLABS_WEB_API_KEY")
+        # A key pasted or read from a file often carries a trailing newline.
+        api_key = (api_key or os.environ.get("OXYLABS_WEB_API_KEY") or "").strip()
         if not api_key:
             raise ValueError(
                 "You must pass api_key when instantiating the tool or set the "
                 "OXYLABS_WEB_API_KEY environment variable"
+            )
+        if any(char.isspace() for char in api_key):
+            # Rejected here because requests would otherwise refuse the header
+            # with an error that quotes the whole key.
+            raise ValueError(
+                "OXYLABS_WEB_API_KEY contains whitespace or a line break; pass "
+                "the key on its own"
             )
         self._api_key = api_key
 
@@ -183,6 +191,16 @@ class OxylabsWebAPIBaseTool(BaseTool):
                     message=f"Oxylabs Web API {path} did not respond in time.",
                     code="timeout",
                     retryable=True,
+                )
+            except requests.exceptions.InvalidHeader:
+                # Never echo this one: requests quotes the rejected header value,
+                # which is the API key.
+                return ToolFailure(
+                    message=(
+                        "Oxylabs Web API request headers were rejected: check that "
+                        "OXYLABS_WEB_API_KEY holds only the key."
+                    ),
+                    code="invalid_key",
                 )
             except requests.RequestException as e:
                 failure = ToolFailure(
