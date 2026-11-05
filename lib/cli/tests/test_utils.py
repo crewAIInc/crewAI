@@ -130,3 +130,31 @@ def test_project_id_lookups_default_to_the_cwd_pyproject(tmp_path, monkeypatch):
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.
+
+
+@pytest.mark.usefixtures("no_provider_keys")
+@pytest.mark.parametrize(
+    ("provider", "env_vars", "expected"),
+    [
+        ("openai", {}, ["OPENAI_API_KEY"]),
+        ("openai", {"OPENAI_API_KEY": ""}, ["OPENAI_API_KEY"]),
+        ("openai", {"OPENAI_API_KEY": "sk-test"}, []),
+        ("bedrock", {"aws_access_key_id": "AKIATEST"}, ["AWS_SECRET_ACCESS_KEY"]),
+        ("azure", {}, ["AZURE_API_KEY", "AZURE_API_BASE"]),
+        ("watson", {}, ["WATSONX_URL", "WATSONX_APIKEY", "WATSONX_PROJECT_ID"]),
+        ("ollama", {}, []),
+        ("deepseek", {}, []),
+    ],
+)
+def test_missing_provider_keys_names_each_required_value_left_unset(
+    provider, env_vars, expected
+):
+    assert utils.missing_provider_keys(provider, env_vars) == expected
+
+
+@pytest.mark.usefixtures("no_provider_keys")
+def test_missing_provider_keys_skips_a_key_set_in_the_environment(monkeypatch):
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-from-shell")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "")
+
+    assert utils.missing_provider_keys("bedrock", {}) == ["AWS_SECRET_ACCESS_KEY"]

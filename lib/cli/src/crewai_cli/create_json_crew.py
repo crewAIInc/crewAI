@@ -36,10 +36,12 @@ from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     copy_assistant_instructions,
+    echo_missing_keys,
     enable_prompt_line_editing,
     get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
+    missing_provider_keys,
     render_template,
     write_env_file,
 )
@@ -66,57 +68,86 @@ _PROVIDERS: list[tuple[str, str]] = [
 # Curated offline fallback / label source. The picker prefers models pulled
 # live from the vendor's own API via ``model_catalog.get_provider_models``;
 # this list is the hand-verified backstop used when no API key is available.
-# Keep entries to real, current model ids — last verified against each vendor's
-# official model docs on 2026-08-17.
+# Each provider lists only its current models, last verified against the
+# vendor's own docs on 2026-11-03. The first entry is the `--provider` default
+# and what people with no key see first, so it is a small, current, generally
+# available model. A preview model is labeled as one and goes last.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
-        ("gpt-5.5", "GPT-5.5"),
-        ("gpt-5.5-pro", "GPT-5.5 Pro"),
-        ("gpt-5.6-sol", "GPT-5.6 Sol"),
-        ("gpt-5.6-terra", "GPT-5.6 Terra"),
-        ("gpt-5.6-luna", "GPT-5.6 Luna"),
-        ("gpt-5.6", "GPT-5.6"),
-        ("gpt-5.4", "GPT-5.4"),
-        ("gpt-5.4-mini", "GPT-5.4 Mini"),
-        ("gpt-5.2", "GPT-5.2"),
-        ("gpt-4.1", "GPT-4.1"),
+        ("gpt-6-luna", "GPT-6 Luna"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-astra", "GPT-6 Astra"),
     ],
     "anthropic": [
-        ("claude-fable-5", "Claude Fable 5"),
-        ("claude-opus-4-8", "Claude Opus 4.8"),
-        ("claude-sonnet-5", "Claude Sonnet 5"),
-        ("claude-opus-4-7", "Claude Opus 4.7"),
-        ("claude-haiku-4-5", "Claude Haiku 4.5"),
-        ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+        ("claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("claude-haiku-5-5", "Claude Haiku 5.5"),
+        ("claude-opus-5-5", "Claude Opus 5.5"),
+        ("claude-fable-5-1", "Claude Fable 5.1"),
     ],
-    # Re-verified 2026-10-31. Gemini 2.5 is left out: Google serves it only to
-    # accounts that used it before, and this list is shown to people with no key.
+    # Gemini 4 Argon has no free tier, so it is never the default.
     "gemini": [
         ("gemini-3.8-flash", "Gemini 3.8 Flash"),
-        ("gemini-4-argon", "Gemini 4 Argon"),
-        ("gemini-3.6-flash", "Gemini 3.6 Flash"),
-        ("gemini-3.5-flash", "Gemini 3.5 Flash"),
         ("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite"),
-        ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
-        ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
+        ("gemini-4-argon", "Gemini 4 Argon"),
     ],
     "groq": [
-        ("meta-llama/llama-4-maverick-17b-128e-instruct", "Llama 4 Maverick"),
-        ("meta-llama/llama-4-scout-17b-16e-instruct", "Llama 4 Scout"),
+        ("openai/gpt-oss-20b", "GPT-OSS 20B"),
         ("openai/gpt-oss-120b", "GPT-OSS 120B"),
-        ("qwen/qwen3-32b", "Qwen3 32B"),
-        ("moonshotai/kimi-k2-instruct-0905", "Kimi K2"),
-        ("llama-3.3-70b-versatile", "Llama 3.3 70B"),
+        ("qwen/qwen3.8-27b", "Qwen3.8 27B (preview)"),
     ],
     "ollama": [
-        ("llama3.3", "Llama 3.3"),
-        ("qwen3", "Qwen 3"),
-        ("deepseek-r1", "DeepSeek R1"),
-        ("gpt-oss", "GPT-OSS"),
-        ("gemma3", "Gemma 3"),
-        ("mistral", "Mistral"),
+        ("qwen3.5:9b", "Qwen 3.5 9B"),
+        ("gemma4:26b", "Gemma 4 26B"),
+        ("qwen3.8:27b", "Qwen 3.8 27B"),
+        ("gpt-oss:120b", "GPT-OSS 120B"),
+    ],
+    "bedrock": [
+        ("global.anthropic.claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("global.anthropic.claude-haiku-5-5", "Claude Haiku 5.5"),
+        ("global.anthropic.claude-opus-5-5", "Claude Opus 5.5"),
+    ],
+    # Deployment names: these match the name Azure AI Foundry suggests when
+    # deploying each model.
+    "azure": [
+        ("gpt-6-luna", "GPT-6 Luna"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-astra", "GPT-6 Astra"),
+    ],
+    "nvidia_nim": [
+        ("nvidia/nemotron-3.5-super-vl-120b-a12b", "Nemotron 3.5 Super VL 120B"),
+        ("nvidia/nemotron-3-ultra-550b-a55b", "Nemotron 3 Ultra 550B"),
+        (
+            "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "Nemotron 3.5 Lightning 30B (preview)",
+        ),
+    ],
+    "huggingface": [
+        ("zai-org/GLM-5.3-Flash", "GLM-5.3 Flash"),
+        ("deepseek-ai/DeepSeek-V4.1-Flash", "DeepSeek V4.1 Flash"),
+        ("zai-org/GLM-5.3", "GLM-5.3"),
+    ],
+    "cerebras": [
+        ("gpt-oss-120b", "GPT-OSS 120B"),
+        ("qwen-3.8-27b", "Qwen 3.8 27B"),
+    ],
+    "sambanova": [
+        ("gpt-oss-120b", "GPT-OSS 120B"),
+        ("DeepSeek-V3.1", "DeepSeek V3.1"),
+        ("gemma-4-31B-it", "Gemma 4 31B (preview)"),
+    ],
+    "watson": [
+        ("ibm/granite-4-h-small", "Granite 4 H Small"),
+        ("meta-llama/llama-4-maverick-17b-128e-instruct-fp8", "Llama 4 Maverick"),
+        ("openai/gpt-oss-120b", "GPT-OSS 120B"),
     ],
 }
+
+_FALLBACK_LLM = "openai/gpt-6-luna"
+
+# crewAI hands watsonx models to LiteLLM, which knows the provider only as
+# `watsonx`; ENV_VARS and the classic picker key it `watson`.
+_MODEL_PREFIXES: dict[str, str] = {"watson": "watsonx"}
+_ENV_PROVIDERS: dict[str, str] = {v: k for k, v in _MODEL_PREFIXES.items()}
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
@@ -613,7 +644,7 @@ def _wizard_agent(
         llm = preset_llm
         _success(llm)
     elif skip_provider:
-        llm = last_llm or "openai/gpt-4o"
+        llm = last_llm or _FALLBACK_LLM
     elif last_llm:
         reuse_labels = [
             f"Same as before  ({last_llm})",
@@ -786,7 +817,7 @@ def _default_agents_and_tasks(
     default_llm: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Return deterministic scaffold data for non-interactive project creation."""
-    llm = default_llm or "openai/gpt-4o"
+    llm = default_llm or _FALLBACK_LLM
     agents = [
         {
             "name": "researcher",
@@ -928,7 +959,7 @@ def _select_model() -> str:
 
     p_idx = pick_one("LLM Provider:", provider_labels)
     if p_idx < 0:
-        return "openai/gpt-4o"
+        return _FALLBACK_LLM
 
     if p_idx == len(_PROVIDERS):
         custom: str = click.prompt(
@@ -939,6 +970,7 @@ def _select_model() -> str:
         return custom.strip()
 
     provider_key, provider_name = _PROVIDERS[p_idx]
+    prefix = _MODEL_PREFIXES.get(provider_key, provider_key)
     click.secho(f"  → {provider_name}", fg="green")
 
     # Prefer the latest models pulled live from the vendor / LiteLLM; the
@@ -946,29 +978,29 @@ def _select_model() -> str:
     models = get_provider_models(provider_key, _PROVIDER_MODELS.get(provider_key, []))
     if not models:
         custom = click.prompt(
-            click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
+            click.style(f"  Enter model name for {prefix}/", fg="cyan"),
             type=str,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
-        return f"{provider_key}/{custom.strip()}"
+        return f"{prefix}/{custom.strip()}"
 
     model_labels = [f"{label}  ({model_id})" for model_id, label in models]
     model_labels.append("Other (enter model name)")
 
     m_idx = pick_one(f"{provider_name} Model:", model_labels)
     if m_idx < 0:
-        return f"{provider_key}/{models[0][0]}"
+        return f"{prefix}/{models[0][0]}"
 
     if m_idx == len(models):
         custom = click.prompt(
-            click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
+            click.style(f"  Enter model name for {prefix}/", fg="cyan"),
             type=str,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
-        result = f"{provider_key}/{custom.strip()}"
+        result = f"{prefix}/{custom.strip()}"
     else:
         model_id = models[m_idx][0]
-        result = f"{provider_key}/{model_id}"
+        result = f"{prefix}/{model_id}"
 
     click.secho(f"  → {result}", fg="green")
     return result
@@ -983,10 +1015,11 @@ def _default_model_for_provider(provider: str | None) -> str | None:
         return None
     if "/" in normalized:
         return normalized
-    models = _PROVIDER_MODELS.get(normalized)
+    provider = _ENV_PROVIDERS.get(normalized, normalized)
+    models = _PROVIDER_MODELS.get(provider)
     if not models:
         return None
-    return f"{normalized}/{models[0][0]}"
+    return f"{_MODEL_PREFIXES.get(provider, provider)}/{models[0][0]}"
 
 
 # ── Helpers ─────────────────────────────────────────────────────
@@ -1003,31 +1036,40 @@ def _write_jsonc(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _setup_env(folder_path: Path, llm_model: str) -> None:
-    """Prompt for API keys based on the selected provider."""
+def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
+    """Save the first model as MODEL and prompt once for each provider's API keys."""
     click.echo()
     env_vars = load_env_vars(folder_path)
-    env_vars["MODEL"] = llm_model
+    env_vars["MODEL"] = llm_models[0]
 
-    provider = llm_model.split("/")[0] if "/" in llm_model else llm_model
-    if provider in ENV_VARS:
-        for details in ENV_VARS[provider]:
+    missing: list[str] = []
+    for provider in dict.fromkeys(
+        _ENV_PROVIDERS.get(prefix, prefix)
+        for prefix in (model.split("/")[0] for model in llm_models)
+    ):
+        for details in ENV_VARS.get(provider, []):
             if details.get("default", False):
                 for key, value in details.items():
                     if key not in ["prompt", "key_name", "default"]:
                         env_vars[key] = value
             elif "key_name" in details:
+                # Hidden input goes through getpass, which reads the terminal
+                # and not piped stdin, so hide it only at a terminal.
                 api_key_value = click.prompt(
                     click.style(f"  {details['prompt']}", fg="cyan"),
                     default="",
                     show_default=False,
+                    hide_input=details.get("secret", True) and sys.stdin.isatty(),
                     prompt_suffix=click.style(" > ", fg="bright_white"),
                 )
                 if api_key_value.strip():
                     env_vars[details["key_name"]] = api_key_value
+        missing += missing_provider_keys(provider, env_vars)
 
-    if env_vars:
-        write_env_file(folder_path, env_vars)
+    write_env_file(folder_path, env_vars)
+    if missing:
+        echo_missing_keys(folder_path, missing)
+    else:
         click.secho("  API keys and model saved to .env file", fg="green")
 
 
@@ -1425,10 +1467,15 @@ def create_json_crew(
     (folder_path / "skills" / ".gitkeep").write_text("", encoding="utf-8")
 
     # Setup .env with API keys
+    keys_to_set: list[str] = []
     if not skip_provider and not dmn_mode:
-        models = list({a["llm"] for a in agents})
-        for model in models:
-            _setup_env(folder_path, model)
+        _setup_env(folder_path, [a["llm"] for a in agents])
+    else:
+        for provider in dict.fromkeys(
+            _ENV_PROVIDERS.get(prefix, prefix)
+            for prefix in (a["llm"].split("/")[0] for a in agents)
+        ):
+            keys_to_set += missing_provider_keys(provider, {})
 
     # Minted at creation so the project has a stable identity from run one.
     # This is the default `crewai create crew` path, not just --classic.
@@ -1443,6 +1490,11 @@ def create_json_crew(
     click.echo()
     click.echo(f"    cd {folder_name}")
     click.echo()
+    if keys_to_set:
+        click.secho(
+            f"  Set {', '.join(keys_to_set)} in .env before `crewai run`", fg="cyan"
+        )
+        click.echo()
     click.secho("  Run your crew:", fg="cyan")
     click.echo("    crewai run")
     click.echo()
