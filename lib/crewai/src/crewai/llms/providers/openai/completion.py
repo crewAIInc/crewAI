@@ -76,11 +76,12 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-# Models learned at runtime to be unavailable on /v1/chat/completions, keyed by
-# the model string as configured. Populated from the 404 by
-# `_remember_responses_only_model` so the wasted round trip is paid once per model
-# per process rather than on every call.
-_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+# (endpoint, model) pairs learned at runtime to need the Responses API: not
+# served by /v1/chat/completions at all (a 404), or not for function tools
+# (GPT-6 Astra and GPT-6.1 Sol). Populated by `_remember_responses_only_model`
+# so the wasted round trips are paid once per model per process rather than on
+# every call. Keyed by endpoint so one gateway's answer never reroutes another.
+_LEARNED_RESPONSES_ONLY_MODELS: set[tuple[str, str]] = set()
 
 # (endpoint, model) pairs a 400 has shown to reject `reasoning_effort` in this
 # process, so the rejected call is paid once rather than on every request. Keyed
@@ -735,14 +736,31 @@ class OpenAICompletion(BaseLLM):
 
             if self._rejects_reasoning_effort_with_tools(cause):
                 retry_params = self._reasoning_effort_none_params(completion_params)
-                if retry_params is not None:
+                if retry_params is not None and self._offers_reasoning_effort_none(
+                    cause
+                ):
                     logging.debug(
                         'Retrying %r with reasoning_effort="none": function tools '
                         "and reasoning effort cannot be combined on "
                         '/v1/chat/completions. Use api="responses" to keep both.',
                         self.model,
                     )
-                    return dispatch(retry_params)
+                    try:
+                        return dispatch(retry_params)
+                    except Exception as retry_error:
+                        if not self._rejects_reasoning_effort_none(
+                            retry_error.__cause__ or retry_error
+                        ):
+                            raise
+                self._remember_tools_need_responses()
+                return self._call_responses(
+                    messages=messages,
+                    tools=tools,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
 
             if self._rejects_reasoning_effort_as_unsupported(cause):
                 retry_params = self._without_reasoning_effort(completion_params)
@@ -879,8 +897,25 @@ class OpenAICompletion(BaseLLM):
 
             if self._rejects_reasoning_effort_with_tools(cause):
                 retry_params = self._reasoning_effort_none_params(completion_params)
-                if retry_params is not None:
-                    return await dispatch(retry_params)
+                if retry_params is not None and self._offers_reasoning_effort_none(
+                    cause
+                ):
+                    try:
+                        return await dispatch(retry_params)
+                    except Exception as retry_error:
+                        if not self._rejects_reasoning_effort_none(
+                            retry_error.__cause__ or retry_error
+                        ):
+                            raise
+                self._remember_tools_need_responses()
+                return await self._acall_responses(
+                    messages=messages,
+                    tools=tools,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
 
             if self._rejects_reasoning_effort_as_unsupported(cause):
                 retry_params = self._without_reasoning_effort(completion_params)
@@ -1061,6 +1096,14 @@ class OpenAICompletion(BaseLLM):
 
         if self.store is not None:
             params["store"] = self.store
+        elif (
+            self.api == "completions"
+            and not (self.auto_chain or self.previous_response_id)
+            and not self._on_compatible_server()
+        ):
+            # Moved here from chat completions, which stores nothing by default;
+            # unset, OpenAI would store the call. Chaining needs it stored.
+            params["store"] = False
 
         # Handle response chaining: explicit previous_response_id takes precedence
         if self.previous_response_id:
@@ -1542,6 +1585,19 @@ class OpenAICompletion(BaseLLM):
 
             return parsed_result
 
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+                usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            return function_calls
+
         if function_calls and available_functions:
             for call in function_calls:
                 function_name = call.get("name", "")
@@ -1678,6 +1734,19 @@ class OpenAICompletion(BaseLLM):
             )
 
             return parsed_result
+
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+                usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            return function_calls
 
         if function_calls and available_functions:
             for call in function_calls:
@@ -1927,7 +1996,7 @@ class OpenAICompletion(BaseLLM):
 
     def _remember_responses_only_model(self) -> None:
         """Record that this model must use the Responses API."""
-        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self._reasoning_effort_key())
 
     def _model_not_found_message(self, error: Exception) -> str:
         """Build a 404 message that says what to do about it.
@@ -1970,6 +2039,57 @@ class OpenAICompletion(BaseLLM):
             return False
         message = str(source.get("message") or "").lower()
         return "function tools" in message and "reasoning_effort" in message
+
+    @staticmethod
+    def _offers_reasoning_effort_none(error: BaseException) -> bool:
+        """Whether the tools 400 offers `reasoning_effort="none"` as a way out.
+
+        Bedrock's OpenAI-compatible endpoint names only /v1/responses for GPT-6
+        Astra, and rejects "none" there, so the retry would be a wasted call:
+
+            "Function tools with reasoning_effort are not supported for
+            us.openai.gpt-6-astra in /v1/chat/completions. To use function
+            tools, use /v1/responses."
+        """
+        return "'none'" in str(error).lower()
+
+    @staticmethod
+    def _rejects_reasoning_effort_none(error: BaseException) -> bool:
+        """Whether a 400 is the model refusing the `reasoning_effort="none"` retry.
+
+        GPT-6 Astra and GPT-6.1 Sol offer "none" in the tools 400 and then
+        refuse it, so their tools are served only by /v1/responses:
+
+            {"param": "reasoning_effort", "code": "unsupported_value",
+             "message": "Unsupported value: 'reasoning_effort' does not support
+             'none' with this model. Supported values are: 'low', 'medium',
+             'high', and 'xhigh'."}
+        """
+        if not isinstance(error, BadRequestError):
+            return False
+        body = getattr(error, "body", None)
+        source = None
+        if isinstance(body, dict):
+            inner = body.get("error")
+            source = inner if isinstance(inner, dict) else body
+        if not source or source.get("param") != "reasoning_effort":
+            return False
+        return "unsupported value" in str(source.get("message") or "").lower()
+
+    def _remember_tools_need_responses(self) -> None:
+        """Send this model's later calls on this endpoint to the Responses API.
+
+        Not with ``custom_openai=True``: `_effective_api` never upgrades those,
+        since most don't implement /v1/responses, so each of their tool calls
+        pays the rejected round trip instead.
+        """
+        logging.debug(
+            "Calling %r on the Responses API: /v1/chat/completions does not serve "
+            'its function tools. Set api="responses" to skip the rejected call.',
+            self.model,
+        )
+        if not self.custom_openai:
+            self._remember_responses_only_model()
 
     def _sends_reasoning_effort(self) -> bool:
         """Whether `reasoning_effort` goes on the wire for this model.
@@ -2099,8 +2219,9 @@ class OpenAICompletion(BaseLLM):
         """Which OpenAI API to actually use for this model.
 
         Honours an explicit ``api`` setting, but upgrades to ``"responses"`` for
-        models already known -- from a previous 404 in this process -- not to be
-        served by chat completions.
+        models already known -- from a previous 404, or a tools 400 only the
+        Responses API can serve, in this process -- not to be served by chat
+        completions.
 
         Never overrides ``custom_openai=True``: an OpenAI-compatible server may
         serve any model name on /v1/chat/completions and most don't implement
@@ -2109,7 +2230,7 @@ class OpenAICompletion(BaseLLM):
         if (
             self.api == "completions"
             and not self.custom_openai
-            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
+            and self._reasoning_effort_key() in _LEARNED_RESPONSES_ONLY_MODELS
         ):
             return "responses"
         return self.api
@@ -2378,11 +2499,13 @@ class OpenAICompletion(BaseLLM):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
 
-            # `_call_completions` retries these, so reporting a failed call
+            # `_call_completions` recovers these, so reporting a failed call
             # here would surface an error the caller never experiences.
-            if self._rejects_reasoning_effort_with_tools(
-                e
-            ) or self._rejects_reasoning_effort_as_unsupported(e):
+            if (
+                self._rejects_reasoning_effort_with_tools(e)
+                or self._rejects_reasoning_effort_as_unsupported(e)
+                or self._rejects_reasoning_effort_none(e)
+            ):
                 raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
@@ -2818,11 +2941,13 @@ class OpenAICompletion(BaseLLM):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
 
-            # `_call_completions` retries these, so reporting a failed call
+            # `_call_completions` recovers these, so reporting a failed call
             # here would surface an error the caller never experiences.
-            if self._rejects_reasoning_effort_with_tools(
-                e
-            ) or self._rejects_reasoning_effort_as_unsupported(e):
+            if (
+                self._rejects_reasoning_effort_with_tools(e)
+                or self._rejects_reasoning_effort_as_unsupported(e)
+                or self._rejects_reasoning_effort_none(e)
+            ):
                 raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
