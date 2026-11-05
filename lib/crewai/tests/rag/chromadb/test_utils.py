@@ -1,5 +1,9 @@
 """Tests for ChromaDB utility functions."""
 
+import pytest
+
+pytest.importorskip("chromadb")
+
 from crewai.rag.chromadb.types import PreparedDocuments
 from crewai.rag.chromadb.utils import (
     MAX_COLLECTION_LENGTH,

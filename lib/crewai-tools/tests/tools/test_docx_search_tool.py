@@ -38,6 +38,7 @@ def test_docx_search_tool_schema() -> None:
         DOCXSearchToolSchema.model_validate({"docx": "path/to/report.docx"})
 
 
+@pytest.mark.vcr()
 def test_docx_search_tool_initialization_schemas() -> None:
     """Verify tool args_schema matches initialization mode without requiring docx in fixed mode."""
     with patch.object(DOCXSearchTool, "add"):

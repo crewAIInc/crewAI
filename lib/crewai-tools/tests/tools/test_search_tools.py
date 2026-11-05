@@ -45,7 +45,7 @@ def test_directory_search_tool():
         test_file.write_text("This is a test file for directory search")
 
         tool = DirectorySearchTool(directory=temp_dir)
-        result = tool._run(search_query="test file")
+        result = tool._run(search_query="test file", similarity_threshold=0.3)
         assert "test file" in result.lower()
 
 
@@ -81,7 +81,7 @@ def test_txt_search_tool():
     try:
         tool = TXTSearchTool()
         tool.add(temp_file_path)
-        result = tool._run(search_query="test file")
+        result = tool._run(search_query="test file", similarity_threshold=0.3)
         assert "test file" in result.lower()
     finally:
         os.unlink(temp_file_path)
@@ -145,7 +145,7 @@ def test_csv_search_tool():
     try:
         tool = CSVSearchTool()
         tool.add(temp_file_path)
-        result = tool._run(search_query="test CSV")
+        result = tool._run(search_query="test CSV", similarity_threshold=0.3)
         assert "test csv" in result.lower()
     finally:
         os.unlink(temp_file_path)

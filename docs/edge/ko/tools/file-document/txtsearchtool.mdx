@@ -73,7 +73,7 @@ tool = TXTSearchTool(
 
         # 필수: 벡터DB 설정
         "vectordb": {
-            "provider": "chromadb",  # 또는 "qdrant"
+            "provider": "chromadb",  # crewai[chromadb] 필요; 기본값은 "qdrant"
             "config": {
                 # Chroma 설정(영속성 예시)
                 # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),

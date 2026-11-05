@@ -113,7 +113,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance, sized to the embedding function's
+                ``vector_size`` when it has one, else 384 dimensions.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -153,7 +154,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance, sized to the embedding function's
+                ``vector_size`` when it has one, else 384 dimensions.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -193,7 +195,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance, sized to the embedding function's
+                ``vector_size`` when it has one, else 384 dimensions.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -244,7 +247,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance, sized to the embedding function's
+                ``vector_size`` when it has one, else 384 dimensions.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.

@@ -44,13 +44,13 @@ tool = PDFSearchTool(pdf='path/to/your/document.pdf')
 
 ## النموذج والتضمينات المخصصة
 
-بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي. ملاحظة: قاعدة بيانات متجهية مطلوبة لأن التضمينات المولّدة يجب تخزينها والاستعلام عنها من قاعدة بيانات متجهية.
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي. ملاحظة: قاعدة بيانات متجهية مطلوبة لأن التضمينات المولّدة يجب تخزينها والاستعلام عنها من قاعدة بيانات متجهية. قاعدة البيانات المتجهية الافتراضية هي Qdrant محلي؛ ويتطلب `chromadb` تنفيذ `pip install "crewai[chromadb]"`.
 
 ```python Code
 from crewai_tools import PDFSearchTool
 
 # - embedding_model (required): choose provider + provider-specific config
-# - vectordb (required): choose vector DB and pass its config
+# - vectordb (optional, defaults to Qdrant): choose vector DB and pass its config
 
 tool = PDFSearchTool(
     config={
@@ -83,7 +83,7 @@ tool = PDFSearchTool(
             },
         },
         "vectordb": {
-                    "provider": "chromadb",  # or "qdrant"
+                    "provider": "chromadb",  # requires crewai[chromadb]; default is "qdrant"
                     "config": {
                         # For ChromaDB: pass "settings" (chromadb.config.Settings) or rely on defaults.
                         # Example (uncomment and import):
