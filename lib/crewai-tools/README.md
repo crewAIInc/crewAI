@@ -119,7 +119,7 @@ with MCPServerAdapter(serverparams) as tools:
 
 ### Option 2: More control over the MCP connection
 
-If you need more control over the MCP connection, you can instanciate the MCPServerAdapter into an `mcp_server_adapter` object which can be used to manage the connection with the MCP server and access the available tools.
+If you need more control over the MCP connection, you can instantiate the MCPServerAdapter into an `mcp_server_adapter` object which can be used to manage the connection with the MCP server and access the available tools.
 
 **important**: in this case you need to call `mcp_server_adapter.stop()` to make sure the connection is correctly stopped. We recommend that you use a `try ... finally` block run to make sure the `.stop()` is called even in case of errors.
 

@@ -14,7 +14,7 @@
 
 ## Example Usage
 
-Utilize the ScrapflyScrapeWebsiteTool as follows to retrieve a web page data as text, markdown (LLM accissible) or HTML:
+Utilize the ScrapflyScrapeWebsiteTool as follows to retrieve a web page data as text, markdown (LLM accessible) or HTML:
 
 ```python
 from crewai_tools import ScrapflyScrapeWebsiteTool
