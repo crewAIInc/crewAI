@@ -44,9 +44,9 @@ class I18N(BaseModel):
                 with open(prompts_path, encoding="utf-8") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError as e:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.") from e
+            raise FileNotFoundError(f"Prompt file '{self.prompt_file}' not found.") from e
         except json.JSONDecodeError as e:
-            raise Exception("Error decoding JSON from the prompts file.") from e
+            raise ValueError(f"Error decoding JSON from the prompts file: {e}") from e
 
         if not self._prompts:
             self._prompts = {}
@@ -120,12 +120,12 @@ class I18N(BaseModel):
             The prompt as a string.
 
         Raises:
-            Exception: If the prompt for the given kind and key is not found.
+            KeyError: If the prompt for the given kind and key is not found.
         """
         try:
             return self._prompts[kind][key]
-        except Exception as e:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.") from e
+        except KeyError as e:
+            raise KeyError(f"Prompt for '{kind}':'{key}' not found.") from e
 
 
 @lru_cache(maxsize=None)
