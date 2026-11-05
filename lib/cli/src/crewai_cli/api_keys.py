@@ -177,21 +177,7 @@ def ask_for_api_key(name: str, project_dir: Path, json_crew: Path | None) -> boo
     if not _askable(name) or not _can_ask(project_dir, env_file):
         return False
     saved = dotenv_values(env_file) if env_file.exists() else {}
-    from_env_file = _endpoint_settings(
-        {key: value for key, value in saved.items() if value}
-    )
-    # The crew's own code ran while it loaded, and may have pointed a provider
-    # at another host through the environment.
-    loaded = [
-        f"{_host(value)} ({key} set while the crew loaded)".encode(
-            "unicode_escape"
-        ).decode("ascii")
-        for key, value in _endpoint_settings(os.environ).items()
-        if value and value not in (_MACHINE_ENDPOINTS.get(key), from_env_file.get(key))
-    ]
-    return _ask_and_save(
-        name, env_file, _project_endpoints(saved, json_crew, project_dir) + loaded
-    )
+    return _ask_and_save(name, env_file, _run_endpoints(saved, json_crew, project_dir))
 
 
 # crewAI's providers name the key they miss `<PROVIDER>_API_KEY`.
@@ -223,8 +209,26 @@ def missing_key_line(
     return (
         f"{name} is not set. Add {name}=<your key> to {env_file}, "
         "then run `crewai run` again."
-        f"{_endpoint_warning(_project_endpoints(saved, json_crew, project_dir))}"
+        f"{_endpoint_warning(_run_endpoints(saved, json_crew, project_dir))}"
     )
+
+
+def _run_endpoints(
+    saved: Mapping[str, str | None], json_crew: Path | None, project_dir: Path
+) -> list[str]:
+    """The hosts :func:`_project_endpoints` names, and those the crew's own code
+    pointed a provider at through the environment while it loaded."""
+    from_env_file = _endpoint_settings(
+        {key: value for key, value in saved.items() if value}
+    )
+    loaded = [
+        f"{_host(value)} ({key} set while the crew loaded)".encode(
+            "unicode_escape"
+        ).decode("ascii")
+        for key, value in _endpoint_settings(os.environ).items()
+        if value and value not in (_MACHINE_ENDPOINTS.get(key), from_env_file.get(key))
+    ]
+    return _project_endpoints(saved, json_crew, project_dir) + loaded
 
 
 def _can_ask(project_dir: Path, env_file: Path) -> bool:
