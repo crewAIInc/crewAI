@@ -2395,6 +2395,57 @@ def test_classic_create_with_skip_provider_keeps_the_tools_only_dependency(
     assert _crewai_dependency(tmp_path / "plain_crew") == get_crewai_tools_dependency()
 
 
+def test_json_create_returns_the_folder_it_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    project = json_crew.create_json_crew("News v2.0", skip_provider=True)
+
+    # A crew folder drops the ".", which a flow folder would keep.
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "crew.jsonc").is_file()
+
+
+def test_classic_create_returns_the_folder_it_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+
+    project = create_crew("News v2.0", skip_provider=True)
+
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "pyproject.toml").is_file()
+
+
+def test_classic_create_returns_none_when_it_adds_a_crew_to_a_project(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    project = create_crew("Writer", skip_provider=True, parent_folder="crews")
+
+    assert project is None
+    assert (tmp_path / "crews" / "writer" / "crew.py").is_file()
+
+
+def test_classic_create_returns_the_folder_when_the_provider_list_is_unavailable(
+    tmp_path, monkeypatch
+):
+    """The curated lists stand in for the catalog, so the crew is still created."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr("crewai_cli.create_crew.get_provider_data", lambda: None)
+    monkeypatch.setattr("crewai_cli.create_crew.select_provider", lambda *_: "openai")
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.select_model", lambda *_: "gpt-6-luna"
+    )
+    monkeypatch.setattr("crewai_cli.create_crew.click.prompt", lambda *_a, **_k: "")
+
+    project = create_crew("Offline Crew")
+
+    assert project == Path("offline_crew")
+    assert (tmp_path / "offline_crew" / "pyproject.toml").is_file()
+
+
 @pytest.fixture
 def classic_create(tmp_path, monkeypatch, runner):
     """Run `crewai create crew my_crew --classic` in ``tmp_path`` with

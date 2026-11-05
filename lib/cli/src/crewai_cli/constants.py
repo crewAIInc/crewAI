@@ -193,6 +193,20 @@ def provider_for_model(model: str) -> str | None:
     return None
 
 
+def required_key_names(provider: str) -> list[str]:
+    """Return the upper-cased ``ENV_VARS`` names ``provider`` needs set to run.
+
+    Entries with a runtime default are left out, and so is azure's and
+    cerebras's ``model`` entry, which fills ``MODEL`` and is not a credential.
+    """
+    names = [
+        str(details["key_name"]).upper()
+        for details in ENV_VARS.get(provider, [])
+        if "key_name" in details and not details.get("optional", False)
+    ]
+    return [name for name in names if name != "MODEL"]
+
+
 # The model names each native provider takes after its prefix, copied from
 # LLM._matches_provider_pattern in crewai/llm.py. crewAI sends any other name
 # under that prefix to LiteLLM. Bedrock takes any name with a ".".

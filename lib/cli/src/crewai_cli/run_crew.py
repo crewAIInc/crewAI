@@ -14,6 +14,11 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
+from crewai_cli.api_keys import (
+    PASTED_KEYS_ENV,
+    PLACEHOLDER_API_KEY,
+    ask_for_missing_api_keys,
+)
 from crewai_cli.input_prompt import (
     closest_name,
     is_interactive,
@@ -568,6 +573,7 @@ RunKind = Literal["crew", "json_crew", "flow", "declarative_flow", "unknown"]
 RunStopReason = Literal[
     "no_project",
     "invalid_project",
+    "api_key_prompt",
     "unsupported_option",
     "invalid_inputs",
     "missing_inputs",
@@ -670,14 +676,38 @@ EVAL_TOKEN_ENV = "CREWAI_EVAL_AWAITING_RUN"  # noqa: S105 - a variable name, not
 
 
 def load_project_env(env_file: Path) -> None:
-    """The project's `.env` over this process's environment, `crewai eval`'s
-    token excepted: the token this process was started with is kept, and a
-    `.env` never sets one. Otherwise a `.env` could unmark a run `crewai eval`
-    started, and its tracing would no longer apply the command's rules."""
-    from dotenv import load_dotenv
+    """The project's `.env` over this process's environment, with two
+    exceptions.
+
+    `crewai eval`'s token: the token this process was started with is kept,
+    and a `.env` never sets one. Otherwise a `.env` could unmark a run `crewai
+    eval` started, and its tracing would no longer apply the command's rules.
+
+    A key pasted at a prompt in this run is kept over a blank line, or one still
+    holding the `YOUR_API_KEY` placeholder: that line holds no key, and the
+    prompt named where the project sends requests before the key was pasted. A
+    key the process only inherited is replaced as any other value is: the
+    `.env` could also point the provider at another host, so a placeholder
+    sends nothing rather than the shell's key.
+    """
+    from dotenv import dotenv_values
 
     kept = os.environ.get(EVAL_TOKEN_ENV)
-    load_dotenv(env_file, override=True)
+    pasted = set(filter(None, os.environ.get(PASTED_KEYS_ENV, "").split(",")))
+    # Read once: a `.env` a secrets manager serves through a pipe hands its
+    # content to one reader. This applies it as load_dotenv(override=True) would.
+    for name, value in dotenv_values(env_file).items():
+        # A bare name with no `=` sets nothing, as in load_dotenv, and only this
+        # process says which keys were pasted.
+        if value is None or name == PASTED_KEYS_ENV:
+            continue
+        if (
+            name in pasted
+            and value.strip() in ("", PLACEHOLDER_API_KEY)
+            and os.environ.get(name)
+        ):
+            continue
+        os.environ[name] = value
     if kept is None:
         os.environ.pop(EVAL_TOKEN_ENV, None)
     else:
@@ -873,6 +903,10 @@ def run_crew(
 ) -> None:
     """Run the crew or flow.
 
+    Before a crew or a Python flow starts, an API key its models need that is
+    not set is asked for at a terminal and saved to the project's ``.env``, or
+    else named with the line to add; the run starts either way.
+
     Args:
         trained_agents_file: Optional path to a trained-agents pickle produced
             by ``crewai train -f``. When set, exported as
@@ -910,10 +944,24 @@ def run_crew(
     # rewritten.
     get_or_create_project_id()
     # After the backfill: the first span caches the project id for the process.
-    record_run_started(_run_kind(pyproject_data))
+    kind = _run_kind(pyproject_data)
+    record_run_started(kind)
 
     with stops_run_as("invalid_project"):
         json_crew_definition = configured_project_json_crew(pyproject_data)
+    project_type = get_crewai_project_type(pyproject_data)
+    # A crewAI crew or Python flow only: `kind` is "crew" for any other
+    # project too. A re-run inside the project's environment was checked by
+    # the run that started it.
+    if (
+        project_type in ("crew", "flow")
+        and kind != "declarative_flow"
+        and os.environ.get(RUN_COUNTED_ENV) is None
+    ):
+        with stops_run_as("api_key_prompt"):
+            api_key = ask_for_missing_api_keys(Path.cwd(), json_crew_definition)
+        if api_key is not None:
+            _count_run_usage(f"run_api_key:{api_key}")
     if json_crew_definition:
         # Declarative (JSON) crews resolve inputs the same way flows do: --inputs
         # layers over the crew's declared defaults, missing {placeholder}s are
@@ -926,7 +974,6 @@ def run_crew(
         return
 
     _warn_if_old_poetry_project(pyproject_data)
-    project_type = get_crewai_project_type(pyproject_data)
 
     if project_type == "flow":
         # No --definition: resolve the configured [tool.crewai] flow — the same

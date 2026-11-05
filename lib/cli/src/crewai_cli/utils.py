@@ -22,7 +22,7 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.constants import required_key_names
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -295,17 +295,10 @@ def missing_provider_keys(provider: str, env_vars: Mapping[str, object]) -> list
     """Return the names ``provider`` needs that neither ``env_vars`` nor the
     environment sets. Entries with a runtime default are not needed."""
     saved = {key.upper() for key, value in env_vars.items() if value}
-    names = [
-        str(details["key_name"]).upper()
-        for details in ENV_VARS.get(provider, [])
-        if "key_name" in details and not details.get("optional", False)
-    ]
-    # azure and cerebras also prompt for the model under key_name "model"; that
-    # fills MODEL, which is not a credential.
     return [
         name
-        for name in names
-        if name != "MODEL" and name not in saved and not os.environ.get(name)
+        for name in required_key_names(provider)
+        if name not in saved and not os.environ.get(name)
     ]
 
 
