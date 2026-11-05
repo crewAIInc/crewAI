@@ -29,10 +29,14 @@ def _say_a_person_is_here(monkeypatch):
 async def wait_for_consent(app, pilot):
     for _ in range(50):
         await pilot.pause(0.01)
-        # A pushed screen is not a laid-out one, and a click lands on the
-        # region the buttons have — zero-sized until the first layout pass.
-        if isinstance(app.screen, TraceConsentScreen) and all(
-            button.region for button in app.screen.query(Button)
+        # A pushed screen is not a composed one: until compose runs it has no
+        # buttons, and `all()` of none is True. A click lands on the region
+        # the buttons have — zero-sized until the first layout pass.
+        buttons = app.screen.query(Button)
+        if (
+            isinstance(app.screen, TraceConsentScreen)
+            and buttons
+            and all(button.region for button in buttons)
         ):
             return app.screen
     raise AssertionError("The execution worker did not open the consent prompt")

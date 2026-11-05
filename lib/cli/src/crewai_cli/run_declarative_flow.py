@@ -16,6 +16,7 @@ from crewai_cli.input_prompt import (
     parse_inputs_json,
     prompt_for_inputs,
 )
+from crewai_cli.run_crew import RUN_COUNTED_ENV, record_run_stopped, stops_run_as
 from crewai_cli.utils import build_env_with_all_tool_credentials
 
 
@@ -40,7 +41,7 @@ def run_declarative_flow_in_project_env(
     command = ["uv", "run", "crewai", "run"]
     if inputs is not None:
         command += ["--inputs", inputs]
-    _execute_declarative_flow_command(command)
+    _execute_declarative_flow_command(command, counted_run=True)
 
 
 def plot_declarative_flow_in_project_env(definition: str | Path) -> None:
@@ -73,9 +74,16 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     if env_file.exists():
         load_project_env(env_file)
 
-    provided = parse_inputs_json(inputs) or {}
+    with stops_run_as("invalid_inputs"):
+        provided = parse_inputs_json(inputs) or {}
 
-    flow = load_declarative_flow(definition)
+    try:
+        flow = load_declarative_flow(definition)
+    except (Exception, SystemExit) as exc:
+        # It exits 1 for both; only the missing crewai package is an ImportError.
+        missing_crewai = isinstance(exc.__cause__, ImportError)
+        record_run_stopped("crewai_missing" if missing_crewai else "load_failed")
+        raise
 
     if _flow_is_conversational(flow):
         _run_conversational_declarative_flow(
@@ -130,6 +138,7 @@ def _run_conversational_declarative_flow(
         # (it passes ``{"id": session_id}`` itself). There is nowhere to put
         # these without fighting it, so say so rather than accepting them and
         # running a conversation that quietly ignored them.
+        record_run_stopped("unsupported_option")
         click.secho(
             "  `--inputs` is not supported for a conversational flow: each turn's "
             "input is the message you type.\n"
@@ -140,15 +149,13 @@ def _run_conversational_declarative_flow(
         )
         raise SystemExit(1)
 
+    from crewai_cli.kickoff_flow import (
+        _exit_without_chat_terminal,
+        _run_conversational_flow_tui,
+    )
+
     if not is_interactive():
-        click.secho(
-            "  This flow is conversational, which needs an interactive terminal.\n"
-            "  Drive it from Python instead: `flow.handle_turn(message, "
-            "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
-            fg="yellow",
-            err=True,
-        )
-        raise SystemExit(1)
+        _exit_without_chat_terminal()
 
     if _flow_uses_human_feedback(flow):
         # Same reason the STEPS TUI declines these: the runtime collects feedback
@@ -157,8 +164,6 @@ def _run_conversational_declarative_flow(
         # hang. A terminal REPL can, so fall back to one.
         flow.chat()
         return
-
-    from crewai_cli.kickoff_flow import _run_conversational_flow_tui
 
     _run_conversational_flow_tui(flow, definition=definition)
 
@@ -419,6 +424,7 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
             click.secho(
                 f"  Missing required input '{name}'{suffix}", fg="red", err=True
             )
+        record_run_stopped("missing_inputs")
         raise SystemExit(1)
 
     _validate_flow_inputs(state_model, {**defaults, **collected})
@@ -475,6 +481,7 @@ def _validate_flow_inputs(state_model: Any, values: dict[str, Any]) -> None:
             click.secho(
                 f"  Invalid input '{location}': {error.get('msg')}", fg="red", err=True
             )
+        record_run_stopped("invalid_inputs")
         raise SystemExit(1) from exc
 
 
@@ -565,8 +572,19 @@ def configured_project_declarative_flow(
         raise click.UsageError(str(exc)) from exc
 
 
-def _execute_declarative_flow_command(command: list[str]) -> None:
+def _execute_declarative_flow_command(
+    command: list[str], *, counted_run: bool = False
+) -> None:
+    """Run COMMAND in the project's environment.
+
+    Args:
+        command: The `uv run crewai ...` command to run.
+        counted_run: COMMAND is a `crewai run` this one already counted as
+            started; the re-run counts where it stops, not a second start.
+    """
     env = build_env_with_all_tool_credentials()
+    if counted_run:
+        env[RUN_COUNTED_ENV] = "1"
 
     try:
         subprocess.run(  # noqa: S603
@@ -579,6 +597,8 @@ def _execute_declarative_flow_command(command: list[str]) -> None:
     except subprocess.CalledProcessError as e:
         raise SystemExit(e.returncode) from e
     except Exception as e:
+        if counted_run:
+            record_run_stopped("launch_failed")
         click.echo(
             f"An unexpected error occurred while running the declarative flow: {e}",
             err=True,
