@@ -420,32 +420,31 @@ def _env_file(project_dir: Path) -> Path:
 
 
 def _json_crew_models(crew_file: Path, saved: Mapping[str, str | None]) -> list[str]:
-    crew, *agents = [definition for _, definition in _json_crew_files(crew_file)]
-    models = [
-        value
-        for definition in (crew, *agents)
-        for field in _JSON_LLM_FIELDS
-        if isinstance(value := definition.get(field), str)
-    ]
+    models: list[str] = []
+    needs_default = False
+    for index, (_, definition) in enumerate(_json_crew_files(crew_file)):
+        models.extend(
+            value
+            for field in _JSON_LLM_FIELDS
+            if isinstance(value := definition.get(field), str)
+        )
+        if index and definition and definition.get("llm") is None:
+            needs_default = True
     # An agent that names no llm runs on the model crewAI picks for it.
-    if any(agent and agent.get("llm") is None for agent in agents):
+    if needs_default:
         models.append(_configured_model(saved, env_file_wins=True) or DEFAULT_LLM_MODEL)
     return models
 
 
-def _json_crew_files(crew_file: Path) -> list[tuple[Path, dict[str, object]]]:
+def _json_crew_files(crew_file: Path) -> Iterator[tuple[Path, dict[str, object]]]:
     """The JSON crew's file, then each agent file it names, with what they hold."""
     crew = _load_jsonc(crew_file)
     listed = crew.get("agents")
     names = [*(listed if isinstance(listed, list) else []), crew.get("manager_agent")]
-    return [
-        (crew_file, crew),
-        *(
-            (path, _load_jsonc(path))
-            for name in names
-            if isinstance(name, str) and (path := _agent_file(crew_file.parent, name))
-        ),
-    ]
+    yield crew_file, crew
+    for name in names:
+        if isinstance(name, str) and (path := _agent_file(crew_file.parent, name)):
+            yield path, _load_jsonc(path)
 
 
 def _agent_file(crew_dir: Path, name: str) -> Path | None:

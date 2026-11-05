@@ -1150,6 +1150,83 @@ def test_a_json_crews_manager_agent_and_json_agent_files_are_read(
     assert warning(project, "GROQ_API_KEY") in result.output
 
 
+def test_json_key_check_keeps_model_and_endpoint_order(
+    project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_prompt: None,
+) -> None:
+    write(project / ".env", "MODEL=gemini/gemini-3.8-flash\n")
+    crew = write(
+        project / "crew.jsonc",
+        '{"agents": ["writer", null, "missing", "writer", "empty", "broken"], '
+        '"manager_agent": "lead", "llm": "anthropic/claude-sonnet-5", '
+        '"function_calling_llm": "openai/gpt-4.1-mini", '
+        '"embedder": {"config": {"api_base": "https://crew.example/v1"}}}',
+    )
+    write(
+        project / "agents" / "writer.jsonc",
+        '{"role": "Writer", "llm": null, "manager_llm": "groq/model", '
+        '"clients": [{"base_url": "https://writer.example/v1"}]}',
+    )
+    # The .jsonc file wins even when a .json file also exists.
+    write(project / "agents" / "writer.json", '{"llm": "cerebras/model"}')
+    write(project / "agents" / "empty.jsonc", "{}")
+    write(project / "agents" / "broken.jsonc", '{"llm":')
+    write(
+        project / "agents" / "lead.json",
+        '{"llm": "cerebras/model", "endpoint": "https://lead.example/v1"}',
+    )
+    monkeypatch.setattr("crewai_cli.input_prompt.is_interactive", lambda: False)
+    before = dict(os.environ)
+
+    outcome = api_keys.ask_for_missing_api_keys(project, crew)
+
+    endpoints = (
+        " This project sends requests to crew.example (embedder.config.api_base in "
+        "crew.jsonc), writer.example (clients.0.base_url in writer.jsonc), "
+        "lead.example (endpoint in lead.json); add the key only if you trust those hosts."
+    )
+    assert outcome == "warned"
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err == "".join(
+        warning(project, name) + endpoints + "\n"
+        for name in (
+            "ANTHROPIC_API_KEY",
+            "OPENAI_API_KEY",
+            "GROQ_API_KEY",
+            "CEREBRAS_API_KEY",
+            "GEMINI_API_KEY",
+        )
+    )
+    assert (project / ".env").read_text() == "MODEL=gemini/gemini-3.8-flash\n"
+    assert dict(os.environ) == before
+
+
+@pytest.mark.parametrize(
+    "definition",
+    ["{}", "[]", '{"llm":', '{"llm": ""}', '{"llm": false}', '{"llm": {}}', None],
+)
+def test_json_key_check_does_not_default_empty_or_unreadable_agents(
+    project: Path,
+    capsys: pytest.CaptureFixture[str],
+    no_prompt: None,
+    definition: str | None,
+) -> None:
+    write(project / ".env", "")
+    crew = write(project / "crew.jsonc", '{"agents": ["writer"]}')
+    agent = project / "agents" / "writer.jsonc"
+    if definition is None:
+        agent.mkdir(parents=True)
+    else:
+        write(agent, definition)
+
+    assert api_keys.ask_for_missing_api_keys(project, crew) is None
+    assert capsys.readouterr() == ("", "")
+    assert (project / ".env").read_text() == ""
+
+
 def test_an_agent_file_the_crew_does_not_list_is_not_read(
     project, children, no_prompt
 ) -> None:
