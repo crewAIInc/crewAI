@@ -11,3 +11,15 @@ def _usage_counts_stay_on_this_machine(monkeypatch):
     A test that checks the counting replaces `Telemetry` or sets the flag
     itself."""
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
+
+
+@pytest.fixture
+def no_provider_keys(monkeypatch):
+    """Unset every value `crewai create` prompts for, so a key exported on the
+    machine running the suite does not stop the CLI from naming it as missing."""
+    from crewai_cli.constants import ENV_VARS
+
+    for entries in ENV_VARS.values():
+        for details in entries:
+            if "key_name" in details:
+                monkeypatch.delenv(str(details["key_name"]).upper(), raising=False)
