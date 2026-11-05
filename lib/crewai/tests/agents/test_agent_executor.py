@@ -3585,3 +3585,24 @@ class TestReplanDoesNotRecountHandledFailures:
 
         assert should_replan is True
         assert "2 failures" in reason
+
+    def test_failed_replan_leaves_failures_eligible_for_the_next_replan(self):
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False, planning_config=None), task=None
+        )
+        executor.state.todos = TodoList(
+            items=[
+                TodoItem(step_number=1, description="a", status="failed"),
+                TodoItem(step_number=2, description="b", status="failed"),
+                TodoItem(step_number=3, description="c"),
+            ]
+        )
+        executor.state.replan_count += 1
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            reasoning.return_value.handle_agent_reasoning.side_effect = RuntimeError(
+                "planner down"
+            )
+            executor._trigger_replan("two steps failed")
+
+        assert executor.state.replanned_failure_ids == set()
+        assert executor._should_replan()[0] is True

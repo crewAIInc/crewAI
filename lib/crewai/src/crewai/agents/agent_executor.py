@@ -2950,7 +2950,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """
         self.state.last_replan_reason = reason
         failed, errored = self._unhandled_failures()
-        self.state.replanned_failure_ids.update(todo.id for todo in failed + errored)
+        seen_failure_ids = {todo.id for todo in failed + errored}
 
         if self.agent.verbose:
             PRINTER.print(
@@ -3013,6 +3013,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     for step in output.plan.steps
                 ]
                 self.state.todos.replace_pending_todos(new_todos)
+                # Mark failures handled only once a new plan replaced the pending steps,
+                # so a failed replan leaves them eligible for the next one.
+                self.state.replanned_failure_ids.update(seen_failure_ids)
 
                 if self.agent.verbose:
                     PRINTER.print(
