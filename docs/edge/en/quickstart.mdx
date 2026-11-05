@@ -36,6 +36,8 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
       ```
     </CodeGroup>
 
+  When `crewai create` asks `Run it now?`, answer `n`. This guide edits the flow before running it.
+
   This creates a Flow app under `src/latest_ai_flow/`, including a starter crew under `crews/content_crew/` that you will replace with a minimal **single-agent** research crew in the next steps.
   </Step>
 
@@ -155,7 +157,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
   In `.env` at the project root, set:
 
     - `SERPER_API_KEY` — from [Serper.dev](https://serper.dev/)
-    - Your model provider keys as required — see [LLM setup](/en/concepts/llms#setting-up-your-llm)
+    - Your model provider's API key, unless you entered it when `crewai create flow` asked for it — see [LLM setup](/en/concepts/llms#setting-up-your-llm)
   </Step>
 
   <Step title="Install and run">

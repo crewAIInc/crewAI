@@ -6,10 +6,13 @@ import contextlib
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import subprocess
+import sys
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
+import click
 from click.testing import CliRunner
 import httpx
 import pytest
@@ -3946,6 +3949,54 @@ def test_what_decides_is_whether_anyone_reads_stdout_not_stdin(project, monkeypa
 
     assert "Crew Execution Started panel" not in capfd.readouterr().out
     assert "Crew Execution Started panel" in (directory / ".crewai" / "last_run.log").read_text()
+
+
+_REAL_RUN_CREW = run_crew_module.run_crew
+
+
+def test_with_nobody_watching_a_missing_key_is_named_in_the_run_log_not_asked_for(
+    project, monkeypatch, capfd, usage
+):
+    """`crewai run`'s key check under `crewai eval`, its output moved to the
+    run log: stdin is a terminal, but nobody reads stdout, so the key is named
+    in the log instead of asked for, and the crew still runs."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text('[project]\nname = "demo"\n\n[tool.crewai]\ntype = "crew"\n')
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+    for name in ("OPENAI_API_KEY", "MODEL", "MODEL_NAME", "OPENAI_MODEL_NAME", "CREWAI_DMN", run_crew_module.RUN_COUNTED_ENV):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(click, "prompt", lambda *args, **kwargs: pytest.fail("asked for a key"))
+
+    def uv_run(command, **kwargs):
+        os.write(1, b"Crew Execution Started panel\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "run", uv_run)
+    monkeypatch.setattr(run_crew_module, "run_crew", _REAL_RUN_CREW)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    # This process's own stdout and stderr, as outside pytest: on descriptors 1
+    # and 2, which the command moves to the run log.
+    with (
+        open(1, "w", closefd=False, buffering=1) as stdout,
+        open(2, "w", closefd=False, buffering=1) as stderr,
+        monkeypatch.context() as streams,
+    ):
+        streams.setattr(sys, "stdout", stdout)
+        streams.setattr(sys, "stderr", stderr)
+        eval_module.eval_crew()
+
+    out, err = capfd.readouterr()
+    log = (directory / ".crewai" / "last_run.log").read_text()
+    assert (
+        f"OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to {directory / '.env'}, "
+        "then run `crewai run` again."
+    ) in log
+    assert "OPENAI_API_KEY" not in out + err
+    assert "Crew Execution Started panel" in log
+    assert "cli_usage:run_api_key:warned" in usage
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
