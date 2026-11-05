@@ -111,7 +111,7 @@ def _prepare_documents_for_chromadb(
 
 def _create_batch_slice(
     prepared: PreparedDocuments, start_index: int, batch_size: int
-) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool]] | None]:
+) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool] | None] | None]:
     """Create a batch slice from prepared documents.
 
     Args:
@@ -129,8 +129,11 @@ def _create_batch_slice(
         prepared.metadatas[start_index:batch_end] if prepared.metadatas else None
     )
 
-    if batch_metadatas and not any(m for m in batch_metadatas):
-        batch_metadatas = None
+    if batch_metadatas:
+        if not any(m for m in batch_metadatas):
+            batch_metadatas = None
+        else:
+            batch_metadatas = [m if m else None for m in batch_metadatas]
 
     return batch_ids, batch_texts, batch_metadatas
 
