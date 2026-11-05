@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai_core.platform_apps import PlatformAppsUnavailableError
 from crewai_core.plus_api import PlusAPI
 import requests
 
@@ -159,6 +160,10 @@ class ClipperClient:
                 timeout=30,
                 verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
             )
+            # 409: no active connection to the app; 404: an app or action AMP
+            # does not know.
+            if response.status_code in (404, 409):
+                raise PlatformAppsUnavailableError([selector.app])
             response.raise_for_status()
             data = response.json()["data"]
             actions = data if selector.action is None else [data]
@@ -252,6 +257,8 @@ class LegacyClient:
             params={"apps": ",".join(apps)},
             verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
         )
+        if missing_apps := _missing_apps(response):
+            raise PlatformAppsUnavailableError(missing_apps)
         response.raise_for_status()
 
         tool_infos: list[ToolInfo] = []
@@ -318,6 +325,20 @@ class LegacyClient:
             )
 
         return ToolExecutionSuccess(output=data)
+
+
+def _missing_apps(response: requests.Response) -> list[str]:
+    """The apps a 422 from AMP's actions endpoint names as missing."""
+    if response.status_code != 422:
+        return []
+    try:
+        body = response.json()
+    except requests.exceptions.JSONDecodeError:
+        return []
+    missing = body.get("missing") if isinstance(body, dict) else None
+    if not isinstance(missing, list):
+        return []
+    return [app for app in missing if isinstance(app, str)]
 
 
 def client_for_selector(
