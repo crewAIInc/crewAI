@@ -2,6 +2,7 @@
 
 from typing import Any, cast
 
+from qdrant_client.models import Distance, VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -11,11 +12,14 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.core.exceptions import ClientMethodMismatchError
+from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
 from crewai.rag.qdrant.types import (
     AsyncEmbeddingFunction,
+    CreateCollectionParams,
     EmbeddingFunction,
     QdrantClientType,
     QdrantCollectionCreateParams,
+    QueryEmbedding,
 )
 from crewai.rag.qdrant.utils import (
     _create_point_from_document,
@@ -26,7 +30,7 @@ from crewai.rag.qdrant.utils import (
     _prepare_search_params,
     _process_search_results,
 )
-from crewai.rag.types import SearchResult
+from crewai.rag.types import BaseRecord, SearchResult
 
 
 class QdrantClient(BaseClient):
@@ -65,6 +69,45 @@ class QdrantClient(BaseClient):
         self.default_score_threshold = default_score_threshold
         self.default_batch_size = default_batch_size
 
+    def _build_collection_params(
+        self, kwargs: QdrantCollectionCreateParams
+    ) -> CreateCollectionParams:
+        """Build collection params, sizing vectors from the embedder when possible.
+
+        When ``vectors_config`` is not given and the embedding function exposes an
+        integer ``vector_size`` (e.g. ``QdrantEmbeddingAdapter``, which measures it
+        once with a real embedding call), the collection is created with that
+        dimension instead of the 384 default.
+        """
+        vector_size = getattr(self.embedding_function, "vector_size", None)
+        if "vectors_config" not in kwargs and isinstance(vector_size, int):
+            kwargs = cast(
+                QdrantCollectionCreateParams,
+                {
+                    **kwargs,
+                    "vectors_config": VectorParams(
+                        size=vector_size, distance=Distance.COSINE
+                    ),
+                },
+            )
+        return _get_collection_params(kwargs)
+
+    def _embed_in_batch(
+        self, documents: list[BaseRecord]
+    ) -> list[QueryEmbedding] | None:
+        """Embed a batch of documents with one call, if the embedder supports it.
+
+        A ``QdrantEmbeddingAdapter`` gets one request per batch instead of one per
+        document. Returns ``None`` for embedders that only embed single texts.
+        """
+        embedder = self.embedding_function
+        if not isinstance(embedder, QdrantEmbeddingAdapter):
+            return None
+        return cast(
+            list[QueryEmbedding],
+            embedder.embed_batch([doc["content"] for doc in documents]),
+        )
+
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
 
@@ -100,7 +143,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = self._build_collection_params(kwargs)
         self.client.create_collection(**params)
 
     async def acreate_collection(
@@ -140,7 +183,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = self._build_collection_params(kwargs)
         await self.client.create_collection(**params)
 
     def get_or_create_collection(
@@ -182,8 +225,15 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
-        self.client.create_collection(**params)
+        params = self._build_collection_params(kwargs)
+        try:
+            self.client.create_collection(**params)
+        except Exception as e:
+            # Another caller may have created it between the check and the create.
+            if not self.client.collection_exists(collection_name):
+                raise RuntimeError(
+                    f"Could not create Qdrant collection '{collection_name}': {e}"
+                ) from e
 
         return self.client.get_collection(collection_name)
 
@@ -226,8 +276,15 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
-        await self.client.create_collection(**params)
+        params = self._build_collection_params(kwargs)
+        try:
+            await self.client.create_collection(**params)
+        except Exception as e:
+            # Another caller may have created it between the check and the create.
+            if not await self.client.collection_exists(collection_name):
+                raise RuntimeError(
+                    f"Could not create Qdrant collection '{collection_name}': {e}"
+                ) from e
 
         return await self.client.get_collection(collection_name)
 
@@ -264,14 +321,18 @@ class QdrantClient(BaseClient):
         for i in range(0, len(documents), batch_size):
             batch_docs = documents[i : min(i + batch_size, len(documents))]
             points = []
-            for doc in batch_docs:
-                if _is_async_embedding_function(self.embedding_function):
+            batch_embeddings = self._embed_in_batch(batch_docs)
+            for index, doc in enumerate(batch_docs):
+                if batch_embeddings is not None:
+                    embedding = batch_embeddings[index]
+                elif _is_async_embedding_function(self.embedding_function):
                     raise TypeError(
                         "Async embedding function cannot be used with sync add_documents. "
                         "Use aadd_documents instead."
                     )
-                sync_fn = cast(EmbeddingFunction, self.embedding_function)
-                embedding = sync_fn(doc["content"])
+                else:
+                    sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                    embedding = sync_fn(doc["content"])
                 point = _create_point_from_document(doc, embedding)
                 points.append(point)
             self.client.upsert(collection_name=collection_name, points=points)
@@ -309,8 +370,11 @@ class QdrantClient(BaseClient):
         for i in range(0, len(documents), batch_size):
             batch_docs = documents[i : min(i + batch_size, len(documents))]
             points = []
-            for doc in batch_docs:
-                if _is_async_embedding_function(self.embedding_function):
+            batch_embeddings = self._embed_in_batch(batch_docs)
+            for index, doc in enumerate(batch_docs):
+                if batch_embeddings is not None:
+                    embedding = batch_embeddings[index]
+                elif _is_async_embedding_function(self.embedding_function):
                     embedding = await self.embedding_function(doc["content"])
                 else:
                     sync_fn = cast(EmbeddingFunction, self.embedding_function)

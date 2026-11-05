@@ -1,6 +1,7 @@
 """Factory functions for creating RAG clients from configuration."""
 
 from collections.abc import Callable
+import importlib
 from typing import cast
 
 from crewai.rag.config.optional_imports.protocols import (
@@ -56,12 +57,10 @@ def create_client(config: RagConfigType) -> BaseClient:
         return factory(config)
 
     if config.provider == "chromadb":
+        # Importing the package raises an install hint if chromadb is missing.
         chromadb_mod = cast(
             ChromaFactoryModule,
-            require(
-                "crewai.rag.chromadb.factory",
-                purpose="The 'chromadb' provider",
-            ),
+            importlib.import_module("crewai.rag.chromadb.factory"),
         )
         return chromadb_mod.create_client(config)
 
