@@ -215,6 +215,8 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "snowflake",
     "deepinfra",
     "token_kiosk",
+    "tokenkiosk",
+    "token-kiosk",
 ]
 
 
@@ -712,6 +714,8 @@ class LLM(BaseLLM):
             "dashscope",
             "deepinfra",
             "token_kiosk",
+            "tokenkiosk",
+            "token-kiosk",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

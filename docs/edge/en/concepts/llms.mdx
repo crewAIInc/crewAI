@@ -1190,7 +1190,7 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="Token Kiosk">
-    CrewAI connects to Token Kiosk through its native OpenAI-compatible client. Token Kiosk is GAIB's multi-provider AI model routing gateway (`https://agent-router.gaib.ai/v1`).
+    CrewAI connects to Token Kiosk through its native OpenAI-compatible client. Token Kiosk is GAIB's multi-provider AI model routing gateway (`https://api-token-kiosk.gaib.ai/v1`).
 
     Set the following environment variables in your `.env` file:
     ```toml Code
@@ -1198,7 +1198,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     TOKEN_KIOSK_API_KEY=<your-token-kiosk-api-key>
 
     # Optional: Custom endpoint URL override
-    TOKEN_KIOSK_BASE_URL="https://agent-router.gaib.ai/v1"
+    TOKEN_KIOSK_BASE_URL="https://api-token-kiosk.gaib.ai/v1"
     ```
 
     Example usage in your CrewAI project:

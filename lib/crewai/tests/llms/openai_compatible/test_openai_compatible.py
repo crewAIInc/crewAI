@@ -106,11 +106,14 @@ class TestProviderRegistry:
     def test_token_kiosk_config(self):
         """Test Token Kiosk provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["token_kiosk"]
-        assert config.base_url == "https://agent-router.gaib.ai/v1"
+        assert config.base_url == "https://api-token-kiosk.gaib.ai/v1"
         assert config.api_key_env == "TOKEN_KIOSK_API_KEY"
         assert config.base_url_env == "TOKEN_KIOSK_BASE_URL"
         assert "HTTP-Referer" in config.default_headers
         assert config.api_key_required is True
+
+        assert OPENAI_COMPATIBLE_PROVIDERS["tokenkiosk"].base_url == "https://api-token-kiosk.gaib.ai/v1"
+        assert OPENAI_COMPATIBLE_PROVIDERS["token-kiosk"].base_url == "https://api-token-kiosk.gaib.ai/v1"
 
 
 class TestNormalizeOllamaBaseUrl:
@@ -359,7 +362,7 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "token_kiosk"
             assert llm.model == "claude-3-5-sonnet"
-            assert llm.base_url == "https://agent-router.gaib.ai/v1"
+            assert llm.base_url == "https://api-token-kiosk.gaib.ai/v1"
             assert llm.default_headers is not None and "HTTP-Referer" in llm.default_headers
 
     def test_deepinfra_base_url_env_override(self):
