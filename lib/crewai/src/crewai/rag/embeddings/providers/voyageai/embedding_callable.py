@@ -2,9 +2,10 @@
 
 from typing import cast
 
-from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.core.types import Documents, Embeddings
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderConfig
 
 

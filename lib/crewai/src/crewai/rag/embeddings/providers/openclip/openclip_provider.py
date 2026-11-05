@@ -1,18 +1,19 @@
 """OpenCLIP embeddings provider."""
 
-from chromadb.utils.embedding_functions.open_clip_embedding_function import (
-    OpenCLIPEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class OpenCLIPProvider(BaseEmbeddingsProvider[OpenCLIPEmbeddingFunction]):
+class OpenCLIPProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """OpenCLIP embeddings provider."""
 
-    embedding_callable: type[OpenCLIPEmbeddingFunction] = Field(
-        default=OpenCLIPEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "open_clip_embedding_function", "OpenCLIPEmbeddingFunction"
+        ),
         description="OpenCLIP embedding function class",
     )
     model_name: str = Field(
