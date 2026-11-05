@@ -39,14 +39,15 @@ from crewai.utilities.agent_utils import (
     execute_single_native_tool_call,
     extract_task_section,
     extract_tool_call_info,
-    format_message_for_llm,
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
     process_llm_response,
     render_text_description_and_args,
+    repeated_tool_call_limit_reached,
     setup_native_tools,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -62,6 +63,7 @@ if TYPE_CHECKING:
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
+    from crewai.tools.tool_types import ToolResult
 
 
 class StepExecutor:
@@ -382,18 +384,30 @@ class StepExecutor:
 
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
-                tool_result = self._execute_text_tool_with_events(formatted, todo)
-                check_repeated_tool_call(
+                executed = self._execute_text_tool_with_events(formatted, todo)
+                tool_result = str(executed.result)
+                note = check_repeated_tool_call(
                     tool_call_counts,
                     tool_name=formatted.tool,
                     tool_args=formatted.tool_input,
-                    result=tool_result,
+                    # Raw: ToolUsage periodically appends a format reminder.
+                    result=executed.raw_result,
                     agent=self.agent,
                     task=self.task,
+                    crew=self.crew,
                 )
                 last_tool_result = tool_result
+                if repeated_tool_call_limit_reached(tool_call_counts):
+                    break
                 messages.append({"role": "assistant", "content": answer_str})
-                messages.append(self._build_observation_message(tool_result))
+                messages.append(
+                    self._build_observation_message(
+                        # An image sentinel cannot take trailing text.
+                        tool_result
+                        if self._parse_vision_sentinel(tool_result)
+                        else tool_result + note
+                    )
+                )
                 continue
 
             return answer_str
@@ -402,7 +416,7 @@ class StepExecutor:
 
     def _execute_text_tool_with_events(
         self, formatted: AgentAction, todo: TodoItem
-    ) -> str:
+    ) -> ToolResult:
         """Execute text-parsed tool calls with tool usage events."""
         args_dict = self._parse_tool_args(formatted.tool_input)
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -474,7 +488,7 @@ class StepExecutor:
                 finished_at=datetime.now(),
             ),
         )
-        return str(tool_result.result)
+        return tool_result
 
     def _parse_tool_args(self, tool_input: Any) -> dict[str, Any]:
         """Parse tool args from the parser output into a dict payload for events."""
@@ -610,6 +624,8 @@ class StepExecutor:
                     answer, messages, todo, tool_calls_made, tool_call_counts
                 )
                 accumulated_results.append(result)
+                if repeated_tool_call_limit_reached(tool_call_counts):
+                    break
                 continue
 
             output = str(answer)
@@ -659,13 +675,14 @@ class StepExecutor:
             if call_result.func_name:
                 tool_calls_made.append(call_result.func_name)
             info = extract_tool_call_info(tool_call)
-            check_repeated_tool_call(
+            note = check_repeated_tool_call(
                 tool_call_counts,
                 tool_name=call_result.func_name,
                 tool_args=info[2] if info else None,
                 result=call_result.result,
                 agent=self.agent,
                 task=self.task,
+                crew=self.crew,
             )
 
             if call_result.result_as_answer:
@@ -691,6 +708,8 @@ class StepExecutor:
                         messages.append(modified)
                         tool_results.append("[image]")
                     else:
+                        # The note is for the model only, not the step's result.
+                        call_result.tool_message["content"] = raw_content + note
                         messages.append(call_result.tool_message)
                         if raw_content:
                             tool_results.append(raw_content)

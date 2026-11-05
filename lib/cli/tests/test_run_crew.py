@@ -12,6 +12,7 @@ from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 import crewai_cli.input_prompt as input_prompt_module
 import crewai_cli.run_crew as run_crew_module
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
@@ -32,7 +33,7 @@ def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
 
     message = exc_info.value.message
     assert "CrewAI CLI is installed without the `crewai` package" in message
-    assert "uv tool install --force 'crewai[tools]>=1.15.0,<2.0.0'" in message
+    assert f"uv tool install --force '{get_crewai_tools_dependency()}'" in message
     assert "quotes are required in zsh" in message
 
 
@@ -1217,6 +1218,171 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
     assert calls == [("kickoff", {"entity_type": "flow"})]
 
 
+@pytest.fixture
+def python_flow_project(tmp_path, monkeypatch):
+    """Write a Python flow project whose `kickoff` script lives in `main.py`,
+    and run from it inside its env (as `uv run crewai run` would)."""
+    package = f"inputs_probe_{tmp_path.name.replace('-', '_')}"
+
+    def write(main_py: str, *, kickoff_script: bool = True) -> Path:
+        scripts = f'[project.scripts]\nkickoff = "{package}.main:kickoff"\n'
+        (tmp_path / "pyproject.toml").write_text(
+            f'[project]\nname = "{package}"\n'
+            + (scripts if kickoff_script else "")
+            + '[tool.crewai]\ntype = "flow"\n'
+        )
+        source = tmp_path / "src" / package
+        source.mkdir(parents=True)
+        (source / "__init__.py").write_text("")
+        (source / "main.py").write_text(main_py)
+        return tmp_path
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    yield write
+    for name in [m for m in sys.modules if m.split(".")[0] == package]:
+        del sys.modules[name]
+
+
+_TWO_FLOWS = """
+from crewai.flow import Flow, start
+
+class FirstFlow(Flow):
+    @start()
+    def go(self):
+        return "first"
+
+class SecondFlow(Flow):
+    @start()
+    def go(self):
+        return "second"
+
+def kickoff():
+    FirstFlow().kickoff()
+"""
+
+_CONVERSATIONAL_FLOW = """
+from crewai.flow import Flow
+
+class ChatFlow(Flow):
+    conversational = True
+
+def kickoff():
+    ChatFlow().kickoff()
+"""
+
+
+def test_run_crew_reruns_python_flow_inputs_inside_the_project_env(
+    tmp_path, monkeypatch
+):
+    """Outside the project env, `--inputs` re-runs `crewai run` there, as a
+    declarative flow does, so the flow imports with the project's dependencies."""
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo"\n')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
+    monkeypatch.setattr(
+        run_crew_module, "read_toml", lambda: {"tool": {"crewai": {"type": "flow"}}}
+    )
+    commands = []
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.subprocess.run",
+        lambda command, **kwargs: commands.append(command),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *a, **k: pytest.fail("ran the kickoff script instead of the flow"),
+    )
+
+    run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+    assert commands == [
+        ["uv", "run", "crewai", "run", "--inputs", '{"topic": "Quantum"}']
+    ]
+
+
+@pytest.mark.parametrize(
+    ("inputs", "message"),
+    [
+        ("{bad", "Invalid --inputs JSON: Expecting property name"),
+        ("[1]", "Invalid --inputs JSON: expected an object."),
+    ],
+)
+def test_run_crew_rejects_bad_python_flow_inputs_before_running(
+    monkeypatch, capsys, inputs, message
+):
+    monkeypatch.setattr(
+        run_crew_module, "read_toml", lambda: {"tool": {"crewai": {"type": "flow"}}}
+    )
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.subprocess.run",
+        lambda *a, **k: pytest.fail("started the project env for invalid inputs"),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module.run_crew(inputs=inputs)
+
+    assert exc_info.value.code == 1
+    assert message in capsys.readouterr().err
+
+
+def test_run_crew_inputs_name_every_flow_when_main_defines_two(python_flow_project):
+    python_flow_project(_TWO_FLOWS)
+
+    with pytest.raises(
+        click.UsageError,
+        match=r"exactly one Flow class defined in inputs_probe_\w+\.main; "
+        r"found: FirstFlow, SecondFlow",
+    ):
+        run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+
+def test_run_crew_inputs_kick_off_a_flow_bound_under_two_names(
+    python_flow_project, tmp_path
+):
+    """An alias such as `MyFlow = ContentFlow` is still one Flow class."""
+    python_flow_project(
+        """
+from pathlib import Path
+
+from crewai.flow import Flow, start
+
+class ContentFlow(Flow):
+    @start()
+    def go(self):
+        Path("topic.txt").write_text(self.state["topic"])
+
+MyFlow = ContentFlow
+
+def kickoff():
+    ContentFlow().kickoff()
+"""
+    )
+
+    run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+    assert (tmp_path / "topic.txt").read_text() == "Quantum"
+
+
+def test_run_crew_inputs_refuse_a_conversational_flow(python_flow_project):
+    python_flow_project(_CONVERSATIONAL_FLOW)
+
+    with pytest.raises(
+        click.UsageError, match="not supported for a conversational flow"
+    ):
+        run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+
+def test_run_crew_inputs_need_a_kickoff_script(python_flow_project):
+    python_flow_project(_TWO_FLOWS, kickoff_script=False)
+
+    with pytest.raises(
+        click.UsageError, match=r"needs a `kickoff` script in \[project\.scripts\]"
+    ):
+        run_crew_module.run_crew(inputs='{"topic": "Quantum"}')
+
+
 def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
     class Flow:
         pass
@@ -1224,6 +1390,8 @@ def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
     flow = Flow()
     calls = []
 
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
@@ -1249,6 +1417,161 @@ def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
 
     assert capsys.readouterr().out == ""
     assert calls == [flow]
+
+
+def _patch_conversational_flow_project(monkeypatch) -> list[str]:
+    """A flow project whose kickoff script yields a conversational flow.
+
+    Returns the list that records whether the chat TUI or the kickoff
+    subprocess was reached; a headless run must reach neither.
+    """
+    reached: list[str] = []
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        object,
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda _flow: reached.append("tui"),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: reached.append("uv"),
+    )
+    return reached
+
+
+def test_run_crew_conversational_flow_without_terminal_exits_with_guidance(
+    monkeypatch, capsys
+):
+    """No stdin TTY (a coding agent, CI): the chat TUI would wait forever."""
+    reached = _patch_conversational_flow_project(monkeypatch)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module.run_crew()
+
+    assert exc_info.value.code == 1
+    assert reached == []
+    err = capsys.readouterr().err
+    assert "This flow is conversational, which needs an interactive terminal." in err
+    assert "flow.handle_turn(message, session_id=...)" in err
+    assert "flow.stream_turn(...)" in err
+
+
+def test_run_crew_conversational_flow_in_dmn_mode_exits_with_guidance(
+    monkeypatch, capsys
+):
+    """CREWAI_DMN counts as headless even when stdin is a terminal."""
+    reached = _patch_conversational_flow_project(monkeypatch)
+    monkeypatch.setenv("CREWAI_DMN", "true")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module.run_crew()
+
+    assert exc_info.value.code == 1
+    assert reached == []
+    assert "needs an interactive terminal" in capsys.readouterr().err
+
+
+def test_run_crew_non_conversational_flow_without_terminal_still_runs_kickoff(
+    monkeypatch, capsys
+):
+    """The gate is for the chat TUI only; a plain Python flow stays headless-safe."""
+    calls = []
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+
+    run_crew_module.run_crew()
+
+    assert calls == [("kickoff", {"entity_type": "flow"})]
+    assert "interactive terminal" not in capsys.readouterr().err
+
+
+_CONVERSATIONAL_FLOW_MODULE = "headless_chat_flow_project"
+
+
+@pytest.fixture
+def conversational_flow_project(tmp_path, monkeypatch):
+    """A real project on disk whose kickoff module defines a conversational flow."""
+    package_dir = tmp_path / "src" / _CONVERSATIONAL_FLOW_MODULE
+    package_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("")
+    (package_dir / "main.py").write_text(
+        "from crewai.flow import Flow\n\n"
+        "class HeadlessChatFlow(Flow):\n"
+        "    conversational = True\n\n"
+        "def kickoff():\n"
+        "    HeadlessChatFlow().chat()\n"
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "headless-chat"\n'
+        "[project.scripts]\n"
+        f'kickoff = "{_CONVERSATIONAL_FLOW_MODULE}.main:kickoff"\n'
+        "[tool.crewai]\n"
+        'type = "flow"\n'
+    )
+    monkeypatch.chdir(tmp_path)
+    # The loader imports the project in-process and prepends src/ to sys.path.
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    yield tmp_path
+    for name in (f"{_CONVERSATIONAL_FLOW_MODULE}.main", _CONVERSATIONAL_FLOW_MODULE):
+        sys.modules.pop(name, None)
+
+
+@pytest.mark.parametrize(
+    "args", [["run"], ["flow", "kickoff"]], ids=["run", "flow-kickoff-alias"]
+)
+def test_cli_conversational_python_flow_without_terminal_does_not_hang(
+    conversational_flow_project, monkeypatch, args
+):
+    """End to end through the CLI: CliRunner's stdin is not a TTY, like an agent's."""
+    from click.testing import CliRunner
+
+    from crewai_cli.cli import crewai
+
+    reached: list[str] = []
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda _flow: reached.append("tui"),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: reached.append("uv"),
+    )
+
+    result = CliRunner().invoke(crewai, args)
+
+    assert reached == []
+    assert isinstance(result.exception, SystemExit)
+    assert result.exit_code == 1
+    assert "needs an interactive terminal" in result.output
+    assert "flow.handle_turn(message, session_id=...)" in result.output
 
 
 def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
@@ -1319,6 +1642,71 @@ def test_a_projects_env_never_sets_or_replaces_crewai_evals_token(
 
     assert os.environ.get("CREWAI_EVAL_AWAITING_RUN") == token_before
     assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+@pytest.mark.parametrize("line", ["OPENAI_API_KEY=YOUR_API_KEY", "OPENAI_API_KEY="])
+def test_a_projects_env_line_with_no_key_never_replaces_a_key_pasted_this_run(
+    monkeypatch, tmp_path: Path, line: str
+):
+    """A key pasted when `crewai run` asked, but not saved, must reach the crew
+    even when `.env` still holds the placeholder or a blank line."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(f"{line}\nFROM_THE_PROJECT=yes\n")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-pasted")
+    monkeypatch.setenv("CREWAI_PASTED_API_KEYS", "OPENAI_API_KEY")
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+@pytest.mark.parametrize("marker", [None, "OPENAI_API_KEY"], ids=["unmarked", "env_marks_it"])
+def test_a_key_the_process_only_inherited_is_replaced_by_the_placeholder(
+    monkeypatch, tmp_path: Path, marker: str | None
+):
+    """The `.env` can also point the provider at its own host: the shell's key
+    must not go there, so the placeholder applies, and a `.env` cannot claim
+    the key was pasted."""
+    env_file = tmp_path / ".env"
+    lines = "OPENAI_API_KEY=YOUR_API_KEY\nOPENAI_BASE_URL=https://attacker.example/v1\n"
+    if marker:
+        lines += f"CREWAI_PASTED_API_KEYS={marker}\n"
+    env_file.write_text(lines)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+    monkeypatch.delenv("CREWAI_PASTED_API_KEYS", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "YOUR_API_KEY"
+    assert "CREWAI_PASTED_API_KEYS" not in os.environ
+
+
+def test_a_projects_env_key_still_replaces_the_one_the_process_has(
+    monkeypatch, tmp_path: Path
+):
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=sk-from-the-project\n")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "sk-from-the-project"
+
+
+def test_a_projects_placeholder_is_loaded_when_the_process_has_no_key(
+    monkeypatch, tmp_path: Path
+):
+    """crewAI then names the missing key, as it always has."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=YOUR_API_KEY\n")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "YOUR_API_KEY"
 
 
 def test_the_three_names_for_the_eval_token_are_one() -> None:

@@ -84,7 +84,7 @@ Pydantic 모델을 사용하여 상태를 정의하세요. 이는 타입 안전�
 CrewAI의 Control Primitives를 활용하여 Crew에 견고함과 제어력을 더하세요.
 
 ### 1. Task Guardrails
-[Task Guardrails](/ko/concepts/tasks#task-guardrails)를 사용하여 작업 결과가 수락되기 전에 유효성을 검사하세요. 이를 통해 agent가 고품질 결과를 생성하도록 보장할 수 있습니다.
+[Task Guardrails](/ko/concepts/tasks#작업-가드레일)를 사용하여 작업 결과가 수락되기 전에 유효성을 검사하세요. 이를 통해 agent가 고품질 결과를 생성하도록 보장할 수 있습니다.
 
 ```python
 def validate_content(result: TaskOutput) -> Tuple[bool, Any]:
