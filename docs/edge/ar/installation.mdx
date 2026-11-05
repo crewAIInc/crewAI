@@ -90,7 +90,7 @@ python3 --version
           </Warning>
 
           <Warning>
-            إذا واجهت خطأ بناء `chroma-hnswlib==0.7.6` (`fatal error C1083: Cannot open include file: 'float.h'`) على Windows، ثبّت [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) مع خيار *Desktop development with C++*.
+            ChromaDB إضافة اختيارية، وتثبيت CrewAI العادي لا يجلبها. ثبّتها عند استخدام Knowledge أو عميل RAG المعتمد على Chroma: `uv add 'crewai[chromadb]'`. إذا ظهر خطأ بناء `chroma-hnswlib==0.7.6` (`fatal error C1083: Cannot open include file: 'float.h'`) على Windows، ثبّت [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) مع خيار *Desktop development with C++*.
           </Warning>
 
       - للتحقق من تثبيت `crewai`، شغّل:

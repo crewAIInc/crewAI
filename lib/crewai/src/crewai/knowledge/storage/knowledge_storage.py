@@ -7,8 +7,6 @@ from pydantic import Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
@@ -17,6 +15,18 @@ from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
+
+
+def _reraise_missing_chromadb(exc: BaseException) -> None:
+    """Surface a missing ChromaDB install instead of an empty knowledge result.
+
+    ``require()`` raises ``OptionalDependencyError``, an ``ImportError``.
+    A missing provider config raises ``RuntimeError`` instead.
+    """
+    if isinstance(exc, ImportError):
+        raise exc
+    if isinstance(exc, RuntimeError) and "not installed" in str(exc):
+        raise exc
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -43,6 +53,15 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         if self.embedder:
+            try:
+                from crewai.rag.chromadb.config import ChromaDBConfig
+                from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+            except ImportError as exc:
+                raise RuntimeError(
+                    "provider 'chromadb' requested but not installed. "
+                    "Install the extra: `uv add 'crewai[chromadb]'`."
+                ) from exc
+
             embedding_function = build_embedder(self.embedder)  # type: ignore[arg-type]
             config = ChromaDBConfig(
                 embedding_function=cast(
@@ -83,6 +102,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 score_threshold=score_threshold,
             )
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
             )
@@ -98,6 +118,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.delete_collection(collection_name=collection_name)
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
@@ -173,6 +194,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 score_threshold=score_threshold,
             )
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
             )
@@ -227,6 +249,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             await client.adelete_collection(collection_name=collection_name)
         except Exception as e:
+            _reraise_missing_chromadb(e)
             logging.error(
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )

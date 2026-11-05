@@ -205,7 +205,7 @@ If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on
           </Warning>
 
           <Warning>
-            If you encounter the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*.
+            ChromaDB is an optional extra, so a plain CrewAI install does not pull it in. Install it when you use Knowledge or a Chroma-backed RAG client: `uv add 'crewai[chromadb]'`. If that install hits the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*.
           </Warning>
 
       - To verify that `crewai` is installed, run:
