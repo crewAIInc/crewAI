@@ -40,6 +40,13 @@ def to_serializable(
     Returns:
         Serializable: A JSON-compatible structure.
     """
+    if isinstance(obj, (str, int, float, bool, type(None))):
+        return obj
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+
     if max_depth > 0 and _current_depth >= max_depth:
         return repr(obj)
 
@@ -48,13 +55,6 @@ def to_serializable(
 
     if _ancestors is None:
         _ancestors = set()
-
-    if isinstance(obj, (str, int, float, bool, type(None))):
-        return obj
-    if isinstance(obj, uuid.UUID):
-        return str(obj)
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
 
     object_id = id(obj)
     if object_id in _ancestors:
