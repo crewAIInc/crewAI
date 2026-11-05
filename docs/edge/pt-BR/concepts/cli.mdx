@@ -261,6 +261,8 @@ Implemente o crew ou flow no [CrewAI AMP](https://app.crewai.com).
   ```
   - Lê a configuração do seu projeto local.
   - Solicita a confirmação das variáveis de ambiente (como `OPENAI_API_KEY`, `SERPER_API_KEY`) encontradas localmente. Elas serão armazenadas de forma segura junto ao deployment na plataforma Enterprise. Verifique se suas chaves sensíveis estão corretamente configuradas localmente (por exemplo, em um arquivo `.env`) antes de executar este comando.
+  - `--zip` envia o projeto como um ZIP mesmo quando ele tem um `origin` git, sem fazer fetch dele.
+  - Quando o projeto é um repositório git com pelo menos um commit, todo envio de ZIP, na criação ou no push, mostra o commit local a partir do qual ele foi gerado e se o diretório do projeto tinha alterações não commitadas.
 
 ### 11. Gerenciamento de Organização
 

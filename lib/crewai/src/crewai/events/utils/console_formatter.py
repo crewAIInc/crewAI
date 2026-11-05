@@ -44,6 +44,7 @@ class ConsoleFormatter:
         self.console = Console(width=None)
         self.verbose = verbose
         self._streaming_live: Live | None = None
+        self._pending_stream_panel: Panel | None = None
         self._is_streaming: bool = False
         self._just_streamed_final_answer: bool = False
         self._last_stream_call_type: Any = None
@@ -195,9 +196,7 @@ To enable tracing, do any one of these:
         This stops any active streaming Live session to prevent console refresh
         interference during HITL (Human-in-the-Loop) user input.
         """
-        if self._streaming_live:
-            self._streaming_live.stop()
-            self._streaming_live = None
+        self._end_stream_display()
 
     def resume_live_updates(self) -> None:
         """Resume Live session updates after human input is complete.
@@ -628,6 +627,13 @@ To enable tracing, do any one of these:
             padding=(1, 2),
         )
 
+        if not self._live_can_repaint():
+            # Off a terminal a Live appends the whole panel on every refresh, and
+            # Rich's stdout proxy re-emits it on every other print during the
+            # stream, so keep only the latest panel and print it once at the end.
+            self._pending_stream_panel = streaming_panel
+            return
+
         if not self._streaming_live:
             self._streaming_live = Live(
                 streaming_panel, console=self.console, refresh_per_second=10
@@ -635,6 +641,27 @@ To enable tracing, do any one of these:
             self._streaming_live.start()
         else:
             self._streaming_live.update(streaming_panel, refresh=True)
+
+    def _live_can_repaint(self) -> bool:
+        # Rich treats any FORCE_COLOR value (even "0") or TTY_COMPATIBLE=1 as a
+        # terminal without checking isatty, so ask the file itself.
+        if self.console.is_jupyter:
+            return True
+        isatty = getattr(self.console.file, "isatty", None)
+        if isatty is None:
+            return False
+        try:
+            return bool(isatty())
+        except ValueError:  # closed stream at interpreter teardown; Rich does the same
+            return False
+
+    def _end_stream_display(self) -> None:
+        if self._streaming_live:
+            self._streaming_live.stop()
+            self._streaming_live = None
+        if self._pending_stream_panel is not None:
+            panel, self._pending_stream_panel = self._pending_stream_panel, None
+            self.console.print(panel)
 
     def handle_llm_stream_completed(self) -> None:
         """Handle completion of LLM streaming - stop the streaming live display."""
@@ -649,9 +676,7 @@ To enable tracing, do any one of these:
 
         self._last_stream_call_type = None
 
-        if self._streaming_live:
-            self._streaming_live.stop()
-            self._streaming_live = None
+        self._end_stream_display()
 
     def handle_crew_test_started(
         self, crew_name: str, source_id: str, n_iterations: int

@@ -1,3 +1,4 @@
+import importlib.util
 import logging
 import os
 from time import sleep
@@ -729,6 +730,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
     assert_event_count(
         mock_emit=mock_emit,
+        expected_completed_tool_call=1,
         expected_stream_chunk=9,
         expected_completed_llm_call=0,
         expected_final_chunk_result='{"location":"New York, NY"}',
@@ -1513,3 +1515,15 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_an_installed_litellm_loads() -> None:
+    """crewai treats a LiteLLM that fails to import as not installed, and tells
+    the user to install the extra they already have. litellm 1.100.4 did this on
+    Python 3.10 (it imports ``typing.NotRequired``)."""
+    if importlib.util.find_spec("litellm") is None:
+        pytest.skip("the crewai[litellm] extra is not installed")
+
+    from crewai.llm import _ensure_litellm
+
+    assert _ensure_litellm() is True
