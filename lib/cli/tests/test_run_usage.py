@@ -14,17 +14,21 @@ from typing import Any, get_args
 from unittest.mock import MagicMock
 import uuid
 
+import click
 from click.testing import CliRunner, Result
 from crewai_core import telemetry as core_telemetry
 import pytest
 
+from crewai_cli import api_keys
 from crewai_cli.cli import crewai
 import crewai_cli.run_crew as run_crew_module
 
 
-ALLOWED_EVENTS = {f"cli_usage:run_started:{kind}" for kind in get_args(run_crew_module.RunKind)} | {
-    f"cli_usage:run_stopped:{reason}" for reason in get_args(run_crew_module.RunStopReason)
-}
+ALLOWED_EVENTS = (
+    {f"cli_usage:run_started:{kind}" for kind in get_args(run_crew_module.RunKind)}
+    | {f"cli_usage:run_stopped:{reason}" for reason in get_args(run_crew_module.RunStopReason)}
+    | {f"cli_usage:run_api_key:{outcome}" for outcome in get_args(api_keys.ApiKeyOutcome)}
+)
 OPT_OUT_FLAGS = ("CREWAI_DISABLE_TELEMETRY", "OTEL_SDK_DISABLED", "CREWAI_DISABLE_TRACKING")
 
 # A name and a path a count must never carry.
@@ -109,6 +113,9 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
     monkeypatch.delenv(run_crew_module.RUN_COUNTED_ENV, raising=False)
     monkeypatch.setattr(sys, "path", list(sys.path))
+    # The key crewAI's default model needs, so a run counts no missing key
+    # unless the test takes it away.
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     return folder
 
 
@@ -708,3 +715,109 @@ def test_a_project_env_opt_out_covers_a_failed_script(
 
     assert crewai_run().exit_code == 0
     assert usage == []
+
+
+def without_api_keys(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
+    for name in names:
+        # Set first, so teardown restores it even after the run exports a key.
+        monkeypatch.setenv(name, "")
+        monkeypatch.delenv(name)
+
+
+def two_provider_json_crew(folder: Path) -> None:
+    json_crew_project(folder)
+    write(
+        folder / "crew.jsonc",
+        '{"agents": ["researcher"], "manager_llm": "anthropic/claude-sonnet-5"}',
+    )
+    write(folder / "agents" / "researcher.jsonc", '{"llm": "openai/gpt-5.6-luna"}')
+
+
+def test_a_missing_key_without_a_terminal_counts_one_warning(
+    project, usage, commands, monkeypatch
+) -> None:
+    two_provider_json_crew(project)
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+
+    result = crewai_run()
+
+    assert result.exit_code == 0, result.output
+    assert "OPENAI_API_KEY is not set" in result.output
+    assert "ANTHROPIC_API_KEY is not set" in result.output
+    assert usage == [started("json_crew"), "cli_usage:run_api_key:warned"]
+    assert_events_are_anonymous(usage)
+
+
+@pytest.mark.parametrize(
+    ("answers", "outcome"),
+    [(["sk-openai", ""], "saved"), (["", ""], "skipped")],
+)
+def test_a_missing_key_at_a_terminal_counts_whether_one_was_saved(
+    project, usage, commands, monkeypatch, answers, outcome
+) -> None:
+    two_provider_json_crew(project)
+    without_api_keys(monkeypatch, "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+    monkeypatch.setattr("crewai_cli.input_prompt.is_interactive", lambda: True)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    queued = list(answers)
+    monkeypatch.setattr(click, "prompt", lambda *args, **kwargs: queued.pop(0))
+
+    run_crew_module.run_crew()
+
+    assert queued == []
+    assert usage == [started("json_crew"), f"cli_usage:run_api_key:{outcome}"]
+    assert commands
+
+
+def test_a_run_with_its_keys_set_or_a_re_run_counts_no_key_event(
+    project, usage, commands, monkeypatch
+) -> None:
+    write(project / "pyproject.toml", CREW_PYPROJECT)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-set")
+
+    assert crewai_run().exit_code == 0
+    assert usage == [started("crew")]
+
+    usage.clear()
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    monkeypatch.setenv(run_crew_module.RUN_COUNTED_ENV, "1")
+
+    result = crewai_run()
+
+    assert "is not set" not in result.output
+    assert usage == []
+
+
+@pytest.mark.parametrize("flag", OPT_OUT_FLAGS)
+def test_a_project_env_opt_out_covers_the_key_count(
+    project, usage, commands, monkeypatch, flag
+) -> None:
+    write(project / "pyproject.toml", CREW_PYPROJECT)
+    write(project / ".env", f"{flag}=true\n")
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+
+    result = crewai_run()
+
+    assert "OPENAI_API_KEY is not set" in result.output
+    assert usage == []
+
+
+def test_quitting_at_the_key_prompt_counts_where_the_run_stopped(
+    project, usage, commands, monkeypatch
+) -> None:
+    """Ctrl-C or Ctrl-D at the prompt: the run stopped there, before kickoff."""
+    write(project / "pyproject.toml", CREW_PYPROJECT)
+    without_api_keys(monkeypatch, "OPENAI_API_KEY")
+    monkeypatch.setattr("crewai_cli.input_prompt.is_interactive", lambda: True)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+
+    def quit_at_the_prompt(*args: Any, **kwargs: Any) -> str:
+        raise click.Abort
+
+    monkeypatch.setattr(click, "prompt", quit_at_the_prompt)
+
+    with pytest.raises(click.Abort):
+        run_crew_module.run_crew()
+
+    assert usage == [started("crew"), stopped("api_key_prompt")]
+    assert commands == []

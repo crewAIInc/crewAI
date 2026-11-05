@@ -1,6 +1,7 @@
 """Tests for TOML-based version and dependency update functions."""
 
 from pathlib import Path
+import re
 from textwrap import dedent
 
 from crewai_devtools import cli as devtools_cli
@@ -14,6 +15,7 @@ from crewai_devtools.cli import (
     update_template_dependencies,
 )
 import pytest
+import tomlkit
 
 
 def test_release_updates_crew_and_flow_canary_repositories(monkeypatch) -> None:
@@ -473,7 +475,7 @@ class TestUpdatePyprojectDependencies:
         assert '"crewai-files==2.0.0"' in result
         assert '"requests>=2.0"' in result
 
-    def test_skips_crewai_files_in_file_processing_extra(self, tmp_path: Path) -> None:
+    def test_bumps_crewai_files_in_file_processing_extra(self, tmp_path: Path) -> None:
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
             dedent("""\
@@ -481,16 +483,31 @@ class TestUpdatePyprojectDependencies:
             file-processing = [
                 "crewai-files==1.0.0",
             ]
-            other = [
-                "crewai-files==1.0.0",
-            ]
         """)
         )
 
-        update_pyproject_dependencies(pyproject, "2.0.0")
-        result = pyproject.read_text()
-        assert '"crewai-files==1.0.0"' in result
-        assert '"crewai-files==2.0.0"' in result
+        assert update_pyproject_dependencies(pyproject, "2.0.0")
+        assert pyproject.read_text() == dedent("""\
+            [project.optional-dependencies]
+            file-processing = [
+                "crewai-files==2.0.0",
+            ]
+        """)
+
+    def test_release_bump_moves_every_sibling_pin_in_crewai(
+        self, tmp_path: Path
+    ) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(_CREWAI_PYPROJECT.read_text())
+
+        update_pyproject_dependencies(pyproject, "99.0.0")
+
+        assert _sibling_pins(pyproject) == {
+            "crewai-cli": "99.0.0",
+            "crewai-core": "99.0.0",
+            "crewai-files": "99.0.0",
+            "crewai-tools": "99.0.0",
+        }
 
     def test_leaves_bare_crewai_pin_alone(self, tmp_path: Path) -> None:
         """`crewai==` must not collide with `crewai-core==` etc."""
@@ -554,3 +571,40 @@ class TestUpdateTemplateDependencies:
 
         assert len(updated) == 0
         assert '"requests>=2.0"' in tpl.read_text()
+
+
+_CREWAI_PYPROJECT = Path(__file__).parents[2] / "crewai" / "pyproject.toml"
+
+
+def _sibling_pins(pyproject: Path) -> dict[str, str]:
+    """Map each workspace sibling crewai requires (core or extra) to its pin."""
+    project = tomlkit.parse(pyproject.read_text())["project"]
+    requirements = [str(r) for r in project["dependencies"]]
+    for extra in project["optional-dependencies"].values():
+        requirements.extend(str(r) for r in extra)
+    pins: dict[str, str] = {}
+    for requirement in requirements:
+        name, _, pin = requirement.partition("==")
+        name = name.split("[")[0].strip()
+        if name in _DEFAULT_WORKSPACE_PACKAGES and name != "crewai":
+            pins[name] = pin
+    return pins
+
+
+def test_crewai_pins_every_workspace_sibling_to_its_own_version() -> None:
+    # An unpinned sibling lets consumers' lockfiles keep an old release, as
+    # crewai-files 1.15.29 (with a vulnerable pypdf) did under crewai 1.15.34.
+    version = _crewai_version()
+    assert _sibling_pins(_CREWAI_PYPROJECT) == {
+        "crewai-cli": version,
+        "crewai-core": version,
+        "crewai-files": version,
+        "crewai-tools": version,
+    }
+
+
+def _crewai_version() -> str:
+    init = _CREWAI_PYPROJECT.parent / "src" / "crewai" / "__init__.py"
+    match = re.search(r'__version__\s*=\s*"([^"]+)"', init.read_text())
+    assert match is not None
+    return match.group(1)

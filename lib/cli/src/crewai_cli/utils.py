@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 import os
 from pathlib import Path
 import re
 import shutil
+import sys
 from typing import Any, Literal
 
 import click
@@ -21,6 +22,7 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
+from crewai_cli.constants import required_key_names
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -30,6 +32,7 @@ __all__ = [
     "copy_assistant_imports",
     "copy_assistant_instructions",
     "copy_template",
+    "echo_missing_keys",
     "enable_prompt_line_editing",
     "fetch_and_json_env_file",
     "get_or_create_project_id",
@@ -39,6 +42,7 @@ __all__ = [
     "get_project_version",
     "is_dmn_mode_enabled",
     "load_env_vars",
+    "missing_provider_keys",
     "normalize_package_name",
     "parse_toml",
     "read_toml",
@@ -158,16 +162,21 @@ def copy_assistant_instructions(destination: Path, *, evaluation: bool = True) -
 
 
 def copy_template(
-    src: Path, dst: Path, name: str, class_name: str, folder_name: str
+    src: Path,
+    dst: Path,
+    name: str,
+    class_name: str,
+    folder_name: str,
+    extras: Iterable[str] = (),
 ) -> None:
-    """Copy a file from src to dst."""
+    """Copy a file from src to dst; ``extras`` go into its crewai dependency."""
     content = render_template(
         src,
         {
             "name": name,
             "crew_name": class_name,
             "folder_name": folder_name,
-            "crewai_tools_dependency": get_crewai_tools_dependency(),
+            "crewai_tools_dependency": get_crewai_tools_dependency(extras=extras),
         },
     )
 
@@ -259,9 +268,48 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 
 
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """Writes environment variables to a gitignored .env file for local use."""
+    """Writes environment variables to a gitignored .env file for local use.
+
+    The file holds API keys, so it is written owner-only, an existing one is
+    made owner-only, and a symlink in its place is never written through.
+
+    Raises:
+        click.ClickException: ``.env`` is a symlink.
+    """
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
+    if env_file_path.is_symlink():
+        raise click.ClickException(
+            f"Not writing API keys to {env_file_path}: it is a symlink."
+        )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(env_file_path, flags, 0o600), "w") as file:
+        if sys.platform != "win32":
+            # os.open's mode applies only when it creates the file.
+            os.fchmod(file.fileno(), 0o600)
         for key, value in env_vars.items():
             # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")
+
+
+def missing_provider_keys(provider: str, env_vars: Mapping[str, object]) -> list[str]:
+    """Return the names ``provider`` needs that neither ``env_vars`` nor the
+    environment sets. Entries with a runtime default are not needed."""
+    saved = {key.upper() for key, value in env_vars.items() if value}
+    return [
+        name
+        for name in required_key_names(provider)
+        if name not in saved and not os.environ.get(name)
+    ]
+
+
+def echo_missing_keys(folder_path: Path, key_names: list[str]) -> None:
+    """Print the ``.env`` lines to add before ``crewai run``, one per missing key."""
+    if len(key_names) == 1:
+        heading = "API key not saved. Add this line"
+    else:
+        heading = "API keys not saved. Add these lines"
+    click.secho(
+        f"  {heading} to {folder_path / '.env'} before `crewai run`:", fg="yellow"
+    )
+    for name in key_names:
+        click.echo(f"    {name}=<your key>")
