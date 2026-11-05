@@ -1559,7 +1559,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     output=step_output,
                     payload=step_output,
                 )
-                self._dispatch_interception(InterceptionPoint.POST_STEP, post_step_ctx)
+                try:
+                    self._dispatch_interception(
+                        InterceptionPoint.POST_STEP, post_step_ctx
+                    )
+                except Exception:
+                    # A hook abort leaves the review pending, so undo the
+                    # recorded reply the same way as the learn_strict path.
+                    self.human_feedback_history.pop()
+                    self.last_human_feedback = previous_feedback
+                    raise
                 if emit:
                     collapsed_outcome = post_step_ctx.payload
                 else:

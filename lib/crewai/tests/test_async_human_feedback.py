@@ -1939,6 +1939,9 @@ class TestResumePostStepHooks:
             assert not flow.state.get("downstream_ran")
             if pause:
                 assert persistence.load_pending_feedback(flow.flow_id) is not None
+                # The review is still pending, so the reply must not be recorded.
+                assert flow.human_feedback_history == []
+                assert flow.last_human_feedback is None
 
     @pytest.mark.parametrize("pause", [False, True])
     @patch("crewai.flow.runtime.crewai_event_bus.emit")
