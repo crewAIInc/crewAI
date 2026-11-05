@@ -139,7 +139,7 @@ def machine_endpoints(monkeypatch: pytest.MonkeyPatch, **values: str) -> None:
     """The endpoint and proxy settings the machine's environment held as the CLI
     started, VALUES alone, and none since: a test's own machine has its own."""
     monkeypatch.setattr(api_keys, "_MACHINE_ENDPOINTS", api_keys._endpoint_settings(values))
-    for name in ("OPENAI_BASE_URL", *values):
+    for name in ("OPENAI_BASE_URL", *api_keys._endpoint_settings(os.environ), *values):
         # Set first, so teardown restores what the machine had after a test
         # loads a project's `.env` into the environment.
         monkeypatch.setenv(name, "")
@@ -1310,3 +1310,70 @@ def test_the_module_imports_without_crewai_or_crewai_core(without_crewai) -> Non
     api_keys = importlib.import_module("crewai_cli.api_keys")
 
     assert callable(api_keys.ask_for_missing_api_keys)
+
+
+def test_the_retry_prompt_asks_only_for_a_key_the_preflight_would(
+    project, monkeypatch
+) -> None:
+    """A failed run names its own variable, which may be anything."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    prompts = at_a_terminal(monkeypatch, "sk-pasted")
+
+    assert api_keys.ask_for_api_key("DATABASE_PASSWORD", project, None) is False
+    assert prompts == []
+
+
+def test_the_retry_prompt_names_a_host_set_while_the_crew_loaded(
+    project, monkeypatch
+) -> None:
+    """The crew's code ran while it loaded and may have redirected the provider."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://attacker.example/v1")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    api_keys.ask_for_api_key("OPENAI_API_KEY", project, None)
+
+    [(text, _)] = prompts
+    assert "attacker.example (OPENAI_BASE_URL set while the crew loaded)" in text
+
+
+def test_the_line_to_add_a_key_names_a_host_set_while_the_crew_loaded(
+    project, monkeypatch
+) -> None:
+    """Without a terminal, this line is the only place a host is named."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://attacker.example/v1")
+
+    line = api_keys.missing_key_line("OPENAI_API_KEY", project)
+
+    assert line.startswith("OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key>")
+    assert "attacker.example (OPENAI_BASE_URL set while the crew loaded)" in line
+
+
+def test_the_line_to_add_a_key_names_a_env_file_host_once(project, monkeypatch) -> None:
+    """A host the project's `.env` sets is named as the `.env`'s, even after
+    the run loaded it into the environment."""
+    machine_endpoints(monkeypatch)
+    crew_project(project)
+    (project / ".env").write_text("OPENAI_BASE_URL=https://proxy.example/v1\n")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.example/v1")
+
+    line = api_keys.missing_key_line("OPENAI_API_KEY", project)
+
+    assert "proxy.example" in line
+    assert "set while the crew loaded" not in line
+
+
+def test_the_line_to_add_a_key_names_no_host_the_machine_already_set(
+    project, monkeypatch
+) -> None:
+    machine_endpoints(monkeypatch, OPENAI_BASE_URL="https://gateway.corp/v1")
+    crew_project(project)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://gateway.corp/v1")
+
+    line = api_keys.missing_key_line("OPENAI_API_KEY", project)
+
+    assert "gateway.corp" not in line

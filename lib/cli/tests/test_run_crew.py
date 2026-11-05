@@ -428,6 +428,114 @@ def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path):
     assert marker.read_text() == "ran"
 
 
+def _run_the_json_runner_on_crewai(
+    tmp_path: Path, crewai_files: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    """Run the JSON crew runner, headless, in a project whose environment's
+    crewai is CREWAI_FILES, each a path under `crewai/` and its source."""
+    environment = tmp_path / "environment"
+    for name, source in {
+        "__init__.py": "",
+        "project/__init__.py": "",
+        **crewai_files,
+    }.items():
+        path = environment / "crewai" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source)
+    project = tmp_path / "project"
+    project.mkdir()
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(environment)
+    env["CREWAI_DMN"] = "true"
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
+        Path(run_crew_module.__file__).resolve().parent
+    )
+    env[run_crew_module._CREWAI_JSON_CREW_DEFINITION_ENV] = "crew.jsonc"
+    return subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        env=env,
+        cwd=project,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _crew_loader_whose_kickoff_raises(error: str, *, imports: str = "") -> str:
+    return (
+        f"{imports}\n"
+        "class Crew:\n"
+        "    agents = []\n"
+        "    tasks = []\n"
+        "    def kickoff(self, inputs):\n"
+        f"        raise {error}\n"
+        "def load_crew(path):\n"
+        "    return Crew(), {}\n"
+    )
+
+
+def test_json_runner_stops_a_crew_without_its_key_with_one_line(tmp_path: Path):
+    """The class is the project's crewai's own, and the stop is a message, not
+    a traceback."""
+    result = _run_the_json_runner_on_crewai(
+        tmp_path,
+        {
+            "llms/__init__.py": "",
+            "llms/base_llm.py": (
+                "class MissingAPIKeyError(ValueError):\n"
+                "    def __init__(self, env_var, model):\n"
+                "        self.env_var = env_var\n"
+                "        super().__init__(f'{env_var} is required for {model}')\n"
+            ),
+            "project/crew_loader.py": _crew_loader_whose_kickoff_raises(
+                "MissingAPIKeyError('OPENAI_API_KEY', 'gpt-4.1-mini')",
+                imports="from crewai.llms.base_llm import MissingAPIKeyError",
+            ),
+        },
+    )
+
+    assert result.returncode == 1
+    assert result.stderr.splitlines()[-1] == (
+        "Error: OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to "
+        f"{tmp_path / 'project' / '.env'}, then run `crewai run` again."
+    )
+    assert "Traceback" not in result.stderr
+
+
+def test_json_runner_ends_a_quit_prompt_as_click_ends_its_commands(tmp_path: Path):
+    """Ctrl-C or Ctrl-D at a prompt in the runner, the API key's included."""
+    result = _run_the_json_runner_on_crewai(
+        tmp_path,
+        {
+            "project/crew_loader.py": _crew_loader_whose_kickoff_raises(
+                "click.Abort()", imports="import click"
+            )
+        },
+    )
+
+    assert result.returncode == 1
+    assert result.stderr.splitlines()[-1] == "Aborted!"
+    assert "Traceback" not in result.stderr
+
+
+def test_json_runner_on_a_crewai_without_missing_api_key_error_fails_as_before(
+    tmp_path: Path,
+):
+    """Before 1.15.34 crewai raised a plain ValueError for a missing key."""
+    result = _run_the_json_runner_on_crewai(
+        tmp_path,
+        {
+            "project/crew_loader.py": _crew_loader_whose_kickoff_raises(
+                "ValueError('OPENAI_API_KEY is required')"
+            )
+        },
+    )
+
+    assert result.returncode == 1
+    assert "Traceback" in result.stderr
+    assert result.stderr.splitlines()[-1] == "ValueError: OPENAI_API_KEY is required"
+
+
 def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path):
     monkeypatch.chdir(tmp_path)
     called: dict = {}
@@ -927,6 +1035,21 @@ def test_resolve_crew_inputs_warns_and_keeps_unknown_input(capsys):
     assert resolved == {"topic": "AI", "topi": "typo"}
     assert "isn't referenced by any {placeholder}" in captured.err
     assert "Did you mean 'topic'?" in captured.err
+
+
+def test_resolve_crew_inputs_does_not_flag_an_input_the_crew_declares(capsys):
+    """The retry after a pasted key passes back the crew's own defaults."""
+    crew = _crew_with_placeholders("topic")
+
+    resolved = run_crew_module._resolve_crew_inputs(
+        crew,
+        {"topic": "AI", "audience": "devs"},
+        {"topic": "ML", "audience": "devs"},
+        interactive=False,
+    )
+
+    assert resolved == {"topic": "ML", "audience": "devs"}
+    assert "isn't referenced" not in capsys.readouterr().err
 
 
 def test_resolve_crew_inputs_prompts_when_interactive(monkeypatch):
