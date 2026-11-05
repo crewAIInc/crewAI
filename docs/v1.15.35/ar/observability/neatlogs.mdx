@@ -1,0 +1,134 @@
+---
+title: تكامل Neatlogs
+description: افهم وأصلح وشارك عمليات تشغيل وكلاء CrewAI الخاصة بك
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# مقدمة
+
+يساعدك Neatlogs على **رؤية ما فعله وكيلك**، و**لماذا**، و**مشاركته**.
+
+يلتقط كل خطوة: الأفكار، واستدعاءات الأدوات، والاستجابات، والتقييمات. لا سجلات خام. فقط تتبعات واضحة ومنظمة. ممتاز لتصحيح الأخطاء والتعاون.
+
+## لماذا تستخدم Neatlogs؟
+
+يستخدم وكلاء CrewAI أدوات متعددة وخطوات تفكير. عندما يحدث خطأ ما، تحتاج إلى السياق - وليس فقط الأخطاء.
+
+يتيح لك Neatlogs:
+
+- تتبع مسار اتخاذ القرار بالكامل
+- إضافة ملاحظات مباشرة على الخطوات
+- الدردشة مع التتبع باستخدام مساعد الذكاء الاصطناعي
+- مشاركة عمليات التشغيل علنياً للحصول على ملاحظات
+- تحويل الرؤى إلى مهام
+
+كل ذلك في مكان واحد.
+
+إدارة تتبعاتك بسهولة
+
+![التتبعات](/images/neatlogs-1.png)
+![استجابة التتبع](/images/neatlogs-2.png)
+
+أفضل تجربة مستخدم لعرض تتبع CrewAI. انشر التعليقات أينما تريد. استخدم الذكاء الاصطناعي لتصحيح الأخطاء.
+
+![تفاصيل التتبع](/images/neatlogs-3.png)
+![روبوت الدردشة الذكي مع التتبع](/images/neatlogs-4.png)
+![درج التعليقات](/images/neatlogs-5.png)
+
+## الميزات الأساسية
+
+- **عارض التتبع**: تتبع الأفكار والأدوات والقرارات بالتسلسل
+- **التعليقات المضمنة**: أشر إلى زملاء الفريق على أي خطوة تتبع
+- **الملاحظات والتقييم**: حدد المخرجات كصحيحة أو غير صحيحة
+- **إبراز الأخطاء**: وسم تلقائي لأخطاء API/الأدوات
+- **تحويل المهام**: حوّل التعليقات إلى مهام موكلة
+- **اسأل التتبع (AI)**: تحدث مع تتبعك باستخدام روبوت Neatlogs الذكي
+- **المشاركة العامة**: انشر روابط التتبع لمجتمعك
+
+## إعداد سريع مع CrewAI
+
+<Steps>
+  <Step title="التسجيل والحصول على مفتاح API">
+    قم بزيارة [neatlogs.com](https://neatlogs.com/?utm_source=crewAI-docs)، وأنشئ مشروعاً، وانسخ مفتاح API.
+  </Step>
+  <Step title="تثبيت SDK">
+    ```bash
+    pip install neatlogs
+    ```
+    (أحدث إصدار 0.8.0، Python 3.8+؛ رخصة MIT)
+  </Step>
+  <Step title="تهيئة Neatlogs">
+    قبل بدء وكلاء Crew، أضف:
+
+    ```python
+    import neatlogs
+    neatlogs.init("YOUR_PROJECT_API_KEY")
+    ```
+
+    يعمل الوكلاء كالمعتاد. يلتقط Neatlogs كل شيء تلقائياً.
+
+  </Step>
+</Steps>
+
+
+
+## تحت الغطاء
+
+وفقاً لـ GitHub، فإن Neatlogs:
+
+- يلتقط الأفكار واستدعاءات الأدوات والاستجابات والأخطاء وإحصائيات الرموز المميزة
+- يدعم توليد المهام بالذكاء الاصطناعي وسير عمل التقييم المتين
+
+كل ذلك بسطرين فقط من الكود.
+
+
+
+## شاهده وهو يعمل
+
+### عرض توضيحي كامل (4 دقائق)
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.youtube.com/embed/8KDme9T2I7Q?si=b8oHteaBwFNs_Duk"
+  title="NeatLogs overview"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+### تكامل CrewAI (30 ثانية)
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.loom.com/embed/9c78b552af43452bb3e4783cb8d91230?sid=e9d7d370-a91a-49b0-809e-2f375d9e801d"
+  title="Loom video player"
+  frameBorder="0"
+  allowFullScreen
+></iframe>
+
+
+
+## الروابط والدعم
+
+- [وثائق Neatlogs](https://docs.neatlogs.com/)
+- [لوحة التحكم ومفتاح API](https://app.neatlogs.com/)
+- [تابعنا على Twitter](https://twitter.com/neatlogs)
+- البريد الإلكتروني: hello@neatlogs.com
+- [GitHub SDK](https://github.com/NeatLogs/neatlogs)
+
+
+
+## الخلاصة
+
+بمجرد:
+
+```bash
+pip install neatlogs
+
+import neatlogs
+neatlogs.init("YOUR_API_KEY")
+
+You can now capture, understand, share, and act on your CrewAI agent runs in seconds.
+No setup overhead. Full trace transparency. Full team collaboration.
+```
