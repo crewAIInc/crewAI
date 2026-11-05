@@ -192,6 +192,45 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch, opt
 
 
 
+@pytest.mark.parametrize("record_id,trace_url,cancelled,show_link", [
+    ("this-run", "https://amp.example/t/current", False, True),
+    ("other-run", "https://amp.example/t/other", False, False),
+    ("this-run", "https://amp.example/t/current", True, False),
+    ("this-run", None, False, False),
+    (None, None, False, False),
+])
+def test_chat_prints_only_its_exported_trace_after_tui_exit(
+    monkeypatch, tmp_path, capsys, record_id, trace_url, cancelled, show_link
+):
+    from types import SimpleNamespace
+
+    from crewai.telemetry.tracing.last_run import record_last_run
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_TESTING", "false")
+
+    class ClosedChat:
+        _status = "chatting"
+        _crew_result = "done"
+        _execution_uuid = "this-run"
+        _discard_trace_on_exit = cancelled
+
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self):
+            if record_id:
+                record_last_run(
+                    execution_id=record_id, tier="ephemeral",
+                    started_at_ns=1, finished_at_ns=2,
+                    amp_base_url="https://amp.example", trace_url=trace_url,
+                )
+
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", ClosedChat)
+    assert kickoff_flow._run_conversational_flow_tui(SimpleNamespace(name="Chat")) == "done"
+    assert capsys.readouterr().out == (f"View traces: {trace_url}\n" if show_link else "")
+
+
 def test_evaluate_on_an_untraced_conversation_runs_it_again_for_its_evaluation(
     monkeypatch,
 ) -> None:

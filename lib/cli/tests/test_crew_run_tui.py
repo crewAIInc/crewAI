@@ -154,6 +154,22 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize("conversational", [False, True])
+def test_execution_identity_follows_conversation_turns(conversational):
+    from crewai.execution import clear_execution_uuid, set_execution_uuid
+
+    app = CrewRunApp(conversational=conversational)
+    for execution_id in ("first-turn", "second-turn"):
+        token = set_execution_uuid(execution_id)
+        try:
+            app._capture_execution_uuid()
+        finally:
+            clear_execution_uuid(token)
+    assert app._execution_uuid == ("second-turn" if conversational else "first-turn")
+    app._capture_execution_uuid()
+    assert app._execution_uuid == ("second-turn" if conversational else "first-turn")
+
+
 def test_view_traces_opens_the_link_crewai_recorded_for_this_run(monkeypatch) -> None:
     """crewAI prints that link after a run but never under a TUI, so the button
     reads it off the record crewAI wrote — matched to THIS app's execution."""

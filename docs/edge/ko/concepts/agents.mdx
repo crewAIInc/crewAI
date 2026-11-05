@@ -689,6 +689,8 @@ agent.chat(tui=True)  # Full terminal UI
 
 일반 REPL과 TUI 모두 응답을 자동으로 스트리밍하므로 `LLM(stream=True)`를 설정할 필요가 없습니다. 토큰 스트리밍을 끄려면 `agent.chat(stream=False)`를 사용하거나(`tui=True`에서도 지원) `LLM(stream=False)`를 명시하세요. 채팅에서 명시한 `stream=True`는 LLM 설정보다 우선합니다. 스트리밍은 각 턴에만 적용되며 LLM 설정이나 독립적인 `kickoff()` 동작을 변경하지 않습니다. 사용자 지정 `output_fn`은 턴마다 완료된 응답 하나를 받습니다. 사용자 지정 스트리밍 전송에는 `stream_turn()`을 사용하세요.
 
+`CREWAI_TRACING_ENABLED=true`로 추적을 활성화하세요. 스트리밍과 `verbose=False`는 추적을 끄지 않습니다. 추적된 TUI 세션이 정상 종료되면 해당 실행에 대해 AMP가 제공한 뷰어 링크가 있을 경우 터미널에 `View traces:`와 함께 출력됩니다. 턴이 실행 중일 때 종료하면 보류 중인 세션 추적을 폐기하며 추적 링크를 출력하지 않습니다.
+
 하나의 대화에는 같은 Agent 인스턴스를 재사용하세요. 고급 영속성 설정에는 `agent.as_flow()`로 기반 대화형 Flow 세션에 접근할 수 있습니다. 기록은 기본적으로 메모리에 유지되며 프로세스 간 복구에는 명시적인 Flow 영속성 설정이 필요합니다. 독립적인 대화에는 별도의 Agent 인스턴스를 사용하세요. `session_id`는 Flow 세션을 식별하거나 복원하며 하나의 Agent에서 동시 다중 세션 격리를 제공하지는 않습니다.
 
 일반 Agent의 기본값은 `conversational=False`입니다. 대화가 활성화되어도 직접 호출하는 `kickoff()`와 `kickoff_async()`는 독립적인 실행으로 유지됩니다. 세션 기록을 유지하려면 `handle_turn()`을 사용하세요. 기존 Crew/Task 실행은 현재 동작을 유지합니다.

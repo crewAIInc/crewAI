@@ -618,6 +618,8 @@ agent.chat(tui=True)  # Full terminal UI
 
 Tanto o REPL simples quanto a TUI transmitem respostas automaticamente; você não precisa de `LLM(stream=True)`. Desative o streaming de tokens com `agent.chat(stream=False)` (também aceito com `tui=True`) ou com `LLM(stream=False)` explícito. Um `stream=True` explícito no chat tem precedência sobre a configuração do LLM. O streaming se aplica a cada turno e não altera a configuração do LLM nem o comportamento independente de `kickoff()`. Um `output_fn` personalizado recebe uma resposta completa por turno; use `stream_turn()` para transportes personalizados com streaming.
 
+Ative o tracing com `CREWAI_TRACING_ENABLED=true`; streaming e `verbose=False` não o desativam. Após o encerramento normal de uma sessão TUI rastreada, o terminal imprime `View traces:` com o link de visualização concedido pelo AMP para aquela execução, quando disponível. Sair durante um turno ativo descarta os traces pendentes da sessão e não imprime um link.
+
 Reutilize a mesma instância de Agent em uma conversa. Para configuração avançada de persistência, `agent.as_flow()` expõe sua sessão conversacional de Flow. O histórico fica em memória por padrão; a recuperação entre processos requer persistência de Flow configurada explicitamente. Use instâncias separadas de Agent para conversas independentes. Um `session_id` identifica ou restaura uma sessão de Flow; ele não fornece isolamento concorrente de várias sessões em um Agent.
 
 Agents comuns usam `conversational=False` por padrão. Chamadas diretas a `kickoff()` e `kickoff_async()` continuam sendo execuções independentes mesmo com a conversa ativada; use `handle_turn()` para manter o histórico da sessão. A execução existente de Crew/Task mantém seu comportamento atual.
