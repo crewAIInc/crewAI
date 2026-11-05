@@ -6,7 +6,7 @@ import click
 from crewai_core.telemetry import Telemetry
 import tomli
 
-from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.constants import ENV_VARS, MODELS, PROVIDER_EXTRAS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.provider import (
     get_provider_data,
@@ -210,6 +210,7 @@ def create_crew(
 ) -> None:
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
+    extras: list[str] = []
     if is_dmn_mode_enabled():
         skip_provider = True
     if not skip_provider:
@@ -243,6 +244,9 @@ def create_crew(
             click.secho(
                 "No provider selected. Please try again or press 'q' to exit.", fg="red"
             )
+
+        if selected_provider in PROVIDER_EXTRAS:
+            extras.append(PROVIDER_EXTRAS[selected_provider])
 
         if MODELS.get(selected_provider):
             while True:
@@ -311,7 +315,7 @@ def create_crew(
     for file_name in root_template_files:
         src_file = templates_dir / file_name
         dst_file = folder_path / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
+        copy_template(src_file, dst_file, name, class_name, folder_name, extras)
 
     src_folder = folder_path / "src" / folder_name if not parent_folder else folder_path
 

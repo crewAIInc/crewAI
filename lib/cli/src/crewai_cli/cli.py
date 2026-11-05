@@ -167,7 +167,7 @@ def uv(uv_args: tuple[str, ...]) -> None:
     type=click.Choice(["crew", "flow", "tool", "skill", "template"]),
 )
 @click.argument("name", required=False, default=None)
-@click.option("--provider", type=str, help="The provider to use for the crew")
+@click.option("--provider", type=str, help="The provider to use for the crew or flow")
 @click.option(
     "--skip-provider",
     "skip_provider",
@@ -296,7 +296,12 @@ def create(
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
-        create_flow(name, declarative=declarative)
+        create_flow(
+            name,
+            declarative=declarative,
+            provider=provider,
+            skip_provider=skip_provider,
+        )
     else:
         click.secho(
             "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",

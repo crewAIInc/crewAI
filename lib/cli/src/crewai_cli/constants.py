@@ -142,6 +142,115 @@ PROVIDERS: list[str] = [
     "sambanova",
 ]
 
+# The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
+# project's crewai dependency; a provider not listed here (openai, ollama,
+# cerebras) runs on what `crewai[tools]` installs.
+PROVIDER_EXTRAS: dict[str, str] = {
+    "anthropic": "anthropic",
+    "gemini": "google-genai",
+    "bedrock": "bedrock",
+    "azure": "azure-ai-inference",
+    # crewAI has no native provider for these and falls back to LiteLLM.
+    "groq": "litellm",
+    "huggingface": "litellm",
+    "nvidia_nim": "litellm",
+    "sambanova": "litellm",
+    "watson": "litellm",
+}
+
+# The other prefixes crewAI routes to a native provider (PROVIDER_ALIASES in
+# crewai/llm.py). The CLI does not depend on crewai, so it keeps this copy.
+_PROVIDER_ALIASES: dict[str, str] = {
+    "claude": "anthropic",
+    "google": "gemini",
+    "aws": "bedrock",
+    "azure_openai": "azure",
+    # Not a crewAI alias: models run as `watsonx/...`, and the CLI keys the
+    # provider `watson`.
+    "watsonx": "watson",
+}
+
+
+def provider_for_model(model: str) -> str | None:
+    """Return the provider crewAI runs ``model`` on, or ``None`` if it is unknown.
+
+    A ``provider/model`` string names its provider by prefix, with crewAI's
+    aliases applied (``claude/`` is Anthropic). A bare name is recognized, in
+    crewAI's order (``LLM._infer_provider_from_model``), by Bedrock's
+    ``anthropic.`` namespace or an OpenAI, Anthropic or Gemini model prefix.
+    """
+    prefix, separator, _ = model.strip().lower().partition("/")
+    if separator:
+        return _PROVIDER_ALIASES.get(prefix, prefix) or None
+    if "anthropic." in prefix:
+        return "bedrock"
+    if prefix.startswith(("gpt-", "o1", "o3", "o4", "chatgpt-")):
+        return "openai"
+    if prefix.startswith("claude-"):
+        return "anthropic"
+    if prefix.startswith(_NATIVE_MODEL_PREFIXES["gemini"]):
+        return "gemini"
+    return None
+
+
+# The model names each native provider takes after its prefix, copied from
+# LLM._matches_provider_pattern in crewai/llm.py. crewAI sends any other name
+# under that prefix to LiteLLM. Bedrock takes any name with a ".".
+_NATIVE_MODEL_PREFIXES: dict[str, tuple[str, ...]] = {
+    "openai": ("gpt-", "o1", "o3", "o4", "whisper-"),
+    "anthropic": ("claude-", "anthropic."),
+    "gemini": ("gemini-", "gemma-", "learnlm-"),
+    "deepseek": ("deepseek",),
+}
+
+# The other native providers in crewAI's PROVIDER_ALIASES, which take every
+# name (DeepInfra raises on one that is not org/model, so no extra helps there).
+# crewAI sends a prefix it has no native provider for, such as `mistral/`, to
+# LiteLLM.
+_NATIVE_ANY_MODEL_PROVIDERS = frozenset(
+    {
+        "azure",
+        "cerebras",
+        "dashscope",
+        "deepinfra",
+        "hosted_vllm",
+        "ollama",
+        "ollama_chat",
+        "openrouter",
+        "snowflake",
+    }
+)
+
+
+def crewai_extras_for_model(model: str) -> set[str]:
+    """Return the crewai extras, besides ``tools``, a project needs to run ``model``.
+
+    That is the provider's extra from ``PROVIDER_EXTRAS``, plus ``litellm`` when
+    crewAI sends a ``provider/model`` string to LiteLLM: because the native
+    provider does not take that name, as with
+    ``bedrock/claude-sonnet-4-5-20250929-v1:0`` or ``anthropic/my-finetune``, or
+    because crewAI has no native provider for the prefix, as with
+    ``mistral/mistral-large``.
+    """
+    provider = provider_for_model(model)
+    extras: set[str] = set()
+    if provider in PROVIDER_EXTRAS:
+        extras.add(PROVIDER_EXTRAS[provider])
+    _, separator, name = model.strip().lower().partition("/")
+    if not separator:
+        # crewAI runs a bare model name on the provider it infers.
+        return extras
+    if provider == "bedrock":
+        native = "." in name
+    elif provider in _NATIVE_MODEL_PREFIXES:
+        native = name.startswith(_NATIVE_MODEL_PREFIXES[provider])
+    else:
+        native = provider in _NATIVE_ANY_MODEL_PROVIDERS
+    if not native:
+        extras.add("litellm")
+    return extras
+
+
 MODELS: dict[str, list[str]] = {
     "openai": [
         "gpt-6-luna",
