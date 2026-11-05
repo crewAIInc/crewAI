@@ -10,6 +10,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+from threading import Lock
 import time
 from typing import (
     TYPE_CHECKING,
@@ -153,6 +154,7 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "AgentExecutor": AgentExecutor,
 }
+_conversation_flow_lock = Lock()
 
 
 def _is_resuming_agent_executor(
@@ -1832,17 +1834,19 @@ class Agent(BaseAgent):
         """
         if not self.conversational:
             raise ValueError("Agent conversations require conversational=True")
-        if self._conversation_flow is None:
-            from crewai.agent.conversation import agent_flow
+        with _conversation_flow_lock:
+            if self._conversation_flow is None:
+                from crewai.agent.conversation import agent_flow
 
-            self._conversation_flow = agent_flow(lambda: self, name=self.role)()
+                self._conversation_flow = agent_flow(lambda: self, name=self.role)()
         return cast("Flow[Any]", self._conversation_flow)
 
     def handle_turn(self, message: str, **kwargs: Any) -> Any:
         """Run a turn with the history of this experimental Agent conversation.
 
         ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
-        persistence restore options. Separate Agent instances own separate sessions.
+        persistence restore options. One Agent owns one session; use a new Agent
+        for another session. Overlapping turns on one Agent are rejected.
         """
         flow = self.as_flow()
         Telemetry().feature_usage_span("standalone_agent:handle_turn")

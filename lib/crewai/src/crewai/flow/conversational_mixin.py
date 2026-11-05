@@ -432,6 +432,10 @@ class _ConversationalMixin:
         self.append_assistant_message(content)
         return content
 
+    @contextmanager
+    def _conversation_turn_scope(self, session_id: str) -> Iterator[None]:
+        yield
+
     def handle_turn(
         self,
         message: str,
@@ -468,57 +472,58 @@ class _ConversationalMixin:
 
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
-        crewai_event_bus.emit(
-            self,
-            ConversationTurnStartedEvent(
-                type="conversation_turn_started",
-                flow_name=self.name or self.__class__.__name__,
-                session_id=sid,
-            ),
-        )
-
-        # Stash the pending turn so the kickoff extension hook picks it up
-        # after persist restore.
-        self._pending_user_message = message
-        self._pending_intents = list(intents) if intents else None
-        self._pending_intent_llm = intent_llm
-
-        failed_event: ConversationTurnFailedEvent | None = None
-        try:
-            # Each turn is a fresh execution; clear graph tracking so the second
-            # turn re-runs instead of being treated as a checkpoint restore.
-            if "from_checkpoint" not in kickoff_kwargs:
-                self._reset_turn_execution_state()
-
-            object.__setattr__(self, "_assistant_reply_appended", False)
-            object.__setattr__(self, "_turn_recorded_results", [])
-            result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
-            if isinstance(result, HumanFeedbackPending):
-                return result
-            self._append_public_turn_result_and_persist(result)
-        except Exception as exc:
-            failed_event = ConversationTurnFailedEvent(
-                type="conversation_turn_failed",
-                flow_name=self.name or self.__class__.__name__,
-                session_id=sid,
-                error=exc,
+        with self._conversation_turn_scope(sid):
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnStartedEvent(
+                    type="conversation_turn_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
             )
-            raise
-        finally:
-            self._pending_user_message = None
-            self._pending_intents = None
-            self._pending_intent_llm = None
-            if failed_event is not None:
-                self._emit_terminal_conversation_turn_event(failed_event)
 
-        self._emit_terminal_conversation_turn_event(
-            ConversationTurnCompletedEvent(
-                type="conversation_turn_completed",
-                flow_name=self.name or self.__class__.__name__,
-                session_id=sid,
-            ),
-        )
-        return result
+            # Stash the pending turn so the kickoff extension hook picks it up
+            # after persist restore.
+            self._pending_user_message = message
+            self._pending_intents = list(intents) if intents else None
+            self._pending_intent_llm = intent_llm
+
+            failed_event: ConversationTurnFailedEvent | None = None
+            try:
+                # Each turn is a fresh execution; clear graph tracking so the second
+                # turn re-runs instead of being treated as a checkpoint restore.
+                if "from_checkpoint" not in kickoff_kwargs:
+                    self._reset_turn_execution_state()
+
+                object.__setattr__(self, "_assistant_reply_appended", False)
+                object.__setattr__(self, "_turn_recorded_results", [])
+                result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                if isinstance(result, HumanFeedbackPending):
+                    return result
+                self._append_public_turn_result_and_persist(result)
+            except Exception as exc:
+                failed_event = ConversationTurnFailedEvent(
+                    type="conversation_turn_failed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                    error=exc,
+                )
+                raise
+            finally:
+                self._pending_user_message = None
+                self._pending_intents = None
+                self._pending_intent_llm = None
+                if failed_event is not None:
+                    self._emit_terminal_conversation_turn_event(failed_event)
+
+            self._emit_terminal_conversation_turn_event(
+                ConversationTurnCompletedEvent(
+                    type="conversation_turn_completed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+            return result
 
     def stream_turn(
         self,
@@ -553,70 +558,75 @@ class _ConversationalMixin:
         output_holder: list[StreamSession[Any]] = []
 
         def run_turn() -> Any:
-            crewai_event_bus.emit(
-                self,
-                ConversationTurnStartedEvent(
-                    type="conversation_turn_started",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                ),
-            )
-
-            self._pending_user_message = message
-            self._pending_intents = list(intents) if intents else None
-            self._pending_intent_llm = intent_llm
-
-            try:
-                if "from_checkpoint" not in kickoff_kwargs:
-                    self._reset_turn_execution_state()
-
-                object.__setattr__(self, "_assistant_reply_appended", False)
-                object.__setattr__(self, "_turn_recorded_results", [])
-                original_stream = bool(getattr(self, "stream", False))
-                original_streaming_turn = getattr(
-                    self, "_streaming_conversation_turn", False
+            with self._conversation_turn_scope(sid):
+                crewai_event_bus.emit(
+                    self,
+                    ConversationTurnStartedEvent(
+                        type="conversation_turn_started",
+                        flow_name=self.name or self.__class__.__name__,
+                        session_id=sid,
+                    ),
                 )
-                original_stream_mode = getattr(self, "_conversation_stream_mode", True)
+
+                self._pending_user_message = message
+                self._pending_intents = list(intents) if intents else None
+                self._pending_intent_llm = intent_llm
+
                 try:
-                    object.__setattr__(self, "stream", False)
-                    object.__setattr__(self, "_streaming_conversation_turn", True)
-                    object.__setattr__(self, "_conversation_stream_mode", stream)
-                    result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
-                finally:
-                    object.__setattr__(self, "stream", original_stream)
-                    object.__setattr__(
-                        self, "_streaming_conversation_turn", original_streaming_turn
-                    )
-                    object.__setattr__(
-                        self, "_conversation_stream_mode", original_stream_mode
-                    )
-                if isinstance(result, HumanFeedbackPending):
-                    return result
-                self._append_public_turn_result_and_persist(result)
-            except HumanFeedbackPending as exc:
-                return exc
-            except Exception as exc:
-                failed_event = ConversationTurnFailedEvent(
-                    type="conversation_turn_failed",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                    error=exc,
-                )
-                self._emit_terminal_conversation_turn_event(failed_event)
-                raise
-            finally:
-                self._pending_user_message = None
-                self._pending_intents = None
-                self._pending_intent_llm = None
+                    if "from_checkpoint" not in kickoff_kwargs:
+                        self._reset_turn_execution_state()
 
-            self._emit_terminal_conversation_turn_event(
-                ConversationTurnCompletedEvent(
-                    type="conversation_turn_completed",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                ),
-            )
-            return result
+                    object.__setattr__(self, "_assistant_reply_appended", False)
+                    object.__setattr__(self, "_turn_recorded_results", [])
+                    original_stream = bool(getattr(self, "stream", False))
+                    original_streaming_turn = getattr(
+                        self, "_streaming_conversation_turn", False
+                    )
+                    original_stream_mode = getattr(
+                        self, "_conversation_stream_mode", True
+                    )
+                    try:
+                        object.__setattr__(self, "stream", False)
+                        object.__setattr__(self, "_streaming_conversation_turn", True)
+                        object.__setattr__(self, "_conversation_stream_mode", stream)
+                        result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                    finally:
+                        object.__setattr__(self, "stream", original_stream)
+                        object.__setattr__(
+                            self,
+                            "_streaming_conversation_turn",
+                            original_streaming_turn,
+                        )
+                        object.__setattr__(
+                            self, "_conversation_stream_mode", original_stream_mode
+                        )
+                    if isinstance(result, HumanFeedbackPending):
+                        return result
+                    self._append_public_turn_result_and_persist(result)
+                except HumanFeedbackPending as exc:
+                    return exc
+                except Exception as exc:
+                    failed_event = ConversationTurnFailedEvent(
+                        type="conversation_turn_failed",
+                        flow_name=self.name or self.__class__.__name__,
+                        session_id=sid,
+                        error=exc,
+                    )
+                    self._emit_terminal_conversation_turn_event(failed_event)
+                    raise
+                finally:
+                    self._pending_user_message = None
+                    self._pending_intents = None
+                    self._pending_intent_llm = None
+
+                self._emit_terminal_conversation_turn_event(
+                    ConversationTurnCompletedEvent(
+                        type="conversation_turn_completed",
+                        flow_name=self.name or self.__class__.__name__,
+                        session_id=sid,
+                    ),
+                )
+                return result
 
         stream_session: StreamSession[Any] = StreamSession(
             sync_iterator=create_frame_generator(frame_state, run_turn, output_holder)

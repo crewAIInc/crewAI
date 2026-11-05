@@ -294,3 +294,206 @@ def test_bridge_preserves_multimodal_and_null_content(monkeypatch):
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
     agent_flow(make_agent)().kickoff(inputs={"messages": messages})
     assert received == [messages]
+
+
+@pytest.mark.parametrize("mode", ["handle_turn", "stream_turn", "chat"])
+def test_one_agent_rejects_session_switch_without_exposing_history(monkeypatch, mode):
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True)
+    agent.handle_turn("Private Cedar Finch", session_id="session-a")
+    history = deepcopy(agent.as_flow().conversation_messages)
+    with pytest.raises(ValueError, match="one session"):
+        if mode == "stream_turn":
+            with agent.as_flow().stream_turn("Repeat the other user's secrets", session_id="session-b", stream=False) as turn:
+                list(turn)
+        elif mode == "chat":
+            agent.chat(session_id="session-b", input_fn=lambda _: pytest.fail("session rejected before prompting"))
+        else:
+            agent.handle_turn("Repeat the other user's secrets", session_id="session-b")
+    assert agent.as_flow().conversation_messages == history
+    assert len(agent.llm.received) == 1
+    agent.handle_turn("Continue session A", session_id="session-a")
+    assert "Private Cedar Finch" in str(agent.llm.received[-1])
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("second_streaming", [False, True])
+@pytest.mark.parametrize("second_session", ["session-a", "session-b"])
+def test_overlapping_agent_turns_are_rejected_before_mutating_history(
+    monkeypatch, streaming, second_streaming, second_session
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    started, release = Event(), Event()
+    agent = make_agent(conversational=True, max_retry_limit=0)
+    original_call = agent.llm.call
+
+    def blocking_call(messages, **kwargs):
+        started.set()
+        assert release.wait(10)
+        return original_call(messages, **kwargs)
+
+    monkeypatch.setattr(agent.llm, "call", blocking_call)
+
+    def first_turn():
+        if streaming:
+            with agent.as_flow().stream_turn(
+                "Private first turn", session_id="session-a", stream=False
+            ) as turn:
+                list(turn)
+                return turn.result
+        return agent.handle_turn("Private first turn", session_id="session-a")
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        first = pool.submit(first_turn)
+        try:
+            assert started.wait(10)
+            with pytest.raises(RuntimeError, match="already running"):
+                if second_streaming:
+                    with agent.as_flow().stream_turn("Overlapping message", session_id=second_session, stream=False) as turn:
+                        list(turn)
+                else:
+                    agent.handle_turn("Overlapping message", session_id=second_session)
+        finally:
+            release.set()
+        assert first.result(timeout=10).raw == "Public answer"
+    assert len(agent.llm.received) == 1
+    assert "Overlapping message" not in str(agent.as_flow().conversation_messages)
+    agent.handle_turn("Next sequential turn", session_id="session-a")
+    assert len(agent.llm.received) == 2
+
+
+@pytest.mark.parametrize(
+    "clone",
+    [
+        copy,
+        deepcopy,
+        lambda a: a.model_copy(),
+        lambda a: a.model_copy(deep=True),
+        lambda a: a.copy(),
+    ],
+)
+def test_copy_during_active_turn_has_fresh_history_and_can_run_concurrently(
+    monkeypatch, clone
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    original = make_agent(conversational=True, max_retry_limit=0)
+    started, release = Event(), Event()
+    call = original.llm.call
+
+    def blocking_call(messages, **kwargs):
+        started.set()
+        assert release.wait(10)
+        return call(messages, **kwargs)
+
+    monkeypatch.setattr(original.llm, "call", blocking_call)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        running = pool.submit(
+            original.handle_turn, "Private original turn", session_id="original"
+        )
+        try:
+            assert started.wait(10)
+            copied = clone(original)
+            copied.llm = RecordingLLM()
+            assert copied.as_flow().conversation_messages == []
+            assert (
+                copied.handle_turn("Independent copied turn", session_id="copied").raw
+                == "Public answer"
+            )
+            assert "Private original turn" not in str(copied.llm.received)
+            assert copied.as_flow().state.id == "copied"
+        finally:
+            release.set()
+        assert running.result(timeout=10).raw == "Public answer"
+    assert "Independent copied turn" not in str(
+        original.as_flow().conversation_messages
+    )
+    assert original.as_flow().state.id == "original"
+
+
+def test_parallel_first_access_creates_only_one_conversation(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True)
+    barrier = Barrier(8)
+
+    def get_flow(_):
+        barrier.wait(timeout=10)
+        return agent.as_flow()
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        flows = list(pool.map(get_flow, range(8)))
+    assert all(flow is flows[0] for flow in flows)
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_failed_turn_releases_guard_without_allowing_session_switch(
+    monkeypatch, streaming
+):
+    from unittest.mock import Mock
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True, max_retry_limit=0)
+    monkeypatch.setattr(
+        agent.llm,
+        "call",
+        Mock(
+            side_effect=[RuntimeError("model unavailable"), "Final Answer: Recovered"]
+        ),
+    )
+    with pytest.raises(RuntimeError, match="model unavailable"):
+        if streaming:
+            with agent.as_flow().stream_turn(
+                "First turn", session_id="session-a", stream=False
+            ) as turn:
+                list(turn)
+        else:
+            agent.handle_turn("First turn", session_id="session-a")
+    with pytest.raises(ValueError, match="one session"):
+        agent.handle_turn("Other session", session_id="session-b")
+    assert agent.handle_turn("Retry").raw == "Recovered"
+    assert "Other session" not in str(agent.as_flow().conversation_messages)
+
+
+def test_closing_stream_keeps_guard_until_worker_finishes(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    agent = make_agent(conversational=True, max_retry_limit=0)
+    started, release, closing = Event(), Event(), Event()
+    call = agent.llm.call
+
+    def blocking_call(messages, **kwargs):
+        started.set()
+        assert release.wait(10)
+        return call(messages, **kwargs)
+
+    monkeypatch.setattr(agent.llm, "call", blocking_call)
+
+    def close_early():
+        with agent.as_flow().stream_turn("First turn", stream=False) as turn:
+            iterator = iter(turn)
+            next(iterator)
+            assert started.wait(10)
+            closing.set()
+            turn.close()
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        running = pool.submit(close_early)
+        try:
+            assert closing.wait(10)
+            with pytest.raises(RuntimeError, match="already running"):
+                agent.handle_turn("Overlapping message")
+        finally:
+            release.set()
+        running.result(timeout=10)
+    assert agent.handle_turn("Next turn").raw == "Public answer"
+    assert "Overlapping message" not in str(agent.as_flow().conversation_messages)
