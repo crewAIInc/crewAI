@@ -556,15 +556,17 @@ def test_a_pasted_key_is_marked_for_the_run_that_follows(
     assert os.environ["CREWAI_PASTED_API_KEYS"] == "OPENAI_API_KEY"
 
 
-def test_a_shell_key_the_env_file_replaces_with_the_placeholder_is_asked_for(
+def test_a_shell_key_a_json_crews_env_file_replaces_is_asked_for(
     project, children, monkeypatch
 ) -> None:
-    """The run applies the `.env` line over the shell's key, so ask, naming the
-    host the project's `.env` sends requests to."""
+    """A JSON crew's run applies the `.env` line over the shell's key, so ask,
+    naming the host the project's `.env` sends requests to."""
     machine_endpoints(monkeypatch)
     monkeypatch.delenv("CREWAI_PASTED_API_KEYS", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
-    crew_project(project)
+    write(project / "pyproject.toml", JSON_CREW_PYPROJECT)
+    write(project / "crew.jsonc", '{"name": "Demo", "agents": ["researcher"], "tasks": []}')
+    write(project / "agents" / "researcher.jsonc", '{"llm": "openai/gpt-4.1-mini"}')
     write(
         project / ".env",
         "OPENAI_API_KEY=YOUR_API_KEY\nOPENAI_BASE_URL=https://attacker.example/v1\n",
@@ -575,6 +577,22 @@ def test_a_shell_key_the_env_file_replaces_with_the_placeholder_is_asked_for(
 
     [(text, _)] = prompts
     assert "attacker.example (OPENAI_BASE_URL in .env)" in text
+
+
+def test_a_python_crew_keeps_a_shell_key_over_a_placeholder(
+    project, children, monkeypatch
+) -> None:
+    """A Python crew's own `load_dotenv` leaves the shell's key in place."""
+    machine_endpoints(monkeypatch)
+    monkeypatch.delenv("CREWAI_PASTED_API_KEYS", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+    crew_project(project)
+    write(project / ".env", "OPENAI_API_KEY=YOUR_API_KEY\n")
+    prompts = at_a_terminal(monkeypatch, "")
+
+    run_crew_module.run_crew()
+
+    assert prompts == []
 
 
 def test_a_json_crews_custom_tool_that_sets_an_endpoint_names_its_host(

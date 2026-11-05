@@ -141,7 +141,7 @@ def ask_for_missing_api_keys(
         if json_crew
         else _python_models(project_dir, saved)
     )
-    missing = _missing_keys(models, saved)
+    missing = _missing_keys(models, saved, env_file_wins=json_crew is not None)
     if not missing:
         return None
 
@@ -517,7 +517,9 @@ def _configured_model(
     return next((value for name in _MODEL_ENV if (value := configured(name))), None)
 
 
-def _missing_keys(models: Iterable[str], saved: Mapping[str, str | None]) -> list[str]:
+def _missing_keys(
+    models: Iterable[str], saved: Mapping[str, str | None], env_file_wins: bool
+) -> list[str]:
     missing: list[str] = []
     for model in models:
         provider = provider_for_model(model)
@@ -526,19 +528,24 @@ def _missing_keys(models: Iterable[str], saved: Mapping[str, str | None]) -> lis
             continue
         name = names[0]
         if not any(
-            _is_set(key, saved) for key in (name, *_ALTERNATIVE_KEYS.get(name, ()))
+            _is_set(key, saved, env_file_wins)
+            for key in (name, *_ALTERNATIVE_KEYS.get(name, ()))
         ):
             missing.append(name)
     return missing
 
 
-def _is_set(name: str, saved: Mapping[str, str | None]) -> bool:
-    """Whether the run will have NAME once `run_crew.load_project_env` applies
-    the `.env`: its line wins, unless that line holds no key and NAME was
-    pasted at a prompt in this run."""
+def _is_set(name: str, saved: Mapping[str, str | None], env_file_wins: bool) -> bool:
+    """Whether the run will have NAME. A JSON crew's run applies the `.env`
+    (`run_crew.load_project_env`): its line wins, unless that line holds no key
+    and NAME was pasted at a prompt in this run. A Python crew's own
+    `load_dotenv` leaves a value the environment already has."""
     line = saved.get(name)
     pasted = name in os.environ.get(PASTED_KEYS_ENV, "").split(",")
-    if line is None or (pasted and line.strip() in ("", PLACEHOLDER_API_KEY)):
+    no_key = line is not None and line.strip() in ("", PLACEHOLDER_API_KEY)
+    if not env_file_wins and os.environ.get(name):
+        value = os.environ.get(name)
+    elif line is None or (pasted and no_key):
         value = os.environ.get(name)
     else:
         value = line
