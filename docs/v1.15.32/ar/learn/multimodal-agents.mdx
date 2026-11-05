@@ -1,0 +1,141 @@
+---
+title: استخدام الوكلاء متعددي الوسائط
+description: تعلم كيفية تفعيل واستخدام القدرات متعددة الوسائط في وكلائك لمعالجة الصور والمحتوى غير النصي ضمن إطار عمل CrewAI.
+icon: video
+mode: "wide"
+---
+
+## استخدام الوكلاء متعددي الوسائط
+
+يدعم CrewAI الوكلاء متعددي الوسائط القادرين على معالجة المحتوى النصي وغير النصي مثل الصور. سيوضح لك هذا الدليل كيفية تفعيل واستخدام القدرات متعددة الوسائط في وكلائك.
+
+### تفعيل القدرات متعددة الوسائط
+
+لإنشاء وكيل متعدد الوسائط، ما عليك سوى تعيين معامل `multimodal` إلى `True` عند تهيئة وكيلك:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Image Analyst",
+    goal="Analyze and extract insights from images",
+    backstory="An expert in visual content interpretation with years of experience in image analysis",
+    multimodal=True  # This enables multimodal capabilities
+)
+```
+
+عند تعيين `multimodal=True`، يتم إعداد الوكيل تلقائياً بالأدوات اللازمة للتعامل مع المحتوى غير النصي، بما في ذلك `AddImageTool`.
+
+### العمل مع الصور
+
+يأتي الوكيل متعدد الوسائط مُعداً مسبقاً بأداة `AddImageTool`، التي تتيح له معالجة الصور. لا تحتاج إلى إضافة هذه الأداة يدوياً — فهي مضمنة تلقائياً عند تفعيل القدرات متعددة الوسائط.
+
+إليك مثالاً كاملاً يوضح كيفية استخدام وكيل متعدد الوسائط لتحليل صورة:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create a multimodal agent
+image_analyst = Agent(
+    role="Product Analyst",
+    goal="Analyze product images and provide detailed descriptions",
+    backstory="Expert in visual product analysis with deep knowledge of design and features",
+    multimodal=True
+)
+
+# Create a task for image analysis
+task = Task(
+    description="Analyze the product image at https://example.com/product.jpg and provide a detailed description",
+    expected_output="A detailed description of the product image",
+    agent=image_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[image_analyst],
+    tasks=[task]
+)
+
+result = crew.kickoff()
+```
+
+### الاستخدام المتقدم مع السياق
+
+يمكنك تقديم سياق إضافي أو أسئلة محددة حول الصورة عند إنشاء مهام للوكلاء متعددي الوسائط. يمكن أن يتضمن وصف المهمة جوانب محددة تريد أن يركز عليها الوكيل:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create a multimodal agent for detailed analysis
+expert_analyst = Agent(
+    role="Visual Quality Inspector",
+    goal="Perform detailed quality analysis of product images",
+    backstory="Senior quality control expert with expertise in visual inspection",
+    multimodal=True  # AddImageTool is automatically included
+)
+
+# Create a task with specific analysis requirements
+inspection_task = Task(
+    description="""
+    Analyze the product image at https://example.com/product.jpg with focus on:
+    1. Quality of materials
+    2. Manufacturing defects
+    3. Compliance with standards
+    Provide a detailed report highlighting any issues found.
+    """,
+    expected_output="A detailed report highlighting any issues found",
+    agent=expert_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[expert_analyst],
+    tasks=[inspection_task]
+)
+
+result = crew.kickoff()
+```
+
+### تفاصيل الأداة
+
+عند العمل مع الوكلاء متعددي الوسائط، يتم إعداد `AddImageTool` تلقائياً بالمخطط التالي:
+
+```python
+class AddImageToolSchema:
+    image_url: str  # Required: The URL or path of the image to process
+    action: Optional[str] = None  # Optional: Additional context or specific questions about the image
+```
+
+سيتعامل الوكيل متعدد الوسائط تلقائياً مع معالجة الصور من خلال أدواته المدمجة، مما يتيح له:
+- الوصول إلى الصور عبر عناوين URL أو مسارات الملفات المحلية
+- معالجة محتوى الصورة مع سياق اختياري أو أسئلة محددة
+- تقديم تحليلات ورؤى بناءً على المعلومات البصرية ومتطلبات المهمة
+
+### أفضل الممارسات
+
+عند العمل مع الوكلاء متعددي الوسائط، ضع هذه الممارسات في الاعتبار:
+
+1. **الوصول إلى الصور**
+   - تأكد من أن صورك قابلة للوصول عبر عناوين URL التي يمكن للوكيل الوصول إليها
+   - للصور المحلية، فكر في استضافتها مؤقتاً أو استخدام مسارات ملفات مطلقة
+   - تحقق من أن عناوين URL للصور صالحة وقابلة للوصول قبل تشغيل المهام
+
+2. **وصف المهمة**
+   - كن محدداً حول الجوانب التي تريد من الوكيل تحليلها في الصورة
+   - قم بتضمين أسئلة أو متطلبات واضحة في وصف المهمة
+   - فكر في استخدام معامل `action` الاختياري للتحليل المركز
+
+3. **إدارة الموارد**
+   - قد تتطلب معالجة الصور موارد حسابية أكثر من المهام النصية فقط
+   - قد تتطلب بعض نماذج اللغة ترميز base64 لبيانات الصورة
+   - فكر في المعالجة الدفعية لصور متعددة لتحسين الأداء
+
+4. **إعداد البيئة**
+   - تحقق من أن بيئتك تحتوي على الاعتماديات اللازمة لمعالجة الصور
+   - تأكد من أن نموذج اللغة الخاص بك يدعم القدرات متعددة الوسائط
+   - اختبر بصور صغيرة أولاً للتحقق من إعدادك
+
+5. **معالجة الأخطاء**
+   - نفّذ معالجة أخطاء مناسبة لحالات فشل تحميل الصور
+   - ضع استراتيجيات احتياطية لحالات فشل معالجة الصور
+   - راقب وسجل عمليات معالجة الصور لأغراض التصحيح

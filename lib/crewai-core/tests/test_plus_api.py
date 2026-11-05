@@ -30,3 +30,47 @@ def test_get_integration_token_rejects_missing_or_invalid_api_key(
 
     with pytest.raises(RuntimeError, match="did not return an integration token"):
         api.get_integration_token()
+
+
+def test_list_skills_without_arguments_sends_no_params(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Projects scaffolded before `crewai skill search` call list_skills() bare.
+    api = PlusAPI("login-token", organization_id="organization-id")
+    make_request = MagicMock()
+    monkeypatch.setattr(api, "_make_request", make_request)
+
+    api.list_skills()
+
+    make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/skills", params=None
+    )
+
+
+def test_list_skills_sends_search_and_page(monkeypatch: pytest.MonkeyPatch) -> None:
+    api = PlusAPI("login-token", organization_id="organization-id")
+    make_request = MagicMock()
+    monkeypatch.setattr(api, "_make_request", make_request)
+
+    api.list_skills(search="triage", page=2)
+
+    make_request.assert_called_once_with(
+        "GET",
+        "/crewai_plus/api/v1/skills",
+        params={"search": "triage", "page": "2"},
+    )
+
+
+@pytest.mark.parametrize("search", [None, ""])
+def test_list_skills_omits_an_empty_search_and_the_first_page(
+    monkeypatch: pytest.MonkeyPatch, search: str | None
+) -> None:
+    api = PlusAPI("login-token", organization_id="organization-id")
+    make_request = MagicMock()
+    monkeypatch.setattr(api, "_make_request", make_request)
+
+    api.list_skills(org="acme", search=search, page=1)
+
+    make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/skills", params={"org": "acme"}
+    )

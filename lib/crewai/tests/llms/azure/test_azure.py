@@ -6,7 +6,8 @@ from urllib.parse import urlparse
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llms.base_llm import MissingAPIKeyError
+from crewai.llms.context_window import AZURE_CONTEXT_WINDOWS, CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -371,7 +372,9 @@ def test_azure_raises_error_when_api_key_missing_without_azure_identity():
             llm = AzureCompletion(
                 model="gpt-4", endpoint="https://test.openai.azure.com"
             )
-            with pytest.raises(ValueError, match="Azure API key is required"):
+            with pytest.raises(
+                MissingAPIKeyError, match="AZURE_API_KEY is required for model 'gpt-4'"
+            ):
                 llm._get_sync_client()
 
 
@@ -553,6 +556,9 @@ def test_azure_supports_stop_words():
     """
     llm = LLM(model="azure/gpt-4")
     assert llm.supports_stop_words() == True
+    # Azure names GPT-3.5 "gpt-35"; it must not match the GPT-5+ check.
+    llm = LLM(model="azure/gpt-35-turbo")
+    assert llm.supports_stop_words() == True
 
 
 def test_azure_gpt5_models_do_not_support_stop_words():
@@ -575,6 +581,10 @@ def test_azure_gpt5_models_do_not_support_stop_words():
         # GPT-5.2 series
         "azure/gpt-5.2",
         "azure/gpt-5.2-chat",
+        "azure/gpt-5.4-nano",
+        # Newer major versions
+        "azure/gpt-6",
+        "azure/gpt-6-luna",
     ]
 
     for model_name in gpt5_models:
@@ -658,7 +668,7 @@ def test_azure_context_window_size():
     ("model", "context_window"),
     [
         ("azure/gpt-6-astra", 922_000),
-        ("azure/gpt-chat-latest", 272_000),
+        ("azure/gpt-chat-latest", AZURE_CONTEXT_WINDOWS["azure/gpt-chat-latest"]),
         ("azure/gpt-oss-120b", 131_072),
         ("azure/codex-mini", 200_000),
         ("azure/computer-use-preview", 8192),

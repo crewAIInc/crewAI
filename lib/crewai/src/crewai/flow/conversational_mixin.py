@@ -144,6 +144,7 @@ def _config_from_definition(
     """
     return ConversationConfig(
         system_prompt=definition.system_prompt,
+        respect_context_window=definition.respect_context_window,
         llm=definition.llm,
         router=(
             _router_config_from_definition(definition.router, project_root)
@@ -384,7 +385,7 @@ class _ConversationalMixin:
 
         llm_instance = self._coerce_llm(llm)
         with self._conversation_streaming_enabled(llm_instance):
-            response = llm_instance.call(messages=messages)
+            response = self._call_conversation_llm(llm_instance, messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -422,7 +423,7 @@ class _ConversationalMixin:
             *self.build_agent_context("answer_from_history"),
         ]
         with self._conversation_streaming_enabled(llm_instance):
-            response = llm_instance.call(messages=messages)
+            response = self._call_conversation_llm(llm_instance, messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -1273,11 +1274,77 @@ class _ConversationalMixin:
         response_format: type[BaseModel],
     ) -> Any:
         try:
-            return llm.call(messages=messages, response_format=response_format)
+            return self._call_conversation_llm(
+                llm, messages=messages, response_format=response_format
+            )
         except TypeError as exc:
             if "response_format" not in str(exc):
                 raise
-            return llm.call(messages=messages, response_model=response_format)
+            return self._call_conversation_llm(
+                llm, messages=messages, response_model=response_format
+            )
+
+    def _call_conversation_llm(
+        self,
+        llm: Any,
+        *,
+        messages: list[LLMMessage],
+        **kwargs: Any,
+    ) -> Any:
+        """Compact request-local context and recover once from provider overflow.
+
+        The canonical transcript remains available for display and persistence.
+        Summary calls disable streaming so their internal output never becomes
+        part of the assistant's streamed reply. Call-only custom LLMs retain
+        their existing behavior.
+        """
+        from crewai_core.printer import Printer
+
+        from crewai.llms.base_llm import BaseLLM, call_stream_override
+        from crewai.utilities.agent_utils import (
+            _proactively_summarize_context,
+            _summarize_context_before_llm_call,
+            is_context_length_exceeded,
+        )
+
+        config = self._conversation_config
+        current_user_message = cast(ConversationState, self.state).current_user_message
+        compact = isinstance(llm, BaseLLM) and (
+            config is None or config.respect_context_window
+        )
+        if compact:
+            original_messages = list(messages)
+            with call_stream_override(llm, False):
+                _proactively_summarize_context(
+                    llm=llm,
+                    messages=messages,
+                    callbacks=[],
+                    printer=Printer(),
+                    tools=None,
+                    response_model=kwargs.get("response_format")
+                    or kwargs.get("response_model"),
+                    verbose=False,
+                    allow_single_user_compaction=True,
+                )
+            if messages != original_messages and current_user_message:
+                messages.append({"role": "user", "content": current_user_message})
+        try:
+            return llm.call(messages=messages, **kwargs)
+        except Exception as exc:
+            if not compact or not is_context_length_exceeded(exc):
+                raise
+            with call_stream_override(llm, False):
+                _summarize_context_before_llm_call(
+                    llm=llm,
+                    messages=messages,
+                    callbacks=[],
+                    printer=Printer(),
+                    verbose=False,
+                    allow_single_user_compaction=True,
+                )
+            if current_user_message:
+                messages.append({"role": "user", "content": current_user_message})
+            return llm.call(messages=messages, **kwargs)
 
     def _build_router_messages(
         self,
