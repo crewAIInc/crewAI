@@ -3490,3 +3490,95 @@ def test_legacy_experimental_discriminator_is_rejected() -> None:
 
     with pytest.raises(ValidationError):
         AgentExecutor.model_validate({"executor_type": "experimental"})
+
+
+class TestReplanKeepsStepNumbersUnique:
+    """A replan numbered from 1 must not collide with the preserved history."""
+
+    @staticmethod
+    def _replanned_executor() -> AgentExecutor:
+        from crewai.utilities.planning_types import PlanStep
+        from crewai.utilities.reasoning_handler import (
+            AgentReasoningOutput,
+            ReasoningPlan,
+        )
+
+        executor = _build_executor(agent=SimpleNamespace(verbose=False), task=None)
+        executor.state.todos = TodoList(
+            items=[
+                TodoItem(
+                    step_number=1,
+                    description="fetch data",
+                    status="completed",
+                    result="3 rows",
+                ),
+                TodoItem(
+                    step_number=2,
+                    description="parse data",
+                    status="failed",
+                    result="Error: bad csv",
+                ),
+                TodoItem(step_number=3, description="write report"),
+            ]
+        )
+        output = AgentReasoningOutput(
+            plan=ReasoningPlan(
+                plan="revised plan",
+                steps=[
+                    PlanStep(step_number=1, description="re-fetch data"),
+                    PlanStep(
+                        step_number=2,
+                        description="parse with fallback",
+                        depends_on=[1],
+                    ),
+                    PlanStep(
+                        step_number=3,
+                        description="write new report",
+                        depends_on=[2],
+                    ),
+                ],
+                ready=True,
+            )
+        )
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            reasoning.return_value.handle_agent_reasoning.return_value = output
+            executor._trigger_replan("step 2 failed")
+        return executor
+
+    def test_replanned_steps_get_their_own_step_numbers(self):
+        executor = self._replanned_executor()
+
+        numbers = [todo.step_number for todo in executor.state.todos.items]
+
+        assert len(numbers) == len(set(numbers))
+        assert [todo.description for todo in executor.state.todos.items] == [
+            "fetch data",
+            "parse data",
+            "re-fetch data",
+            "parse with fallback",
+            "write new report",
+        ]
+
+    def test_first_replanned_step_runs_alone_and_keeps_history_intact(self):
+        executor = self._replanned_executor()
+
+        route = AgentExecutor.get_ready_todos_method(executor)
+
+        todos = executor.state.todos
+        assert route == "single_todo_ready"
+        assert todos.current_todo is not None
+        assert todos.current_todo.description == "re-fetch data"
+        assert todos.items[0].status == "completed"
+        assert todos.items[0].result == "3 rows"
+
+    def test_finishing_a_replanned_step_unlocks_the_next_one(self):
+        executor = self._replanned_executor()
+        AgentExecutor.get_ready_todos_method(executor)
+        running = executor.state.todos.current_todo
+        assert running is not None
+
+        executor._mark_todo_completed(running.step_number, result="fresh rows")
+
+        ready = executor.state.todos.get_ready_todos()
+        assert [todo.description for todo in ready] == ["parse with fallback"]
+        assert executor.state.todos.items[0].result == "3 rows"

@@ -380,3 +380,124 @@ class TestTodoFromPlanStep:
         assert todo_list.items[0].tool_to_use == "tool1"
         assert todo_list.items[1].depends_on == [1]
         assert todo_list.items[2].depends_on == [1, 2]
+
+
+class TestReplacePendingTodos:
+    """Tests for TodoList.replace_pending_todos."""
+
+    @staticmethod
+    def _history() -> TodoList:
+        return TodoList(
+            items=[
+                TodoItem(
+                    step_number=1,
+                    description="old 1",
+                    status="completed",
+                    result="done",
+                ),
+                TodoItem(
+                    step_number=2,
+                    description="old 2",
+                    status="failed",
+                    result="Error: boom",
+                ),
+                TodoItem(step_number=3, description="old 3"),
+            ]
+        )
+
+    @staticmethod
+    def _restarted_plan() -> list[TodoItem]:
+        """A replan whose steps are numbered from 1, as the planner schema asks."""
+        return [
+            TodoItem(step_number=1, description="new 1"),
+            TodoItem(step_number=2, description="new 2", depends_on=[1]),
+            TodoItem(step_number=3, description="new 3", depends_on=[1, 2]),
+        ]
+
+    def test_keeps_non_pending_items_and_drops_old_pending(self):
+        todo_list = self._history()
+
+        todo_list.replace_pending_todos(self._restarted_plan())
+
+        descriptions = [item.description for item in todo_list.items]
+        assert descriptions == ["old 1", "old 2", "new 1", "new 2", "new 3"]
+
+    def test_restarted_numbering_does_not_collide_with_preserved_steps(self):
+        todo_list = self._history()
+
+        todo_list.replace_pending_todos(self._restarted_plan())
+
+        numbers = [item.step_number for item in todo_list.items]
+        assert len(numbers) == len(set(numbers))
+
+    def test_restarted_numbering_keeps_dependencies_between_new_steps(self):
+        todo_list = self._history()
+
+        todo_list.replace_pending_todos(self._restarted_plan())
+
+        new_1, new_2, new_3 = todo_list.items[2:]
+        assert new_2.depends_on == [new_1.step_number]
+        assert new_3.depends_on == [new_1.step_number, new_2.step_number]
+
+    def test_only_first_new_step_is_ready_after_restarted_numbering(self):
+        todo_list = self._history()
+
+        todo_list.replace_pending_todos(self._restarted_plan())
+
+        assert [item.description for item in todo_list.get_ready_todos()] == ["new 1"]
+
+    def test_marking_a_new_step_running_leaves_preserved_steps_alone(self):
+        todo_list = self._history()
+        todo_list.replace_pending_todos(self._restarted_plan())
+        new_1 = todo_list.items[2]
+
+        todo_list.mark_running(new_1.step_number)
+
+        assert new_1.status == "running"
+        assert todo_list.items[0].status == "completed"
+        assert todo_list.items[0].result == "done"
+
+    def test_completing_a_new_step_does_not_touch_preserved_results(self):
+        todo_list = self._history()
+        todo_list.replace_pending_todos(self._restarted_plan())
+        new_1 = todo_list.items[2]
+
+        todo_list.mark_completed(new_1.step_number, result="new result")
+
+        assert new_1.status == "completed"
+        assert new_1.result == "new result"
+        assert todo_list.items[0].result == "done"
+
+    def test_continued_numbering_is_left_unchanged(self):
+        todo_list = self._history()
+        new_items = [
+            TodoItem(step_number=3, description="new 3"),
+            TodoItem(step_number=4, description="new 4", depends_on=[2, 3]),
+        ]
+
+        todo_list.replace_pending_todos(new_items)
+
+        assert [item.step_number for item in todo_list.items] == [1, 2, 3, 4]
+        assert todo_list.items[3].depends_on == [2, 3]
+
+    def test_running_step_keeps_its_number_when_plan_is_replaced(self):
+        todo_list = TodoList(
+            items=[
+                TodoItem(step_number=1, description="old 1", status="running"),
+                TodoItem(step_number=2, description="old 2"),
+            ]
+        )
+
+        todo_list.replace_pending_todos(
+            [TodoItem(step_number=1, description="new 1")]
+        )
+
+        assert todo_list.get_by_step_number(1).description == "old 1"
+        assert len({item.step_number for item in todo_list.items}) == 2
+
+    def test_replacing_with_nothing_keeps_history(self):
+        todo_list = self._history()
+
+        todo_list.replace_pending_todos([])
+
+        assert [item.description for item in todo_list.items] == ["old 1", "old 2"]
