@@ -32,6 +32,7 @@ so the mark fails loudly once the fix lands.
 
 from __future__ import annotations
 
+import base64
 import copy
 from typing import Any
 
@@ -195,6 +196,37 @@ def test_parts_list_is_sent_as_blocks_with_image_bytes_intact(
     assert blocks == parts
     assert blocks[1]["image"]["source"]["bytes"] == PNG_BYTES
     assert all(isinstance(block, dict) for block in blocks)
+
+
+@pytest.mark.xfail(
+    reason="#9095: OpenAI-style text parts are forwarded to Converse unconverted",
+    strict=True,
+)
+def test_openai_style_text_part_is_sent_as_a_converse_text_block(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parts: list[dict[str, Any]] = [{"type": "text", "text": PROMPT}]
+
+    request = _send([{"role": "user", "content": parts}], monkeypatch)
+
+    assert BEDROCK.user_blocks(request) == [[{"text": PROMPT}]]
+
+
+@pytest.mark.xfail(
+    reason="#9095: image_url data URIs are forwarded to Converse unconverted",
+    strict=True,
+)
+def test_openai_style_image_url_part_is_sent_as_a_converse_image_block(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data_uri = "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode()
+    parts: list[dict[str, Any]] = [
+        {"type": "image_url", "image_url": {"url": data_uri}}
+    ]
+
+    request = _send([{"role": "user", "content": parts}], monkeypatch)
+
+    assert BEDROCK.user_blocks(request) == [[_IMAGE_BLOCK]]
 
 
 def test_none_user_content_keeps_the_message_and_never_becomes_text_none(
