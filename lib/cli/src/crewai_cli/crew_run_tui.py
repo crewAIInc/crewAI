@@ -705,6 +705,9 @@ FooterKey .footer-key--key {
         self._task_start_time = time.time()
         self._final_output: str | None = None
         self._error: str | None = None
+        # What a crew's kickoff raised: `crewai run` asks for an API key it
+        # names once the app has closed.
+        self._failure: Exception | None = None
         self._frame = 0
 
         self._task_logs: list[dict[str, Any]] = []
@@ -904,6 +907,7 @@ FooterKey .footer-key--key {
                 self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
             if not self._discard_trace_on_exit:
+                self._failure = e
                 self.call_from_thread(self._on_crew_failed, str(e))
 
     @work(thread=True, exclusive=True, group="flow")
