@@ -1933,10 +1933,13 @@ class BedrockCompletion(BaseLLM):
                     and ";base64," in url
                 ):
                     header, data = url.split(";base64,", 1)
+                    image_format = header.removeprefix("data:image/")
+                    if image_format == "jpg":
+                        image_format = "jpeg"
                     converted.append(
                         {
                             "image": {
-                                "format": header.removeprefix("data:image/"),
+                                "format": image_format,
                                 "source": {
                                     "bytes": base64.b64decode(data, validate=True)
                                 },

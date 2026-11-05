@@ -39,6 +39,19 @@ def bedrock(monkeypatch: pytest.MonkeyPatch) -> BedrockCompletion:
             [{"image": {"format": "png", "source": {"bytes": b"\x89PNG"}}}],
         ),
         (
+            [{"type": "image_url", "image_url": {"url": "data:image/jpg;base64,/9g="}}],
+            [{"image": {"format": "jpeg", "source": {"bytes": b"\xff\xd8"}}}],
+        ),
+        (
+            [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "data:image/jpeg;base64,/9g="},
+                }
+            ],
+            [{"image": {"format": "jpeg", "source": {"bytes": b"\xff\xd8"}}}],
+        ),
+        (
             [{"text": "native"}, {"type": "text", "text": "converted"}],
             [{"text": "native"}, {"text": "converted"}],
         ),
@@ -47,7 +60,7 @@ def bedrock(monkeypatch: pytest.MonkeyPatch) -> BedrockCompletion:
             [{"image": {"format": "png", "source": {"bytes": b"\x89PNG"}}}],
         ),
     ],
-    ids=["text", "base64-image", "mixed", "native-image"],
+    ids=["text", "base64-image", "jpg-alias", "jpeg", "mixed", "native-image"],
 )
 async def test_public_call_sends_valid_converse_content(
     bedrock: BedrockCompletion,
