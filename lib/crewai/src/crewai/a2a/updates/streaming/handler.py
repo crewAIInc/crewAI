@@ -8,7 +8,6 @@ from typing import Final
 import uuid
 
 from a2a.client import Client
-from a2a.client.errors import A2AClientHTTPError
 from a2a.types import (
     AgentCard,
     Message,
@@ -16,12 +15,10 @@ from a2a.types import (
     Role,
     Task,
     TaskArtifactUpdateEvent,
-    TaskIdParams,
-    TaskQueryParams,
     TaskState,
     TaskStatusUpdateEvent,
-    TextPart,
 )
+from crewai.a2a._compat import A2AClientHTTPError, TaskIdParams, TaskQueryParams, TextPart
 from typing_extensions import Unpack
 
 from crewai.a2a.task_helpers import (

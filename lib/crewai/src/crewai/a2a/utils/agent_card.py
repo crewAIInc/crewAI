@@ -12,7 +12,7 @@ import time
 from types import MethodType
 from typing import TYPE_CHECKING
 
-from a2a.client.errors import A2AClientHTTPError
+from crewai.a2a._compat import A2AClientHTTPError
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 from aiocache import cached  # type: ignore[import-untyped]
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]

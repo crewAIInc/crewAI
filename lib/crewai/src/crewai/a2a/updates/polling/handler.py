@@ -8,16 +8,14 @@ from typing import TYPE_CHECKING, Any
 import uuid
 
 from a2a.client import Client
-from a2a.client.errors import A2AClientHTTPError
 from a2a.types import (
     AgentCard,
     Message,
     Part,
     Role,
-    TaskQueryParams,
     TaskState,
-    TextPart,
 )
+from crewai.a2a._compat import A2AClientHTTPError, TaskQueryParams, TextPart
 from typing_extensions import Unpack
 
 from crewai.a2a.errors import A2APollingTimeoutError

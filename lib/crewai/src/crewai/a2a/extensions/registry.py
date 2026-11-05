@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from a2a.client.middleware import ClientCallContext, ClientCallInterceptor
+try:
+    # a2a-sdk 0.3.x
+    from a2a.client.middleware import ClientCallContext, ClientCallInterceptor
+except ImportError:
+    # a2a-sdk 1.x moved these to a2a.client directly
+    from a2a.client import ClientCallContext, ClientCallInterceptor  # type: ignore[no-redef]
 from a2a.extensions.common import (
     HTTP_EXTENSION_HEADER,
 )
