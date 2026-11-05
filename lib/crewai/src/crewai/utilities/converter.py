@@ -40,6 +40,12 @@ def _extract_first_json_object(result: str) -> Any | None:
         except json.JSONDecodeError:
             index = result.find("{", index + 1)
             continue
+        except RecursionError:
+            # The C scanner hits the recursion limit on deeply nested input on
+            # some Python versions; treat this candidate as unparseable and
+            # let the caller fall back to convert_with_instructions.
+            index = result.find("{", index + 1)
+            continue
         return parsed
     return None
 
