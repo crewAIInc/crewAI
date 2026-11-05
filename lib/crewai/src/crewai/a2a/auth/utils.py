@@ -65,8 +65,13 @@ class _AuthStore:
 
 _auth_store = _AuthStore()
 
-_SCHEME_PATTERN: Final[re.Pattern[str]] = re.compile(r"(\w+)\s+(.+?)(?=,\s*\w+\s+|$)")
-_PARAM_PATTERN: Final[re.Pattern[str]] = re.compile(r'(\w+)=(?:"([^"]*)"|([^\s,]+))')
+_NAME_CHARS: Final[str] = r"[!#$%&'*+.^_`|~0-9A-Za-z-]+"
+_SEPARATOR_PATTERN: Final[re.Pattern[str]] = re.compile(r"[\s,]*")
+_PARAM_PATTERN: Final[re.Pattern[str]] = re.compile(
+    rf'({_NAME_CHARS})\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^\s,]+))'
+)
+_SCHEME_PATTERN: Final[re.Pattern[str]] = re.compile(_NAME_CHARS)
+_QUOTED_PAIR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\\(.)")
 
 _SCHEME_AUTH_MAPPING: Final[dict[type, tuple[type[ClientAuthScheme], ...]]] = {
     OAuth2SecurityScheme: (
@@ -125,23 +130,31 @@ def parse_www_authenticate(header_value: str) -> dict[str, dict[str, str]]:
         Dictionary mapping auth scheme to its parameters.
         Example: {"Bearer": {"realm": "api", "scope": "read write"}}
     """
-    if not header_value:
-        return {}
-
     challenges: dict[str, dict[str, str]] = {}
+    params: dict[str, str] | None = None
+    position = 0
 
-    for match in _SCHEME_PATTERN.finditer(header_value):
-        scheme = match.group(1)
-        params_str = match.group(2)
+    while position < len(header_value):
+        separator = _SEPARATOR_PATTERN.match(header_value, position)
+        position = separator.end() if separator else position
+        if position >= len(header_value):
+            break
 
-        params: dict[str, str] = {}
+        param_match = _PARAM_PATTERN.match(header_value, position)
+        if param_match is not None and params is not None:
+            name, quoted, token = param_match.groups()
+            params[name] = (
+                _QUOTED_PAIR_PATTERN.sub(r"\1", quoted) if quoted is not None else token
+            )
+            position = param_match.end()
+            continue
 
-        for param_match in _PARAM_PATTERN.finditer(params_str):
-            key = param_match.group(1)
-            value = param_match.group(2) or param_match.group(3)
-            params[key] = value
-
-        challenges[scheme] = params
+        scheme_match = _SCHEME_PATTERN.match(header_value, position)
+        if scheme_match is None:
+            position += 1
+            continue
+        params = challenges[scheme_match.group(0)] = {}
+        position = scheme_match.end()
 
     return challenges
 
