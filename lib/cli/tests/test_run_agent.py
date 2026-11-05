@@ -11,7 +11,9 @@ import crewai_cli.run_crew as dispatcher
 
 def test_headless_chat_reports_no_terminal(monkeypatch):
     stopped = []
-    monkeypatch.setattr(dispatcher, "record_run_stopped", stopped.append)
+    monkeypatch.setattr(
+        dispatcher, "record_run_stopped", lambda reason, error=None: stopped.append(reason)
+    )
     monkeypatch.setattr(runner, "is_interactive", lambda: False)
     with pytest.raises(click.UsageError, match="interactive terminal"):
         runner.run_agent_in_project_env(None)

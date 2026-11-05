@@ -805,12 +805,12 @@ def test_checking_a_class_claim_runs_no_lazy_module_getattr(
     ("llm", "openai_api_key", "error_class"),
     [
         ({"model": "openai/gpt-4o-mini", "temperature": "hot"}, "sk-test", "ValidationError"),
-        ("openai/gpt-4o-mini", "", "OpenAIError"),
+        ("openai/gpt-4o-mini", "", None),
         ("anthropic/claude-sonnet-4-5", "sk-test", "ImportError"),
     ],
     ids=["a_setting_its_model_rejects", "a_blank_key", "a_provider_sdk_not_installed"],
 )
-def test_a_json_crew_whose_model_cannot_be_built_counts_why(
+def test_json_crew_model_load_counts_only_construction_failures(
     project, usage, error_classes, monkeypatch, llm, openai_api_key, error_class
 ) -> None:
     """crewAI raises any failure to build a model as an ImportError, which the
@@ -825,6 +825,13 @@ def test_a_json_crew_whose_model_cannot_be_built_counts_why(
     monkeypatch.delitem(
         sys.modules, "crewai.llms.providers.anthropic.completion", raising=False
     )
+
+    if error_class is None:
+        crew, _ = run_crew_module._load_json_crew(crew_path)
+        assert crew.agents
+        assert usage == []
+        assert error_classes == []
+        return
 
     with pytest.raises(JSONProjectError, match="failed to load agent"):
         run_crew_module._load_json_crew(crew_path)
