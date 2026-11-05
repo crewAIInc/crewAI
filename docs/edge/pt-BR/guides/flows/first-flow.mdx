@@ -370,7 +370,7 @@ Este é o poder dos flows – combinar diferentes tipos de processamento (intera
 
 ## Passo 6: Configure suas Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto com suas chaves de API. Veja o [guia de configuração do LLM](/pt-BR/concepts/llms#configurando-seu-llm) para detalhes sobre como configurar o provedor.
+Quando você executou `crewai create flow` em um terminal, ele pediu um provedor, um modelo e a chave de API dele, e os salvou no arquivo `.env` na raiz do projeto. Se você pulou a chave, adicione-a ao `.env` agora. A etapa de esboço deste guia chama `openai/gpt-4o-mini`, então o `.env` também precisa de `OPENAI_API_KEY`, qualquer que seja o modelo escolhido. Veja o [guia de configuração do LLM](/pt-BR/concepts/llms#configurando-seu-llm) para detalhes sobre como configurar o provedor.
 
 ```sh .env
 OPENAI_API_KEY=sua_chave_openai
