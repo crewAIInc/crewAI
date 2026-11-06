@@ -10,7 +10,7 @@ from pydantic.types import StringConstraints
 import requests
 
 from crewai_tools.tools.brave_search_tool.base import _save_results_to_file
-from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
+from crewai_tools.tools.brave_search_tool.schemas import BraveSearchParams
 
 
 load_dotenv()
@@ -33,7 +33,7 @@ class BraveSearchTool(BaseTool):
         "A tool that performs web searches using the Brave Search API. "
         "Results are returned as structured JSON data."
     )
-    args_schema: type[BaseModel] = WebSearchParams
+    args_schema: type[BaseModel] = BraveSearchParams
     search_url: str = "https://api.search.brave.com/res/v1/web/search"
     n_results: int = 10
     save_file: bool = False
@@ -100,7 +100,11 @@ class BraveSearchTool(BaseTool):
             if safesearch := kwargs.get("safesearch"):
                 payload["safesearch"] = safesearch
 
-            save_file = kwargs.get("save_file", self.save_file)
+            # The schema always provides the key, so a missing value must fall
+            # back to the instance setting instead of replacing it with None.
+            save_file = kwargs.get("save_file")
+            if save_file is None:
+                save_file = self.save_file
             if freshness := kwargs.get("freshness"):
                 payload["freshness"] = freshness
 
