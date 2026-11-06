@@ -1598,50 +1598,60 @@ class Crew(FlowTrackable, BaseModel):
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
 
-        for task_index, task in enumerate(tasks):
-            exec_data, task_outputs, last_sync_output = prepare_task_execution(
-                self, task, task_index, start_index, task_outputs, last_sync_output
-            )
-            if exec_data.should_skip:
-                continue
-
-            if isinstance(task, ConditionalTask):
-                skipped_task_output = self._handle_conditional_task(
-                    task, task_outputs, futures, task_index, was_replayed
+        try:
+            for task_index, task in enumerate(tasks):
+                exec_data, task_outputs, last_sync_output = prepare_task_execution(
+                    self, task, task_index, start_index, task_outputs, last_sync_output
                 )
-                if skipped_task_output:
-                    task_outputs.append(skipped_task_output)
+                if exec_data.should_skip:
                     continue
 
-            if task.async_execution:
-                context = self._get_context(
-                    task, [last_sync_output] if last_sync_output else []
-                )
-                future = task.execute_async(
-                    agent=exec_data.agent,
-                    context=context,
-                    tools=exec_data.tools,
-                )
-                futures.append((task, future, task_index))
-            else:
-                if futures:
-                    task_outputs.extend(
-                        self._process_async_tasks(futures, was_replayed)
+                if isinstance(task, ConditionalTask):
+                    skipped_task_output = self._handle_conditional_task(
+                        task, task_outputs, futures, task_index, was_replayed
                     )
-                    futures.clear()
+                    if skipped_task_output:
+                        task_outputs.append(skipped_task_output)
+                        continue
 
-                context = self._get_context(task, task_outputs)
-                task_output = task.execute_sync(
-                    agent=exec_data.agent,
-                    context=context,
-                    tools=exec_data.tools,
-                )
-                task_outputs.append(task_output)
-                self._process_task_result(task, task_output)
-                self._store_execution_log(task, task_output, task_index, was_replayed)
+                if task.async_execution:
+                    context = self._get_context(
+                        task, [last_sync_output] if last_sync_output else []
+                    )
+                    future = task.execute_async(
+                        agent=exec_data.agent,
+                        context=context,
+                        tools=exec_data.tools,
+                    )
+                    futures.append((task, future, task_index))
+                else:
+                    if futures:
+                        task_outputs.extend(
+                            self._process_async_tasks(futures, was_replayed)
+                        )
+                        futures.clear()
 
-        if futures:
-            task_outputs.extend(self._process_async_tasks(futures, was_replayed))
+                    context = self._get_context(task, task_outputs)
+                    task_output = task.execute_sync(
+                        agent=exec_data.agent,
+                        context=context,
+                        tools=exec_data.tools,
+                    )
+                    task_outputs.append(task_output)
+                    self._process_task_result(task, task_output)
+                    self._store_execution_log(
+                        task, task_output, task_index, was_replayed
+                    )
+
+            if futures:
+                task_outputs.extend(self._process_async_tasks(futures, was_replayed))
+        except BaseException:
+            # A later iteration can raise before reaching its own drain —
+            # prepare_task_execution and _prepare_tools both raise ValueError —
+            # leaving the tasks already started in their threads behind. Signal
+            # them from the owner of the list, not only from the drain.
+            self._cancel_pending_tasks(futures)
+            raise
 
         return self._create_crew_output(task_outputs)
 
@@ -2029,14 +2039,38 @@ class Crew(FlowTrackable, BaseModel):
         was_replayed: bool = False,
     ) -> list[TaskOutput]:
         task_outputs: list[TaskOutput] = []
-        for future_task, future, task_index in futures:
-            task_output = future.result()
-            task_outputs.append(task_output)
-            self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
-            )
+        try:
+            for future_task, future, task_index in futures:
+                task_output = future.result()
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+                self._store_execution_log(
+                    future_task, task_output, task_index, was_replayed
+                )
+        except BaseException:
+            # The run has failed while the other tasks are still going, each in
+            # its own thread, and would otherwise keep calling the model, firing
+            # callbacks and reporting completion after the caller got the error.
+            self._cancel_pending_tasks(futures)
+            raise
         return task_outputs
+
+    @staticmethod
+    def _cancel_pending_tasks(
+        futures: list[tuple[Task, Future[TaskOutput], int]],
+    ) -> None:
+        """Signal the tasks still running in their threads to stop.
+
+        ``Future.cancel()`` is not an option here: ``Task.execute_async`` starts
+        the thread straight away and the bare future is never moved to RUNNING
+        by an executor, so cancelling it would succeed and then make the
+        thread's ``set_result()`` raise ``InvalidStateError``. A thread cannot
+        be preempted either, so each task is signalled and stops at the next
+        boundary it controls — work already inside an agent call runs to the
+        end of that call, but nothing further is started.
+        """
+        for task, _, _ in futures:
+            task._request_cancellation()
 
     @staticmethod
     def _find_task_index(task_id: str, stored_outputs: list[Any]) -> int | None:
