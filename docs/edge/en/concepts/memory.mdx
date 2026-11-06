@@ -699,6 +699,41 @@ def my_embedder(texts: list[str]) -> list[list[float]]:
 memory = Memory(embedder=my_embedder)
 ```
 </Accordion>
+
+<Accordion title="Oracle Database">
+
+Install `oracledb` (`uv add oracledb`) and import an embedding model into Oracle Database before using this provider. Set `ORACLE_EMBEDDING_MODEL` to a model accessible to the configured account. The provider calls `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS`.
+
+```python
+import os
+
+from crewai import Memory
+
+memory = Memory(embedder={
+    "provider": "oracle",
+    "config": {
+        "connection_params": {
+            "user": os.environ["ORACLE_DB_USERNAME"],
+            "password": os.environ["ORACLE_DB_SECRET"],
+            "dsn": os.environ["ORACLE_DB_DSN"],
+        },
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+```
+
+Supply exactly one of `connection_params` or a programmatic `conn` connection object. `ORACLE_CONN` is not used as a connection object.
+
+Optional `proxy` or `ORACLE_PROXY` configures `UTL_HTTP` for remote embedding requests.
+
+Documents must be at most 4000 characters; returned vectors are aligned by `embed_id`, and missing or duplicate results raise an error.
+
+This config selects the embedding provider; Memory storage and its LLM are configured independently. To search documents stored in Oracle tables, use [Oracle Vector Search](/edge/en/tools/database-data/oraclevectorsearchtool).
+
+</Accordion>
 </AccordionGroup>
 
 ### Provider Reference
@@ -706,6 +741,7 @@ memory = Memory(embedder=my_embedder)
 | Provider | Key | Typical Model | Notes |
 | :--- | :--- | :--- | :--- |
 | OpenAI | `openai` | `text-embedding-3-large` | Default. Set `OPENAI_API_KEY`. |
+| Oracle Database | `oracle` | `ORACLE_EMBEDDING_MODEL` | Imported Oracle model; requires `oracledb` and access to `DBMS_VECTOR_CHAIN`. |
 | Ollama | `ollama` | `mxbai-embed-large` | Local, no API key needed. |
 | Azure OpenAI | `azure` | `text-embedding-3-large` | Default model. Requires `deployment_id`. |
 | Google AI | `google-generativeai` | `gemini-embedding-001` | Set `GOOGLE_API_KEY`. |

@@ -695,6 +695,41 @@ def my_embedder(texts: list[str]) -> list[list[float]]:
 memory = Memory(embedder=my_embedder)
 ```
 </Accordion>
+
+<Accordion title="Oracle Database">
+
+이 제공자를 사용하기 전에 `oracledb`(`uv add oracledb`)를 설치하고 Oracle Database에 임베딩 모델을 가져오세요. `ORACLE_EMBEDDING_MODEL`을 설정된 계정이 접근할 수 있는 모델 이름으로 지정하세요. 제공자는 `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS`를 호출합니다.
+
+```python
+import os
+
+from crewai import Memory
+
+memory = Memory(embedder={
+    "provider": "oracle",
+    "config": {
+        "connection_params": {
+            "user": os.environ["ORACLE_DB_USERNAME"],
+            "password": os.environ["ORACLE_DB_SECRET"],
+            "dsn": os.environ["ORACLE_DB_DSN"],
+        },
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+```
+
+`connection_params` 또는 코드로 전달하는 `conn` 연결 객체 중 정확히 하나를 제공하세요. `ORACLE_CONN`은 연결 객체로 사용되지 않습니다.
+
+선택적 `proxy` 또는 `ORACLE_PROXY`는 원격 임베딩 요청을 위한 `UTL_HTTP`를 설정합니다.
+
+문서는 최대 4000자여야 합니다. 반환된 벡터는 `embed_id`에 따라 정렬되며 누락되거나 중복된 결과는 오류를 발생시킵니다.
+
+이 설정은 임베딩 제공자를 선택하며 Memory 저장소와 LLM은 별도로 설정합니다. Oracle 테이블의 문서를 검색하려면 [Oracle Vector Search](/edge/ko/tools/database-data/oraclevectorsearchtool)를 사용하세요.
+
+</Accordion>
 </AccordionGroup>
 
 ### 제공자 참조
@@ -702,6 +737,7 @@ memory = Memory(embedder=my_embedder)
 | 제공자 | 키 | 일반적인 모델 | 참고 |
 | :--- | :--- | :--- | :--- |
 | OpenAI | `openai` | `text-embedding-3-small` | 기본값. `OPENAI_API_KEY` 설정. |
+| Oracle Database | `oracle` | `ORACLE_EMBEDDING_MODEL` | Oracle에 가져온 모델. `oracledb` 및 `DBMS_VECTOR_CHAIN` 접근 권한이 필요합니다. |
 | Ollama | `ollama` | `mxbai-embed-large` | 로컬, API 키 불필요. |
 | Azure OpenAI | `azure` | `text-embedding-ada-002` | `deployment_id` 필요. |
 | Google AI | `google-generativeai` | `gemini-embedding-001` | `GOOGLE_API_KEY` 설정. |
