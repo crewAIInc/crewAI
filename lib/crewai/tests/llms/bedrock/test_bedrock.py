@@ -1477,9 +1477,9 @@ def test_bedrock_cached_token_tracking():
 
         result = llm.call("Hello")
         assert result == "test response"
-        assert llm._token_usage['prompt_tokens'] == 100
+        assert llm._token_usage['prompt_tokens'] == 130
         assert llm._token_usage['completion_tokens'] == 50
-        assert llm._token_usage['total_tokens'] == 150
+        assert llm._token_usage['total_tokens'] == 180
         assert llm._token_usage['cached_prompt_tokens'] == 30
 
 
