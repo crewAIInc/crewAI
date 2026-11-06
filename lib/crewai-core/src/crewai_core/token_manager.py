@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -54,7 +54,7 @@ class TokenManager:
             access_token: The access token to save.
             expires_at: The UNIX timestamp of the expiration time.
         """
-        expiration_time = datetime.fromtimestamp(expires_at)
+        expiration_time = datetime.fromtimestamp(expires_at, tz=timezone.utc)
         data = {
             "access_token": access_token,
             "expiration": expiration_time.isoformat(),
@@ -72,7 +72,8 @@ class TokenManager:
         data = json.loads(decrypted_data)
 
         expiration = datetime.fromisoformat(data["expiration"])
-        if expiration <= datetime.now():
+        # Legacy files have naive local dates; retain their local-time meaning.
+        if expiration <= datetime.now(expiration.tzinfo):
             return None
 
         return cast(str | None, data.get("access_token"))
