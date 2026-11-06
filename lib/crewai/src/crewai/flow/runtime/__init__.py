@@ -688,6 +688,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 apply_execution_context(entity.execution_context)
             if isinstance(entity, cls):
                 entity._restore_from_checkpoint()
+                entity._owned_runtime_state = state
                 return entity
             instance = (
                 cls.from_declaration(contents=definition)
@@ -699,6 +700,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             instance.checkpoint_method_counts = entity.checkpoint_method_counts
             instance.checkpoint_state = entity.checkpoint_state
             instance._restore_from_checkpoint()
+            instance._owned_runtime_state = state
             return instance
         raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
 
@@ -769,6 +771,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restore_event_scope(())
         reset_last_event_id()
 
+    def _owns_runtime_state(self) -> bool:
+        """True while the bus still holds the state installed by from_checkpoint.
+
+        A restored flow must keep that state attached when the caller starts it
+        without ``from_checkpoint`` again; otherwise the recorded events and
+        lineage loaded from the checkpoint would be discarded before replay.
+        """
+        state = self._owned_runtime_state
+        return state is not None and crewai_event_bus.runtime_state is state
+
     _methods: dict[FlowMethodName, Callable[..., Any]] = PrivateAttr(
         default_factory=dict
     )
@@ -801,6 +813,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     _is_execution_resuming: bool = PrivateAttr(default=False)
     _restored_from_checkpoint: bool = PrivateAttr(default=False)
+    # RuntimeState installed by ``from_checkpoint``. A top-level kickoff must
+    # keep it attached so the restored event record can be replayed.
+    _owned_runtime_state: Any = PrivateAttr(default=None)
     # Monotonic stamp set by the telemetry listener at flow start, so the
     # duration span emitted at the end does not need to hold a span open for
     # the life of the run.
@@ -2148,6 +2163,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
+        if current_flow_id.get() is None and not self._owns_runtime_state():
+            # A top-level kickoff owns its run: drop entities accumulated in
+            # this context by earlier runs (and by flow construction), so this
+            # run's checkpoints serialize only the flow being executed. A state
+            # installed by from_checkpoint is this run's state, not baggage.
+            crewai_event_bus.reset_runtime_state()
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
@@ -2214,6 +2235,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
+        if current_flow_id.get() is None and not self._owns_runtime_state():
+            # Top-level kickoffs must not inherit the constructing context's
+            # runtime state: asyncio.run() executes the coroutine in a copied
+            # context, so the synced scope below ends only that copy. Clearing
+            # here keeps earlier flows out of this run's checkpoints. Restored
+            # checkpoint state is kept so completed methods can be replayed.
+            crewai_event_bus.reset_runtime_state()
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
@@ -2347,6 +2375,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Restore is single-shot: a later kickoff on the same instance
             # starts fresh.
             self._restored_from_checkpoint = False
+            self._owned_runtime_state = None
 
             # Fork hydration: when restore_from_state_id is set and persistence is
             # available, hydrate self._state from the source UUID's latest snapshot
