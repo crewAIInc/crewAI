@@ -265,6 +265,28 @@ class SnowflakeSearchTool(BaseTool):
             logger.error(f"Error executing query: {e!s}")
             raise
 
+    async def _arun(
+        self,
+        query: str,
+        database: str | None = None,
+        snowflake_schema: str | None = None,
+        timeout: int = 300,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute the search query through the async tool interface.
+
+        ``_run`` is already a coroutine, so ``_arun`` simply delegates to it,
+        allowing ``await tool.arun(...)`` to work for async agents and
+        frameworks instead of raising ``NotImplementedError``.
+        """
+        return await self._run(
+            query=query,
+            database=database,
+            snowflake_schema=snowflake_schema,
+            timeout=timeout,
+            **kwargs,
+        )
+
     def __del__(self) -> None:
         """Cleanup connections on deletion."""
         try:

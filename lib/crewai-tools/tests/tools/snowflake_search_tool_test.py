@@ -95,3 +95,45 @@ def test_config_validation():
 
     with pytest.raises(ValueError):
         SnowflakeConfig(account="test_account", user="test_user")
+
+
+def test_arun_does_not_raise_not_implemented() -> None:
+    """``await tool.arun(...)`` must delegate to ``_run`` instead of raising."""
+    from unittest.mock import AsyncMock
+
+    with (
+        patch(
+            "crewai_tools.tools.snowflake_search_tool.snowflake_search_tool.SNOWFLAKE_AVAILABLE",
+            True,
+        ),
+        patch.object(SnowflakeSearchTool, "_initialize_snowflake", lambda self: None),
+    ):
+        tool = SnowflakeSearchTool(
+            config=SnowflakeConfig(account="acct", user="u", password="p"),
+        )
+    tool._execute_query = AsyncMock(return_value=[{"VALUE": 1}])
+    # _claim_usage touches the usage counter / lock; stub it so the test
+    # focuses purely on the _arun -> _run delegation.
+    with patch.object(tool, "_claim_usage", return_value=None):
+        result = asyncio.run(tool.arun(query="SELECT 1 AS value"))
+    assert result == [{"VALUE": 1}]
+
+
+def test_arun_delegates_to_run() -> None:
+    """``_arun`` returns the same rows as ``_run`` for the same query."""
+    from unittest.mock import AsyncMock
+
+    with (
+        patch(
+            "crewai_tools.tools.snowflake_search_tool.snowflake_search_tool.SNOWFLAKE_AVAILABLE",
+            True,
+        ),
+        patch.object(SnowflakeSearchTool, "_initialize_snowflake", lambda self: None),
+    ):
+        tool = SnowflakeSearchTool(
+            config=SnowflakeConfig(account="acct", user="u", password="p"),
+        )
+    tool._execute_query = AsyncMock(return_value=[{"VALUE": 1}])
+    run_result = asyncio.run(tool._run(query="SELECT 1 AS value"))
+    arun_result = asyncio.run(tool._arun(query="SELECT 1 AS value"))
+    assert arun_result == run_result == [{"VALUE": 1}]
