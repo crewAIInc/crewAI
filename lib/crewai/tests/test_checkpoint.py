@@ -1148,3 +1148,58 @@ class TestConcurrentCheckpointWrites:
         # A second snapshot taken before the first write lands would let the
         # older state be persisted last, so writes must not overlap snapshots.
         assert sequence == ["snapshot", "write", "snapshot", "write"]
+
+    def test_lineage_matches_the_persisted_payload(
+        self, tmp_path: Path, monkeypatch: Any
+    ) -> None:
+        writes: list[tuple[str | None, str, str]] = []
+        snapshot_started = threading.Event()
+
+        real_dump = RuntimeState.model_dump
+
+        def slow_dump(self: RuntimeState, *args: Any, **kwargs: Any) -> Any:
+            snapshot_started.set()
+            time.sleep(0.1)
+            return real_dump(self, *args, **kwargs)
+
+        real_checkpoint = JsonProvider.checkpoint
+
+        def recording_checkpoint(
+            self: JsonProvider,
+            data: str,
+            location: str,
+            *,
+            parent_id: str | None = None,
+            branch: str = "main",
+        ) -> str:
+            written = real_checkpoint(
+                self, data, location, parent_id=parent_id, branch=branch
+            )
+            writes.append((parent_id, data, written))
+            return written
+
+        monkeypatch.setattr(RuntimeState, "model_dump", slow_dump)
+        monkeypatch.setattr(JsonProvider, "checkpoint", recording_checkpoint)
+
+        flow = Flow()
+        state = RuntimeState(root=[flow])
+        cfg = CheckpointConfig(location=str(tmp_path), provider=JsonProvider())
+
+        def worker() -> None:
+            _do_checkpoint(state, cfg, None)
+
+        first = threading.Thread(target=worker)
+        first.start()
+        assert snapshot_started.wait(timeout=5)
+        second = threading.Thread(target=worker)
+        second.start()
+        first.join(timeout=15)
+        second.join(timeout=15)
+
+        assert len(writes) == 2
+        # The blob carries the lineage it was dumped with, so a queued writer
+        # must read _parent_id only once it owns the lock; otherwise the blob
+        # names a parent the provider never recorded for it.
+        for parent_id, data, _ in writes:
+            assert json.loads(data)["parent_id"] == parent_id
+        assert writes[1][0] == JsonProvider().extract_id(writes[0][2])

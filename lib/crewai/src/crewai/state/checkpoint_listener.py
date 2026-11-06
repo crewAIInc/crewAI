@@ -130,24 +130,29 @@ def _do_checkpoint(
         "agent_role": event.agent_role if event is not None else None,
     }
 
-    parent_id_snapshot: str | None = state._parent_id
-    branch_snapshot: str = state._branch
-
-    crewai_event_bus.emit(
-        cfg,
-        CheckpointStartedEvent(
-            location=cfg.location,
-            provider=provider_name,
-            trigger=trigger,
-            branch=branch_snapshot,
-            parent_id=parent_id_snapshot,
-            **context,
-        ),
-    )
-
     start: float = time.perf_counter()
-    try:
-        with _write_lock:
+    # The lineage is read under the same lock as the write: a writer that
+    # already holds it may have advanced ``_parent_id``, and the payload dumped
+    # below must carry the same parent as the one the provider records for it.
+    # The start event is emitted from that snapshot too, so the three lineage
+    # reports (event, blob, filename) cannot disagree.
+    with _write_lock:
+        parent_id_snapshot: str | None = state._parent_id
+        branch_snapshot: str = state._branch
+
+        crewai_event_bus.emit(
+            cfg,
+            CheckpointStartedEvent(
+                location=cfg.location,
+                provider=provider_name,
+                trigger=trigger,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
+                **context,
+            ),
+        )
+
+        try:
             _prepare_entities(state.root)
             payload = state.model_dump(mode="json")
             if event is not None:
@@ -160,21 +165,22 @@ def _do_checkpoint(
                 branch=branch_snapshot,
             )
             state._chain_lineage(cfg.provider, location)
-        checkpoint_id: str = cfg.provider.extract_id(location)
-    except Exception as exc:
-        crewai_event_bus.emit(
-            cfg,
-            CheckpointFailedEvent(
-                location=cfg.location,
-                provider=provider_name,
-                trigger=trigger,
-                branch=branch_snapshot,
-                parent_id=parent_id_snapshot,
-                error=str(exc),
-                **context,
-            ),
-        )
-        raise
+        except Exception as exc:
+            crewai_event_bus.emit(
+                cfg,
+                CheckpointFailedEvent(
+                    location=cfg.location,
+                    provider=provider_name,
+                    trigger=trigger,
+                    branch=branch_snapshot,
+                    parent_id=parent_id_snapshot,
+                    error=str(exc),
+                    **context,
+                ),
+            )
+            raise
+
+    checkpoint_id: str = cfg.provider.extract_id(location)
 
     duration_ms: float = (time.perf_counter() - start) * 1000.0
     msg: str = (
