@@ -15,6 +15,7 @@ from crewai.memory.types import (
     ScopeInfo,
 )
 from crewai.memory.unified_memory import Memory
+from crewai.memory.utils import join_scope_paths
 
 
 def _ensure_memory_kind(value: Any) -> Any:
@@ -302,13 +303,14 @@ class MemorySlice(BaseModel):
         source: str | None = None,
         include_private: bool = False,
     ) -> list[MemoryMatch]:
-        """Recall across all slice scopes; results merged and re-ranked."""
+        """Recall across all slice roots, optionally within a relative scope."""
         cats = categories or self.categories
         all_matches: list[MemoryMatch] = []
         for sc in self.scopes:
+            search_scope = join_scope_paths(sc, scope)
             matches = self._require_memory().recall(
                 query,
-                scope=sc,
+                scope=search_scope,
                 categories=cats,
                 limit=limit * _RECALL_OVERSAMPLE_FACTOR,
                 depth=depth,
