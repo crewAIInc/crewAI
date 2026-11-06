@@ -784,7 +784,7 @@ def _handle_max_turns_exceeded(
                     part.root.text for part in msg.parts if part.root.kind == "text"
                 ]
                 final_message = (
-                    " ".join(text_parts) if text_parts else "Conversation completed"
+                    "".join(text_parts) if text_parts else "Conversation completed"
                 )
                 crewai_event_bus.emit(
                     None,
