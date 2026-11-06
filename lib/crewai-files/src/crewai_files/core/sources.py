@@ -220,8 +220,9 @@ class FilePath(BaseModel):
         """Validate that the file exists, is secure, and within size limits."""
         from crewai_files.processing.exceptions import FileTooLargeError
 
-        path_str = str(self.path)
-        if ".." in path_str:
+        # Check path components instead of the raw string: a filename such as
+        # "data..2024.csv" contains two dots but is not a parent reference.
+        if ".." in self.path.parts:
             raise ValueError(f"Path traversal not allowed: {self.path}")
 
         if self.path.is_symlink():
