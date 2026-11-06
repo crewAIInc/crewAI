@@ -6,7 +6,7 @@ import zipfile
 import pytest
 import re
 import requests
-from crewai.tools.tool_failure import ToolFailure
+from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
 
 from crewai_tools import URLReadTool
 from crewai_tools.security.safe_requests import safe_get_bounded
@@ -336,6 +336,7 @@ def test_validation_failure_is_returned_as_error():
         result = tool.run(url="http://169.254.169.254/")
 
     assert isinstance(result, ToolFailure)
+    assert result.reason is ToolFailureReason.TOOL_REPORTED
     assert result.message.startswith("Error:")
     assert "private/reserved IP" in result.message
 
@@ -348,6 +349,7 @@ def test_request_failure_is_returned_as_error():
         result = tool.run(url="https://example.com/f.txt")
 
     assert isinstance(result, ToolFailure)
+    assert result.reason is ToolFailureReason.TOOL_REPORTED
     assert result.message.startswith("Error: Failed to fetch")
 
 
