@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_fireworks_ai_config(self):
+        """Test Fireworks AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["fireworks_ai"]
+        assert config.base_url == "https://api.fireworks.ai/inference/v1"
+        assert config.api_key_env == "FIREWORKS_API_KEY"
+        assert config.base_url_env == "FIREWORKS_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -420,6 +428,29 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepseek"
             assert llm.model == "deepseek-chat"
+
+    def test_llm_creates_openai_compatible_for_fireworks(self):
+        """LLM routes fireworks_ai/<id> and preserves the full model path."""
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            llm = LLM(
+                model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct"
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "fireworks_ai"
+            # Only the fireworks_ai/ provider prefix is removed; the
+            # accounts/fireworks/models/<id> path must reach the SDK intact.
+            assert llm.model == "accounts/fireworks/models/llama-v3p1-8b-instruct"
+            assert llm.base_url == "https://api.fireworks.ai/inference/v1"
+
+    def test_fireworks_missing_api_key_names_env_var(self):
+        """Fireworks requires a key; the error names FIREWORKS_API_KEY."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="FIREWORKS_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="accounts/fireworks/models/llama-v3p1-8b-instruct",
+                provider="fireworks_ai",
+            )
 
     def test_llm_passes_kwargs_to_completion(self):
         """Test LLM passes kwargs to OpenAICompatibleCompletion."""
