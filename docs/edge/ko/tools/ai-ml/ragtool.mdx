@@ -49,6 +49,7 @@ def knowledge_expert(self) -> Agent:
 - 📰 PDF 파일
 - 📊 CSV 파일
 - 📃 JSON 파일
+- JSONL 파일 (`.jsonl` 및 `.ndjson`)
 - 📝 텍스트
 - 📁 디렉터리/폴더
 - 🌐 HTML 웹 페이지
@@ -95,7 +96,16 @@ rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VID
 
 # Add a directory of files
 rag_tool.add(data_type="directory", path="path/to/your/directory")
+
+# Add a local JSONL file with an explicit type
+rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
+
+# Auto-detect a local JSONL file by its extension
+rag_tool.add(path="path/to/your/records.ndjson")
 ```
+
+JSONL 파일은 각 줄에 하나의 JSON 값을 포함합니다. JSONL 로더는 로컬 파일을 지원하며,
+JSONL URL을 인식하더라도 해당 콘텐츠를 가져오지는 않습니다.
 
 ## 에이전트 통합 예시
 
