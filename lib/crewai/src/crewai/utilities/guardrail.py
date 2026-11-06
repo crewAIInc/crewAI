@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import warnings
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.utilities.guardrail_types import GuardrailCallable
@@ -78,29 +78,24 @@ class GuardrailResult(BaseModel):
         default=None, description="Error message if validation failed"
     )
 
-    @field_validator("result", "error")
-    @classmethod
-    def validate_result_error_exclusivity(cls, v: Any, info: Any) -> Any:
+    @model_validator(mode="after")
+    def validate_result_error_exclusivity(self) -> Self:
         """Ensure that result and error are mutually exclusive based on success.
 
-        Args:
-          v: The value being validated (either result or error)
-          info: Validation info containing the entire model data
+        Runs on the fully constructed instance: a per-field validator cannot
+        see fields declared after the one being validated, so the success=True
+        case could never observe a non-empty ``error``.
 
         Returns:
-          The original value if validation passes
+          The validated instance.
         """
-        values = info.data
-        if "success" in values:
-            if values["success"] and v and "error" in values and values["error"]:
+        if self.result and self.error:
+            if self.success:
                 raise ValueError(
                     "Cannot have both result and error when success is True"
                 )
-            if not values["success"] and v and "result" in values and values["result"]:
-                raise ValueError(
-                    "Cannot have both result and error when success is False"
-                )
-        return v
+            raise ValueError("Cannot have both result and error when success is False")
+        return self
 
     @classmethod
     def from_tuple(cls, result: tuple[bool, Any | str]) -> Self:
@@ -171,6 +166,7 @@ def process_guardrail(
 
     try:
         result = guardrail(output)
+        guardrail_result = GuardrailResult.from_tuple(result)
     except HookAborted as e:
         # a deny ends the validation, so the started event above still needs a
         # terminal one before it leaves
@@ -206,8 +202,6 @@ def process_guardrail(
             ),
         )
         raise
-
-    guardrail_result = GuardrailResult.from_tuple(result)
 
     crewai_event_bus.emit(
         event_source,

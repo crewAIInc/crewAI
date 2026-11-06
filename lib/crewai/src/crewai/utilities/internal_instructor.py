@@ -147,6 +147,30 @@ class InternalInstructor(Generic[T]):
                 the call by returning ``False``.
             HookAborted: If a hook denied the call.
         """
+        return self._client.chat.completions.create(  # type: ignore[no-any-return]
+            **self._request_kwargs()
+        )
+
+    def to_pydantic_with_completion(self) -> tuple[T, Any]:
+        """Generate structured output and return the raw provider completion too.
+
+        The completion carries the token usage of the call, summed across
+        instructor's retries, which ``to_pydantic`` discards.
+
+        Returns:
+            Tuple of the Pydantic model instance and the raw completion
+
+        Raises:
+            ValueError: If LLM is not provided or invalid, or if a hook blocked
+                the call by returning ``False``.
+            HookAborted: If a hook denied the call.
+        """
+        return self._client.chat.completions.create_with_completion(  # type: ignore[no-any-return]
+            **self._request_kwargs()
+        )
+
+    def _request_kwargs(self) -> dict[str, Any]:
+        """Validate the LLM, dispatch before-call hooks and build the request."""
         from crewai.llms.base_llm import BaseLLM
 
         messages: list[LLMMessage] = [{"role": "user", "content": self.content}]
@@ -166,6 +190,4 @@ class InternalInstructor(Generic[T]):
             # layer would have dispatched are dispatched here instead.
             self.llm._invoke_before_llm_call_hooks(messages, self.agent)
 
-        return self._client.chat.completions.create(  # type: ignore[no-any-return]
-            model=model_name, response_model=self.model, messages=messages
-        )
+        return {"model": model_name, "response_model": self.model, "messages": messages}

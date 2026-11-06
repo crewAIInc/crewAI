@@ -176,6 +176,7 @@ async def aexecute_tool_and_check_finality(
             # A failed tool must not become the final answer -- the same
             # exclusion the native paths already apply to raised errors.
             tool.result_as_answer and tool_usage.last_failure is None,
+            raw_result=raw_tool_result,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
@@ -339,6 +340,7 @@ def execute_tool_and_check_finality(
             # A failed tool must not become the final answer -- the same
             # exclusion the native paths already apply to raised errors.
             tool.result_as_answer and tool_usage.last_failure is None,
+            raw_result=raw_tool_result,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(

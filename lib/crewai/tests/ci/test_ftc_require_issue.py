@@ -30,6 +30,9 @@ def _run_gate(
     title: str,
     body: str,
     issue_payloads: dict[int, dict],
+    author_permission: str | None = None,
+    actor_permission: str | None = None,
+    event_action: str = "opened",
     expect_exit: int | None = 0,
 ) -> list[list[str]]:
     calls: list[list[str]] = []
@@ -45,6 +48,18 @@ def _run_gate(
         result.returncode = 0
         result.stderr = ""
         result.stdout = ""
+        if args[:2] == ["gh", "api"] and "/collaborators/" in args[2]:
+            permission = (
+                author_permission
+                if args[2].endswith("/maintainer/permission")
+                else actor_permission
+            )
+            if permission is None:
+                result.returncode = 1
+                result.stderr = "404 Not Found"
+            else:
+                result.stdout = json.dumps({"permission": permission})
+            return result
         if args[:2] == ["gh", "api"] and "/issues/" in args[2]:
             number = int(args[2].rsplit("/", 1)[-1])
             result.stdout = json.dumps(issue_payloads[number])
@@ -53,6 +68,9 @@ def _run_gate(
     env = {
         "REPO": "crewAIInc/crewAI",
         "PR_NUMBER": "99",
+        "AUTHOR_LOGIN": "maintainer",
+        "ACTOR_LOGIN": "org-member",
+        "EVENT_ACTION": event_action,
         "AUTHOR_ASSOCIATION": "FIRST_TIME_CONTRIBUTOR",
     }
     with (
@@ -89,7 +107,9 @@ def test_open_issue_mention_blocks_close(body: str) -> None:
     assert not any(
         call[:3] == ["gh", "pr", "edit"] and "--add-label" in call for call in calls
     )
-    assert any(call[:2] == ["gh", "api"] and call[2].endswith("/issues/123") for call in calls)
+    assert any(
+        call[:2] == ["gh", "api"] and call[2].endswith("/issues/123") for call in calls
+    )
 
 
 def test_foreign_repo_reference_closes_pr() -> None:
@@ -102,8 +122,53 @@ def test_foreign_repo_reference_closes_pr() -> None:
 
     assert any(call[:3] == ["gh", "pr", "close"] for call in calls)
     assert any(
-        call[:3] == ["gh", "pr", "edit"] and call[call.index("--add-label") + 1] == "needs-issue"
+        call[:3] == ["gh", "pr", "edit"]
+        and call[call.index("--add-label") + 1] == "needs-issue"
         for call in calls
         if "--add-label" in call
     )
-    assert not any(call[:2] == ["gh", "api"] for call in calls)
+    assert not any(
+        call[:2] == ["gh", "api"] and "/issues/" in call[2] for call in calls
+    )
+
+
+@pytest.mark.parametrize("permission", ["write", "push", "maintain", "admin"])
+def test_repository_maintainer_bypasses_issue_gate(permission: str) -> None:
+    calls = _run_gate(
+        title="feat: example",
+        body="",
+        issue_payloads={},
+        author_permission=permission,
+    )
+
+    assert not any(call[:3] == ["gh", "pr", "close"] for call in calls)
+    assert not any(
+        call[:2] == ["gh", "api"] and "/issues/" in call[2] for call in calls
+    )
+
+
+def test_read_only_contributor_still_requires_issue() -> None:
+    calls = _run_gate(
+        title="feat: example",
+        body="",
+        issue_payloads={},
+        author_permission="read",
+        expect_exit=None,
+    )
+
+    assert any(call[:3] == ["gh", "pr", "close"] for call in calls)
+
+
+def test_organization_member_reopening_pr_bypasses_issue_gate() -> None:
+    calls = _run_gate(
+        title="feat: example",
+        body="",
+        issue_payloads={},
+        actor_permission="push",
+        event_action="reopened",
+    )
+
+    assert not any(call[:3] == ["gh", "pr", "close"] for call in calls)
+    assert not any(
+        call[:2] == ["gh", "api"] and "/issues/" in call[2] for call in calls
+    )
