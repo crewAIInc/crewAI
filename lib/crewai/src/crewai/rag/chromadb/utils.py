@@ -183,6 +183,13 @@ def _convert_distance_to_score(
     if distance_metric == "cosine":
         score = 1.0 - 0.5 * distance
         return max(0.0, min(1.0, score))
+    if distance_metric == "ip":
+        # ChromaDB reports ``1 - dot`` for inner product. With the
+        # unit-normalized embeddings this function assumes, that lands in the
+        # same [0, 2] range as the cosine distance, so normalize it the same
+        # way instead of rejecting the collection configured with ``ip``.
+        score = 1.0 - 0.5 * distance
+        return max(0.0, min(1.0, score))
     if distance_metric == "l2":
         score = 1.0 / (1.0 + distance)
         return max(0.0, min(1.0, score))
