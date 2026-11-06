@@ -112,7 +112,7 @@ class FirecrawlSearchTool(BaseTool):
 
         return self._firecrawl.search(
             query=query,
-            **self.config,
+            **(self.config or {}),
         )
 
 
@@ -124,3 +124,4 @@ try:
         FirecrawlSearchTool._model_rebuilt = True  # type: ignore[attr-defined]
 except ImportError:
     pass
+
