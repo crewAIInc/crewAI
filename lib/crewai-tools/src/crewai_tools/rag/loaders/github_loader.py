@@ -87,7 +87,13 @@ class GithubLoader(BaseLoader):
 
         if "issue" in content_types:
             issues = repo.get_issues(state="open")
-            issue_list = [i for i in list(issues[:10]) if not i.pull_request][:5]
+            issue_list = []
+            for issue in issues:
+                if issue.pull_request:
+                    continue
+                issue_list.append(issue)
+                if len(issue_list) == 5:
+                    break
             if issue_list:
                 all_content.append("Recent Issues:")
                 for issue in issue_list:

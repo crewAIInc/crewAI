@@ -29,3 +29,28 @@ def test_github_loader_preserves_repository_source(content_types: list[str]) -> 
     assert result.source == result.metadata["source"]
     assert result.metadata["repo"] == "example/project"
     assert result.doc_id == GithubLoader.generate_doc_id(url, result.content)
+
+
+def test_github_loader_filters_pull_requests_before_limiting_issues() -> None:
+    url = "https://github.com/example/project"
+    pull_requests = [
+        SimpleNamespace(pull_request={"url": f"https://example.test/pr/{number}"})
+        for number in range(10)
+    ]
+    issues = [
+        SimpleNamespace(
+            pull_request=None, number=number, title=f"Issue {number}", body="Body"
+        )
+        for number in range(42, 48)
+    ]
+    repository = SimpleNamespace(get_issues=lambda **_: pull_requests + issues)
+    with patch("crewai_tools.rag.loaders.github_loader.Github") as github:
+        github.return_value.get_repo.return_value = repository
+        result = GithubLoader().load(
+            SourceContent(url), metadata={"content_types": ["issue"]}
+        )
+
+    assert result.content.count("- Issue #") == 5
+    assert "- Issue #42: Issue 42" in result.content
+    assert "- Issue #46: Issue 46" in result.content
+    assert "Issue #47" not in result.content
