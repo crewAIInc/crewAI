@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_groq_config(self):
+        """Test Groq provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["groq"]
+        assert config.base_url == "https://api.groq.com/openai/v1"
+        assert config.api_key_env == "GROQ_API_KEY"
+        assert config.base_url_env == "GROQ_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -420,6 +428,30 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepseek"
             assert llm.model == "deepseek-chat"
+
+    def test_llm_creates_openai_compatible_for_groq(self):
+        """LLM routes groq/<model> to the native OpenAI-compatible client."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            llm = LLM(model="groq/llama-3.1-8b-instant")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.model == "llama-3.1-8b-instant"
+            assert llm.base_url == "https://api.groq.com/openai/v1"
+
+    def test_llm_creates_openai_compatible_for_groq_explicit_provider(self):
+        """Explicit provider="groq" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            llm = LLM(model="llama-3.1-8b-instant", provider="groq")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.model == "llama-3.1-8b-instant"
+
+    def test_groq_missing_api_key_names_env_var(self):
+        """Groq requires a key; the error names GROQ_API_KEY."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="GROQ_API_KEY"
+        ):
+            OpenAICompatibleCompletion(model="llama-3.1-8b-instant", provider="groq")
 
     def test_llm_passes_kwargs_to_completion(self):
         """Test LLM passes kwargs to OpenAICompatibleCompletion."""
