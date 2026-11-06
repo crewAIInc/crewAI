@@ -1,0 +1,68 @@
+---
+title: "تكامل TraceRoot"
+description: "تتبع تشغيل CrewAI واستدعاءات OpenAI باستخدام SDK الخاص بـ TraceRoot للغة Python."
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+يوفر [TraceRoot](https://traceroot.ai/docs/integrations/crewai) تتبعًا لـ Crew وAgent وTask في CrewAI. فعّل تكامل OpenAI لتسجيل استدعاءات النموذج ضمن التتبع نفسه.
+
+## تثبيت SDK
+
+```bash
+uv add crewai traceroot
+```
+
+## إعداد مفاتيح API
+
+أنشئ مفتاح API للمشروع في [TraceRoot Cloud](https://app.traceroot.ai)، ثم صدّره مع مفتاح OpenAI.
+
+```bash
+export TRACEROOT_API_KEY="your-traceroot-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+يقرأ SDK الخاص بـ TraceRoot متغيرات بيئة العملية. إذا كنت تستخدم ملف `.env`، فحمّله قبل التهيئة. وللاستضافة الذاتية، اضبط أيضًا `TRACEROOT_HOST_URL` على عنوان المثيل.
+
+## تشغيل Crew
+
+احفظ هذا المثال في `main.py`. هيّئ التكاملات قبل إنشاء Agent. أرسل مقاطع التتبع المعلّقة قبل خروج العملية.
+
+```python
+import traceroot
+from traceroot import Integration
+
+from crewai import Agent, Crew, Task
+
+traceroot.initialize(integrations=[Integration.CREWAI, Integration.OPENAI])
+
+writer = Agent(
+    role="Technical writer",
+    goal="Explain agent workflows clearly",
+    backstory="You write concise explanations for developers.",
+    llm="openai/gpt-4o-mini",
+    allow_delegation=False,
+)
+task = Task(
+    description="Explain how a Crew coordinates agents and tasks in three sentences.",
+    expected_output="A three-sentence explanation.",
+    agent=writer,
+)
+crew = Crew(agents=[writer], tasks=[task])
+
+try:
+    result = crew.kickoff()
+    print(result.raw)
+finally:
+    traceroot.flush()
+```
+
+```bash
+uv run python main.py
+```
+
+## فحص التتبع
+
+افتح مشروع TraceRoot وحدد التتبع الناتج عن هذا التشغيل. افحص مقاطع Crew وAgent وTask والنموذج لمقارنة المدخلات والمخرجات والمدة.
+
+قد تتضمن بيانات التتبع مطالبات النموذج ومخرجاته. راجع [مرجع Python SDK](https://traceroot.ai/docs/tracing/python-sdk) للاطلاع على الإعدادات وتكاملات المزوّدين الآخرين.
