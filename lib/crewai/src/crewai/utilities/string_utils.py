@@ -35,7 +35,12 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
 
     Returns:
         Sanitized tool name (lowercase, a-z0-9_ only, max 64 chars).
+
+    Raises:
+        ValueError: If max_length is not positive.
     """
+    if max_length <= 0:
+        raise ValueError("max_length must be positive")
     name = unicodedata.normalize("NFKD", name)
     name = name.encode("ascii", "ignore").decode("ascii")
     name = _CAMEL_UPPER_LOWER.sub(r"\1_\2", name)
@@ -49,6 +54,8 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     if len(name) > max_length:
         name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
         suffix = f"_{name_hash}"
+        if max_length < len(suffix):
+            return name_hash[:max_length]
         name = name[: max_length - len(suffix)].rstrip("_") + suffix
 
     return name
