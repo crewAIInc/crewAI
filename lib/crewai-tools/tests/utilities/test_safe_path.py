@@ -174,6 +174,45 @@ class TestValidateUrl:
             "https://factory.example/internal",
         ) == "https://factory.example/internal"
 
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            "factory.example",
+            "https://factory.example",
+            "https://factory.example/some/path",
+            "factory.example:443",
+            "https://FACTORY.example:8443/",
+            "  factory.example  ",
+        ],
+    )
+    def test_allows_entry_in_any_common_host_format(self, monkeypatch, entry):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", entry)
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        assert validate_url("https://factory.example/internal")
+
+    @pytest.mark.parametrize(
+        "entry", ["*.example", ".example", "example", "other.example", ""]
+    )
+    def test_does_not_match_wildcards_or_other_hosts(self, monkeypatch, entry):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", entry)
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("https://factory.example/internal")
+
     def test_does_not_allow_private_ip_literal(self, monkeypatch):
         monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "10.0.0.1")
         with pytest.raises(ValueError, match="private/reserved IP"):

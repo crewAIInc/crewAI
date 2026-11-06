@@ -9,8 +9,8 @@ recommended for production). Managed workers should set
 CREWAI_TOOLS_FORCE_SAFE_PATHS=true so a tenant cannot disable these
 checks by exporting the escape hatch on their own deployment.
 
-Set CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS to a comma-separated list of exact
-hostnames that may resolve to private IPs.
+Set CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS to a comma-separated list of hosts
+(bare hostname, host:port or URL) that may resolve to private IPs.
 """
 
 from __future__ import annotations
@@ -234,8 +234,29 @@ def _normalize_hostname(hostname: str) -> str:
         return ""
 
 
+def _entry_hostname(entry: str) -> str:
+    """Extract the hostname from an allowlist entry.
+
+    Entries may be a bare hostname, ``host:port`` or a full URL, so an
+    administrator can paste whichever form they have. Only the hostname is
+    kept, matching how the requested URL is reduced before comparison.
+    """
+    entry = entry.strip()
+    if "://" not in entry:
+        entry = f"//{entry}"
+    try:
+        hostname = urlparse(entry).hostname
+    except ValueError:
+        return ""
+    return _normalize_hostname(hostname) if hostname else ""
+
+
 def allows_private_host(hostname: str) -> bool:
-    """Whether *hostname* is explicitly allowed to resolve privately."""
+    """Whether *hostname* is explicitly allowed to resolve privately.
+
+    Matching is exact on the hostname: no wildcards, and IP addresses are
+    never allowed.
+    """
     normalized = _normalize_hostname(hostname)
     try:
         ipaddress.ip_address(normalized)
@@ -243,9 +264,8 @@ def allows_private_host(hostname: str) -> bool:
     except ValueError:
         pass
     return bool(normalized) and any(
-        normalized == _normalize_hostname(allowed)
-        for allowed in os.environ.get(_ALLOWED_PRIVATE_HOSTS_ENV, "").split(",")
-        if allowed.strip()
+        normalized == _entry_hostname(entry)
+        for entry in os.environ.get(_ALLOWED_PRIVATE_HOSTS_ENV, "").split(",")
     )
 
 

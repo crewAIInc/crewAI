@@ -79,6 +79,32 @@ def test_safe_get_allows_configured_private_hostname(
     assert response.status_code == 200
 
 
+def test_safe_get_follows_redirect_from_private_host_to_public_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    addresses = {"factory.example": "10.0.0.1", "public.example": "93.184.216.34"}
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", (addresses[host], port))
+        ],
+    )
+
+    def respond(url: str, **_kwargs: Any) -> requests.Response:
+        if "factory.example" in url:
+            return _response(url, 302, location="https://public.example/document")
+        return _response(url, 200)
+
+    _mock_get(monkeypatch, respond)
+
+    response = safe_get("https://factory.example/document")
+
+    assert response.status_code == 200
+    assert response.history[0].url == "https://factory.example/document"
+
+
 def test_safe_get_rechecks_private_host_allowlist_on_redirect(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -473,6 +499,7 @@ def test_create_validated_connection_allows_configured_private_hostname(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+
     class RecordingSocket:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             self.peer: tuple[str, int] | None = None

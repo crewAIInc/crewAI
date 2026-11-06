@@ -218,6 +218,7 @@
                         "pages": [
                           "edge/en/tools/file-document/overview",
                           "edge/en/tools/file-document/filereadtool",
+                          "edge/en/tools/file-document/urlreadtool",
                           "edge/en/tools/file-document/filewritetool",
                           "edge/en/tools/file-document/pdfsearchtool",
                           "edge/en/tools/file-document/docxsearchtool",
@@ -21201,6 +21202,7 @@
                         "pages": [
                           "edge/pt-BR/tools/file-document/overview",
                           "edge/pt-BR/tools/file-document/filereadtool",
+                          "edge/pt-BR/tools/file-document/urlreadtool",
                           "edge/pt-BR/tools/file-document/filewritetool",
                           "edge/pt-BR/tools/file-document/pdfsearchtool",
                           "edge/pt-BR/tools/file-document/docxsearchtool",
@@ -40486,6 +40488,7 @@
                         "pages": [
                           "edge/ko/tools/file-document/overview",
                           "edge/ko/tools/file-document/filereadtool",
+                          "edge/ko/tools/file-document/urlreadtool",
                           "edge/ko/tools/file-document/filewritetool",
                           "edge/ko/tools/file-document/pdfsearchtool",
                           "edge/ko/tools/file-document/docxsearchtool",
@@ -60419,6 +60422,7 @@
                         "pages": [
                           "edge/ar/tools/file-document/overview",
                           "edge/ar/tools/file-document/filereadtool",
+                          "edge/ar/tools/file-document/urlreadtool",
                           "edge/ar/tools/file-document/filewritetool",
                           "edge/ar/tools/file-document/pdfsearchtool",
                           "edge/ar/tools/file-document/docxsearchtool",
