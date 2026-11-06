@@ -13173,6 +13173,172 @@
       }
     },
     {
+      "description": "Execute a self-contained Python script inside an isolated Hyperlight micro-VM and return its exit code, stdout, and stderr. Each call starts from a fresh sandbox: variables and imports from earlier calls are gone, so print every result you need. numpy, pandas, scipy, scikit-learn, matplotlib, pillow, and requests are available. The sandbox has no network access. Code that runs longer than 60 seconds is stopped. Use this for calculations, data processing, or any code that should not run on the host.",
+      "env_vars": [],
+      "humanized_name": "Hyperlight Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run Python code in a local Hyperlight micro-VM through the `hluk` CLI.\n\nEach call runs in a fresh, hardware-isolated micro-VM restored from a warm\nsnapshot of the runtime image, so nothing carries over between calls and\nnothing the code does reaches the host beyond what the tool allows. The\nguest has no network access unless hosts are listed in `net_allow`.\n\nNeeds the `hluk` binary from\nhttps://github.com/hyperlight-dev/hyperlight-unikraft and a hypervisor:\nKVM on Linux, WHP on Windows, Hypervisor.framework on macOS.\n\nThe generated description tells the model what the sandbox offers, and is\nkept in sync with `runtime`, `net_allow`, `timeout` and `hluk_args`: so is any\ndescription in the generated form, such as one dumped and validated again.\nAny other description supplied by the caller is left alone.",
+        "properties": {
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox. They are passed on the `hluk` command line, which other processes on the host can read, so do not put secrets here.",
+            "title": "Envs"
+          },
+          "hluk_args": {
+            "default": [],
+            "description": "Additional arguments to pass to `hluk run`, e.g. [\"--mount\", \"/data:/data:ro\"].",
+            "items": {
+              "type": "string"
+            },
+            "title": "Hluk Args",
+            "type": "array"
+          },
+          "hluk_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Path to the `hluk` binary. Defaults to the `hluk` found on PATH.",
+            "title": "Hluk Path"
+          },
+          "max_output_bytes": {
+            "default": 1048576,
+            "description": "Bytes of stdout and of stderr kept per call. Longer output keeps its beginning and end, with a note of how much was left out.",
+            "exclusiveMinimum": 0,
+            "title": "Max Output Bytes",
+            "type": "integer"
+          },
+          "net_allow": {
+            "default": [],
+            "description": "Hosts or IPs the guest may connect to. Defaults to none: every connection is refused.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Net Allow",
+            "type": "array"
+          },
+          "runtime": {
+            "default": "agent",
+            "description": "Published runtime image to run, by name or full image reference. The `agent` image ships CPython 3.12 with numpy, pandas, scipy, scikit-learn, matplotlib, pillow, and requests.",
+            "title": "Runtime",
+            "type": "string"
+          },
+          "scratch_mb": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Guest memory in MiB. Defaults to the size the runtime image is tested with.",
+            "title": "Scratch Mb"
+          },
+          "startup_timeout": {
+            "default": 300.0,
+            "description": "Maximum seconds to wait for the first call to prepare the sandbox: it pulls the runtime image and saves its warm snapshot.",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "title": "Startup Timeout",
+            "type": "number"
+          },
+          "timeout": {
+            "default": 60.0,
+            "description": "Maximum seconds a call's code may run before the sandbox is stopped.",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "HyperlightPythonTool",
+        "type": "object"
+      },
+      "name": "HyperlightPythonTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "HyperlightPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Invokes an CrewAI Platform Automation using API",
       "env_vars": [],
       "humanized_name": "invoke_amp_automation",

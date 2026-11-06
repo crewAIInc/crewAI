@@ -1,0 +1,100 @@
+---
+title: Hyperlight Python Tool
+description: The `HyperlightPythonTool` runs agent-written Python in a local, hardware-isolated Hyperlight micro-VM, with no account or API key.
+icon: microchip
+mode: "wide"
+---
+
+# `HyperlightPythonTool`
+
+## Description
+
+The `HyperlightPythonTool` lets CrewAI agents run Python in a micro-VM on your own machine, using [Hyperlight](https://github.com/hyperlight-dev/hyperlight) with a [Unikraft](https://unikraft.org) guest kernel through the [`hluk`](https://github.com/hyperlight-dev/hyperlight-unikraft) CLI.
+
+- Each call runs in a fresh micro-VM restored from a warm snapshot, in tens of milliseconds.
+- The code is isolated from the host by the hypervisor: KVM on Linux, WHP on Windows, Hypervisor.framework on Apple silicon macOS.
+- The guest has no network access unless you allow hosts with `net_allow`.
+- Nothing carries over between calls: variables, imports, and files are gone when a call returns, except in host directories you mount with `hluk_args`.
+
+## Installation
+
+Install `crewai-tools` and the `hluk` binary:
+
+```shell
+uv add crewai-tools
+```
+
+```shell
+# Linux, macOS
+curl -fsSL https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.sh | sh
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.ps1 | iex
+```
+
+On Linux, your user needs access to `/dev/kvm`. The first call pulls the runtime image and saves its warm snapshot, which can take a minute; later calls start in milliseconds.
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import HyperlightPythonTool
+
+analyst = Agent(
+    role="Data analyst",
+    goal="Answer questions by running Python",
+    backstory="You check every number by computing it.",
+    tools=[HyperlightPythonTool()],
+)
+
+task = Task(
+    description="What is the standard deviation of the first 100 prime numbers?",
+    expected_output="The value, rounded to two decimals.",
+    agent=analyst,
+)
+
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+You can also call the tool directly:
+
+```python Code
+tool = HyperlightPythonTool()
+result = tool.run(code="import numpy as np\nprint(np.arange(10).sum())")
+```
+
+## Arguments
+
+- `code: str` — Required. The Python script to run.
+
+## Returns
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "45\n",
+  "stderr": "",
+  "timed_out": false
+}
+```
+
+`exit_code` is `null` and `timed_out` is `true` when the code runs longer than `timeout`.
+
+## Parameters
+
+- `hluk_path: str | None` — Path to the `hluk` binary. Defaults to the `hluk` on `PATH`.
+- `runtime: str` — Runtime image, by name or full image reference. Default `"agent"`: CPython 3.12 with numpy, pandas, scipy, scikit-learn, matplotlib, pillow, and requests.
+- `net_allow: tuple[str, ...]` — Hosts or IPs the guest may connect to. Default: none.
+- `envs: dict[str, str] | None` — Environment variables set inside the sandbox. They are passed on the `hluk` command line, which other processes on the host can read, so do not put secrets here.
+- `scratch_mb: int | None` — Guest memory in MiB. Defaults to the size the runtime image is tested with.
+- `hluk_args: tuple[str, ...]` — Extra arguments for `hluk run`, e.g. `["--mount", "/data:/data:ro"]`.
+- `timeout: float` — Seconds a call's code may run. Default `60`.
+- `startup_timeout: float` — Seconds the first call may take to pull the image and save the snapshot. Default `300`.
+- `max_output_bytes: int` — Bytes kept of stdout and of stderr per call. Longer output keeps its beginning and end. Default 1 MiB.
+
+## Allowing network access
+
+```python Code
+tool = HyperlightPythonTool(net_allow=["api.github.com"])
+```
+
+Connections to any other host are refused.
