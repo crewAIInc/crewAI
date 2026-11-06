@@ -1474,3 +1474,21 @@ def test_gemini_no_thinking_tokens_defaults_to_zero():
     usage = llm._extract_token_usage(mock_response)
     assert usage["reasoning_tokens"] == 0
     assert usage["cached_prompt_tokens"] == 0
+
+
+def test_gemini_max_tokens_falls_back_to_max_output_tokens():
+    """#8856: the general max_tokens setting must actually cap the response
+    (Gemini's GenerateContentConfig only knows max_output_tokens), while an
+    explicit max_output_tokens keeps precedence."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    general = GeminiCompletion(model="gemini-2.0-flash-001", max_tokens=50)
+    assert general._prepare_generation_config().max_output_tokens == 50
+
+    explicit = GeminiCompletion(
+        model="gemini-2.0-flash-001", max_tokens=50, max_output_tokens=99
+    )
+    assert explicit._prepare_generation_config().max_output_tokens == 99
+
+    unset = GeminiCompletion(model="gemini-2.0-flash-001")
+    assert unset._prepare_generation_config().max_output_tokens is None
