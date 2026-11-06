@@ -97,6 +97,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "together": ProviderConfig(
+        base_url="https://api.together.ai/v1",
+        api_key_env="TOGETHER_API_KEY",
+        base_url_env="TOGETHER_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
