@@ -472,6 +472,43 @@ research_task = Task(
 )
 ```
 
+### الحراس القائمون على القرارات
+
+يطرح `DecisionGuardrail` سؤالاً واحدًا بنعم أو لا حول مخرجات المهمة على خدمة قرارات (مثل مُحوّل لـ OpenAI Decisions API)، ولا يقبل المخرجات إلا إذا بلغ الاحتمال المُعاد العتبة التي تحددها. هذه الميزة اختيارية: أنت من يوفر المُحوّل الذي يجيب عن السؤال، لذا لا يجري CrewAI أي استدعاءات API ما لم تضف واحدًا.
+
+```python Code
+from crewai import Task
+from crewai.tasks.decision_guardrail import DecisionGuardrail, PredicateAnswer
+
+
+class MyDecider:
+    """Any object with this `predicate` method works, e.g. a Decisions API adapter."""
+
+    def predicate(self, input: str, *, name: str, instructions: str) -> PredicateAnswer | None:
+        probability = ...  # ask your decision service about `input`
+        return PredicateAnswer(name=name, probability=probability)
+
+
+summary_task = Task(
+    description="Summarize the attached article",
+    expected_output="A summary that cites its sources",
+    agent=writer_agent,
+    guardrail=DecisionGuardrail(
+        "The summary cites at least one source",
+        decider=MyDecider(),
+        threshold=0.8,
+    ),
+)
+```
+
+سيقوم حارس القرار بما يلي:
+
+1. إعادة `(True, output)` مع المخرجات الأصلية دون تغيير عندما يكون الاحتمال مساويًا للعتبة أو أكبر منها. الاحتمال المساوي للعتبة تمامًا يُقبل.
+2. إعادة `(False, feedback)` مع ذكر الاحتمال والعتبة في غير ذلك، فيعيد الوكيل المحاولة كما هو الحال مع أي حارس.
+3. الرفض عند الشك: الإجابة المفقودة، أو الإجابة عن سؤال مختلف، أو الاحتمال غير الصالح، أو أي خطأ من المُقرِّر، كلها ترفض المخرجات بدلاً من قبولها.
+
+يجب أن تكون العتبة رقمًا بين 0 و1. وتتوفر آخر إجابة صالحة عبر `guardrail.last_answer`.
+
 ### حراس متعددون
 
 يمكنك تطبيق حراس متعددين على مهمة باستخدام معامل `guardrails`. تُنفَّذ الحراس المتعددون بالتسلسل، حيث يتلقى كل حارس المخرجات من السابق. يتيح لك هذا سلسلة خطوات التحقق والتحويل.

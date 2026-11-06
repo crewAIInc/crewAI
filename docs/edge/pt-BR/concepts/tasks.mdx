@@ -408,6 +408,43 @@ blog_task = Task(
 )
 ```
 
+### Guardrails Baseados em Decisão
+
+Um `DecisionGuardrail` faz a um serviço de decisão (por exemplo, um adaptador para a OpenAI Decisions API) uma única pergunta de sim ou não sobre a saída da tarefa, e só aceita a saída se a probabilidade retornada atingir o limiar que você definir. O recurso é opcional: você fornece o adaptador que responde à pergunta, então o CrewAI não faz chamadas de API a menos que você adicione um.
+
+```python Code
+from crewai import Task
+from crewai.tasks.decision_guardrail import DecisionGuardrail, PredicateAnswer
+
+
+class MyDecider:
+    """Any object with this `predicate` method works, e.g. a Decisions API adapter."""
+
+    def predicate(self, input: str, *, name: str, instructions: str) -> PredicateAnswer | None:
+        probability = ...  # ask your decision service about `input`
+        return PredicateAnswer(name=name, probability=probability)
+
+
+summary_task = Task(
+    description="Summarize the attached article",
+    expected_output="A summary that cites its sources",
+    agent=writer_agent,
+    guardrail=DecisionGuardrail(
+        "The summary cites at least one source",
+        decider=MyDecider(),
+        threshold=0.8,
+    ),
+)
+```
+
+O guardrail de decisão:
+
+1. Retorna `(True, output)` com a saída original inalterada quando a probabilidade é maior ou igual ao limiar. Uma probabilidade exatamente igual ao limiar é aceita.
+2. Caso contrário, retorna `(False, feedback)` informando a probabilidade e o limiar, e o agente tenta novamente como com qualquer guardrail.
+3. Falha de forma segura: uma resposta ausente, uma resposta para outra pergunta, uma probabilidade inválida ou um erro do decider rejeitam a saída em vez de aprová-la.
+
+O limiar deve ser um número entre 0 e 1. A resposta válida mais recente fica disponível em `guardrail.last_answer`.
+
 ### Requisitos da Função Guardrail
 
 1. **Assinatura da Função**:
