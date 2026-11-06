@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -338,3 +339,46 @@ def test_memory_string_storage_qdrant_edge(tmp_path: Path) -> None:
         m.close()
     finally:
         os.environ.pop("CREWAI_STORAGE_DIR", None)
+
+
+# --- #7684: liveness probe must not crash (or kill) on Windows -----------------
+def test_process_is_alive_does_not_signal_the_process() -> None:
+    import os
+
+    from crewai.memory.storage.qdrant_edge_storage import _process_is_alive
+
+    assert _process_is_alive(os.getpid()) is True
+    assert _process_is_alive(99999999) is False
+
+
+def test_win_pid_is_gone_only_for_invalid_parameter() -> None:
+    """An access-denied process is alive; only an invalid pid is gone."""
+    from crewai.memory.storage.qdrant_edge_storage import _win_pid_is_gone
+
+    assert _win_pid_is_gone(5) is False  # ERROR_ACCESS_DENIED
+    assert _win_pid_is_gone(0) is False  # inconclusive
+    assert _win_pid_is_gone(87) is True  # ERROR_INVALID_PARAMETER
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows-only OpenProcess failure path")
+def test_open_failure_keeps_live_worker_shard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed OpenProcess must not delete a protected worker's shard."""
+    import ctypes
+
+    from crewai.memory.storage import qdrant_edge_storage as storage_module
+
+    class _FakeKernel32:
+        def __init__(self) -> None:
+            self.OpenProcess = lambda *args: 0
+            self.GetExitCodeProcess = lambda *args: 0
+            self.CloseHandle = lambda *args: 1
+
+    monkeypatch.setattr(ctypes, "WinDLL", lambda *args, **kwargs: _FakeKernel32())
+
+    monkeypatch.setattr(ctypes, "get_last_error", lambda: 5)
+    assert storage_module._process_is_alive(12345) is True
+
+    monkeypatch.setattr(ctypes, "get_last_error", lambda: 87)
+    assert storage_module._process_is_alive(12345) is False
