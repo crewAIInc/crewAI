@@ -71,6 +71,9 @@ linkup-sdk = [
 tavily-python = [
     "tavily-python~=0.7.14",
 ]
+typesafe-sdk = [
+    "typesafe-sdk>=0.7.2",
+]
 hyperbrowser = [
     "hyperbrowser>=0.18.0",
 ]
