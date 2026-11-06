@@ -30,10 +30,16 @@ REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지
 | `stream_turn(message, session_id=...)` | 대화형 한 턴을 순서가 보장된 런타임 frame으로 스트리밍 |
 | `chat()` | 대화형 `Flow`용 로컬 터미널 REPL |
 | `kickoff(inputs={...})` | 대화형 턴 처리 없이 flow를 직접 실행하는 고급 용도 |
-| `ask()` | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
+| [`ask()`](/ko/concepts/flows#user-input-in-steps-with-ask) | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
 | `@human_feedback` | **스텝 출력** 승인/거부 — 다음 채팅 줄이 아님 |
 
 대화형 모드가 활성화되지 않으면 `handle_turn()`, `stream_turn()`, `chat()`은 `ValueError`를 발생시킵니다. `@ConversationConfig(...)`를 적용하면 자동으로 활성화되며, 그렇지 않으면 `conversational = True`로 설정하세요.
+
+<Tip>
+**`ask()` vs `handle_turn()`**:
+- `self.ask(message, metadata=...)`는 Flow 내의 실행 중인 스텝이 현재 메서드를 완료하기 전에 즉각적이고 동기적인 답변(예: 스텝 중간 확인, 마법사 프롬프트 또는 확인 질문)이 필요할 때 사용합니다. 요청 메타데이터를 첨부하고 터미널 입력을 차단하지 않고 프롬프트를 라우팅할 수 있는 커스텀 `InputProvider`를 제공할 수 있습니다. [ask()를 사용한 스텝 내 사용자 입력](/ko/concepts/flows#user-input-in-steps-with-ask)을 참조하세요.
+- `flow.handle_turn(message, session_id=...)`는 들어오는 각 사용자 메시지가 flow 그래프의 새로운 실행을 시작하는 대화형 세션을 진행할 때 사용합니다.
+</Tip>
 
 ## 빠른 시작
 

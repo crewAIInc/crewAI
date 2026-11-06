@@ -729,6 +729,143 @@ Access all feedback collected during a flow via `self.last_human_feedback` (most
 
 For a complete guide on human feedback in flows, including **async/non-blocking feedback** with custom providers (Slack, webhooks, etc.), see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
 
+### User Input in Steps with ask()
+
+When a step inside a flow requires direct user input—such as selecting an option, confirming an action, or answering a mid-step clarification—use `self.ask()`.
+
+By default, `ask()` prompts the terminal user via standard console input. However, you can configure a custom `InputProvider` on the Flow to integrate with automated tests, webhooks, message queues, or custom web/chat interfaces without blocking on `stdin`.
+
+#### Custom Input Providers and Metadata
+
+An input provider implements the `InputProvider` protocol with a single method:
+
+```python
+def request_input(
+    self,
+    message: str,
+    flow: Flow,
+    metadata: dict[str, Any] | None = None,
+) -> InputResponse | str | None:
+    ...
+```
+
+- **Request metadata**: You can pass arbitrary key-value context (such as prompt IDs, field requirements, or timeouts) via `self.ask(message, metadata={...})`.
+- **Response metadata**: The provider can return either a plain `str`, an `InputResponse(text="...", metadata={...})` carrying transport or caller metadata (such as timestamps, user IDs, or confidence scores), or `None` if input is unavailable or cancelled.
+- **Return value**: `self.ask()` unwraps `InputResponse` and returns the response string directly (or `None`).
+- **Inspecting response metadata**: The complete history—including request metadata and response metadata—is recorded in `flow.input_history`.
+
+#### Scripted Input Provider Example
+
+Here is a complete, runnable example using a deterministic, scripted provider. It demonstrates passing request metadata, receiving an `InputResponse` with response metadata, and handling unavailable input without blocking on terminal input or requiring external APIs.
+
+```python Code
+from typing import Any, Mapping
+from crewai.flow.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedInputProvider:
+    """Deterministic input provider for automated testing and headless environments."""
+
+    def __init__(self, responses: Mapping[str, InputResponse | str | None]):
+        self.responses = responses
+        self.received_requests: list[dict[str, Any]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | str | None:
+        # Request metadata from self.ask() is delivered here
+        self.received_requests.append(
+            {"message": message, "metadata": metadata or {}}
+        )
+        return self.responses.get(message)
+
+
+class OrderFulfillmentFlow(Flow):
+    # Configure custom input provider at the flow level
+    input_provider = ScriptedInputProvider(
+        responses={
+            "Select shipping method (standard/express):": InputResponse(
+                text="express",
+                metadata={"source": "customer_portal", "confidence": 0.98},
+            ),
+            "Provide gift wrap message (optional):": None,  # Simulated unavailable or skipped input
+        }
+    )
+
+    @start()
+    def process_order(self):
+        # 1. Required prompt with request metadata
+        shipping = self.ask(
+            "Select shipping method (standard/express):",
+            metadata={"step": "shipping_selection", "required": True},
+        )
+        print(f"Selected shipping: {shipping}")
+
+        # 2. Optional prompt where input is unavailable (returns None)
+        gift_message = self.ask(
+            "Provide gift wrap message (optional):",
+            metadata={"step": "gift_wrap", "required": False},
+        )
+        if gift_message is None:
+            # Handle unavailable or skipped input explicitly
+            print("Gift wrap skipped or input unavailable.")
+        else:
+            print(f"Gift wrap message: {gift_message}")
+
+        return "order_processed"
+
+
+if __name__ == "__main__":
+    flow = OrderFulfillmentFlow()
+    result = flow.kickoff()
+    print(f"Flow result: {result}")
+
+    # Inspect input history and response metadata
+    print("\nInput History:")
+    for entry in flow.input_history:
+        print(f"- Prompt: {entry.message}")
+        print(f"  Response text: {entry.response}")
+        print(f"  Request metadata: {entry.metadata}")
+        print(f"  Response metadata: {entry.response_metadata}")
+```
+
+Run this script:
+
+```bash Command
+python order_flow.py
+```
+
+```text Output
+Selected shipping: express
+Gift wrap skipped or input unavailable.
+Flow result: order_processed
+
+Input History:
+- Prompt: Select shipping method (standard/express):
+  Response text: express
+  Request metadata: {'step': 'shipping_selection', 'required': True}
+  Response metadata: {'source': 'customer_portal', 'confidence': 0.98}
+- Prompt: Provide gift wrap message (optional):
+  Response text: None
+  Request metadata: {'step': 'gift_wrap', 'required': False}
+  Response metadata: None
+```
+
+#### ask() vs handle_turn()
+
+It is important to distinguish `self.ask()` from conversational turns:
+
+| Feature | `self.ask()` | `flow.handle_turn()` |
+| :--- | :--- | :--- |
+| **Execution context** | Called **inside** an actively executing step method | Entry point to kickoff or advance an entire flow turn |
+| **Purpose** | Mid-step clarification, wizard question, or confirmation prompt | Driving multi-turn conversations where each message triggers a graph execution |
+| **Control flow** | Synchronous inline call pausing the current step until answered | Starts a new execution of the flow graph for that turn |
+| **Guide** | See above for custom `InputProvider` usage | See [Conversational Flows](/en/guides/flows/conversational-flows) |
+
 ## Adding Agents to Flows
 
 Agents can be seamlessly integrated into your flows, providing a lightweight alternative to full Crews when you need simpler, focused task execution. Here's an example of how to use an Agent within a flow to perform market research:

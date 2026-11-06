@@ -726,6 +726,143 @@ def next_step(self, result: HumanFeedbackResult):
 
 للحصول على دليل كامل حول التغذية الراجعة البشرية في التدفقات، بما في ذلك **التغذية الراجعة غير المتزامنة/غير الحاجبة** مع مزودين مخصصين (Slack، webhooks، إلخ)، انظر [التغذية الراجعة البشرية في التدفقات](/ar/learn/human-feedback-in-flows).
 
+### إدخال المستخدم في الخطوات باستخدام ask()
+
+عندما تتطلب خطوة داخل تدفق إدخالاً مباشراً من المستخدم — مثل تحديد خيار أو تأكيد إجراء أو الرد على توضيح في منتصف الخطوة — استخدم `self.ask()`.
+
+بشكل افتراضي، يطلب `ask()` المدخلات من مستخدم الطرفية عبر الإدخال القياسي في وحدة التحكم (console input). ومع ذلك، يمكنك تكوين `InputProvider` مخصص على Flow للتكامل مع الاختبارات المؤتمتة أو الـ webhooks أو قوائم انتظار الرسائل أو واجهات الويب/الدردشة المخصصة دون حظر `stdin`.
+
+#### موفرو الإدخال المخصصون والبيانات الوصفية (Metadata)
+
+يُنفذ موفر الإدخال بروتوكول `InputProvider` بدالة واحدة:
+
+```python
+def request_input(
+    self,
+    message: str,
+    flow: Flow,
+    metadata: dict[str, Any] | None = None,
+) -> InputResponse | str | None:
+    ...
+```
+
+- **بيانات وصفية للطلب (Request metadata)**: يمكنك تمرير سياق مفتاح-قيمة عشوائي (مثل معرفات المطالبة، أو متطلبات الحقل، أو المهل الزمنية) عبر `self.ask(message, metadata={...})`.
+- **بيانات وصفية للاستجابة (Response metadata)**: يمكن للموفر إرجاع إما `str` عادي، أو `InputResponse(text="...", metadata={...})` حاملاً بيانات وصفية للنقل أو للمتصل (مثل الطوابع الزمنية، أو معرفات المستخدمين، أو درجات الثقة)، أو `None` إذا كان الإدخال غير متاح أو تم إلغاؤه.
+- **قيمة الإرجاع**: يقوم `self.ask()` بفك حزمة `InputResponse` وإرجاع نص الاستجابة مباشرة (أو `None`).
+- **فحص بيانات الاستجابة الوصفية**: يتم تسجيل السجل الكامل — بما في ذلك بيانات الطلب والبيانات الوصفية للاستجابة — في `flow.input_history`.
+
+#### مثال على موفر إدخال نصي مبرمج (Scripted Input Provider)
+
+إليك مثال كامل وقابل للتشغيل باستخدام موفر محدد ومبرمج مسبقاً. يوضح تمرير البيانات الوصفية للطلب، وتلقي `InputResponse` مع البيانات الوصفية للاستجابة، والتعامل مع الإدخال غير المتاح دون حظر إدخال الطرفية أو الحاجة إلى واجهات برمجة تطبيقات خارجية.
+
+```python Code
+from typing import Any, Mapping
+from crewai.flow.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedInputProvider:
+    """Deterministic input provider for automated testing and headless environments."""
+
+    def __init__(self, responses: Mapping[str, InputResponse | str | None]):
+        self.responses = responses
+        self.received_requests: list[dict[str, Any]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | str | None:
+        # Request metadata from self.ask() is delivered here
+        self.received_requests.append(
+            {"message": message, "metadata": metadata or {}}
+        )
+        return self.responses.get(message)
+
+
+class OrderFulfillmentFlow(Flow):
+    # Configure custom input provider at the flow level
+    input_provider = ScriptedInputProvider(
+        responses={
+            "Select shipping method (standard/express):": InputResponse(
+                text="express",
+                metadata={"source": "customer_portal", "confidence": 0.98},
+            ),
+            "Provide gift wrap message (optional):": None,  # Simulated unavailable or skipped input
+        }
+    )
+
+    @start()
+    def process_order(self):
+        # 1. Required prompt with request metadata
+        shipping = self.ask(
+            "Select shipping method (standard/express):",
+            metadata={"step": "shipping_selection", "required": True},
+        )
+        print(f"Selected shipping: {shipping}")
+
+        # 2. Optional prompt where input is unavailable (returns None)
+        gift_message = self.ask(
+            "Provide gift wrap message (optional):",
+            metadata={"step": "gift_wrap", "required": False},
+        )
+        if gift_message is None:
+            # Handle unavailable or skipped input explicitly
+            print("Gift wrap skipped or input unavailable.")
+        else:
+            print(f"Gift wrap message: {gift_message}")
+
+        return "order_processed"
+
+
+if __name__ == "__main__":
+    flow = OrderFulfillmentFlow()
+    result = flow.kickoff()
+    print(f"Flow result: {result}")
+
+    # Inspect input history and response metadata
+    print("\nInput History:")
+    for entry in flow.input_history:
+        print(f"- Prompt: {entry.message}")
+        print(f"  Response text: {entry.response}")
+        print(f"  Request metadata: {entry.metadata}")
+        print(f"  Response metadata: {entry.response_metadata}")
+```
+
+قم بتشغيل هذا السكربت:
+
+```bash Command
+python order_flow.py
+```
+
+```text Output
+Selected shipping: express
+Gift wrap skipped or input unavailable.
+Flow result: order_processed
+
+Input History:
+- Prompt: Select shipping method (standard/express):
+  Response text: express
+  Request metadata: {'step': 'shipping_selection', 'required': True}
+  Response metadata: {'source': 'customer_portal', 'confidence': 0.98}
+- Prompt: Provide gift wrap message (optional):
+  Response text: None
+  Request metadata: {'step': 'gift_wrap', 'required': False}
+  Response metadata: None
+```
+
+#### ask() مقابل handle_turn()
+
+من المهم التمييز بين `self.ask()` والجولات المحادثية:
+
+| الميزة | `self.ask()` | `flow.handle_turn()` |
+| :--- | :--- | :--- |
+| **سياق التنفيذ** | يُستدعى **داخل** طريقة خطوة قيد التنفيذ النشط | نقطة البداية لتشغيل أو دفع جولة flow كاملة |
+| **الغرض** | توضيح في منتصف الخطوة، سؤال في معالج إرشادي، أو تأكيد | إدارة محادثات متعددة الجولات حيث تُشغل كل رسالة تنفيذاً للمخطط البياني |
+| **تدفق التحكم** | استدعاء متزامن ومباشر يوقف الخطوة الحالية مؤقتاً حتى تتم الإجابة | يبدأ تنفيذاً جديداً لمخطط flow لتلك الجولة |
+| **الدليل** | انظر أعلاه لمعرفة كيفية استخدام `InputProvider` مخصص | انظر [التدفقات المحادثية](/ar/guides/flows/conversational-flows) |
+
 ## إضافة Agents إلى التدفقات
 
 يمكن دمج Agents بسلاسة في تدفقاتك، مما يوفر بديلًا خفيف الوزن لفرق Crew الكاملة عندما تحتاج إلى تنفيذ مهام أبسط وأكثر تركيزًا. إليك مثال على كيفية استخدام Agent ضمن تدفق لإجراء أبحاث السوق:
