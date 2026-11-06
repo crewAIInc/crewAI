@@ -303,6 +303,13 @@ async def aexecute_a2a_delegation(
     if turn_number is None:
         turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
 
+    # The failure event below is scope-ending, so it may only fire once the
+    # impl's own started event has been emitted: pre-flight failures (agent
+    # card fetch, auth/extension validation, negotiation) raise before that
+    # scope exists, and an unpaired ending event would pop the caller's
+    # scope (e.g. the task executing the delegation).
+    delegation_started: dict[str, bool] = {"emitted": False}
+
     try:
         result = await _aexecute_a2a_delegation_impl(
             endpoint=endpoint,
@@ -330,23 +337,25 @@ async def aexecute_a2a_delegation(
             transport=transport,
             accepted_output_modes=accepted_output_modes,
             input_files=input_files,
+            _delegation_started=delegation_started,
         )
     except Exception as e:
-        crewai_event_bus.emit(
-            agent_branch,
-            A2ADelegationCompletedEvent(
-                status="failed",
-                result=None,
-                error=str(e),
-                context_id=context_id,
-                is_multiturn=is_multiturn,
-                endpoint=endpoint,
-                metadata=metadata,
-                extensions=list(extensions.keys()) if extensions else None,
-                from_task=from_task,
-                from_agent=from_agent,
-            ),
-        )
+        if delegation_started["emitted"]:
+            crewai_event_bus.emit(
+                agent_branch,
+                A2ADelegationCompletedEvent(
+                    status="failed",
+                    result=None,
+                    error=str(e),
+                    context_id=context_id,
+                    is_multiturn=is_multiturn,
+                    endpoint=endpoint,
+                    metadata=metadata,
+                    extensions=list(extensions.keys()) if extensions else None,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
         raise
 
     agent_card_data = result.get("agent_card")
@@ -398,6 +407,7 @@ async def _aexecute_a2a_delegation_impl(
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
     input_files: dict[str, Any] | None = None,
+    _delegation_started: dict[str, bool] | None = None,
 ) -> TaskStateResult:
     """Internal async implementation of A2A delegation."""
     if transport is None:
@@ -501,6 +511,8 @@ async def _aexecute_a2a_delegation_impl(
             from_agent=from_agent,
         ),
     )
+    if _delegation_started is not None:
+        _delegation_started["emitted"] = True
 
     if turn_number == 1:
         agent_id_for_event = agent_id or endpoint
