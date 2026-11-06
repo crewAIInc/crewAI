@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from threading import Lock
 from typing import Any
 import unittest
 import uuid
@@ -50,6 +51,30 @@ class TestPickleHandler(unittest.TestCase):
 
         assert str(exc.value) == "pickle data was truncated"
         assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_pickle_serialization_failure_preserves_file(
+    tmp_path: Path, existing: bool
+) -> None:
+    path = tmp_path / "training.pkl"
+    handler = PickleHandler(str(path))
+    original = {"agent": {"score": 10}}
+    if existing:
+        handler.save(original)
+        original_bytes = path.read_bytes()
+
+    with pytest.raises(TypeError, match="cannot pickle"):
+        handler.save({"lock": Lock()})
+
+    if existing:
+        assert path.read_bytes() == original_bytes
+        assert handler.load() == original
+    else:
+        assert not path.exists()
+
+    handler.save({"next": "record"})
+    assert handler.load() == {"next": "record"}
 
 
 @pytest.mark.parametrize("kind", ["unsupported", "circular"])
