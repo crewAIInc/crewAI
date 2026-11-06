@@ -119,7 +119,9 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
             with pd.ExcelFile(file_path) as xl:
                 sheet_dict = {
                     str(sheet_name): str(
-                        pd.read_excel(xl, sheet_name).to_csv(index=False)
+                        pd.read_excel(
+                            xl, sheet_name, dtype=str, keep_default_na=False
+                        ).to_csv(index=False)
                     )
                     for sheet_name in xl.sheet_names
                 }
