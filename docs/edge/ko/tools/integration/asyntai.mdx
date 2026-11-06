@@ -1,0 +1,74 @@
+---
+title: Asyntai 도구
+description: CrewAI 에이전트가 Asyntai를 통해 웹사이트의 지식 베이스로 답변하고 채팅과 리드를 읽을 수 있게 합니다
+icon: comments
+mode: "wide"
+---
+
+# Asyntai 도구
+
+[Asyntai](https://asyntai.com)는 웹사이트용 AI 챗봇입니다. 웹사이트의 페이지, 문서, 지식 베이스를 바탕으로 방문자에게 답변하고 리드를 수집합니다. 이 도구를 사용하면 CrewAI 에이전트가 해당 지식 베이스에 질문하고, 지식을 추가하고, 수집된 리드와 대화를 읽을 수 있습니다.
+
+## 설치
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## 요구 사항
+
+- Starter 플랜 이상의 [Asyntai](https://asyntai.com) 계정
+- 대시보드의 Settings > API에서 받은 Asyntai API 키
+
+```bash
+export ASYNTAI_API_KEY='your-key-here'
+```
+
+## 사용 가능한 도구
+
+| 도구 | 기능 |
+| --- | --- |
+| `AsyntaiAskWebsiteTool` | 웹사이트의 지식 베이스로 질문에 답변합니다 |
+| `AsyntaiListWebsitesTool` | 계정의 웹사이트와 ID를 나열합니다 |
+| `AsyntaiAddTextTool` | 제목과 텍스트를 지식 베이스에 추가합니다 |
+| `AsyntaiAddUrlTool` | 웹 페이지를 읽고 그 내용을 지식 베이스에 추가합니다 |
+| `AsyntaiListKnowledgeTool` | 지식 베이스의 항목을 나열합니다 |
+| `AsyntaiGetLeadsTool` | 연락처를 남긴 방문자를 읽습니다 |
+| `AsyntaiGetConversationTool` | 웹사이트 채팅 하나의 메시지를 읽습니다 |
+
+## 예시
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AsyntaiAskWebsiteTool, AsyntaiGetLeadsTool
+
+agent = Agent(
+    role="Customer success assistant",
+    goal="Answer from our website and follow up with new leads",
+    backstory="You know our website and our customers.",
+    tools=[AsyntaiAskWebsiteTool(), AsyntaiGetLeadsTool()],
+)
+
+task = Task(
+    description="Read the 5 newest leads and find what our website says about the return policy.",
+    expected_output="The leads and the return policy.",
+    agent=agent,
+)
+
+print(Crew(agents=[agent], tasks=[task]).kickoff())
+```
+
+## 매개변수
+
+모든 도구는 다음 생성자 매개변수를 받습니다.
+
+- `api_key`: Asyntai API 키입니다. 기본값은 `ASYNTAI_API_KEY` 환경 변수입니다.
+- `website_id`: 기본 Asyntai 웹사이트입니다. 지정하지 않으면 기본 웹사이트를 사용합니다.
+- `api_base_url`: Asyntai API의 기본 URL입니다. 기본값은 `https://asyntai.com/api/v1`입니다.
+- `timeout`: 각 API 요청의 제한 시간(초)입니다. 기본값은 60입니다.
+
+## 참고 사항
+
+- `AsyntaiAskWebsiteTool`은 `session_id`를 반환합니다. 후속 질문을 하려면 다음 호출에 이 값을 전달하세요.
+- 도구는 예외를 발생시키지 않고 읽을 수 있는 오류 텍스트를 에이전트에 반환합니다.
+- 자세한 내용은 [Asyntai 문서](https://asyntai.com/documentation/integrations/crewai/)를 참조하세요.

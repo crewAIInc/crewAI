@@ -1,0 +1,74 @@
+---
+title: أدوات Asyntai
+description: تتيح لوكلاء CrewAI الإجابة من قاعدة معرفة موقع الويب وقراءة محادثاته وعملائه المحتملين عبر Asyntai
+icon: comments
+mode: "wide"
+---
+
+# أدوات Asyntai
+
+[Asyntai](https://asyntai.com) هو روبوت دردشة بالذكاء الاصطناعي لمواقع الويب. يجيب الزوار من صفحات الموقع ومستنداته وقاعدة معرفته، ويجمع العملاء المحتملين. تتيح هذه الأدوات لوكيل CrewAI طرح الأسئلة على قاعدة المعرفة هذه، وإضافة معرفة إليها، وقراءة العملاء المحتملين والمحادثات التي جمعها.
+
+## التثبيت
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## المتطلبات
+
+- حساب [Asyntai](https://asyntai.com) على خطة Starter أو أعلى
+- مفتاح API من Asyntai، من لوحة التحكم ضمن Settings > API
+
+```bash
+export ASYNTAI_API_KEY='your-key-here'
+```
+
+## الأدوات المتاحة
+
+| الأداة | ما تفعله |
+| --- | --- |
+| `AsyntaiAskWebsiteTool` | تجيب عن سؤال من قاعدة معرفة الموقع |
+| `AsyntaiListWebsitesTool` | تسرد مواقع الحساب مع معرّفاتها |
+| `AsyntaiAddTextTool` | تضيف عنوانًا ونصًا إلى قاعدة المعرفة |
+| `AsyntaiAddUrlTool` | تقرأ صفحة ويب وتضيف محتواها إلى قاعدة المعرفة |
+| `AsyntaiListKnowledgeTool` | تسرد إدخالات قاعدة المعرفة |
+| `AsyntaiGetLeadsTool` | تقرأ الزوار الذين تركوا بيانات الاتصال |
+| `AsyntaiGetConversationTool` | تقرأ رسائل محادثة واحدة على الموقع |
+
+## مثال
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AsyntaiAskWebsiteTool, AsyntaiGetLeadsTool
+
+agent = Agent(
+    role="Customer success assistant",
+    goal="Answer from our website and follow up with new leads",
+    backstory="You know our website and our customers.",
+    tools=[AsyntaiAskWebsiteTool(), AsyntaiGetLeadsTool()],
+)
+
+task = Task(
+    description="Read the 5 newest leads and find what our website says about the return policy.",
+    expected_output="The leads and the return policy.",
+    agent=agent,
+)
+
+print(Crew(agents=[agent], tasks=[task]).kickoff())
+```
+
+## المعاملات
+
+تقبل كل أداة معاملات المُنشئ التالية:
+
+- `api_key`: مفتاح API من Asyntai. القيمة الافتراضية هي متغير البيئة `ASYNTAI_API_KEY`.
+- `website_id`: موقع Asyntai الافتراضي. بدونه يُستخدم الموقع الأساسي.
+- `api_base_url`: عنوان URL الأساسي لواجهة Asyntai API. القيمة الافتراضية هي `https://asyntai.com/api/v1`.
+- `timeout`: المهلة بالثواني لكل طلب API. القيمة الافتراضية هي 60.
+
+## ملاحظات
+
+- تُرجع `AsyntaiAskWebsiteTool` قيمة `session_id`. مرّرها في الاستدعاء التالي لطرح سؤال متابعة.
+- تُرجع الأدوات نص خطأ مقروءًا إلى الوكيل ولا تُطلق استثناءات.
+- راجع [توثيق Asyntai](https://asyntai.com/documentation/integrations/crewai/) لمزيد من التفاصيل.
