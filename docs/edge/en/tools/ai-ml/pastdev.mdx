@@ -1,0 +1,117 @@
+---
+title: past dev
+description: Keep CrewAI memory in past dev, a memory API for AI agents, and give agents Recall and Ingest tools.
+icon: clock-rotate-left
+mode: "wide"
+---
+
+# past dev
+
+## Description
+
+[past dev](https://past.dev) is a memory API for AI agents. It keeps what your
+crews learn and returns it in later runs, with the date and the source of
+every memory. When a later statement replaces an earlier one, past dev marks
+the earlier one as superseded.
+
+The `crewai-pastdotdev` package connects past dev to CrewAI in two ways:
+
+- **`PastDevMemory`**: a `Memory` that you pass as `memory=` to a `Crew` or an
+  `Agent`. A save is a past dev Ingest and a search is a past dev Recall.
+- **`PastDevRecallTool`** and **`PastDevIngestTool`**: tools that an agent
+  calls when it decides to. The model gives only the query or the content.
+
+## Installation
+
+```shell
+uv add crewai-pastdotdev
+# or
+pip install crewai-pastdotdev
+```
+
+Make a project API key in the past dev console and set it:
+
+```shell
+export PAST_API_KEY="past_sk_..."
+```
+
+If you run past dev in your own cloud, also set `PAST_API_HOST`. The default
+is `https://api.past.dev`.
+
+## The identity
+
+Every memory in past dev belongs to an identity: the id of the person or
+account the memory is about, for example the user id in your application.
+Your code sets the identity, never the model. The tools have no identity
+argument, so an agent cannot read or write the memory of another person.
+Make one memory or one tool for each user.
+
+## Crew memory
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_pastdotdev import PastDevMemory
+
+memory = PastDevMemory(identity="user-42")
+
+writer = Agent(
+    role="Account manager",
+    goal="Write the weekly report the way the customer wants it",
+    backstory="You know the customer well.",
+)
+report = Task(
+    description="Write this week's report for the customer.",
+    expected_output="A report in the format the customer prefers.",
+    agent=writer,
+)
+
+crew = Crew(agents=[writer], tasks=[report], memory=memory)
+crew.kickoff()
+```
+
+Before each task, CrewAI recalls with the task description and adds the
+memories to the agent's prompt. After each task, it saves the task and its
+result. past dev extracts the memories on its side, so `PastDevMemory` makes
+no extra LLM call for a save. The "Search memory" and "Save to memory" tools
+that CrewAI gives to agents also go through past dev.
+
+| Parameter | Default | Description |
+| :- | :- | :- |
+| `identity` | required | The identity for every save and recall. |
+| `api_key` | `PAST_API_KEY` | The project API key. |
+| `api_host` | `PAST_API_HOST` or `https://api.past.dev` | The API host. |
+| `audience` | none | An audience slug for saved memories. Without it, a memory is visible to the whole project. |
+| `recall_level` | `low` | The evidence budget of a recall: `low`, `medium`, `high` or `extra-high`. |
+| `read_only` | `False` | Recall only. |
+
+past dev keeps memory on its servers, so the local store operations
+(`tree()`, `info()`, `list_records()`, `update()`, `reset()`) are not
+available. `forget(record_ids=[...])` deletes data points by their source id.
+
+## Agent tools
+
+```python Code
+from crewai import Agent
+from crewai_pastdotdev import PastDevIngestTool, PastDevRecallTool
+
+agent = Agent(
+    role="Support agent",
+    goal="Help the customer with what you know about them",
+    backstory="You remember every earlier conversation.",
+    tools=[
+        PastDevRecallTool(identity="user-42"),
+        PastDevIngestTool(identity="user-42"),
+    ],
+)
+```
+
+| Tool | Argument from the model | Constructor parameters |
+| :- | :- | :- |
+| `PastDevRecallTool` | `query` | `identity`, `limit`, `level`, `api_key`, `api_host` |
+| `PastDevIngestTool` | `content` | `identity`, `audience`, `label`, `metadata`, `api_key`, `api_host` |
+
+## More information
+
+- [past dev quickstart](https://past.dev/docs/memory-api/quickstart)
+- [past dev API reference](https://past.dev/docs/memory-api/api-reference)
+- [crewai-pastdotdev on PyPI](https://pypi.org/project/crewai-pastdotdev/)
