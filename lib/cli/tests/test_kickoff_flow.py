@@ -194,8 +194,6 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch, opt
 
 @pytest.mark.parametrize("record_id,trace_url,cancelled,show_link", [
     ("this-run", "https://amp.example/t/current", False, True),
-    ("this-run", "https://attacker.example/t/current", False, False),
-    ("this-run", "https://amp.example/t/current\nunsafe", False, False),
     ("other-run", "https://amp.example/t/other", False, False),
     ("this-run", "https://amp.example/t/current", True, False),
     ("this-run", None, False, False),
@@ -205,12 +203,10 @@ def test_chat_prints_only_its_exported_trace_after_tui_exit(
     monkeypatch, tmp_path, capsys, record_id, trace_url, cancelled, show_link
 ):
     from types import SimpleNamespace
-    from crewai_core import plus_api
 
     from crewai.telemetry.tracing.last_run import record_last_run
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(plus_api, "_MACHINE_AMP_ENV", {"CREWAI_PLUS_URL": "https://amp.example"})
     monkeypatch.setenv("CREWAI_TESTING", "false")
 
     class ClosedChat:

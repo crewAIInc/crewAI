@@ -111,9 +111,6 @@ def done(gate="passed", grades=None, eval_config=None):
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
-    from crewai_core import plus_api
-
-    monkeypatch.setattr(plus_api, "_MACHINE_AMP_ENV", {"CREWAI_PLUS_URL": "https://amp.test"})
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(eval_module, "console", Console(width=240))  # one sentence per line in the captured output
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
@@ -148,13 +145,6 @@ def install(monkeypatch, amp: FakeAMP, configured_amp: str = "https://amp.test")
         return amp
 
     monkeypatch.setattr(eval_module, "PlusAPI", build)
-    return amp
-
-
-def install_legacy_amp(monkeypatch, amp, destination):
-    install(monkeypatch, amp)
-    build = eval_module.PlusAPI
-    monkeypatch.setattr(eval_module, "PlusAPI", lambda **kwargs: build(**{**kwargs, "base_url": destination}))
     return amp
 
 
@@ -383,18 +373,21 @@ def test_the_credential_goes_only_to_the_configured_amp_never_to_an_address_off_
     assert "was traced to" not in out and "Reading anonymously" not in out
 
 
-def test_project_env_cannot_redirect_evaluation_away_from_the_machine_amp(project, monkeypatch, capsys):
+def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(project, monkeypatch, capsys):
+    """A .env can send the request elsewhere — that is how a self-hosted project is wired —
+    but the token goes only to an AMP this machine is logged in to."""
     directory, _ = project
     (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\n")
     record_last_run(directory, amp_base_url="https://evil.example")
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
 
-    eval_module.eval_crew()
+    eval_module.eval_crew()  # still works: AMP reads it anonymously
 
-    assert amp.base_url == "https://amp.test"
-    assert amp.api_key == "login-token"
+    assert amp.base_url == "https://evil.example"  # the request follows the project
+    assert amp.api_key is None  # the credential does not
     out = capsys.readouterr().out
-    assert "Reading anonymously" not in out
+    assert "Reading anonymously: https://evil.example is not an AMP this machine is logged in to." in out
+    assert "crewai enterprise configure" in out
 
 
 def test_the_app_never_trusts_an_amp_the_project_env_introduced(project, monkeypatch):
@@ -3266,7 +3259,7 @@ def test_tracing_is_turned_on_and_said_once_only_when_nobody_had(
     eval_module.eval_crew(run_again=True)
     second = " ".join(capsys.readouterr().out.split())
 
-    turned_on = opted_in != "a consent given once"
+    turned_on = opted_in == "nobody"
     assert ("Tracing is now on for this project" in first) is turned_on
     assert "Tracing is now on for this project" not in second
     assert told == [turned_on, False]
@@ -3287,9 +3280,6 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     if answer == "already on":
         (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
-        from crewai_core import plus_api
-
-        monkeypatch.setitem(plus_api._MACHINE_AMP_ENV, "CREWAI_TRACING_ENABLED", "true")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     consent_screen.answer["yes"] = answer != "no"
     ran: list[tuple[str, object]] = []
@@ -3408,7 +3398,7 @@ def test_with_tracing_turned_off_and_nobody_to_ask_it_says_how_to_turn_it_on(
     [
         ("false", None, True),
         ("0", "true", True),  # the run loads the project's .env over the environment
-        ("true", "false", True),
+        ("true", "false", False),
         (None, "false", True),
         (None, "0", True),
         (None, None, False),
@@ -3549,7 +3539,7 @@ def test_tracing_is_never_turned_on_toward_an_amp_the_command_does_not_trust(
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
-    install_legacy_amp(monkeypatch, FakeAMP(statuses=[done()]), amp_url)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
 
     trusted = amp_url == "https://amp.test"
     if trusted:
@@ -3586,7 +3576,7 @@ def test_a_crew_whose_trace_would_carry_the_login_to_an_untrusted_amp_is_not_run
         monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
     (directory / ".env").write_text(env)
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: at_a_terminal)
-    amp = install_legacy_amp(monkeypatch, FakeAMP(), "https://evil.example")
+    amp = install(monkeypatch, FakeAMP())
 
     with pytest.raises(SystemExit) as exited:
         eval_module.eval_crew()  # the autouse guard fails the test if the crew runs
@@ -3615,7 +3605,7 @@ def test_with_no_login_on_this_machine_yet_tracing_is_still_not_turned_on_toward
     monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
     monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: at_a_terminal)
-    amp = install_legacy_amp(monkeypatch, FakeAMP(), "https://evil.example")
+    amp = install(monkeypatch, FakeAMP())
 
     with pytest.raises(SystemExit) as exited:
         eval_module.eval_crew()  # the autouse guard fails the test if the crew runs
@@ -3636,7 +3626,7 @@ def test_a_project_that_turned_tracing_off_is_not_asked_to_trace_toward_an_untru
     (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\nCREWAI_TRACING_ENABLED=false\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: pytest.fail("no question"))
-    install_legacy_amp(monkeypatch, FakeAMP(), "https://evil.example")
+    install(monkeypatch, FakeAMP())
 
     with pytest.raises(SystemExit) as exited:
         eval_module.eval_crew()
@@ -4140,9 +4130,11 @@ def test_tracing_already_on_follows_the_run_gate(
     assert eval_module.tracing_already_on() is already_on
 
 
-def test_project_env_cannot_override_machine_tracing_opt_out(
+def test_tracing_already_on_lets_the_project_env_beat_a_shell_false(
     tmp_path, monkeypatch
 ):
+    """The run loads `.env` over the shell, so `.env` true with a shell false
+    is traced: nobody is asked to turn on what is already on."""
     from crewai_core.user_data import update_user_data
 
     monkeypatch.chdir(tmp_path)
@@ -4155,5 +4147,5 @@ def test_project_env_cannot_override_machine_tracing_opt_out(
     (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
 
-    assert eval_module.tracing_turned_off() is True
-    assert eval_module.tracing_already_on() is False
+    assert eval_module.tracing_turned_off() is False
+    assert eval_module.tracing_already_on() is True

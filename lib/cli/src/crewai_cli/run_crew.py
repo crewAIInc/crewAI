@@ -895,7 +895,8 @@ EVAL_TOKEN_ENV = "CREWAI_EVAL_AWAITING_RUN"  # noqa: S105 - a variable name, not
 
 
 def load_project_env(env_file: Path) -> None:
-    """Load project values while preserving machine-owned AMP settings.
+    """The project's `.env` over this process's environment, with two
+    exceptions.
 
     `crewai eval`'s token: the token this process was started with is kept,
     and a `.env` never sets one. Otherwise a `.env` could unmark a run `crewai
@@ -908,20 +909,8 @@ def load_project_env(env_file: Path) -> None:
     `.env` could also point the provider at another host, so a placeholder
     sends nothing rather than the shell's key.
     """
-    from crewai_core import plus_api
     from dotenv import dotenv_values
 
-    # Project runners can use a core older than the CLI. Preserve their inherited
-    # AMP settings too; the parent passes the machine settings to its child.
-    inherited_amp = {
-        name: os.environ.get(name, "")
-        for name in (
-            "CREWAI_PLUS_URL",
-            "CREWAI_USER_PAT",
-            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
-            "CREWAI_TRACING_ENABLED",
-        )
-    }
     kept = os.environ.get(EVAL_TOKEN_ENV)
     pasted = set(filter(None, os.environ.get(PASTED_KEYS_ENV, "").split(",")))
     # Read once: a `.env` a secrets manager serves through a pipe hands its
@@ -942,10 +931,6 @@ def load_project_env(env_file: Path) -> None:
         os.environ.pop(EVAL_TOKEN_ENV, None)
     else:
         os.environ[EVAL_TOKEN_ENV] = kept
-    if restore_amp := getattr(plus_api, "restore_machine_amp_environment", None):
-        restore_amp(os.environ)
-    else:
-        os.environ.update(inherited_amp)
 
 
 def _chain_traced_rerun(run_args: dict[str, Any] | None = None) -> None:

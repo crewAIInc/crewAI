@@ -233,19 +233,21 @@ UNTRUSTED_AMP = (
 
 
 def _project_tracing_value() -> str:
-    """A project can disable tracing; enabling it requires machine consent."""
+    """`CREWAI_TRACING_ENABLED` as the run will see it: the project's `.env`
+    (which wins, as the run loads it) or else the environment, lowercased."""
     value: str | None = None
     with contextlib.suppress(Exception):
         env_file = Path.cwd() / ".env"
         if env_file.is_file():
             value = dotenv_values(env_file).get(TRACING_ENV_VAR)
-    if str(value or "").strip().lower() not in ("false", "0"):
+    if value is None:
         value = os.environ.get(TRACING_ENV_VAR)
     return str(value or "").strip().lower()
 
 
 def tracing_turned_off() -> bool:
-    """Has the project or machine disabled tracing?"""
+    """Has this project said no to tracing — `CREWAI_TRACING_ENABLED` false or
+    0, in its `.env` (which wins, as the run loads it) or else the environment?"""
     return _project_tracing_value() in ("false", "0")
 
 
@@ -256,10 +258,6 @@ def turn_tracing_on() -> None:
     env_file.touch(exist_ok=True)
     set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
     os.environ[TRACING_ENV_VAR] = "true"
-    from crewai_core import plus_api
-
-    if record_consent := getattr(plus_api, "record_tracing_consent", None):
-        record_consent()
 
 
 def _count_usage(feature: str) -> None:
@@ -642,21 +640,20 @@ def _trusted_amp_origins() -> set[str]:
         Settings().enterprise_base_url,
         DEFAULT_CREWAI_ENTERPRISE_URL,
     )
-    return {
-        origin for origin in map(_origin, candidates) if origin
-    } | _machine_amp_origins()
+    return {origin for origin in map(_origin, candidates) if origin}
 
 
 def _machine_amp_origins() -> set[str]:
-    """Trust saved settings and core's pre-project URL, never the live environment."""
-    from crewai_core import plus_api
+    """The same set, for a caller whose environment can no longer be trusted.
 
-    machine_url = getattr(plus_api, "machine_amp_url", lambda: None)()
-    candidates = (
-        machine_url,
-        Settings().enterprise_base_url,
-        DEFAULT_CREWAI_ENTERPRISE_URL,
-    )
+    `crewai eval` reads `CREWAI_PLUS_URL` BEFORE the project's `.env` is loaded,
+    so a shell export counts there and a project cannot introduce one. Inside
+    the run app there is no such "before": the crew has already run and its
+    `.env` was loaded for it, so the variable is left out of the set entirely.
+    The request still follows it — that is how a self-hosted project is wired —
+    and the credential still does not.
+    """
+    candidates = (Settings().enterprise_base_url, DEFAULT_CREWAI_ENTERPRISE_URL)
     return {origin for origin in map(_origin, candidates) if origin}
 
 
@@ -947,6 +944,9 @@ def tracing_already_on() -> bool:
     """Did somebody turn tracing on already — `CREWAI_TRACING_ENABLED=true`, or
     the consent a person gave once? A crew that sets `tracing=True` in code is
     not seen from here."""
+    # The project's `.env` beats a shell `false` the gate below would honor.
+    if _project_tracing_value() in ("true", "1"):
+        return True
     try:
         from crewai_core.user_data import is_tracing_enabled
 

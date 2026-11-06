@@ -12,10 +12,7 @@ import click
 
 # Imported first so AMP requests pin the machine's proxy and CA settings before
 # any command loads a project's .env (see crewai_core.plus_api).
-from crewai_core.plus_api import (
-    restore_machine_amp_environment,
-    restore_machine_transport,
-)
+from crewai_core.plus_api import restore_machine_transport
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.api_keys import PASTED_KEYS_ENV
@@ -329,7 +326,6 @@ def create(
             # SSL_CERT_FILE.
             env = dict(os.environ)
             restore_machine_transport(env)
-            restore_machine_amp_environment(env)
             run = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
                 [sys.executable, "-m", "crewai_cli.cli", "run"], cwd=project, env=env
             )

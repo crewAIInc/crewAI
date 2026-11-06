@@ -4,13 +4,6 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _isolate_machine_amp_settings(monkeypatch):
-    from crewai_core import plus_api
-
-    monkeypatch.setattr(plus_api, "_MACHINE_AMP_ENV", dict(plus_api._MACHINE_AMP_ENV))
-
-
-@pytest.fixture(autouse=True)
 def _usage_counts_stay_on_this_machine(monkeypatch):
     """The CLI counts what its commands do (`cli_usage:*`), and a suite that
     exercises them would send those counts as if users had run them: every

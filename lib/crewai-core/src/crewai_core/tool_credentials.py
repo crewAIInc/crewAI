@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from crewai_core.plus_api import restore_machine_amp_environment
 from crewai_core.project import read_toml
 from crewai_core.settings import Settings
 
@@ -23,7 +22,6 @@ def build_env_with_tool_repository_credentials(
     settings = Settings()
 
     env = os.environ.copy()
-    restore_machine_amp_environment(env)
     env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
         settings.tool_repository_username or ""
     )
@@ -42,7 +40,6 @@ def build_env_with_all_tool_credentials() -> dict[str, Any]:
     environment is returned in that case.
     """
     env = os.environ.copy()
-    restore_machine_amp_environment(env)
     try:
         pyproject_data = read_toml()
         sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})

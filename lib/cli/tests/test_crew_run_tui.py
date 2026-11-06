@@ -173,9 +173,6 @@ def test_execution_identity_follows_conversation_turns(conversational):
 def test_view_traces_opens_the_link_crewai_recorded_for_this_run(monkeypatch) -> None:
     """crewAI prints that link after a run but never under a TUI, so the button
     reads it off the record crewAI wrote — matched to THIS app's execution."""
-    from crewai_core import plus_api
-
-    monkeypatch.setattr(plus_api, "_MACHINE_AMP_ENV", {"CREWAI_PLUS_URL": "https://amp.example"})
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()
@@ -183,7 +180,7 @@ def test_view_traces_opens_the_link_crewai_recorded_for_this_run(monkeypatch) ->
     monkeypatch.setattr(
         crew_run_tui,
         "_recorded_run",
-        lambda uuid: {"execution_id": uuid, "amp_base_url": "https://amp.example", "trace_url": "https://amp.example/t/1"}
+        lambda uuid: {"execution_id": uuid, "trace_url": "https://amp.example/t/1"}
         if uuid == "run-this-app"
         else None,
     )
@@ -2800,11 +2797,6 @@ def test_evaluate_toward_an_untrusted_amp_asks_nothing_and_writes_nothing(
     of closing."""
     from crewai_cli.experimental import eval_crew
 
-    # An older project core can still resolve the live URL; evaluation must
-    # continue refusing that destination rather than trusting it implicitly.
-    monkeypatch.setattr(
-        eval_crew, "PlusAPI", lambda: SimpleNamespace(base_url="https://evil.example")
-    )
     monkeypatch.chdir(tmp_path)
     env = "CREWAI_PLUS_URL=https://evil.example\n"
     if tracing == "turned off":
@@ -3122,20 +3114,3 @@ def test_other_refusals_on_this_screen_offer_no_login(
     assert rejected_login.suspended == []
     assert app._evaluation["state"] == "failed"
     assert rejected_login.stops == [f"cli_usage:eval_stopped:{reason}"]
-
-
-@pytest.mark.parametrize("record_base", ["https://attacker.example", "https://amp.example:8443", None])
-def test_view_traces_rejects_a_record_from_another_amp(monkeypatch, record_base):
-    from crewai_core import plus_api
-
-    monkeypatch.setattr(plus_api, "_MACHINE_AMP_ENV", {"CREWAI_PLUS_URL": "https://amp.example"})
-    app = CrewRunApp()
-    app._status = "completed"
-    app._telemetry = Mock()
-    app._execution_uuid = "this-run"
-    monkeypatch.setattr(crew_run_tui, "_recorded_run", lambda _: {"amp_base_url": record_base, "trace_url": "https://amp.example/t/1"})
-    opened = []
-    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
-    monkeypatch.setattr(app, "notify", Mock())
-    app.action_view_traces()
-    assert opened == []

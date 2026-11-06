@@ -146,7 +146,7 @@ def _run_conversational_flow_tui(
 ) -> Any:
     from crewai.events.event_listener import EventListener
 
-    from crewai_cli.crew_run_tui import CrewRunApp, _recorded_run, _trusted_trace_url
+    from crewai_cli.crew_run_tui import CrewRunApp, _recorded_run
 
     EventListener()  # ensures we get events from the TUI
 
@@ -166,7 +166,7 @@ def _run_conversational_flow_tui(
     execution_uuid = getattr(app, "_execution_uuid", None)
     if execution_uuid and not getattr(app, "_discard_trace_on_exit", False):
         record = _recorded_run(execution_uuid) or {}
-        if trace_url := _trusted_trace_url(record):
+        if trace_url := record.get("trace_url"):
             click.echo(f"View traces: {trace_url}")
 
     if getattr(app, "_want_traced_rerun", False):
