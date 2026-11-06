@@ -35,7 +35,7 @@ class I18N(BaseModel):
         """
         try:
             if self.prompt_file:
-                with open(self.prompt_file, encoding="utf-8") as f:
+                with open(self.prompt_file, encoding="utf-8-sig") as f:
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
