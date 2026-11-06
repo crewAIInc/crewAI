@@ -26,6 +26,7 @@ from crewai.rag.chromadb.utils import (
     _prepare_documents_for_chromadb,
     _process_query_results,
     _sanitize_collection_name,
+    _with_default_collection_metadata,
 )
 from crewai.rag.core.base_client import (
     BaseClient,
@@ -131,9 +132,7 @@ class ChromaDBClient(BaseClient):
                 "Use acreate_collection() for AsyncClientAPI."
             )
 
-        metadata = kwargs.get("metadata", {})
-        if "hnsw:space" not in metadata:
-            metadata["hnsw:space"] = "cosine"
+        metadata = _with_default_collection_metadata(kwargs.get("metadata"))
 
         self.client.create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
@@ -188,9 +187,7 @@ class ChromaDBClient(BaseClient):
                 "Use create_collection() for ClientAPI."
             )
 
-        metadata = kwargs.get("metadata", {})
-        if "hnsw:space" not in metadata:
-            metadata["hnsw:space"] = "cosine"
+        metadata = _with_default_collection_metadata(kwargs.get("metadata"))
 
         await self.client.create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
@@ -239,9 +236,7 @@ class ChromaDBClient(BaseClient):
                 "Use aget_or_create_collection() for AsyncClientAPI."
             )
 
-        metadata = kwargs.get("metadata", {})
-        if "hnsw:space" not in metadata:
-            metadata["hnsw:space"] = "cosine"
+        metadata = _with_default_collection_metadata(kwargs.get("metadata"))
 
         return self.client.get_or_create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
@@ -292,9 +287,7 @@ class ChromaDBClient(BaseClient):
                 "Use get_or_create_collection() for ClientAPI."
             )
 
-        metadata = kwargs.get("metadata", {})
-        if "hnsw:space" not in metadata:
-            metadata["hnsw:space"] = "cosine"
+        metadata = _with_default_collection_metadata(kwargs.get("metadata"))
 
         return await self.client.get_or_create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
