@@ -174,6 +174,21 @@ def test_file_read_tool_zero_or_negative_start_line():
         assert result == expected
 
 
+def test_file_read_tool_zero_line_count_reads_no_lines():
+    """A zero line count must not fall back to reading the whole file."""
+    test_file = "zero_count.txt"
+    lines = ["Line 1\n", "Line 2\n", "Line 3\n"]
+
+    with patch("builtins.open", mock_open(read_data="".join(lines))):
+        tool = FileReadTool()
+
+        assert tool._run(file_path=test_file, line_count=0) == ""
+
+        # Zero lines were explicitly requested, so a later start line must
+        # return empty content rather than an "exceeds" error.
+        assert tool._run(file_path=test_file, start_line=2, line_count=0) == ""
+
+
 def test_file_read_tool_error_messages_do_not_disclose_absolute_paths(
     tmp_path, monkeypatch
 ):
