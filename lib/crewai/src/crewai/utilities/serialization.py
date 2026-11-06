@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from datetime import date, datetime
+from enum import Enum
 import json
 from typing import Any, TypeAlias
 import uuid
@@ -49,6 +50,14 @@ def to_serializable(
     if _ancestors is None:
         _ancestors = set()
 
+    if isinstance(obj, Enum):
+        return to_serializable(
+            obj.value,
+            exclude=exclude,
+            max_depth=max_depth,
+            _current_depth=_current_depth,
+            _ancestors=_ancestors,
+        )
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
     if isinstance(obj, uuid.UUID):
@@ -122,6 +131,11 @@ def to_serializable(
 
 
 def _to_serializable_key(key: Any) -> str:
+    if isinstance(key, Enum):
+        value = to_serializable(key.value, max_depth=0)
+        if isinstance(value, (str, int, float, bool)):
+            return str(value)
+        return json.dumps(value)
     if isinstance(key, (str, int)):
         return str(key)
     return f"key_{id(key)}_{key!r}"
