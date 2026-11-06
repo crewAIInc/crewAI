@@ -476,3 +476,53 @@ class TestMetadataHandling:
                 doc.get("metadata", {}).get("custom_key") == "custom_value"
                 for doc in documents
             )
+
+
+class TestAutoDetectMultipleItemsAndCaseSensitivity:
+    """Tests for case-insensitive extensions and multi-item auto-detection."""
+
+    def test_auto_detect_uppercase_file_extension(
+        self, rag_tool: RagTool, mock_rag_client: MagicMock
+    ) -> None:
+        """Test that uppercase file extensions like .JSON and .CSV are correctly detected."""
+        with TemporaryDirectory() as tmpdir:
+            json_file = Path(tmpdir) / "DATA.JSON"
+            json_file.write_text('{"name": "test"}')
+
+            rag_tool.add(str(json_file))
+
+            assert mock_rag_client.add_documents.called
+            call_args = mock_rag_client.add_documents.call_args
+            documents = call_args.kwargs.get("documents", [])
+            assert any(
+                doc.get("metadata", {}).get("data_type") == str(DataType.JSON)
+                for doc in documents
+            )
+
+    def test_auto_detect_uppercase_url_extension(self) -> None:
+        """Test that URLs with uppercase extensions resolve to their correct DataType."""
+        from crewai_tools.rag.data_types import DataTypes
+
+        assert DataTypes.from_content("https://example.com/report.PDF") == DataType.PDF_FILE
+        assert DataTypes.from_content("https://example.com/data.CSV") == DataType.CSV
+
+    def test_auto_detect_multiple_items_independent_types(
+        self, rag_tool: RagTool, mock_rag_client: MagicMock
+    ) -> None:
+        """Test that adding a directory followed by a file does not leak DataType.DIRECTORY."""
+        with TemporaryDirectory() as tmpdir:
+            subfolder = Path(tmpdir) / "subfolder"
+            subfolder.mkdir()
+            (subfolder / "inner.txt").write_text("inner content")
+
+            file2 = Path(tmpdir) / "outer.txt"
+            file2.write_text("outer content")
+
+            # Must not raise ValueError: Directory does not exist on outer.txt
+            rag_tool.add(str(subfolder), str(file2))
+
+            assert mock_rag_client.add_documents.called
+            call_args = mock_rag_client.add_documents.call_args
+            documents = call_args.kwargs.get("documents", [])
+            sources = [doc.get("metadata", {}).get("source") for doc in documents]
+            assert any("outer.txt" in s for s in sources if s)
