@@ -452,15 +452,21 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(ConversationTurnCompletedEvent)
         def on_conversation_turn_completed(
-            _: Any, event: ConversationTurnCompletedEvent
+            source: Any, event: ConversationTurnCompletedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn")
+            if getattr(source, "_standalone_agent", False):
+                self._telemetry.feature_usage_span("standalone_agent:conversation_turn")
 
         @crewai_event_bus.on(ConversationTurnFailedEvent)
         def on_conversation_turn_failed(
             source: Any, event: ConversationTurnFailedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn_failed")
+            if getattr(source, "_standalone_agent", False):
+                self._telemetry.feature_usage_span(
+                    "standalone_agent:conversation_turn_failed"
+                )
             # A deferred session closes with FlowFinishedEvent whatever happened,
             # so record the failure for on_flow_finished to read. Without
             # deferral the run already emitted FlowFailedEvent before

@@ -265,7 +265,7 @@ O `CrewOutput` inclui os resultados da tarefa final, uso de tokens e as saídas 
 
 | Método/Propriedade | Descrição                                                                                          |
 | :----------------- | :------------------------------------------------------------------------------------------------- |
-| **json**           | Retorna a representação em string JSON da saída da crew caso o formato seja JSON.                  |
+| **json**           | Retorna a representação em string JSON da saída da crew caso o formato seja JSON, ou `None` se a saída não pôde ser convertida.                  |
 | **to_dict**        | Converte as saídas JSON e Pydantic em um dicionário.                                               |
 | **__str__**        | Retorna a representação em string do resultado da crew, priorizando Pydantic, depois JSON, depois raw.|
 

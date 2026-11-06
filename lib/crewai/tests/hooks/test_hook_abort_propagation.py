@@ -42,7 +42,7 @@ from crewai.events.types.observation_events import (
     StepObservationFailedEvent,
     StepObservationStartedEvent,
 )
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import (
     HookAborted,
     InterceptionPoint,

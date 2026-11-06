@@ -31,7 +31,7 @@ def test_to_json_preserves_object_shape(response: str) -> None:
     result = converter.to_json()
 
     assert json.loads(result) == {"name": 'a "quoted" report', "count": 2}
-    assert Task._unpack_model_output(result) == (
+    assert Task._unpack_model_output(result, Report) == (
         None,
         {"name": 'a "quoted" report', "count": 2},
     )
@@ -51,7 +51,7 @@ async def test_ato_json_preserves_object_shape(response: str) -> None:
     result = await converter.ato_json()
 
     assert json.loads(result) == {"name": 'a "quoted" report', "count": 2}
-    assert Task._unpack_model_output(result) == (
+    assert Task._unpack_model_output(result, Report) == (
         None,
         {"name": 'a "quoted" report', "count": 2},
     )

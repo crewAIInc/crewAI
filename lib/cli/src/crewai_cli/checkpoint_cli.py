@@ -239,7 +239,7 @@ def _entity_summary(entities: list[dict[str, Any]]) -> str:
 
 
 def _list_json(location: str) -> list[dict[str, Any]]:
-    pattern = os.path.join(location, "**", "*.json")
+    pattern = os.path.join(glob.escape(location), "**", "*.json")
     results = []
     for path in sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
@@ -260,7 +260,7 @@ def _list_json(location: str) -> list[dict[str, Any]]:
 
 
 def _info_json_latest(location: str) -> dict[str, Any] | None:
-    pattern = os.path.join(location, "**", "*.json")
+    pattern = os.path.join(glob.escape(location), "**", "*.json")
     files = sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
     )
@@ -456,7 +456,7 @@ def _resolve_checkpoint(
             from crewai.state.provider.json_provider import JsonProvider
 
             _json_provider: JsonProvider = JsonProvider()
-            pattern: str = os.path.join(location, "**", "*.json")
+            pattern: str = os.path.join(glob.escape(location), "**", "*.json")
             all_files: list[str] = glob.glob(pattern, recursive=True)
             matches: list[str] = [
                 f for f in all_files if checkpoint_id in _json_provider.extract_id(f)
@@ -647,7 +647,7 @@ def _parse_duration(value: str) -> timedelta:
 
 
 def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -> int:
-    pattern: str = os.path.join(location, "**", "*.json")
+    pattern: str = os.path.join(glob.escape(location), "**", "*.json")
     files: list[str] = sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
     )
@@ -725,7 +725,7 @@ def prune_checkpoints(
     elif os.path.isdir(location):
         if dry_run:
             files: list[str] = glob.glob(
-                os.path.join(location, "**", "*.json"), recursive=True
+                os.path.join(glob.escape(location), "**", "*.json"), recursive=True
             )
             click.echo(f"Would prune from {len(files)} checkpoint(s) in {location}")
             return
