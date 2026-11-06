@@ -52,4 +52,30 @@ result = crew.kickoff()
 
 طريقة `call()` هي قلب تنفيذ LLM. يجب أن تقبل الرسائل وتعيد استجابة نصية وتعالج الأدوات واستدعاء الدوال إذا كانت مدعومة.
 
+## أنماط شائعة
+
+### دعم كلمات التوقف
+
+يضيف CrewAI تلقائيًا `"\nObservation:"` ككلمة توقف للتحكم في سلوك الوكيل. إذا كان LLM لديك يدعم كلمات التوقف، فأرسل `self.stop` مع طلب الـ API وأعد `True` من `supports_stop_words()`.
+
+إذا لم يدعم LLM لديك كلمات التوقف بشكل أصلي، فاقتطع الاستجابة باستخدام الطريقة الموروثة `BaseLLM._apply_stop_words()`:
+
+```python
+def call(self, messages, tools=None, callbacks=None, available_functions=None):
+    response = self._make_api_call(messages, tools)
+    content = response["choices"][0]["message"]["content"]
+    
+    # Truncate at the stop word that appears earliest in the response
+    return self._apply_stop_words(content)
+
+def supports_stop_words(self) -> bool:
+    return False  # Tell CrewAI we handle stop words manually
+```
+
+تقتطع هذه الطريقة عند كلمة التوقف التي تظهر أولًا في نص الاستجابة، لذا لا تتأثر النتيجة بترتيب `self.stop`. فمع الاستجابة `"hello EARLY middle LATE tail"`، تُعيد كل من `["LATE", "EARLY"]` و`["EARLY", "LATE"]` القيمة `"hello"`؛ إذ يُطبَّق `.strip()` على النص المقتطع، ومن ثَم تُحذف المسافة التي تسبق `EARLY` بشكل مقصود. أما الاستجابة التي لا تحتوي على أي من كلمات التوقف فتُعاد كما هي دون تغيير.
+
+<Warning>
+لا تقتطع عند أول *عنصر* موجود في `self.stop` (مثل استخدام `content.split(stop_word)[0]` داخل حلقة تتوقف عند أول تطابق)، لأن ذلك يُبقي النص الذي أنتجه النموذج بعد كلمة توقف وردت لاحقًا في القائمة، ويجعل الناتج يتغير عند إعادة ترتيب القائمة.
+</Warning>
+
 يغطي هذا الدليل أساسيات تنفيذ LLM مخصصة في CrewAI.
