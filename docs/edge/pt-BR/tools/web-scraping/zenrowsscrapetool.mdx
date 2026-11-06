@@ -1,0 +1,81 @@
+---
+title: Zenrows Scrape Tool
+description: A `ZenRowsScrapeTool` usa o Zenrows para raspar uma única página web, tratando automaticamente o bypass de anti-bot, a renderização de JavaScript e a rotação de proxies.
+icon: spider
+mode: "wide"
+---
+
+# `ZenRowsScrapeTool`
+
+## Descrição
+
+[Zenrows](https://www.zenrows.com/) é uma API de web scraping que trata o bypass de anti-bot, a renderização de JavaScript com navegador headless e a rotação de proxies residenciais por trás de um único endpoint HTTP. A `ZenRowsScrapeTool` raspa uma URL e retorna seu conteúdo como markdown, texto simples ou HTML bruto.
+
+Por padrão, toda requisição é enviada no [Adaptive Stealth Mode](https://docs.zenrows.com/universal-scraper-api/features/adaptive-stealth-mode) (`mode: "auto"`): o Zenrows começa com a configuração mais barata possível e escala automaticamente para renderização JS ou proxies premium apenas quando a página-alvo precisa, cobrando apenas pela configuração que teve sucesso. Essa é uma escolha de design deliberada para esta tool — ela mantém a superfície visível ao agente restrita a `url` e `response_type`, em vez de uma longa lista de parâmetros anti-bot (`js_render`, `premium_proxy`, `proxy_country`, ...) que um LLM não tem como escolher corretamente para cada página.
+
+## Instalação
+
+- Obtenha uma chave de API em [zenrows.com](https://www.zenrows.com/) e defina-a na variável de ambiente `ZENROWS_API_KEY` (ou passe `api_key=` explicitamente).
+- Nenhum pacote extra é necessário — a tool usa `requests`, que já é uma dependência de `crewai-tools`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+```python Code
+from crewai_tools import ZenRowsScrapeTool
+
+tool = ZenRowsScrapeTool()
+
+result = tool.run(url="https://example.com")
+```
+
+Solicitando texto simples em vez do markdown padrão:
+
+```python Code
+result = tool.run(url="https://example.com", response_type="plaintext")
+```
+
+## Configuração avançada
+
+Parâmetros que uma crew específica sempre precisa — executar `js_instructions`, aguardar um seletor, ou fixar um `proxy_country` — são definidos uma vez na construção via `config` e passam a valer para toda requisição feita por essa instância da tool.
+
+```python Code
+tool = ZenRowsScrapeTool(
+    config={
+        "mode": "auto",
+        "proxy_country": "us",
+    }
+)
+```
+
+<Note>
+  `proxy_country` funciona junto com `mode: "auto"` — o Zenrows ativa `premium_proxy` automaticamente para ele. Fora de `mode: "auto"`, `proxy_country` exige `premium_proxy: True` definido explicitamente, já que o Zenrows só aplica geolocalização a proxies premium (residenciais) e o ignoraria silenciosamente caso contrário. Definir `premium_proxy` (ou `js_render`) manualmente junto com `mode: "auto"` é uma combinação diferente, e ainda inválida — o Adaptive Stealth Mode gerencia esses dois por conta própria e rejeita a requisição se também forem definidos manualmente. A `ZenRowsScrapeTool` valida as duas regras no momento da construção e levanta um `ValueError` em vez de deixar qualquer uma falhar silenciosamente ou apenas no momento da requisição.
+</Note>
+
+Para ter controle manual total em vez do Adaptive Stealth:
+
+```python Code
+tool = ZenRowsScrapeTool(
+    config={
+        "js_render": True,
+        "premium_proxy": True,
+        "proxy_country": "us",
+    }
+)
+```
+
+Consulte a [documentação da API do Zenrows](https://docs.zenrows.com/universal-scraper-api/api-reference) para a referência completa de parâmetros.
+
+## Argumentos
+
+- `api_key`: Opcional. Sua chave de API do Zenrows. Padrão é a variável de ambiente `ZENROWS_API_KEY`.
+- `config`: Opcional. Parâmetros extras da API do Zenrows mesclados em toda requisição feita por essa instância da tool. Padrão é `{"mode": "auto"}` (Adaptive Stealth Mode).
+- `timeout`: Opcional. Timeout da requisição em segundos. Padrão é `140` para acomodar páginas renderizadas via JS.
+
+Argumentos por chamada (visíveis ao agente):
+
+- `url`: Obrigatório. URL completa da página a ser raspada, incluindo o esquema.
+- `response_type`: Opcional. Um de `"markdown"` (padrão), `"plaintext"`, ou `"html"`.
