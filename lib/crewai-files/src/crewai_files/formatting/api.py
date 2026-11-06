@@ -8,7 +8,7 @@ from typing import Any
 from crewai_files.cache.upload_cache import get_upload_cache
 from crewai_files.core.types import FileInput
 from crewai_files.formatting.anthropic import AnthropicFormatter
-from crewai_files.formatting.bedrock import BedrockFormatter
+from crewai_files.formatting.bedrock import BedrockFormatter, dedupe_document_names
 from crewai_files.formatting.gemini import GeminiFormatter
 from crewai_files.formatting.openai import OpenAIFormatter, OpenAIResponsesFormatter
 from crewai_files.processing.constraints import (
@@ -154,6 +154,9 @@ def format_multimodal_content(
         if block is not None:
             content_blocks.append(block)
 
+    if isinstance(formatter, BedrockFormatter):
+        dedupe_document_names(content_blocks)
+
     return content_blocks
 
 
@@ -221,6 +224,9 @@ async def aformat_multimodal_content(
         block = _format_block(formatter, file_input, resolved, name)
         if block is not None:
             content_blocks.append(block)
+
+    if isinstance(formatter, BedrockFormatter):
+        dedupe_document_names(content_blocks)
 
     return content_blocks
 
