@@ -49,6 +49,22 @@ provider로 등록하지 않습니다. 이를 통해 양방향이 분리됩니�
 관측 가능성 통합은 영향을 받지 않습니다: 해당 통합은 여기서 설명한 provider와
 독립적인 자체 tracer provider를 통해 CrewAI를 계측합니다.
 
+### 독립형 Agent 대화
+
+실험적 독립형 Agent 대화는 다음 `Feature Usage` 스팬을 내보냅니다. 각 스팬은 발생 한 번을 나타냅니다.
+
+| `feature` | 집계하는 발생 |
+| --- | --- |
+| `standalone_agent:handle_turn` | 대화 모드 활성화를 확인한 후의 공개 `Agent.handle_turn()` 호출. |
+| `standalone_agent:chat:repl` | 일반 채팅을 위한 공개 `Agent.chat()` 호출. |
+| `standalone_agent:chat:tui` | 공개 `Agent.chat(tui=True)` 호출. |
+| `standalone_agent:conversation_turn` | 완료된 Agent 대화 턴. |
+| `standalone_agent:conversation_turn_failed` | 실패한 Agent 대화 턴. |
+
+호출 횟수는 채팅 세션이 성공적으로 시작되었음을 의미하지 않습니다. 턴 결과는 관리형 Agent Flow 브리지와 스트리밍 턴도 포함하며, 기존 Flow 대화 집계는 변경되지 않습니다. 일반 Agent와 일반 대화형 Flow는 이러한 Agent 전용 신호를 내보내지 않습니다.
+
+이 신호는 메시지 내용, 응답, 세션 ID, Agent 역할, 모델 이름 또는 오류 텍스트를 추가하지 않습니다. 아래에 설명된 공통 실행 환경 속성은 유지됩니다. 조용한 모드나 AMP 추적 비활성화는 사용량 텔레메트리를 비활성화하지 않습니다. 이 신호를 비활성화하려면 `CREWAI_DISABLE_TELEMETRY=true`, `CREWAI_DISABLE_TRACKING=true` 또는 `OTEL_SDK_DISABLED=true`를 설정하세요.
+
 ### 데이터 설명:
 | 기본값 | 데이터                                      | 사유 및 세부 사항                                                                                                       |
 |:--------|:-------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|

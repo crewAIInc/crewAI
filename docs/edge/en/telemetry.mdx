@@ -51,6 +51,22 @@ itself as the global one. This keeps the two directions separate:
 Observability integrations are unaffected: they instrument CrewAI through their
 own tracer provider, which is independent of the one described here.
 
+### Standalone Agent conversations
+
+Experimental standalone Agent conversations emit these `Feature Usage` spans. Each span counts one occurrence:
+
+| `feature` | Counted occurrence |
+| --- | --- |
+| `standalone_agent:handle_turn` | A public `Agent.handle_turn()` invocation after conversational opt-in is validated. |
+| `standalone_agent:chat:repl` | A public `Agent.chat()` invocation for plain chat. |
+| `standalone_agent:chat:tui` | A public `Agent.chat(tui=True)` invocation. |
+| `standalone_agent:conversation_turn` | A completed conversational Agent turn. |
+| `standalone_agent:conversation_turn_failed` | A failed conversational Agent turn. |
+
+Invocation counts do not imply that a chat session started successfully. Turn outcomes also cover the managed Agent Flow bridge and streamed turns; existing Flow conversation counts remain unchanged. Ordinary Agents and ordinary conversational Flows do not emit these Agent-specific signals.
+
+These signals add no message contents, responses, session IDs, Agent roles, model names, or error text. They retain the common Execution Environment attributes listed below. Quiet mode and disabling AMP tracing do not disable usage telemetry. Set `CREWAI_DISABLE_TELEMETRY=true`, `CREWAI_DISABLE_TRACKING=true`, or `OTEL_SDK_DISABLED=true` to disable these signals.
+
 ### Data Explanation:
 | Defaulted | Data                                      | Reason and Specifics                                                                                                       |
 |:----------|:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------|

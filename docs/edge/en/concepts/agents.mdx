@@ -650,6 +650,45 @@ asyncio.run(main())
   configuration (role, goal, backstory, tools, etc.).
 </Note>
 
+## Conversational Agents (Experimental)
+
+Enable `conversational=True` to give a directly used Agent a conversational Flow session. `handle_turn()` passes the session's user/assistant history to the configured Agent and tools on each turn and returns the usual Agent output.
+
+<Warning>
+This API is experimental and requires a matching SDK build. Its contract may change before release.
+</Warning>
+
+```python
+from crewai import Agent, LLM
+
+agent = Agent(
+    role="Assistant",
+    goal="Help the user accurately.",
+    backstory="A general-purpose assistant.",
+    llm=LLM(model="openai/gpt-6.1-sol", api="responses"),
+    conversational=True,
+)
+
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+For interactive conversations, use the same `chat()` convention as conversational Flows:
+
+```python
+agent.chat()          # Plain terminal REPL
+agent.chat(tui=True)  # Full terminal UI
+```
+
+`tui=True` requires an interactive terminal and a matching CLI build. Both modes accept `session_id`, `exit_commands`, and options forwarded to `handle_turn()`. Custom prompts, input/output callables, and `skip_empty` are REPL-only options. You do not need to create or pass a Flow to start chatting.
+
+Both the plain REPL and TUI stream responses automatically; you do not need `LLM(stream=True)`. Disable token streaming with `agent.chat(stream=False)` (also supported with `tui=True`) or an explicit `LLM(stream=False)`. An explicit chat `stream=True` overrides the LLM setting. Streaming is scoped to each turn and does not change the LLM configuration or independent `kickoff()` behavior. A custom `output_fn` receives one completed response per turn; use `stream_turn()` for custom streaming transports.
+
+Reuse one Agent for one conversation. The first turn binds its session ID; switching to another ID raises `ValueError` before history reaches the model. Overlapping turns on that Agent raise `RuntimeError`, including streamed turns used by the REPL, TUI and managed Flow bridge. Create a separate Agent for each independent conversation. Python and Pydantic Agent copies start with fresh history and session guards, even when copied during an active turn. For advanced persistence configuration, `agent.as_flow()` exposes the underlying session. History is in memory by default; process recovery requires explicit Flow persistence. A session ID identifies state; applications must still authorize access to persisted sessions.
+
+Ordinary Agents default to `conversational=False`. Direct `kickoff()` and `kickoff_async()` calls remain independent executions even when conversation is enabled; use `handle_turn()` to retain the session history. Existing Crew/Task execution keeps its current behavior.
+
 ## Upgrading Agents from Earlier Releases
 
 Release 1.15.29 removed `CrewAgentExecutor` and changed how every agent handles large tool results, long conversations, and repeated tool calls. These changes apply to agents in a crew, in a Flow, and called with `kickoff()`. The exception is the plan steps of an agent that [plans](/en/concepts/planning): their tool results are not deferred, their conversation is not summarized, and the repeated-call count restarts for each step. If you are moving from 1.15.28 or earlier, check each one below.
