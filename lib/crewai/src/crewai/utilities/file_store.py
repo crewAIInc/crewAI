@@ -47,12 +47,18 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
     """
     try:
         asyncio.get_running_loop()
-        ctx = contextvars.copy_context()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(ctx.run, asyncio.run, coro)
-            return future.result()
     except RuntimeError:
+        # No loop is running, so the coroutine can be driven directly.
         return asyncio.run(coro)
+
+    # Inside a running loop, drive the coroutine in a worker thread. Only the
+    # loop detection may fall back to `asyncio.run`: catching `RuntimeError`
+    # around `future.result()` would swallow an error raised by the coroutine
+    # itself and re-run an already awaited coroutine instead.
+    ctx = contextvars.copy_context()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(ctx.run, asyncio.run, coro)
+        return future.result()
 
 
 DEFAULT_TTL = 3600

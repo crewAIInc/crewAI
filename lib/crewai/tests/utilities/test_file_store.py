@@ -1,10 +1,12 @@
 """Unit tests for file_store module."""
 
+import asyncio
 import uuid
 
 import pytest
 
 from crewai.utilities.file_store import (
+    _run_sync,
     clear_files,
     clear_task_files,
     get_all_files,
@@ -169,3 +171,28 @@ class TestAsyncFileStore:
         finally:
             await aclear_files(crew_id)
             await aclear_task_files(task_id)
+
+class TestRunSync:
+    """Tests for the sync bridge used when a loop is already running."""
+
+    def test_returns_result_when_loop_is_running(self) -> None:
+        async def value() -> int:
+            return 42
+
+        async def main() -> None:
+            assert _run_sync(value()) == 42
+
+        asyncio.run(main())
+
+    def test_propagates_error_raised_by_the_coroutine(self) -> None:
+        """A RuntimeError from the coroutine must not be mistaken for the
+        "no running loop" signal and re-raised as an asyncio misuse error."""
+
+        async def boom() -> None:
+            raise RuntimeError("inner boom")
+
+        async def main() -> None:
+            with pytest.raises(RuntimeError, match="inner boom"):
+                _run_sync(boom())
+
+        asyncio.run(main())
