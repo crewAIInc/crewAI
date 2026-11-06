@@ -1,0 +1,85 @@
+---
+title: URL Read
+description: The `URLReadTool` fetches a URL and returns its content as text.
+icon: globe
+mode: "wide"
+---
+
+## Overview
+
+The `URLReadTool` reads the content at a URL and returns it as text. PDF, DOCX and XLSX bodies have their text extracted, HTML is reduced to visible text, and text-based types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded as-is. It works with presigned cloud-storage links (S3, R2, Google Drive, OneDrive, SharePoint) even when the server labels the file `application/octet-stream`.
+
+The tool does not authenticate, so the link must already grant access.
+
+## Installation
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python Code
+from crewai_tools import URLReadTool
+
+url_read_tool = URLReadTool()
+
+content = url_read_tool.run(url="https://example.com/report.pdf")
+
+# Read a window of lines instead of the whole document
+head = url_read_tool.run(url="https://example.com/data.csv", line_count=20)
+```
+
+## Arguments
+
+The agent supplies these at runtime:
+
+- `url`: The URL to read.
+- `start_line`: (Optional) The line to start from (1-indexed). Defaults to `1`.
+- `line_count`: (Optional) The number of lines to return. If omitted, returns everything from `start_line`.
+
+You set these when constructing the tool:
+
+- `max_bytes`: (Optional) Largest response body to accept. Defaults to 5 MiB.
+- `timeout`: (Optional) Per-request timeout in seconds. Defaults to `30`.
+- `headers`: (Optional) Extra request headers.
+- `encoding`: (Optional) Force a text encoding instead of the one the server declares.
+
+If the fetch fails, the tool returns a failure that includes the reason, such as a blocked address or a connection error.
+
+## Network safety
+
+Because the URL is usually chosen by an LLM at runtime, requests are checked against SSRF:
+
+- Each hostname is resolved, and the request is rejected if any resolved address is private, loopback, link-local or otherwise reserved. This covers cloud metadata endpoints and internal services.
+- Redirects are not followed automatically. Every hop is checked again, and credentials are dropped on cross-origin hops.
+
+### Allowing an internal host
+
+Some deployments serve files from a host that resolves to a private address, such as a self-hosted platform behind an internal load balancer. To permit it, list its exact hostname in `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`:
+
+```shell
+export CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS="files.internal.example.com,assets.internal.example.com"
+```
+
+Examples of what each value allows, for a request to `https://files.internal.example.com/report.pdf`:
+
+| Value of `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS` | Result | Why |
+| --- | --- | --- |
+| `files.internal.example.com` | Allowed | Exact hostname match. |
+| `https://files.internal.example.com/blobs` | Allowed | Only the hostname is used. The scheme and path are ignored. |
+| `files.internal.example.com:8443` | Allowed | The port is ignored, so any port on that host is allowed. |
+| `Files.Internal.Example.com` | Allowed | Comparison is case-insensitive, and surrounding spaces are ignored. |
+| `other.example.com,files.internal.example.com` | Allowed | Each entry is checked on its own, so listing several hosts works. |
+| `other.internal.example.com` | Blocked | A different host is not covered. |
+| `*.internal.example.com` | Blocked | Wildcards are not supported. List each host. |
+| `10.10.0.115` | Blocked | IP addresses are never allowed through this list. |
+
+- Entries are comma-separated. Each can be a bare hostname, `host:port` or a full URL. Only the hostname is used, and it is matched exactly and case-insensitively. Wildcards such as `*.example.com` are not supported.
+- IP addresses are never allowed through this list.
+- A listed host may resolve to any private address, so list only hostnames whose DNS you control and trust.
+- Redirects are still checked, so a redirect to another internal host must be listed as well.
+- The setting applies to every crewai-tools tool that makes safe requests, not only `URLReadTool`.
+- TLS certificates are still verified. A host that uses a private certificate authority must chain to a CA the tool trusts.
+
+This is narrower than `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`, which disables path and SSRF protection process-wide and should be avoided. Managed workers can set `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` and still use the allowlist.

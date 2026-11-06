@@ -1,0 +1,85 @@
+---
+title: URL 읽기
+description: `URLReadTool`은 URL을 가져와 콘텐츠를 텍스트로 반환합니다.
+icon: globe
+mode: "wide"
+---
+
+## 개요
+
+`URLReadTool`은 URL의 콘텐츠를 읽어 텍스트로 반환합니다. PDF, DOCX, XLSX 본문은 텍스트가 추출되고, HTML은 보이는 텍스트로 줄여지며, 텍스트 기반 형식(일반 텍스트, Markdown, JSON, XML, YAML, CSV)은 그대로 디코딩됩니다. 서버가 파일을 `application/octet-stream`으로 표시하더라도 클라우드 스토리지의 사전 서명된 링크(S3, R2, Google Drive, OneDrive, SharePoint)에서 동작합니다.
+
+이 도구는 인증을 수행하지 않으므로 링크 자체가 이미 접근 권한을 부여해야 합니다.
+
+## 설치
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용 예시
+
+```python Code
+from crewai_tools import URLReadTool
+
+url_read_tool = URLReadTool()
+
+content = url_read_tool.run(url="https://example.com/report.pdf")
+
+# 문서 전체 대신 일부 줄만 읽기
+head = url_read_tool.run(url="https://example.com/data.csv", line_count=20)
+```
+
+## 인수
+
+에이전트가 런타임에 제공합니다:
+
+- `url`: 읽을 URL입니다.
+- `start_line`: (선택 사항) 시작할 줄 번호(1부터 시작)입니다. 기본값은 `1`입니다.
+- `line_count`: (선택 사항) 반환할 줄 수입니다. 생략하면 `start_line`부터 끝까지 반환합니다.
+
+도구를 생성할 때 설정합니다:
+
+- `max_bytes`: (선택 사항) 허용하는 최대 응답 본문 크기입니다. 기본값은 5 MiB입니다.
+- `timeout`: (선택 사항) 요청당 제한 시간(초)입니다. 기본값은 `30`입니다.
+- `headers`: (선택 사항) 추가 요청 헤더입니다.
+- `encoding`: (선택 사항) 서버가 선언한 인코딩 대신 사용할 텍스트 인코딩입니다.
+
+가져오기에 실패하면 차단된 주소나 연결 오류와 같은 이유가 포함된 실패를 반환합니다.
+
+## 네트워크 보안
+
+URL은 보통 런타임에 LLM이 선택하므로 요청은 SSRF에 대해 검사됩니다:
+
+- 각 호스트 이름을 확인(resolve)하고, 확인된 주소 중 하나라도 사설, 루프백, 링크 로컬 또는 기타 예약된 주소이면 요청을 거부합니다. 클라우드 메타데이터 엔드포인트와 내부 서비스가 이에 포함됩니다.
+- 리디렉션은 자동으로 따라가지 않습니다. 모든 단계가 다시 검사되며, 다른 출처로 이동하면 자격 증명이 제거됩니다.
+
+### 내부 호스트 허용
+
+일부 환경에서는 내부 로드 밸런서 뒤의 자체 호스팅 플랫폼처럼 사설 주소로 확인되는 호스트에서 파일을 제공합니다. 이를 허용하려면 정확한 호스트 이름을 `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`에 나열하세요:
+
+```shell
+export CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS="files.internal.example.com,assets.internal.example.com"
+```
+
+`https://files.internal.example.com/report.pdf`에 대한 요청에서 각 값이 허용하는 범위의 예시:
+
+| `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS` 값 | 결과 | 이유 |
+| --- | --- | --- |
+| `files.internal.example.com` | 허용 | 호스트 이름이 정확히 일치합니다. |
+| `https://files.internal.example.com/blobs` | 허용 | 호스트 이름만 사용됩니다. 스킴과 경로는 무시됩니다. |
+| `files.internal.example.com:8443` | 허용 | 포트는 무시되므로 해당 호스트의 모든 포트가 허용됩니다. |
+| `Files.Internal.Example.com` | 허용 | 대소문자를 구분하지 않으며 앞뒤 공백은 무시됩니다. |
+| `other.example.com,files.internal.example.com` | 허용 | 각 항목이 개별적으로 검사되므로 여러 호스트를 나열할 수 있습니다. |
+| `other.internal.example.com` | 차단 | 다른 호스트는 포함되지 않습니다. |
+| `*.internal.example.com` | 차단 | 와일드카드는 지원되지 않습니다. 각 호스트를 나열하세요. |
+| `10.10.0.115` | 차단 | 이 목록으로는 IP 주소가 허용되지 않습니다. |
+
+- 항목은 쉼표로 구분합니다. 각 항목은 호스트 이름, `host:port` 또는 전체 URL일 수 있습니다. 호스트 이름만 사용되며 대소문자를 구분하지 않고 정확히 일치해야 합니다. `*.example.com`과 같은 와일드카드는 지원되지 않습니다.
+- IP 주소는 이 목록으로 허용되지 않습니다.
+- 나열된 호스트는 어떤 사설 주소로도 확인될 수 있으므로, DNS를 직접 관리하고 신뢰할 수 있는 호스트 이름만 나열하세요.
+- 리디렉션도 계속 검사되므로 다른 내부 호스트로의 리디렉션도 목록에 있어야 합니다.
+- 이 설정은 `URLReadTool`뿐 아니라 안전한 요청을 사용하는 모든 crewai-tools 도구에 적용됩니다.
+- TLS 인증서는 계속 검증됩니다. 사설 인증 기관을 사용하는 호스트는 도구가 신뢰하는 CA로 이어지는 체인이어야 합니다.
+
+이는 경로 및 SSRF 보호를 프로세스 전체에서 비활성화하므로 피해야 하는 `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`보다 범위가 좁습니다. 관리형 워커는 `CREWAI_TOOLS_FORCE_SAFE_PATHS=true`를 설정하고도 허용 목록을 사용할 수 있습니다.

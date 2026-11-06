@@ -20,6 +20,7 @@ from crewai_tools.security.safe_requests import safe_get_bounded
 
 _DEFAULT_MAX_BYTES: Final[int] = 5 * 1024 * 1024
 _DEFAULT_TIMEOUT: Final[int] = 30
+
 _PDF_TYPE: Final[str] = "application/pdf"
 _DOCX_TYPE: Final[str] = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -145,13 +146,17 @@ class URLReadTool(BaseTool):
 
         The fetch pins TCP to the IP that passed validation unless
         ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without
-        ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. Set
+        ``CREWAI_TOOLS_FORCE_SAFE_PATHS``.
+
+        An administrator can approve internal hosts by setting
         ``CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`` to a comma-separated list of
-        exact hostnames when an administrator has approved an internal URL host.
-        The returned text is still
-        untrusted remote content flowing into an agent's context -- a
-        fetched page can attempt to instruct the agent. Network egress
-        policy and prompt-level handling cover that.
+        hosts (a bare hostname, ``host:port`` or a URL; matched on the exact
+        hostname, with no wildcards and no IP addresses). It applies to every crewai-tools tool that uses the
+        safe request helpers, not just this one.
+
+        The returned text is still untrusted remote content flowing into an
+        agent's context -- a fetched page can attempt to instruct the agent.
+        Network egress policy and prompt-level handling cover that.
 
     Args:
         max_bytes (int): Largest response body to accept, in decoded bytes.
