@@ -62,7 +62,11 @@ class ArxivPaperTool(BaseTool):
                             filename_base = safe_title or paper["arxiv_id"]
                         else:
                             filename_base = paper["arxiv_id"]
-                        filename = f"{filename_base[:500]}.pdf"
+                        # Reserve four bytes for .pdf within a 255-byte filename.
+                        filename_base = filename_base.encode("utf-8")[:251].decode(
+                            "utf-8", errors="ignore"
+                        )
+                        filename = f"{filename_base}.pdf"
                         save_path = Path(save_dir) / filename
 
                         self.download_pdf(paper["pdf_url"], save_path)  # type: ignore[arg-type]
