@@ -569,6 +569,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if method_definition.is_start
         ]
 
+    def _ensure_start_method(self) -> None:
+        # A checkpoint restore can finish from its recorded outputs alone:
+        # ``crewai checkpoint resume`` restores a plain Flow with no methods.
+        if self._restored_from_checkpoint or self._start_method_names():
+            return
+        raise ValueError(
+            f"Flow {self._definition.name!r} has no start method, so kickoff "
+            "has nothing to run. Mark at least one method with @start()."
+        )
+
     def _listener_methods(
         self,
     ) -> Iterator[tuple[FlowMethodName, FlowMethodDefinition, FlowDefinitionCondition]]:
@@ -2151,6 +2161,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
+        self._ensure_start_method()
         if self.stream:
             return self.stream_events(
                 inputs=inputs,
@@ -2217,6 +2228,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
+        self._ensure_start_method()
         if self.stream:
             return self.astream(
                 inputs=inputs,
