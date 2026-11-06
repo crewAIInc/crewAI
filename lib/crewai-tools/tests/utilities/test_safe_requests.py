@@ -59,6 +59,50 @@ def test_safe_get_blocks_direct_internal_url() -> None:
         safe_get("http://127.0.0.1/admin", timeout=15)
 
 
+def test_safe_get_allows_configured_private_hostname(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+    _mock_get(monkeypatch, lambda url, **_kwargs: _response(url, 200))
+
+    response = safe_get(
+        "https://factory.example/document",
+    )
+
+    assert response.status_code == 200
+
+
+def test_safe_get_rechecks_private_host_allowlist_on_redirect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+    _mock_get(
+        monkeypatch,
+        lambda url, **_kwargs: _response(
+            url, 302, location="https://other-private.example/document"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        safe_get(
+            "https://factory.example/document",
+        )
+
+
 def _mock_get(monkeypatch: pytest.MonkeyPatch, get_response: Any) -> None:
     monkeypatch.setattr(
         "crewai_tools.security.safe_requests._raw_get",
@@ -423,6 +467,44 @@ def test_create_validated_connection_pins_resolved_ip(
 
     assert connected_to == [("93.184.216.34", 80)]
     assert sock.getpeername() == ("93.184.216.34", 80)
+
+
+def test_create_validated_connection_allows_configured_private_hostname(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    class RecordingSocket:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.peer: tuple[str, int] | None = None
+
+        def setsockopt(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        def settimeout(self, timeout: Any) -> None:
+            return None
+
+        def connect(self, sockaddr: tuple[str, int]) -> None:
+            self.peer = sockaddr
+
+        def getpeername(self) -> tuple[str, int]:
+            assert self.peer is not None
+            return self.peer
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+    monkeypatch.setattr(socket, "socket", lambda *args, **kwargs: RecordingSocket())
+
+    sock = create_validated_connection("factory.example", 443)
+
+    assert sock.getpeername() == ("10.0.0.1", 443)
 
 
 def test_create_validated_connection_blocks_when_any_record_is_private(
