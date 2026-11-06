@@ -272,6 +272,25 @@ def prepare_kickoff(
         reset_emission_counter()
         reset_last_event_id()
 
+    # Emit the start event before setup: crew_kickoff_failed is
+    # scope-ending, so a failure during input validation, hook dispatch, or
+    # before-callbacks must find its opener already on the stack instead of
+    # popping the caller's scope. The payload carries the caller's inputs;
+    # an invalid ``inputs`` argument is reported as None rather than risking
+    # event-validation errors on the way to the caller's TypeError.
+    if not (resuming and crew._kickoff_event_id):
+        started_event = CrewKickoffStartedEvent(
+            crew_name=crew.name,
+            inputs=inputs if isinstance(inputs, Mapping) else None,
+        )
+        crew._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(crew, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: S110
+                pass
+
     from crewai.hooks.contexts import ExecutionStartContext, InputContext
     from crewai.hooks.dispatch import InterceptionPoint, dispatch
 
@@ -326,15 +345,6 @@ def prepare_kickoff(
             fmt.print_panel(
                 content, "\U0001f504 Resuming from Checkpoint", "bright_magenta"
             )
-    else:
-        started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
-        crew._kickoff_event_id = started_event.event_id
-        future = crewai_event_bus.emit(crew, started_event)
-        if future is not None:
-            try:
-                future.result()
-            except Exception:  # noqa: S110
-                pass
 
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"

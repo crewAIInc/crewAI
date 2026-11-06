@@ -4321,6 +4321,132 @@ def test_crew_test_setup_failure_pairs_events(researcher):
     )
 
 
+def test_crew_kickoff_setup_failure_pairs_events(researcher):
+    """A failure during kickoff() setup must still pair Started with Failed.
+
+    crew_kickoff_failed is scope-ending: the start event used to be emitted
+    only after input validation, hook dispatch, and before-kickoff callbacks
+    succeeded, so any of those failures emitted an unpaired Failed that
+    popped the caller's enclosing event scope (e.g. a Flow method's).
+    """
+    task = Task(
+        description="Summarize the topic.",
+        expected_output="A summary.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    started: list[CrewKickoffStartedEvent] = []
+    failed: list[CrewKickoffFailedEvent] = []
+
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started.append(event)
+
+    @crewai_event_bus.on(CrewKickoffFailedEvent)
+    def on_failed(source, event: CrewKickoffFailedEvent):
+        failed.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewKickoffFailedEvent, on_failed)
+    try:
+        with pytest.raises(TypeError, match="inputs must be a dict or Mapping"):
+            crew.kickoff(inputs="oops-not-a-mapping")
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        crewai_event_bus.off(CrewKickoffFailedEvent, on_failed)
+
+    assert started, "kickoff() must emit CrewKickoffStartedEvent before setup runs"
+    assert failed, "kickoff() setup failure must emit CrewKickoffFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the Failed event must pair with the kickoff's own start event, not pop "
+        "the caller's enclosing scope"
+    )
+
+
+def test_crew_kickoff_callback_failure_pairs_events(researcher):
+    """A raising before_kickoff_callback must not pop the caller's scope."""
+
+    def bad_callback(inputs):
+        raise RuntimeError("callback exploded")
+
+    task = Task(
+        description="Summarize the topic.",
+        expected_output="A summary.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    crew.before_kickoff_callbacks.append(bad_callback)
+
+    started: list[CrewKickoffStartedEvent] = []
+    failed: list[CrewKickoffFailedEvent] = []
+
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started.append(event)
+
+    @crewai_event_bus.on(CrewKickoffFailedEvent)
+    def on_failed(source, event: CrewKickoffFailedEvent):
+        failed.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewKickoffFailedEvent, on_failed)
+    try:
+        with pytest.raises(RuntimeError, match="callback exploded"):
+            crew.kickoff(inputs={"topic": "AI"})
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        crewai_event_bus.off(CrewKickoffFailedEvent, on_failed)
+
+    assert started, "kickoff() must emit CrewKickoffStartedEvent before callbacks run"
+    assert failed, "a callback failure must emit CrewKickoffFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the Failed event must pair with the kickoff's own start event, not pop "
+        "the caller's enclosing scope"
+    )
+
+
+@pytest.mark.asyncio
+async def test_crew_akickoff_setup_failure_pairs_events(researcher):
+    """Same regression as the sync path, exercised via akickoff."""
+    task = Task(
+        description="Summarize the topic.",
+        expected_output="A summary.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    started: list[CrewKickoffStartedEvent] = []
+    failed: list[CrewKickoffFailedEvent] = []
+
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started.append(event)
+
+    @crewai_event_bus.on(CrewKickoffFailedEvent)
+    def on_failed(source, event: CrewKickoffFailedEvent):
+        failed.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewKickoffFailedEvent, on_failed)
+    try:
+        with pytest.raises(TypeError, match="inputs must be a dict or Mapping"):
+            await crew.akickoff(inputs="oops-not-a-mapping")
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        crewai_event_bus.off(CrewKickoffFailedEvent, on_failed)
+
+    assert started, "akickoff() must emit CrewKickoffStartedEvent before setup runs"
+    assert failed, "akickoff() setup failure must emit CrewKickoffFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the Failed event must pair with the kickoff's own start event, not pop "
+        "the caller's enclosing scope"
+    )
+
+
 def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
