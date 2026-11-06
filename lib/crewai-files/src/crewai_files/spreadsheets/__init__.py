@@ -11,11 +11,12 @@ from __future__ import annotations
 from collections import OrderedDict
 import hashlib
 import io
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 import threading
 from typing import TYPE_CHECKING, Final
 from urllib.parse import urlparse
 import zipfile
+import zlib
 
 from crewai_files.core.sources import FileBytes, FilePath, FileUrl
 
@@ -39,8 +40,15 @@ _ARCHIVE_TYPES: Final = frozenset({"application/zip", "application/octet-stream"
 _DELIMITED: Final = frozenset({"csv", "tsv"})
 _DELIMITED_TYPES: Final = {"text/csv": "csv", "text/tab-separated-values": "tsv"}
 _CACHED_WORKBOOKS: Final = 8
+# Cells held across cached workbooks: one workbook at the parser's own limit,
+# about 1 GB in memory, so eight large uploads can't pin several.
+_CACHED_CELLS: Final = 10_000_000
+# Recognition opens an unknown archive too, so it keeps to the parser's member
+# cap and reads no more of ``mimetype`` than the value it compares.
+_MAX_MEMBERS: Final = 10_000
+_ODS_MIMETYPE: Final = b"application/vnd.oasis.opendocument.spreadsheet"
 
-_workbooks: OrderedDict[tuple[str, str], Workbook] = OrderedDict()
+_workbooks: OrderedDict[tuple[str, str], tuple[Workbook, int]] = OrderedDict()
 _workbooks_lock = threading.Lock()
 
 
@@ -59,8 +67,11 @@ def is_spreadsheet(file: FileInput) -> bool:
     content_type = file.content_type
     if content_type in _CONTENT_TYPES:
         return True
-    if content_type in _ARCHIVE_TYPES and isinstance(source, (FilePath, FileBytes)):
-        return _holds_a_workbook(file.read())
+    if isinstance(source, FilePath) and content_type in _ARCHIVE_TYPES:
+        return _holds_a_workbook(source.path)
+    if isinstance(source, FileBytes) and content_type in _ARCHIVE_TYPES:
+        data = file.read()
+        return data.startswith(b"PK\x03\x04") and _holds_a_workbook(io.BytesIO(data))
     return False
 
 
@@ -86,11 +97,15 @@ def load_spreadsheet(file: FileInput, *, max_bytes: int | None = None) -> Workbo
     with _workbooks_lock:
         if key in _workbooks:
             _workbooks.move_to_end(key)
-            return _workbooks[key]
+            return _workbooks[key][0]
     workbook = parse(data, name, max_bytes=limit)
+    cells = sum(len(row) for sheet in workbook.sheets for row in sheet.grid)
     with _workbooks_lock:
-        _workbooks[key] = workbook
-        while len(_workbooks) > _CACHED_WORKBOOKS:
+        _workbooks[key] = (workbook, cells)
+        while len(_workbooks) > 1 and (
+            len(_workbooks) > _CACHED_WORKBOOKS
+            or sum(held for _, held in _workbooks.values()) > _CACHED_CELLS
+        ):
             _workbooks.popitem(last=False)
     return workbook
 
@@ -108,18 +123,29 @@ def _url_name(file: FileInput) -> str | None:
     return None
 
 
-def _holds_a_workbook(data: bytes) -> bool:
-    if not data.startswith(b"PK\x03\x04"):
-        return False
+def _holds_a_workbook(archive_file: Path | io.BytesIO) -> bool:
     try:
-        with zipfile.ZipFile(io.BytesIO(data)) as archive:
-            names = set(archive.namelist())
-            if "xl/workbook.xml" in names:
+        with zipfile.ZipFile(archive_file) as archive:
+            members = archive.infolist()
+            if len(members) > _MAX_MEMBERS:
+                return False
+            if any(m.filename.lower() == "xl/workbook.xml" for m in members):
                 return True
-            return "mimetype" in names and archive.read("mimetype").strip() == (
-                b"application/vnd.oasis.opendocument.spreadsheet"
-            )
-    except zipfile.BadZipFile:
+            mimetype = next((m for m in members if m.filename == "mimetype"), None)
+            if mimetype is None:
+                return False
+            with archive.open(mimetype) as stream:
+                return stream.read(len(_ODS_MIMETYPE) + 64).strip() == _ODS_MIMETYPE
+    # A damaged, encrypted or oddly compressed archive isn't one to route here.
+    except (
+        zipfile.BadZipFile,
+        zipfile.LargeZipFile,
+        zlib.error,
+        NotImplementedError,
+        RuntimeError,
+        EOFError,
+        OSError,
+    ):
         return False
 
 

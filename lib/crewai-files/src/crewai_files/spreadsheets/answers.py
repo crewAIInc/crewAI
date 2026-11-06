@@ -444,7 +444,8 @@ def _value(table: Table, column: str, raw: str) -> object:
             )
         return float(parsed)
     if kind == "date":
-        moment = pd.to_datetime(text, errors="coerce")
+        # ISO only: the sheet's dates may read day-first, so 01/03/2026 is ambiguous.
+        moment = pd.to_datetime(text, errors="coerce", format="ISO8601")
         if not pd.isna(moment):
             # The sheet's dates carry no zone; "2026-01-05T00:00Z" compares as UTC.
             return moment.tz_convert(None) if moment.tzinfo else moment
@@ -506,12 +507,10 @@ def _mask(table: Table, filters: list[Filter]) -> tuple[Column, list[str]]:
             said.append(f"{column} in ({shown}{', …' if len(f.values) > 5 else ''})")
             continue
         target = _value(table, column, f.values[0])
-        if f.op == "ne":
-            hit = ~(compared == target).fillna(False).astype(bool)
-        else:
-            present = compared.notna()
-            hit = pd.Series(False, index=frame.index)
-            hit[present] = _compare(compared[present], f.op, target).astype(bool)
+        # An empty cell matches no comparison, ≠ included.
+        present = compared.notna()
+        hit = pd.Series(False, index=frame.index)
+        hit[present] = _compare(compared[present], f.op, target).astype(bool)
         mask &= hit
         quoted = f'"{text_of(f.values[0], 40)}"' if textual else text_of(target)
         said.append(f"{column} {_SYMBOLS[f.op]} {quoted}")
@@ -521,6 +520,8 @@ def _mask(table: Table, filters: list[Filter]) -> tuple[Column, list[str]]:
 def _compare(series: Column, op: str, target: object) -> Column:
     if op == "eq":
         return series == target
+    if op == "ne":
+        return series != target
     if op == "gt":
         return series > target
     if op == "gte":

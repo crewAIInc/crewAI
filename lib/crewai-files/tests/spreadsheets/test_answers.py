@@ -174,7 +174,7 @@ class TestInspect:
         book = parse(b"a,b\n1,x\n", "a.csv")
         assert body(answers.inspect(book, "a.csv")).splitlines()[:3] == [
             'Sheet "data" of a.csv: 1 data row x 2 columns; header row 1 (detected; '
-            "pass header_row to use another).",
+            + "pass header_row to use another).",
             "Columns (name | type | filled | distinct | range or top values):",
             "a | integer | 100% | 1 | 1 to 1",
         ]
@@ -268,6 +268,30 @@ class TestFilters:
     def count(self, *filters) -> str:
         result = ask(operation="rows", where=list(filters), columns=["Order ID"])
         return body(result).split(". Rows")[0]
+
+    def test_not_equal_leaves_empty_cells_out(self):
+        book = parse(b"id,amount\n1,80\n2,\n3,90\n4,\n", "a.csv")
+        result = ask(
+            book,
+            "a.csv",
+            operation="rows",
+            where=[{"column": "amount", "op": "ne", "values": ["80"]}],
+        )
+        assert body(result).startswith("data: 1 of 4 rows match (amount ≠ 80)")
+
+    def test_a_date_filter_takes_iso_dates_only(self):
+        """The sheet may read 01/03/2026 day-first; the filter can't guess."""
+        book = parse(b"day,v\n01/03/2026,1\n02/03/2026,2\n", "eu.csv")
+        with pytest.raises(
+            QueryError,
+            match=r'^Filter on day: "01/03/2026" is not a date; use YYYY-MM-DD\.$',
+        ):
+            ask(
+                book,
+                "eu.csv",
+                operation="rows",
+                where=[{"column": "day", "op": "eq", "values": ["01/03/2026"]}],
+            )
 
     @pytest.mark.parametrize(
         ("column", "op", "values", "expected"),

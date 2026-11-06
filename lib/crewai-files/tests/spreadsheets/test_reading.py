@@ -12,6 +12,7 @@ import datetime
 import io
 import re
 import struct
+import threading
 import time
 import zipfile
 
@@ -649,3 +650,155 @@ class TestScanAgreesWithCalamine:
             .end
         )
         assert reading._measure_archive(data)["Data"] == (end[0] + 1, end[1] + 1)
+
+
+_SHEET_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+_RELS_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+_DOC_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+def package(
+    folder: str, sheets: dict[str, bytes], decoy: bool = False, **extra
+) -> bytes:
+    """A workbook in ``folder`` whose ``_rels/.rels`` points there, holding
+    ``sheets`` by name; ``decoy`` adds a one-cell workbook at the usual ``xl/``.
+    ``extra`` adds members as written."""
+
+    def book(at: str, named: dict[str, bytes]) -> dict[str, bytes]:
+        entries = "".join(
+            f'<sheet name="{name}" sheetId="{i}" r:id="rId{i}"/>'
+            for i, name in enumerate(named, 1)
+        )
+        rels = "".join(
+            f'<Relationship Id="rId{i}" Type="{_DOC_NS}/worksheet" '
+            f'Target="worksheets/sheet{i}.xml"/>'
+            for i in range(1, len(named) + 1)
+        )
+        return {
+            f"{at}workbook.xml": (
+                f'<workbook xmlns="{_SHEET_NS}" xmlns:r="{_DOC_NS}"><sheets>{entries}'
+                "</sheets></workbook>"
+            ).encode(),
+            f"{at}_rels/workbook.xml.rels": (
+                f'<Relationships xmlns="{_RELS_NS}">{rels}</Relationships>'
+            ).encode(),
+            **{
+                f"{at}worksheets/sheet{i}.xml": (
+                    f'<worksheet xmlns="{_SHEET_NS}"><sheetData>'.encode()
+                    + rows
+                    + b"</sheetData></worksheet>"
+                )
+                for i, rows in enumerate(named.values(), 1)
+            },
+        }
+
+    members = {
+        "_rels/.rels": (
+            f'<Relationships xmlns="{_RELS_NS}"><Relationship Id="rId1" '
+            f'Type="{_DOC_NS}/officeDocument" Target="{folder}workbook.xml"/>'
+            "</Relationships>"
+        ).encode(),
+        **book(folder, sheets),
+    }
+    if decoy:
+        members.update(book("xl/", {name: CELL_DECOY for name in sheets}))
+    members.update(extra)
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in members.items():
+            archive.writestr(name, content)
+    return out.getvalue()
+
+
+def inline(reference: str, text: str) -> bytes:
+    return (
+        f'<row r="{reference.lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")}">'
+        f'<c r="{reference}" t="inlineStr"><is><t>{text}</t></is></c></row>'
+    ).encode()
+
+
+CELL_DECOY = inline("A1", "decoy")
+
+
+class TestScanFollowsCalaminesParts:
+    """The scan must open the members calamine opens, or it measures a decoy."""
+
+    def test_the_workbook_the_package_points_to_is_the_one_read(self):
+        book = parse(
+            package("other/", {"S": inline("A1", "real")}, decoy=True), "w.xlsx"
+        )
+        assert book.sheets[0].grid == [["real"]]
+
+    def test_a_far_sheet_behind_a_redirected_package_is_refused_unopened(
+        self, calamine_must_not_open
+    ):
+        data = package("other/", {"S": inline("XFD1048576", "far")}, decoy=True)
+        assert reason(data) == "too_far"
+
+    def test_members_whose_names_differ_only_in_case_are_refused(self):
+        data = package(
+            "xl/",
+            {"S": CELL_DECOY},
+            **{"xl/worksheets/SHEET1.xml": b"<worksheet/>"},
+        )
+        with pytest.raises(SpreadsheetError, match="could not be read"):
+            reading._measure_archive(data)
+
+    def test_two_sheets_with_one_name_are_refused(self):
+        data = package("xl/", {"S": CELL_DECOY, "T": CELL_DECOY})
+        data = rewrite_member(
+            data, "xl/workbook.xml", lambda xml: xml.replace(b'"T"', b'"S"')
+        )
+        with pytest.raises(SpreadsheetError, match="could not be read"):
+            reading._measure_archive(data)
+
+    def test_a_target_with_xml_escapes_is_refused(self):
+        data = package("xl/", {"S": CELL_DECOY})
+        data = rewrite_member(
+            data,
+            "xl/_rels/workbook.xml.rels",
+            lambda xml: xml.replace(b"worksheets/", b"work&amp;sheets/"),
+        )
+        with pytest.raises(SpreadsheetError, match="could not be read"):
+            reading._measure_archive(data)
+
+
+def rewrite_member(data: bytes, member: str, change) -> bytes:
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        parts = {name: archive.read(name) for name in archive.namelist()}
+    parts[member] = change(parts[member])
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in parts.items():
+            archive.writestr(name, content)
+    return out.getvalue()
+
+
+def test_a_csv_waits_for_a_parse_slot_like_an_xlsx(monkeypatch):
+    slots = threading.BoundedSemaphore(1)
+    slots.acquire()
+    monkeypatch.setattr(reading, "_parses", slots)
+    monkeypatch.setattr(reading, "_PARSE_WAIT_SECONDS", 0.01)
+
+    assert reason(b"a,b\n1,2\n", "a.csv") == "busy"
+
+
+def test_a_header_row_asked_for_is_the_one_returned_while_another_is_cached(
+    monkeypatch,
+):
+    """Another caller caching a different header row right after this one's table
+    is cached must not swap the table this caller gets back."""
+    sheet = parse(b"a,b\nc,d\n1,2\n3,4\n", "a.csv").sheets[0]
+    held: dict[str, object] = {}
+
+    def cache(target, table):
+        held["table"] = table
+        if table is not None and table.header_row == 1 and "raced" not in held:
+            held["raced"] = True
+            target.table(header_row=2)
+
+    monkeypatch.setattr(
+        reading.Sheet, "_chosen", property(lambda _: held.get("table"), cache)
+    )
+
+    assert sheet.table(header_row=1).header_row == 1

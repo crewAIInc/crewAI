@@ -15,6 +15,7 @@ import functools
 import io
 import math
 import re
+import string
 import struct
 import threading
 from typing import IO, Any, Final, TypeAlias
@@ -48,9 +49,6 @@ _ZIP_MAGIC: Final = b"PK\x03\x04"
 # these has a known denial of service (RUSTSEC-2026-0436), so they never reach it.
 _CFB_MAGIC: Final = b"\xd0\xcf\x11\xe0"
 _ODS_MIMETYPE: Final = b"application/vnd.oasis.opendocument.spreadsheet"
-_WORKSHEET_TYPE: Final = (
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
-)
 
 # Microseconds rather than pandas' default nanoseconds, whose range ends in 2262:
 # "valid until 9999-12-31" is a date like any other.
@@ -130,9 +128,12 @@ class Sheet:
                 f"header_row must be 0 (detected) or 1 to {len(self.grid)} for sheet "
                 f'"{self.name}"; got {header_row}.'
             )
-        if self._chosen is None or self._chosen.header_row != header_row:
-            self._chosen = _build_table(self, header_row - 1, False)
-        return self._chosen
+        # Return the table built here: another caller may replace _chosen meanwhile.
+        chosen = self._chosen
+        if chosen is None or chosen.header_row != header_row:
+            chosen = _build_table(self, header_row - 1, False)
+            self._chosen = chosen
+        return chosen
 
 
 @dataclass
@@ -217,10 +218,7 @@ def _read_xlsx(data: bytes) -> Workbook:
         if too_far:
             raise SpreadsheetError("too_far", _TOO_FAR)
         return Workbook("xlsx", [], more_sheets=len(unread), unread_sheets=unread)
-    if not _parses.acquire(timeout=_PARSE_WAIT_SECONDS):
-        raise SpreadsheetError(
-            "busy", "too many spreadsheets are being read at once; try again"
-        )
+    _take_a_parse_slot()
     sheets: list[Sheet] = []
     try:
         book = CalamineWorkbook.from_filelike(io.BytesIO(data))
@@ -261,6 +259,15 @@ def _read_xlsx(data: bytes) -> Workbook:
     )
 
 
+def _take_a_parse_slot() -> None:
+    """Wait for one of the few parse slots, so concurrent uploads can't each
+    allocate a full workbook at once; release it with ``_parses.release()``."""
+    if not _parses.acquire(timeout=_PARSE_WAIT_SECONDS):
+        raise SpreadsheetError(
+            "busy", "too many spreadsheets are being read at once; try again"
+        )
+
+
 def _measure_archive(data: bytes) -> dict[str, tuple[int, int] | None]:
     """Each worksheet's extent (rows, columns) from A1 to its farthest value, by
     sheet name in workbook order, after refusing a zip bomb. None for a sheet whose
@@ -281,23 +288,29 @@ def _measure_archive(data: bytes) -> dict[str, tuple[int, int] | None]:
                 if size != member.file_size:
                     raise _unreadable()
                 unpacked += size
-            names = set(archive.namelist())
-            if "xl/workbook.xml" not in names:
-                if "mimetype" in names and archive.read("mimetype").strip() == (
-                    _ODS_MIMETYPE
-                ):
-                    raise SpreadsheetError(
-                        "ods",
-                        "the file is an OpenDocument spreadsheet (.ods), which can't "
-                        "be read; an .xlsx or a CSV can",
-                    )
+            parts = _parts(archive)
+            if "_rels/.rels" not in parts:
+                mimetype = parts.get("mimetype")
+                if mimetype is not None:
+                    with archive.open(mimetype) as stream:
+                        if (
+                            stream.read(len(_ODS_MIMETYPE) + 64).strip()
+                            == _ODS_MIMETYPE
+                        ):
+                            raise SpreadsheetError(
+                                "ods",
+                                "the file is an OpenDocument spreadsheet (.ods), "
+                                "which can't be read; an .xlsx or a CSV can",
+                            )
                 raise _unreadable()
+            folder = _workbook_folder(archive.read(parts["_rels/.rels"]))
             extents: dict[str, tuple[int, int] | None] = {}
-            for sheet, member_name in _worksheet_members(archive).items():
-                if member_name not in names:
+            for sheet, path in _worksheet_paths(archive, parts, folder).items():
+                part = _member(parts, archive, path)
+                if part is None:
                     extents[sheet] = None
                     continue
-                with archive.open(member_name) as stream:
+                with archive.open(part) as stream:
                     extents[sheet] = _sheet_extent(stream)
             return extents
     except (zipfile.BadZipFile, zipfile.LargeZipFile, zlib.error, struct.error) as e:
@@ -345,34 +358,102 @@ def _inflated_size(data: bytes, member: zipfile.ZipInfo, budget: int) -> int:
     return size
 
 
-def _worksheet_members(archive: zipfile.ZipFile) -> dict[str, str]:
-    """Each worksheet's name and the archive member holding its cells, as the
-    workbook's relationships declare them."""
-    targets: dict[str, str] = {}
-    sheets: dict[str, str] = {}
+# calamine (0.36 and 0.37) finds a part by its name lowercased, ASCII only, with
+# backslashes read as slashes, falling back to the exact name. The scan must open
+# the same members calamine will, or it measures a decoy.
+_ASCII_LOWER: Final = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+
+
+def _part_key(name: str) -> str:
+    return name.replace("\\", "/").translate(_ASCII_LOWER)
+
+
+def _parts(archive: zipfile.ZipFile) -> dict[str, str]:
+    """Each member by the name calamine looks it up under, refusing an archive
+    where two members share one: calamine would read the later while this could
+    measure the other."""
+    parts: dict[str, str] = {}
+    for name in archive.namelist():
+        key = _part_key(name)
+        if key in parts:
+            raise _unreadable()
+        parts[key] = name
+    return parts
+
+
+def _member(parts: dict[str, str], archive: zipfile.ZipFile, path: str) -> str | None:
+    found = parts.get(path.translate(_ASCII_LOWER))
+    if found is not None:
+        return found
+    return path if path in archive.NameToInfo else None
+
+
+def _target(value: str) -> str:
+    """A relationship target as a part path. One with XML-special characters is
+    refused, since not every calamine version unescapes them the way expat does."""
+    if any(c in value for c in "&<>\"'"):
+        raise _unreadable()
+    return value
+
+
+def _workbook_folder(package_rels: bytes) -> str:
+    """The folder calamine reads ``workbook.xml`` from: that of the last
+    ``officeDocument`` target in ``_rels/.rels``, whatever file it names."""
+    targets: list[str] = []
 
     def relationship(name: str, attributes: dict[str, str]) -> None:
-        if name.rsplit("}", 1)[-1] == "Relationship" and (
-            attributes.get("Type") == _WORKSHEET_TYPE
+        if (
+            name.rsplit("}", 1)[-1] == "Relationship"
+            and attributes.get("Type", "").endswith("/relationships/officeDocument")
+            and "Target" in attributes
         ):
-            target = attributes.get("Target", "")
-            targets[attributes.get("Id", "")] = (
-                target.lstrip("/") if target.startswith("/") else f"xl/{target}"
+            targets.append(_target(attributes["Target"]))
+
+    _parse_xml(package_rels, relationship)
+    if not targets:
+        raise _unreadable()
+    return targets[-1][: targets[-1].rfind("/") + 1].removeprefix("/")
+
+
+def _worksheet_paths(
+    archive: zipfile.ZipFile, parts: dict[str, str], folder: str
+) -> dict[str, str]:
+    """Each worksheet's name and the part path calamine opens for it, from
+    ``workbook.xml`` and its relationships in ``folder``. Two sheets with one name
+    are refused: calamine opens the first, this would measure the last."""
+    rels = _member(parts, archive, f"{folder}_rels/workbook.xml.rels")
+    workbook = _member(parts, archive, f"{folder}workbook.xml")
+    if rels is None or workbook is None:
+        raise _unreadable()
+    relationships: dict[str, tuple[str, str]] = {}
+    paths: dict[str, str] = {}
+    titles: set[str] = set()
+
+    def relationship(name: str, attributes: dict[str, str]) -> None:
+        if name.rsplit("}", 1)[-1] == "Relationship" and "Id" in attributes:
+            relationships[attributes["Id"]] = (
+                _target(attributes.get("Target", "")),
+                attributes.get("Type", ""),
             )
 
     def sheet(name: str, attributes: dict[str, str]) -> None:
         if name.rsplit("}", 1)[-1] != "sheet":
             return
-        rel_id = next(
-            (v for k, v in attributes.items() if k.rsplit("}", 1)[-1] == "id"), None
-        )
-        if "name" in attributes and rel_id is not None:
-            sheets[attributes["name"]] = rel_id
+        rel_id = ""
+        for key, value in attributes.items():
+            if key.rsplit("}", 1)[-1] == "id":
+                rel_id = value
+        title = attributes.get("name", "")
+        if rel_id not in relationships or title in titles:
+            raise _unreadable()
+        titles.add(title)
+        target, kind = relationships[rel_id]
+        if kind.rsplit("/", 1)[-1] == "worksheet":
+            paths[title] = target[1:] if target.startswith("/") else folder + target
 
-    if "xl/_rels/workbook.xml.rels" in archive.namelist():
-        _parse_xml(archive.read("xl/_rels/workbook.xml.rels"), relationship)
-    _parse_xml(archive.read("xl/workbook.xml"), sheet)
-    return {name: targets[rel] for name, rel in sheets.items() if rel in targets}
+    _parse_xml(archive.read(rels), relationship)
+    _parse_xml(archive.read(workbook), sheet)
+    return paths
 
 
 def _parse_xml(xml: bytes, on_start: Callable[[str, dict[str, str]], None]) -> None:
@@ -467,6 +548,15 @@ def _cell_index(reference: str) -> tuple[int, int]:
 
 
 def _read_text(data: bytes, extension: str) -> Workbook:
+    # Ten million cells of text take hundreds of MB, as an .xlsx does.
+    _take_a_parse_slot()
+    try:
+        return _parse_text(data, extension)
+    finally:
+        _parses.release()
+
+
+def _parse_text(data: bytes, extension: str) -> Workbook:
     text = _decode(data)
     delimiter = "\t" if extension == "tsv" else _sniff_delimiter(text[:_SNIFF_BYTES])
     rows: list[list[Cell]] = []

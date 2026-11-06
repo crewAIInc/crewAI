@@ -6,10 +6,11 @@ from __future__ import annotations
 import io
 import subprocess
 import sys
+import tracemalloc
+import zipfile
 
 from crewai_files import AudioFile, File, FileBytes, FilePath, FileUrl, TextFile
 import crewai_files.spreadsheets as spreadsheets
-from crewai_files.spreadsheets import is_spreadsheet, load_spreadsheet
 from crewai_files.spreadsheets.reading import SpreadsheetError
 import openpyxl
 import pytest
@@ -44,10 +45,10 @@ class TestIsSpreadsheet:
         ids=["text-csv", "file-tsv", "audio-csv", "xlsx", "xls", "ods", "url"],
     )
     def test_every_way_a_spreadsheet_arrives(self, file):
-        assert is_spreadsheet(file)
+        assert spreadsheets.is_spreadsheet(file)
 
     def test_an_unnamed_workbook_is_found_inside_its_archive(self):
-        assert is_spreadsheet(File(source=FileBytes(data=xlsx_bytes())))
+        assert spreadsheets.is_spreadsheet(File(source=FileBytes(data=xlsx_bytes())))
 
     @pytest.mark.parametrize(
         "file",
@@ -59,7 +60,7 @@ class TestIsSpreadsheet:
         ids=["text", "pdf", "url-without-a-name"],
     )
     def test_other_files_are_not_spreadsheets(self, file):
-        assert not is_spreadsheet(file)
+        assert not spreadsheets.is_spreadsheet(file)
 
     def test_a_url_is_never_downloaded_to_decide(self, monkeypatch):
         def refuse(*args, **kwargs):
@@ -67,7 +68,37 @@ class TestIsSpreadsheet:
 
         monkeypatch.setattr("httpx.get", refuse)
         monkeypatch.setattr("httpx.stream", refuse)
-        is_spreadsheet(File(source=FileUrl(url="https://bucket.example/x")))
+        spreadsheets.is_spreadsheet(
+            File(source=FileUrl(url="https://bucket.example/x"))
+        )
+
+    def test_recognising_an_archive_reads_only_the_start_of_its_mimetype(self):
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("mimetype", b"a" * 200_000_000)
+        bomb = File(source=FileBytes(data=out.getvalue()))
+
+        tracemalloc.start()
+        try:
+            assert not spreadsheets.is_spreadsheet(bomb)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert peak < 10_000_000
+
+    def test_an_archive_of_too_many_members_is_not_opened_further(self):
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w") as archive:
+            for i in range(spreadsheets._MAX_MEMBERS + 1):
+                archive.writestr(f"m{i}", b"")
+            archive.writestr("xl/workbook.xml", b"")
+        assert not spreadsheets.is_spreadsheet(
+            File(source=FileBytes(data=out.getvalue()))
+        )
+
+    def test_a_damaged_archive_is_not_a_spreadsheet(self):
+        damaged = File(source=FileBytes(data=b"PK\x03\x04" + b"\x00" * 64))
+        assert not spreadsheets.is_spreadsheet(damaged)
 
     def test_importing_it_needs_no_pandas(self):
         """crewAI routes files with is_spreadsheet whether or not the extra is
@@ -85,7 +116,9 @@ class TestIsSpreadsheet:
 
 class TestLoad:
     def test_a_csv_from_bytes(self):
-        book = load_spreadsheet(TextFile(source=FileBytes(data=CSV, filename="s.csv")))
+        book = spreadsheets.load_spreadsheet(
+            TextFile(source=FileBytes(data=CSV, filename="s.csv"))
+        )
         assert (book.kind, len(book.sheets[0].table().frame)) == ("csv", 2)
 
     def test_the_same_content_is_read_once(self, monkeypatch):
@@ -100,8 +133,12 @@ class TestLoad:
 
         monkeypatch.setattr(reading, "parse", counting)
         data = CSV + b"East,99\n"
-        first = load_spreadsheet(File(source=FileBytes(data=data, filename="a.csv")))
-        again = load_spreadsheet(File(source=FileBytes(data=data, filename="b.csv")))
+        first = spreadsheets.load_spreadsheet(
+            File(source=FileBytes(data=data, filename="a.csv"))
+        )
+        again = spreadsheets.load_spreadsheet(
+            File(source=FileBytes(data=data, filename="b.csv"))
+        )
         assert first is again
         assert calls == ["a.csv"]
 
@@ -110,7 +147,7 @@ class TestLoad:
         monkeypatch.setattr(
             FileBytes, "content_type", property(lambda self: "text/csv")
         )
-        assert load_spreadsheet(file).kind == "csv"
+        assert spreadsheets.load_spreadsheet(file).kind == "csv"
 
     def test_a_local_file_over_the_limit_is_refused_unread(self, tmp_path, monkeypatch):
         path = tmp_path / "big.csv"
@@ -121,7 +158,7 @@ class TestLoad:
 
         monkeypatch.setattr(FilePath, "read", refuse)
         with pytest.raises(SpreadsheetError, match=r"over the 0 MB limit"):
-            load_spreadsheet(File(source=path), max_bytes=100)
+            spreadsheets.load_spreadsheet(File(source=path), max_bytes=100)
 
 
 class _Response:
@@ -160,27 +197,34 @@ class TestDownload:
 
     def test_a_url_is_streamed_and_read(self, monkeypatch):
         self.serve(monkeypatch, _Response([CSV[:10], CSV[10:]]))
-        assert load_spreadsheet(File(source=FileUrl(url=self.URL))).kind == "csv"
+        assert (
+            spreadsheets.load_spreadsheet(File(source=FileUrl(url=self.URL))).kind
+            == "csv"
+        )
 
     def test_a_declared_length_over_the_limit_is_refused_before_reading(
         self, monkeypatch
     ):
         response = self.serve(monkeypatch, _Response([b"x" * 10], length=10**9))
         with pytest.raises(SpreadsheetError, match="over the 1 MB limit"):
-            load_spreadsheet(File(source=FileUrl(url=self.URL)), max_bytes=1_048_576)
+            spreadsheets.load_spreadsheet(
+                File(source=FileUrl(url=self.URL)), max_bytes=1_048_576
+            )
         assert response.read == 0
 
     def test_a_body_past_the_limit_stops_the_download(self, monkeypatch):
         chunks = [b"a,b\n" * 100] * 1000
         response = self.serve(monkeypatch, _Response(chunks))
         with pytest.raises(SpreadsheetError, match="over the 0 MB limit"):
-            load_spreadsheet(File(source=FileUrl(url=self.URL)), max_bytes=1_000)
+            spreadsheets.load_spreadsheet(
+                File(source=FileUrl(url=self.URL)), max_bytes=1_000
+            )
         assert response.read < 2_000
 
     def test_a_failed_download_says_so(self, monkeypatch):
         self.serve(monkeypatch, _Response([], status=404))
         with pytest.raises(SpreadsheetError, match="could not be downloaded") as raised:
-            load_spreadsheet(File(source=FileUrl(url=self.URL)))
+            spreadsheets.load_spreadsheet(File(source=FileUrl(url=self.URL)))
         assert raised.value.reason == "download"
 
 
@@ -188,5 +232,31 @@ def test_the_workbook_cache_is_bounded(monkeypatch):
     monkeypatch.setattr(spreadsheets, "_workbooks", type(spreadsheets._workbooks)())
     for i in range(spreadsheets._CACHED_WORKBOOKS + 3):
         data = f"a\n{i}\n".encode()
-        load_spreadsheet(File(source=FileBytes(data=data, filename="a.csv")))
+        spreadsheets.load_spreadsheet(
+            File(source=FileBytes(data=data, filename="a.csv"))
+        )
     assert len(spreadsheets._workbooks) == spreadsheets._CACHED_WORKBOOKS
+
+
+def test_the_workbook_cache_holds_cells_up_to_its_budget(monkeypatch):
+    monkeypatch.setattr(spreadsheets, "_workbooks", type(spreadsheets._workbooks)())
+    monkeypatch.setattr(spreadsheets, "_CACHED_CELLS", 5)
+    for i in range(2):
+        data = f"a,b\n{i},{i}\n".encode()  # 4 cells
+        spreadsheets.load_spreadsheet(
+            File(source=FileBytes(data=data, filename="a.csv"))
+        )
+    assert len(spreadsheets._workbooks) == 1
+
+
+def test_a_workbook_over_the_cell_budget_is_still_kept_while_newest(monkeypatch):
+    monkeypatch.setattr(spreadsheets, "_workbooks", type(spreadsheets._workbooks)())
+    monkeypatch.setattr(spreadsheets, "_CACHED_CELLS", 1)
+    data = b"a,b\n1,2\n"
+    first = spreadsheets.load_spreadsheet(
+        File(source=FileBytes(data=data, filename="a.csv"))
+    )
+    again = spreadsheets.load_spreadsheet(
+        File(source=FileBytes(data=data, filename="b.csv"))
+    )
+    assert first is again
