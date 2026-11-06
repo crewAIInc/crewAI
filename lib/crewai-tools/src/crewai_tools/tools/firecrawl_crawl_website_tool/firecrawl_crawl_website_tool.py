@@ -109,7 +109,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
             raise RuntimeError("FirecrawlApp not properly initialized")
 
         url = validate_url(url)
-        return self._firecrawl.crawl(url=url, poll_interval=2, **self.config)
+        return self._firecrawl.crawl(url=url, poll_interval=2, **(self.config or {}))
 
 
 try:
