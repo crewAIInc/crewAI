@@ -705,6 +705,9 @@ FooterKey .footer-key--key {
         self._task_start_time = time.time()
         self._final_output: str | None = None
         self._error: str | None = None
+        # What a crew's kickoff raised: `crewai run` asks for an API key it
+        # names once the app has closed.
+        self._failure: Exception | None = None
         self._frame = 0
 
         self._task_logs: list[dict[str, Any]] = []
@@ -727,6 +730,9 @@ FooterKey .footer-key--key {
         self._conversation_turns = 0
         self._conversation_turn_in_progress = False
         self._conversation_previous_defer_trace_finalization: bool | None = None
+        self._conversation_defer_trace_finalization = True
+        self._conversation_stream: bool | None = None
+        self._conversation_turn_kwargs: dict[str, Any] = {}
         self._conversation_exit_commands = {"exit", "quit"}
         self._default_inputs: dict[str, Any] | None = None
         self._crew_result: Any = None
@@ -904,6 +910,7 @@ FooterKey .footer-key--key {
                 self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
             if not self._discard_trace_on_exit:
+                self._failure = e
                 self.call_from_thread(self._on_crew_failed, str(e))
 
     @work(thread=True, exclusive=True, group="flow")
@@ -1073,7 +1080,8 @@ FooterKey .footer-key--key {
             self._conversation_previous_defer_trace_finalization = getattr(
                 self._flow, "defer_trace_finalization", False
             )
-            self._flow.defer_trace_finalization = True
+            if self._conversation_defer_trace_finalization:
+                self._flow.defer_trace_finalization = True
 
         try:
             input_widget = self.query_one("#conversation-input", Input)
@@ -1145,7 +1153,14 @@ FooterKey .footer-key--key {
             from crewai.telemetry.tracing.ephemeral import trace_consent
 
             with trace_consent(self._request_trace_consent):
-                result = self._flow.handle_turn(message)
+                with self._flow.stream_turn(
+                    message,
+                    stream=self._conversation_stream,
+                    **self._conversation_turn_kwargs,
+                ) as turn:
+                    for _frame in turn:
+                        pass
+                    result = turn.result
             if hasattr(result, "get_full_text") and hasattr(result, "result"):
                 for _chunk in result:
                     pass
