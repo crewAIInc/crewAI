@@ -344,6 +344,28 @@ class UploadCache:
                 return True
         return False
 
+    async def aremove_provider(self, provider: ProviderType) -> int:
+        """Remove every cached upload for a provider.
+
+        Unlike ``aget_all_for_provider``, this includes expired entries that are
+        still tracked in the provider's key set.
+
+        Args:
+            provider: The provider name.
+
+        Returns:
+            Number of entries removed.
+        """
+        keys = list(self._provider_keys.get(provider, ()))
+        for key in keys:
+            await self._cache.delete(key)
+            self._untrack_key(provider, key)
+        self._provider_keys.pop(provider, None)
+
+        if keys:
+            logger.debug(f"Cleared {len(keys)} cache entries for provider {provider}")
+        return len(keys)
+
     async def aclear_expired(self) -> int:
         """Remove all expired entries from the cache.
 
@@ -465,6 +487,11 @@ class UploadCache:
     def remove_by_file_id(self, file_id: str, provider: ProviderType) -> bool:
         """Sync wrapper for aremove_by_file_id."""
         result: bool = self._run_sync(self.aremove_by_file_id(file_id, provider))
+        return result
+
+    def remove_provider(self, provider: ProviderType) -> int:
+        """Sync wrapper for aremove_provider."""
+        result: int = self._run_sync(self.aremove_provider(provider))
         return result
 
     def clear_expired(self) -> int:
