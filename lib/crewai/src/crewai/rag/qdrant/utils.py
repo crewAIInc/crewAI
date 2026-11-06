@@ -228,5 +228,5 @@ def _create_point_from_document(
     return PointStruct(
         id=doc_id,
         vector=vector,
-        payload={"content": doc["content"], **metadata},
+        payload={**metadata, "content": doc["content"]},
     )
