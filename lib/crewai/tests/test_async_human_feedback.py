@@ -29,6 +29,7 @@ from crewai.flow.async_feedback import (
     PendingFeedbackContext,
 )
 from crewai.flow.persistence import SQLiteFlowPersistence
+from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 
 
 # PendingFeedbackContext Tests
@@ -1820,3 +1821,161 @@ class TestLearnOnResume:
             ["Lead with the customer outcome"], source="hitl"
         )
         assert "first draft" in llm.call.call_args.args[0][1]["content"]
+
+
+class _PauseOrReturnProvider:
+    """Returns feedback inline, or pauses so the caller can resume later."""
+
+    def __init__(self, pause: bool, feedback: str = "reviewed") -> None:
+        self.pause = pause
+        self.feedback = feedback
+
+    def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+        if self.pause:
+            raise HumanFeedbackPending(context=context)
+        return self.feedback
+
+
+def _kickoff_or_resume(
+    flow_cls: type[Flow],
+    persistence: SQLiteFlowPersistence,
+    feedback: str = "reviewed",
+) -> tuple[Flow, Any]:
+    flow = flow_cls(persistence=persistence, suppress_flow_events=True)
+    result = flow.kickoff()
+    if isinstance(result, HumanFeedbackPending):
+        flow = flow_cls.from_pending(
+            result.context.flow_id,
+            persistence=persistence,
+            suppress_flow_events=True,
+        )
+        result = flow.resume(feedback)
+    return flow, result
+
+
+class TestResumePostStepHooks:
+    """POST_STEP on @human_feedback must match inline vs from_pending().resume()."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_hooks(self):
+        clear_all()
+        yield
+        clear_all()
+
+    @pytest.mark.parametrize("pause", [False, True])
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_post_step_replaces_output_on_resume(
+        self, mock_emit: MagicMock, pause: bool
+    ) -> None:
+        calls: list[str] = []
+
+        @on(InterceptionPoint.POST_STEP)
+        def rewrite_review(ctx: Any) -> str | None:
+            if ctx.kind == "flow_method" and ctx.step_name == "review":
+                calls.append(ctx.step_name)
+                return "normalized"
+            return None
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review",
+                provider=_PauseOrReturnProvider(pause),
+            )
+            def review(self) -> str:
+                return "draft"
+
+            @listen(review)
+            def finish(self, result: Any) -> Any:
+                return result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            _, result = _kickoff_or_resume(ReviewFlow, persistence)
+
+        assert calls == ["review"]
+        assert result == "normalized"
+
+    @pytest.mark.parametrize("pause", [False, True])
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_post_step_abort_stops_downstream_on_resume(
+        self, mock_emit: MagicMock, pause: bool
+    ) -> None:
+        calls: list[str] = []
+
+        @on(InterceptionPoint.POST_STEP)
+        def abort_review(ctx: Any) -> None:
+            if ctx.kind == "flow_method" and ctx.step_name == "review":
+                calls.append(ctx.step_name)
+                raise HookAborted("stop after review", source="test")
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review",
+                provider=_PauseOrReturnProvider(pause),
+            )
+            def review(self) -> str:
+                return "draft"
+
+            @listen(review)
+            def downstream(self) -> None:
+                self.state["downstream_ran"] = True
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+            with pytest.raises(HookAborted):
+                result = flow.kickoff()
+                if isinstance(result, HumanFeedbackPending):
+                    flow = ReviewFlow.from_pending(
+                        result.context.flow_id,
+                        persistence=persistence,
+                        suppress_flow_events=True,
+                    )
+                    flow.resume("reviewed")
+
+            assert calls == ["review"]
+            assert not flow.state.get("downstream_ran")
+            if pause:
+                assert persistence.load_pending_feedback(flow.flow_id) is not None
+                # The review is still pending, so the reply must not be recorded.
+                assert flow.human_feedback_history == []
+                assert flow.last_human_feedback is None
+
+    @pytest.mark.parametrize("pause", [False, True])
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_post_step_replaces_route_on_resume(
+        self, mock_emit: MagicMock, pause: bool
+    ) -> None:
+        @on(InterceptionPoint.POST_STEP)
+        def rewrite_review(ctx: Any) -> str | None:
+            if ctx.kind == "flow_method" and ctx.step_name == "review":
+                assert ctx.payload == "approved"
+                return "revised"
+            return None
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review",
+                emit=["approved", "revised"],
+                default_outcome="approved",
+                provider=_PauseOrReturnProvider(pause, feedback=""),
+            )
+            def review(self) -> str:
+                return "draft"
+
+            @listen("approved")
+            def original(self, result: Any) -> str:
+                return "original route"
+
+            @listen("revised")
+            def handle_revised(self, result: Any) -> str:
+                return "rewritten route"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            _, result = _kickoff_or_resume(ReviewFlow, persistence, feedback="")
+
+        assert result == "rewritten route"

@@ -1468,6 +1468,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
     ) -> Any:
+        from crewai.hooks.contexts import (
+            ExecutionEndContext,
+            OutputContext,
+            StepContext,
+        )
+        from crewai.hooks.dispatch import InterceptionPoint
+
         await self._open_flow_scope(None)
 
         context = self._pending_feedback_context
@@ -1538,6 +1545,35 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self.human_feedback_history.pop()
                     self.last_human_feedback = previous_feedback
                     raise
+
+            if not self._skip_interception(InterceptionPoint.POST_STEP):
+                # Same seam as `_execute_method`: POST_STEP runs after feedback
+                # is finalized and before the method is marked complete. Resume
+                # previously skipped this, so payload/route replacement and
+                # HookAborted only applied on the inline path.
+                step_output = collapsed_outcome if emit else result
+                post_step_ctx = StepContext(
+                    kind="flow_method",
+                    step_name=context.method_name,
+                    flow=self,
+                    output=step_output,
+                    payload=step_output,
+                )
+                try:
+                    self._dispatch_interception(
+                        InterceptionPoint.POST_STEP, post_step_ctx
+                    )
+                except Exception:
+                    # A hook abort leaves the review pending, so undo the
+                    # recorded reply the same way as the learn_strict path.
+                    self.human_feedback_history.pop()
+                    self.last_human_feedback = previous_feedback
+                    raise
+                if emit:
+                    collapsed_outcome = post_step_ctx.payload
+                else:
+                    result = post_step_ctx.payload
+                    resumed_method_output = result
 
             self._completed_methods.add(FlowMethodName(context.method_name))
 
@@ -1642,9 +1678,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if method_outputs
             else (resumed_method_output if emit else result)
         )
-
-        from crewai.hooks.contexts import ExecutionEndContext, OutputContext
-        from crewai.hooks.dispatch import InterceptionPoint
 
         output_ctx = OutputContext(flow=self, output=final_result, payload=final_result)
         self._dispatch_interception(InterceptionPoint.OUTPUT, output_ctx)
