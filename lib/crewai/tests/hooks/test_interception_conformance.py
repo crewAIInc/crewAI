@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import asyncio
 from typing import ClassVar
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import CrewKickoffCompletedEvent
 from crewai.events.types.flow_events import (
@@ -487,6 +488,41 @@ class TestExecutionEndOnFailure:
 
         assert len(seen) == 1
         assert seen[0].status == "failed"
+
+    def test_crew_kickoff_async_hook_can_supply_defaults_for_omitted_inputs(self):
+        @on(InterceptionPoint.EXECUTION_START)
+        def supply_defaults(ctx):
+            if ctx.payload is None:
+                return {"topic": "general"}
+
+        def crew_with_topic() -> Crew:
+            agent = Agent(role="Writer", goal="Write", backstory="Writes things.")
+            task = Task(
+                description="Write about {topic}",
+                expected_output="A short note about {topic}",
+                agent=agent,
+            )
+            return Crew(agents=[agent], tasks=[task], verbose=False)
+
+        crews = [crew_with_topic() for _ in range(3)]
+        with (
+            patch.object(Crew, "_run_sequential_process", return_value=CrewOutput()),
+            patch.object(
+                Crew,
+                "_arun_sequential_process",
+                new_callable=AsyncMock,
+                return_value=CrewOutput(),
+            ),
+        ):
+            crews[0].kickoff()
+            asyncio.run(crews[1].kickoff_async())
+            asyncio.run(crews[2].akickoff())
+
+        assert [crew.tasks[0].description for crew in crews] == [
+            "Write about general",
+            "Write about general",
+            "Write about general",
+        ]
 
     def test_flow_success_fires_completed_once(self):
         seen: list[tuple[str, BaseException | None]] = []

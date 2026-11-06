@@ -1158,7 +1158,6 @@ class Crew(FlowTrackable, BaseModel):
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
-        inputs = inputs or {}
 
         if self.stream:
             enable_agent_streaming(self.agents)
