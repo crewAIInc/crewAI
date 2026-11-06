@@ -35,10 +35,42 @@ class TestSanitizeScopeName:
         assert sanitize_scope_name("Agent #1 (Main)") == "agent-1-main"
 
     def test_name_with_unicode(self) -> None:
-        # Unicode characters get replaced with hyphens
-        result = sanitize_scope_name("café_worker")
-        # é becomes -, and the underscore is preserved, so café_worker -> caf-_worker
-        assert result == "caf-_worker"
+        # Unicode letters are kept, the underscore is preserved
+        assert sanitize_scope_name("café_worker") == "café_worker"
+
+    @pytest.mark.parametrize(
+        "name",
+        ["東京支社", "田中太郎", "프로젝트", "Москва"],
+    )
+    def test_non_ascii_names_are_not_collapsed_to_unknown(self, name: str) -> None:
+        assert sanitize_scope_name(name) == name.lower()
+
+    def test_distinct_cjk_names_stay_distinct(self) -> None:
+        names = ["東京支社", "大阪支社", "田中太郎", "프로젝트"]
+        assert len({sanitize_scope_name(n) for n in names}) == len(names)
+
+    @pytest.mark.parametrize(
+        ("first", "second"),
+        [
+            ("काली", "किली"),  # Hindi: differ only in vowel signs (combining marks)
+            ("เก่า", "เก้า"),  # Thai: differ only in tone marks (combining marks)
+        ],
+    )
+    def test_names_differing_only_in_combining_marks_stay_distinct(
+        self, first: str, second: str
+    ) -> None:
+        assert sanitize_scope_name(first) == first
+        assert sanitize_scope_name(second) == second
+        assert sanitize_scope_name(first) != sanitize_scope_name(second)
+
+    def test_non_ascii_name_is_sanitized_like_ascii(self) -> None:
+        assert sanitize_scope_name("東京 支社 / (A)") == "東京-支社-a"
+
+    def test_unicode_normalization_is_stable(self) -> None:
+        # "ガ" precomposed (NFC) vs. decomposed (NFD, as macOS file names)
+        result = sanitize_scope_name("\u30ac")
+        assert result != "unknown"
+        assert result == sanitize_scope_name("\u30ab\u3099")
 
     def test_name_with_underscores(self) -> None:
         # Underscores are preserved
