@@ -1188,6 +1188,49 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+  <Accordion title="HopBase">
+    [HopBase](https://hop-base.com?utm_source=crewai&utm_medium=listing) is an AI gateway that serves Claude, GPT, Gemini, DeepSeek, Qwen, GLM, Kimi, Doubao Seed and Grok models behind one API key. Its OpenAI-compatible endpoint works with CrewAI's native OpenAI client through the `openai/` prefix and `base_url`, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    HOPBASE_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/deepseek-v4.1-flash",
+        base_url="https://api.hop-base.com/v1",
+        api_key=os.environ["HOPBASE_API_KEY"],
+    )
+    ```
+
+    Claude models use the Anthropic-compatible endpoint, whose base URL has no `/v1`:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-sonnet-5-5",
+        base_url="https://api.hop-base.com",
+        api_key=os.environ["HOPBASE_API_KEY"],
+        max_tokens=4096,
+    )
+    ```
+
+    <Info>
+      HopBase features:
+      - One key for chat models from several model families, plus image and video models
+      - OpenAI-compatible (`/v1/chat/completions`, `/v1/responses`) and Anthropic-compatible (`/v1/messages`) endpoints
+      - Routing across pooled capacity with automatic failover
+    </Info>
+
+    The models a key can call depend on the groups attached to it. List them with
+    `GET https://api.hop-base.com/v1/models` (authenticated) and use the returned IDs after the
+    `openai/` prefix, for example `openai/gpt-6-sol` or `openai/qwen3.8-max`. Create a key in the
+    [HopBase console](https://api.hop-base.com/login) and see the
+    [HopBase docs](https://hop-base.com/en/docs?utm_source=crewai&utm_medium=listing) for model IDs and parameters.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses

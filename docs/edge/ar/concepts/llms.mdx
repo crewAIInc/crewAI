@@ -1045,6 +1045,49 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+  <Accordion title="HopBase">
+    [HopBase](https://hop-base.com?utm_source=crewai&utm_medium=listing) بوابة ذكاء اصطناعي تتيح نماذج Claude وGPT وGemini وDeepSeek وQwen وGLM وKimi وDoubao Seed وGrok بمفتاح API واحد. تعمل نقطة النهاية المتوافقة مع OpenAI مع عميل OpenAI الأصلي في CrewAI عبر البادئة `openai/` والمعامل `base_url`، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    HOPBASE_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/deepseek-v4.1-flash",
+        base_url="https://api.hop-base.com/v1",
+        api_key=os.environ["HOPBASE_API_KEY"],
+    )
+    ```
+
+    تستخدم نماذج Claude نقطة النهاية المتوافقة مع Anthropic، وعنوانها الأساسي لا يتضمن `/v1`:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-sonnet-5-5",
+        base_url="https://api.hop-base.com",
+        api_key=os.environ["HOPBASE_API_KEY"],
+        max_tokens=4096,
+    )
+    ```
+
+    <Info>
+      ميزات HopBase:
+      - مفتاح واحد لنماذج المحادثة من عدة عائلات نماذج، إضافة إلى نماذج الصور والفيديو
+      - نقاط نهاية متوافقة مع OpenAI (`/v1/chat/completions`، `/v1/responses`) ومع Anthropic (`/v1/messages`)
+      - توجيه عبر سعة مجمّعة مع تحويل تلقائي عند الفشل
+    </Info>
+
+    تعتمد النماذج التي يمكن للمفتاح استدعاؤها على المجموعات المرتبطة به. اعرضها عبر
+    `GET https://api.hop-base.com/v1/models` (يتطلب مصادقة) واستخدم المعرّفات المُعادة بعد البادئة
+    `openai/`، مثل `openai/gpt-6-sol` أو `openai/qwen3.8-max`. أنشئ مفتاحًا في
+    [لوحة تحكم HopBase](https://api.hop-base.com/login) وراجع
+    [وثائق HopBase](https://hop-base.com/en/docs?utm_source=crewai&utm_medium=listing) لمعرّفات النماذج والمعاملات.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

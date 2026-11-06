@@ -761,6 +761,49 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+  <Accordion title="HopBase">
+    O [HopBase](https://hop-base.com?utm_source=crewai&utm_medium=listing) é um gateway de IA que disponibiliza modelos Claude, GPT, Gemini, DeepSeek, Qwen, GLM, Kimi, Doubao Seed e Grok com uma única chave de API. Seu endpoint compatível com OpenAI funciona com o cliente OpenAI nativo do CrewAI por meio do prefixo `openai/` e de `base_url`, então não é necessário instalar o LiteLLM.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    HOPBASE_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/deepseek-v4.1-flash",
+        base_url="https://api.hop-base.com/v1",
+        api_key=os.environ["HOPBASE_API_KEY"],
+    )
+    ```
+
+    Os modelos Claude usam o endpoint compatível com Anthropic, cuja URL base não tem `/v1`:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-sonnet-5-5",
+        base_url="https://api.hop-base.com",
+        api_key=os.environ["HOPBASE_API_KEY"],
+        max_tokens=4096,
+    )
+    ```
+
+    <Info>
+      Recursos do HopBase:
+      - Uma única chave para modelos de chat de várias famílias, além de modelos de imagem e vídeo
+      - Endpoints compatíveis com OpenAI (`/v1/chat/completions`, `/v1/responses`) e com Anthropic (`/v1/messages`)
+      - Roteamento entre capacidade agrupada com failover automático
+    </Info>
+
+    Os modelos que uma chave pode chamar dependem dos grupos associados a ela. Liste-os com
+    `GET https://api.hop-base.com/v1/models` (autenticado) e use os IDs retornados após o
+    prefixo `openai/`, por exemplo `openai/gpt-6-sol` ou `openai/qwen3.8-max`. Crie uma chave no
+    [console do HopBase](https://api.hop-base.com/login) e consulte a
+    [documentação do HopBase](https://hop-base.com/en/docs?utm_source=crewai&utm_medium=listing) para IDs de modelos e parâmetros.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming
