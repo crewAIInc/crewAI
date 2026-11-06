@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.types import LLMMessage
 
 
@@ -60,12 +61,11 @@ class ChatState(BaseModel):
 
 
 def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
+    """Return the text of a user message without rendering parts as a repr."""
     if isinstance(user_message, str):
         return user_message
     if isinstance(user_message, dict):
-        content = user_message.get("content")
-        if content is not None:
-            return str(content)
+        return message_content_text(cast(LLMMessage, user_message))
     return str(user_message)
 
 
