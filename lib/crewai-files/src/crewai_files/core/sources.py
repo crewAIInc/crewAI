@@ -7,6 +7,7 @@ import inspect
 import json
 import mimetypes
 from pathlib import Path
+import sys
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
 
 import aiofiles
@@ -135,6 +136,14 @@ def detect_content_type(data: bytes, filename: str | None = None) -> str:
     Returns:
         The detected MIME type.
     """
+    if sys.platform == "win32":
+        # The pinned ``python-magic`` dependency cannot work on Windows: it
+        # does not bundle libmagic, and probing %PATH% for a DLL can pick up
+        # an incompatible MSYS/Cygwin build (Git for Windows ships
+        # ``msys-magic-1.dll`` on PATH). Loading that from native CPython
+        # raises an access violation or hangs the process at import time.
+        # The mimetypes/sniffing fallback below is the supported path there.
+        return _fallback_content_type(filename, data)
     try:
         import magic
 
@@ -168,6 +177,10 @@ def detect_content_type_from_path(path: Path, filename: str | None = None) -> st
         The detected MIME type.
     """
     fallback_filename = filename or path.name
+    if sys.platform == "win32":
+        # Same Windows constraint as detect_content_type: never probe PATH
+        # for a libmagic DLL from native CPython.
+        return _fallback_content_type(fallback_filename, _read_magic_header(path))
     try:
         import magic
 
