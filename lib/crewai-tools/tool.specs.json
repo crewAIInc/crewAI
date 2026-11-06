@@ -118,6 +118,181 @@
       }
     },
     {
+      "description": "Search the APIVerve catalog of about 380 APIs (validation, IP and DNS lookups, currency and tax rates, documents, images and more). Returns matching API ids with their parameters, to pass to the Run APIVerve API tool.",
+      "env_vars": [],
+      "humanized_name": "Find APIVerve APIs",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search the APIVerve catalog for the API that fits a task.",
+        "properties": {
+          "max_results": {
+            "default": 10,
+            "title": "Max Results",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "ApiverveFindApisTool",
+        "type": "object"
+      },
+      "name": "ApiverveFindApisTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input for ApiverveFindApisTool.",
+        "properties": {
+          "query": {
+            "description": "What you need, in a few words, for example 'validate email' or 'vat rates'.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ApiverveFindApisToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Call any APIVerve API by id with its parameters and get the result as JSON: validate emails and phone numbers, look up IPs, DNS and SSL certificates, get exchange rates, decode VINs, and more. Use Find APIVerve APIs to look up ids.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for APIVerve, from https://dashboard.apiverve.com",
+          "name": "APIVERVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Run APIVerve API",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Call one APIVerve API by id and return its response data.",
+        "properties": {},
+        "required": [],
+        "title": "ApiverveRunApiTool",
+        "type": "object"
+      },
+      "name": "ApiverveRunApiTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input for ApiverveRunApiTool.",
+        "properties": {
+          "api": {
+            "description": "The APIVerve API id, for example emailvalidator, iplookup or vindecoder.",
+            "title": "Api",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The API parameters, for example {\"email\": \"jane@example.com\"}.",
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "api"
+        ],
+        "title": "ApiverveRunApiToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Fetches metadata from Arxiv based on a search query and optionally downloads PDFs.",
       "env_vars": [],
       "humanized_name": "Arxiv Paper Fetcher and Downloader",
