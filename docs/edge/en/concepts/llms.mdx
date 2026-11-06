@@ -1188,6 +1188,37 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Token Kiosk">
+    CrewAI connects to Token Kiosk through its native OpenAI-compatible client. Token Kiosk is GAIB's multi-provider AI model routing gateway (`https://api-token-kiosk.gaib.ai/v1`).
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    TOKEN_KIOSK_API_KEY=<your-token-kiosk-api-key>
+
+    # Optional: Custom endpoint URL override
+    TOKEN_KIOSK_BASE_URL="https://api-token-kiosk.gaib.ai/v1"
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    # Initialize Token Kiosk model (e.g. Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1)
+    llm = LLM(
+        model="token_kiosk/claude-3-5-sonnet",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Token Kiosk features:
+      - Unified routing across frontier and open-weight models (Claude 3.7/3.5, OpenAI, DeepSeek, Gemini, Mistral)
+      - Smart resilience fallback routing on upstream errors
+      - Full tool calling, streaming, and structured outputs support
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
