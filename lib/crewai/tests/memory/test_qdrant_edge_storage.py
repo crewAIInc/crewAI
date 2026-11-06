@@ -236,6 +236,17 @@ def test_close_lifecycle(tmp_path: Path) -> None:
     s2.close()
 
 
+def test_worker_process_is_alive_detects_dead_and_live_pids() -> None:
+    import os
+
+    from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+
+    # The current process is alive; a very high pid is not. Neither call may
+    # raise, including on Windows where os.kill(pid, 0) does not work.
+    assert QdrantEdgeStorage._worker_process_is_alive(os.getpid())
+    assert not QdrantEdgeStorage._worker_process_is_alive(99999999)
+
+
 def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     base = tmp_path / "edge"
     fake_pid = 99999999
