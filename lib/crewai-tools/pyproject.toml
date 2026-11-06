@@ -63,7 +63,8 @@ spider-client = [
     "spider-client>=0.1.25",
 ]
 scrapegraph-py = [
-    "scrapegraph-py>=1.9.0,<2",
+    # scrapegraph-py 2.x removed Client class; pin until upstream fixes type ignores
+    "scrapegraph-py>=1.46.0,<2",
 ]
 linkup-sdk = [
     "linkup-sdk>=0.2.2",
