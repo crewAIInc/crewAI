@@ -529,13 +529,13 @@ class URLReadTool(BaseTool):
         except ValueError as e:
             return ToolFailure(
                 message=f"Error: {e}",
-                reason=ToolFailureReason.EXCEPTION,
+                reason=ToolFailureReason.TOOL_REPORTED,
                 code="ValueError",
             )
         except requests.RequestException as e:
             return ToolFailure(
                 message=f"Error: Failed to fetch '{url}'. {format_error_for_display(e)}",
-                reason=ToolFailureReason.EXCEPTION,
+                reason=ToolFailureReason.TOOL_REPORTED,
                 code=type(e).__name__,
             )
 
