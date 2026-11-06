@@ -140,3 +140,37 @@ def test_valid_prune_is_counted_once(tmp_path, dry_run, retention):
     telemetry.return_value.feature_usage_span.assert_called_once_with(
         "cli_usage:checkpoint_prune"
     )
+
+
+@pytest.mark.parametrize(
+    ("subcommand", "target"),
+    [
+        ("list", "crewai_cli.checkpoint_cli.list_checkpoints"),
+        ("info", "crewai_cli.checkpoint_cli.info_checkpoint"),
+    ],
+)
+def test_group_location_is_used_by_list_and_info(subcommand, target):
+    with (
+        patch("crewai_core.telemetry.Telemetry"),
+        patch(target) as operation,
+    ):
+        result = CliRunner().invoke(
+            crewai, ["checkpoint", "--location", "/custom/checkpoints", subcommand]
+        )
+
+    assert result.exit_code == 0, result.output
+    operation.assert_called_once_with("/custom/checkpoints")
+
+
+def test_positional_location_still_overrides_group_option():
+    with (
+        patch("crewai_core.telemetry.Telemetry"),
+        patch("crewai_cli.checkpoint_cli.list_checkpoints") as operation,
+    ):
+        result = CliRunner().invoke(
+            crewai,
+            ["checkpoint", "--location", "/group/checkpoints", "list", "/positional"],
+        )
+
+    assert result.exit_code == 0, result.output
+    operation.assert_called_once_with("/positional")

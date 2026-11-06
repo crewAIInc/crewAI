@@ -1451,8 +1451,9 @@ def checkpoint(ctx: click.Context, location: str) -> None:
 
 
 @checkpoint.command("list")
-@click.argument("location", default="./.checkpoints")
-def checkpoint_list(location: str) -> None:
+@click.argument("location", default=None, required=False)
+@click.pass_context
+def checkpoint_list(ctx: click.Context, location: str | None) -> None:
     """List checkpoints in a directory."""
     from crewai_cli.checkpoint_cli import (
         _detect_location,
@@ -1461,12 +1462,13 @@ def checkpoint_list(location: str) -> None:
     )
 
     _record_checkpoint_usage("list")
-    list_checkpoints(_detect_location(location))
+    list_checkpoints(_detect_location(location or ctx.obj["location"]))
 
 
 @checkpoint.command("info")
-@click.argument("path", default="./.checkpoints")
-def checkpoint_info(path: str) -> None:
+@click.argument("path", default=None, required=False)
+@click.pass_context
+def checkpoint_info(ctx: click.Context, path: str | None) -> None:
     """Show details of a checkpoint. Pass a file or directory for latest."""
     from crewai_cli.checkpoint_cli import (
         _detect_location,
@@ -1475,7 +1477,7 @@ def checkpoint_info(path: str) -> None:
     )
 
     _record_checkpoint_usage("info")
-    info_checkpoint(_detect_location(path))
+    info_checkpoint(_detect_location(path or ctx.obj["location"]))
 
 
 @checkpoint.command("resume")
