@@ -22,6 +22,10 @@ from typing import (
 )
 import warnings
 
+from crewai_core.platform_apps import (
+    PlatformAppsUnavailableError,
+    UnresolvedPlatformAppsWarning,
+)
 from crewai_core.printer import set_suppress_console_output
 from pydantic import (
     BaseModel,
@@ -1381,17 +1385,22 @@ class Agent(BaseAgent):
 
         Returns:
             The resolved tools, or an empty list when none resolve or resolution
-            fails. A non-empty ``apps`` that resolves to no tools emits a
-            ``UserWarning`` naming the agent and its apps.
+            fails. A non-empty ``apps`` that resolves to no tools emits an
+            ``UnresolvedPlatformAppsWarning`` naming the agent, its apps, and
+            the apps CrewAI AMP said it could not resolve.
         """
         platform_tools: list[BaseTool] = []
         cause = ""
+        missing_apps: list[str] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
             platform_tools = CrewaiPlatformTools(apps=apps)
+        except PlatformAppsUnavailableError as e:
+            self._logger.log("error", f"Error getting platform tools: {e!s}")
+            missing_apps = e.missing_apps
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
             cause = f" Cause: {e!s}"
@@ -1399,14 +1408,10 @@ class Agent(BaseAgent):
         if apps and not platform_tools:
             # Logger.log above is verbose-gated; without a warning a bad `apps`
             # entry only shows up later as a task the agent couldn't do.
-            app_names = ", ".join(str(app) for app in apps)
             warnings.warn(
-                f"Agent '{self.role}' declares apps [{app_names}] but none "
-                "resolved to any tools; the agent will run without them and may "
-                "be unable to complete its goal. Check that these apps exist and "
-                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set."
-                f"{cause}",
-                UserWarning,
+                UnresolvedPlatformAppsWarning(
+                    self.role, [str(app) for app in apps], missing_apps, cause
+                ),
                 stacklevel=2,
             )
 
