@@ -421,6 +421,27 @@ class ForEachStreamingContext:
         self.output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
 
 
+async def _gather_cancelling_siblings(
+    coros: Iterable[Coroutine[Any, Any, Any]],
+) -> list[Any]:
+    """Run the coroutines concurrently; on failure cancel the rest, then raise.
+
+    A bare ``asyncio.gather`` propagates the first exception and leaves the
+    remaining coroutines running in the background after the caller already
+    holds the error, so in-flight stream consumers keep pulling from their
+    crews while their outcomes are never retrieved.
+    """
+    tasks = [asyncio.ensure_future(coro) for coro in coros]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
 async def run_for_each_async(
     crew: Crew,
     inputs: list[dict[str, Any]],
@@ -473,8 +494,8 @@ async def run_for_each_async(
                             )
                     return stream_output.result
 
-                crew_results = await asyncio.gather(
-                    *[consume_stream(s) for s in streaming_outputs]
+                crew_results = await _gather_cancelling_siblings(
+                    [consume_stream(s) for s in streaming_outputs]
                 )
                 ctx.result_holder[0] = list(crew_results)
             except Exception as e:
