@@ -484,6 +484,11 @@ class EncodingFlow(Flow[EncodingState]):
                     created_at=existing.created_at,
                     last_accessed=now,
                     embedding=new_emb if new_emb else existing.embedding,
+                    # Carry these over explicitly: both have defaults, so
+                    # omitting them would silently turn a private memory public
+                    # and drop its provenance during consolidation.
+                    source=existing.source,
+                    private=existing.private,
                 )
                 self._storage.update(updated)
                 self.state.records_updated += 1
