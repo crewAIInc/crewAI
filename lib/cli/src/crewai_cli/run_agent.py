@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -13,6 +14,7 @@ from crewai_cli.api_keys import (
     ask_for_api_key,
     missing_key_line,
 )
+from crewai_cli.constants import ENV_VARS, required_key_names
 from crewai_cli.input_prompt import is_interactive, parse_inputs_json
 from crewai_cli.run_crew import (
     _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV,
@@ -37,8 +39,15 @@ try:
 except module.click.ClickException as exc:
     exc.show()
     raise SystemExit(exc.exit_code)
+except module.click.Abort:
+    # Ctrl-C or Ctrl-D at the API key prompt, which counted the stop.
+    module.click.echo("Aborted!", err=True)
+    raise SystemExit(module._ABORTED_EXIT_CODE)
 """,
 )
+# The project-env run exits with this when it was aborted at a prompt, so the
+# launching process does not count it again as a failed script.
+_ABORTED_EXIT_CODE = 130
 
 
 def _agent_messages(inputs: str | None) -> Any:
@@ -94,7 +103,8 @@ def run_agent_in_project_env(inputs: str | None) -> None:
     try:
         subprocess.run(command, check=True, env=env)  # noqa: S603
     except subprocess.CalledProcessError as exc:
-        record_run_stopped("script_failed")
+        if exc.returncode != _ABORTED_EXIT_CODE:
+            record_run_stopped("script_failed")
         raise SystemExit(exc.returncode) from exc
     except OSError as exc:
         record_run_stopped("launch_failed")
@@ -118,10 +128,30 @@ def _ask_for_missing_api_key(agent: Any) -> None:
     for name in _missing_keys([model], {}, env_file_wins=False):
         # Ctrl-C or Ctrl-D at the prompt stops the run there.
         with stops_run_as("missing_api_key"):
-            pasted = ask_for_api_key(name, Path.cwd(), None)
+            pasted = ask_for_api_key(
+                name,
+                Path.cwd(),
+                None,
+                llm_endpoints={
+                    key: getattr(llm, key, None)
+                    for key in ("base_url", "api_base", "endpoint")
+                },
+            )
         if not pasted:
             record_run_stopped("missing_api_key")
             raise click.ClickException(missing_key_line(name, Path.cwd()))
+
+
+def _drop_blank_api_keys() -> None:
+    """Unset provider API keys that are blank.
+
+    A blank key fails while the model is built, before the loaded Agent can be
+    checked and the key asked for. Unset, the provider waits for its first call.
+    """
+    for provider in ENV_VARS:
+        for name in required_key_names(provider):
+            if name in os.environ and not os.environ[name].strip():
+                del os.environ[name]
 
 
 def run_agent(inputs: str | None = None) -> None:
@@ -135,13 +165,15 @@ def run_agent(inputs: str | None = None) -> None:
     try:
         from crewai.project import load_agent_project
 
+        # After the import: crewai loads the project's .env again as it imports.
+        _drop_blank_api_keys()
         agent = load_agent_project()
         _ask_for_missing_api_key(agent)
         if inputs is None:
             agent.chat(tui=True)
             return
         result = asyncio.run(agent.kickoff_async(messages=messages))
-    except click.ClickException:
+    except (click.ClickException, click.Abort):
         raise
     except Exception as exc:
         raise click.ClickException(f"Agent run failed: {exc}") from exc

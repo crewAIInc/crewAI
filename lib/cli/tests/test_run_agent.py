@@ -24,6 +24,7 @@ def test_headless_chat_reports_no_terminal(monkeypatch):
     (FileNotFoundError("uv unavailable"), "launch_failed", click.ClickException),
     (PermissionError("launch denied"), "launch_failed", click.ClickException),
     (subprocess.CalledProcessError(7, ["uv"]), "script_failed", SystemExit),
+    (subprocess.CalledProcessError(130, ["uv"]), None, SystemExit),
 ])
 def test_agent_launch_failures_are_reported(monkeypatch, error, reason, exception):
     stopped = []
@@ -37,9 +38,9 @@ def test_agent_launch_failures_are_reported(monkeypatch, error, reason, exceptio
     monkeypatch.setattr(runner.subprocess, "run", fail)
     with pytest.raises(exception) as caught:
         runner.run_agent_in_project_env('{"messages":"hello"}')
-    assert stopped == [reason]
-    if reason == "script_failed":
-        assert caught.value.code == 7
+    assert stopped == ([reason] if reason else [])
+    if isinstance(error, subprocess.CalledProcessError):
+        assert caught.value.code == error.returncode
 
 
 @pytest.mark.parametrize(
@@ -296,23 +297,43 @@ async def test_agent_chat_tui_runs_two_turns_with_history(monkeypatch):
     assert "first" in llm.received[1]
 
 
+@pytest.mark.parametrize("blank", [False, True])
 @pytest.mark.parametrize("pasted", [True, False])
-def test_missing_api_key_is_asked_for_before_chat(tmp_path, monkeypatch, pasted):
+def test_missing_api_key_is_asked_for_before_chat(tmp_path, monkeypatch, pasted, blank):
+    import os
+
     import crewai.project
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    if blank:
+        # A blank key would fail while the model is built, before the prompt.
+        monkeypatch.setenv("OPENAI_API_KEY", "")
+    else:
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(runner, "is_interactive", lambda: True)
     chats = []
     agent = SimpleNamespace(
-        llm=SimpleNamespace(provider="openai", model="gpt-6.1-sol", api_key=None),
+        llm=SimpleNamespace(
+            provider="openai",
+            model="gpt-6.1-sol",
+            api_key=None,
+            base_url="https://models.example/v1",
+        ),
         chat=lambda **kwargs: chats.append(kwargs),
     )
-    monkeypatch.setattr(crewai.project, "load_agent_project", lambda: agent)
+
+    def load_agent_project():
+        assert "OPENAI_API_KEY" not in os.environ
+        return agent
+
+    monkeypatch.setattr(crewai.project, "load_agent_project", load_agent_project)
     asked = []
-    monkeypatch.setattr(
-        runner, "ask_for_api_key", lambda name, *_: asked.append(name) or pasted
-    )
+
+    def ask(name, *_, llm_endpoints):
+        asked.append((name, llm_endpoints["base_url"]))
+        return pasted
+
+    monkeypatch.setattr(runner, "ask_for_api_key", ask)
     if pasted:
         runner.run_agent()
         assert chats == [{"tui": True}]
@@ -320,7 +341,55 @@ def test_missing_api_key_is_asked_for_before_chat(tmp_path, monkeypatch, pasted)
         with pytest.raises(click.ClickException, match="OPENAI_API_KEY is not set"):
             runner.run_agent()
         assert chats == []
-    assert asked == ["OPENAI_API_KEY"]
+    assert asked == [("OPENAI_API_KEY", "https://models.example/v1")]
+
+
+def test_aborting_the_key_prompt_ends_the_run_as_aborted(tmp_path, monkeypatch):
+    import crewai.project
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(runner, "is_interactive", lambda: True)
+    agent = SimpleNamespace(
+        llm=SimpleNamespace(provider="openai", model="gpt-6.1-sol", api_key=None),
+        chat=lambda **kwargs: pytest.fail("chat started after an abort"),
+    )
+    monkeypatch.setattr(crewai.project, "load_agent_project", lambda: agent)
+
+    def abort(*args, **kwargs):
+        raise click.Abort
+
+    monkeypatch.setattr(runner, "ask_for_api_key", abort)
+    with pytest.raises(click.Abort):
+        runner.run_agent()
+
+
+def test_project_bootstrap_ends_an_aborted_agent_run_as_aborted(tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    package = tmp_path / "crewai_cli"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    (package / "run_agent.py").write_text(
+        "import click\n"
+        "_ABORTED_EXIT_CODE = 130\n"
+        "def run_agent(inputs):\n"
+        "    raise click.Abort\n"
+    )
+    env = dict(os.environ)
+    env[runner._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(package)
+    env[runner._CREWAI_AGENT_INPUTS_ENV] = ""
+    result = subprocess.run(
+        [sys.executable, "-c", runner._AGENT_RUNNER_CODE],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode == runner._ABORTED_EXIT_CODE
+    assert "Aborted!" in result.stderr
 
 
 def test_configured_api_key_is_not_asked_for(tmp_path, monkeypatch):
