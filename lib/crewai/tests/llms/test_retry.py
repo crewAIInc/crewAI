@@ -2,11 +2,13 @@
 
 from typing import Any
 
+import httpx
 import pytest
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.retry import (
     _ThrottlingErrorClassifier,
+    _retry_after_seconds,
     arun_with_rate_limit_retry,
     get_retry_delay_seconds,
     run_with_rate_limit_retry,
@@ -148,6 +150,37 @@ async def test_base_llm_acall_is_automatically_wrapped(
 
     assert await llm.acall("hello") == "complete"
     assert llm.outcomes == []
+
+
+def test_retry_after_is_read_from_an_httpx_response() -> None:
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = httpx.Response(429, headers={"retry-after": "7"}, request=request)
+    error = type(
+        "RateLimitError",
+        (Exception,),
+        {"status_code": 429, "response": response},
+    )("rate limit exceeded")
+
+    assert _retry_after_seconds(error) == 7
+
+
+def test_run_with_rate_limit_retry_honors_an_httpx_retry_after() -> None:
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = httpx.Response(429, headers={"retry-after": "7"}, request=request)
+    error = type(
+        "RateLimitError",
+        (Exception,),
+        {"status_code": 429, "response": response},
+    )("rate limit exceeded")
+    outcomes: list[str | Exception] = [error, "complete"]
+    delays: list[float] = []
+
+    result = run_with_rate_limit_retry(
+        lambda: _pop_outcome(outcomes), sleep=delays.append
+    )
+
+    assert result == "complete"
+    assert delays == [7]
 
 
 def _pop_outcome(outcomes: list[str | Exception]) -> str:
