@@ -1607,3 +1607,82 @@ async def test_async_streaming_response_model_conversion_failure_raises() -> Non
             with pytest.raises(ValueError, match="Async schema validation failed"):
                 await llm.acall("prompt", response_model=PersonModel)
 
+
+@pytest.mark.asyncio
+async def test_async_streaming_empty_stream_raises_empty_response_error() -> None:
+    """When an async stream completes with empty content and no tool calls,
+    EmptyLLMResponseError must be raised instead of invoking Instructor with blank input."""
+    from crewai.llms.base_llm import EmptyLLMResponseError
+    from pydantic import BaseModel
+
+    class PersonModel(BaseModel):
+        name: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_empty_chunk = {
+        "id": "resp-empty",
+        "choices": [{"delta": {"content": ""}}],
+    }
+
+    async def empty_stream():
+        yield mock_empty_chunk
+
+    with patch("litellm.acompletion", return_value=empty_stream()):
+        with pytest.raises(EmptyLLMResponseError):
+            await llm.acall("prompt", response_model=PersonModel)
+
+
+@pytest.mark.asyncio
+async def test_async_streaming_response_model_mid_stream_error_raises() -> None:
+    """Async sibling: when response_model is set and a connection drop occurs mid-stream,
+    the partial raw text must not be returned as a valid structured response."""
+    from pydantic import BaseModel
+
+    class PersonModel(BaseModel):
+        name: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_chunk = {
+        "id": "resp-1",
+        "choices": [{"delta": {"content": "partial async text"}}],
+    }
+
+    async def failing_async_stream():
+        yield mock_chunk
+        raise ConnectionResetError("Async connection dropped mid-stream")
+
+    with patch("litellm.acompletion", return_value=failing_async_stream()):
+        with pytest.raises(
+            ConnectionResetError, match="Async connection dropped mid-stream"
+        ):
+            await llm.acall("prompt", response_model=PersonModel)
+
+
+@pytest.mark.asyncio
+async def test_async_streaming_zero_chunks_fallback_preserves_response_model() -> None:
+    """When 0 chunks are received in an async stream, it must fall back to
+    _ahandle_non_streaming_response with response_model preserved."""
+    from pydantic import BaseModel
+
+    class PersonModel(BaseModel):
+        name: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    async def zero_chunk_stream():
+        if False:
+            yield {}
+
+    async def mock_ahandle_non_streaming(*args, **kwargs):
+        assert kwargs.get("response_model") is PersonModel
+        return '{"name": "Fallback Person"}'
+
+    with patch("litellm.acompletion", return_value=zero_chunk_stream()):
+        with patch.object(
+            llm,
+            "_ahandle_non_streaming_response",
+            side_effect=mock_ahandle_non_streaming,
+        ):
+            res = await llm.acall("prompt", response_model=PersonModel)
+            assert res == '{"name": "Fallback Person"}'
+

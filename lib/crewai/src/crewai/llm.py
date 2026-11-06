@@ -1760,110 +1760,16 @@ class LLM(BaseLLM):
                             call_id=get_current_call_id(),
                         ),
                     )
-
-            if callbacks and len(callbacks) > 0 and usage_info:
-                for callback in callbacks:
-                    if isinstance(callback, TokenCalcHandler):
-                        callback.log_success_event(
-                            kwargs=params,
-                            response_obj={"usage": usage_info},
-                            start_time=0,
-                            end_time=0,
-                        )
-
-            if usage_info:
-                self._track_token_usage_internal(usage_info)
-
-            if accumulated_tool_args:
-                tool_calls_list: list[ChatCompletionDeltaToolCall] = [
-                    ChatCompletionDeltaToolCall(
-                        index=idx,
-                        function=Function(
-                            name=tool_arg.function.name,
-                            arguments=tool_arg.function.arguments,
-                        ),
-                    )
-                    for idx, tool_arg in sorted(accumulated_tool_args.items())
-                    if tool_arg.function.name
-                ]
-
-                if tool_calls_list:
-                    if available_functions:
-                        result = self._handle_streaming_tool_calls(
-                            tool_calls=tool_calls_list,
-                            accumulated_tool_args=accumulated_tool_args,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_id=response_id,
-                        )
-                        if result is not None:
-                            return result
-                    else:
-                        self._handle_emit_call_events(
-                            response=tool_calls_list,
-                            call_type=LLMCallType.TOOL_CALL,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            messages=params.get("messages"),
-                            usage=self._usage_to_dict(usage_info),
-                            finish_reason=stream_finish_reason,
-                            response_id=stream_response_id,
-                        )
-                        return tool_calls_list
-
-            if response_model and self.is_litellm:
-                from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-                from crewai.utilities.internal_instructor import InternalInstructor
-
-                instructor_instance = InternalInstructor(
-                    content=full_response,
-                    model=response_model,
-                    llm=self,
-                )
-                with model_call_hooks_dispatched():
-                    result = instructor_instance.to_pydantic()
-                structured_response = result.model_dump_json()
-                usage_dict = self._usage_to_dict(usage_info)
-                self._handle_emit_call_events(
-                    response=structured_response,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params.get("messages"),
-                    usage=usage_dict,
-                    finish_reason=stream_finish_reason,
-                    response_id=stream_response_id,
-                )
-                return structured_response
-
-            usage_dict = self._usage_to_dict(usage_info)
-            finish_reason, response_id_last = (
-                stream_finish_reason,
-                stream_response_id,
-            )
-            self._handle_emit_call_events(
-                response=full_response,
-                call_type=LLMCallType.LLM_CALL,
-                from_task=from_task,
-                from_agent=from_agent,
-                messages=params.get("messages"),
-                usage=usage_dict,
-                finish_reason=finish_reason,
-                response_id=response_id_last,
-            )
-            return full_response
-
-        except LLMContextLengthExceededError:
+        except (LLMContextLengthExceededError, EmptyLLMResponseError):
             raise
         except Exception as e:
             error_msg = str(e)
             if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
-            if chunk_count == 0:
-                raise
-            if full_response and not response_model:
+            logging.error(f"Error in async streaming response: {e!s}")
+            if full_response.strip() and not response_model:
+                logging.warning(f"Returning partial response despite error: {e!s}")
                 finish_reason, response_id_last = (
                     stream_finish_reason,
                     stream_response_id,
@@ -1879,7 +1785,120 @@ class LLM(BaseLLM):
                     response_id=response_id_last,
                 )
                 return full_response
+
             raise
+
+        if callbacks and len(callbacks) > 0 and usage_info:
+            for callback in callbacks:
+                if isinstance(callback, TokenCalcHandler):
+                    callback.log_success_event(
+                        kwargs=params,
+                        response_obj={"usage": usage_info},
+                        start_time=0,
+                        end_time=0,
+                    )
+
+        if usage_info:
+            self._track_token_usage_internal(usage_info)
+
+        if accumulated_tool_args:
+            tool_calls_list: list[ChatCompletionDeltaToolCall] = [
+                ChatCompletionDeltaToolCall(
+                    index=idx,
+                    function=Function(
+                        name=tool_arg.function.name,
+                        arguments=tool_arg.function.arguments,
+                    ),
+                )
+                for idx, tool_arg in sorted(accumulated_tool_args.items())
+                if tool_arg.function.name
+            ]
+
+            if tool_calls_list:
+                if available_functions:
+                    result = self._handle_streaming_tool_calls(
+                        tool_calls=tool_calls_list,
+                        accumulated_tool_args=accumulated_tool_args,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_id=response_id,
+                    )
+                    if result is not None:
+                        return result
+                else:
+                    self._handle_emit_call_events(
+                        response=tool_calls_list,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params.get("messages"),
+                        usage=self._usage_to_dict(usage_info),
+                        finish_reason=stream_finish_reason,
+                        response_id=stream_response_id,
+                    )
+                    return tool_calls_list
+
+        if not full_response.strip() and chunk_count == 0:
+            logging.warning(
+                "No chunks received in streaming response, falling back to non-streaming"
+            )
+            non_streaming_params = params.copy()
+            non_streaming_params["stream"] = False
+            non_streaming_params.pop("stream_options", None)
+            return await self._ahandle_non_streaming_response(
+                non_streaming_params,
+                callbacks,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model=response_model,
+            )
+
+        if not full_response.strip() and len(accumulated_tool_args) == 0:
+            raise EmptyLLMResponseError(self.model)
+
+        if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.internal_instructor import InternalInstructor
+
+            instructor_instance = InternalInstructor(
+                content=full_response,
+                model=response_model,
+                llm=self,
+            )
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
+            structured_response = result.model_dump_json()
+            usage_dict = self._usage_to_dict(usage_info)
+            self._handle_emit_call_events(
+                response=structured_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("messages"),
+                usage=usage_dict,
+                finish_reason=stream_finish_reason,
+                response_id=stream_response_id,
+            )
+            return structured_response
+
+        usage_dict = self._usage_to_dict(usage_info)
+        finish_reason, response_id_last = (
+            stream_finish_reason,
+            stream_response_id,
+        )
+        self._handle_emit_call_events(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params.get("messages"),
+            usage=usage_dict,
+            finish_reason=finish_reason,
+            response_id=response_id_last,
+        )
+        return full_response
 
     def _handle_tool_call(
         self,
