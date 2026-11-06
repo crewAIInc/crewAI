@@ -2444,3 +2444,21 @@ def test_conditional_start_triggered_by_method_name_and_reference():
     ByCompositeMethodConditionFlow().kickoff()
     assert ran == ["step_a", "step_b", "after_both"]
 
+    class ByMultiEventOrStartFlow(Flow):
+        @start()
+        def step_a(self):
+            ran.append("step_a")
+
+        @listen(step_a)
+        def step_b(self):
+            ran.append("step_b")
+
+        @start(or_(step_a, step_b))
+        def after_either(self):
+            ran.append("after_either")
+
+    ran.clear()
+    ByMultiEventOrStartFlow().kickoff()
+    assert ran.count("after_either") == 1
+
+
