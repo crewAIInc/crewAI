@@ -105,6 +105,9 @@ databricks-sdk = [
 couchbase = [
     "couchbase>=4.6.0",
 ]
+crawlcheck = [
+    "crawlcheck>=1.7.0",
+]
 mcp = [
     "mcp>=1.30.0,<2",
     "mcpadapt>=0.1.9",
