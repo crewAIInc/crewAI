@@ -4,6 +4,38 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="05 nov 2026">
+  ## v1.15.36
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.36)
+
+  # O Que Mudou
+
+  ### Recursos
+  - Adicionar sessões experimentais de Agente Conversacional.
+  - Solicitar uma chave de API ausente quando a execução do crewai iniciar.
+  - Registrar a classe de erro quando a execução do crewai não consegue carregar um projeto.
+  - Nomear os aplicativos que o CrewAI AMP não consegue resolver para um agente.
+
+  ### Correções de Bugs
+  - Corrigir a execução de chamadas assíncronas no contexto do chamador para ferramentas síncronas.
+  - Resolver problema com a precedência de valores vazios na verificação de chave da execução.
+  - Parar uma execução de crew JSON de forma limpa quando sua chave de API estiver ausente.
+  - Chamar as ferramentas GPT-6 Astra e GPT-6.1 Sol através da API de Respostas.
+  - Lidar corretamente com a forma de saída sourcedAnswer.
+  - Remover valores de metadados None antes de escrever no ChromaDB.
+  - Adicionar o extra crewai do provedor escolhido a novos projetos.
+  - Fixar crewai-files no extra de processamento de arquivos como seus irmãos.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.35.
+
+  ## Contribuidores
+
+  @Kiko0301, @StoyanD, @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="03 nov 2026">
   ## v1.15.35
 
