@@ -10,7 +10,7 @@ from typing import Any, Final
 from urllib.parse import urlparse
 import zipfile
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, ToolFailure, ToolFailureReason
 from pydantic import BaseModel, Field
 import requests
 
@@ -20,7 +20,6 @@ from crewai_tools.security.safe_requests import safe_get_bounded
 
 _DEFAULT_MAX_BYTES: Final[int] = 5 * 1024 * 1024
 _DEFAULT_TIMEOUT: Final[int] = 30
-
 _PDF_TYPE: Final[str] = "application/pdf"
 _DOCX_TYPE: Final[str] = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -146,7 +145,10 @@ class URLReadTool(BaseTool):
 
         The fetch pins TCP to the IP that passed validation unless
         ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without
-        ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. The returned text is still
+        ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. Set
+        ``CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`` to a comma-separated list of
+        exact hostnames when an administrator has approved an internal URL host.
+        The returned text is still
         untrusted remote content flowing into an agent's context -- a
         fetched page can attempt to instruct the agent. Network egress
         policy and prompt-level handling cover that.
@@ -507,7 +509,7 @@ class URLReadTool(BaseTool):
         url: str,
         start_line: int | None = 1,
         line_count: int | None = None,
-    ) -> str:
+    ) -> str | ToolFailure:
         """Fetch a URL and return its content, or a window of it, as text."""
         start_line = start_line or 1
         line_count = line_count or None
@@ -520,9 +522,17 @@ class URLReadTool(BaseTool):
                 headers=self._request_headers(),
             )
         except ValueError as e:
-            return f"Error: {e}"
+            return ToolFailure(
+                message=f"Error: {e}",
+                reason=ToolFailureReason.EXCEPTION,
+                code="ValueError",
+            )
         except requests.RequestException as e:
-            return f"Error: Failed to fetch '{url}'. {format_error_for_display(e)}"
+            return ToolFailure(
+                message=f"Error: Failed to fetch '{url}'. {format_error_for_display(e)}",
+                reason=ToolFailureReason.EXCEPTION,
+                code=type(e).__name__,
+            )
 
         kind = self._resolve_kind(body, content_type, final_url, url)
         if kind is None:
