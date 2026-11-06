@@ -127,7 +127,7 @@ agent = Agent(
 O padrão mais comum no mundo real. A skill fornece *como* abordar o trabalho; ferramentas fornecem *o que* o agente pode fazer:
 
 ```python
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 analyst = Agent(
     role="Security Analyst",
@@ -137,7 +137,6 @@ analyst = Agent(
     tools=[
         SerperDevTool(),                  # Pesquisar vulnerabilidades conhecidas
         FileReadTool(),                   # Ler arquivos de configuração
-        CodeInterpreterTool(),            # Executar scripts de análise
     ],
 )
 ```
