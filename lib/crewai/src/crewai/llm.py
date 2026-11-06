@@ -214,6 +214,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "aistupidlevel",
 ]
 
 
@@ -239,6 +240,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "aistupidlevel": "aistupidlevel",
 }
 
 
@@ -475,6 +477,10 @@ class LLM(BaseLLM):
             parts = model_lower.split("/")
             return len(parts) == 2 and all(parts)
 
+        if provider == "aistupidlevel":
+            # A routing mode (auto-coding, auto-reasoning, ...) or a pinned model id
+            return bool(model_lower)
+
         if provider == "snowflake":
             return True
 
@@ -703,6 +709,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "aistupidlevel",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

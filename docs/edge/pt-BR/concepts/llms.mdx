@@ -761,6 +761,36 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+
+  <Accordion title="AI Stupid Level">
+    O CrewAI se comunica com o AI Stupid Level pelo cliente OpenAI nativo, então não é necessário instalar o LiteLLM. O AI Stupid Level é um roteador: envia cada requisição ao modelo com a melhor pontuação atual em benchmarks de programação, raciocínio e uso de ferramentas executados continuamente, usando suas próprias chaves de provedor (OpenAI, Anthropic, Google, DeepSeek, Kimi, GLM).
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required: a router key (aism_...) from https://aistupidlevel.info/router/keys
+    AISTUPIDLEVEL_API_KEY=<your-router-key>
+
+    # Optional
+    AISTUPIDLEVEL_BASE_URL=https://aistupidlevel.info/v1
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="aistupidlevel/auto-coding",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Recursos do AI Stupid Level:
+      - Modos de roteamento como IDs de modelo: `auto-coding`, `auto-reasoning`, `auto-tooling`, `auto-best`
+      - Os modos `auto-value*` escolhem o maior número de pontos de benchmark por dólar medido entre os modelos próximos do melhor
+      - Chamada de ferramentas, streaming e saídas estruturadas com JSON schema; um loop de ferramentas permanece em um único modelo
+    </Info>
+
+    Qualquer ID de modelo real (por exemplo `aistupidlevel/claude-opus-5-5`) fixa esse modelo. Consulte os [modos de roteamento](https://aistupidlevel.info/router/docs#strategies) e `GET /v1/models` para a lista completa.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming
