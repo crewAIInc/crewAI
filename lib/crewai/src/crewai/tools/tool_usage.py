@@ -419,34 +419,17 @@ class ToolUsage:
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
 
-                    if available_tool and hasattr(
-                        available_tool, "_increment_usage_count"
+                    # tool.ainvoke() already counted this call toward max_usage_count.
+                    if (
+                        available_tool
+                        and getattr(available_tool, "max_usage_count", None) is not None
+                        and self.agent
+                        and self.agent.verbose
                     ):
-                        available_tool._increment_usage_count()
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
-                    elif available_tool and hasattr(
-                        available_tool, "current_usage_count"
-                    ):
-                        available_tool.current_usage_count += 1
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
+                        PRINTER.print(
+                            content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                            color="blue",
+                        )
 
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
@@ -676,34 +659,17 @@ class ToolUsage:
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
 
-                    if available_tool and hasattr(
-                        available_tool, "_increment_usage_count"
+                    # tool.invoke() already counted this call toward max_usage_count.
+                    if (
+                        available_tool
+                        and getattr(available_tool, "max_usage_count", None) is not None
+                        and self.agent
+                        and self.agent.verbose
                     ):
-                        available_tool._increment_usage_count()
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
-                    elif available_tool and hasattr(
-                        available_tool, "current_usage_count"
-                    ):
-                        available_tool.current_usage_count += 1
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
+                        PRINTER.print(
+                            content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                            color="blue",
+                        )
 
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
