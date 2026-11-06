@@ -93,7 +93,10 @@ class FileHandler:
                     try:
                         with open(self._path, encoding="utf-8") as read_file:
                             existing_data = json.load(read_file)
-                            existing_data.append(log_entry)
+                            if isinstance(existing_data, list):
+                                existing_data.append(log_entry)
+                            else:
+                                existing_data = [log_entry]
                     except (json.JSONDecodeError, FileNotFoundError):
                         existing_data = [log_entry]
 
