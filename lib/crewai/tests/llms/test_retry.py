@@ -9,6 +9,7 @@ from crewai.llms.retry import (
     _ThrottlingErrorClassifier,
     arun_with_rate_limit_retry,
     get_retry_delay_seconds,
+    mark_stream_chunk_emitted,
     run_with_rate_limit_retry,
 )
 
@@ -156,3 +157,63 @@ def _pop_outcome(outcomes: list[str | Exception]) -> str:
     if isinstance(outcome, Exception):
         raise outcome
     return outcome
+
+
+def test_run_with_rate_limit_retry_does_not_retry_after_stream_chunk_emitted() -> None:
+    calls = 0
+
+    def streaming_operation() -> str:
+        nonlocal calls
+        calls += 1
+        mark_stream_chunk_emitted()
+        raise RuntimeError("rate limit exceeded")
+
+    delays: list[float] = []
+    with pytest.raises(RuntimeError, match="rate limit exceeded"):
+        run_with_rate_limit_retry(streaming_operation, sleep=delays.append)
+
+    assert calls == 1
+    assert delays == []
+
+
+@pytest.mark.asyncio
+async def test_arun_with_rate_limit_retry_does_not_retry_after_stream_chunk_emitted() -> None:
+    calls = 0
+
+    async def streaming_operation() -> str:
+        nonlocal calls
+        calls += 1
+        mark_stream_chunk_emitted()
+        raise RuntimeError("rate limit exceeded")
+
+    delays: list[float] = []
+
+    async def record_delay(delay: float) -> None:
+        delays.append(delay)
+
+    with pytest.raises(RuntimeError, match="rate limit exceeded"):
+        await arun_with_rate_limit_retry(streaming_operation, sleep=record_delay)
+
+    assert calls == 1
+    assert delays == []
+
+
+def test_base_llm_stream_chunk_event_prevents_retry_on_mid_stream_throttle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("crewai.llms.retry.time.sleep", lambda _: None)
+
+    class _StreamingLLM(BaseLLM):
+        model: str = "test-model"
+        attempts: int = 0
+
+        def call(self, *args: Any, **kwargs: Any) -> str:
+            self.attempts += 1
+            self._emit_stream_chunk_event("first partial chunk")
+            raise RuntimeError("rate limit exceeded")
+
+    llm = _StreamingLLM(model="test-model")
+    with pytest.raises(RuntimeError, match="rate limit exceeded"):
+        llm.call("hello")
+
+    assert llm.attempts == 1
