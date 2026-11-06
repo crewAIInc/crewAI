@@ -6,7 +6,7 @@ The implementation now lives in three modules, split by concern:
   ``@router``, ``or_`` / ``and_``) and Python Flow class projection
 - ``crewai.flow.flow_definition`` -- the serializable Flow Definition contract
 - ``crewai.flow.runtime`` -- the Flow execution engine and state
-- ``crewai.experimental.conversational_mixin`` -- experimental conversational
+- ``crewai.flow.conversational_mixin`` -- conversational
   runtime extension composed onto the public ``Flow`` class
 
 Prefer importing from those modules in new code; this module preserves the
@@ -17,8 +17,12 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from crewai.experimental.conversational_mixin import _ConversationalMixin
+from crewai.flow.conversational_mixin import _ConversationalMixin
 from crewai.flow.dsl import and_, listen, or_, router, start
+
+# Never exported here before, but the AGENTS.md scaffolded by crewai
+# 1.10.0-1.15.28 taught `from crewai.flow.flow import persist`.
+from crewai.flow.persistence import persist
 from crewai.flow.runtime import (
     _INITIAL_STATE_CLASS_MARKER,
     Flow as RuntimeFlow,
@@ -31,7 +35,7 @@ T = TypeVar("T", bound=dict[str, Any] | BaseModel)
 
 
 class Flow(_ConversationalMixin, RuntimeFlow[T]):
-    """Public Flow class with experimental conversational extension behavior."""
+    """Public Flow class with conversational extension behavior."""
 
 
 __all__ = [
@@ -42,6 +46,7 @@ __all__ = [
     "and_",
     "listen",
     "or_",
+    "persist",
     "router",
     "start",
 ]

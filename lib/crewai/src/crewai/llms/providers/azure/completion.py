@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -42,7 +44,14 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM, call_stream_override, llm_call_context
+    from crewai.llms.base_llm import (
+        BaseLLM,
+        LLMCallBlockedError,
+        MissingAPIKeyError,
+        _without_placeholder,
+        call_stream_override,
+        llm_call_context,
+    )
 
 except ImportError:
     raise ImportError(
@@ -193,6 +202,19 @@ class AzureCompletion(BaseLLM):
 
         base_url = self._get_responses_base_url()
 
+        self.api_key = (
+            _without_placeholder(self.api_key)
+            or _without_placeholder(os.getenv("AZURE_API_KEY"))
+            or None
+        )
+        if self.api_key is None and not _without_placeholder(
+            os.getenv("OPENAI_API_KEY")
+        ):
+            # The delegate is a plain OpenAI client, so azure-identity cannot
+            # authenticate it. Without a key it reads OPENAI_API_KEY, kept for
+            # existing setups; when that is unset too, name the Azure variable.
+            raise MissingAPIKeyError("AZURE_API_KEY", self.model)
+
         delegate_kwargs: dict[str, Any] = {
             "model": self.model,
             "api_key": self.api_key,
@@ -241,6 +263,20 @@ class AzureCompletion(BaseLLM):
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
 
+    def _get_responses_delegate(self) -> Any:
+        if self._responses_delegate is None:
+            self._init_responses_delegate()
+        return self._responses_delegate
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate input tokens until Azure offers a count endpoint."""
+        return super().get_input_tokens_count(messages, tools, response_model)
+
     def _get_responses_base_url(self) -> str:
         """Construct the base URL for the Azure OpenAI Responses API.
 
@@ -267,8 +303,9 @@ class AzureCompletion(BaseLLM):
         # Re-read env vars so that a deferred build can pick up credentials
         # that weren't set at instantiation time (e.g. LLM constructed at
         # module import before deployment env vars were injected).
+        self.api_key = _without_placeholder(self.api_key)
         if not self.api_key:
-            self.api_key = os.getenv("AZURE_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("AZURE_API_KEY"))
         if not self.endpoint:
             endpoint = (
                 os.getenv("AZURE_ENDPOINT")
@@ -324,10 +361,11 @@ class AzureCompletion(BaseLLM):
         try:
             from azure.identity import DefaultAzureCredential
         except ImportError:
-            raise ValueError(
-                "Azure API key is required when azure-identity is not "
-                "installed. Set AZURE_API_KEY, or install azure-identity "
-                'for keyless auth: uv add "crewai[azure-ai-inference]"'
+            raise MissingAPIKeyError(
+                "AZURE_API_KEY",
+                self.model,
+                alternative="For keyless auth instead, install azure-identity: "
+                'uv add "crewai[azure-ai-inference]"',
             ) from None
 
         return DefaultAzureCredential()
@@ -493,10 +531,9 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            with call_stream_override(
-                self._responses_delegate, bool(self._effective_stream())
-            ):
-                return self._responses_delegate.call(
+            delegate = self._get_responses_delegate()
+            with call_stream_override(delegate, bool(self._effective_stream())):
+                return delegate.call(
                     messages=messages,
                     tools=tools,
                     callbacks=callbacks,
@@ -521,10 +558,7 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
@@ -547,6 +581,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
@@ -575,10 +612,9 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            with call_stream_override(
-                self._responses_delegate, bool(self._effective_stream())
-            ):
-                return await self._responses_delegate.acall(
+            delegate = self._get_responses_delegate()
+            with call_stream_override(delegate, bool(self._effective_stream())):
+                return await delegate.acall(
                     messages=messages,
                     tools=tools,
                     callbacks=callbacks,
@@ -603,6 +639,8 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
                 )
@@ -624,6 +662,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 self._handle_api_error(e, from_task, from_agent)
 
@@ -987,19 +1028,25 @@ class AzureCompletion(BaseLLM):
 
             if choice.delta and choice.delta.tool_calls:
                 for idx, tool_call in enumerate(choice.delta.tool_calls):
-                    if idx not in tool_calls:
-                        tool_calls[idx] = {
+                    tool_index = tool_call.get("index")
+                    if tool_index is None:
+                        tool_index = idx
+
+                    if tool_index not in tool_calls:
+                        tool_calls[tool_index] = {
                             "id": tool_call.id,
                             "name": "",
                             "arguments": "",
                         }
-                    elif tool_call.id and not tool_calls[idx]["id"]:
-                        tool_calls[idx]["id"] = tool_call.id
+                    elif tool_call.id and not tool_calls[tool_index]["id"]:
+                        tool_calls[tool_index]["id"] = tool_call.id
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[idx]["name"] = tool_call.function.name
+                        tool_calls[tool_index]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[idx]["arguments"] += tool_call.function.arguments
+                        tool_calls[tool_index]["arguments"] += (
+                            tool_call.function.arguments
+                        )
 
                     self._emit_stream_chunk_event(
                         chunk=tool_call.function.arguments
@@ -1008,13 +1055,13 @@ class AzureCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_call={
-                            "id": tool_calls[idx]["id"],
+                            "id": tool_calls[tool_index]["id"],
                             "function": {
-                                "name": tool_calls[idx]["name"],
-                                "arguments": tool_calls[idx]["arguments"],
+                                "name": tool_calls[tool_index]["name"],
+                                "arguments": tool_calls[tool_index]["arguments"],
                             },
                             "type": "function",
-                            "index": idx,
+                            "index": tool_index,
                         },
                         call_type=LLMCallType.TOOL_CALL,
                         response_id=response_id,
@@ -1274,7 +1321,7 @@ class AzureCompletion(BaseLLM):
         """
         model_lower = self.model.lower() if self.model else ""
 
-        if "gpt-5" in model_lower:
+        if re.search(r"gpt-[5-9](?!\d)", model_lower):
             return False
 
         o_series_models = ["o1", "o3", "o4", "o1-mini", "o3-mini", "o4-mini"]
@@ -1291,36 +1338,18 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            AZURE_OPENAI_CONTEXT_WINDOWS,
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        # Longest prefix first. Always insert new keys in that order so
-        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
-        context_windows = {
-            "text-embedding": 8191,
-            "gpt-3.5-turbo": 16385,
-            "gpt-5.4-mini": 200000,
-            "gpt-35-turbo": 16385,
-            "gpt-4o-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-5.6": 1050000,
-            "gpt-4o": 128000,
-            "gpt-4": 8192,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            AZURE_OPENAI_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""

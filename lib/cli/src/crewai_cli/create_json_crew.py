@@ -2,26 +2,46 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
+import warnings
 
 import click
+from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
+from crewai_core.platform_apps import (
+    PLATFORM_APPLICATION_CATALOG,
+    PLATFORM_APP_CATEGORIES,
+    PLATFORM_APP_DISPLAY_NAMES,
+    PLATFORM_APP_TOOLS,
+    PLATFORM_APP_TOOL_COUNTS,
+)
+from crewai_core.settings import Settings
 from crewai_core.telemetry import Telemetry
+import httpx
 from rich.console import Console
 from rich.text import Text
 
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.authentication.main import AuthenticationCommand
+from crewai_cli.authentication.token import AuthError, get_auth_token
+from crewai_cli.constants import ENV_VARS, crewai_extras_for_model, provider_for_model
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
+    copy_assistant_instructions,
+    echo_missing_keys,
     enable_prompt_line_editing,
     get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
+    missing_provider_keys,
     render_template,
     write_env_file,
 )
@@ -48,61 +68,107 @@ _PROVIDERS: list[tuple[str, str]] = [
 # Curated offline fallback / label source. The picker prefers models pulled
 # live from the vendor's own API via ``model_catalog.get_provider_models``;
 # this list is the hand-verified backstop used when no API key is available.
-# Keep entries to real, current model ids — last verified against each vendor's
-# official model docs on 2026-08-17.
+# Each provider lists only its current models, last verified against the
+# vendor's own docs on 2026-11-03. The first entry is the `--provider` default
+# and what people with no key see first, so it is a small, current, generally
+# available model. A preview model is labeled as one and goes last.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
-        ("gpt-5.5", "GPT-5.5"),
-        ("gpt-5.5-pro", "GPT-5.5 Pro"),
-        ("gpt-5.6-sol", "GPT-5.6 Sol"),
-        ("gpt-5.6-terra", "GPT-5.6 Terra"),
-        ("gpt-5.6-luna", "GPT-5.6 Luna"),
-        ("gpt-5.6", "GPT-5.6"),
-        ("gpt-5.4", "GPT-5.4"),
-        ("gpt-5.4-mini", "GPT-5.4 Mini"),
-        ("gpt-5.2", "GPT-5.2"),
-        ("gpt-4.1", "GPT-4.1"),
+        ("gpt-6-luna", "GPT-6 Luna"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-astra", "GPT-6 Astra"),
     ],
     "anthropic": [
-        ("claude-fable-5", "Claude Fable 5"),
-        ("claude-opus-4-8", "Claude Opus 4.8"),
-        ("claude-sonnet-5", "Claude Sonnet 5"),
-        ("claude-opus-4-7", "Claude Opus 4.7"),
-        ("claude-haiku-4-5", "Claude Haiku 4.5"),
-        ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+        ("claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("claude-haiku-5-5", "Claude Haiku 5.5"),
+        ("claude-opus-5-5", "Claude Opus 5.5"),
+        ("claude-fable-5-1", "Claude Fable 5.1"),
     ],
+    # Gemini 4 Argon has no free tier, so it is never the default.
     "gemini": [
-        ("gemini-3.5-flash", "Gemini 3.5 Flash"),
-        ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
-        ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
-        ("gemini-2.5-pro", "Gemini 2.5 Pro"),
-        ("gemini-2.5-flash", "Gemini 2.5 Flash"),
-        ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite"),
+        ("gemini-3.8-flash", "Gemini 3.8 Flash"),
+        ("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite"),
+        ("gemini-4-argon", "Gemini 4 Argon"),
     ],
     "groq": [
-        ("meta-llama/llama-4-maverick-17b-128e-instruct", "Llama 4 Maverick"),
-        ("meta-llama/llama-4-scout-17b-16e-instruct", "Llama 4 Scout"),
+        ("openai/gpt-oss-20b", "GPT-OSS 20B"),
         ("openai/gpt-oss-120b", "GPT-OSS 120B"),
-        ("qwen/qwen3-32b", "Qwen3 32B"),
-        ("moonshotai/kimi-k2-instruct-0905", "Kimi K2"),
-        ("llama-3.3-70b-versatile", "Llama 3.3 70B"),
+        ("qwen/qwen3.8-27b", "Qwen3.8 27B (preview)"),
     ],
     "ollama": [
-        ("llama3.3", "Llama 3.3"),
-        ("qwen3", "Qwen 3"),
-        ("deepseek-r1", "DeepSeek R1"),
-        ("gpt-oss", "GPT-OSS"),
-        ("gemma3", "Gemma 3"),
-        ("mistral", "Mistral"),
+        ("qwen3.5:9b", "Qwen 3.5 9B"),
+        ("gemma4:26b", "Gemma 4 26B"),
+        ("qwen3.8:27b", "Qwen 3.8 27B"),
+        ("gpt-oss:120b", "GPT-OSS 120B"),
+    ],
+    "bedrock": [
+        ("global.anthropic.claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("global.anthropic.claude-haiku-5-5", "Claude Haiku 5.5"),
+        ("global.anthropic.claude-opus-5-5", "Claude Opus 5.5"),
+    ],
+    # Deployment names: these match the name Azure AI Foundry suggests when
+    # deploying each model.
+    "azure": [
+        ("gpt-6-luna", "GPT-6 Luna"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6-astra", "GPT-6 Astra"),
+    ],
+    "nvidia_nim": [
+        ("nvidia/nemotron-3.5-super-vl-120b-a12b", "Nemotron 3.5 Super VL 120B"),
+        ("nvidia/nemotron-3-ultra-550b-a55b", "Nemotron 3 Ultra 550B"),
+        (
+            "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "Nemotron 3.5 Lightning 30B (preview)",
+        ),
+    ],
+    "huggingface": [
+        ("zai-org/GLM-5.3-Flash", "GLM-5.3 Flash"),
+        ("deepseek-ai/DeepSeek-V4.1-Flash", "DeepSeek V4.1 Flash"),
+        ("zai-org/GLM-5.3", "GLM-5.3"),
+    ],
+    "cerebras": [
+        ("gpt-oss-120b", "GPT-OSS 120B"),
+        ("qwen-3.8-27b", "Qwen 3.8 27B"),
+    ],
+    "sambanova": [
+        ("gpt-oss-120b", "GPT-OSS 120B"),
+        ("DeepSeek-V3.1", "DeepSeek V3.1"),
+        ("gemma-4-31B-it", "Gemma 4 31B (preview)"),
+    ],
+    "watson": [
+        ("ibm/granite-4-h-small", "Granite 4 H Small"),
+        ("meta-llama/llama-4-maverick-17b-128e-instruct-fp8", "Llama 4 Maverick"),
+        ("openai/gpt-oss-120b", "GPT-OSS 120B"),
     ],
 }
 
+_FALLBACK_LLM = "openai/gpt-6-luna"
+
+# crewAI hands watsonx models to LiteLLM, which knows the provider only as
+# `watsonx`; ENV_VARS and the classic picker key it `watson`.
+_MODEL_PREFIXES: dict[str, str] = {"watson": "watsonx"}
+_ENV_PROVIDERS: dict[str, str] = {v: k for k, v in _MODEL_PREFIXES.items()}
+
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
+
+
+class _NoOrganizationSelectedError(RuntimeError):
+    """Raised when the saved CLI login has no active organization."""
 
 
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
+    (
+        "CrewAI Platform",
+        [
+            (
+                f"platform:{application.slug}",
+                f"{application.display_name} Integration",
+            )
+            for application in PLATFORM_APPLICATION_CATALOG
+        ],
+    ),
     (
         "Search & Research",
         [
@@ -227,9 +293,9 @@ _FLAT_TOOLS: list[tuple[str, str]] = [
 _COMMON_TOOL_ORDER = [
     "SerperDevTool",
     "ScrapeWebsiteTool",
-    "DirectoryReadTool",
     "FileReadTool",
-    "FileWriterTool",
+    "platform:gmail",
+    "platform:whatsapp",
 ]
 
 _ANSI_SEQUENCE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -304,6 +370,13 @@ def _show_interpolation_hint(kind: str) -> None:
 
 
 def _tool_label(name: str, description: str) -> str:
+    if name.startswith("platform:"):
+        app_name = description.removesuffix(" Integration").replace(" ", "")
+        tool_count = PLATFORM_APP_TOOL_COUNTS.get(name.removeprefix("platform:"), 0)
+        return (
+            f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration "
+            f"({tool_count} tools)"
+        )
     return f"{description:<48s} {name}"
 
 
@@ -312,12 +385,20 @@ def _tool_category_label(category: str) -> str:
 
 
 def _category_row_label(
-    category: str, tools: list[tuple[str, str]], selected: set[str], expanded: bool
+    category: str,
+    tools: list[tuple[str, str]],
+    selected: set[str],
+    expanded: bool,
+    *,
+    item_label: str | None = None,
 ) -> str:
     """Render an accordion category row with tool/selection counts."""
     marker = "▾" if expanded else "▸"
     sel_count = sum(1 for name, _desc in tools if name in selected)
-    suffix = f"{len(tools)} tools"
+    item_label = item_label or (
+        "applications" if category == "CrewAI Platform" else "tools"
+    )
+    suffix = f"{len(tools)} {item_label}"
     if sel_count:
         suffix += f", {sel_count} selected"
     return f"{marker} {category}  ({suffix})"
@@ -338,8 +419,26 @@ def _select_tools() -> list[str]:
     ]
     common_tool_names = {name for name, _desc in common_tools}
 
+    platform_tools = next(
+        tools for category, tools in _TOOL_CATEGORIES if category == "CrewAI Platform"
+    )
+    platform_groups = [
+        (
+            category.name,
+            [
+                (
+                    f"platform:{app}",
+                    f"{PLATFORM_APP_DISPLAY_NAMES[app]} Integration",
+                )
+                for app in category.apps
+            ],
+        )
+        for category in PLATFORM_APP_CATEGORIES
+    ]
     categories: list[tuple[str, list[tuple[str, str]]]] = []
     for category, category_tools in _TOOL_CATEGORIES:
+        if category == "CrewAI Platform":
+            continue
         remaining_tools = [
             (name, desc)
             for name, desc in category_tools
@@ -350,14 +449,17 @@ def _select_tools() -> list[str]:
 
     selected: set[str] = set()
     expanded: str | None = None
+    expanded_platform_group: str | None = None
     focus_category: str | None = None
+    first_render = True
 
     while True:
         labels: list[str] = []
         tool_by_index: dict[int, str] = {}
         separator_indices: set[int] = set()
         action_indices: set[int] = set()
-        category_by_index: dict[int, str] = {}
+        action_by_index: dict[int, tuple[str, str]] = {}
+        collapsed_indices: set[int] = set()
         preselected: set[int] = set()
         initial_cursor: int | None = None
 
@@ -369,10 +471,49 @@ def _select_tools() -> list[str]:
             tool_by_index[len(labels)] = name
             labels.append(_tool_label(name, desc))
 
+        platform_row = len(labels)
+        action_indices.add(platform_row)
+        action_by_index[platform_row] = ("category", "CrewAI Platform")
+        if focus_category == "CrewAI Platform":
+            initial_cursor = platform_row
+        labels.append(
+            _category_row_label(
+                "CrewAI Platform",
+                platform_tools,
+                selected,
+                expanded == "CrewAI Platform",
+            )
+        )
+        if expanded == "CrewAI Platform":
+            for group, apps in platform_groups:
+                row = len(labels)
+                action_indices.add(row)
+                action_by_index[row] = ("platform_group", group)
+                is_expanded = group == expanded_platform_group
+                if group == focus_category:
+                    initial_cursor = row
+                labels.append(
+                    "  "
+                    + _category_row_label(
+                        group,
+                        apps,
+                        selected,
+                        is_expanded,
+                        item_label="applications",
+                    )
+                )
+                for name, description in apps:
+                    if name in selected:
+                        preselected.add(len(labels))
+                    tool_by_index[len(labels)] = name
+                    labels.append("    " + _tool_label(name, description))
+                    if not is_expanded:
+                        collapsed_indices.add(len(labels) - 1)
+
         for category, category_tools in categories:
             row = len(labels)
             action_indices.add(row)
-            category_by_index[row] = category
+            action_by_index[row] = ("category", category)
             is_expanded = category == expanded
             if category == focus_category:
                 initial_cursor = row
@@ -387,13 +528,17 @@ def _select_tools() -> list[str]:
                     labels.append(_tool_label(name, desc))
 
         indices, action = pick_many(
-            "Tools (space to toggle, enter to confirm):",
+            "Tools (space to toggle, enter to confirm):" if first_render else "",
             labels,
             action_indices=action_indices,
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
+            searchable=expanded == "CrewAI Platform",
+            collapsed_indices=collapsed_indices,
+            search_title="SEARCH APPLICATIONS",
         )
+        first_render = False
 
         # Carry over toggles made on this screen; tools not visible in this
         # render keep their previous state.
@@ -403,14 +548,67 @@ def _select_tools() -> list[str]:
 
         if action is None:
             break
-        toggled = category_by_index.get(action)
-        focus_category = toggled
-        expanded = None if toggled == expanded else toggled
+        action_type, category = action_by_index[action]
+        if action_type == "platform_group":
+            focus_category = category
+            expanded_platform_group = (
+                None if category == expanded_platform_group else category
+            )
+            continue
 
-    ordered = [name for name, _desc in common_tools] + [
-        name for _cat, cat_tools in categories for name, _desc in cat_tools
-    ]
+        focus_category = category
+        if category == "CrewAI Platform":
+            expanded = None if category == expanded else category
+            expanded_platform_group = None
+        else:
+            expanded = None if category == expanded else category
+            expanded_platform_group = None
+
+    ordered = (
+        [name for name, _desc in common_tools]
+        + [
+            f"platform:{app}"
+            for category in PLATFORM_APP_CATEGORIES
+            for app in category.apps
+            if f"platform:{app}" not in common_tool_names
+        ]
+        + [name for _cat, cat_tools in categories for name, _desc in cat_tools]
+    )
     return [name for name in ordered if name in selected]
+
+
+def _select_platform_actions(selected_tools: list[str]) -> list[str]:
+    """Replace selected Platform applications with the chosen actions for an agent."""
+    platform_apps = [
+        tool.removeprefix("platform:")
+        for tool in selected_tools
+        if tool.startswith("platform:") and "/" not in tool
+    ]
+    non_platform_tools = [
+        tool for tool in selected_tools if not tool.startswith("platform:")
+    ]
+    platform_actions = [
+        tool for tool in selected_tools if tool.startswith("platform:") and "/" in tool
+    ]
+
+    for app in platform_apps:
+        app_tools = PLATFORM_APP_TOOLS[app]
+        default_slugs = set(PLATFORM_APP_DEFAULT_TOOLS[app])
+        action_indices = pick_many(
+            f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
+            [f"{item.display_name} ({item.slug})" for item in app_tools],
+            searchable=True,
+            preselected={
+                index
+                for index, item in enumerate(app_tools)
+                if item.slug in default_slugs
+            },
+        )
+        platform_actions.extend(
+            f"platform:{app}/{app_tools[index].slug}" for index in action_indices
+        )
+
+    return non_platform_tools + platform_actions
 
 
 def _wizard_agent(
@@ -446,7 +644,7 @@ def _wizard_agent(
         llm = preset_llm
         _success(llm)
     elif skip_provider:
-        llm = last_llm or "openai/gpt-4o"
+        llm = last_llm or _FALLBACK_LLM
     elif last_llm:
         reuse_labels = [
             f"Same as before  ({last_llm})",
@@ -461,7 +659,7 @@ def _wizard_agent(
     else:
         llm = _select_model()
 
-    tools = _select_tools()
+    tools = _select_platform_actions(_select_tools())
     if tools:
         _success(f"{len(tools)} tool{'s' if len(tools) != 1 else ''}")
     else:
@@ -619,7 +817,7 @@ def _default_agents_and_tasks(
     default_llm: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Return deterministic scaffold data for non-interactive project creation."""
-    llm = default_llm or "openai/gpt-4o"
+    llm = default_llm or _FALLBACK_LLM
     agents = [
         {
             "name": "researcher",
@@ -761,7 +959,7 @@ def _select_model() -> str:
 
     p_idx = pick_one("LLM Provider:", provider_labels)
     if p_idx < 0:
-        return "openai/gpt-4o"
+        return _FALLBACK_LLM
 
     if p_idx == len(_PROVIDERS):
         custom: str = click.prompt(
@@ -772,6 +970,7 @@ def _select_model() -> str:
         return custom.strip()
 
     provider_key, provider_name = _PROVIDERS[p_idx]
+    prefix = _MODEL_PREFIXES.get(provider_key, provider_key)
     click.secho(f"  → {provider_name}", fg="green")
 
     # Prefer the latest models pulled live from the vendor / LiteLLM; the
@@ -779,29 +978,29 @@ def _select_model() -> str:
     models = get_provider_models(provider_key, _PROVIDER_MODELS.get(provider_key, []))
     if not models:
         custom = click.prompt(
-            click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
+            click.style(f"  Enter model name for {prefix}/", fg="cyan"),
             type=str,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
-        return f"{provider_key}/{custom.strip()}"
+        return f"{prefix}/{custom.strip()}"
 
     model_labels = [f"{label}  ({model_id})" for model_id, label in models]
     model_labels.append("Other (enter model name)")
 
     m_idx = pick_one(f"{provider_name} Model:", model_labels)
     if m_idx < 0:
-        return f"{provider_key}/{models[0][0]}"
+        return f"{prefix}/{models[0][0]}"
 
     if m_idx == len(models):
         custom = click.prompt(
-            click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
+            click.style(f"  Enter model name for {prefix}/", fg="cyan"),
             type=str,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
-        result = f"{provider_key}/{custom.strip()}"
+        result = f"{prefix}/{custom.strip()}"
     else:
         model_id = models[m_idx][0]
-        result = f"{provider_key}/{model_id}"
+        result = f"{prefix}/{model_id}"
 
     click.secho(f"  → {result}", fg="green")
     return result
@@ -816,10 +1015,11 @@ def _default_model_for_provider(provider: str | None) -> str | None:
         return None
     if "/" in normalized:
         return normalized
-    models = _PROVIDER_MODELS.get(normalized)
+    provider = _ENV_PROVIDERS.get(normalized, normalized)
+    models = _PROVIDER_MODELS.get(provider)
     if not models:
         return None
-    return f"{normalized}/{models[0][0]}"
+    return f"{_MODEL_PREFIXES.get(provider, provider)}/{models[0][0]}"
 
 
 # ── Helpers ─────────────────────────────────────────────────────
@@ -836,32 +1036,317 @@ def _write_jsonc(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _setup_env(folder_path: Path, llm_model: str) -> None:
-    """Prompt for API keys based on the selected provider."""
+def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
+    """Save the first model as MODEL and prompt once for each provider's API keys."""
     click.echo()
     env_vars = load_env_vars(folder_path)
-    env_vars["MODEL"] = llm_model
+    env_vars["MODEL"] = llm_models[0]
 
-    provider = llm_model.split("/")[0] if "/" in llm_model else llm_model
-    if provider in ENV_VARS:
-        for details in ENV_VARS[provider]:
+    missing: list[str] = []
+    for provider in dict.fromkeys(
+        provider_for_model(model) or model.split("/")[0] for model in llm_models
+    ):
+        for details in ENV_VARS.get(provider, []):
             if details.get("default", False):
                 for key, value in details.items():
                     if key not in ["prompt", "key_name", "default"]:
                         env_vars[key] = value
             elif "key_name" in details:
+                # Hidden input goes through getpass, which reads the terminal
+                # and not piped stdin, so hide it only at a terminal.
                 api_key_value = click.prompt(
                     click.style(f"  {details['prompt']}", fg="cyan"),
                     default="",
                     show_default=False,
+                    hide_input=details.get("secret", True) and sys.stdin.isatty(),
                     prompt_suffix=click.style(" > ", fg="bright_white"),
                 )
                 if api_key_value.strip():
                     env_vars[details["key_name"]] = api_key_value
+        missing += missing_provider_keys(provider, env_vars)
 
-    if env_vars:
-        write_env_file(folder_path, env_vars)
+    write_env_file(folder_path, env_vars)
+    if missing:
+        echo_missing_keys(folder_path, missing)
+    else:
         click.secho("  API keys and model saved to .env file", fg="green")
+
+
+def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
+    """Return unique platform application slugs selected across all agents."""
+    apps: list[str] = []
+    for agent in agents:
+        for tool in agent.get("tools", []):
+            if isinstance(tool, str) and tool.startswith("platform:"):
+                app = tool.removeprefix("platform:").split("/", maxsplit=1)[0]
+                if app and app not in apps:
+                    apps.append(app)
+    return apps
+
+
+def _platform_app_name(app: str) -> str:
+    """Return the display name for a platform application slug."""
+    return PLATFORM_APP_DISPLAY_NAMES.get(app, app.replace("_", " ").title())
+
+
+def _get_logged_in_platform_token() -> str:
+    """Fetch the selected organization's integration token from the saved login."""
+    login_token = get_auth_token()
+    settings = Settings()
+    organization_id = settings.org_uuid
+    if not organization_id:
+        raise _NoOrganizationSelectedError("No CrewAI organization is selected")
+    api = PlusAPI(
+        api_key=login_token,
+        organization_id=organization_id,
+        base_url=settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL,
+    )
+    return api.get_integration_token()
+
+
+def _get_platform_token_from_login() -> str:
+    """Fetch an integration token, asking the user to log in when necessary."""
+    try:
+        return _get_logged_in_platform_token()
+    except AuthError:
+        click.secho(
+            "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand().login()
+    except httpx.HTTPStatusError as error:
+        status_code = getattr(error.response, "status_code", None)
+        if status_code == 403:
+            raise click.ClickException(
+                "Your account does not have access to the selected CrewAI organization. "
+                "Select another organization or ask an administrator for access."
+            ) from error
+        if status_code != 401:
+            raise
+        click.secho(
+            "  Your CrewAI login has expired; sign in again to configure integrations.",
+            fg="cyan",
+        )
+        AuthenticationCommand().login()
+    except _NoOrganizationSelectedError:
+        click.secho(
+            "  Select a CrewAI organization to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand()._select_organization()
+
+    try:
+        return _get_logged_in_platform_token()
+    except _NoOrganizationSelectedError as error:
+        raise click.ClickException(
+            "A CrewAI organization must be selected to configure integrations."
+        ) from error
+
+
+def _check_platform_app(
+    app: str,
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
+) -> tuple[Any | None, Exception | None]:
+    """Check one AMP application with the synchronous platform client."""
+    try:
+        selector = application_selector.from_string(app)
+        client = client_for_selector(selector, base_url=base_url)
+        return client.get_actions([selector]), None
+    except Exception as error:
+        return None, error
+
+
+async def _check_platform_apps_concurrently(
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
+) -> list[tuple[Any | None, Exception | None]]:
+    """Run independent AMP application checks concurrently."""
+    return await asyncio.gather(
+        *(
+            asyncio.to_thread(
+                _check_platform_app,
+                app,
+                application_selector,
+                client_for_selector,
+                base_url,
+            )
+            for app in apps
+        )
+    )
+
+
+def _report_platform_app_validation(
+    app: str,
+    actions: Any | None,
+    error: Exception | None,
+    failed: list[str],
+) -> bool:
+    """Print one AMP application validation result and return token validity."""
+    app_name = _platform_app_name(app)
+    if error is not None:
+        status_code = getattr(getattr(error, "response", None), "status_code", None)
+        if status_code in {401, 403}:
+            click.secho(
+                "  ✘ Enterprise Action Auth Token is invalid or expired",
+                fg="red",
+            )
+            return True
+        click.secho(
+            f"  ✘ {app_name} integration could not be validated: {error}",
+            fg="red",
+        )
+        failed.append(app)
+        return False
+
+    if not actions:
+        click.secho(
+            f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+            fg="red",
+        )
+        failed.append(app)
+    else:
+        click.secho(
+            f"  ✔ {app_name} integration is connected on CrewAI Platform",
+            fg="green",
+        )
+    return False
+
+
+def _validate_platform_apps(
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
+) -> tuple[list[str], bool]:
+    """Check selected AMP applications concurrently when no event loop is running."""
+    failed: list[str] = []
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        app_names = [_platform_app_name(app) for app in apps]
+        click.echo()
+        click.secho(
+            "  Checking "
+            f"{', '.join(app_names)} integration{'s' if len(app_names) != 1 else ''} "
+            "together on AMP...",
+            fg="cyan",
+        )
+        results = asyncio.run(
+            _check_platform_apps_concurrently(
+                apps, application_selector, client_for_selector, base_url
+            )
+        )
+        for app, (actions, error) in zip(apps, results, strict=True):
+            if _report_platform_app_validation(app, actions, error, failed):
+                return failed, True
+    else:
+        for app in apps:
+            app_name = _platform_app_name(app)
+            click.echo()
+            click.secho(
+                "  Checking Enterprise Action Auth Token and "
+                f"{app_name} integration on AMP...",
+                fg="cyan",
+            )
+            actions, error = _check_platform_app(
+                app, application_selector, client_for_selector, base_url
+            )
+            if _report_platform_app_validation(app, actions, error, failed):
+                return failed, True
+    return failed, False
+
+
+def _show_platform_validation_guidance(
+    failed_apps: list[str], token_invalid: bool, base_url: str
+) -> None:
+    """Tell the user what to fix before revalidating AMP integrations."""
+    click.echo()
+    if token_invalid:
+        click.secho(
+            "  Your CrewAI login could not validate the Enterprise Action Auth Token.",
+            fg="yellow",
+        )
+        return
+
+    failed_app_names = [_platform_app_name(app) for app in failed_apps]
+    click.secho(
+        "  Connect the "
+        f"{', '.join(failed_app_names)} integration"
+        f"{'s' if len(failed_app_names) != 1 else ''} in CrewAI AMP:",
+        fg="yellow",
+    )
+    click.secho(f"  {base_url.rstrip('/')}", fg="cyan")
+
+
+def _confirm_platform_revalidation() -> bool:
+    """Ask whether to retry integration validation after AMP is updated."""
+    click.echo()
+    return click.confirm(
+        click.style("  Revalidate integrations?", fg="cyan"), default=True
+    )
+
+
+def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
+    """Get and validate AMP authentication for selected platform applications."""
+    apps = _platform_apps_from_agents(agents)
+    if not apps:
+        return None
+
+    click.echo()
+    try:
+        # Importing crewai_tools currently initializes optional tool SDKs. Keep
+        # their import-time warnings out of the interactive token setup flow.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+                ApplicationSelector,
+                client_for_selector,
+            )
+    except ImportError as error:
+        raise click.ClickException(
+            "Platform tools require the 'crewai-tools' package. "
+            "Install it with `uv add crewai-tools` or "
+            "`pip install 'crewai[tools]'`."
+        ) from error
+
+    click.secho(
+        "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",
+        fg="cyan",
+    )
+    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "")
+    credential_location: str | None = None
+    if token:
+        credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
+    else:
+        token = _get_platform_token_from_login()
+        credential_location = "crewai login"
+
+    while True:
+        _success(
+            f"Enterprise Action Auth Token found via {credential_location}", dim=True
+        )
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        settings = Settings()
+        base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+        failed_apps, token_invalid = _validate_platform_apps(
+            apps,
+            ApplicationSelector,
+            client_for_selector,
+            base_url,
+        )
+        if not failed_apps and not token_invalid:
+            _success("Enterprise Action Auth Token set", bold=True)
+            _success(
+                "CrewAI Platform integrations connected: "
+                f"{', '.join(_platform_app_name(app) for app in apps)}"
+            )
+            return token
+
+        _show_platform_validation_guidance(failed_apps, token_invalid, base_url)
+        if not _confirm_platform_revalidation():
+            raise click.Abort()
 
 
 # ── Main ────────────────────────────────────────────────────────
@@ -871,8 +1356,12 @@ def create_json_crew(
     name: str,
     provider: str | None = None,
     skip_provider: bool = False,
-) -> None:
-    """Scaffold a new JSON-first crew project."""
+) -> Path:
+    """Scaffold a new JSON-first crew project.
+
+    Returns:
+        The crew's folder.
+    """
     import keyword
     import shutil
 
@@ -916,12 +1405,24 @@ def create_json_crew(
             default_llm=default_llm,
         )
 
-    # Create directories
+    # Authenticate only after the full wizard is complete, but before any
+    # project files are created. The returned token is then persisted below.
+    platform_token = _setup_platform_auth(agents) if not dmn_mode else None
+
+    # Create directories only after platform authentication succeeds.
     folder_path.mkdir(parents=True)
     (folder_path / "agents").mkdir()
     (folder_path / "tools").mkdir()
     (folder_path / "skills").mkdir()
     (folder_path / "knowledge").mkdir()
+    copy_assistant_instructions(folder_path)
+
+    if platform_token:
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        env_vars = load_env_vars(folder_path)
+        env_vars["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        write_env_file(folder_path, env_vars)
+        _success("Enterprise Action Auth Token saved to .env")
 
     for agent in agents:
         _write_jsonc(
@@ -935,13 +1436,16 @@ def create_json_crew(
     )
 
     # Write pyproject.toml
+    extras = {
+        extra for agent in agents for extra in crewai_extras_for_model(agent["llm"])
+    }
     (folder_path / "pyproject.toml").write_text(
         _render_json_crew_template(
             "pyproject.toml",
             {
                 "folder_name": folder_name,
                 "name": name,
-                "crewai_tools_dependency": get_crewai_tools_dependency(),
+                "crewai_tools_dependency": get_crewai_tools_dependency(extras=extras),
             },
         ),
         encoding="utf-8",
@@ -969,10 +1473,14 @@ def create_json_crew(
     (folder_path / "skills" / ".gitkeep").write_text("", encoding="utf-8")
 
     # Setup .env with API keys
+    keys_to_set: list[str] = []
     if not skip_provider and not dmn_mode:
-        models = list({a["llm"] for a in agents})
-        for model in models:
-            _setup_env(folder_path, model)
+        _setup_env(folder_path, [a["llm"] for a in agents])
+    else:
+        for provider in dict.fromkeys(
+            provider_for_model(a["llm"]) or a["llm"].split("/")[0] for a in agents
+        ):
+            keys_to_set += missing_provider_keys(provider, {})
 
     # Minted at creation so the project has a stable identity from run one.
     # This is the default `crewai create crew` path, not just --classic.
@@ -987,6 +1495,11 @@ def create_json_crew(
     click.echo()
     click.echo(f"    cd {folder_name}")
     click.echo()
+    if keys_to_set:
+        click.secho(
+            f"  Set {', '.join(keys_to_set)} in .env before `crewai run`", fg="cyan"
+        )
+        click.echo()
     click.secho("  Run your crew:", fg="cyan")
     click.echo("    crewai run")
     click.echo()
@@ -995,3 +1508,4 @@ def create_json_crew(
     click.echo("    crew.jsonc        Configure tasks and optional input defaults")
     click.echo("    tools/            Add custom tools (Python)")
     click.echo()
+    return folder_path

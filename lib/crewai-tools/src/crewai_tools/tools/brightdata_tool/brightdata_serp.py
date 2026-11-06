@@ -131,10 +131,10 @@ class BrightDataSearchTool(BaseTool):
 
     def get_search_url(self, engine: str, query: str) -> str:
         if engine == "yandex":
-            return f"https://yandex.com/search/?text=${query}"
+            return f"https://yandex.com/search/?text={query}"
         if engine == "bing":
-            return f"https://www.bing.com/search?q=${query}"
-        return f"https://www.google.com/search?q=${query}"
+            return f"https://www.bing.com/search?q={query}"
+        return f"https://www.google.com/search?q={query}"
 
     def _run(
         self,

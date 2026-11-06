@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_deepinfra_config(self):
+        """Test DeepInfra provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["deepinfra"]
+        assert config.base_url == "https://api.deepinfra.com/v1/openai"
+        assert config.api_key_env == "DEEPINFRA_API_KEY"
+        assert config.base_url_env == "DEEPINFRA_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -114,7 +122,34 @@ class TestNormalizeOllamaBaseUrl:
     def test_handles_v1_with_trailing_slash(self):
         """Test /v1/ is normalized."""
         assert _normalize_ollama_base_url("http://localhost:11434/v1/") == "http://localhost:11434/v1"
+        
+    def test_bare_host_gets_scheme_and_port(self):
+        """Bare host from OLLAMA_HOST gets http:// and the default port."""
+        assert _normalize_ollama_base_url("0.0.0.0") == "http://0.0.0.0:11434/v1"
 
+    def test_bare_localhost_gets_scheme_and_port(self):
+        """Bare localhost gets http:// and the default port."""
+        assert _normalize_ollama_base_url("localhost") == "http://localhost:11434/v1"
+
+    def test_host_port_without_scheme_gets_scheme(self):
+        """host:port without a scheme gets http:// prepended."""
+        assert _normalize_ollama_base_url("127.0.0.1:11434") == "http://127.0.0.1:11434/v1"
+
+    def test_lan_host_port_without_scheme(self):
+        """A LAN host:port without a scheme gets http:// prepended."""
+        assert _normalize_ollama_base_url("192.168.1.5:11434") == "http://192.168.1.5:11434/v1"
+
+    def test_https_url_keeps_scheme_and_gets_no_default_port(self):
+        """An explicit https:// URL keeps its scheme and gets no default port."""
+        assert _normalize_ollama_base_url("https://ollama.example.com") == "https://ollama.example.com/v1"
+
+    def test_root_path_with_query_does_not_double_slash(self):
+        """A root path alongside a query yields /v1, not //v1."""
+        assert _normalize_ollama_base_url("http://ollama/?tenant=acme") == "http://ollama:11434/v1?tenant=acme"
+
+    def test_trailing_slash_in_query_is_preserved(self):
+        """Only the path is stripped, so a query ending in / keeps that character."""
+        assert _normalize_ollama_base_url("http://ollama:11434/?x=a/") == "http://ollama:11434/v1?x=a/"
 
 class TestOpenAICompatibleCompletion:
     """Tests for OpenAICompatibleCompletion class."""
@@ -129,11 +164,23 @@ class TestOpenAICompatibleCompletion:
         env_key = "DEEPSEEK_API_KEY"
         original = os.environ.pop(env_key, None)
         try:
-            with pytest.raises(ValueError, match="API key required"):
+            with pytest.raises(
+                ValueError,
+                match="DEEPSEEK_API_KEY is required for model 'deepseek-chat'",
+            ):
                 OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
         finally:
             if original is not None:
                 os.environ[env_key] = original
+
+    def test_deepinfra_missing_api_key_names_env_var(self):
+        """DeepInfra requires a key; the error tells the user which env var to set."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="DEEPINFRA_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
+            )
 
     def test_api_key_from_env(self):
         """Test API key is read from environment variable."""
@@ -270,6 +317,101 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_dashscope_non_qwen(self):
+        """Non-Qwen DashScope models must still use the native OpenAI-compatible path."""
+        with patch.dict(
+            os.environ,
+            {
+                "DASHSCOPE_API_KEY": "test-key",
+                "DASHSCOPE_BASE_URL": "https://my-dashscope.example.com/v1",
+            },
+        ):
+            llm = LLM(model="dashscope/deepseek-v3")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "dashscope"
+            assert llm.base_url == "https://my-dashscope.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_deepinfra(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for DeepInfra."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}):
+            llm = LLM(model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "deepinfra"
+            # DeepInfra ids are org/model, so the part after the provider
+            # prefix is itself two segments and must reach the API intact.
+            assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+            assert llm.base_url == "https://api.deepinfra.com/v1/openai"
+
+    def test_deepinfra_base_url_env_override(self):
+        """DEEPINFRA_BASE_URL redirects DeepInfra to a proxy or private endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "DEEPINFRA_API_KEY": "test-key",
+                "DEEPINFRA_BASE_URL": "https://proxy.example.com/v1/openai",
+            },
+        ):
+            llm = LLM(model="deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1/openai"
+
+    def test_llm_creates_openai_compatible_for_deepinfra_explicit_provider(self):
+        """Explicit provider="deepinfra" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}):
+            llm = LLM(model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "deepinfra"
+            assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+            "DeepSeek-V4-Flash-0731",
+            "deepseek-ai/DeepSeek-V4-Flash-0731/",
+        ],
+    )
+    def test_llm_explicit_deepinfra_provider_rejects_malformed_model(self, model):
+        """provider="deepinfra" applies the org/model check before building a client."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}), pytest.raises(
+            ValueError, match="org/model"
+        ):
+            LLM(model=model, provider="deepinfra")
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "deepinfra/DeepSeek-V4-Flash-0731",
+            "deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731/",
+            "deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731/extra",
+        ],
+    )
+    def test_llm_rejects_malformed_deepinfra_prefixed_model(self, model):
+        """A malformed deepinfra/... id raises the org/model error, never reaching LiteLLM."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}), pytest.raises(
+            ValueError, match="org/model"
+        ) as exc_info:
+            LLM(model=model)
+        assert model in str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("deepseek-ai/DeepSeek-V4-Flash-0731", True),
+            ("Qwen/Qwen3.5-27B", True),
+            ("meta-llama/Llama-4-Scout-17B-16E-Instruct", True),
+            ("", False),
+            ("qwen", False),
+            ("Qwen/", False),
+            ("/Qwen3.5-27B", False),
+            ("deepseek-ai/DeepSeek-V4-Flash-0731/extra", False),
+            ("deepseek-ai/DeepSeek-V4-Flash-0731/", False),
+        ],
+    )
+    def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
+        """DeepInfra references are exactly org/model: one slash, both parts present."""
+        assert LLM._matches_provider_pattern(model, "deepinfra") is expected
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

@@ -736,7 +736,7 @@ memory = Memory(llm="anthropic/claude-3-haiku-20240307")
 memory = Memory(llm="ollama/llama3.2")
 
 # Usar Google Gemini
-memory = Memory(llm="gemini/gemini-2.0-flash")
+memory = Memory(llm="gemini/gemini-3.7-flash")
 
 # Passar uma instância LLM pré-configurada com configurações customizadas
 llm = LLM(model="gpt-4o", temperature=0)
@@ -758,7 +758,7 @@ memory = Memory(
 ## Backend de Armazenamento
 
 - **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
-- **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`.
+- **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`. Para implantações em produção, você pode usar o `MongoDBStorageBackend` do pacote `crewai-mongodb-memory`. Para saber mais, veja o [tutorial de implementação do MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/).
 
 
 ## Descoberta

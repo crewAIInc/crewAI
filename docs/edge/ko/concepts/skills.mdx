@@ -202,13 +202,17 @@ crewai skill publish
 
 ### 설치
 
-게시된 스킬을 `@org/name` 참조로 설치합니다:
+게시된 스킬을 `@org-uuid/name` 참조로 설치합니다:
 
 ```shell Terminal
-crewai skill install @acme/code-review
+crewai skill install @your-org-uuid/code-review
 ```
 
-크루 프로젝트 내부에서는 스킬이 `./skills/{name}/`에 설치되고, 프로젝트 외부에서는 공유 캐시인 `~/.crewai/skills/{org}/{name}/`에 저장됩니다.
+<Note>
+  조직 이름이 아니라 조직 **UUID**를 사용하세요 — 조직 이름은 고유하지 않아서 잘못된 조직으로 해석될 수 있고, 그러면 설치가 "찾을 수 없음" 오류로 실패합니다. `crewai org list`를 실행하면 소속된 각 조직의 UUID(`ID` 열)를 확인할 수 있습니다.
+</Note>
+
+크루 프로젝트 내부에서는 스킬이 `./skills/{name}/`에 설치되고, 프로젝트 외부에서는 공유 캐시인 `~/.crewai/skills/{org-uuid}/{name}/`에 저장됩니다.
 
 에이전트는 레지스트리 스킬을 직접 참조할 수도 있습니다 — 런타임에 로컬 캐시(또는 프로젝트 `skills/` 디렉터리)에서 해석됩니다:
 
@@ -217,9 +221,20 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review"],  # registry ref, resolved locally
+    skills=["@your-org-uuid/code-review"],  # registry ref, resolved locally
 )
 ```
+
+### 검색
+
+AMP에서 조직에 게시된 스킬을 나열합니다. 검색어를 주면 각 스킬의 handle과 설명에서 일치하는 항목만 보여줍니다:
+
+```shell Terminal
+crewai skill search
+crewai skill search "code review"
+```
+
+각 줄은 최신 버전의 보안 검사 상태(`passed`, `pending` 또는 `failed`이며, `passed`인 버전만 설치됩니다)로 시작하고, 이어서 `<handle>@<latest-version>`과 설명이 표시됩니다. 참조에 들어갈 수 없는 문자가 포함된 handle이나 버전은 따옴표로 묶어 표시됩니다. 스킬 목록 위의 한 줄은 에이전트의 `skills`가 받는 참조 `@<org-uuid>/<handle>@<version>`에 현재 조직의 UUID를 채워 보여 주며, `crewai skill install`은 `@<org-uuid>/<handle>`을 받습니다. 먼저 `crewai org switch <org-uuid>`로 조직을 설정하세요. `(public)`으로 표시된 스킬은 다른 조직의 것일 수 있으며, 그 참조에는 해당 조직의 UUID가 필요하지만 목록에는 표시되지 않습니다.
 
 ### 목록 조회
 

@@ -1,0 +1,267 @@
+---
+title: Arquivos
+description: Passe imagens, PDFs, áudio, vídeo e arquivos de texto para seus agentes para processamento multimodal.
+icon: file-image
+---
+
+## Visão Geral
+
+O CrewAI suporta entradas de arquivos multimodais nativos, permitindo que você passe imagens, PDFs, áudio, vídeo e arquivos de texto diretamente para seus agentes. Os arquivos são formatados automaticamente para os requisitos da API de cada provedor LLM.
+
+<Note type="info" title="Dependência Opcional">
+O suporte a arquivos requer o pacote opcional `crewai-files`. Instale com:
+
+```bash
+uv add 'crewai[file-processing]'
+```
+</Note>
+
+<Note type="warning" title="Acesso Antecipado">
+A API de processamento de arquivos está atualmente em acesso antecipado.
+</Note>
+
+## Tipos de Arquivo
+
+O CrewAI suporta cinco tipos de arquivo específicos mais uma classe genérica `File` que detecta automaticamente o tipo:
+
+| Tipo | Classe | Casos de Uso |
+|:-----|:------|:----------|
+| **Imagem** | `ImageFile` | Fotos, capturas de tela, diagramas, gráficos |
+| **PDF** | `PDFFile` | Documentos, relatórios, artigos |
+| **Áudio** | `AudioFile` | Gravações de voz, podcasts, reuniões |
+| **Vídeo** | `VideoFile` | Gravações de tela, apresentações |
+| **Texto** | `TextFile` | Arquivos de código, logs, arquivos de dados |
+| **Genérico** | `File` | Detecta automaticamente o tipo do conteúdo |
+
+```python
+from crewai_files import File, ImageFile, PDFFile, AudioFile, VideoFile, TextFile
+
+image = ImageFile(source="screenshot.png")
+pdf = PDFFile(source="report.pdf")
+audio = AudioFile(source="meeting.mp3")
+video = VideoFile(source="demo.mp4")
+text = TextFile(source="data.csv")
+
+file = File(source="document.pdf")
+```
+
+## Fontes de Arquivo
+
+O parâmetro `source` aceita múltiplos tipos de entrada e detecta automaticamente o handler apropriado:
+
+### De Caminho
+
+```python
+from crewai_files import ImageFile
+
+image = ImageFile(source="./images/chart.png")
+```
+
+### De URL
+
+```python
+from crewai_files import ImageFile
+
+image = ImageFile(source="https://example.com/image.png")
+```
+
+### De Bytes
+
+```python
+from crewai_files import ImageFile, FileBytes
+
+image_bytes = download_image_from_api()
+image = ImageFile(source=FileBytes(data=image_bytes, filename="downloaded.png"))
+image = ImageFile(source=image_bytes)
+```
+
+## Usando Arquivos
+
+Arquivos podem ser passados em múltiplos níveis, com níveis mais específicos tendo precedência.
+
+### Com Crews
+
+Passe arquivos ao iniciar uma crew:
+
+```python
+from crewai import Crew
+from crewai_files import ImageFile
+
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+
+result = crew.kickoff(
+    inputs={"topic": "Q4 Sales"},
+    input_files={
+        "chart": ImageFile(source="sales_chart.png"),
+        "report": PDFFile(source="quarterly_report.pdf"),
+    }
+)
+```
+
+### Com Tasks
+
+Anexe arquivos a tasks específicas:
+
+```python
+from crewai import Task
+from crewai_files import ImageFile
+
+task = Task(
+    description="Analise o gráfico de vendas e identifique tendências em {chart}",
+    expected_output="Um resumo das principais tendências",
+    input_files={
+        "chart": ImageFile(source="sales_chart.png"),
+    }
+)
+```
+
+### Com Flows
+
+Passe arquivos para flows, que automaticamente herdam para crews:
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai_files import ImageFile
+
+class AnalysisFlow(Flow):
+    @start()
+    def analyze(self):
+        return self.analysis_crew.kickoff()
+
+flow = AnalysisFlow()
+result = flow.kickoff(
+    input_files={"image": ImageFile(source="data.png")}
+)
+```
+
+### Com Agentes Standalone
+
+Passe arquivos diretamente no kickoff do agente:
+
+```python
+from crewai import Agent
+from crewai_files import ImageFile
+
+agent = Agent(
+    role="Image Analyst",
+    goal="Analyze images",
+    backstory="Expert at visual analysis",
+    llm="gpt-4o",
+)
+
+result = agent.kickoff(
+    messages="What's in this image?",
+    input_files={"photo": ImageFile(source="photo.jpg")},
+)
+```
+
+## Precedência de Arquivos
+
+Quando arquivos são passados em múltiplos níveis, níveis mais específicos sobrescrevem os mais amplos:
+
+```
+Flow input_files < Crew input_files < Task input_files
+```
+
+Por exemplo, se tanto Flow quanto Task definem um arquivo chamado `"chart"`, a versão da Task é usada.
+
+## Suporte por Provedor
+
+Diferentes provedores suportam diferentes tipos de arquivo. O CrewAI formata automaticamente os arquivos para a API de cada provedor.
+
+| Provedor | Imagem | PDF | Áudio | Vídeo | Texto |
+|:---------|:-----:|:---:|:-----:|:-----:|:----:|
+| **OpenAI** (API completions) | ✓ | | | | |
+| **OpenAI** (API responses) | ✓ | ✓ | ✓ | | |
+| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
+
+<Note type="info" title="Gemini para Máximo Suporte de Arquivos">
+Os modelos Google Gemini suportam todos os tipos de arquivo incluindo vídeo (até 1 hora, 2GB). Use Gemini quando precisar processar conteúdo de vídeo.
+</Note>
+
+<Note type="warning" title="Tipos de Arquivo Não Suportados">
+Se você passar um tipo de arquivo que o provedor não suporta (ex: vídeo para OpenAI), você receberá um `UnsupportedFileTypeError`. Escolha seu provedor baseado nos tipos de arquivo que você precisa processar.
+</Note>
+
+## Como os Arquivos São Enviados
+
+O CrewAI escolhe automaticamente o método ideal para enviar arquivos para cada provedor:
+
+| Método | Descrição | Usado Quando |
+|:-------|:------------|:----------|
+| **Base64 Inline** | Arquivo embutido diretamente na requisição | Arquivos pequenos (< 5MB tipicamente) |
+| **API de Upload de Arquivo** | Arquivo enviado separadamente, referenciado por ID | Arquivos grandes que excedem o limite |
+| **Referência por URL** | URL direta passada para o modelo | Fonte do arquivo já é uma URL |
+
+### Métodos de Transmissão por Provedor
+
+| Provedor | Base64 Inline | API de Upload | Referências URL |
+|:---------|:-------------:|:---------------:|:--------------:|
+| **OpenAI** | ✓ | ✓ (> 5 MB) | ✓ |
+| **Anthropic** | ✓ | ✓ (> 5 MB) | ✓ |
+| **Google Gemini** | ✓ | ✓ (> 20 MB) | ✓ |
+| **AWS Bedrock** | ✓ | | ✓ (S3 URIs) |
+| **Azure OpenAI** | ✓ | | ✓ |
+
+<Note type="info" title="Otimização Automática">
+Você não precisa gerenciar isso. O CrewAI usa automaticamente o método mais eficiente baseado no tamanho do arquivo e nas capacidades do provedor. Provedores sem APIs de upload de arquivo usam base64 inline para todos os arquivos.
+</Note>
+
+## Modos de Tratamento de Arquivo
+
+Controle como os arquivos são processados quando excedem os limites do provedor:
+
+```python
+from crewai_files import ImageFile, PDFFile
+
+image = ImageFile(source="large.png", mode="strict")
+image = ImageFile(source="large.png", mode="auto")
+image = ImageFile(source="large.png", mode="warn")
+pdf = PDFFile(source="large.pdf", mode="chunk")
+```
+
+## Restrições por Provedor
+
+Cada provedor tem limites específicos para tamanhos e dimensões de arquivo:
+
+### OpenAI
+- **Imagens**: Máx 20 MB, até 10 imagens por requisição
+- **PDFs**: Máx 32 MB, até 100 páginas
+- **Áudio**: Máx 25 MB, até 25 minutos
+
+### Anthropic
+- **Imagens**: Máx 5 MB, máx 8000x8000 pixels, até 100 imagens
+- **PDFs**: Máx 32 MB, até 100 páginas
+
+### Google Gemini
+- **Imagens**: Máx 100 MB
+- **PDFs**: Máx 50 MB
+- **Áudio**: Máx 100 MB, até 9,5 horas
+- **Vídeo**: Máx 2 GB, até 1 hora
+
+### AWS Bedrock
+- **Imagens**: Máx 4,5 MB, máx 8000x8000 pixels
+- **PDFs**: Máx 3,75 MB, até 100 páginas
+
+## Referenciando Arquivos em Prompts
+
+Use o nome da chave do arquivo nas descrições das suas tasks para referenciar arquivos:
+
+```python
+task = Task(
+    description="""
+    Analise os materiais fornecidos:
+    1. Revise o gráfico em {sales_chart}
+    2. Faça referência cruzada com dados em {quarterly_report}
+    3. Resuma as principais descobertas
+    """,
+    expected_output="Resumo da análise com insights principais",
+    input_files={
+        "sales_chart": ImageFile(source="chart.png"),
+        "quarterly_report": PDFFile(source="report.pdf"),
+    }
+)
+```

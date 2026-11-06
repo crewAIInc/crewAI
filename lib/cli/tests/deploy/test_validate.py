@@ -6,7 +6,10 @@ in the #crewai-deployment-failures Slack channel that motivated this work.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import shutil
+import subprocess
 from textwrap import dedent
 from typing import Iterable
 from unittest.mock import patch
@@ -16,7 +19,10 @@ import pytest
 from crewai_cli.deploy.validate import (
     DeployValidator,
     Severity,
+    ValidationResult,
+    _JSONProjectEnvironmentError,
     normalize_package_name,
+    render_report,
 )
 
 
@@ -205,6 +211,33 @@ def test_json_runtime_fields_are_deploy_errors(tmp_path: Path) -> None:
     assert "runtime-only" in finding.detail
 
 
+def test_json_project_environment_failure_has_actionable_hint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scaffold_json_crew(tmp_path)
+
+    def fail_in_project_environment(*args: object) -> list[str]:
+        raise _JSONProjectEnvironmentError("uv run failed")
+
+    monkeypatch.setattr(
+        "crewai_cli.deploy.validate._validate_json_project",
+        fail_in_project_environment,
+    )
+
+    validator = DeployValidator(project_root=tmp_path)
+    validator.run()
+
+    finding = next(
+        result
+        for result in validator.results
+        if result.code == "json_validation_environment_failed"
+    )
+    assert finding.title == "Could not validate the JSON crew in the project environment"
+    assert finding.detail == "uv run failed"
+    assert "Install `uv`" in finding.hint
+    assert "uv sync" in finding.hint
+
+
 def test_json_crew_requires_agents_dir_without_classic_errors(tmp_path: Path) -> None:
     _scaffold_json_crew(tmp_path)
     for path in (tmp_path / "agents").iterdir():
@@ -271,18 +304,141 @@ def test_poetry_lock_is_accepted(tmp_path: Path) -> None:
     assert "missing_lockfile" not in _codes(v)
 
 
-def test_stale_lockfile_warns(tmp_path: Path) -> None:
-    _scaffold_standard_crew(tmp_path)
-    lock = tmp_path / "uv.lock"
-    pyproject = tmp_path / "pyproject.toml"
-    old_time = pyproject.stat().st_mtime - 60
-    import os
+_DEPENDENCY_FREE_PYPROJECT = dedent(
+    """
+    [project]
+    name = "my_crew"
+    version = "0.1.0"
+    description = "first"
+    requires-python = ">=3.10"
+    dependencies = []
+    """
+)
 
-    os.utime(lock, (old_time, old_time))
+needs_uv = pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv")
+
+
+def _scaffold_locked_crew(root: Path) -> Path:
+    """A crew with a real uv.lock; uv resolves it offline (no dependencies)."""
+    _scaffold_standard_crew(
+        root, include_lockfile=False, pyproject=_DEPENDENCY_FREE_PYPROJECT
+    )
+    subprocess.run(  # noqa: S603 - fixed command in a temp directory
+        ["uv", "lock"],  # noqa: S607 - resolved from PATH like the validator
+        cwd=root,
+        capture_output=True,
+        check=True,
+        timeout=60,
+        env={**os.environ, "UV_OFFLINE": "1"},
+    )
+    return root / "pyproject.toml"
+
+
+def _make_older(path: Path, than: Path) -> None:
+    old_time = than.stat().st_mtime - 60
+    os.utime(path, (old_time, old_time))
+
+
+def _finding(validator: DeployValidator, code: str) -> ValidationResult:
+    return next(r for r in validator.results if r.code == code)
+
+
+@needs_uv
+def test_lockfile_is_current_when_only_project_metadata_changed(
+    tmp_path: Path,
+) -> None:
+    pyproject = _scaffold_locked_crew(tmp_path)
+    pyproject.write_text(pyproject.read_text().replace('"first"', '"second"'))
+    # `uv lock` leaves an unchanged lock alone, so its mtime stays older.
+    _make_older(tmp_path / "uv.lock", than=pyproject)
+
     v = _run_without_import_check(tmp_path)
-    assert "stale_lockfile" in _codes(v)
+
+    assert "stale_lockfile" not in _codes(v)
+    assert "unverified_lockfile" not in _codes(v)
+
+
+@needs_uv
+def test_lockfile_behind_pyproject_warns_stale(tmp_path: Path) -> None:
+    pyproject = _scaffold_locked_crew(tmp_path)
+    pyproject.write_text(pyproject.read_text().replace('"0.1.0"', '"0.2.0"'))
+
+    v = _run_without_import_check(tmp_path)
+
+    finding = _finding(v, "stale_lockfile")
+    assert finding.severity is Severity.WARNING
+    assert finding.title == "uv.lock is out of date with pyproject.toml"
+    assert finding.hint == "Run `uv lock` and commit the result."
     # Stale is a warning, so the run can still be ok (no errors).
     assert v.ok
+
+
+def test_lockfile_check_that_cannot_resolve_offline_warns_unverified(
+    tmp_path: Path,
+) -> None:
+    _scaffold_standard_crew(tmp_path)
+    no_solution = (
+        "  × No solution found when resolving dependencies:\n"
+        "      hint: Packages were unavailable because the network was disabled."
+    )
+    with (
+        patch("crewai_cli.deploy.validate.shutil.which", return_value="/bin/uv"),
+        patch(
+            "crewai_cli.deploy.validate.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                ["/bin/uv", "lock", "--check"], 1, stdout="", stderr=no_solution
+            ),
+        ) as run,
+    ):
+        v = _run_without_import_check(tmp_path)
+
+    assert run.call_args.kwargs["env"]["UV_OFFLINE"] == "1"
+    assert "stale_lockfile" not in _codes(v)
+    finding = _finding(v, "unverified_lockfile")
+    assert finding.severity is Severity.WARNING
+    assert finding.title == "Could not verify that uv.lock is up to date"
+    assert "network was disabled" in finding.detail
+    assert v.ok
+
+
+def test_lockfile_check_timeout_warns_unverified(tmp_path: Path) -> None:
+    _scaffold_standard_crew(tmp_path)
+    with (
+        patch("crewai_cli.deploy.validate.shutil.which", return_value="/bin/uv"),
+        patch(
+            "crewai_cli.deploy.validate.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(["uv", "lock", "--check"], 60),
+        ),
+    ):
+        v = _run_without_import_check(tmp_path)
+
+    finding = _finding(v, "unverified_lockfile")
+    assert finding.detail == "`uv lock --check` timed out after 60s."
+
+
+def test_stale_uv_lock_without_uv_falls_back_to_file_times(tmp_path: Path) -> None:
+    _scaffold_standard_crew(tmp_path)
+    _make_older(tmp_path / "uv.lock", than=tmp_path / "pyproject.toml")
+
+    with patch("crewai_cli.deploy.validate.shutil.which", return_value=None):
+        v = _run_without_import_check(tmp_path)
+
+    finding = _finding(v, "stale_lockfile")
+    assert finding.title == "uv.lock is older than pyproject.toml"
+    assert v.ok
+
+
+def test_stale_poetry_lock_uses_file_times_even_with_uv(tmp_path: Path) -> None:
+    _scaffold_standard_crew(tmp_path, include_lockfile=False)
+    (tmp_path / "poetry.lock").write_text("# poetry lockfile\n")
+    _make_older(tmp_path / "poetry.lock", than=tmp_path / "pyproject.toml")
+
+    with patch("crewai_cli.deploy.validate.shutil.which", return_value="/bin/uv"):
+        v = _run_without_import_check(tmp_path)
+
+    finding = _finding(v, "stale_lockfile")
+    assert finding.title == "poetry.lock is older than pyproject.toml"
+    assert "unverified_lockfile" not in _codes(v)
 
 
 def test_missing_package_dir_errors(tmp_path: Path) -> None:
@@ -391,6 +547,22 @@ def test_classify_missing_openai_key_is_warning(tmp_path: Path) -> None:
     assert result.code == "llm_init_missing_key"
     assert result.severity is Severity.WARNING
     assert "OPENAI_API_KEY" in result.title
+
+
+def test_classify_missing_api_key_error_is_warning(tmp_path: Path) -> None:
+    """Newer crewai raises a missing key as itself, not inside an ImportError."""
+    v = DeployValidator(project_root=tmp_path)
+    v._classify_import_error(
+        "MissingAPIKeyError",
+        "DEEPSEEK_API_KEY is required for model 'deepseek-chat' but is not set or "
+        "is still the placeholder 'YOUR_API_KEY'.",
+        tb='File ".../site-packages/pydantic/main.py", line 250, in __init__',
+    )
+    assert len(v.results) == 1
+    result = v.results[0]
+    assert result.code == "llm_init_missing_key"
+    assert result.severity is Severity.WARNING
+    assert "DEEPSEEK_API_KEY" in result.title
 
 
 def test_classify_azure_extra_missing_is_error(tmp_path: Path) -> None:
@@ -589,3 +761,37 @@ def test_is_json_crew_false_without_pyproject(tmp_path):
     (tmp_path / "crew.jsonc").write_text("{}")
 
     assert DeployValidator(project_root=tmp_path)._is_json_crew is False
+
+
+@pytest.mark.parametrize("severity", [Severity.ERROR, Severity.WARNING])
+def test_render_report_prints_bracketed_text_verbatim(severity, capsys):
+    render_report(
+        [
+            ValidationResult(
+                severity=severity,
+                code="stale_lockfile",
+                title="uv.lock is out of date with pyproject.toml",
+                detail="error: crewai[tools]==1.0 not found; stray [/red] tag",
+                hint="Add [tool.hatch.build.targets.wheel] under [project].",
+            )
+        ]
+    )
+
+    out = capsys.readouterr().out
+    assert "[stale_lockfile] uv.lock is out of date with pyproject.toml" in out
+    assert "error: crewai[tools]==1.0 not found; stray [/red] tag" in out
+    assert "hint: Add [tool.hatch.build.targets.wheel] under [project]." in out
+
+
+def test_classify_validation_error_without_a_key_is_not_an_llm_failure(
+    tmp_path: Path,
+) -> None:
+    """Only a ValidationError that names a missing key is an LLM key problem."""
+    v = DeployValidator(project_root=tmp_path)
+    v._classify_import_error(
+        "ValidationError",
+        "1 validation error for Agent\n  role\n    Field required [type=missing]",
+        tb="",
+    )
+    assert "llm_init_missing_key" not in _codes(v)
+    assert "llm_provider_init_failed" not in _codes(v)

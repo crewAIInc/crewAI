@@ -12,7 +12,7 @@ mode: "wide"
 ### 준비 사항
 
 1. [설치 가이드](/ko/installation)에 따라 CrewAI 설치
-2. [LLM 설정](/ko/concepts/llms#setting-up-your-llm)에 따라 모델 API 키 설정
+2. [LLM 설정](/ko/concepts/llms#llm-설정하기)에 따라 모델 API 키 설정
 3. 웹 검색을 사용할 경우 [Serper.dev](https://serper.dev/) API 키 준비
 
 ## 1단계: 새 Crew 만들기
@@ -21,6 +21,8 @@ mode: "wide"
 crewai create crew research_crew
 cd research_crew
 ```
+
+`crewai create`가 `Run it now?`라고 물으면 `n`으로 답하세요. 이 가이드에서는 Crew를 실행하기 전에 먼저 수정합니다.
 
 생성되는 구조:
 
@@ -75,7 +77,7 @@ research_crew/
 }
 ```
 
-`provider/model-id`를 `openai/gpt-4o`, `anthropic/claude-sonnet-4-6`, `gemini/gemini-2.0-flash-001` 같은 모델로 바꾸세요.
+`provider/model-id`를 `openai/gpt-4o`, `anthropic/claude-sonnet-4-6`, `gemini/gemini-3.7-flash` 같은 모델로 바꾸세요.
 
 ## 3단계: 태스크와 Crew 설정
 

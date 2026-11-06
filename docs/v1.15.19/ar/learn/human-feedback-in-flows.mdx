@@ -1,0 +1,98 @@
+---
+title: التغذية الراجعة البشرية في Flows
+description: تعلم كيفية دمج التغذية الراجعة البشرية مباشرة في CrewAI Flows باستخدام مزخرف @human_feedback
+icon: user-check
+mode: "wide"
+---
+
+## نظرة عامة
+
+<Note>
+يتطلب مزخرف `@human_feedback` إصدار **CrewAI 1.8.0 أو أحدث**. تأكد من تحديث تثبيتك قبل استخدام هذه الميزة.
+</Note>
+
+يمكّن مزخرف `@human_feedback` سير العمل البشري في الحلقة (HITL) مباشرة ضمن CrewAI Flows. يتيح لك إيقاف تنفيذ Flow مؤقتًا وعرض المخرجات لإنسان للمراجعة وجمع تعليقاته واختياريًا التوجيه إلى مستمعين مختلفين بناءً على نتيجة التعليقات.
+
+هذا مفيد بشكل خاص لـ:
+
+- **ضمان الجودة**: مراجعة المحتوى المُنشأ بالذكاء الاصطناعي قبل استخدامه
+- **بوابات القرار**: السماح للبشر باتخاذ قرارات حرجة في سير العمل الآلي
+- **سير عمل الموافقة**: تنفيذ أنماط الموافقة/الرفض/المراجعة
+- **التحسين التفاعلي**: جمع التعليقات لتحسين المخرجات تكراريًا
+
+## بداية سريعة
+
+```python Code
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.human_feedback import human_feedback
+
+class SimpleReviewFlow(Flow):
+    @start()
+    @human_feedback(message="Please review this content:")
+    def generate_content(self):
+        return "This is AI-generated content that needs review."
+
+    @listen(generate_content)
+    def process_feedback(self, result):
+        print(f"Content: {result.output}")
+        print(f"Human said: {result.feedback}")
+
+flow = SimpleReviewFlow()
+flow.kickoff()
+```
+
+## التوجيه مع emit
+
+عند تحديد `emit`، يصبح المزخرف موجّهًا. يُفسَّر التعليق البشري الحر بواسطة LLM ويُختزل إلى إحدى النتائج المحددة:
+
+```python Code
+from crewai.flow.flow import Flow, start, listen, or_
+from crewai.flow.human_feedback import human_feedback
+
+class ReviewFlow(Flow):
+    @start()
+    def generate_content(self):
+        return "Draft blog post content here..."
+
+    @human_feedback(
+        message="Do you approve this content for publication?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+    )
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "Draft blog post content here..."
+
+    @listen("approved")
+    def publish(self, result):
+        print(f"Publishing! User said: {result.feedback}")
+
+    @listen("rejected")
+    def discard(self, result):
+        print(f"Discarding. Reason: {result.feedback}")
+```
+
+## التعلم من التغذية الراجعة
+
+معامل `learn=True` يمكّن حلقة تغذية راجعة بين المراجعين البشريين ونظام الذاكرة. عند تمكينه، يحسّن النظام مخرجاته تدريجيًا بالتعلم من التصحيحات البشرية السابقة.
+
+## أفضل الممارسات
+
+1. **اكتب رسائل طلب واضحة**
+2. **اختر نتائج ذات معنى**
+3. **وفّر دائمًا نتيجة افتراضية**
+4. **استخدم سجل التعليقات لمسارات التدقيق**
+
+## التغذية الراجعة البشرية غير المتزامنة (غير محجوبة)
+
+استخدم معامل `provider` لتحديد استراتيجية جمع تعليقات مخصصة تتكامل مع أنظمة خارجية مثل Slack والبريد الإلكتروني وWebhooks وواجهات API.
+
+## التوثيق ذو الصلة
+
+- [نظرة عامة على Flows](/ar/concepts/flows)
+- [إدارة حالة Flow](/ar/guides/flows/mastering-flow-state)
+- [حفظ Flow](/ar/concepts/flows#persistence)
+- [التوجيه مع @router](/ar/concepts/flows#router)
+- [إدخال بشري عند التنفيذ](/ar/learn/human-input-on-execution)
+- [الذاكرة](/ar/concepts/memory)

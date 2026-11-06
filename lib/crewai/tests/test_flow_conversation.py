@@ -27,19 +27,23 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallStartedEvent, LLMStreamChunkEvent
-from crewai.experimental import (
+from crewai.flow import (
+    ChatState,
     ConversationConfig,
     ConversationMessage,
     ConversationState,
+    Flow,
     RouterConfig,
+    listen,
+    start,
 )
-from crewai.flow import Flow, ChatState, listen, start
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
     current_flow_id,
     current_flow_name,
 )
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
     append_message,
@@ -1027,10 +1031,10 @@ class TestConversationalFlow:
         """``Flow`` mixes in ``_ConversationalMixin`` — opt-in subclasses get its methods.
 
         The conversational graph + ``handle_turn`` live on the mixin in
-        ``crewai.experimental.conversational_mixin``; this test confirms
+        ``crewai.flow.conversational_mixin``; this test confirms
         MRO resolution wires them onto a ``Flow`` subclass that opts in.
         """
-        from crewai.experimental.conversational_mixin import _ConversationalMixin
+        from crewai.flow.conversational_mixin import _ConversationalMixin
 
         @ConversationConfig()
         class MyChat(Flow):
@@ -1366,13 +1370,8 @@ class TestConversationalFlow:
         assert len(route_events) == 1
         assert route_events[0].message_index is None
 
-    def test_finalize_session_traces_emits_finished_and_finalizes_batch(self) -> None:
-        """``finalize_session_traces()`` emits one ``FlowFinishedEvent`` + one ``finalize_batch``.
-
-        Pairs with the deferral above: after N turns with deferral on, a
-        single ``finalize_session_traces()`` closes the whole session as
-        one trace batch with one terminal event.
-        """
+    def test_finalize_session_traces_emits_finished_without_legacy_batch(self) -> None:
+        """Deferred finalization emits one terminal event without legacy upload."""
         from crewai.events.types.flow_events import FlowFinishedEvent
 
         @ConversationConfig()
@@ -1416,9 +1415,7 @@ class TestConversationalFlow:
                 assert len(finished_events) == 1, (
                     "finalize_session_traces must emit exactly one FlowFinishedEvent"
                 )
-                assert mock_finalize.call_count == 1, (
-                    "finalize_session_traces must finalize the trace batch once"
-                )
+                mock_finalize.assert_not_called()
 
     def test_deferred_resume_skips_per_resume_flow_finished_event(self) -> None:
         """Deferred sessions do not emit terminal events while resuming."""
@@ -1597,6 +1594,121 @@ class TestHandleTurnReplyFallback:
             if message.role == "assistant"
         ]
         assert assistant_messages == ["computed reply"]
+
+
+class TestPersistCustomListenReplies:
+    """Custom ``@listen`` returns must land in ``@persist`` snapshots.
+
+    The fallback appends after ``kickoff()``, so the per-method snapshot is
+    user-only unless we persist again. Fresh Flow instances restore the
+    latest row; without that second snapshot the assistant turn disappears.
+    """
+
+    SESSION = "persist-custom-listen-session"
+
+    @staticmethod
+    def _roles(messages: Any) -> list[tuple[Any, Any]]:
+        rows: list[tuple[Any, Any]] = []
+        for message in messages:
+            if hasattr(message, "role"):
+                rows.append((message.role, message.content))
+            else:
+                rows.append((message["role"], message["content"]))
+        return rows
+
+    def test_custom_listen_return_persists_across_fresh_instances(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "custom-listen.db"))
+
+        @persist(store)
+        class ResearchBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "research"
+
+            @listen("research")
+            def run_research(self) -> str:
+                return f"researched: {self.state.current_user_message}"
+
+        bot_a = ResearchBot()
+        bot_a.handle_turn("what is CrewAI?", session_id=self.SESSION)
+
+        saved = store.load_state(self.SESSION)
+        assert saved is not None
+        assert self._roles(saved["messages"]) == [
+            ("user", "what is CrewAI?"),
+            ("assistant", "researched: what is CrewAI?"),
+        ]
+
+        bot_b = ResearchBot()
+        bot_b.handle_turn("tell me more", session_id=self.SESSION)
+
+        assert self._roles(bot_b.state.messages) == [
+            ("user", "what is CrewAI?"),
+            ("assistant", "researched: what is CrewAI?"),
+            ("user", "tell me more"),
+            ("assistant", "researched: tell me more"),
+        ]
+
+    def test_builtin_converse_does_not_double_append_with_persist(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "converse.db"))
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "hello back"
+
+        @ConversationConfig(llm=chat_llm)
+        @persist(store)
+        class ChatBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        bot_a = ChatBot()
+        bot_a.handle_turn("hi", session_id=self.SESSION)
+
+        assert self._roles(bot_a.state.messages) == [
+            ("user", "hi"),
+            ("assistant", "hello back"),
+        ]
+
+        bot_b = ChatBot()
+        bot_b.handle_turn("again", session_id=self.SESSION)
+
+        assert self._roles(bot_b.state.messages) == [
+            ("user", "hi"),
+            ("assistant", "hello back"),
+            ("user", "again"),
+            ("assistant", "hello back"),
+        ]
+
+    def test_custom_listen_return_emits_one_user_and_one_assistant_message_event(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "trace.db"))
+
+        @persist(store)
+        class ResearchBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "research"
+
+            @listen("research")
+            def run_research(self) -> str:
+                return "researched"
+
+        events: list[ConversationMessageAddedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationMessageAddedEvent)
+            def capture(_: Any, event: ConversationMessageAddedEvent) -> None:
+                events.append(event)
+
+            ResearchBot().handle_turn("hello", session_id=self.SESSION)
+            crewai_event_bus.flush()
+
+        assert [(event.role, event.content) for event in events] == [
+            ("user", "hello"),
+            ("assistant", "researched"),
+        ]
 
 
 class TestFalsyRouteTurnFallback:
@@ -1929,7 +2041,7 @@ class TestDeferredFlowLifecycleEvents:
                     listener.batch_manager.finalize_batch()
             mock_finalize.assert_not_called()
 
-    def test_deferred_flow_kickoff_marks_trace_manager_session_deferred(
+    def test_deferred_flow_kickoff_leaves_legacy_trace_manager_untouched(
         self,
     ) -> None:
         class DeferredTraceFlow(Flow[ChatState]):
@@ -1946,13 +2058,13 @@ class TestDeferredFlowLifecycleEvents:
         with patch.object(listener.batch_manager, "finalize_batch"):
             flow.kickoff()
 
-        assert listener.batch_manager.defer_session_finalization is True
+        assert listener.batch_manager.defer_session_finalization is False
 
         flow.finalize_session_traces()
 
         assert listener.batch_manager.defer_session_finalization is False
 
-    def test_non_deferred_flow_kickoff_clears_stale_trace_manager_flag(
+    def test_non_deferred_flow_kickoff_leaves_legacy_trace_manager_untouched(
         self,
     ) -> None:
         class PlainTraceFlow(Flow[ChatState]):
@@ -1965,7 +2077,7 @@ class TestDeferredFlowLifecycleEvents:
 
         PlainTraceFlow().kickoff()
 
-        assert listener.batch_manager.defer_session_finalization is False
+        assert listener.batch_manager.defer_session_finalization is True
 
 
 class TestNestedCrewTracing:
@@ -2072,6 +2184,10 @@ class TestNestedCrewTracing:
     ) -> None:
         from crewai import Agent, Crew, Task
         from crewai.llms.base_llm import BaseLLM
+        from crewai.telemetry.tracing.session import telemetry_session
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
 
         class StaticLLM(BaseLLM):
             def __init__(self) -> None:
@@ -2130,7 +2246,10 @@ class TestNestedCrewTracing:
 
         flow = NestedCrewFlow()
 
+        recorder = InMemorySpanExporter()
         with (
+            patch.dict("os.environ", {"OTEL_SDK_DISABLED": "false"}),
+            telemetry_session(str(uuid4()), "nested", [recorder]),
             patch.object(
                 listener.batch_manager,
                 "_initialize_backend_batch",
@@ -2147,6 +2266,10 @@ class TestNestedCrewTracing:
                 "nested AgentExecutor flows inside a deferred parent Flow must "
                 "not finalize the parent trace batch"
             )
+
+            flow.finalize_session_traces()
+
+        assert [span.name for span in recorder.get_finished_spans()].count("execute flow") == 1
 
 
 class TestConversationalOptIn:
@@ -2282,7 +2405,7 @@ class TestHandleTurnGuard:
         assert DecoratedFlow().handle_turn("hi") == "ok"
 
 
-_MIXIN = "crewai.experimental.conversational_mixin:_ConversationalMixin"
+_MIXIN = "crewai.flow.conversational_mixin:_ConversationalMixin"
 
 
 class DeclaredChatState(ConversationState):
@@ -2331,7 +2454,7 @@ def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
         "name": "DeclaredChat",
         "state": {
             "type": "pydantic",
-            "ref": "crewai.experimental.conversational:ConversationState",
+            "ref": "crewai.flow.conversational:ConversationState",
         },
         "conversational": {},
         "methods": {
@@ -2648,9 +2771,7 @@ class TestDeclaredRouterResponseFormat:
         projected = ClassChat.flow_definition().conversational.router.response_format
 
         assert projected is not None
-        assert projected.python == (
-            "crewai.experimental.conversational.ConversationState"
-        )
+        assert projected.python == "crewai.flow.conversational.ConversationState"
 
 
 class DeclaredSchemaChatState(ConversationState):
@@ -3648,3 +3769,38 @@ class TestHandlerReplyPromotion:
             ("user", "hi"),
             ("assistant", "explicit"),
         ]
+
+
+@pytest.mark.parametrize("scope,expected", [("turn", False), ("session", True)])
+@pytest.mark.parametrize("legacy_defer", [False, True])
+def test_explicit_trace_scope_wins_over_legacy_flags(scope, expected, legacy_defer):
+    @ConversationConfig(trace_scope=scope, defer_trace_finalization=legacy_defer)
+    class ScopedChat(ConversationalFlow):
+        pass
+
+    flow = ScopedChat()
+    flow.defer_trace_finalization = True
+    assert flow._should_defer_trace_finalization() is expected
+    assert ScopedChat.flow_definition().conversational.trace_scope == scope
+
+
+def test_declarative_trace_scope_and_class_precedence():
+    declaration = _conversational_declaration(conversational={"trace_scope": "turn"})
+    declared = Flow.from_declaration(contents=declaration)
+    assert declared._conversation_config.trace_scope == "turn"
+    assert declared._should_defer_trace_finalization() is False
+
+    @ConversationConfig(trace_scope="session")
+    class SessionChat(ConversationalFlow):
+        pass
+
+    assert SessionChat.from_declaration(contents=declaration)._should_defer_trace_finalization() is True
+
+
+def test_invalid_conversation_trace_scope_is_rejected():
+    with pytest.raises(ValueError, match="trace_scope"):
+        ConversationConfig(trace_scope="forever")
+    with pytest.raises(ValidationError):
+        Flow.from_declaration(contents=_conversational_declaration(
+            conversational={"trace_scope": "forever"}
+        ))

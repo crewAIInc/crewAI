@@ -11,7 +11,7 @@ mode: "wide"
 
 ## CLI로 프로젝트 생성
 
-CrewAI CLI를 사용하여 프로젝트를 스캐폴딩하면, `AGENTS.md`가 루트에 자동으로 추가됩니다.
+CrewAI CLI를 사용하여 프로젝트를 스캐폴딩하세요. `AGENTS.md`가 루트에 추가되며, 이를 임포트하는 `CLAUDE.md`와 `GEMINI.md`도 함께 추가되므로 Claude Code와 Gemini CLI가 다른 모든 어시스턴트와 동일한 안내를 읽습니다.
 
 ```bash
 # Crew
@@ -32,23 +32,27 @@ Codex는 저장소에 배치된 `AGENTS.md` 파일로 안내할 수 있습니다
 
 ### Claude Code
 
-Claude Code는 프로젝트 메모리를 `CLAUDE.md`에 저장합니다. `/init`으로 부트스트랩하고 `/memory`로 편집할 수 있습니다. Claude Code는 `CLAUDE.md` 내에서 임포트도 지원하므로, `@AGENTS.md`와 같은 한 줄을 추가하여 공유 지침을 중복 없이 가져올 수 있습니다.
+Claude Code는 `CLAUDE.md`를 읽고 `AGENTS.md`는 무시합니다. 스캐폴딩된 프로젝트에는 임포트 줄 `@AGENTS.md` 하나만 담긴 `CLAUDE.md`가 포함되어 있어, 공유 안내가 중복 없이 로드됩니다. Claude 전용 메모는 그 줄 아래에 추가하고, 공유 컨벤션은 `AGENTS.md`에 유지하세요.
 
-간단하게 다음과 같이 사용할 수 있습니다:
+`CLAUDE.md`가 스캐폴딩되기 전에 생성된 프로젝트라면 임포트를 직접 추가하세요:
 
 ```bash
-mv AGENTS.md CLAUDE.md
+printf '@AGENTS.md\n' > CLAUDE.md
 ```
+
+`AGENTS.md`를 `CLAUDE.md`로 이름을 바꾸지 마세요. Codex와 Cursor는 `AGENTS.md`를 읽으며, 이름을 바꾸면 이들에게 보이지 않게 됩니다.
 
 ### Gemini CLI와 Google Antigravity
 
-Gemini CLI와 Antigravity는 저장소 루트 및 상위 디렉토리에서 프로젝트 컨텍스트 파일(기본값: `GEMINI.md`)을 로드합니다. Gemini CLI 설정에서 `context.fileName`을 설정하여 `AGENTS.md`를 대신(또는 추가로) 읽도록 구성할 수 있습니다. 예를 들어, `AGENTS.md`만 설정하거나 각 도구의 형식을 유지하고 싶다면 `AGENTS.md`와 `GEMINI.md`를 모두 포함할 수 있습니다.
+Gemini CLI와 Antigravity는 저장소 루트 및 상위 디렉토리에서 프로젝트 컨텍스트 파일(기본값: `GEMINI.md`)을 로드합니다. 스캐폴딩된 프로젝트에는 임포트 줄 `@./AGENTS.md` 하나만 담긴 `GEMINI.md`가 포함되어 있어, 공유 안내가 중복 없이 로드됩니다. Gemini 전용 메모는 그 줄 아래에 추가하고, 공유 컨벤션은 `AGENTS.md`에 유지하세요.
 
-간단하게 다음과 같이 사용할 수 있습니다:
+`GEMINI.md`가 스캐폴딩되기 전에 생성된 프로젝트라면 임포트를 직접 추가하세요:
 
 ```bash
-mv AGENTS.md GEMINI.md
+printf '@./AGENTS.md\n' > GEMINI.md
 ```
+
+또는 Gemini CLI 설정의 `context.fileName`에 `AGENTS.md`를 포함시키면 Gemini가 이를 직접 읽습니다. `AGENTS.md`를 `GEMINI.md`로 이름을 바꾸지 마세요. Codex와 Cursor는 `AGENTS.md`를 읽으며, 이름을 바꾸면 이들에게 보이지 않게 됩니다.
 
 ### Cursor
 

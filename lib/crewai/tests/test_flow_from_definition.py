@@ -30,7 +30,8 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
 from crewai.project.crew_definition import AgentDefinition
 from crewai.state.checkpoint_config import CheckpointConfig
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, ToolFailure
+from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.types.streaming import StreamSession
 
 
@@ -3047,6 +3048,94 @@ def test_expression_keeps_short_circuited_cel_errors():
     )
 
 
+def test_expression_now_evaluates_with_frozen_timestamp():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, 12, 30, tzinfo=timezone.utc)
+
+    assert Expression("now().getFullYear()", context={}, now=frozen).evaluate() == 2026
+    assert (
+        Expression("string(now())", context={}, now=frozen).evaluate()
+        == "2026-01-15T12:30:00Z"
+    )
+    assert (
+        Expression("string(now() - duration('24h'))", context={}, now=frozen).evaluate()
+        == "2026-01-14T12:30:00Z"
+    )
+
+
+def test_expression_now_defaults_to_current_time():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    year = Expression("now().getFullYear()", context={}).evaluate()
+
+    assert year == datetime.now(timezone.utc).year
+
+
+def test_expression_now_renders_in_templates():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, tzinfo=timezone.utc)
+    rendered = Expression(
+        {"query": "News from ${string(now().getFullYear())}"},
+        context={},
+        now=frozen,
+    ).render_template()
+
+    assert rendered == {"query": "News from 2026"}
+
+
+def test_expression_now_passes_root_validation():
+    from crewai.flow.expressions import Expression
+
+    Expression("string(now().getFullYear())").validate_expression(
+        allowed_roots=["state", "outputs"]
+    )
+
+
+def test_expression_from_flow_uses_run_frozen_now():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    flow = Flow()
+    flow._cel_now = datetime(2026, 1, 15, tzinfo=timezone.utc)
+
+    assert (
+        Expression.from_flow("now().getFullYear()", flow).evaluate() == 2026
+    )
+
+
+def test_expression_action_can_use_now():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "NowFlow",
+            "methods": {
+                "today": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "string(now().getFullYear())",
+                    },
+                }
+            },
+        }
+    )
+
+    from datetime import datetime, timezone
+
+    result = Flow.from_declaration(contents=definition).kickoff()
+
+    assert result == str(datetime.now(timezone.utc).year)
+
+
 def test_expression_action_can_route_like_if_else():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -3138,6 +3227,103 @@ def test_tool_action_requires_module_qualname_ref():
 
     with pytest.raises(ValueError, match="expected 'module:qualname'"):
         Flow.from_declaration(contents=definition)
+
+
+class FailingTool(BaseTool):
+    name: str = "FailingTool"
+    description: str = "Always reports failure."
+
+    def _run(self, to: str) -> ToolFailure:
+        return ToolFailure(message=f"cannot send to {to}", code="bad_recipient")
+
+
+def _tool_flow_definition(ref: str, with_: dict[str, Any]) -> FlowDefinition:
+    return FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "send": {
+                    "start": True,
+                    "do": {"call": "tool", "ref": ref, "with": with_},
+                }
+            },
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        "google_gmail/send_email",
+        "google_gmail/send_email@0b3c9f8e-1d2a-4c5b-9e6f-7a8b9c0d1e2f",
+    ],
+)
+def test_tool_action_runs_platform_action(selector: str):
+    definition = _tool_flow_definition(
+        selector,
+        {"search_query": "${state.topic}", "prefix": "mail"},
+    )
+
+    with patch(
+        "crewai.project.json_loader._resolve_platform_tools",
+        return_value=[StaticSearchTool()],
+    ) as resolve:
+        flow = Flow.from_declaration(contents=definition)
+
+    resolve.assert_called_once_with(selector)
+    assert flow.kickoff(inputs={"topic": "digest"}) == "mail:digest"
+
+
+def test_tool_action_platform_ref_requires_action():
+    definition = _tool_flow_definition("google_gmail", {})
+
+    with patch("crewai.project.json_loader._resolve_platform_tools") as resolve:
+        with pytest.raises(ValueError, match="<app>/<action>"):
+            Flow.from_declaration(contents=definition)
+
+    resolve.assert_not_called()
+
+
+def test_tool_action_platform_ref_with_no_tools_names_ref():
+    definition = _tool_flow_definition("google_gmail/send_email", {})
+
+    with patch(
+        "crewai.project.json_loader._resolve_platform_tools", return_value=[]
+    ):
+        with pytest.raises(ValueError, match="'google_gmail/send_email'"):
+            Flow.from_declaration(contents=definition)
+
+
+def test_a_platform_ref_amp_cannot_resolve_names_the_app():
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    from crewai.project.json_loader import JSONProjectError, _resolve_platform_tools
+
+    def unavailable(apps):
+        raise PlatformAppsUnavailableError(["google_gmail"])
+
+    with patch("crewai_tools.CrewaiPlatformTools", unavailable):
+        with pytest.raises(
+            JSONProjectError,
+            match=r"^Failed to initialize platform tool "
+            r"'platform:google_gmail/send_email': CrewAI AMP could not resolve "
+            r"these apps: google_gmail$",
+        ):
+            _resolve_platform_tools("google_gmail/send_email")
+
+
+def test_tool_action_raises_when_tool_reports_failure():
+    definition = _tool_flow_definition(
+        f"{__name__}:FailingTool", {"to": "${state.email}"}
+    )
+    flow = Flow.from_declaration(contents=definition)
+
+    with pytest.raises(ToolExecutionFailedError, match="cannot send to a@b.c") as exc:
+        flow.kickoff(inputs={"email": "a@b.c"})
+
+    assert exc.value.record.tool_name == "FailingTool"
+    assert exc.value.record.tool_args == {"to": "a@b.c"}
 
 
 def test_pydantic_state_from_ref_parity():
@@ -3738,6 +3924,41 @@ def test_resume_synthetic_completion_persists():
     assert _saved_methods("resume-synthetic") == ["generate"]
 
 
+def test_resume_freezes_fresh_cel_now():
+    from crewai.flow.expressions import Expression
+
+    backend = DefinitionStoreBackend(store="resume-cel-now")
+    frozen_at_listener: list[Any] = []
+
+    class NowResumableFlow(Flow):
+        @start()
+        @human_feedback(message="Review:")
+        def generate(self):
+            return "content"
+
+        @listen(generate)
+        def process(self, result):
+            frozen_at_listener.append(self._cel_now)
+            return Expression.from_flow("string(now())", self).evaluate()
+
+    context = PendingFeedbackContext(
+        flow_id="resume-cel-now-1",
+        flow_class="NowResumableFlow",
+        method_name="generate",
+        method_output="content",
+        message="Review:",
+    )
+    backend.save_pending_feedback("resume-cel-now-1", context, {"id": "resume-cel-now-1"})
+
+    flow = NowResumableFlow.from_pending("resume-cel-now-1", backend)
+    assert flow._cel_now is None
+
+    result = flow.resume("looks good")
+
+    assert frozen_at_listener[0] is not None
+    assert result == frozen_at_listener[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 class ReviewFlow(Flow):
     @start()
     @human_feedback(
@@ -3881,6 +4102,200 @@ def test_human_feedback_pending_and_resume_from_declaration():
     assert result == "resumed:looks good"
     assert resumed.last_human_feedback.feedback == "looks good"
     assert flow_id not in DefinitionStoreBackend.pending
+
+
+EMIT_REVIEW_EXPR_YAML = """
+schema: crewai.flow/v1
+name: EmitReviewExprFlow
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review the draft:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      default_outcome: rejected
+  rewrite:
+    do:
+      call: expression
+      expr: "outputs.draft.feedback + '|' + outputs.draft.outcome + '|' + outputs.draft.output"
+    listen: rejected
+"""
+
+
+def test_human_feedback_emit_exposes_feedback_in_outputs():
+    flow = Flow.from_declaration(contents=EMIT_REVIEW_EXPR_YAML)
+
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="make it shorter"),
+        patch.object(flow, "_collapse_to_outcome", return_value="rejected"),
+    ):
+        result = flow.kickoff()
+
+    assert result == "make it shorter|rejected|draft-content"
+    assert flow.method_outputs[0] == "draft-content"
+
+
+def test_human_feedback_emit_feedback_renders_in_action_templates():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EmitFeedbackTemplateFlow
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review the draft:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+  rewrite:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "Draft: ${{outputs.draft.output}}. Reason: ${{outputs.draft.feedback}}"
+        prefix: rewrite
+    listen: rejected
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="too long"),
+        patch.object(flow, "_collapse_to_outcome", return_value="rejected"),
+    ):
+        result = flow.kickoff()
+
+    assert result == "rewrite:Draft: draft-content. Reason: too long"
+
+
+PENDING_EMIT_REVIEW_YAML = f"""
+schema: crewai.flow/v1
+name: PendingEmitReviewFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: hitl-pending-emit
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  rewrite:
+    do:
+      call: expression
+      expr: "outputs.draft.feedback + '|' + outputs.draft.output"
+    listen: rejected
+"""
+
+
+def test_human_feedback_emit_exposes_feedback_in_outputs_after_resume():
+    definition = FlowDefinition.from_declaration(contents=PENDING_EMIT_REVIEW_YAML)
+    pending = Flow.from_declaration(contents=definition).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    resumed = Flow.from_pending(
+        pending.context.flow_id,
+        DefinitionStoreBackend(store="hitl-pending-emit"),
+        definition=definition,
+    )
+    with patch.object(resumed, "_collapse_to_outcome", return_value="rejected"):
+        result = resumed.resume("make it shorter")
+
+    assert result == "make it shorter|draft-content"
+    assert resumed.method_outputs[0] == "draft-content"
+
+
+PENDING_REVISE_LOOP_YAML = f"""
+schema: crewai.flow/v1
+name: PendingReviseLoopFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: hitl-revise-loop
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    listen: request_changes
+    human_feedback:
+      message: "Review:"
+      emit: [approved, request_changes]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  publish:
+    do:
+      call: expression
+      expr: "'published:' + outputs.draft.feedback"
+    listen: approved
+"""
+
+
+def test_start_step_listening_to_its_own_outcome_reruns_after_resume():
+    definition = FlowDefinition.from_declaration(contents=PENDING_REVISE_LOOP_YAML)
+    backend = DefinitionStoreBackend(store="hitl-revise-loop")
+    pending = Flow.from_declaration(contents=definition).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    revising = Flow.from_pending(pending.context.flow_id, backend, definition=definition)
+    with patch.object(revising, "_collapse_to_outcome", return_value="request_changes"):
+        repaused = revising.resume("make it shorter")
+
+    assert isinstance(repaused, HumanFeedbackPending)
+    assert repaused.context.method_name == "draft"
+
+    approving = Flow.from_pending(repaused.context.flow_id, backend, definition=definition)
+    with patch.object(approving, "_collapse_to_outcome", return_value="approved"):
+        result = approving.resume("ship it")
+
+    assert result == "published:ship it"
+
+
+@pytest.mark.parametrize("router", [False, True])
+def test_conditional_start_that_also_listens_runs_once_per_event(router):
+    handler_routing = "router: true\n    emit: [done]" if router else ""
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ConditionalStartListenFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'x'"
+    start: true
+  route:
+    do:
+      call: expression
+      expr: "'go'"
+    listen: seed
+    router: true
+    emit: [go]
+  handler:
+    do:
+      call: expression
+      expr: "'done'"
+    start: go
+    listen: go
+    {handler_routing}
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+    flow.kickoff()
+
+    assert flow._method_execution_counts["handler"] == 1
 
 
 def test_flow_config_provider_fallback_from_declaration():

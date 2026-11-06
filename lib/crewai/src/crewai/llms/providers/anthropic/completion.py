@@ -8,7 +8,15 @@ from typing import Any, Final, Literal, Protocol, TypeGuard, TypedDict, cast
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -46,25 +54,57 @@ TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
 
 ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
 ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
+# Anthropic requires max_tokens. Offered models all accept at least 32000.
+# Longest prefix wins. Unknown IDs use 32000 so they stay in-range.
+_MAX_OUTPUT_TOKENS_BY_PREFIX: Final[tuple[tuple[str, int], ...]] = (
+    ("claude-fable-5", 128000),
+    ("claude-opus-5", 128000),
+    ("claude-sonnet-5", 128000),
+    ("claude-opus-4-8", 128000),
+    ("claude-opus-4-7", 128000),
+    ("claude-opus-4-6", 128000),
+    ("claude-sonnet-4-6", 128000),
+    ("claude-haiku-4-5", 64000),
+    ("claude-sonnet-4-5", 64000),
+    ("claude-opus-4-5", 64000),
+)
+_DEFAULT_MODEL_MAX_TOKENS: Final[int] = 32000
+DEFAULT_MODEL: Final[str] = "claude-sonnet-4-6"
+
+
+def _default_max_tokens_for_model(model: str) -> int:
+    """Return the model's documented Messages API max output tokens."""
+    name = model.rsplit("/", 1)[-1].lower()
+    for prefix, limit in _MAX_OUTPUT_TOKENS_BY_PREFIX:
+        if name.startswith(prefix):
+            return limit
+    return _DEFAULT_MODEL_MAX_TOKENS
+
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
+        Literal["claude-fable-5"],
+        Literal["claude-opus-5"],
+        Literal["claude-sonnet-5"],
+        Literal["claude-opus-4-8"],
+        Literal["claude-opus-4.8"],
         Literal["claude-sonnet-4-5"],
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
         Literal["claude-opus-4.5"],
-        Literal["claude-opus-4-1"],
-        Literal["claude-opus-4.1"],
         Literal["claude-haiku-4-5"],
         Literal["claude-haiku-4.5"],
     ]
 ] = (
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-4-8",
+    "claude-opus-4.8",
     "claude-sonnet-4-5",
     "claude-sonnet-4.5",
     "claude-opus-4-5",
     "claude-opus-4.5",
-    "claude-opus-4-1",
-    "claude-opus-4.1",
     "claude-haiku-4-5",
     "claude-haiku-4.5",
 )
@@ -73,9 +113,9 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Native structured outputs are only available for Claude 4.5 models
-    (Sonnet 4.5, Opus 4.5, Opus 4.1, Haiku 4.5).
-    Other models require the tool-based fallback approach.
+    Covers Claude Fable 5, Opus 5, Sonnet 5, Opus 4.8 and the 4.5-era models
+    (Sonnet 4.5, Opus 4.5, Haiku 4.5). Other models require the tool-based
+    fallback approach.
 
     Args:
         model: The model name/identifier.
@@ -102,7 +142,7 @@ def _is_pydantic_model_class(obj: Any) -> TypeGuard[type[BaseModel]]:
     return isinstance(obj, type) and issubclass(obj, BaseModel)
 
 
-def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
+def _contains_file_id_reference(messages: list[LLMMessage]) -> bool:
     """Check if any message content contains a file_id reference.
 
     Anthropic's Files API is in beta and requires a special header when
@@ -187,6 +227,16 @@ def _tool_use_input(block: _AnthropicToolUseBlock) -> dict[str, Any]:
     )
 
 
+def _tools_named_in_history(messages: list[LLMMessage]) -> list[dict[str, Any]]:
+    """Return an open-schema definition for each tool the history's tool_use blocks name."""
+    names: dict[str, None] = {}
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            names.update(dict.fromkeys(map(_tool_use_name, _tool_use_blocks(content))))
+    return [{"name": name, "input_schema": {"type": "object"}} for name in names]
+
+
 class AnthropicThinkingConfig(BaseModel):
     type: Literal["enabled", "disabled"]
     budget_tokens: int | None = None
@@ -216,10 +266,10 @@ class AnthropicCompletion(BaseLLM):
     """
 
     llm_type: Literal["anthropic"] = "anthropic"
-    model: str = "claude-3-5-sonnet-20241022"
+    model: str = DEFAULT_MODEL
     timeout: float | None = None
     max_retries: int = 2
-    max_tokens: int = 4096
+    max_tokens: int = _DEFAULT_MODEL_MAX_TOKENS
     top_p: float | None = None
     stream: bool = False
     client_params: dict[str, Any] | None = None
@@ -245,7 +295,11 @@ class AnthropicCompletion(BaseLLM):
         if isinstance(seqs, str):
             seqs = [seqs]
         data["stop"] = seqs
+        if not data.get("model"):
+            data["model"] = DEFAULT_MODEL
         data["is_claude_3"] = "claude-3" in data.get("model", "").lower()
+        if data.get("max_tokens") is None:
+            data["max_tokens"] = _default_max_tokens_for_model(data["model"])
         # Normalize tool_search
         ts = data.get("tool_search")
         if ts is True:
@@ -292,10 +346,93 @@ class AnthropicCompletion(BaseLLM):
             self._async_client = self._build_async_client()
         return self._async_client
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Anthropic's Messages API.
+
+        The token-count request uses the same message and tool formatting as a
+        completion, while excluding generation-only parameters such as output
+        limits and sampling settings.
+        """
+        try:
+            formatted_messages, system_message = self._format_messages_for_anthropic(
+                messages
+            )
+            completion_params = self._prepare_completion_params(
+                formatted_messages, system_message, tools
+            )
+            count_params = {
+                key: completion_params[key]
+                for key in (
+                    "model",
+                    "messages",
+                    "system",
+                    "thinking",
+                    "tool_choice",
+                    "tools",
+                )
+                if key in completion_params
+            }
+            effective_response_model = response_model or self.response_format
+            uses_file_api = _contains_file_id_reference(formatted_messages)
+
+            def count_tokens(
+                *,
+                betas: list[str] | None = None,
+                output_format: dict[str, Any] | None = None,
+            ) -> Any:
+                if betas:
+                    return self._get_sync_client().beta.messages.count_tokens(
+                        **count_params,
+                        betas=betas,
+                        **({"output_format": output_format} if output_format else {}),
+                    )
+                return self._get_sync_client().messages.count_tokens(**count_params)
+
+            if _is_pydantic_model_class(effective_response_model):
+                schema = transform_schema(effective_response_model.model_json_schema())
+                if _supports_native_structured_outputs(self.model):
+                    betas = [ANTHROPIC_STRUCTURED_OUTPUTS_BETA]
+                    if uses_file_api:
+                        betas.append(ANTHROPIC_FILES_API_BETA)
+                    response = count_tokens(
+                        betas=betas,
+                        output_format={"type": "json_schema", "schema": schema},
+                    )
+                else:
+                    count_params["tools"] = [
+                        {
+                            "name": "structured_output",
+                            "description": "Output the structured response",
+                            "input_schema": schema,
+                        }
+                    ]
+                    count_params["tool_choice"] = {
+                        "type": "tool",
+                        "name": "structured_output",
+                    }
+                    if uses_file_api:
+                        response = count_tokens(betas=[ANTHROPIC_FILES_API_BETA])
+                    else:
+                        response = count_tokens()
+            elif uses_file_api:
+                response = count_tokens(betas=[ANTHROPIC_FILES_API_BETA])
+            else:
+                response = count_tokens()
+            if response is None:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            return int(response.input_tokens)
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
         config = super().to_config_dict()
-        if self.max_tokens != 4096:  # non-default
+        if self.max_tokens != _default_max_tokens_for_model(self.model):
             config["max_tokens"] = self.max_tokens
         if self.max_retries != 2:  # non-default
             config["max_retries"] = self.max_retries
@@ -315,10 +452,11 @@ class AnthropicCompletion(BaseLLM):
                 without leaking a sync one.
         """
 
+        self.api_key = _without_placeholder(self.api_key)
         if self.api_key is None:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("ANTHROPIC_API_KEY"))
             if self.api_key is None:
-                raise ValueError("ANTHROPIC_API_KEY is required")
+                raise MissingAPIKeyError("ANTHROPIC_API_KEY", self.model)
 
         client_params = {
             "api_key": self.api_key,
@@ -375,10 +513,7 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
@@ -403,6 +538,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
@@ -450,6 +588,8 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
                 )
@@ -473,6 +613,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
@@ -495,7 +638,8 @@ class AnthropicCompletion(BaseLLM):
             system_message: Extracted system message
             tools: Tool definitions
             available_functions: Available functions for tool calling. When provided
-                with a single tool, tool_choice is automatically set to force tool use.
+                with a single tool, tool_choice is "auto" so the model may call
+                that tool or answer in text.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -522,8 +666,7 @@ class AnthropicCompletion(BaseLLM):
 
             # When tool_search is enabled and there are 2+ regular tools,
             # inject the search tool and mark regular tools with defer_loading.
-            # With only 1 tool there's nothing to search — skip tool search
-            # entirely so the normal forced tool_choice optimisation still works.
+            # With only 1 tool there's nothing to search, so skip tool search.
             regular_tools = [
                 t
                 for t in converted_tools
@@ -534,10 +677,17 @@ class AnthropicCompletion(BaseLLM):
 
             params["tools"] = converted_tools
 
+            # available_functions means the tool can be executed, not that the
+            # model must call it. Named tool_choice is also rejected by newer
+            # Claude models (Sonnet 5.5, Opus 5.5, Fable 5.1, Mythos 5.1).
             if available_functions and len(regular_tools) == 1:
-                tool_name = regular_tools[0].get("name")
-                if tool_name and tool_name in available_functions:
-                    params["tool_choice"] = {"type": "tool", "name": tool_name}
+                params["tool_choice"] = {"type": "auto"}
+        elif history_tools := _tools_named_in_history(messages):
+            # Anthropic rejects tool_use/tool_result blocks in a request that
+            # defines no tools (a final-answer or schema request after tool
+            # calls). Declare the tools the history used and forbid calling them.
+            params["tools"] = history_tools
+            params["tool_choice"] = {"type": "none"}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
@@ -1284,6 +1434,16 @@ class AnthropicCompletion(BaseLLM):
 
             if tool_uses:
                 if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
+                    )
                     return list(tool_uses)
 
                 result = self._execute_first_tool(
@@ -1808,6 +1968,16 @@ class AnthropicCompletion(BaseLLM):
 
             if tool_uses:
                 if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
+                    )
                     return list(tool_uses)
 
                 result = self._execute_first_tool(
@@ -1925,25 +2095,17 @@ class AnthropicCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+        from crewai.llms.context_window import (
+            ANTHROPIC_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        context_windows = {
-            "claude-3-5-sonnet": 200000,
-            "claude-3-5-haiku": 200000,
-            "claude-3-opus": 200000,
-            "claude-3-sonnet": 200000,
-            "claude-3-haiku": 200000,
-            "claude-3-7-sonnet": 200000,
-            "claude-2.1": 200000,
-            "claude-2": 100000,
-            "claude-instant": 100000,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            ANTHROPIC_CONTEXT_WINDOWS,
+            default=200_000,
+            configured=self.context_window_size,
+        )
 
     @staticmethod
     def _extract_finish_reason_and_id(

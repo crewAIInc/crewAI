@@ -188,6 +188,23 @@ KNOWN_RUNTIME_CONTEXTS: Final[frozenset[str]] = frozenset(
     + ["interactive", "non_interactive", _UNKNOWN]
 )
 
+# Core counts as coarse bands, never the exact number. Powers of two, top band
+# open-ended: the observed maximum in the fleet is 512, and a span reporting 512
+# identifies one machine.
+_CPU_BANDS: Final[tuple[tuple[int, str], ...]] = (
+    (2, "1-2"),
+    (4, "3-4"),
+    (8, "5-8"),
+    (16, "9-16"),
+    (32, "17-32"),
+)
+_CPU_BAND_ABOVE: Final[str] = "33+"
+
+# The same guarantee again for detect_cpu_band().
+KNOWN_CPU_BANDS: Final[frozenset[str]] = frozenset(
+    [band for _, band in _CPU_BANDS] + [_CPU_BAND_ABOVE, _UNKNOWN]
+)
+
 
 def detect_coding_agent() -> str:
     """Best-effort detection of the AI coding assistant running this process.
@@ -266,3 +283,30 @@ def detect_runtime_context() -> str:
         return "interactive" if sys.stdout.isatty() else "non_interactive"
     except (AttributeError, ValueError, OSError):
         return _UNKNOWN
+
+
+def detect_cpu_band() -> str:
+    """The machine's core count as a coarse band, never the exact number.
+
+    Answers "is this a server or someone's laptop", which ``runtime_context``
+    cannot: its largest bucket is a catch-all, and ``non_interactive`` is
+    returned identically by a gunicorn worker on a VM and by
+    ``python main.py > out.log`` on a MacBook. A band adds the capacity axis
+    without the fingerprint an exact count would carry.
+
+    **Reports HOST cores, not the cgroup quota.** A 1-vCPU pod on a 96-core node
+    lands in ``33+``. That is the right answer for "what kind of machine is this"
+    and the wrong one for "what resources did this run get" --
+    ``os.process_cpu_count()`` gives the latter but needs Python 3.13, above this
+    package's floor.
+
+    Returns:
+        One of ``KNOWN_CPU_BANDS``; ``"unknown"`` when the count is unavailable.
+    """
+    count = os.cpu_count()
+    if not count or count < 1:
+        return _UNKNOWN
+    for upper, band in _CPU_BANDS:
+        if count <= upper:
+            return band
+    return _CPU_BAND_ABOVE

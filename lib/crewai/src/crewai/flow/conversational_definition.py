@@ -1,8 +1,8 @@
 """Static conversational Flow definition models.
 
 This module is part of the serializable Flow Definition contract. It should
-only contain static data shapes. Experimental conversational runtime behavior
-continues to live in ``crewai.experimental.conversational_mixin``.
+only contain static data shapes. Conversational runtime behavior lives in
+``crewai.flow.conversational_mixin``.
 """
 
 from __future__ import annotations
@@ -59,6 +59,14 @@ class FlowConversationalDefinition(BaseModel):
         examples=[True],
     )
     system_prompt: str | None = None
+    respect_context_window: bool = Field(
+        default=True,
+        description=(
+            "Compact built-in chat and router LLM requests before the context "
+            "window fills, and retry once after a provider context-limit error. "
+            "The public conversation transcript is preserved."
+        ),
+    )
     llm: Any = Field(
         default=None,
         description=(
@@ -96,6 +104,16 @@ class FlowConversationalDefinition(BaseModel):
     )
     visible_agent_outputs: list[str] | Literal["all"] | None = None
     defer_trace_finalization: bool = True
+    trace_scope: Literal["turn", "session"] | None = Field(
+        default=None,
+        description=(
+            "Trace lifetime for conversational turns. 'turn' finalizes each "
+            "turn automatically; 'session' keeps one trace until finalized. "
+            "When omitted, preserve the legacy defer_trace_finalization behavior. "
+            "An explicit scope takes precedence over the legacy flag."
+        ),
+        examples=["turn", "session"],
+    )
     builtin_routes: list[str] = Field(default_factory=lambda: ["converse", "end"])
     internal_routes: list[str] = Field(default_factory=lambda: ["answer_from_history"])
 

@@ -1,10 +1,11 @@
 from pathlib import Path
 import subprocess
+import tempfile
 import zipfile
 
 import pytest
 
-from crewai_cli.deploy.archive import create_project_zip
+from crewai_cli.deploy.archive import ArchiveError, create_project_zip
 
 
 def test_create_project_zip_excludes_local_artifacts(tmp_path: Path):
@@ -305,3 +306,60 @@ type = "crew"
     assert "run_crew" not in pyproject
     assert "json_crew =" not in pyproject
     assert "[project.scripts]" not in pyproject
+
+
+def test_create_project_zip_with_nothing_to_deploy_raises_archive_error(
+    tmp_path: Path,
+):
+    """Still a ValueError for existing callers, and a distinct type for the deploy command."""
+    with pytest.raises(ArchiveError, match="No deployable project files were found"):
+        create_project_zip("demo", project_dir=tmp_path)
+    assert issubclass(ArchiveError, ValueError)
+
+
+def test_create_project_zip_wraps_a_write_failure_and_removes_the_partial_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / "uv.lock").write_text("# lock\n")
+    created: list[Path] = []
+
+    def failing_zipfile(path, *args, **kwargs):
+        created.append(Path(path))
+        raise OSError("disk full")
+
+    monkeypatch.setattr("crewai_cli.deploy.archive.zipfile.ZipFile", failing_zipfile)
+
+    with pytest.raises(ArchiveError, match="Could not build the project ZIP: disk full"):
+        create_project_zip("demo", project_dir=tmp_path)
+
+    assert created and not created[0].exists()
+
+
+@pytest.mark.parametrize(
+    "failing_step",
+    [
+        "crewai_cli.deploy.archive.shutil.copy2",
+        "crewai_cli.deploy.archive.tempfile.NamedTemporaryFile",
+    ],
+)
+def test_create_project_zip_wraps_staging_and_temp_file_failures_and_cleans_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing_step: str
+):
+    """A full disk while staging or creating the archive is an archive failure too."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+
+    def fail(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(failing_step, fail)
+
+    with pytest.raises(ArchiveError, match="Could not build the project ZIP: disk full"):
+        create_project_zip("demo", project_dir=project)
+
+    assert list(scratch.iterdir()) == []

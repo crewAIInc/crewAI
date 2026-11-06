@@ -18,8 +18,10 @@ from collections.abc import Iterator
 from crewai_core.runtime_env import (
     CODING_AGENT_ENV_MARKERS,
     GENERIC_AGENT_ENV_VARS,
+    KNOWN_CPU_BANDS,
     RUNTIME_CONTEXT_ENV_MARKERS,
     detect_coding_agent,
+    detect_cpu_band,
     detect_runtime_context,
 )
 from crewai_core.telemetry import Telemetry, common_span_attributes
@@ -135,3 +137,74 @@ def test_cli_spans_carry_the_process_context(
         assert attributes is not None
         assert attributes["coding_agent"] == "claude_code"
         assert attributes["runtime_context"] == "ci"
+
+
+class TestCpuBand:
+    """A coarse capacity signal: enough to tell a server from a laptop, no more."""
+
+    @pytest.mark.parametrize(
+        ("cores", "expected"),
+        [
+            (1, "1-2"),
+            (2, "1-2"),
+            (3, "3-4"),
+            (4, "3-4"),
+            (5, "5-8"),
+            (8, "5-8"),
+            (9, "9-16"),
+            (16, "9-16"),
+            (17, "17-32"),
+            (32, "17-32"),
+            (33, "33+"),
+            (96, "33+"),
+            (512, "33+"),
+        ],
+    )
+    def test_bands_are_inclusive_at_every_boundary(
+        self, cores: int, expected: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("crewai_core.runtime_env.os.cpu_count", lambda: cores)
+        assert detect_cpu_band() == expected
+
+    def test_the_largest_band_is_open_ended(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The exact count is the fingerprint: 512 cores identifies one machine.
+
+        The observed fleet maximum is 512, so the top band must absorb it rather
+        than the value reaching a span.
+        """
+        monkeypatch.setattr("crewai_core.runtime_env.os.cpu_count", lambda: 512)
+        band = detect_cpu_band()
+        assert band == "33+"
+        assert "512" not in band
+
+    @pytest.mark.parametrize("unavailable", [None, 0])
+    def test_an_unavailable_count_is_unknown_not_a_band(
+        self, unavailable: int | None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`os.cpu_count()` returns None when it cannot tell; that is not "1-2"."""
+        monkeypatch.setattr("crewai_core.runtime_env.os.cpu_count", lambda: unavailable)
+        assert detect_cpu_band() == "unknown"
+
+    def test_the_real_machine_lands_in_the_closed_vocabulary(self) -> None:
+        """Unmocked: whatever this host reports must still be a known literal."""
+        assert detect_cpu_band() in KNOWN_CPU_BANDS
+
+    def test_no_band_can_carry_a_precise_core_count(self) -> None:
+        """Every emittable value is a short opaque label, as for the sibling signals."""
+        for band in KNOWN_CPU_BANDS:
+            assert len(band) <= 32, band
+            assert band.replace("-", "").replace("+", "").replace("_", "").isalnum(), (
+                band
+            )
+
+    def test_it_rides_every_span_rather_than_only_crew_created(self) -> None:
+        """The gated `cpus` sits on Crew Created alone, which answers nothing for
+        Flow-only, CLI-only or standalone-agent runs. This one is a common
+        attribute, so it is on all of them."""
+        common_span_attributes.cache_clear()
+        try:
+            assert common_span_attributes()["cpu_band"] in KNOWN_CPU_BANDS
+        finally:
+            common_span_attributes.cache_clear()

@@ -1,0 +1,76 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Count these input tokens."}],"model":"claude-haiku-4-5"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '95'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.14
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages/count_tokens
+  response:
+    body:
+      string: '{"input_tokens":12}'
+    headers:
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-workspace-id:
+      - ANTHROPIC-WORKSPACE-ID-XXX
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-security-policy:
+      - CSP-FILTERED
+      content-type:
+      - application/json
+      date:
+      - Tue, 13 Oct 2026 12:05:28 GMT
+      request-id:
+      - REQUEST-ID-XXX
+      server:
+      - cloudflare
+      server-timing:
+      - x-originResponse;dur=69
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-robots-tag:
+      - none
+    status:
+      code: 200
+      message: OK
+version: 1

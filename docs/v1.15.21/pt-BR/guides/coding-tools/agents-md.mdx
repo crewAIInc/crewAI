@@ -1,0 +1,61 @@
+---
+title: Ferramentas de Codificação
+description: Use o AGENTS.md para guiar agentes de codificação e IDEs em seus projetos CrewAI.
+icon: terminal
+mode: "wide"
+---
+
+## Por que AGENTS.md
+
+`AGENTS.md` é um arquivo de instruções leve e local do repositório que fornece aos agentes de codificação orientações consistentes e específicas do projeto. Mantenha-o na raiz do projeto e trate-o como a fonte da verdade para como você deseja que os assistentes trabalhem: convenções, comandos, notas de arquitetura e proteções.
+
+## Criar um Projeto com o CLI
+
+Use o CLI do CrewAI para criar a estrutura de um projeto, e o `AGENTS.md` será automaticamente adicionado na raiz.
+
+```bash
+# Crew
+crewai create crew my_crew
+
+# Flow
+crewai create flow my_flow
+
+# Tool repository
+crewai tool create my_tool
+```
+
+## Configuração de Ferramentas: Direcione Assistentes para o AGENTS.md
+
+### Codex
+
+O Codex pode ser guiado por arquivos `AGENTS.md` colocados no seu repositório. Use-os para fornecer contexto persistente do projeto, como convenções, comandos e expectativas de fluxo de trabalho.
+
+### Claude Code
+
+O Claude Code armazena a memória do projeto em `CLAUDE.md`. Você pode inicializá-lo com `/init` e editá-lo usando `/memory`. O Claude Code também suporta importações dentro do `CLAUDE.md`, então você pode adicionar uma única linha como `@AGENTS.md` para incluir as instruções compartilhadas sem duplicá-las.
+
+Você pode simplesmente usar:
+
+```bash
+mv AGENTS.md CLAUDE.md
+```
+
+### Gemini CLI e Google Antigravity
+
+O Gemini CLI e o Antigravity carregam um arquivo de contexto do projeto (padrão: `GEMINI.md`) da raiz do repositório e diretórios pais. Você pode configurá-lo para ler o `AGENTS.md` em vez disso (ou além) definindo `context.fileName` nas configurações do Gemini CLI. Por exemplo, defina apenas para `AGENTS.md`, ou inclua tanto `AGENTS.md` quanto `GEMINI.md` se quiser manter o formato de cada ferramenta.
+
+Você pode simplesmente usar:
+
+```bash
+mv AGENTS.md GEMINI.md
+```
+
+### Cursor
+
+O Cursor suporta `AGENTS.md` como arquivo de instruções do projeto. Coloque-o na raiz do projeto para fornecer orientação ao assistente de codificação do Cursor.
+
+### Windsurf
+
+O Claude Code fornece uma integração oficial com o Windsurf. Se você usa o Claude Code dentro do Windsurf, siga a orientação do Claude Code acima e importe o `AGENTS.md` a partir do `CLAUDE.md`.
+
+Se você está usando o assistente nativo do Windsurf, configure o recurso de regras ou instruções do projeto (se disponível) para ler o `AGENTS.md` ou cole o conteúdo diretamente.

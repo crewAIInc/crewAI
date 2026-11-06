@@ -12,7 +12,7 @@ mode: "wide"
 ### المتطلبات
 
 1. تثبيت CrewAI من [دليل التثبيت](/ar/installation)
-2. إعداد مفتاح LLM من [دليل LLMs](/ar/concepts/llms#setting-up-your-llm)
+2. إعداد مفتاح LLM من [دليل LLMs](/ar/concepts/llms#إعداد-llm-الخاص-بك)
 3. مفتاح [Serper.dev](https://serper.dev/) إذا أردت استخدام البحث على الويب
 
 ## الخطوة 1: إنشاء Crew جديدة
@@ -21,6 +21,8 @@ mode: "wide"
 crewai create crew research_crew
 cd research_crew
 ```
+
+عندما يعرض `crewai create` السؤال `Run it now?`، أجب بـ `n`. يعدّل هذا الدليل الـ Crew قبل تشغيلها.
 
 البنية الناتجة:
 
@@ -75,7 +77,7 @@ research_crew/
 }
 ```
 
-استبدل `provider/model-id` بالنموذج الذي تستخدمه، مثل `openai/gpt-4o` أو `anthropic/claude-sonnet-4-6` أو `gemini/gemini-2.0-flash-001`.
+استبدل `provider/model-id` بالنموذج الذي تستخدمه، مثل `openai/gpt-4o` أو `anthropic/claude-sonnet-4-6` أو `gemini/gemini-3.7-flash`.
 
 ## الخطوة 3: تعريف المهام وإعدادات الـ Crew
 

@@ -11,6 +11,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
+from functools import wraps
 import json
 import logging
 import re
@@ -24,6 +25,7 @@ from pydantic import (
     Field,
     PrivateAttr,
     field_serializer,
+    field_validator,
     model_validator,
 )
 from typing_extensions import TypedDict
@@ -42,6 +44,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
@@ -72,9 +75,78 @@ class JsonResponseFormat(TypedDict):
     type: Literal["json_object"]
 
 
+class LLMCallBlockedError(ValueError):
+    """A ``before_llm_call`` hook blocked the call by returning ``False``.
+
+    A ``ValueError`` so the fail-open handlers around internal model calls keep
+    absorbing it, and its own type so a provider can report it as the decision
+    it is instead of letting it read as a provider outage.
+    """
+
+
+# Projects created by older versions of `crewai create flow` may still have it in
+# .env; it passes a presence check and only fails later at the provider as an
+# authentication error.
+_API_KEY_PLACEHOLDER: Final[str] = "YOUR_API_KEY"
+
+
+def _without_placeholder(api_key: str | None) -> str | None:
+    return None if api_key == _API_KEY_PLACEHOLDER else api_key
+
+
+class MissingAPIKeyError(ValueError):
+    """An LLM provider needs an API key and none is configured.
+
+    Raised when the key is unset or still holds the ``YOUR_API_KEY`` placeholder,
+    which projects created by older versions of ``crewai create flow`` may contain
+    in ``.env``. A ``ValueError`` so existing ``except ValueError`` handlers keep
+    catching it.
+
+    Attributes:
+        env_var: The environment variable the provider reads the key from.
+        model: The model that needs the key.
+    """
+
+    def __init__(self, env_var: str, model: str, alternative: str = "") -> None:
+        """Build the message that tells the user which variable to set.
+
+        Args:
+            env_var: The environment variable the provider reads the key from.
+            model: The model that needs the key.
+            alternative: A sentence naming a keyless way to authenticate, for
+                providers that offer one.
+        """
+        self.env_var = env_var
+        self.model = model
+        message = (
+            f"{env_var} is required for model '{model}' but is not set or is "
+            f"still the placeholder '{_API_KEY_PLACEHOLDER}'. Add "
+            f"{env_var}=<your-api-key> to the .env file in your project root, "
+            f"then run `crewai run` again."
+        )
+        super().__init__(f"{message} {alternative}" if alternative else message)
+
+
+class EmptyLLMResponseError(ValueError):
+    """The provider returned no content and no tool calls for a model call.
+
+    A ``ValueError`` so existing ``except ValueError`` handlers keep catching it.
+    The agent loop retries an empty answer once before raising this.
+
+    Attributes:
+        model: The model that returned the empty response.
+    """
+
+    def __init__(self, model: str) -> None:
+        self.model = model
+        super().__init__(f"The provider returned no content for model '{model}'.")
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
+TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD: Final[float] = 0.25
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+logger = logging.getLogger(__name__)
 
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
@@ -164,9 +236,53 @@ class BaseLLM(BaseModel, ABC):
         temperature: Optional temperature setting for response generation.
         stop: A list of stop sequences that the LLM should use to stop generation.
         additional_params: Additional provider-specific parameters.
+        context_window_size: The model's full context window in tokens. When
+            set, it is used instead of CrewAI's model catalog, which matters
+            for models the catalog does not list.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Wrap concrete client call methods with the shared retry policy."""
+        super().__init_subclass__(**kwargs)
+        cls._wrap_call_method("call")
+        cls._wrap_call_method("acall")
+
+    @classmethod
+    def _wrap_call_method(cls, method_name: str) -> None:
+        """Install one retry wrapper around a subclass-defined public call method."""
+        method = cls.__dict__.get(method_name)
+        if method is None or getattr(method, "_crewai_rate_limit_wrapped", False):
+            return
+
+        if method_name == "call":
+
+            @wraps(method)
+            def wrapped_call(instance: BaseLLM, *args: Any, **kwargs: Any) -> Any:
+                return run_with_rate_limit_retry(
+                    lambda: method(instance, *args, **kwargs)
+                )
+
+            wrapped_call._crewai_rate_limit_wrapped = True  # type: ignore[attr-defined]
+            setattr(cls, method_name, wrapped_call)
+            return
+
+        if method_name == "acall":
+
+            @wraps(method)
+            async def wrapped_acall(
+                instance: BaseLLM, *args: Any, **kwargs: Any
+            ) -> Any:
+                return await arun_with_rate_limit_retry(
+                    lambda: method(instance, *args, **kwargs)
+                )
+
+            wrapped_acall._crewai_rate_limit_wrapped = True  # type: ignore[attr-defined]
+            setattr(cls, method_name, wrapped_acall)
+            return
+
+        raise ValueError(f"Unsupported LLM call method: {method_name}")
 
     llm_type: str = "base"
     model: str
@@ -188,6 +304,20 @@ class BaseLLM(BaseModel, ABC):
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
     additional_params: dict[str, Any] = Field(default_factory=dict)
+    context_window_size: int | None = Field(default=None, strict=True)
+
+    @field_validator("context_window_size")
+    @classmethod
+    def _validate_context_window_size(cls, value: int | None) -> int | None:
+        # ``LLM`` stored 0 for "not set" through 1.15.32, and checkpoints written
+        # by those versions carry it. Remove in 2.0.
+        if value == 0:
+            return None
+        if value is not None and value < 0:
+            raise ValueError(
+                f"context_window_size must be a positive number of tokens, got {value}"
+            )
+        return value
 
     @field_serializer("response_format", when_used="json", check_fields=False)
     def _serialize_response_format(self, value: Any) -> Any:
@@ -308,8 +438,104 @@ class BaseLLM(BaseModel, ABC):
             config["base_url"] = self.base_url
         if self.stop:
             config["stop"] = self.stop
+        if self.context_window_size is not None:
+            config["context_window_size"] = self.context_window_size
 
         return config
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate the input-token count a request will consume.
+
+        Providers with native token-estimation support should override this
+        method. This fallback estimates one token per four text characters,
+        rounded up, so callers can safely preflight requests when a native
+        count endpoint is unavailable.
+
+        Args:
+            messages: Input messages for the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            A conservative estimate of the provider's input-token count.
+        """
+        logger.warning(
+            "Using an approximate input token count for model %r: assuming one "
+            "token per four characters because a native token count is unavailable.",
+            self.model,
+        )
+        from crewai.utilities.message_utils import message_content_text
+
+        if isinstance(messages, str):
+            character_count = len(messages)
+        else:
+            character_count = sum(
+                len(message_content_text(message)) for message in messages
+            )
+        return (character_count + 3) // 4
+
+    def is_tool_result_overflowing_threshold(
+        self, tool_result: str
+    ) -> tuple[bool, int]:
+        """Check whether a tool result exceeds the deferred-output threshold.
+
+        The threshold is 25% of the model's usable context window. The count
+        comes from one call to :meth:`get_input_tokens_count`, which uses the
+        provider's estimator or the four-characters-per-token fallback.
+
+        Args:
+            tool_result: The formatted text returned by a tool.
+
+        Returns:
+            Whether the result alone uses more than 25% of the usable context
+            window, and the input-token count from that same check.
+        """
+        tool_result_tokens = self.get_input_tokens_count(tool_result)
+        threshold = (
+            self.get_context_window_size() * TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD
+        )
+        return tool_result_tokens > threshold, tool_result_tokens
+
+    def is_context_window_overflowing_threshold(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> bool:
+        """Check whether a pending request exceeds the usable context window.
+
+        ``get_context_window_size`` already reserves 15% of the raw model
+        window, so this preflight check triggers compaction once a request
+        reaches more than 85% of the provider's advertised limit.
+
+        Args:
+            messages: The messages that will be sent to the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            Whether the pending request exceeds the usable context window.
+        """
+        input_tokens = self.get_input_tokens_count(messages, tools, response_model)
+        return input_tokens > self.get_context_window_size()
+
+    def summarize_messages(
+        self,
+        messages: list[LLMMessage],
+        callbacks: list[Any],
+        verbose: bool = True,
+    ) -> None:
+        """Compact a mutable conversation history to fit this model's context window."""
+        from crewai.llms.context_window import summarize_messages
+
+        summarize_messages(self, messages, callbacks, verbose)
 
     @abstractmethod
     def call(
@@ -498,8 +724,13 @@ class BaseLLM(BaseModel, ABC):
         """Get the context window size for the LLM.
 
         Returns:
-            The number of tokens/characters the model can handle.
+            The number of tokens/characters the model can handle: 85% of
+            ``context_window_size`` when it is set, else a fixed default.
         """
+        if self.context_window_size is not None:
+            from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
+
+            return int(self.context_window_size * CONTEXT_WINDOW_USAGE_RATIO)
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
     def supports_multimodal(self) -> bool:
@@ -660,6 +891,28 @@ class BaseLLM(BaseModel, ABC):
             ),
         )
 
+    def _emit_call_denied_event(
+        self,
+        denial: Exception,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+    ) -> None:
+        """Report a hook deny as a deny rather than as a provider failure.
+
+        The call still owes its started event a terminal one, so the failed event
+        is emitted — with a message that names the decision instead of blaming
+        the provider for an outage that never happened.
+        """
+        from crewai.hooks.dispatch import source_name
+
+        source = source_name(getattr(denial, "source", None))
+        reason = getattr(denial, "reason", str(denial))
+        message = f"LLM call denied by {source or 'hook'}: {reason}"
+        logging.warning(message)
+        self._emit_call_failed_event(
+            error=message, from_task=from_task, from_agent=from_agent
+        )
+
     def _emit_stream_chunk_event(
         self,
         chunk: str,
@@ -810,7 +1063,9 @@ class BaseLLM(BaseModel, ABC):
 
             return None
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Convert messages to standard format.
 
         Args:
@@ -829,8 +1084,8 @@ class BaseLLM(BaseModel, ABC):
             return [{"role": "user", "content": messages}]
 
         # Validate then copy each message, dropping the cache-breakpoint
-        # flag in the copy only. The caller (e.g. CrewAgentExecutor,
-        # experimental.AgentExecutor) reuses its messages buffer across
+        # flag in the copy only. The caller (AgentExecutor) reuses its
+        # messages buffer across
         # many LLM calls in the tool-use loop; mutating their dicts
         # in place would erase the markers after the first call and
         # break prompt caching for every subsequent iteration.
@@ -847,9 +1102,11 @@ class BaseLLM(BaseModel, ABC):
             }
             cleaned.append(cast(_LLMMessage, copy))
 
-        return self._process_message_files(cleaned)
+        return self._process_message_files(cleaned, api=file_api)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.
 
         For each message with a `files` field, formats the files into
@@ -874,7 +1131,7 @@ class BaseLLM(BaseModel, ABC):
             return messages
 
         formatter = self._multimodal_formatter_name()
-        api = getattr(self, "api", None)
+        api = api if api is not None else getattr(self, "api", None)
 
         for msg in messages:
             files = msg.get("files")
@@ -990,35 +1247,43 @@ class BaseLLM(BaseModel, ABC):
         messages: list[LLMMessage],
         from_agent: BaseAgent | None = None,
     ) -> bool:
-        """Invoke before_llm_call hooks for direct LLM calls (no agent context).
+        """Invoke before_llm_call hooks for an LLM call reaching the provider.
 
         This method should be called by native provider implementations before
-        making the actual LLM call when from_agent is None (direct calls).
+        making the actual LLM call. It no-ops when an enclosing caller — the
+        executor — already dispatched the hooks for this same call.
 
         Args:
             messages: The messages being sent to the LLM
-            from_agent: The agent making the call (None for direct calls)
+            from_agent: The agent making the call, when there is one
 
         Returns:
-            True if LLM call should proceed, False if blocked by hook
+            True, so a provider may still guard the call with ``if not ...``.
+            A block is raised, never returned.
+
+        Raises:
+            HookAborted: If a hook raised it. The deny reaches the caller intact
+                instead of being flattened into a provider-style error.
+            LLMCallBlockedError: If a legacy hook blocked the call by returning
+                ``False``. A ``ValueError``, so the fail-open handlers around
+                internal model calls keep absorbing it.
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if from_agent is None and not self._invoke_before_llm_call_hooks(
-            ...     messages, from_agent
-            ... ):
-            ...     raise ValueError("LLM call blocked by hook")
+            >>> self._invoke_before_llm_call_hooks(messages, from_agent)
         """
-        if from_agent is not None:
-            return True
-
         from crewai_core.printer import PRINTER
 
-        from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
+            LegacyHookBlocked,
             before_llm_call_reducer,
+            model_call_hooks_already_dispatched,
         )
+
+        if model_call_hooks_already_dispatched():
+            return True
 
         # No early global-list guard: dispatch resolves global + execution-scoped
         # hooks and has its own no-op fast path, so scoped hooks still run here.
@@ -1026,7 +1291,7 @@ class BaseLLM(BaseModel, ABC):
             executor=None,
             messages=messages,
             llm=self,
-            agent=None,
+            agent=from_agent,
             task=None,
             crew=None,
         )
@@ -1037,12 +1302,14 @@ class BaseLLM(BaseModel, ABC):
                 hook_context,
                 reducer=before_llm_call_reducer,
             )
-        except HookAborted:
+        except LegacyHookBlocked as blocked:
             PRINTER.print(
                 content="LLM call blocked by before_llm_call hook",
                 color="yellow",
             )
-            return False
+            raise LLMCallBlockedError(
+                "LLM call blocked by before_llm_call hook"
+            ) from blocked
 
         return True
 
@@ -1052,34 +1319,36 @@ class BaseLLM(BaseModel, ABC):
         response: str,
         from_agent: BaseAgent | None = None,
     ) -> str:
-        """Invoke after_llm_call hooks for direct LLM calls (no agent context).
+        """Invoke after_llm_call hooks for an LLM call that reached the provider.
 
         This method should be called by native provider implementations after
-        receiving the LLM response when from_agent is None (direct calls).
+        receiving the LLM response. It no-ops when an enclosing caller — the
+        executor — already dispatched the hooks for this same call.
 
         Args:
             messages: The messages that were sent to the LLM
             response: The response from the LLM
-            from_agent: The agent that made the call (None for direct calls)
+            from_agent: The agent that made the call, when there is one
 
         Returns:
             The potentially modified response string
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if from_agent is None and isinstance(result, str):
+            >>> if isinstance(result, str):
             ...     result = self._invoke_after_llm_call_hooks(
             ...         messages, result, from_agent
             ...     )
         """
-        if from_agent is not None or not isinstance(response, str):
-            return response
-
         from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             after_llm_call_reducer,
+            model_call_hooks_already_dispatched,
         )
+
+        if model_call_hooks_already_dispatched() or not isinstance(response, str):
+            return response
 
         # No early global-list guard: dispatch resolves global + execution-scoped
         # hooks and has its own no-op fast path, so scoped hooks still run here.
@@ -1087,7 +1356,7 @@ class BaseLLM(BaseModel, ABC):
             executor=None,
             messages=messages,
             llm=self,
-            agent=None,
+            agent=from_agent,
             task=None,
             crew=None,
             response=response,

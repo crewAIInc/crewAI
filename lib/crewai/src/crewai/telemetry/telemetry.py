@@ -18,21 +18,18 @@ import os
 import platform
 import signal
 import threading
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from crewai_core.telemetry import (
     CommonAttributesSpanProcessor,
+    SafeOTLPSpanExporter,
+    Telemetry as CoreTelemetry,
     common_span_attributes,
-)
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,
+    flush_and_shutdown,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    SpanExportResult,
-)
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Span
 from typing_extensions import Self
 
@@ -67,29 +64,6 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
-
-
-class SafeOTLPSpanExporter(OTLPSpanExporter):
-    """Safe wrapper for OTLP span exporter that handles exceptions gracefully.
-
-    This exporter prevents telemetry failures from breaking the application
-    by catching and logging exceptions during span export.
-    """
-
-    def export(self, spans: Any) -> SpanExportResult:
-        """Export spans to the telemetry backend safely.
-
-        Args:
-            spans: Collection of spans to export.
-
-        Returns:
-            Export result status, FAILURE if an exception occurs.
-        """
-        try:
-            return super().export(spans)
-        except Exception as e:
-            logger.error(e)
-            return SpanExportResult.FAILURE
 
 
 class Telemetry:
@@ -140,14 +114,11 @@ class Telemetry:
                 CommonAttributesSpanProcessor(common_span_attributes())
             )
 
-            processor = BatchSpanProcessor(
-                SafeOTLPSpanExporter(
-                    endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
-                    timeout=30,
-                )
+            self._exporter = SafeOTLPSpanExporter(
+                endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
+                timeout=30,
             )
-
-            self.provider.add_span_processor(processor)
+            self.provider.add_span_processor(BatchSpanProcessor(self._exporter))
             self._register_shutdown_handlers()
             self.ready = True
         except Exception as e:
@@ -161,11 +132,7 @@ class Telemetry:
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
-        return (
-            os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-        )
+        return CoreTelemetry._is_telemetry_disabled()
 
     def _should_execute_telemetry(self) -> bool:
         """Check if telemetry operations should be executed."""
@@ -253,14 +220,14 @@ class Telemetry:
     def _shutdown(self) -> None:
         """Flush and shutdown the telemetry provider on process exit.
 
-        Uses a short timeout to avoid blocking process shutdown.
+        Waits at most ``FINAL_FLUSH_SECONDS`` so an unreachable collector
+        cannot hold the process.
         """
         if not self.ready:
             return
 
         try:
-            self.provider.force_flush(timeout_millis=5000)
-            self.provider.shutdown()
+            flush_and_shutdown(self.provider, self._exporter)
             self.ready = False
         except Exception as e:
             logger.debug(f"Telemetry shutdown failed: {e}")
@@ -1120,6 +1087,45 @@ class Telemetry:
             return error_type.__name__
         return None
 
+    def crew_completed_span(self, crew: Crew, duration_ms: float, outcome: str) -> None:
+        """Records how long a crew ran and how it ended, for every user.
+
+        The crew analogue of :meth:`flow_completed_span`, and it exists because
+        crew was the one level with no ungated terminal record: ``Crew
+        Execution`` and :meth:`end_crew` are both behind ``share_crew``, which
+        defaults False, so for essentially every run there is no end-of-crew
+        span at all -- not one with fields missing. Task and flow outcomes
+        already ship ungated, which made crew the odd one out rather than a
+        deliberate exclusion.
+
+        A separate span rather than ``Crew Execution`` held open to completion,
+        for the same reason flows use one: that span is emitted and closed at
+        start, so holding it would drop every run that is killed or crashes.
+
+        Carries no token count. ``crew.token_usage`` sums each agent's LLM
+        counters, and two agents sharing one ``LLM`` object share one counter,
+        so that total double-counts today -- putting it on a span would
+        propagate a known-wrong number into a metric. Models are already on the
+        ungated ``Crew Created`` span, which this joins by ``crew_id``.
+
+        Args:
+            crew: The crew that finished, for its key and id.
+            duration_ms: Wall-clock milliseconds from kickoff, measured on a
+                monotonic clock.
+            outcome: Either ``"completed"`` or ``"failed"``.
+        """
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Completed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            add_crew_attributes(span, crew, self._add_attribute)
+            self._add_attribute(span, "duration_ms", duration_ms)
+            self._add_attribute(span, "outcome", outcome)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
     def flow_completed_span(
         self,
         flow_name: str,
@@ -1279,13 +1285,34 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def feature_usage_span(self, feature: str) -> None:
+    # What a caller may add to a feature span, per feature. Anything else is
+    # dropped: the span counts a use, and a key nobody agreed on is how run
+    # content — a prompt, an output, a path — or an identifier reaches stats
+    # that promise to hold neither. The dimensions every span already carries
+    # are never on a list: a caller that could overwrite `feature` could file
+    # its use under somebody else's name.
+    FEATURE_ATTRIBUTES: ClassVar[dict[str, frozenset[str]]] = {
+        "cli_usage:eval": frozenset({"authenticated"}),
+        # The models compared: a model in crewAI's own catalog by name (anyone
+        # can read it off a price list), any other — a fine-tune, a deployment
+        # name, a self-hosted model — as `<provider>/other`; the CLI decides
+        # (`telemetry_model_name`). Never a run, an output or an organization.
+        "cli_usage:eval_models": frozenset({"authenticated", "models", "models_count"}),
+    }
+
+    def feature_usage_span(
+        self, feature: str, attributes: dict[str, str] | None = None
+    ) -> None:
         """Records that a feature was used. One span = one count.
 
         Args:
             feature: Feature identifier, e.g. "planning:creation",
                      "mcp:connection", "a2a:delegation",
                      "hooks:pre_tool_call", "hooks:aborted".
+            attributes: What a caller knows about THIS use that the common
+                attributes cannot know. Only the keys ``FEATURE_ATTRIBUTES`` lists
+                for this feature are kept; anything else is dropped, including
+                the dimensions every span already carries.
         """
 
         def _operation() -> None:
@@ -1293,6 +1320,10 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
+            allowed = self.FEATURE_ATTRIBUTES.get(feature, frozenset())
+            for key, value in (attributes or {}).items():
+                if key in allowed:
+                    self._add_attribute(span, key, str(value))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

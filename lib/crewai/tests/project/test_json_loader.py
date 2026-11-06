@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import (
+    JSONProjectError,
     JSONProjectValidationError,
     _looks_like_windows_absolute_path,
     find_json_project_file,
@@ -276,6 +277,25 @@ class TestLoadAgent:
         assert len(agent.tools or []) == 1
         assert agent.tools[0].name == "echo"
 
+    def test_load_agent_rejects_tool_dict_that_is_not_a_tool(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        agent_def = {
+            "role": "Tool User",
+            "goal": "Use tools",
+            "backstory": "Tool expert.",
+            "tools": [{"tool_type": "os.system", "name": "x", "description": "x"}],
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        with pytest.raises(
+            JSONProjectError,
+            match=r"invalid tool ref 'os:system'; expected a BaseTool class",
+        ):
+            load_agent(agent_file)
+
     def test_load_agent_accepts_static_mcp_tool_filter(self, tmp_path: Path):
         agent_def = {
             "role": "MCP User",
@@ -403,6 +423,52 @@ class TestLoadAgentFromDefinition:
 
 
 class TestResolveTools:
+    def test_platform_tool_refs_materialize_multiple_application_tools(
+        self, monkeypatch
+    ):
+        from crewai.project.json_loader import _resolve_tools
+
+        github_tools = [object()]
+        linear_tools = [object(), object()]
+        calls: list[list[str]] = []
+
+        def build_platform_tools(apps: list[str]):
+            calls.append(apps)
+            return {
+                "github": github_tools,
+                "linear": linear_tools,
+            }[apps[0]]
+
+        monkeypatch.setattr(
+            "crewai_tools.CrewaiPlatformTools", build_platform_tools
+        )
+
+        tools = _resolve_tools(["platform:github", "platform:linear"])
+
+        assert tools == github_tools + linear_tools
+        assert calls == [["github"], ["linear"]]
+
+    def test_empty_platform_tool_ref_raises_with_guidance(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(JSONProjectError, match="platform:<application>"):
+            _resolve_tools(["platform:"])
+
+    def test_platform_tool_discovery_errors_are_json_project_errors(
+        self, monkeypatch
+    ):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        def fail_platform_tool_discovery(apps: list[str]):
+            raise RuntimeError("discovery unavailable")
+
+        monkeypatch.setattr(
+            "crewai_tools.CrewaiPlatformTools", fail_platform_tool_discovery
+        )
+
+        with pytest.raises(JSONProjectError, match="discovery unavailable"):
+            _resolve_tools(["platform:github"])
+
     def test_import_ref_tool_resolves(self, tmp_path, monkeypatch):
         from crewai.project.json_loader import _resolve_tools
 
@@ -492,8 +558,16 @@ class TestResolveTools:
     def test_serialized_tool_dicts_pass_through(self):
         from crewai.project.json_loader import _resolve_tools
 
-        spec = {"tool_type": "some.module.Tool"}
+        spec = {"tool_type": "crewai.tools.agent_tools.add_image_tool.AddImageTool"}
         assert _resolve_tools([spec]) == [spec]
+
+    def test_serialized_tool_dict_with_unknown_module_fails_at_load(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(
+            JSONProjectError, match=r"unresolvable tool ref 'some\.module:Tool'"
+        ):
+            _resolve_tools([{"tool_type": "some.module.Tool"}])
 
 
 class TestValidationDoesNotExecuteTools:
@@ -613,6 +687,19 @@ class TestValidationDoesNotExecuteTools:
             validate_crew_project(crew_path, tmp_path / "agents")
 
         assert "Invalid custom tool name" in str(exc_info.value)
+
+    def test_validate_rejects_empty_platform_tool_ref(self, tmp_path):
+        from crewai.project.json_loader import (
+            JSONProjectValidationError,
+            validate_crew_project,
+        )
+
+        crew_path = self._write_project(tmp_path, tool_line='"platform:"')
+
+        with pytest.raises(JSONProjectValidationError) as exc_info:
+            validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert "platform:<application>" in str(exc_info.value)
 
     def test_validate_rejects_deep_python_ref_nesting(self, tmp_path):
         from crewai.project.json_loader import validate_crew_project

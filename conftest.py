@@ -203,6 +203,38 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 
 
 @pytest.fixture(autouse=True, scope="function")
+def reset_tracing_state() -> Generator[None, Any, None]:
+    """Drop the tracing singleton and its context after each test.
+
+    `TraceCollectionListener` is a singleton, so without this three things leak
+    for the rest of the xdist worker:
+
+    - `TraceBatchManager.trace_batch_id`, which moves later trace POSTs from
+      `/tracing/ephemeral/batches` to `/tracing/batches/<id>/events` until some
+      unrelated cassette stops matching, naming neither the leak nor its source.
+    - `_listeners_setup`, which makes `setup_listeners` return early
+      (`trace_listener.py:208`) after `cleanup_event_handlers` has wiped the bus,
+      so tracing silently registers nothing and collects no events.
+    - the `_tracing_enabled` context var, which leaves tracing on for later tests
+      and re-registers `on_task_failed` alongside telemetry's — breaking
+      `test_task_failure_instrumentation`, which requires one handler per event.
+
+    All three go together: clearing the context vars is what makes dropping the
+    singleton safe, because the replacement listener then sees tracing disabled
+    and registers nothing. Dropping the singleton alone re-registers handlers and
+    breaks the telemetry test.
+    """
+    yield
+
+    from crewai.events.listeners.tracing import utils as tracing_utils
+    from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+
+    tracing_utils._tracing_enabled.set(None)
+    tracing_utils._tui_mode.set(False)
+    TraceCollectionListener._instance = None
+
+
+@pytest.fixture(autouse=True, scope="function")
 def reset_event_state() -> None:
     """Reset event system state before each test for isolation."""
     from crewai.events.base_events import reset_emission_counter
@@ -215,6 +247,9 @@ def reset_event_state() -> None:
     reset_emission_counter()
     _event_id_stack.set(())
     _event_context_config.set(EventContextConfig())
+
+
+_ENV_RESTORED_AFTER_EACH_TEST = ("CREWAI_DISABLE_TELEMETRY", "OTEL_SDK_DISABLED")
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -240,14 +275,21 @@ def setup_test_environment() -> Generator[None, Any, None]:
 
         os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
         os.environ["CREWAI_TESTING"] = "true"
+        # Restore rather than pop: `.env.test` sets these once at import, so popping
+        # them after the first test switched telemetry on for the rest of the run
+        # and the suite sent real spans, from laptops and from CI.
+        restored = {key: os.environ.get(key) for key in _ENV_RESTORED_AFTER_EACH_TEST}
 
         try:
             yield
         finally:
             os.environ.pop("CREWAI_TESTING", "true")
             os.environ.pop("CREWAI_STORAGE_DIR", None)
-            os.environ.pop("CREWAI_DISABLE_TELEMETRY", "true")
-            os.environ.pop("OTEL_SDK_DISABLED", "true")
+            for key, value in restored.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
             os.environ.pop("OPENAI_BASE_URL", "https://api.openai.com/v1")
             os.environ.pop("OPENAI_API_BASE", "https://api.openai.com/v1")
 

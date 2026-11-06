@@ -10,7 +10,14 @@ from typing import Any, Literal, cast
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import (
+    BaseLLM,
+    LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -32,6 +39,22 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+
+def _resolve_api_key(api_key: str | None) -> str | None:
+    """Pick ``api_key``, then ``GOOGLE_API_KEY``, then ``GEMINI_API_KEY``.
+
+    The placeholder is skipped so a leftover one cannot hide a real key further
+    down. It is returned only when nothing real is set, so ``_initialize_client``
+    can report it instead of letting the SDK read it from the environment.
+    """
+    candidates = [
+        key
+        for key in (api_key, os.getenv("GOOGLE_API_KEY"), os.getenv("GEMINI_API_KEY"))
+        if key
+    ]
+    real = [key for key in candidates if _without_placeholder(key)]
+    return next(iter(real or candidates), None)
 
 
 class GeminiCompletion(BaseLLM):
@@ -79,11 +102,7 @@ class GeminiCompletion(BaseLLM):
             seqs = [seqs]
         data["stop"] = seqs
 
-        data["api_key"] = (
-            data.get("api_key")
-            or os.getenv("GOOGLE_API_KEY")
-            or os.getenv("GEMINI_API_KEY")
-        )
+        data["api_key"] = _resolve_api_key(data.get("api_key"))
         data["project"] = data.get("project") or os.getenv("GOOGLE_CLOUD_PROJECT")
         data["location"] = (
             data.get("location") or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
@@ -129,10 +148,7 @@ class GeminiCompletion(BaseLLM):
         if self._client is None:
             # Re-read env vars so a deferred build can pick up credentials
             # that weren't set at instantiation time.
-            if not self.api_key:
-                self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
-                    "GEMINI_API_KEY"
-                )
+            self.api_key = _resolve_api_key(self.api_key)
             if not self.project:
                 self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
             self._client = self._initialize_client(self.use_vertexai)
@@ -141,6 +157,65 @@ class GeminiCompletion(BaseLLM):
     def _get_async_client(self) -> Any:
         """Gemini uses a single client for both sync and async calls."""
         return self._get_sync_client()
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Gemini's Count Tokens API."""
+        formatted_content, system_instruction = self._format_messages_for_gemini(
+            messages
+        )
+        generation_config = self._prepare_generation_config(
+            system_instruction, tools, response_model or self.response_format
+        )
+        config_data = generation_config.model_dump(exclude_none=True)
+        client = self._get_sync_client()
+        if not getattr(client, "vertexai", False):
+            unsupported_context = [
+                name
+                for name, value in (
+                    ("system instructions", config_data.get("system_instruction")),
+                    ("tools", config_data.get("tools")),
+                    ("structured output", response_model or self.response_format),
+                )
+                if value is not None
+            ]
+            if unsupported_context:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            try:
+                response = client.models.count_tokens(
+                    model=self.model,
+                    contents=formatted_content,
+                )
+            except Exception:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            return int(response.total_tokens)
+
+        count_config_params: dict[str, Any] = {
+            "system_instruction": config_data.pop("system_instruction", None),
+            "tools": config_data.pop("tools", None),
+        }
+        generation_config_data = {
+            key: value
+            for key, value in config_data.items()
+            if key in types.GenerationConfig.model_fields
+        }
+        count_config_params["generation_config"] = types.GenerationConfig(
+            **generation_config_data
+        )
+        count_config = types.CountTokensConfig(**count_config_params)
+        try:
+            response = client.models.count_tokens(
+                model=self.model,
+                contents=formatted_content,
+                config=count_config,
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response.total_tokens)
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Gemini/Vertex-specific fields."""
@@ -186,7 +261,7 @@ class GeminiCompletion(BaseLLM):
         if self.client_params:
             client_params.update(self.client_params)
 
-        has_api_key = bool(self.api_key)
+        has_api_key = bool(_without_placeholder(self.api_key))
         has_project = bool(self.project)
 
         if has_api_key and has_project:
@@ -225,17 +300,25 @@ class GeminiCompletion(BaseLLM):
             client_params.pop("location", None)
 
         else:
+            missing_key = MissingAPIKeyError(
+                "GEMINI_API_KEY",
+                self.model,
+                alternative="For Vertex AI with Application Default Credentials "
+                "instead, set GOOGLE_CLOUD_PROJECT and run "
+                "`gcloud auth application-default login`.",
+            )
+            if self.api_key:
+                # Only the placeholder gets here; the SDK would read it from the
+                # environment again and fail later at the API.
+                raise missing_key
             try:
                 return genai.Client(**client_params)
-            except Exception as e:
-                raise ValueError(
-                    "Authentication required. Provide one of:\n"
-                    "  1. API key via GOOGLE_API_KEY or GEMINI_API_KEY environment variable\n"
-                    "     (use_vertexai=True is optional for Vertex AI with API key)\n"
-                    "  2. For Vertex AI with ADC: Set GOOGLE_CLOUD_PROJECT and run:\n"
-                    "     gcloud auth application-default login\n"
-                    "  3. Pass api_key parameter directly to LLM constructor\n"
-                ) from e
+            except ValueError as e:
+                # The SDK has no dedicated error type for a missing key. Any other
+                # ValueError (e.g. invalid http_options) is not one, so keep it.
+                if not str(e).startswith("No API key was provided"):
+                    raise
+                raise missing_key from e
         return genai.Client(**client_params)
 
     def _get_client_params(self) -> dict[str, Any]:
@@ -313,10 +396,7 @@ class GeminiCompletion(BaseLLM):
 
                 messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-                if not self._invoke_before_llm_call_hooks(
-                    messages_for_hooks, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
 
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
@@ -341,6 +421,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -397,6 +480,10 @@ class GeminiCompletion(BaseLLM):
                     self._format_messages_for_gemini(messages)
                 )
 
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
+
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
                 )
@@ -420,6 +507,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -554,12 +644,19 @@ class GeminiCompletion(BaseLLM):
         - System messages are separate system_instruction
         - Content is organized as Content objects with Parts
         - Roles are 'user' and 'model' (not 'assistant')
+        - History may not end on a model turn; a "Please continue." user turn
+          is appended when it does
 
         Args:
             messages: Input messages
 
         Returns:
             Tuple of (formatted_contents, system_instruction)
+
+        Raises:
+            ValueError: If the history ends on a model turn with an unresolved
+                function call, which requires a function response rather than a
+                continuation prompt.
         """
         base_formatted = super()._format_messages(messages)
 
@@ -582,6 +679,14 @@ class GeminiCompletion(BaseLLM):
                                 types.Part.from_bytes(
                                     data=base64.b64decode(inline["data"]),
                                     mime_type=inline["mimeType"],
+                                )
+                            )
+                        elif "fileData" in item:
+                            file_data = item["fileData"]
+                            parts.append(
+                                types.Part.from_uri(
+                                    file_uri=file_data["fileUri"],
+                                    mime_type=file_data["mimeType"],
                                 )
                             )
                     else:
@@ -671,6 +776,23 @@ class GeminiCompletion(BaseLLM):
 
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
+
+        if contents and contents[-1].role == "model":
+            # Gemini's generateContent API rejects a request whose history ends
+            # on a model turn (agent loops can produce this, e.g. after
+            # max-iteration handling or a guardrail retry).
+            last_parts = contents[-1].parts or []
+            if any(part.function_call for part in last_parts):
+                raise ValueError(
+                    "Gemini message history ends on an unresolved function call "
+                    "-- a function response must be provided before calling the "
+                    "model again."
+                )
+            contents.append(
+                types.Content(
+                    role="user", parts=[types.Part.from_text(text="Please continue.")]
+                )
+            )
 
         return contents, system_instruction
 
@@ -1342,39 +1464,17 @@ class GeminiCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            GEMINI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        context_windows = {
-            "gemini-3-pro-preview": 1048576,  # 1M tokens
-            "gemini-2.0-flash": 1048576,  # 1M tokens
-            "gemini-2.0-flash-thinking": 32768,
-            "gemini-2.0-flash-lite": 1048576,
-            "gemini-2.5-flash": 1048576,
-            "gemini-2.5-pro": 1048576,
-            "gemini-1.5-pro": 2097152,  # 2M tokens
-            "gemini-1.5-flash": 1048576,
-            "gemini-1.5-flash-8b": 1048576,
-            "gemini-1.0-pro": 32768,
-            "gemma-3-1b": 32000,
-            "gemma-3-4b": 128000,
-            "gemma-3-12b": 128000,
-            "gemma-3-27b": 128000,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
+        return resolve_context_window_size(
+            self.model,
+            GEMINI_CONTEXT_WINDOWS,
+            default=1_048_576,
+            configured=self.context_window_size,
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Gemini caps generation via ``max_output_tokens``."""

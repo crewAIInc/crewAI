@@ -110,7 +110,11 @@ class RecallFlow(Flow[RecallState]):
                 raw = [
                     (r, s)
                     for r, s in raw
-                    if not r.private or r.source == self.state.source
+                    # Match the shallow path: a private record with source=None
+                    # must not leak to default (source=None) callers via
+                    # None == None.
+                    if not r.private
+                    or (self.state.source is not None and r.source == self.state.source)
                 ]
             return scope, raw
 
@@ -296,6 +300,8 @@ class RecallFlow(Flow[RecallState]):
 
         Decrements the exploration budget so the loop terminates.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         self.state.exploration_budget -= 1
 
         enhanced = []
@@ -321,6 +327,8 @@ class RecallFlow(Flow[RecallState]):
                         "results": finding["results"],
                     }
                 )
+            except HookAborted:
+                raise
             except Exception:
                 enhanced.append(
                     {

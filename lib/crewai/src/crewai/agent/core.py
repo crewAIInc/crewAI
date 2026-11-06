@@ -10,6 +10,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+from threading import Lock
 import time
 from typing import (
     TYPE_CHECKING,
@@ -21,6 +22,11 @@ from typing import (
 )
 import warnings
 
+from crewai_core.platform_apps import (
+    PlatformAppsUnavailableError,
+    UnresolvedPlatformAppsWarning,
+)
+from crewai_core.printer import set_suppress_console_output
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -51,8 +57,8 @@ from crewai.agents.agent_builder.base_agent import (
     _serialize_llm_ref,
     _validate_llm_ref,
 )
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -73,10 +79,12 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
 )
 from crewai.events.types.skill_events import SkillUsedEvent
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.execution import begin_execution, end_execution
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
+from crewai.llm_overlay import active as overlay_active
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -84,6 +92,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
+from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
@@ -100,6 +109,7 @@ from crewai.utilities.agent_utils import (
     parse_tools,
     render_text_description_and_args,
 )
+from crewai.utilities.config import process_config
 from crewai.utilities.constants import (
     CREWAI_TRAINED_AGENTS_FILE_ENV,
     TRAINED_AGENTS_DATA_FILE,
@@ -110,7 +120,8 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_llm, overlay_llm_for
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -129,6 +140,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.flow.flow import Flow
     from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
@@ -138,37 +150,37 @@ if TYPE_CHECKING:
 
 # Deliberate stops, not transient errors: never swallowed into the
 # max_retry_limit loop.
-_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
+_passthrough_exceptions: tuple[type[Exception], ...] = (
+    ToolExecutionFailedError,
+    HookAborted,
+)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
-    "CrewAgentExecutor": CrewAgentExecutor,
     "AgentExecutor": AgentExecutor,
 }
+_conversation_flow_lock = Lock()
 
 
 def _is_resuming_agent_executor(
-    executor: CrewAgentExecutor | AgentExecutor | None,
+    executor: AgentExecutor | None,
 ) -> TypeIs[AgentExecutor]:
     """Type guard: True when the executor is resuming from a checkpoint."""
     return isinstance(executor, AgentExecutor) and executor._resuming
 
 
 def _validate_executor_class(value: Any) -> Any:
+    if getattr(value, "__name__", None) == "CrewAgentExecutor" or (
+        isinstance(value, str) and value == "CrewAgentExecutor"
+    ):
+        raise ValueError(
+            "CrewAgentExecutor has been removed. Use "
+            "crewai.agents.agent_executor.AgentExecutor."
+        )
     if isinstance(value, str):
         cls = _EXECUTOR_CLASS_MAP.get(value)
         if cls is None:
             raise ValueError(f"Unknown executor class: {value}")
-        value = cls
-    import warnings
-
-    if value is CrewAgentExecutor:
-        warnings.warn(
-            "CrewAgentExecutor is deprecated and will be removed in a future release. "
-            "Agents inside Crews now use AgentExecutor by default. "
-            "Switch to crewai.experimental.AgentExecutor.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        return cls
     return value
 
 
@@ -215,7 +227,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
+            agent_executor: The AgentExecutor running this agent.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -238,8 +250,21 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
+    # The construction-time ``llm_overlay`` read happened; see post_init_setup.
+    _overlay_read: bool = PrivateAttr(default=False)
+    # The llm the agent was declared with, resolved before any overlay read: what
+    # an overlay swap is configured like, and what a role outside it runs on.
+    _declared_llm: BaseLLM | None = PrivateAttr(default=None)
+    # The instance the overlay built and put on ``llm``; any other ``llm`` found
+    # there later was assigned by the caller and is the declared one from then on.
+    _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _conversation_flow: Any = PrivateAttr(default=None)
+    conversational: bool = Field(
+        default=False,
+        description="Experimental: enable standalone conversations through a Flow session.",
+    )
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time in seconds for an agent to execute a task",
@@ -283,6 +308,10 @@ class Agent(BaseAgent):
     respect_context_window: bool = Field(
         default=True,
         description="Keep messages under the context window size by summarizing content.",
+    )
+    use_better_compaction: bool = Field(
+        default=True,
+        description="Defer oversized tool results to temporary artifacts for bounded reads.",
     )
     max_retry_limit: int = Field(
         default=2,
@@ -371,30 +400,49 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+    agent_executor: AgentExecutor | None = Field(
+        default=None,
+        description="Executor running this agent.",
     )
     executor_class: Annotated[
-        type[CrewAgentExecutor] | type[AgentExecutor],
+        type[AgentExecutor],
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
         default=AgentExecutor,
-        description="Class to use for the agent executor. Defaults to AgentExecutor, can optionally use CrewAgentExecutor.",
+        description="Class to use for the agent executor. CrewAgentExecutor has been removed.",
     )
 
     @model_validator(mode="before")
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
         """Merge repository agent config with provided values before validation."""
-        if v is not None and (from_repository := v.get("from_repository")):
+        if v is None:
+            return v
+        # Flatten ``config`` first so a ``from_repository`` set in agents.yaml is
+        # seen here, and its config fields override the repository's values.
+        # Copy so the caller's mapping keeps its ``config`` key.
+        v = process_config(dict(v), cls)
+        if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
         return v
 
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         """Initialize LLM, executor, code tools, and skills after model creation."""
-        self.llm = create_llm(self.llm)
+        if self._overlay_read:
+            # A re-validation of an existing instance — the event bus registers
+            # an agent in its RuntimeState the first time it emits, which runs
+            # this validator again on the same object. The overlay was read when
+            # the agent was built (and again by interpolate_inputs if its role
+            # changed); reading it once more here would replace an llm the agent
+            # already runs on, and drop state set on it such as ``stream``.
+            self.llm = create_llm(self.llm)
+        else:
+            declared = create_llm(self.llm)
+            self._declared_llm = declared
+            self.llm = self._resolved_overlay(declared)
+            self._overlay_read = True
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
@@ -439,6 +487,85 @@ class Agent(BaseAgent):
     def planning_enabled(self) -> bool:
         """Check if planning is enabled for this agent."""
         return self.planning_config is not None or self.planning
+
+    def _llm_for_copy(self) -> Any:
+        """Inside an ``llm_overlay`` block a copy is built from the declared llm.
+
+        ``Crew.copy`` — ``kickoff_for_each``, ``train``, ``test`` — copies every
+        agent before its input is interpolated. Built from the llm this agent
+        currently runs on, a copy would record a model the overlay mapped as its
+        declared one and never revert on a miss; built from the declared llm, its
+        construction resolves the overlay for its own role like any agent built
+        inside the block. Outside any block a copy keeps the llm this agent runs
+        on.
+        """
+        if overlay_active.get() is not None:
+            declared = self._declared_now()
+            if declared is not None:
+                return declared
+        return self.llm
+
+    def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
+        """Interpolate inputs, then re-resolve the ``llm_overlay`` if the role changed.
+
+        A role declared as a template (``"Researcher for {repo}"``) is not a
+        key of an overlay written for the text a trace records until a kickoff
+        fills the placeholders in, and that happens after ``post_init_setup``
+        resolved ``llm``. So when interpolation rewrites the role inside an
+        active overlay, the overlay is looked up again with the new text: a
+        key sets ``llm`` to the mapped model, built with the declared llm's
+        configuration (``create_llm_like``); a miss puts the declared ``llm``
+        instance back, so a ``Crew`` reused for another input never keeps a
+        previous role's model. Outside any block the rewrite changes nothing.
+        A role the rewrite did not change is not looked up again —
+        construction's resolution stands, and its ``llm`` instance is kept.
+
+        The ``llm`` the agent ends up on inherits the streaming flag of the
+        one it replaces: ``Crew.kickoff(stream=True)`` sets ``agent.llm.stream``
+        before it interpolates. Two things resolved from ``llm`` before kickoff
+        do NOT follow the swap — a task's string guardrail LLM (built with the
+        Task) and the crew_creation telemetry span; a crew ``Memory`` built at
+        kickoff does.
+
+        The executor sees the new ``llm`` because it binds ``self.llm`` when a
+        task runs, after kickoff has interpolated: ``execute_task`` ->
+        ``_finalize_task_prompt`` -> ``prepare_tools`` ->
+        ``create_agent_executor``, which assigns ``self.llm`` to the executor
+        on every task (``_update_executor_parameters`` once it exists).
+        """
+        role_before = self.role
+        super().interpolate_inputs(inputs)
+        if self.role == role_before or overlay_active.get() is None:
+            return
+        previous = self.llm
+        self.llm = self._resolved_overlay(self._declared_now())
+        if isinstance(previous, BaseLLM) and isinstance(self.llm, BaseLLM):
+            self.llm.stream = previous.stream
+
+    def _resolved_overlay(self, declared: BaseLLM | None) -> BaseLLM | None:
+        """The llm ``llm_overlay`` puts this agent on, given its ``declared`` one.
+
+        The role's key wins over the model keys; with neither, ``declared``.
+        What the overlay built is remembered, so a later miss can tell it from
+        an llm the caller assigned.
+        """
+        resolved = overlay_llm_for(self.role, declared)
+        if resolved is not declared:
+            self._overlay_built = resolved
+        return resolved
+
+    def _declared_now(self) -> BaseLLM | None:
+        """The llm this agent is declared with, as of now.
+
+        Construction's ``create_llm(self.llm)`` unless the caller assigned
+        another ``llm`` since: whatever is on ``llm`` that the overlay did not
+        put there is the caller's, and a miss reverts to it. ``llm`` is a plain
+        field, so what the caller assigned may be a model string or ``None``;
+        it is resolved the way construction resolves it.
+        """
+        if self.llm is None or self.llm is not self._overlay_built:
+            self._declared_llm = create_llm(self.llm)
+        return self._declared_llm
 
     def _setup_agent_executor(self) -> None:
         """Initialize the agent's tools handler and optional tool cache.
@@ -710,6 +837,9 @@ class Agent(BaseAgent):
                     error=str(e),
                 ),
             )
+            # a deny aborts the task; any other failure degrades to no memory
+            if isinstance(e, HookAborted):
+                raise
 
         return task_prompt
 
@@ -1149,11 +1279,7 @@ class Agent(BaseAgent):
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
-        """Create an agent executor for the agent.
-
-        Returns:
-            An instance of the CrewAgentExecutor class.
-        """
+        """Create the AgentExecutor for the agent."""
         configured_tools = tools if tools is not None else self.tools or []
         raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)
         parsed_tools = parse_tools(raw_tools)
@@ -1198,6 +1324,8 @@ class Agent(BaseAgent):
                 if task
                 else None,
             )
+            if isinstance(self.agent_executor, AgentExecutor):
+                self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def _update_executor_parameters(
         self,
@@ -1231,10 +1359,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        if isinstance(self.agent_executor, AgentExecutor):
-            self.agent_executor.stop_words = stop_words
-        else:
-            self.agent_executor.stop = stop_words
+        self.agent_executor.stop_words = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -1245,21 +1370,52 @@ class Agent(BaseAgent):
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Resolve platform app selectors into tools.
+
+        Args:
+            apps: App or ``app/action`` selectors to resolve.
+
+        Returns:
+            The resolved tools, or an empty list when none resolve or resolution
+            fails. A non-empty ``apps`` that resolves to no tools emits an
+            ``UnresolvedPlatformAppsWarning`` naming the agent, its apps, and
+            the apps CrewAI AMP said it could not resolve.
+        """
+        platform_tools: list[BaseTool] = []
+        cause = ""
+        missing_apps: list[str] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
-            return CrewaiPlatformTools(apps=apps)
+            platform_tools = CrewaiPlatformTools(apps=apps)
+        except PlatformAppsUnavailableError as e:
+            self._logger.log("error", f"Error getting platform tools: {e!s}")
+            missing_apps = e.missing_apps
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
-            return []
+            cause = f" Cause: {e!s}"
+
+        if apps and not platform_tools:
+            # Logger.log above is verbose-gated; without a warning a bad `apps`
+            # entry only shows up later as a task the agent couldn't do.
+            warnings.warn(
+                UnresolvedPlatformAppsWarning(
+                    self.role, [str(app) for app in apps], missing_apps, cause
+                ),
+                stacklevel=2,
+            )
+
+        return platform_tools
 
     def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Convert MCP server references/configs to CrewAI tools.
@@ -1437,6 +1593,18 @@ class Agent(BaseAgent):
                 ),
             )
             return rewritten_query
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the fallback to no query is skipped.
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    error=str(e),
+                    from_task=task,
+                    from_agent=self,
+                ),
+            )
+            raise
         except Exception as e:
             crewai_event_bus.emit(
                 self,
@@ -1533,6 +1701,7 @@ class Agent(BaseAgent):
                 BaseLLM | None, self.function_calling_llm
             )
             executor.respect_context_window = self.respect_context_window
+            executor.use_better_compaction = self.use_better_compaction
             executor.request_within_rpm_limit = rpm_limit_fn
             executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
@@ -1550,6 +1719,7 @@ class Agent(BaseAgent):
                 step_callback=self.step_callback,
                 function_calling_llm=self.function_calling_llm,
                 respect_context_window=self.respect_context_window,
+                use_better_compaction=self.use_better_compaction,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
                 response_model=response_format,
@@ -1572,7 +1742,7 @@ class Agent(BaseAgent):
             # assistant's own replies were the user's.
             request_index = _request_index(carried)
             request = carried[request_index] if carried else None
-            formatted_messages = str(request.get("content") or "") if request else ""
+            formatted_messages = message_content_text(request) if request else ""
             # Split, rather than one history list: the promoted request keeps
             # its position in the conversation. Sending everything before it
             # would hoist a trailing tool pair above the question it answers,
@@ -1581,7 +1751,7 @@ class Agent(BaseAgent):
                 history = carried[:request_index]
                 trailing = carried[request_index + 1 :]
             recall_text = "\n".join(
-                str(msg.get("content", "")) for msg in carried if msg.get("content")
+                message_content_text(msg) for msg in carried if msg.get("content")
             )
             # Only the request's attachments go on the current turn; a history
             # message keeps its own, so unioning them all would send prior
@@ -1633,6 +1803,9 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+                # a deny aborts the kickoff; any other failure degrades to no memory
+                if isinstance(e, HookAborted):
+                    raise
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1647,6 +1820,60 @@ class Agent(BaseAgent):
             inputs["trailing"] = trailing
 
         return executor, inputs, agent_info, parsed_tools
+
+    def __copy__(self) -> Self:
+        copied = super().__copy__()
+        copied._conversation_flow = None
+        return copied
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        # Sessions contain locks and a loader bound to their original Agent.
+        return BaseModel.__deepcopy__(self.__copy__(), memo)
+
+    def as_flow(self) -> Flow[Any]:
+        """Return this Agent's experimental conversational Flow session.
+
+        Requires ``conversational=True``. Reuse the returned Flow for multiple
+        turns, or configure its persistence to restore sessions across processes.
+        Direct ``kickoff`` calls remain independent executions.
+        """
+        if not self.conversational:
+            raise ValueError("Agent conversations require conversational=True")
+        with _conversation_flow_lock:
+            if self._conversation_flow is None:
+                from crewai.agent.conversation import agent_flow
+
+                self._conversation_flow = agent_flow(lambda: self, name=self.role)()
+        return cast("Flow[Any]", self._conversation_flow)
+
+    def handle_turn(self, message: str, **kwargs: Any) -> Any:
+        """Run a turn with the history of this experimental Agent conversation.
+
+        ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
+        persistence restore options. One Agent owns one session; use a new Agent
+        for another session. Overlapping turns on one Agent are rejected.
+        """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span("standalone_agent:handle_turn")
+        context = contextvars.copy_context()
+        if not self.verbose:
+            context.run(set_suppress_console_output, True)
+        return context.run(flow.handle_turn, message, **kwargs)
+
+    def chat(self, *, tui: bool = False, **kwargs: Any) -> None:
+        """Start an experimental conversation using the same options as Flow.chat.
+
+        Requires ``conversational=True``. Use ``tui=True`` for the terminal UI,
+        or omit it for a plain REPL. Other options are forwarded to Flow.chat.
+        """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span(
+            "standalone_agent:chat:tui" if tui else "standalone_agent:chat:repl"
+        )
+        context = contextvars.copy_context()
+        if not self.verbose and not tui:
+            context.run(set_suppress_console_output, True)
+        context.run(flow.chat, tui=tui, **kwargs)
 
     def kickoff(
         self,
@@ -1700,39 +1927,43 @@ class Agent(BaseAgent):
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
-        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, input_files
-        )
-
+        execution_token = begin_execution()
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
+            executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+                messages, response_format, input_files
+            )
+
+            try:
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
+
+                usage_baseline = self._current_usage_summary()
+                output = self._execute_and_build_output(
+                    executor, inputs, response_format, usage_baseline
                 )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+                return self._finalize_kickoff(
+                    output,
+                    executor,
+                    inputs,
+                    response_format,
+                    messages,
+                    agent_info,
+                    usage_baseline,
+                )
 
-            usage_baseline = self._current_usage_summary()
-            output = self._execute_and_build_output(
-                executor, inputs, response_format, usage_baseline
-            )
-            return self._finalize_kickoff(
-                output,
-                executor,
-                inputs,
-                response_format,
-                messages,
-                agent_info,
-                usage_baseline,
-            )
-
-        except Exception as e:
-            self._emit_kickoff_error(agent_info, e)
+            except Exception as e:
+                self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     def _finalize_kickoff(
         self,
@@ -1804,7 +2035,7 @@ class Agent(BaseAgent):
             else:
                 input_str = (
                     "\n".join(
-                        str(msg.get("content", ""))
+                        message_content_text(msg)
                         for msg in messages
                         if msg.get("content")
                     )
@@ -1814,6 +2045,8 @@ class Agent(BaseAgent):
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
+        except HookAborted:
+            raise
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
@@ -2072,39 +2305,43 @@ class Agent(BaseAgent):
                 input_files=input_files,
             )
 
-        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, input_files
-        )
-
+        execution_token = begin_execution()
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
+            executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+                messages, response_format, input_files
+            )
+
+            try:
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
+
+                usage_baseline = self._current_usage_summary()
+                output = await self._execute_and_build_output_async(
+                    executor, inputs, response_format, usage_baseline
                 )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+                return self._finalize_kickoff(
+                    output,
+                    executor,
+                    inputs,
+                    response_format,
+                    messages,
+                    agent_info,
+                    usage_baseline,
+                )
 
-            usage_baseline = self._current_usage_summary()
-            output = await self._execute_and_build_output_async(
-                executor, inputs, response_format, usage_baseline
-            )
-            return self._finalize_kickoff(
-                output,
-                executor,
-                inputs,
-                response_format,
-                messages,
-                agent_info,
-                usage_baseline,
-            )
-
-        except Exception as e:
-            self._emit_kickoff_error(agent_info, e)
+            except Exception as e:
+                self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     async def akickoff(
         self,

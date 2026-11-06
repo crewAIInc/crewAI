@@ -63,7 +63,7 @@ class JsonProvider(BaseProvider):
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(data)
         return str(file_path)
 
@@ -91,7 +91,7 @@ class JsonProvider(BaseProvider):
         file_path = _build_path(location, branch, parent_id)
         await aiofiles.os.makedirs(str(file_path.parent), exist_ok=True)
 
-        async with aiofiles.open(file_path, "w") as f:
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
             await f.write(data)
         return str(file_path)
 
@@ -99,7 +99,7 @@ class JsonProvider(BaseProvider):
         """Remove oldest checkpoint files beyond *max_keep* on a branch."""
         _safe_branch(location, branch)
         branch_dir = os.path.join(location, branch)
-        pattern = os.path.join(branch_dir, "*.json")
+        pattern = os.path.join(glob.escape(branch_dir), "*.json")
         files = sorted(glob.glob(pattern), key=os.path.getmtime)
         removed = 0
         for path in files if max_keep == 0 else files[:-max_keep]:
@@ -129,7 +129,7 @@ class JsonProvider(BaseProvider):
         Returns:
             The raw JSON string.
         """
-        return Path(location).read_text()
+        return Path(location).read_text(encoding="utf-8")
 
     async def afrom_checkpoint(self, location: str) -> str:
         """Read a JSON checkpoint file asynchronously.
@@ -140,7 +140,7 @@ class JsonProvider(BaseProvider):
         Returns:
             The raw JSON string.
         """
-        async with aiofiles.open(location) as f:
+        async with aiofiles.open(location, encoding="utf-8") as f:
             return await f.read()
 
 

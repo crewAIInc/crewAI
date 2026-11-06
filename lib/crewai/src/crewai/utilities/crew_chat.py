@@ -3,7 +3,6 @@
 import contextvars
 import json
 from pathlib import Path
-import platform
 import re
 import sys
 import threading
@@ -12,12 +11,14 @@ from typing import Any, Final, Literal
 
 import click
 from crewai_core.printer import PRINTER
+from crewai_core.project import configured_project_definition
 from packaging import version
 import tomli
 
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
+from crewai.project.crew_loader import load_crew
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.project_utils import read_toml
@@ -175,11 +176,11 @@ def create_tool_function(crew: Crew, messages: list[LLMMessage]) -> Any:
 
 def flush_input() -> None:
     """Flush any pending input from the user."""
-    if platform.system() == "Windows":
+    if sys.platform == "win32":
         import msvcrt
 
-        while msvcrt.kbhit():  # type: ignore[attr-defined]
-            msvcrt.getch()  # type: ignore[attr-defined]
+        while msvcrt.kbhit():
+            msvcrt.getch()
     else:
         import termios
 
@@ -310,7 +311,11 @@ def run_crew_tool(crew: Crew, messages: list[LLMMessage], **kwargs: Any) -> str:
 
 
 def load_crew_and_name() -> tuple[Crew, str]:
-    """Load the crew by importing the crew class from the user's project.
+    """Load the crew from the user's project.
+
+    A JSON crew project (``[tool.crewai].definition`` in ``pyproject.toml``) is
+    loaded from that definition, as ``crewai run`` does; otherwise the crew
+    class is imported from ``src/<project>/crew.py``.
 
     Returns:
         A tuple containing the Crew instance and the name of the crew.
@@ -328,6 +333,12 @@ def load_crew_and_name() -> tuple[Crew, str]:
     folder_name = project_name
 
     crew_class_name = project_name.replace("_", " ").title().replace(" ", "")
+
+    if definition := configured_project_definition(
+        "crew", pyproject_data=pyproject_data, project_root=cwd
+    ):
+        crew, _ = load_crew(definition)
+        return crew, crew_class_name
 
     src_path = cwd / "src"
     if str(src_path) not in sys.path:
@@ -417,6 +428,8 @@ def generate_input_description_with_ai(
     Returns:
         A concise description of the input.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -460,6 +473,8 @@ def generate_input_description_with_ai(
     )
     try:
         response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except HookAborted:
+        raise
     except Exception as exc:
         click.secho(
             f"Warning: failed to generate input description for '{input_name}' "
@@ -480,6 +495,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     Returns:
         A concise description of the crew's purpose (15 words or less).
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -514,6 +531,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     )
     try:
         response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except HookAborted:
+        raise
     except Exception as exc:
         click.secho(
             f"Warning: failed to generate crew description ({exc}); using default.",

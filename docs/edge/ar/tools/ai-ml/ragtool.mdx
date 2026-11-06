@@ -460,7 +460,7 @@ rag_tool = RagTool(config=config, summarize=True)
 
     **خيارات الإعداد:**
     - `model_name` (str): معرّف نموذج HuggingFace. القيمة الافتراضية: `hkunlp/instructor-base`. الخيارات: `hkunlp/instructor-xl`، `hkunlp/instructor-large`، `hkunlp/instructor-base`
-    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`، `xpu`
     - `instruction` (str): بادئة التعليمات للتضمينات
 
     **متغيرات البيئة:**
@@ -485,7 +485,7 @@ rag_tool = RagTool(config=config, summarize=True)
 
     **خيارات الإعداد:**
     - `model_name` (str): اسم نموذج Sentence Transformers. القيمة الافتراضية: `all-MiniLM-L6-v2`. الخيارات: `all-mpnet-base-v2`، `all-MiniLM-L6-v2`، `paraphrase-multilingual-MiniLM-L12-v2`
-    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`، `xpu`
     - `normalize_embeddings` (bool): ما إذا كان يتم تطبيع التضمينات. القيمة الافتراضية: `False`
 
     **متغيرات البيئة:**
@@ -530,7 +530,7 @@ rag_tool = RagTool(config=config, summarize=True)
     **خيارات الإعداد:**
     - `model_name` (str): بنية نموذج OpenCLIP. القيمة الافتراضية: `ViT-B-32`. الخيارات: `ViT-B-32`، `ViT-B-16`، `ViT-L-14`
     - `checkpoint` (str): اسم نقطة التحقق المُدرّبة مسبقاً. القيمة الافتراضية: `laion2b_s34b_b79k`. الخيارات: `laion2b_s34b_b79k`، `laion400m_e32`، `openai`
-    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`، `xpu`
 
     **متغيرات البيئة:**
     - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`

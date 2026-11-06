@@ -202,13 +202,17 @@ A publicação lê `name`, `description` e `metadata.version` do frontmatter do 
 
 ### Instalar
 
-Instale uma skill publicada pela sua referência `@org/name`:
+Instale uma skill publicada pela sua referência `@org-uuid/name`:
 
 ```shell Terminal
-crewai skill install @acme/code-review
+crewai skill install @your-org-uuid/code-review
 ```
 
-Dentro de um projeto de crew, a skill é colocada em `./skills/{name}/`; fora de um projeto, vai para o cache compartilhado em `~/.crewai/skills/{org}/{name}/`.
+<Note>
+  Use o **UUID** da sua organização, não o nome — nomes de organização não são únicos, então um nome pode resolver para a organização errada e a instalação falha com um erro de "não encontrado". Execute `crewai org list` para ver o UUID (a coluna `ID`) de cada organização à qual você pertence.
+</Note>
+
+Dentro de um projeto de crew, a skill é colocada em `./skills/{name}/`; fora de um projeto, vai para o cache compartilhado em `~/.crewai/skills/{org-uuid}/{name}/`.
 
 Agentes também podem referenciar skills do registro diretamente — elas são resolvidas a partir do cache local (ou do diretório `skills/` do projeto) em tempo de execução:
 
@@ -217,9 +221,20 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review"],  # registry ref, resolved locally
+    skills=["@your-org-uuid/code-review"],  # registry ref, resolved locally
 )
 ```
+
+### Buscar
+
+Lista as skills publicadas na sua organização no AMP, opcionalmente filtradas por um termo comparado ao handle e à descrição de cada skill:
+
+```shell Terminal
+crewai skill search
+crewai skill search "code review"
+```
+
+Cada linha começa com o status da verificação de segurança da versão mais recente (`passed`, `pending` ou `failed`; só uma versão `passed` é instalada), seguido de `<handle>@<latest-version>` e da descrição. Um handle ou versão com caracteres que uma referência não pode conter aparece entre aspas. Uma linha acima das skills traz o UUID da organização atual na referência que o `skills` de um agente aceita, `@<org-uuid>/<handle>@<version>`; o `crewai skill install` aceita `@<org-uuid>/<handle>`. Defina a organização antes com `crewai org switch <org-uuid>`. Uma skill marcada com `(public)` pode pertencer a outra organização, cujo UUID a referência dela exige; a lista não o mostra.
 
 ### Listar
 

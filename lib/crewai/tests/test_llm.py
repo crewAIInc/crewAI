@@ -1,3 +1,4 @@
+import importlib.util
 import logging
 import os
 from time import sleep
@@ -11,8 +12,13 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, DEFAULT_CONTEXT_WINDOW_SIZE, LLM
+from crewai.llm import DEFAULT_CONTEXT_WINDOW_SIZE, LLM
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
@@ -78,6 +84,24 @@ def test_llm_call_with_message_list():
     result = llm.call(messages)
     assert isinstance(result, str)
     assert "Paris" in result
+
+
+def test_context_window_preflight_triggers_only_above_usable_limit():
+    """The proactive threshold preserves the 15% context-window headroom."""
+    llm = LLM(model="gpt-4o-mini")
+    messages = [{"role": "user", "content": "test"}]
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=850),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is False
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=851),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is True
 
 
 @pytest.mark.vcr()
@@ -254,6 +278,7 @@ def test_validate_call_params_no_response_format():
 @pytest.mark.parametrize(
     "model",
     [
+        "gemini/gemini-3.8-flash",
         "gemini/gemini-3-pro-preview",
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
         "gemini/gemini-2.0-flash-001",
@@ -328,19 +353,17 @@ def test_o3_mini_reasoning_effort_medium():
 
 
 def test_context_window_validation():
-    """Test that context window validation works correctly."""
+    """A published catalog limit is used as given."""
     llm = LLM(model="o3-mini")
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    with pytest.raises(ValueError) as excinfo:
-        with patch.dict(
-            "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
-            {"test-model": 500},
-            clear=True,
-        ):
-            llm = LLM(model="test-model")
-            llm.get_context_window_size()
-    assert "must be between 1024 and 2097152" in str(excinfo.value)
+    with patch.dict(
+        "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+        {"test-model": 500},
+        clear=True,
+    ):
+        llm = LLM(model="test-model", is_litellm=True)
+        assert llm.get_context_window_size() == int(500 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 @pytest.mark.parametrize(
@@ -348,15 +371,49 @@ def test_context_window_validation():
     ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
 )
 def test_gpt56_family_uses_official_context_window(model: str) -> None:
-    """GPT-5.6 Sol, Terra, Luna, and the alias share a 1.05M window."""
+    """GPT-5.6 Sol, Terra, Luna, and the alias share the catalog window."""
     llm = LLM(model=model, is_litellm=True)
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_gpt56_does_not_override_gpt54_mini_window() -> None:
-    """A more specific older prefix must keep its own window."""
+    """A more specific model id must keep its own catalog window."""
     llm = LLM(model="gpt-5.4-mini", is_litellm=True)
-    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_qualified_litellm_gpt35_keeps_the_provider_context_window() -> None:
+    openai_llm = LLM(model="openai/gpt-3.5-turbo", is_litellm=True)
+    azure_llm = LLM(model="azure/gpt-3.5-turbo", is_litellm=True)
+
+    assert openai_llm.get_context_window_size() == int(
+        16_385 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+    assert azure_llm.get_context_window_size() == int(4097 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
+    llm = LLM(model="gpt-5", is_litellm=True)
+
+    assert llm.get_context_window_size() == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    ("native_model", "litellm_model"),
+    [
+        ("openai/gpt-5", "gpt-5"),
+        ("openai/o1-pro", "o1-pro"),
+        ("anthropic/claude-sonnet-4-6", "claude-sonnet-4-6"),
+        ("google/gemini-2.5-flash", "gemini-2.5-flash"),
+    ],
+)
+def test_native_and_litellm_context_windows_match(
+    native_model: str, litellm_model: str
+) -> None:
+    native_llm = LLM(model=native_model)
+    litellm_llm = LLM(model=litellm_model, is_litellm=True)
+
+    assert native_llm.get_context_window_size() == litellm_llm.get_context_window_size()
 
 
 @pytest.mark.parametrize(
@@ -373,7 +430,7 @@ def test_gpt56_family_context_window_with_provider_prefix(model: str) -> None:
     llm = LLM(model=model, is_litellm=True)
     assert llm.model == model
     assert llm._context_window_model_name() == model.partition("/")[2]
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_unrecognized_provider_prefix_is_not_stripped() -> None:
@@ -429,6 +486,7 @@ def test_context_window_exceeded_error_handling():
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
 
+
     llm = LLM(model="gpt-4", stream=True, is_litellm=True)
     with patch("litellm.completion") as mock_completion:
         mock_completion.side_effect = ContextWindowExceededError(
@@ -442,6 +500,24 @@ def test_context_window_exceeded_error_handling():
 
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
+
+
+def test_rate_limits_are_not_treated_as_context_window_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error = RuntimeError("API throttled: too many tokens requested this minute")
+
+    assert not is_context_length_exceeded(error)
+    assert not LLMContextLengthExceededError._is_context_length_exceeded_error(error)
+
+    monkeypatch.setattr("crewai.llms.retry.time.sleep", lambda _: None)
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    with patch("litellm.completion", side_effect=error) as completion:
+        with pytest.raises(RuntimeError) as exc_info:
+            llm.call("Hello")
+
+    assert exc_info.value is error
+    assert completion.call_count == 3
 
 
 @pytest.fixture
@@ -654,6 +730,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
     assert_event_count(
         mock_emit=mock_emit,
+        expected_completed_tool_call=1,
         expected_stream_chunk=9,
         expected_completed_llm_call=0,
         expected_final_chunk_result='{"location":"New York, NY"}',
@@ -753,6 +830,67 @@ def test_litellm_non_gpt5_sends_stop_in_params():
     )
 
 
+def test_litellm_input_token_count_uses_formatted_messages_and_tools():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+    with patch("crewai.llm.litellm.token_counter", return_value=42) as token_counter:
+        assert llm.get_input_tokens_count("What is CrewAI?", tools=tools) == 42
+
+    token_counter.assert_called_once_with(
+        model="openai/gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is CrewAI?"}],
+        tools=tools,
+        tool_choice=None,
+    )
+
+
+def test_litellm_input_token_count_includes_structured_output_tool():
+    class Answer(BaseModel):
+        value: str
+
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.token_counter", return_value=42) as token_counter:
+        assert llm.get_input_tokens_count("What is CrewAI?", response_model=Answer) == 42
+
+    count_kwargs = token_counter.call_args.kwargs
+    assert count_kwargs["tools"] == [
+        {
+            "type": "function",
+            "function": {
+                "name": "Answer",
+                "description": "Correctly extracted `Answer` with all the required parameters with correct types",
+                "parameters": {
+                    "properties": {"value": {"title": "Value", "type": "string"}},
+                    "required": ["value"],
+                    "type": "object",
+                },
+            },
+        }
+    ]
+    assert count_kwargs["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "Answer"},
+    }
+
+
+def test_litellm_input_token_count_uses_character_fallback():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.token_counter", side_effect=RuntimeError):
+        assert llm.get_input_tokens_count("12345") == 2
+
+
 def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
     """
     Test that the retry logic catches LiteLLM's UnsupportedParamsError format
@@ -849,6 +987,33 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     assert formatted == original_messages
 
 
+@pytest.fixture
+def gemini_litellm_llm():
+    return LLM(model="gemini/gemini-flash-latest", is_litellm=True)
+
+
+def test_gemini_litellm_appends_user_message_when_last_is_assistant(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Hi there"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert len(formatted) == len(original_messages) + 1
+    assert formatted[-1] == {"role": "user", "content": "Please continue."}
+
+
+def test_gemini_litellm_does_not_modify_when_last_is_user(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Tell me a joke."},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert formatted == original_messages
+
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
@@ -886,7 +1051,7 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
 
     # Test anthropic/ prefix with Claude model in constants → Native SDK
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        llm2 = LLM(model="anthropic/claude-opus-4-0", is_litellm=False)
+        llm2 = LLM(model="anthropic/claude-sonnet-4-6", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "anthropic"
 
@@ -981,9 +1146,9 @@ def test_unprefixed_models_use_native_sdk():
         assert llm.is_litellm is False
         assert llm.provider == "openai"
 
-    # claude-opus-4-0 is in ANTHROPIC_MODELS → Native Anthropic SDK
+    # claude-sonnet-4-6 is in ANTHROPIC_MODELS → Native Anthropic SDK
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        llm2 = LLM(model="claude-opus-4-0", is_litellm=False)
+        llm2 = LLM(model="claude-sonnet-4-6", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "anthropic"
 
@@ -992,6 +1157,71 @@ def test_unprefixed_models_use_native_sdk():
         llm3 = LLM(model="gemini-2.5-pro", is_litellm=False)
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-opus-4-8"],
+)
+def test_current_claude_models_route_to_anthropic(model):
+    """Current Claude models are in the constants list and use the Anthropic SDK."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_claude_model_newer_than_constants_routes_to_anthropic():
+    """A Claude release we have not listed yet must not fall through to OpenAI."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model="claude-opus-6-20990101", is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_gemini_model_newer_than_constants_routes_to_gemini():
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        llm = LLM(model="gemini-9-pro-preview", is_litellm=False)
+        assert llm.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "anthropic.claude-opus-9-20990101-v1:0",
+        "us.anthropic.claude-opus-9-20990101-v1:0",
+        "eu.anthropic.claude-sonnet-9-20990101-v1:0",
+    ],
+)
+def test_unlisted_bedrock_anthropic_ids_route_to_bedrock(model):
+    """Bedrock names Anthropic models "anthropic.claude-*"; that is not the direct API."""
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    ):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "bedrock"
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_provider"),
+    [
+        # Bedrock's pattern is `"." in model` and Azure's covers every OpenAI
+        # prefix, so these pin that pattern inference did not steal them.
+        ("gpt-3.5-turbo", "openai"),
+        ("gpt-4.1", "openai"),
+        ("gpt-4o", "openai"),
+        ("gpt-4o-mini", "openai"),
+        ("o1", "openai"),
+        ("some-unknown-model", "openai"),
+    ],
+)
+def test_non_claude_models_keep_their_inferred_provider(model, expected_provider):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == expected_provider
 
 
 def test_explicit_provider_kwarg_takes_priority():
@@ -1009,6 +1239,44 @@ def test_explicit_provider_kwarg_takes_priority():
         assert llm2.provider == "openai"
 
 
+def test_resolve_route_decides_what_new_constructs():
+    """`LLM._resolve_route` is `__new__`'s routing, callable without building anything."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    route = LLM._resolve_route("openai/gpt-4o", {})
+    assert (route.provider, route.model, route.native_class, route.custom_openai) == (
+        "openai",
+        "gpt-4o",
+        OpenAICompletion,
+        False,
+    )
+    assert (
+        LLM._resolve_route("claude/claude-haiku-4-5", {}).native_class
+        is AnthropicCompletion
+    )
+    assert LLM._resolve_route("claude/claude-haiku-4-5", {}).provider == "anthropic"
+
+    # An unknown openai/ model is LiteLLM's — unless a custom endpoint is configured.
+    plain = LLM._resolve_route("openai/not-a-known-model", {})
+    assert (plain.provider, plain.native_class) == ("openai", None)
+    custom = LLM._resolve_route(
+        "openai/not-a-known-model", {"base_url": "http://localhost:1/v1"}
+    )
+    assert (custom.native_class, custom.custom_openai) == (OpenAICompletion, True)
+
+    litellm_route = LLM._resolve_route("groq/llama-3.1-8b-instant", {})
+    assert (
+        litellm_route.provider,
+        litellm_route.model,
+        litellm_route.native_class,
+    ) == ("groq", "llama-3.1-8b-instant", None)
+    assert LLM._resolve_route("gpt-4o", {}).native_class is OpenAICompletion
+    kwargs = {"provider": "anthropic"}
+    assert LLM._resolve_route("some-model", kwargs).native_class is AnthropicCompletion
+    assert kwargs == {"provider": "anthropic"}
+
+
 def test_validate_model_in_constants():
     """Test the _validate_model_in_constants method."""
     # OpenAI models
@@ -1018,11 +1286,9 @@ def test_validate_model_in_constants():
     assert LLM._validate_model_in_constants("unknown-model", "openai") is False
 
     # Anthropic models
-    assert LLM._validate_model_in_constants("claude-opus-4-0", "claude") is True
+    assert LLM._validate_model_in_constants("claude-sonnet-4-6", "claude") is True
     assert LLM._validate_model_in_constants("claude-future-5", "claude") is True
-    assert (
-        LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
-    )
+    assert LLM._validate_model_in_constants("claude-haiku-4-5", "claude") is True
     assert LLM._validate_model_in_constants("unknown-model", "claude") is False
 
     # Gemini models
@@ -1128,6 +1394,38 @@ def test_streaming_response_model_conversion_failure_raises():
             side_effect=ValueError("model output did not match schema"),
         ),
         pytest.raises(Exception, match="Failed to convert streaming response"),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+
+def test_streaming_response_model_context_limit_keeps_its_error_type():
+    """A context-limit failure during conversion must not look like a schema
+    mismatch, or callers lose their context-window handling."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", return_value=iter(chunks)),
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError("maximum context length exceeded"),
+        ),
+        pytest.raises(LLMContextLengthExceededError),
     ):
         llm.call("What is the capital of France?", response_model=Answer)
 
@@ -1283,3 +1581,15 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_an_installed_litellm_loads() -> None:
+    """crewai treats a LiteLLM that fails to import as not installed, and tells
+    the user to install the extra they already have. litellm 1.100.4 did this on
+    Python 3.10 (it imports ``typing.NotRequired``)."""
+    if importlib.util.find_spec("litellm") is None:
+        pytest.skip("the crewai[litellm] extra is not installed")
+
+    from crewai.llm import _ensure_litellm
+
+    assert _ensure_litellm() is True
