@@ -68,3 +68,33 @@ def test_add_texts(mongodb_vector_search_tool):
         args = bulk_write.mock_calls[0].args
         assert "ReplaceOne" in str(args[0][0])
         assert "foo" in str(args[0][0])
+
+
+def test_add_texts_uses_provided_ids(mongodb_vector_search_tool):
+    """Caller-provided ids must be used as the document ids."""
+    inserted_ids = []
+
+    def fake_bulk_insert(texts, metadatas, ids):
+        inserted_ids.extend(ids)
+        return list(ids)
+
+    mongodb_vector_search_tool._bulk_embed_and_insert_texts = fake_bulk_insert
+
+    result = mongodb_vector_search_tool.add_texts(["a", "b"], ids=["x", "y"])
+
+    assert result == ["x", "y"]
+    assert inserted_ids == ["x", "y"]
+
+
+def test_add_texts_accepts_iterators(mongodb_vector_search_tool):
+    """A generator of texts must be inserted, not silently dropped."""
+
+    def fake_bulk_insert(texts, metadatas, ids):
+        return list(ids)
+
+    mongodb_vector_search_tool._bulk_embed_and_insert_texts = fake_bulk_insert
+
+    result = mongodb_vector_search_tool.add_texts(iter(["a", "b"]))
+
+    assert len(result) == 2
+    assert len(set(result)) == 2
