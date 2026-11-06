@@ -26,6 +26,11 @@ Documentation = "https://docs.crewai.com"
 
 
 [project.optional-dependencies]
+skim = [
+    "x402[evm]>=2.0.0",
+    "eth-account>=0.13.0",
+    "requests>=2.31.0",
+]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]
