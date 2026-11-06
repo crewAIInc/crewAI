@@ -1970,9 +1970,14 @@ class Crew(FlowTrackable, BaseModel):
         )
         # Flag set before dispatching so an EXECUTION_END hook that raises
         # HookAborted does not trigger a second (failure) dispatch upstream.
-        self._execution_end_dispatched = True
-        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
-        crew_output = cast(CrewOutput, end_ctx.payload)
+        # The guard keeps the pairing invariant documented on
+        # _dispatch_execution_end_failure: END fires once per dispatched START.
+        # replay() skips prepare_kickoff, so without the guard its tail would
+        # dispatch a second END for the original kickoff's START.
+        if self._execution_start_dispatched and not self._execution_end_dispatched:
+            self._execution_end_dispatched = True
+            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+            crew_output = cast(CrewOutput, end_ctx.payload)
 
         if isinstance(crew_output, CrewOutput):
             final_task_output.raw = crew_output.raw
