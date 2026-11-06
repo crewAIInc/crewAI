@@ -4,7 +4,8 @@ from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 
 load_dotenv()
@@ -74,12 +75,50 @@ class TavilyExtractorTool(BaseTool):
         default="basic",
         description="The depth of extraction. 'basic' for basic extraction, 'advanced' for advanced extraction.",
     )
-    timeout: int = Field(
+    query: str | None = Field(
+        default=None, description="Rerank extracted content chunks for this query."
+    )
+    chunks_per_source: int | None = Field(
+        default=None,
+        ge=1,
+        le=5,
+        description="Maximum relevant chunks per source. Requires query.",
+    )
+    format: Literal["markdown", "text"] | None = Field(
+        default=None, description="Format of the extracted content."
+    )
+    include_favicon: bool | None = Field(
+        default=None, description="Include a favicon URL for each result."
+    )
+    include_usage: bool | None = Field(
+        default=None, description="Include credit usage in the response."
+    )
+    timeout: float = Field(
         default=60,
         description="The timeout for the extraction request in seconds.",
     )
 
-    def __init__(self, **kwargs: Any):
+    @model_validator(mode="after")
+    def validate_extract_options(self) -> Self:
+        if self.chunks_per_source is not None and not self.query:
+            raise ValueError("chunks_per_source requires query")
+        return self
+
+    def _optional_extract_params(self) -> dict[str, Any]:
+        """Keep unconfigured options out of requests, preserving explicit False."""
+        return {
+            name: value
+            for name in (
+                "query",
+                "chunks_per_source",
+                "format",
+                "include_favicon",
+                "include_usage",
+            )
+            if (value := getattr(self, name)) is not None
+        }
+
+    def __init__(self, **kwargs: Any) -> None:
         """Initializes the TavilyExtractorTool.
 
         Args:
@@ -146,6 +185,7 @@ class TavilyExtractorTool(BaseTool):
                 extract_depth=self.extract_depth,
                 include_images=self.include_images,
                 timeout=self.timeout,
+                **self._optional_extract_params(),
             ),
             indent=2,
         )
@@ -172,5 +212,6 @@ class TavilyExtractorTool(BaseTool):
             extract_depth=self.extract_depth,
             include_images=self.include_images,
             timeout=self.timeout,
+            **self._optional_extract_params(),
         )
         return json.dumps(results, indent=2)

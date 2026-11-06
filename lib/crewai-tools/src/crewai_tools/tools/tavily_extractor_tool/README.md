@@ -9,7 +9,7 @@ The `TavilyExtractorTool` allows CrewAI agents to extract structured content fro
 To use the `TavilyExtractorTool`, you need to install the `tavily-python` library:
 
 ```shell
-uv add 'crewai[tools]' tavily-python
+uv add 'crewai[tools]' 'tavily-python>=0.7.24,<0.8'
 ```
 
 You also need to set your Tavily API key as an environment variable:
@@ -20,80 +20,51 @@ export TAVILY_API_KEY='your-tavily-api-key'
 
 ## Example
 
-Here's how to initialize and use the `TavilyExtractorTool` within a CrewAI agent:
+Configure extraction options when constructing the tool. Pass only the URL or URLs to `run`, `arun`, or the agent tool call.
 
 ```python
-import os
-from crewai import Agent, Task, Crew
 from crewai_tools import TavilyExtractorTool
 
-# Ensure TAVILY_API_KEY is set in your environment
-# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
-
-# Initialize the tool
-tavily_tool = TavilyExtractorTool()
-
-# Create an agent that uses the tool
-extractor_agent = Agent(
-    role='Web Content Extractor',
-    goal='Extract key information from specified web pages',
-    backstory='You are an expert at extracting relevant content from websites using the Tavily API.',
-    tools=[tavily_tool],
-    verbose=True
+tool = TavilyExtractorTool(
+    extract_depth="advanced",
+    query="Pricing and plan limits",
+    chunks_per_source=3,
+    format="text",
+    include_usage=True,
 )
 
-# Define a task for the agent
-extract_task = Task(
-    description='Extract the main content from the URL https://example.com using basic extraction depth.',
-    expected_output='A JSON string containing the extracted content from the URL.',
-    agent=extractor_agent,
-    tool_inputs={
-        'urls': 'https://example.com',
-        'extract_depth': 'basic'
-    }
-)
-
-# Create and run the crew
-crew = Crew(
-    agents=[extractor_agent],
-    tasks=[extract_task],
-    verbose=2
-)
-
-result = crew.kickoff()
+result = tool.run(urls=["https://example.com/pricing"])
 print(result)
-
-# Example with multiple URLs and advanced extraction
-extract_multiple_task = Task(
-    description='Extract content from https://example.com and https://anotherexample.org using advanced extraction.',
-    expected_output='A JSON string containing the extracted content from both URLs.',
-    agent=extractor_agent,
-    tool_inputs={
-        'urls': ['https://example.com', 'https://anotherexample.org'],
-        'extract_depth': 'advanced',
-        'include_images': True
-    }
-)
-
-result_multiple = crew.kickoff(inputs={'urls': ['https://example.com', 'https://anotherexample.org'], 'extract_depth': 'advanced', 'include_images': True}) # If task doesn't specify inputs directly
-print(result_multiple)
-
+# In async code: await tool.arun(urls=["https://example.com/pricing"])
 ```
+
+Add the configured tool to an agent's `tools` list to let the agent select URLs. The agent-facing schema remains `urls` only.
 
 ## Arguments
 
-The `TavilyExtractorTool` accepts the following arguments during initialization or when running the tool:
+Runtime input:
 
-- `api_key` (Optional[str]): Your Tavily API key. If not provided during initialization, it defaults to the `TAVILY_API_KEY` environment variable.
-- `proxies` (Optional[dict[str, str]]): Proxies to use for the API requests. Defaults to `None`.
+- `urls` (str or list[str], required): One URL or a batch of up to 20 URLs to extract.
 
-When running the tool (`_run` or `_arun` methods, or via agent execution), it uses the `TavilyExtractorToolSchema` and expects the following inputs:
+Constructor settings:
 
-- `urls` (Union[List[str], str]): **Required**. A single URL string or a list of URL strings to extract data from.
-- `include_images` (Optional[bool]): Whether to include images in the extraction results. Defaults to `False`.
-- `extract_depth` (Literal["basic", "advanced"]): The depth of extraction. Use `"basic"` for faster, surface-level extraction or `"advanced"` for more comprehensive extraction. Defaults to `"basic"`.
-- `timeout` (int): The maximum time in seconds to wait for the extraction request to complete. Defaults to `60`.
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `api_key` | `TAVILY_API_KEY` environment variable | Tavily API key. |
+| `proxies` | `None` | Proxy settings for the SDK clients. |
+| `extract_depth` | `"basic"` | `"basic"` or `"advanced"` extraction. |
+| `include_images` | `False` | Include extracted images. |
+| `timeout` | `60` | Request timeout in seconds. |
+| `query` | `None` | Rerank extracted content chunks for this intent. |
+| `chunks_per_source` | `None` | 1–5 relevant chunks per source; requires `query`. |
+| `format` | `None` | `"markdown"` or `"text"`; omitted by default so Tavily uses markdown. |
+| `include_favicon` | `None` | Include a favicon URL for each result. |
+| `include_usage` | `None` | Include credit usage metadata. |
+
+Optional settings with a `None` value are omitted from requests. Explicit `False` is forwarded in both sync and async calls.
 
 ## Response Format
 
-The tool returns a JSON string representing the structured data extracted from the provided URL(s). The exact structure depends on the content of the pages and the `extract_depth` used. Refer to the [Tavily API documentation](https://docs.tavily.com/docs/tavily-api/python-sdk#extract) for details on the response structure.
+The tool returns the complete SDK response as a JSON string. Check both `results` and `failed_results`: a successful HTTP request can still contain per-URL failures. Result metadata and usage are preserved. SDK errors propagate to the caller.
+
+See the [Extract API reference](https://docs.tavily.com/documentation/api-reference/endpoint/extract) for details on the response structure.
