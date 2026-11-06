@@ -135,6 +135,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.state.method_outputs import rebuild_method_output_types
 from crewai.telemetry.tracing.context import get_trace_session
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
@@ -750,9 +751,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
             self._method_outputs = [
-                entry
-                if isinstance(entry, dict) and "method" in entry and "output" in entry
-                else {"method": "", "output": entry}
+                rebuild_method_output_types(
+                    entry
+                    if isinstance(entry, dict)
+                    and "method" in entry
+                    and "output" in entry
+                    else {"method": "", "output": entry}
+                )
                 for entry in self.checkpoint_method_outputs
             ]
         if self.checkpoint_method_counts is not None:
@@ -1853,6 +1858,36 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 outputs.append(entry)
         return outputs
 
+    def _recorded_listener_input(self, method_name: FlowMethodName) -> tuple[bool, Any]:
+        """Locate the output a completed method returned in its recorded run.
+
+        During a resumed kickoff, completed methods are skipped instead of
+        re-executed, so their listeners continue with this value rather than
+        losing the method's output. Emit-driven human-feedback methods return
+        their collapsed outcome to listeners, so the recorded outcome is
+        preferred when present.
+
+        Args:
+            method_name: The completed method whose output to look up.
+
+        Returns:
+            ``(found, output)``; ``(False, None)`` when the checkpoint
+            predates per-method output records.
+        """
+        for entry in reversed(self._method_outputs):
+            if isinstance(entry, dict) and entry.get("method") == str(method_name):
+                feedback = entry.get("human_feedback")
+                if feedback is not None:
+                    # Checkpoints may hold the feedback as a plain dict —
+                    # legacy entries, or a rebuild that degraded to JSON.
+                    if isinstance(feedback, dict):
+                        outcome = feedback.get("outcome")
+                    else:
+                        outcome = getattr(feedback, "outcome", None)
+                    return True, outcome if outcome is not None else feedback
+                return True, entry.get("output")
+        return False, None
+
     @property
     def flow_id(self) -> str:
         """Returns the unique identifier of this flow instance.
@@ -2850,9 +2885,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if start_method_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                method_outputs = self.method_outputs
-                last_output = method_outputs[-1] if method_outputs else None
-                await self._execute_listeners(start_method_name, last_output)
+                # with the output the method returned in its recorded run,
+                # so resumed listeners see the same input as the first run.
+                found, recorded = self._recorded_listener_input(start_method_name)
+                if not found:
+                    # Legacy checkpoints record no per-method entries.
+                    method_outputs = self.method_outputs
+                    recorded = method_outputs[-1] if method_outputs else None
+                await self._execute_listeners(start_method_name, recorded)
                 return
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(start_method_name)
@@ -3389,7 +3429,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                await self._execute_listeners(listener_name, None)
+                # with the output the method returned in its recorded run,
+                # instead of None.
+                _, recorded = self._recorded_listener_input(listener_name)
+                await self._execute_listeners(listener_name, recorded)
 
                 # For routers, also check if any conditional starts they triggered are completed
                 # If so, continue their chains
