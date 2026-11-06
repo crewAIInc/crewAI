@@ -1,0 +1,126 @@
+---
+title: أدوات Decodo
+description: أدوات Decodo Web Scraping API لاستخراج صفحات الويب، والبحث في Google وAmazon، والاستعلام عن المنتجات، وجلب نتائج محركات البحث.
+icon: globe
+mode: "wide"
+---
+
+# أدوات Decodo
+
+تستخدم هذه الأدوات Web Scraping API من [Decodo](https://decodo.com) لتزويد وكلائك بصفحات ويب ونتائج بحث مباشرة.
+
+## التثبيت
+
+```shell
+uv add 'crewai-tools[decodo]'
+```
+
+## متغيرات البيئة
+
+- `DECODO_API_KEY` (مطلوب)
+
+انسخ مفتاح API من اشتراكك في Web Scraping API على [لوحة تحكم Decodo](https://dashboard.decodo.com/web-data/playground). يمكنك أيضًا تمريره إلى كل أداة باستخدام `api_key=`.
+
+## الأدوات المضمنة
+
+- `DecodoWebScraperTool`: يستخرج أي عنوان URL عام ويعيد الصفحة بتنسيق Markdown.
+- `DecodoSearchTool`: يبحث في Google أو Amazon ويعيد النتائج المحللة بتنسيق JSON.
+- `DecodoEcommerceTool`: يجلب تفاصيل المنتجات أو نتائج البحث من Amazon أو Walmart أو Target بتنسيق JSON.
+- `DecodoSERPTool`: يجلب صفحات نتائج Google أو Bing مع التنقل بين الصفحات، أو إجابة Google AI Mode بتنسيق JSON.
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import DecodoSearchTool, DecodoWebScraperTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and summarize up-to-date information from the web",
+    backstory="You search the web, read the most relevant pages and report what they say.",
+    tools=[DecodoSearchTool(), DecodoWebScraperTool()],
+)
+
+task = Task(
+    description="Find the three most recent announcements about {topic} and summarize each one.",
+    expected_output="Three bullet points, each with a one-sentence summary and the source URL.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff(inputs={"topic": "solid-state batteries"}))
+```
+
+## الأدوات
+
+### DecodoWebScraperTool
+
+```python Code
+from crewai_tools import DecodoWebScraperTool
+
+tool = DecodoWebScraperTool()
+print(tool.run(url="https://ip.decodo.com"))
+```
+
+| المعامل | النوع | الوصف |
+| --- | --- | --- |
+| `url` | `str` | عنوان URL الكامل للصفحة المراد استخراجها. |
+| `geo` | `str`، اختياري | الدولة التي يُرسل منها الطلب، مثل `United States`. |
+| `js_render` | `bool`، اختياري | يفتح الصفحة في متصفح بدون واجهة. مطلوب فقط للصفحات التي تحمّل محتواها باستخدام JavaScript. |
+
+يُقتطع محتوى Markdown الأطول من `max_chars` (الافتراضي `45000`) لإبقاء الصفحة ضمن سياق الوكيل.
+
+### DecodoSearchTool
+
+```python Code
+from crewai_tools import DecodoSearchTool
+
+tool = DecodoSearchTool()
+print(tool.run(query="mechanical keyboard", source="amazon"))
+```
+
+| المعامل | النوع | الوصف |
+| --- | --- | --- |
+| `query` | `str` | عبارة البحث. |
+| `source` | `"google"` أو `"amazon"`، اختياري | `google` (الافتراضي) لنتائج الويب، و`amazon` لقوائم المنتجات. |
+| `geo` | `str`، اختياري | Google: اسم دولة، مثل `United States`. Amazon: رمز بريدي أمريكي، مثل `10001`، أو رمز دولة من حرفين للتوصيل خارج الولايات المتحدة، مثل `DE`. |
+
+### DecodoEcommerceTool
+
+```python Code
+from crewai_tools import DecodoEcommerceTool
+
+tool = DecodoEcommerceTool()
+print(tool.run(store="amazon", product_id="B09H74FXNW"))
+```
+
+مرّر `product_id` أو `query`:
+
+| المعامل | النوع | الوصف |
+| --- | --- | --- |
+| `store` | `"amazon"` أو `"walmart"` أو `"target"` | المتجر المراد البحث فيه. |
+| `product_id` | `str`، اختياري | تفاصيل منتج واحد. Amazon: رمز ASIN، مثل `B09H74FXNW`. Walmart أو Target: معرّف المنتج من عنوان URL الخاص به. |
+| `query` | `str`، اختياري | البحث في منتجات المتجر بدلًا من ذلك. |
+| `zip_code` | `str`، اختياري | رمز بريدي أمريكي لعرض الأسعار والتوفر في موقع التوصيل هذا، مثل `10001`. |
+
+### DecodoSERPTool
+
+```python Code
+from crewai_tools import DecodoSERPTool
+
+tool = DecodoSERPTool()
+print(tool.run(query="what are solid state batteries", engine="google_ai_mode"))
+```
+
+| المعامل | النوع | الوصف |
+| --- | --- | --- |
+| `query` | `str` | عبارة البحث. |
+| `engine` | `"google"` أو `"bing"` أو `"google_ai_mode"`، اختياري | `google` (الافتراضي) أو `bing` لصفحة نتائج، و`google_ai_mode` لإجابة Google المكتوبة بالذكاء الاصطناعي والمصادر التي تستشهد بها. |
+| `page` | `int`، اختياري | صفحة النتائج المطلوبة، بدءًا من 1. يتجاهلها `google_ai_mode`. |
+| `geo` | `str`، اختياري | الدولة التي يتم البحث منها، مثل `United States`. |
+
+تُعرض نتائج Bing في متصفح بدون واجهة وقد تستغرق أكثر من دقيقة.
+
+## الأخطاء
+
+عند فشل الطلب، مثلًا بسبب مفتاح API غير صالح أو تجاوز حد الطلبات أو صفحة تعيد `404` أو خطأ في الشبكة، تعيد الأدوات `ToolFailure` بدلًا من إطلاق استثناء. يرى الوكيل ما الخطأ ويمكنه إعادة المحاولة أو تغيير مساره.

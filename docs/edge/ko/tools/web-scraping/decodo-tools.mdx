@@ -1,0 +1,126 @@
+---
+title: Decodo 도구
+description: 웹 페이지 스크래핑, Google 및 Amazon 검색, 상품 조회, 검색 엔진 결과 수집을 위한 Decodo Web Scraping API 도구.
+icon: globe
+mode: "wide"
+---
+
+# Decodo 도구
+
+이 도구들은 [Decodo](https://decodo.com) Web Scraping API를 사용하여 에이전트에게 실시간 웹 페이지와 검색 결과를 제공합니다.
+
+## 설치
+
+```shell
+uv add 'crewai-tools[decodo]'
+```
+
+## 환경 변수
+
+- `DECODO_API_KEY` (필수)
+
+[Decodo 대시보드](https://dashboard.decodo.com/web-data/playground)의 Web Scraping API 구독에서 API 키를 복사하세요. 각 도구에 `api_key=`로 전달할 수도 있습니다.
+
+## 포함된 도구
+
+- `DecodoWebScraperTool`: 모든 공개 URL을 스크래핑하여 페이지를 Markdown으로 반환합니다.
+- `DecodoSearchTool`: Google 또는 Amazon을 검색하여 파싱된 결과를 JSON으로 반환합니다.
+- `DecodoEcommerceTool`: Amazon, Walmart 또는 Target의 상품 상세 정보나 검색 결과를 JSON으로 가져옵니다.
+- `DecodoSERPTool`: Google 또는 Bing 결과 페이지(페이지 이동 지원)나 Google AI Mode 답변을 JSON으로 가져옵니다.
+
+## 예시
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import DecodoSearchTool, DecodoWebScraperTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and summarize up-to-date information from the web",
+    backstory="You search the web, read the most relevant pages and report what they say.",
+    tools=[DecodoSearchTool(), DecodoWebScraperTool()],
+)
+
+task = Task(
+    description="Find the three most recent announcements about {topic} and summarize each one.",
+    expected_output="Three bullet points, each with a one-sentence summary and the source URL.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff(inputs={"topic": "solid-state batteries"}))
+```
+
+## 도구
+
+### DecodoWebScraperTool
+
+```python Code
+from crewai_tools import DecodoWebScraperTool
+
+tool = DecodoWebScraperTool()
+print(tool.run(url="https://ip.decodo.com"))
+```
+
+| 인자 | 타입 | 설명 |
+| --- | --- | --- |
+| `url` | `str` | 스크래핑할 페이지의 전체 URL. |
+| `geo` | `str`, 선택 | 요청을 보낼 국가. 예: `United States`. |
+| `js_render` | `bool`, 선택 | 헤드리스 브라우저에서 페이지를 엽니다. JavaScript로 콘텐츠를 불러오는 페이지에만 필요합니다. |
+
+`max_chars`(기본값 `45000`)보다 긴 Markdown은 페이지가 에이전트의 컨텍스트 안에 들어가도록 잘립니다.
+
+### DecodoSearchTool
+
+```python Code
+from crewai_tools import DecodoSearchTool
+
+tool = DecodoSearchTool()
+print(tool.run(query="mechanical keyboard", source="amazon"))
+```
+
+| 인자 | 타입 | 설명 |
+| --- | --- | --- |
+| `query` | `str` | 검색어. |
+| `source` | `"google"` 또는 `"amazon"`, 선택 | 웹 결과는 `google`(기본값), 상품 목록은 `amazon`. |
+| `geo` | `str`, 선택 | Google: 국가 이름. 예: `United States`. Amazon: 미국 ZIP 코드(예: `10001`) 또는 미국 외 배송을 위한 두 글자 국가 코드(예: `DE`). |
+
+### DecodoEcommerceTool
+
+```python Code
+from crewai_tools import DecodoEcommerceTool
+
+tool = DecodoEcommerceTool()
+print(tool.run(store="amazon", product_id="B09H74FXNW"))
+```
+
+`product_id` 또는 `query` 중 하나를 전달하세요:
+
+| 인자 | 타입 | 설명 |
+| --- | --- | --- |
+| `store` | `"amazon"`, `"walmart"` 또는 `"target"` | 조회할 스토어. |
+| `product_id` | `str`, 선택 | 단일 상품의 상세 정보. Amazon: ASIN(예: `B09H74FXNW`). Walmart 또는 Target: 상품 URL에 있는 상품 ID. |
+| `query` | `str`, 선택 | 대신 스토어의 상품을 검색합니다. |
+| `zip_code` | `str`, 선택 | 해당 배송지의 가격과 재고를 확인할 미국 ZIP 코드. 예: `10001`. |
+
+### DecodoSERPTool
+
+```python Code
+from crewai_tools import DecodoSERPTool
+
+tool = DecodoSERPTool()
+print(tool.run(query="what are solid state batteries", engine="google_ai_mode"))
+```
+
+| 인자 | 타입 | 설명 |
+| --- | --- | --- |
+| `query` | `str` | 검색어. |
+| `engine` | `"google"`, `"bing"` 또는 `"google_ai_mode"`, 선택 | 결과 페이지는 `google`(기본값) 또는 `bing`, Google의 AI 작성 답변과 인용 출처는 `google_ai_mode`. |
+| `page` | `int`, 선택 | 가져올 결과 페이지(1부터 시작). `google_ai_mode`에서는 무시됩니다. |
+| `geo` | `str`, 선택 | 검색할 국가. 예: `United States`. |
+
+Bing 결과는 헤드리스 브라우저에서 렌더링되며 1분 이상 걸릴 수 있습니다.
+
+## 오류
+
+잘못된 API 키, 요청 한도 초과, `404`를 반환하는 페이지, 네트워크 오류 등으로 요청이 실패하면 도구는 예외를 발생시키는 대신 `ToolFailure`를 반환합니다. 에이전트는 무엇이 잘못되었는지 확인하고 다시 시도하거나 방향을 바꿀 수 있습니다.
