@@ -44,6 +44,7 @@ O Construtor Visual de Agentes permite:
 | **Goal (Objetivo)**                     | `goal`                   | `str`                                 | O objetivo individual que guia a tomada de decisão do agente.                                             |
 | **Backstory (História de fundo)**       | `backstory`              | `str`                                 | Fornece contexto e personalidade ao agente, enriquecendo as interações.                                   |
 | **LLM** _(opcional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Modelo de linguagem que alimenta o agente. Padrão: modelo especificado em `OPENAI_MODEL_NAME` ou "gpt-4". |
+| **LLM do Guardrail** _(opcional)_ | `guardrail_llm` | `Optional[Union[str, LLM, dict]]` | Modelo de linguagem para guardrails de texto. Usa o LLM do agente por padrão. |
 | **Tools (Ferramentas)** _(opcional)_    | `tools`                  | `List[BaseTool]`                      | Capacidades ou funções disponíveis para o agente. Padrão: lista vazia.                                    |
 | **Function Calling LLM** _(opcional)_   | `function_calling_llm`   | `Optional[Any]`                       | Modelo de linguagem usado para chamada de ferramentas, sobrescreve LLM principal se especificado.         |
 | **Max Iterations** _(opcional)_         | `max_iter`               | `int`                                 | Número máximo de iterações antes do agente fornecer sua melhor resposta. Padrão: 20.                      |

@@ -65,6 +65,7 @@ crew = Crew(
 | **Guardrail** _(optional)_             | `guardrail`             | `Optional[Callable]`        | Function to validate task output before proceeding to next task.                                                |
 | **Guardrails** _(optional)_            | `guardrails`            | `Optional[List[Callable]]`  | List of guardrails to validate task output before proceeding to next task.                                      |
 | **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`             | Maximum number of retries when guardrail validation fails. Defaults to 3.                                       |
+| **Guardrail LLM** _(optional)_ | `guardrail_llm` | `Optional[Union[str, LLM, dict]]` | Overrides the agent’s guardrail LLM for string guardrails. |
 
 <Note type="warning" title="Deprecated: max_retries">
   The task attribute `max_retries` is deprecated and will be removed in v1.0.0.
@@ -339,11 +340,11 @@ blog_task = Task(
 
 ### LLM-Based Guardrails (String Descriptions)
 
-Instead of writing custom validation functions, you can use string descriptions that leverage LLM-based validation. When you provide a string to the `guardrail` or `guardrails` parameter, CrewAI automatically creates an `LLMGuardrail` that uses the agent's LLM to validate the output based on your description.
+Instead of writing custom validation functions, you can use string descriptions that leverage LLM-based validation. When you provide a string to the `guardrail` or `guardrails` parameter, CrewAI automatically creates an `LLMGuardrail` that uses the agent's LLM by default to validate the output based on your description.
 
 **Requirements**:
 
-- The task must have an `agent` assigned (the guardrail uses the agent's LLM)
+- The task must have an `agent` assigned (the guardrail uses the agent's LLM by default)
 - Provide a clear, descriptive string explaining the validation criteria
 
 ```python Code
@@ -355,6 +356,25 @@ blog_task = Task(
     expected_output="A blog post under 200 words",
     agent=blog_agent,
     guardrail="The blog post must be under 200 words and contain no technical jargon"
+)
+```
+
+### Choosing a separate guardrail LLM
+
+By default, string guardrails use the agent’s own LLM instance. Set `guardrail_llm` on the Agent to choose another judge, or on the Task to override the Agent’s choice. You can pass an LLM instance, model name, or model configuration dictionary. Callable guardrails keep their own behavior.
+
+When a task executes with a replacement agent, its string guardrails use that executing agent’s configuration. A Task-level `guardrail_llm` still takes precedence.
+
+```python Code
+from crewai import LLM, Task
+
+judge_llm = LLM(model="gpt-4o-mini", temperature=0)
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="The blog post must be under 200 words",
+    guardrail_llm=judge_llm,
 )
 ```
 
