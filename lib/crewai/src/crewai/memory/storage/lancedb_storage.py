@@ -644,10 +644,15 @@ class LanceDBStorage:
                 return
             prefix = scope_prefix.rstrip("/")
             if prefix:
+                # Match the scope itself plus its true subtree. A range that
+                # starts at the bare prefix also sweeps up sibling scopes whose
+                # next character sorts below '/' ('-' is 45, '.' is 46, ' ' is
+                # 32), so reset('/proj') would take '/proj-x' and '/proj.big'
+                # with it. Requiring the separator excludes them, and reusing
+                # _scope_prefix_filter keeps the escaping in one place.
                 literal = _sql_str(prefix)
-                self._do_write(
-                    "delete", f"scope >= '{literal}' AND scope < '{literal}/\uffff'"
-                )
+                subtree = _scope_prefix_filter(prefix + "/")
+                self._do_write("delete", f"(scope = '{literal}' OR {subtree})")
 
     def optimize(self) -> None:
         """Compact the table synchronously and refresh the scope index.
