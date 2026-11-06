@@ -24,9 +24,9 @@ class ScrapegraphScrapeToolSchema(FixedScrapegraphScrapeToolSchema):
     """Input for ScrapegraphScrapeTool."""
 
     website_url: str = Field(..., description="Mandatory website url to scrape")
-    user_prompt: str = Field(
-        default="Extract the main content of the webpage",
-        description="Prompt to guide the extraction of content",
+    user_prompt: str | None = Field(
+        default=None,
+        description="Prompt to guide extraction. Omit to use the configured prompt or the default main-content extraction.",
     )
 
     @field_validator("website_url")
@@ -162,7 +162,8 @@ class ScrapegraphScrapeTool(BaseTool):
     ) -> Any:
         website_url = kwargs.get("website_url", self.website_url)
         user_prompt = (
-            kwargs.get("user_prompt", self.user_prompt)
+            kwargs.get("user_prompt")
+            or self.user_prompt
             or "Extract the main content of the webpage"
         )
 
