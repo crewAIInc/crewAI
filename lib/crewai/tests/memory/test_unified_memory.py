@@ -1405,3 +1405,27 @@ def test_private_record_still_visible_to_its_source_and_when_included(lancedb_pa
     assert [m.record.content for m in with_private] == ["private to worker-1"], (
         "include_private=True must still see everything"
     )
+
+
+def test_memory_deepcopy_gives_independent_locks_and_executor(tmp_path: Path) -> None:
+    """#8786: deepcopy a Memory, or a MemoryScope built from one, on Python 3.10-3.12."""
+    import copy
+    import threading
+
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=f"{tmp_path}/db",
+        llm=MagicMock(),
+        embedder=lambda t: [[0.1] for _ in t],
+    )
+
+    cloned = copy.deepcopy(mem)
+    assert cloned is not mem
+    assert type(cloned._pending_lock) is type(threading.Lock())
+    assert cloned._pending_lock is not mem._pending_lock
+    assert cloned._reset_lock is not mem._reset_lock
+
+    scoped = mem.scope("/team")
+    scoped_copy = copy.deepcopy(scoped)
+    assert scoped_copy is not scoped
