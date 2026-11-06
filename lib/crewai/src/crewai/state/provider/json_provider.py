@@ -63,8 +63,13 @@ class JsonProvider(BaseProvider):
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, "w", encoding="utf-8") as f:
+        # Publish atomically: a crash mid-write must never leave a truncated
+        # checkpoint at the final path — that is the newest file ``prune``
+        # keeps and the one a resume reads.
+        tmp_path = file_path.with_name(file_path.name + ".tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
             f.write(data)
+        os.replace(tmp_path, file_path)
         return str(file_path)
 
     async def acheckpoint(
@@ -91,8 +96,11 @@ class JsonProvider(BaseProvider):
         file_path = _build_path(location, branch, parent_id)
         await aiofiles.os.makedirs(str(file_path.parent), exist_ok=True)
 
-        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+        # Atomic publish, as in checkpoint(): readers never see a partial file.
+        tmp_path = file_path.with_name(file_path.name + ".tmp")
+        async with aiofiles.open(tmp_path, "w", encoding="utf-8") as f:
             await f.write(data)
+        await aiofiles.os.replace(tmp_path, file_path)
         return str(file_path)
 
     def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
