@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime, timedelta
 from pathlib import Path
 import threading
@@ -1405,3 +1406,38 @@ def test_private_record_still_visible_to_its_source_and_when_included(lancedb_pa
     assert [m.record.content for m in with_private] == ["private to worker-1"], (
         "include_private=True must still see everything"
     )
+
+
+def test_memory_deepcopy_gives_fresh_runtime_state(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Memory can be deep-copied on every supported Python, not only 3.13+.
+
+    Before 3.13, threading.Lock is a factory function rather than a class, so
+    using it in an isinstance() check raised TypeError on every copy.
+    """
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder
+    )
+
+    clone = copy.deepcopy(mem)
+
+    assert clone is not mem
+    assert clone._save_pool is not mem._save_pool
+    assert clone._pending_lock is not mem._pending_lock
+    assert clone._reset_lock is not mem._reset_lock
+
+
+def test_memory_scope_deepcopy(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder
+    )
+
+    clone = copy.deepcopy(mem.scope("/team"))
+
+    assert clone.root_path == "/team"
+
