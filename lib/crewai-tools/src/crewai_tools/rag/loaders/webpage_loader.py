@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
 from crewai_tools.security.safe_requests import safe_get
+from crewai_tools.utilities.html_text import visible_text
 
 
 _SPACES_PATTERN: Final[re.Pattern[str]] = re.compile(r"[ \t]+")
@@ -33,7 +34,7 @@ class WebPageLoader(BaseLoader):
             for script in soup(["script", "style"]):
                 script.decompose()
 
-            text = soup.get_text(" ")
+            text = visible_text(soup)
             text = _SPACES_PATTERN.sub(" ", text)
             text = _NEWLINE_PATTERN.sub("\n", text)
             text = text.strip()

@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import Field
 
 from crewai_tools.security.safe_requests import safe_get
+from crewai_tools.utilities.html_text import visible_text
 
 
 try:
@@ -85,6 +86,6 @@ class ScrapeWebsiteTool(BaseTool):
         parsed = BeautifulSoup(page.text, "html.parser")
 
         text = "The following text is scraped website content:\n\n"
-        text += parsed.get_text(" ")
+        text += visible_text(parsed)
         text = re.sub("[ \t]+", " ", text)
         return re.sub("\\s+\n\\s+", "\n", text)
