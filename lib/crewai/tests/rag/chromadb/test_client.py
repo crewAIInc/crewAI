@@ -322,6 +322,24 @@ class TestChromaDBClient:
         call_args = mock_collection.upsert.call_args
         assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
 
+    def test_add_documents_drops_none_metadata_values(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """Test add_documents drops None metadata values that ChromaDB rejects."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+
+        documents: list[BaseRecord] = [
+            {"content": "d1", "metadata": {"title": "clean"}},
+            {"content": "d2", "metadata": {"title": "Video", "description": None}},
+        ]
+
+        client.add_documents(collection_name="test_collection", documents=documents)
+
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
+        assert call_args[1]["metadatas"] == [{"title": "clean"}, {"title": "Video"}]
+
     def test_add_documents_all_without_metadata(
         self, client, mock_chromadb_client
     ) -> None:
@@ -436,6 +454,29 @@ class TestChromaDBClient:
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
         assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+
+    @pytest.mark.asyncio
+    async def test_aadd_documents_drops_none_metadata_values(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """Test aadd_documents drops None metadata values that ChromaDB rejects."""
+        mock_collection = AsyncMock()
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+            return_value=mock_collection
+        )
+
+        documents: list[BaseRecord] = [
+            {"content": "d1", "metadata": {"title": "clean"}},
+            {"content": "d2", "metadata": {"title": "Video", "description": None}},
+        ]
+
+        await async_client.aadd_documents(
+            collection_name="test_collection", documents=documents
+        )
+
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
+        assert call_args[1]["metadatas"] == [{"title": "clean"}, {"title": "Video"}]
 
     @pytest.mark.asyncio
     async def test_aadd_documents_empty_list_raises_error(
