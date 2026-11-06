@@ -1024,7 +1024,7 @@ class TraceCollectionListener(BaseEventListener):
                 "task_name": task_name,
                 "task_display_name": task_display_name,
                 "context": event.context,
-                "agent_role": source.agent.role,
+                "agent_role": source.agent.role if source.agent else None,
                 "task_id": str(event.task.id),
             }
         if event_type == "task_completed":

@@ -695,6 +695,12 @@ class Task(BaseModel):
             agent = agent or self.agent
             self.agent = agent
             if not agent:
+                # task_failed is scope-ending: emit the opener first so the
+                # imminent failure pairs with it instead of popping the
+                # caller's scope.
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
@@ -854,6 +860,12 @@ class Task(BaseModel):
             agent = agent or self.agent
             self.agent = agent
             if not agent:
+                # task_failed is scope-ending: emit the opener first so the
+                # imminent failure pairs with it instead of popping the
+                # caller's scope.
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
