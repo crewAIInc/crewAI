@@ -11,7 +11,7 @@ import zipfile
 
 from crewai_files import AudioFile, File, FileBytes, FilePath, FileUrl, TextFile
 import crewai_files.spreadsheets as spreadsheets
-from crewai_files.spreadsheets.reading import SpreadsheetError
+import crewai_files.spreadsheets.reading as reading
 import openpyxl
 import pytest
 
@@ -122,8 +122,6 @@ class TestLoad:
         assert (book.kind, len(book.sheets[0].table().frame)) == ("csv", 2)
 
     def test_the_same_content_is_read_once(self, monkeypatch):
-        from crewai_files.spreadsheets import reading
-
         calls = []
         real = reading.parse
 
@@ -157,7 +155,7 @@ class TestLoad:
             raise AssertionError("must not read")
 
         monkeypatch.setattr(FilePath, "read", refuse)
-        with pytest.raises(SpreadsheetError, match=r"over the 0 MB limit"):
+        with pytest.raises(reading.SpreadsheetError, match=r"over the 0 MB limit"):
             spreadsheets.load_spreadsheet(File(source=path), max_bytes=100)
 
 
@@ -206,7 +204,7 @@ class TestDownload:
         self, monkeypatch
     ):
         response = self.serve(monkeypatch, _Response([b"x" * 10], length=10**9))
-        with pytest.raises(SpreadsheetError, match="over the 1 MB limit"):
+        with pytest.raises(reading.SpreadsheetError, match="over the 1 MB limit"):
             spreadsheets.load_spreadsheet(
                 File(source=FileUrl(url=self.URL)), max_bytes=1_048_576
             )
@@ -215,7 +213,7 @@ class TestDownload:
     def test_a_body_past_the_limit_stops_the_download(self, monkeypatch):
         chunks = [b"a,b\n" * 100] * 1000
         response = self.serve(monkeypatch, _Response(chunks))
-        with pytest.raises(SpreadsheetError, match="over the 0 MB limit"):
+        with pytest.raises(reading.SpreadsheetError, match="over the 0 MB limit"):
             spreadsheets.load_spreadsheet(
                 File(source=FileUrl(url=self.URL)), max_bytes=1_000
             )
@@ -223,7 +221,9 @@ class TestDownload:
 
     def test_a_failed_download_says_so(self, monkeypatch):
         self.serve(monkeypatch, _Response([], status=404))
-        with pytest.raises(SpreadsheetError, match="could not be downloaded") as raised:
+        with pytest.raises(
+            reading.SpreadsheetError, match="could not be downloaded"
+        ) as raised:
             spreadsheets.load_spreadsheet(File(source=FileUrl(url=self.URL)))
         assert raised.value.reason == "download"
 

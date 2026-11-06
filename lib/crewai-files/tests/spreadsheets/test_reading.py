@@ -735,6 +735,22 @@ class TestScanFollowsCalaminesParts:
         data = package("other/", {"S": inline("XFD1048576", "far")}, decoy=True)
         assert reason(data) == "too_far"
 
+    def test_a_backslash_target_reads_the_root_workbook_as_calamine_does(self):
+        """calamine takes the workbook folder up to the last "/" only, so a target
+        of ``xl\\workbook.xml`` names the root ``workbook.xml``, not ``xl/``'s."""
+        data = backslashed(
+            root=inline("A1", "root"), under_xl=inline("XFD1048576", "x")
+        )
+        assert parse(data, "w.xlsx").sheets[0].grid == [["root"]]
+
+    def test_a_backslash_target_measures_the_root_workbook_calamine_would_read(
+        self, calamine_must_not_open
+    ):
+        data = backslashed(
+            root=inline("XFD1048576", "x"), under_xl=inline("A1", "small")
+        )
+        assert reason(data) == "too_far"
+
     def test_members_whose_names_differ_only_in_case_are_refused(self):
         data = package(
             "xl/",
@@ -802,3 +818,30 @@ def test_a_header_row_asked_for_is_the_one_returned_while_another_is_cached(
     )
 
     assert sheet.table(header_row=1).header_row == 1
+
+
+def merge(first: bytes, second: bytes) -> bytes:
+    """Both archives' members in one; the second's win on a shared name."""
+    parts: dict[str, bytes] = {}
+    for data in (first, second):
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            parts.update({name: archive.read(name) for name in archive.namelist()})
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in parts.items():
+            archive.writestr(name, content)
+    return out.getvalue()
+
+
+def backslashed(root: bytes, under_xl: bytes) -> bytes:
+    """A workbook at the root and one under ``xl/``, with ``_rels/.rels`` naming
+    ``xl\\workbook.xml``."""
+    rels = (
+        f'<Relationships xmlns="{_RELS_NS}"><Relationship Id="rId1" '
+        f'Type="{_DOC_NS}/officeDocument" Target="xl\\workbook.xml"/>'
+        "</Relationships>"
+    ).encode()
+    return merge(
+        package("xl/", {"S": under_xl}),
+        package("", {"S": root}, **{"_rels/.rels": rels}),
+    )
