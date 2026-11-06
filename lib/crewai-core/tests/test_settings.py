@@ -11,6 +11,35 @@ import crewai_core.settings as settings_module
 import pytest
 
 
+def test_corrupt_settings_json_is_logged_and_recovered(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Corrupt settings.json must warn on load and be recoverable on dump/reset."""
+    config_path = tmp_path / "settings.json"
+    # Trailing comma makes the JSON invalid
+    config_path.write_text('{"org_name": "acme", "org_uuid": "123",}')
+
+    with caplog.at_level("WARNING"):
+        settings = settings_module.Settings(config_path=config_path)
+
+    assert settings.org_name is None
+    assert any("Could not parse settings file" in rec.message for rec in caplog.records)
+
+    settings.org_name = "recovered"
+    settings.dump()
+
+    recovered = json.loads(config_path.read_text())
+    assert recovered["org_name"] == "recovered"
+    # Original corrupt file should have been backed up
+    assert (tmp_path / "settings.json.bak").is_file()
+
+    # reset must also leave a valid file
+    settings.reset()
+    after_reset = json.loads(config_path.read_text())
+    assert after_reset["org_name"] is None
+    assert "enterprise_base_url" in after_reset
+
+
 def test_concurrent_settings_instances_keep_configured_enterprise_url(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
