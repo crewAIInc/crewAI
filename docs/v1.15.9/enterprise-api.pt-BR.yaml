@@ -141,10 +141,7 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: "#/components/schemas/ExecutionRunning"
-                  - $ref: "#/components/schemas/ExecutionCompleted"
-                  - $ref: "#/components/schemas/ExecutionError"
+                $ref: "#/components/schemas/TaskStatus"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -294,50 +291,109 @@ components:
         Use seus tokens reais do painel do CrewAI AMP.
 
   schemas:
-    ExecutionRunning:
+    TaskStatus:
       type: object
+      description: Execution status response from the CrewAI API
+      required:
+        - state
+        - source
       properties:
+        state:
+          type: string
+          enum: ["PENDING", "STARTED", "RUNNING", "SUCCESS", "FAILED", "PAUSED", "REVOKED", "NOT FOUND"]
+          description: Primary execution state
         status:
           type: string
-          enum: ["running"]
-        current_task:
+          nullable: true
+          description: Human-readable status message. Null on success.
+        result:
+          nullable: true
+          description: The execution output (present on success)
+        result_json:
+          type: object
+          nullable: true
+          description: Parsed JSON result if the output is valid JSON
+        usage_metrics:
+          type: object
+          nullable: true
+          description: Token usage metrics for the execution
+          properties:
+            total_tokens:
+              type: integer
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+        flow_id:
           type: string
+          nullable: true
+          description: Flow ID (present when state is PAUSED)
+        last_step:
+          nullable: true
+          description: Information about the last step executed
+        last_executed_task:
+          nullable: true
+          description: Details of the last executed task
+        last_event:
+          type: object
+          nullable: true
+          description: The most recent event
+        events:
+          type: array
+          nullable: true
+          description: List of execution events
+        events_count:
+          type: integer
+          nullable: true
+          description: Total number of events
+        events_by_type:
+          type: object
+          nullable: true
+          description: Events grouped by type
         progress:
           type: object
+          nullable: true
+          description: Execution progress details
           properties:
-            completed_tasks:
-              type: integer
-            total_tasks:
-              type: integer
-
-    ExecutionCompleted:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: ["completed"]
-        result:
-          type: object
-          properties:
-            output:
+            unit:
               type: string
-            tasks:
-              type: array
-              items:
-                $ref: "#/components/schemas/TaskResult"
-        execution_time:
-          type: number
-
-    ExecutionError:
-      type: object
-      properties:
-        status:
+            completed:
+              type: integer
+            total:
+              type: integer
+            remaining:
+              type: integer
+            current:
+              type: string
+              description: Current task name
+            current_agent:
+              type: string
+              description: Name of the currently active agent
+            started_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            duration_seconds:
+              type: number
+        triggered_by:
+          type: object
+          nullable: true
+          description: Information about who triggered the execution
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+        execution_origin:
           type: string
-          enum: ["error"]
-        error:
+          nullable: true
+          description: Origin of the execution
+        source:
           type: string
-        execution_time:
-          type: number
+          enum: ["memory", "application"]
+          description: Where the status was retrieved from
 
     TaskResult:
       type: object
