@@ -824,7 +824,9 @@ class BaseLLM(BaseModel, ABC):
             self,
             event=LLMCallStartedEvent(
                 messages=to_serializable(messages),
-                tools=to_serializable(tools),
+                # Tool parameter schemas are plain JSON that nests past the
+                # default depth limit, so serialize them in full.
+                tools=to_serializable(tools, max_depth=0),
                 callbacks=callbacks,
                 available_functions=available_functions,
                 from_task=from_task,
