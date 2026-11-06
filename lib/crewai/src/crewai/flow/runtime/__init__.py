@@ -2852,7 +2852,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # During resumption, skip execution but continue listeners
                 method_outputs = self.method_outputs
                 last_output = method_outputs[-1] if method_outputs else None
-                await self._execute_listeners(start_method_name, last_output)
+                await self._execute_listeners(
+                    start_method_name, last_output, _resuming_skip=True
+                )
                 return
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(start_method_name)
@@ -3170,6 +3172,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         trigger_method: FlowMethodName,
         result: Any,
         triggering_event_id: str | None = None,
+        *,
+        _resuming_skip: bool = False,
     ) -> None:
         """Executes all listeners and routers triggered by a method completion.
 
@@ -3293,21 +3297,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         ]
                         await asyncio.gather(*tasks)
 
-                if current_trigger in router_results:
-                    for method_name in self._start_method_names():
-                        if self._start_condition_triggered_by(
-                            method_name, current_trigger
-                        ) and method_name not in ran_for_trigger.get(
-                            str(current_trigger), set()
+                for method_name in self._start_method_names():
+                    if self._start_condition_triggered_by(
+                        method_name, current_trigger
+                    ) and method_name not in ran_for_trigger.get(
+                        str(current_trigger), set()
+                    ):
+                        if method_name in self._completed_methods and (
+                            current_trigger in router_results or not _resuming_skip
                         ):
-                            if method_name in self._completed_methods:
-                                # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
-                                was_resuming = self._is_execution_resuming
-                                self._is_execution_resuming = False
-                                await self._execute_start_method(method_name)
-                                self._is_execution_resuming = was_resuming
-                            else:
-                                await self._execute_start_method(method_name)
+                            # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
+                            was_resuming = self._is_execution_resuming
+                            self._is_execution_resuming = False
+                            await self._execute_start_method(method_name)
+                            self._is_execution_resuming = was_resuming
+                        else:
+                            await self._execute_start_method(method_name)
 
     def _condition_met(
         self,
@@ -3389,7 +3394,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                await self._execute_listeners(listener_name, None)
+                await self._execute_listeners(
+                    listener_name, None, _resuming_skip=True
+                )
 
                 # For routers, also check if any conditional starts they triggered are completed
                 # If so, continue their chains
