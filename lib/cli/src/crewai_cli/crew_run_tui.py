@@ -1368,17 +1368,16 @@ FooterKey .footer-key--key {
 
         Read as the run announces itself, from the run's own context, and kept:
         the uuid is gone by the time the kickoff returns, and the project's
-        record cannot say which run was THIS one. Conversations follow their
-        latest turn; nested runs inherit that turn's execution id.
+        record cannot say which run was THIS one.
         """
-        if self._execution_uuid is not None and not self._is_conversational:
+        if self._execution_uuid is not None:
             return
         try:
             from crewai.execution import get_execution_uuid
 
-            self._execution_uuid = get_execution_uuid() or self._execution_uuid
+            self._execution_uuid = get_execution_uuid()
         except Exception:  # a run without tracing simply has no execution
-            return
+            self._execution_uuid = None
 
     def _tracing_was_asked_for(self) -> bool:
         """Did somebody turn tracing on for this run?
