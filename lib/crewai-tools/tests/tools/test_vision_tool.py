@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -203,3 +204,21 @@ def test_model_setter_switches_cached_model(mock_llm_cls: MagicMock) -> None:
     assert tool._run(image_path_url=IMAGE_URL) == "default answer"
     assert tool.llm is default_llm
     assert mock_llm_cls.call_count == 2
+
+
+def test_local_image_data_uri_uses_file_media_type(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A local PNG is announced as image/png in the data URI, not image/jpeg."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    llm = _llm_mock("a picture")
+    tool = VisionTool(llm=llm)
+
+    assert tool._run(image_path_url="picture.png") == "a picture"
+
+    sent_url = llm.call.call_args.kwargs["messages"][0]["content"][1]["image_url"][
+        "url"
+    ]
+    assert sent_url.startswith("data:image/png;base64,")
