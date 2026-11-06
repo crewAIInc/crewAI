@@ -172,7 +172,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", oauthlib = "2026-09-29T00:00:00Z", certifi = "2026-10-21T00:00:00Z", uv = "2026-10-21T00:00:00Z", pypdf = "2026-10-29T00:00:00Z" }
+exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", certifi = "2026-10-21T00:00:00Z", uv = "2026-10-21T00:00:00Z", pypdf = "2026-10-29T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
@@ -311,8 +311,10 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # 1.106.x imports mcp.types.CacheableResult, which no released mcp 1.x has, so its tool calls fail.
 # oauthlib <4.0.0 has GHSA-xpv3-w29h-x7cv / PYSEC-2026-4114 (PKCE code_verifier timing side channel)
 # and GHSA-hj66-6f7g-4r5v (JSONP callback injection on RevocationEndpoint). Fixed in 4.0.0.
+# 3.3.0-4.0.0 has GHSA-3jp2-3mrg-2vxc / CVE-2026-49272 (device-flow bearer token for any known
+# client ID). Fixed in 4.0.1.
 # Transitive via chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client.
-# 4.0.0 (2026-09-28) is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
+# 4.0.1 (2026-10-31) is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -362,7 +364,7 @@ override-dependencies = [
     "snowflake-connector-python>=4.7.3,<5",
     "snowflake-sqlalchemy>=1.11.0",
     "soupsieve>=2.9.2",
-    "oauthlib>=4.0.0",
+    "oauthlib>=4.0.1",
 ]
 
 [tool.uv.workspace]
