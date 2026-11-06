@@ -1045,6 +1045,37 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Hostinger Router">
+    يتصل CrewAI بـ Hostinger Router عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    HOSTINGER_ROUTER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or another compatible endpoint
+    HOSTINGER_ROUTER_BASE_URL=https://router.hostinger.com/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="hostinger_router/claude-sonnet-5"
+    )
+    ```
+
+    <Info>
+      ميزات Hostinger Router:
+      - نماذج من OpenAI وAnthropic وGoogle وMistral وDeepSeek وQwen وغيرها خلف API واحد متوافق مع OpenAI
+      - استدعاء الأدوات والبث
+      - نسخ إقليمية في الاتحاد الأوروبي والولايات المتحدة للعديد من النماذج، مثل `gpt-5-mini-eu`
+    </Info>
+
+    معرّفات النماذج بلا بادئة للمورّد، لذا يكون المرجع الكامل `hostinger_router/<model>`،
+    مثل `hostinger_router/gpt-5-mini` أو `hostinger_router/gemini-3.5-flash`.
+    [قائمة النماذج](https://router.hostinger.com/v1/models) عامة ولا تتطلب مصادقة.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
