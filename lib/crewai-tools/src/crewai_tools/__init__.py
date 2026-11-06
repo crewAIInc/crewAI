@@ -40,6 +40,21 @@ from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
 )
+from crewai_tools.tools.companyenrich_tool import (
+    CompanyEnrichAdvancedRequestTool,
+    CompanyEnrichBatchTool,
+    CompanyEnrichCompanyByIdTool,
+    CompanyEnrichCompanyTool,
+    CompanyEnrichPeopleSearchTool,
+    CompanyEnrichPersonByIdTool,
+    CompanyEnrichPersonLookupTool,
+    CompanyEnrichPropertiesTool,
+    CompanyEnrichSearchCountTool,
+    CompanyEnrichSearchTool,
+    CompanyEnrichSimilarCountTool,
+    CompanyEnrichSimilarTool,
+    CompanyEnrichWorkforceTool,
+)
 from crewai_tools.tools.composio_tool.composio_tool import ComposioTool
 from crewai_tools.tools.contextualai_create_agent_tool.contextual_create_agent_tool import (
     ContextualAICreateAgentTool,
@@ -258,6 +273,19 @@ __all__ = [
     "BrowserbaseLoadTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",
+    "CompanyEnrichAdvancedRequestTool",
+    "CompanyEnrichBatchTool",
+    "CompanyEnrichCompanyByIdTool",
+    "CompanyEnrichCompanyTool",
+    "CompanyEnrichPeopleSearchTool",
+    "CompanyEnrichPersonByIdTool",
+    "CompanyEnrichPersonLookupTool",
+    "CompanyEnrichPropertiesTool",
+    "CompanyEnrichSearchCountTool",
+    "CompanyEnrichSearchTool",
+    "CompanyEnrichSimilarCountTool",
+    "CompanyEnrichSimilarTool",
+    "CompanyEnrichWorkforceTool",
     "ComposioTool",
     "ContextualAICreateAgentTool",
     "ContextualAIParseTool",

@@ -1,0 +1,53 @@
+---
+title: "أدوات CompanyEnrich"
+description: "ابحث عن الشركات والأشخاص باستخدام اثنتي عشرة أداة أساسية ومحدد عمليات متقدم."
+---
+
+## الإعداد
+
+ثبّت `crewai-tools` واضبط `COMPANYENRICH_API_KEY` بمفتاح من [لوحة CompanyEnrich](https://app.companyenrich.com/). يمكنك أيضًا تمرير `api_key` عند إنشاء الأداة وإضافة الأدوات إلى وكيل CrewAI.
+
+## الأدوات الأساسية
+
+| الأداة | المسار |
+| --- | --- |
+| `CompanyEnrichCompanyTool` | `GET /companies/enrich` |
+| `CompanyEnrichSearchTool` | `POST /companies/search` |
+| `CompanyEnrichSimilarTool` | `POST /companies/similar` |
+| `CompanyEnrichPeopleSearchTool` | `POST /people/search` |
+| `CompanyEnrichPersonLookupTool` | `POST /people/lookup` |
+| `CompanyEnrichWorkforceTool` | `GET /companies/workforce` |
+| `CompanyEnrichPropertiesTool` | `POST /companies/enrich` |
+| `CompanyEnrichBatchTool` | `POST /companies/enrich/batch` |
+| `CompanyEnrichCompanyByIdTool` | `GET /companies` |
+| `CompanyEnrichPersonByIdTool` | `GET /people` |
+| `CompanyEnrichSearchCountTool` | `POST /companies/search/count` |
+| `CompanyEnrichSimilarCountTool` | `POST /companies/similar/count` |
+
+## الاستخدام
+
+```python
+from crewai_tools import (
+    CompanyEnrichCompanyTool, CompanyEnrichPeopleSearchTool,
+    CompanyEnrichSearchCountTool, CompanyEnrichAdvancedRequestTool,
+)
+
+profile = CompanyEnrichCompanyTool().run(domain="stripe.com", expand=["workforce"])
+people = CompanyEnrichPeopleSearchTool().run(
+    filters={"companyFilter": {"domains": ["stripe.com"]}}, expand=["education"], page_size=5
+)
+count = CompanyEnrichSearchCountTool().run(filters={"countries": ["US"]})
+industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
+```
+
+## المدخلات والنتائج
+
+تقبل أدوات البحث كائن `filters` كاملًا. يقبل بحث الشركات أيضًا `semantic_query` حتى 500 حرف و`query` حتى 250 حرفًا. تتقدم المدخلات المخصصة غير الفارغة على الحقول المطابقة في المرشحات، وتُحفظ بقية الحقول. استخدم `expand` المدعوم (`workforce` للشركات و`education` للأشخاص) و`wait_for_enrichment` حيث يدعمه المسار. تتطلب بيانات القوى العاملة واحدًا فقط من `company_id` أو `domain`. يقبل الإثراء الجماعي 1–50 نطاقًا والشركات المشابهة 1–10. معرّفات الشركات UUID؛ وتقبل معرّفات الأشخاص أعداد int64 موجبة أو سلاسل عشرية.
+
+تظل إعدادات البحث الأساسية `page=1` و`page_size=5`. يقبل حجم الصفحة 1–100 ويجب ألا يتجاوز حاصل ضرب رقم الصفحة وحجمها 10,000. تُحفظ جميع حقول الاستجابة وبيانات الصفحات. تعيد أدوات العد أرقامًا، بما فيها الصفر، وتظل نتائج الدفعات والتصنيفات مصفوفات.
+
+## العمليات المتقدمة
+
+تقبل `CompanyEnrichAdvancedRequestTool` تعدادًا ثابتًا من 42 عملية عبر `operation` وكائنات اختيارية هي `body` و`query` و`path_parameters`. تشمل العمليات الأساسية والمعاينة والعد والتمرير والتعليم والجغرافيا والتصنيفات والتصدير غير المتزامن والإثراء الجماعي ودورة حياة المهام. لا تشمل إدارة القوائم المحفوظة أو `/me`. تُرفض العمليات والحقول غير المعروفة والمعرّفات والمدخلات المطلوبة غير الصالحة قبل الاتصال. تتطلب عمليات البريد التجريبية `allow_beta=True`. تستخدم طلبات الصفحات المتقدمة الصفحة 1 وحجم 10 افتراضيًا؛ ويتطلب التصدير عددًا من 1 إلى 50,000.
+
+ينفذ كل استدعاء طلبًا واحدًا إلى واجهة HTTPS الثابتة بمهلة `timeout` قابلة للتعديل، وافتراضيها 30 ثانية. لا توجد إعادة محاولة أو صفحات أو استطلاع أو تنزيل روابط نتائج تلقائيًا. قد تستهلك العمليات أرصدة؛ راجع [مرجع API](https://docs.companyenrich.com/reference) للمخططات والأسعار الحالية. تُعرض أخطاء HTTP برسائل منقحة دون مفتاح API أو نص الخطأ الأصلي.
