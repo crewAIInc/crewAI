@@ -26,7 +26,7 @@ Checkpointing saves a snapshot of execution state during a run so a crew, flow, 
 
 ### What a checkpoint is
 
-A checkpoint captures everything CrewAI needs to recreate a run mid-flight: the full state of the crew, flow, or agent — configuration, agent memory and knowledge sources, task progress, intermediate outputs, internal state and attributes — alongside the kickoff inputs, the event history up to that point, and a lineage ID that ties the checkpoint to the run it came from.
+A checkpoint captures the state CrewAI needs to recreate a run mid-flight: the full state of the crew, flow, or agent — configuration, agent memory and knowledge sources, task progress, intermediate outputs, internal state and attributes — alongside the kickoff inputs, the event history up to that point, and a lineage ID that ties the checkpoint to the run it came from. Callbacks are saved only as references to named functions; see [What a restore does not bring back](#what-a-restore-does-not-bring-back).
 
 Restoring rebuilds that state and continues. Completed tasks are skipped, memory and knowledge are rehydrated, and downstream work runs against the same outputs the original run produced. Forking does the same restore under a new lineage, so the new branch and the original run can write checkpoints side by side without overwriting each other.
 
@@ -50,6 +50,37 @@ Auto-checkpoint writes (event-driven) are best-effort: a failed write is logged 
 ### Inheritance model
 
 `Crew`, `Flow`, and `Agent` all accept a `checkpoint` argument. Children inherit from their parent unless they set their own value or pass `False` to opt out. Enable checkpointing once on the crew and every agent participates, or selectively exclude one agent.
+
+### What a restore does not bring back
+
+A restore builds the crew, flow, or agent from the checkpoint file, not from the object you call `kickoff()` on. `crew.kickoff(from_checkpoint=...)` runs the crew stored in the file, so callables you set on `crew` are not copied over.
+
+A checkpoint saves a callback as the dotted path of a module-level function, such as `"my_project.hooks.on_task_done"`, and imports it again on restore. A checkpoint is data, so CrewAI imports these paths only when the `CREWAI_DESERIALIZE_CALLBACKS=1` environment variable is set. Without it, restoring a checkpoint that names a callback raises a `ValueError`. Set it only for checkpoint files you trust.
+
+These are not saved and do not run after a restore:
+
+- Lambdas, closures, bound methods such as `notifier.on_task_done`, `functools.partial` objects, and callable instances. CrewAI warns `A ... callback cannot be saved in a checkpoint` when you pass one to a `Task`, `Agent`, `Crew`, or tool; setting the attribute afterwards does not warn. A tool `cache_function` of this kind is restored as one that never caches.
+- Callable guardrails. CrewAI warns when it writes the checkpoint. String guardrails are saved.
+- `@before_kickoff` and `@after_kickoff` hooks on a `@CrewBase` class.
+
+To keep a callback that cannot be saved, restore with `Crew.from_checkpoint()` and assign it again before `kickoff()`:
+
+```python
+from crewai import CheckpointConfig, Crew
+
+
+class Notifier:
+    def on_task_done(self, output):
+        print(f"Finished: {output.description}")
+
+
+notifier = Notifier()
+crew = Crew.from_checkpoint(
+    CheckpointConfig(restore_from="./.checkpoints/<timestamp>_<uuid>.json")
+)
+crew.tasks[-1].callback = notifier.on_task_done
+result = crew.kickoff()
+```
 
 ## Tutorial: Resume a failing crew
 
@@ -92,6 +123,10 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
     ```
 
     The research task is skipped, the writer runs against the saved research output, and the crew finishes.
+
+    <Note>
+    The resumed crew is built from the checkpoint file, not from `crew`. If your tasks use callbacks, read [What a restore does not bring back](#what-a-restore-does-not-bring-back).
+    </Note>
   </Step>
 </Steps>
 

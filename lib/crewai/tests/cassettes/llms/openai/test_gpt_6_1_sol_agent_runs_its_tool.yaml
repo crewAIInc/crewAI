@@ -1,0 +1,644 @@
+interactions:
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''orion''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '715'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 135\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:47 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '286'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Records clerk. You never
+      guess a code.\nYour personal goal is: Report access codes exactly as the lookup
+      tool returns them"},{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''orion''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"model":"gpt-6.1-sol","tool_choice":"auto","tools":[{"type":"function","function":{"name":"lookup_code","description":"Look
+      up the access code for a project by name.","strict":true,"parameters":{"properties":{"name":{"type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '764'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Function tools with reasoning_effort
+        are not supported for gpt-6.1-sol in /v1/chat/completions. To use function
+        tools, use /v1/responses or set reasoning_effort to 'none'.\",\n    \"type\":
+        \"invalid_request_error\",\n    \"param\": \"reasoning_effort\",\n    \"code\":
+        null\n  }\n}"
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Records clerk. You never
+      guess a code.\nYour personal goal is: Report access codes exactly as the lookup
+      tool returns them"},{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''orion''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"model":"gpt-6.1-sol","reasoning_effort":"none","tool_choice":"auto","tools":[{"type":"function","function":{"name":"lookup_code","description":"Look
+      up the access code for a project by name.","strict":true,"parameters":{"properties":{"name":{"type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '790'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Unsupported value: 'reasoning_effort'
+        does not support 'none' with this model. Supported values are: 'low', 'medium',
+        'high', and 'xhigh'.\",\n    \"type\": \"invalid_request_error\",\n    \"param\":
+        \"reasoning_effort\",\n    \"code\": \"unsupported_value\"\n  }\n}"
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''orion''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","store":false,"tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '729'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_00c80b8bc9c693e2016aeadaefe8b087d0932673fffe1f3049\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1793776367,\n  \"status\":
+        \"completed\",\n  \"access_programs\": null,\n  \"background\": false,\n  \"billing\":
+        {\n    \"payer\": \"developer\"\n  },\n  \"completed_at\": 1793776369,\n  \"error\":
+        null,\n  \"frequency_penalty\": 0.0,\n  \"image\": {\n    \"context_compression\":
+        \"disabled\"\n  },\n  \"incomplete_details\": null,\n  \"instructions\": \"You
+        are Records clerk. You never guess a code.\\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them\",\n  \"max_output_tokens\":
+        null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-6.1-sol\",\n  \"moderation\":
+        null,\n  \"output\": [\n    {\n      \"id\": \"fc_00c80b8bc9c693e2016aeadaf0e85087d09020bf71a7b1d888\",\n
+        \     \"type\": \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"name\\\":\\\"orion\\\"}\",\n      \"call_id\": \"call_DQM23qIJtyJM12fCoAt8Ao8C\",\n
+        \     \"name\": \"lookup_code\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
+        \ \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
+        null,\n  \"prompt_cache_retention\": \"24h\",\n  \"reasoning\": {\n    \"context\":
+        \"all_turns\",\n    \"effort\": \"medium\",\n    \"mode\": \"standard\",\n
+        \   \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": false,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\": \"medium\"\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tool_usage\": {\n    \"image_gen\":
+        {\n      \"input_tokens\": 0,\n      \"input_tokens_details\": {\n        \"image_tokens\":
+        0,\n        \"text_tokens\": 0\n      },\n      \"output_tokens\": 0,\n      \"output_tokens_details\":
+        {\n        \"image_tokens\": 0,\n        \"text_tokens\": 0\n      },\n      \"total_tokens\":
+        0\n    },\n    \"web_search\": {\n      \"num_requests\": 0\n    }\n  },\n
+        \ \"tools\": [\n    {\n      \"type\": \"function\",\n      \"description\":
+        \"Look up the access code for a project by name.\",\n      \"name\": \"lookup_code\",\n
+        \     \"output_schema\": null,\n      \"parameters\": {\n        \"properties\":
+        {\n          \"name\": {\n            \"title\": \"Name\",\n            \"type\":
+        \"string\"\n          }\n        },\n        \"required\": [\n          \"name\"\n
+        \       ],\n        \"type\": \"object\",\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    }\n  ],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 0.98,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n
+        \   \"input_tokens\": 135,\n    \"input_tokens_details\": {\n      \"cache_write_tokens\":
+        0,\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 19,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 154\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:49 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1414'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":[{"role":"user","content":"ORION-ZETA-7741"}],"model":"gpt-6.1-sol"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '77'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 13\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:49 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '88'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''orion''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","name":"lookup_code","arguments":"{\"name\":\"orion\"}"},{"type":"function_call_output","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","output":"ORION-ZETA-7741"}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '939'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 172\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:49 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '92'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''orion''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","name":"lookup_code","arguments":"{\"name\":\"orion\"}"},{"type":"function_call_output","call_id":"call_DQM23qIJtyJM12fCoAt8Ao8C","output":"ORION-ZETA-7741"}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","store":false,"tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '953'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_06509424d49b4b0b016aeadaf1e48c87d0957c29c70e1cb216\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1793776369,\n  \"status\":
+        \"completed\",\n  \"access_programs\": null,\n  \"background\": false,\n  \"billing\":
+        {\n    \"payer\": \"developer\"\n  },\n  \"completed_at\": 1793776371,\n  \"error\":
+        null,\n  \"frequency_penalty\": 0.0,\n  \"image\": {\n    \"context_compression\":
+        \"disabled\"\n  },\n  \"incomplete_details\": null,\n  \"instructions\": \"You
+        are Records clerk. You never guess a code.\\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them\",\n  \"max_output_tokens\":
+        null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-6.1-sol\",\n  \"moderation\":
+        null,\n  \"output\": [\n    {\n      \"id\": \"msg_06509424d49b4b0b016aeadaf2e66087d081d99a53c21272b2\",\n
+        \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
+        [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
+        [],\n          \"logprobs\": [],\n          \"text\": \"ORION-ZETA-7741\"\n
+        \       }\n      ],\n      \"phase\": \"final_answer\",\n      \"role\": \"assistant\"\n
+        \   }\n  ],\n  \"parallel_tool_calls\": true,\n  \"presence_penalty\": 0.0,\n
+        \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\":
+        \"24h\",\n  \"reasoning\": {\n    \"context\": \"all_turns\",\n    \"effort\":
+        \"medium\",\n    \"mode\": \"standard\",\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": false,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    },\n
+        \   \"verbosity\": \"medium\"\n  },\n  \"tool_choice\": \"auto\",\n  \"tool_usage\":
+        {\n    \"image_gen\": {\n      \"input_tokens\": 0,\n      \"input_tokens_details\":
+        {\n        \"image_tokens\": 0,\n        \"text_tokens\": 0\n      },\n      \"output_tokens\":
+        0,\n      \"output_tokens_details\": {\n        \"image_tokens\": 0,\n        \"text_tokens\":
+        0\n      },\n      \"total_tokens\": 0\n    },\n    \"web_search\": {\n      \"num_requests\":
+        0\n    }\n  },\n  \"tools\": [\n    {\n      \"type\": \"function\",\n      \"description\":
+        \"Look up the access code for a project by name.\",\n      \"name\": \"lookup_code\",\n
+        \     \"output_schema\": null,\n      \"parameters\": {\n        \"properties\":
+        {\n          \"name\": {\n            \"title\": \"Name\",\n            \"type\":
+        \"string\"\n          }\n        },\n        \"required\": [\n          \"name\"\n
+        \       ],\n        \"type\": \"object\",\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    }\n  ],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 0.98,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n
+        \   \"input_tokens\": 172,\n    \"input_tokens_details\": {\n      \"cache_write_tokens\":
+        0,\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 11,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 183\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:51 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1369'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

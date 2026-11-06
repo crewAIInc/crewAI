@@ -281,9 +281,15 @@ Para um chat local no terminal, use `chat()`:
 ```python
 def kickoff() -> None:
     SupportFlow().chat()
+    # Or open the full terminal UI:
+    SupportFlow().chat(tui=True)
 ```
 
-`chat()` envolve `handle_turn()` em um REPL, sai com `exit` / `quit` e ignora linhas em branco por padrão. Com `trace_scope="turn"`, cada turno finaliza seu trace automaticamente. Sem escopo explícito, o ciclo da sessão inteira e a limpeza automática ao sair do REPL permanecem inalterados.
+`chat()` envolve `stream_turn()` em um REPL, sai com `exit` / `quit` e ignora linhas em branco por padrão. Com `trace_scope="turn"`, cada turno finaliza seu trace automaticamente. Sem escopo explícito, o ciclo da sessão inteira e a limpeza automática ao sair do REPL permanecem inalterados.
+
+`chat(tui=True)` abre a mesma interface de terminal usada por `crewai run` e requer um terminal interativo. Preserva `session_id`, `exit_commands`, o adiamento dos traces e as opções encaminhadas a `handle_turn()`. Prompts personalizados, funções de entrada/saída e `skip_empty` são exclusivos do REPL e são rejeitados no modo TUI. Agents conversacionais expõem os mesmos métodos `agent.chat()` e `agent.chat(tui=True)`.
+
+O streaming de tokens fica ativado por padrão no REPL simples e na TUI quando o LLM não o desativa explicitamente. Use `flow.chat(stream=False)` (também aceito com `tui=True`) ou `LLM(stream=False)` para desativá-lo; um `stream=True` explícito no chat tem precedência. Ambos os modos consomem frames de `stream_turn()` e preservam o resultado completo do turno. As substituições de streaming se aplicam apenas ao turno e não alteram as configurações compartilhadas do LLM. Para transportes personalizados, `stream_turn(message, stream=None)` aplica o mesmo padrão automático; seu padrão existente `stream=True` continua solicitando streaming de tokens explicitamente. `stream=False` mantém os frames de ciclo de vida e mensagens enquanto desativa os chunks de tokens do LLM. O REPL simples imprime os chunks de texto conforme chegam, excluindo os de raciocínio e argumentos de chamadas de ferramentas. Um `output_fn` personalizado continua recebendo uma resposta completa por turno. O texto ao vivo vem dos métodos de resposta `converse_turn` e `answer_from_history_turn`; os demais handlers exibem seu resultado público completo.
 
 ### `ConversationConfig`
 
@@ -293,6 +299,7 @@ Decorador de classe que anexa os defaults de chat por classe.
 |-------|--------|-----------|
 | `system_prompt` | `slices.conversational_system_prompt` (i18n) | System message usado pelo `converse_turn` embutido. Passe `""` para desativar totalmente. |
 | `llm` | `None` | LLM de conversa (usado pelo `converse_turn` e como fallback do router). |
+| `respect_context_window` | `True` | Compacta automaticamente as requisições de chat e roteamento embutidas perto do limite de contexto do modelo e tenta novamente uma vez após um erro de limite de contexto. Defina `False` para desativar. |
 | `router` | `None` | Sobrescritas opcionais de `RouterConfig`. Com listeners customizados e um LLM que possa ser resolvido, o roteamento é habilitado automaticamente mesmo quando este campo é omitido. |
 | `answer_from_history_prompt` | padrão do framework | **Descontinuado.** Use o system prompt de `converse` ou sobrescreva `converse_turn()`. |
 | `answer_from_history_llm` | `None` | **Descontinuado.** Use `llm`; `converse` já recebe o histórico canônico. |
@@ -314,6 +321,8 @@ Decorador de classe que anexa os defaults de chat por classe.
 Sem rotas customizadas, os turnos caem em `converse`. Com rotas customizadas e um LLM de conversa/router, o framework sintetiza um `RouterConfig` padrão; forneça um explicitamente apenas para customizar seu prompt, lista de rotas, descrições ou comportamento de fallback. Definir `default_intents` usa o caminho legado de pré-classificação.
 
 Se nenhum LLM de conversa estiver configurado, o `converse_turn` embutido retorna um placeholder de configuração em vez de gerar uma resposta.
+
+Para modelos `BaseLLM`, as chamadas embutidas de `converse`, `answer_from_history` e do router reutilizam o sumarizador de contexto compartilhado. A compactação preserva as mensagens de system, repete a mensagem mais recente do usuário literalmente após o resumo e mantém `state.messages` intacto para exibição e persistência; cada turno monta sua própria requisição ao modelo e pode resumir novamente. Os resumos internos não são transmitidos como texto da resposta, e os eventos existentes de sumarização de contexto informam o progresso. Objetos customizados que implementam apenas `call()` mantêm seu comportamento atual. A pré-classificação legada com `intents=` / `default_intents` e os handlers de rotas customizadas mantêm seu próprio tratamento de contexto.
 
 ### `RouterConfig` e o catálogo de rotas auto-gerado
 
