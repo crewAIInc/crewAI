@@ -95,3 +95,62 @@ def test_config_validation():
 
     with pytest.raises(ValueError):
         SnowflakeConfig(account="test_account", user="test_user")
+
+
+class _FakeCursor:
+    """Cursor that reports the database selected by the last USE statement."""
+
+    def __init__(self) -> None:
+        self._database: str | None = None
+        self._description: list[tuple[str]] | None = None
+
+    def execute(self, sql: str, timeout: int | None = None) -> None:
+        if sql.startswith("USE DATABASE "):
+            self._database = sql.rsplit(" ", 1)[-1]
+            self._description = None
+        else:
+            self._description = [("value",)]
+
+    @property
+    def description(self) -> list[tuple[str]] | None:
+        return self._description
+
+    def fetchall(self) -> list[tuple[str | None]]:
+        return [(self._database,)]
+
+    def close(self) -> None:
+        pass
+
+
+class _FakeConnection:
+    def __init__(self) -> None:
+        self._cursor = _FakeCursor()
+
+    def cursor(self) -> _FakeCursor:
+        return self._cursor
+
+
+def test_overrides_do_not_reuse_results_cached_for_another_database(
+    snowflake_tool,
+):
+    """The cache key must reflect the per-call database override."""
+    import crewai_tools.tools.snowflake_search_tool.snowflake_search_tool as sf
+
+    sf._query_cache.clear()
+    connection = _FakeConnection()
+
+    async def _get_connection():
+        return connection
+
+    with patch.object(snowflake_tool, "_get_connection", new=_get_connection):
+        first = asyncio.run(
+            snowflake_tool._run(query="SELECT value", database="db_one")
+        )
+        second = asyncio.run(
+            snowflake_tool._run(query="SELECT value", database="db_two")
+        )
+
+    sf._query_cache.clear()
+
+    assert first == [{"value": "db_one"}]
+    assert second == [{"value": "db_two"}]
