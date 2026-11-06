@@ -1,0 +1,99 @@
+---
+title: Apify Actors
+description: "تتيح لك `ApifyActorsTool` استدعاء Apify Actors لتوفير إمكانيات تجريف الويب والزحف واستخراج البيانات وأتمتة الويب لسير عمل CrewAI."
+icon: "); -webkit-mask-image: url('https://upload.wikimedia.org/wikipedia/commons/a/ae/Apify.svg');/*"
+mode: "wide"
+---
+
+# `ApifyActorsTool`
+
+دمج [Apify Actors](https://apify.com/actors) في سير عمل CrewAI الخاص بك.
+
+## الوصف
+
+تربط `ApifyActorsTool` بين [Apify Actors](https://apify.com/actors)، وهي برامج سحابية لتجريف الويب والأتمتة، وسير عمل CrewAI الخاص بك.
+استخدم أياً من أكثر من 4,000 Actor على [متجر Apify](https://apify.com/store) لحالات استخدام مثل استخراج البيانات من وسائل التواصل الاجتماعي ومحركات البحث والخرائط الإلكترونية ومواقع التجارة الإلكترونية وبوابات السفر أو المواقع العامة.
+
+للتفاصيل، راجع [تكامل Apify CrewAI](https://docs.apify.com/platform/integrations/crewai) في وثائق Apify.
+
+## خطوات البدء
+
+<Steps>
+    <Step title="تثبيت التبعيات">
+        ثبّت `crewai[tools]` و`langchain-apify` باستخدام pip: `pip install 'crewai[tools]' langchain-apify`.
+    </Step>
+    <Step title="الحصول على رمز API لـ Apify">
+        سجّل في [وحدة تحكم Apify](https://console.apify.com/) واحصل على [رمز API الخاص بك](https://console.apify.com/settings/integrations).
+    </Step>
+    <Step title="إعداد البيئة">
+        عيّن رمز API لـ Apify كمتغير بيئة `APIFY_API_TOKEN` لتمكين وظائف الأداة.
+    </Step>
+</Steps>
+
+## مثال على الاستخدام
+
+استخدم `ApifyActorsTool` يدوياً لتشغيل [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) لإجراء بحث ويب:
+
+```python
+from crewai_tools import ApifyActorsTool
+
+# Initialize the tool with an Apify Actor
+tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+# Run the tool with input parameters
+results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
+
+# Process the results
+for result in results:
+    print(f"URL: {result['metadata']['url']}")
+    print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
+```
+
+### المخرجات المتوقعة
+
+إليك المخرجات من تشغيل الكود أعلاه:
+
+```text
+URL: https://www.example.com/crewai-intro
+Content: CrewAI is a framework for building AI-powered workflows...
+URL: https://docs.crewai.com/
+Content: Official documentation for CrewAI...
+```
+
+تقوم `ApifyActorsTool` تلقائياً بجلب تعريف Actor ومخطط الإدخال من Apify باستخدام `actor_name` المقدم ثم تبني وصف الأداة ومخطط المعاملات. هذا يعني أنك تحتاج فقط إلى تحديد `actor_name` صالح، والأداة تتعامل مع الباقي عند استخدامها مع الوكلاء - دون الحاجة لتحديد `run_input`. إليك كيفية عمل ذلك:
+
+```python
+from crewai import Agent
+from crewai_tools import ApifyActorsTool
+
+rag_browser = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and summarize information about specific topics",
+    backstory="You are an experienced researcher with attention to detail",
+    tools=[rag_browser],
+)
+```
+
+يمكنك تشغيل Actors أخرى من [متجر Apify](https://apify.com/store) ببساطة عن طريق تغيير `actor_name` وعند الاستخدام اليدوي، ضبط `run_input` بناءً على مخطط إدخال Actor.
+
+لمثال على الاستخدام مع الوكلاء، راجع [قالب CrewAI Actor](https://apify.com/templates/python-crewai).
+
+## الإعداد
+
+تتطلب `ApifyActorsTool` المدخلات التالية للعمل:
+
+- **`actor_name`**
+  معرّف Apify Actor المراد تشغيله، مثل `"apify/rag-web-browser"`. تصفح جميع Actors على [متجر Apify](https://apify.com/store).
+- **`run_input`**
+  قاموس من معاملات الإدخال لـ Actor عند تشغيل الأداة يدوياً.
+  - على سبيل المثال، لـ Actor `apify/rag-web-browser`: `{"query": "search term", "maxResults": 5}`
+  - راجع [مخطط إدخال](https://apify.com/apify/rag-web-browser/input-schema) Actor لقائمة معاملات الإدخال.
+
+## الموارد
+
+- **[Apify](https://apify.com/)**: استكشف منصة Apify.
+- **[كيفية بناء وكيل ذكاء اصطناعي على Apify](https://blog.apify.com/how-to-build-an-ai-agent/)** - دليل شامل خطوة بخطوة لإنشاء ونشر وتسويق وكلاء الذكاء الاصطناعي على منصة Apify.
+- **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: Actor شائع لبحث الويب لنماذج LLM.
+- **[دليل تكامل CrewAI](https://docs.apify.com/platform/integrations/crewai)**: اتبع الدليل الرسمي لتكامل Apify وCrewAI.
