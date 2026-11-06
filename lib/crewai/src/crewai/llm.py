@@ -214,6 +214,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "fireworks_ai",
 ]
 
 
@@ -239,6 +240,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "fireworks_ai": "fireworks_ai",
 }
 
 
@@ -475,6 +477,10 @@ class LLM(BaseLLM):
             parts = model_lower.split("/")
             return len(parts) == 2 and all(parts)
 
+        if provider == "fireworks_ai":
+            # Fireworks ids are full resource paths such as accounts/fireworks/models/<model>
+            return True
+
         if provider == "snowflake":
             return True
 
@@ -703,6 +709,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "fireworks_ai",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
