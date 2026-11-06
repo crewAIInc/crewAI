@@ -292,3 +292,29 @@ def test_preparation_retry_during_playback_preserves_lease_and_completion():
     assert queue.observe_client(activity(flow, 2, delivery_id=delivery.delivery_id))
     assert queue.claim().delivery_id == deliveries[1]
     assert [job.status for job in jobs] == ["completed", "completed"]
+
+
+@pytest.mark.parametrize("claimed", [False, True])
+def test_completed_job_control_suppresses_delivery_without_losing_artifacts(claimed):
+    from crewai.experimental.flow_jobs import JobControl, request_job_control
+
+    flow, turns, queue = setup()
+    job = complete(flow)
+    delivery_id = queue.enqueue(job)
+    if claimed:
+        assert queue.claim().delivery_id == delivery_id
+        assert queue.prepare(delivery_id, lambda current: current[0].answer)
+        assert queue.accepts_output(delivery_id)
+    receipt = request_job_control(flow.state, JobControl(
+        session_id=flow.state.id, job_id=job.job_id, revision=job.revision,
+        attempt=job.attempt, action="cancel",
+    ))
+    assert receipt.accepted and job.status == "completed"
+    assert job.answer == "Result one" and job.delivery_suppressed
+    assert queue.enqueue(job) is None
+    assert not queue.accepts_output(delivery_id)
+    if claimed:
+        assert queue.settle(delivery_id, "skipped")
+    else:
+        assert queue.claim() is None
+    assert flow.state.deliveries[delivery_id].status == "skipped"
