@@ -197,7 +197,7 @@ class Memory(BaseModel):
             if k in {"_save_pool", "_pending_lock", "_reset_lock"}:
                 attr = self.__private_attributes__[k]
                 private[k] = attr.get_default()
-            elif isinstance(v, (ThreadPoolExecutor, threading.Lock)):
+            elif isinstance(v, (ThreadPoolExecutor, type(threading.Lock()))):
                 attr = self.__private_attributes__[k]
                 private[k] = attr.get_default()
             else:

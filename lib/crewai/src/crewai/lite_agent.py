@@ -784,7 +784,12 @@ class LiteAgent(FlowTrackable, BaseModel):
                 if isinstance(guardrail_result.result, str):
                     output.raw = guardrail_result.result
                 elif isinstance(guardrail_result.result, BaseModel):
-                    output.pydantic = guardrail_result.result
+                    if guardrail_result.result is output:
+                        # (True, output): pass-through leaves the output (and its
+                        # response_format result) unchanged.
+                        pass
+                    else:
+                        output.pydantic = guardrail_result.result
 
             if isinstance(self.llm, BaseLLM):
                 usage_metrics = self.llm.get_token_usage_summary()
