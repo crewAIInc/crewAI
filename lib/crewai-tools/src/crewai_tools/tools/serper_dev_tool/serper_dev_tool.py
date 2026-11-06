@@ -105,6 +105,14 @@ class SerperDevToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to search the internet"
     )
+    search_type: str | None = Field(
+        default=None,
+        description="Type of search to run ('search' or 'news'). Defaults to the tool setting.",
+    )
+    save_file: bool | None = Field(
+        default=None,
+        description="Whether to save the results to a file. Defaults to the tool setting.",
+    )
 
 
 class SerperDevTool(BaseTool):
@@ -317,8 +325,12 @@ class SerperDevTool(BaseTool):
     def _run(self, **kwargs: Any) -> FormattedResults:
         """Execute the search operation."""
         search_query: str | None = kwargs.get("search_query") or kwargs.get("query")
-        search_type: str = kwargs.get("search_type", self.search_type)
-        save_file = kwargs.get("save_file", self.save_file)
+        search_type: str = kwargs.get("search_type") or self.search_type
+        # The schema always provides the key, so a missing value must fall
+        # back to the instance setting instead of replacing it with None.
+        save_file = kwargs.get("save_file")
+        if save_file is None:
+            save_file = self.save_file
 
         if not search_query:
             raise ValueError("search_query is required")
