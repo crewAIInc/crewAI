@@ -832,17 +832,17 @@ def test_legacy_client_raises_http_errors_that_name_no_app(
         LegacyClient().get_actions([ApplicationSelector.from_string("gmail")])
 
 
-@pytest.mark.parametrize("status", [404, 409])
+@pytest.mark.parametrize(("status", "code"), [(409, "conflict"), (404, "clipper_not_found")])
 @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
 def test_clipper_client_names_an_app_without_a_connection_or_unknown(
-    mock_get: Mock, status: int
+    mock_get: Mock, status: int, code: str
 ) -> None:
-    """Clipper answers 409 for an app with no active connection, 404 for one
-    it does not know."""
+    """Clipper answers 409 `conflict` for an app with no active connection, and
+    404 `clipper_not_found` for one it does not know."""
     from crewai_core.platform_apps import PlatformAppsUnavailableError
 
-    mock_get.return_value = amp_answer(status, {"errors": [{"code": "conflict"}]})
+    mock_get.return_value = amp_answer(status, {"errors": [{"code": code}]})
 
     with pytest.raises(PlatformAppsUnavailableError) as raised:
         ClipperClient().get_actions([ApplicationSelector.from_string("slack@private")])
@@ -858,4 +858,30 @@ def test_clipper_client_raises_a_refusal_that_names_no_app(mock_get: Mock) -> No
     mock_get.return_value = amp_answer(403, {"errors": [{"code": "clipper_disallowed"}]})
 
     with pytest.raises(requests.HTTPError, match="403"):
+        ClipperClient().get_actions([ApplicationSelector.from_string("slack@private")])
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [
+        (404, {"error": "Not Found"}),
+        (404, "<html>404 Not Found</html>"),
+        (404, {"errors": [{"code": "not_found"}]}),
+        (409, {"errors": [{"code": "clipper_not_found"}]}),
+        (409, {"errors": []}),
+    ],
+    ids=["proxy-json", "proxy-html", "other-code", "code-for-another-status", "no-errors"],
+)
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_clipper_client_keeps_another_servers_404_or_409(
+    mock_get: Mock, status: int, body: Any
+) -> None:
+    """A 404 or 409 without Clipper's own code, from a proxy or a wrong base URL,
+    is not reported as an app that is not connected."""
+    import requests
+
+    mock_get.return_value = amp_answer(status, body)
+
+    with pytest.raises(requests.HTTPError, match=str(status)):
         ClipperClient().get_actions([ApplicationSelector.from_string("slack@private")])

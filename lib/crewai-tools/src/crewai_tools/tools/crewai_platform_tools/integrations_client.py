@@ -160,9 +160,7 @@ class ClipperClient:
                 timeout=30,
                 verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
             )
-            # 409: no active connection to the app; 404: an app or action AMP
-            # does not know.
-            if response.status_code in (404, 409):
+            if _clipper_says_unavailable(response):
                 raise PlatformAppsUnavailableError([selector.app])
             response.raise_for_status()
             data = response.json()["data"]
@@ -325,6 +323,27 @@ class LegacyClient:
             )
 
         return ToolExecutionSuccess(output=data)
+
+
+# Clipper's own error codes, by status: no active connection to the app, and an
+# app or action it does not know. Another server's 404 or 409 (a proxy, a wrong
+# base URL) keeps its own error.
+_CLIPPER_UNAVAILABLE_CODES = {409: "conflict", 404: "clipper_not_found"}
+
+
+def _clipper_says_unavailable(response: requests.Response) -> bool:
+    """Whether Clipper answered that the selected app is not available."""
+    code = _CLIPPER_UNAVAILABLE_CODES.get(response.status_code)
+    if code is None:
+        return False
+    try:
+        body = response.json()
+    except requests.exceptions.JSONDecodeError:
+        return False
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if not isinstance(errors, list) or not errors or not isinstance(errors[0], dict):
+        return False
+    return bool(errors[0].get("code") == code)
 
 
 def _missing_apps(response: requests.Response) -> list[str]:
