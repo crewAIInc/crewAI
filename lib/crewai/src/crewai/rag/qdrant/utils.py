@@ -225,8 +225,10 @@ def _create_point_from_document(
     elif not isinstance(metadata, dict):
         metadata = dict(metadata) if metadata else {}
 
+    # ``content`` is reserved for the document text; a metadata key of the
+    # same name must not replace it in the payload search results read back.
     return PointStruct(
         id=doc_id,
         vector=vector,
-        payload={"content": doc["content"], **metadata},
+        payload={**metadata, "content": doc["content"]},
     )
