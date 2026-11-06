@@ -381,13 +381,17 @@
  },
  {
   "id": "A-038",
-  "item": "Checking login from a script: `crewai org list` exits 0 even when logged out; read the output for 'Please sign up/login'.",
+  "item": "Checking login from a script: `crewai org list` exits 1 when logged out and prints 'Please sign up/login'.",
   "q": "From a shell script, how do I tell whether the user is logged in to CrewAI AMP?",
   "key": [
-   "sign up/login|output|exits? 0|exit code (is )?0"
+   "crewai org list",
+   "sign up/login|exits? (1|non-?zero)|exit (code|status)|\\$\\?|if !?\\s*crewai org list"
+  ],
+  "partial": [
+   "crewai org list"
   ],
   "trap": [
-   "if crewai org (list|current)[^|]*; then"
+   "exits? 0 (even )?when logged out"
   ]
  },
  {
@@ -1402,7 +1406,7 @@
   "q": "You've changed the flow and re-evaluated three times, and the grades aren't moving. What now?",
   "key": [
    "(stop|report)",
-   "brief"
+   "brief|grades|report links?"
   ],
   "partial": [
    "structur"
@@ -1499,7 +1503,7 @@
   "item": "`crewai skill list` shows downloaded skills only, not the organization's registry.",
   "q": "How do I see every skill my organization has published on AMP?",
   "key": [
-   "list_skills|/crewai_plus/api/v1/skills|Skills page"
+   "crewai skill search|list_skills|/crewai_plus/api/v1/skills|Skills page"
   ],
   "trap": [
    "crewai skill list (shows|lists|prints) (all|every|the organi[sz]ation)"
@@ -1507,10 +1511,10 @@
  },
  {
   "id": "C-022",
-  "item": "List the organization's skills with `SkillCommand().plus_api_client.list_skills()` (handle, latest_version, description) until the CLI can.",
+  "item": "`crewai skill search [query]` lists the organization's skills on AMP, with refs.",
   "q": "Give me a command I can run in this project that prints the handles of all skills on our AMP account.",
   "key": [
-   "list_skills"
+   "crewai skill search"
   ]
  },
  {
@@ -1836,10 +1840,13 @@
  },
  {
   "id": "C-058",
-  "item": "There's no way to force a ZIP deploy when an origin exists; create from a copy without one (until A5).",
+  "item": "`crewai deploy create --zip` uploads a ZIP even when an origin exists.",
   "q": "My repo has a GitHub origin, but I want AMP to deploy an uploaded copy of the code instead. Can I?",
   "key": [
-   "(copy|without (an? )?(git )?origin|no (such )?(flag|option)|can'?t|cannot|isn'?t)"
+   "deploy create\\b.*--zip"
+  ],
+  "trap": [
+   "copy (of the (project|repo(sitory)?) )?without (an? )?(git )?(`)?origin"
   ]
  },
  {

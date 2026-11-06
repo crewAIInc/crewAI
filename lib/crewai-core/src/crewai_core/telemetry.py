@@ -585,6 +585,11 @@ class Telemetry:
         # name, a self-hosted model — as `<provider>/other`; the CLI decides
         # (`telemetry_model_name`). Never a run, an output or an organization.
         "cli_usage:eval_models": frozenset({"authenticated", "models", "models_count"}),
+        # The class of the error `crewai run` failed to load a project with: by
+        # name when Python, crewAI or a library crewAI loads projects with
+        # defines it, any other as `other`; the CLI decides (`_error_class`).
+        # Never the message.
+        "cli_usage:run_stopped:load_failed": frozenset({"error_class"}),
     }
 
     def feature_usage_span(

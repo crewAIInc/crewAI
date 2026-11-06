@@ -1,0 +1,111 @@
+---
+title: أداة أوراق arXiv
+description: تبحث `ArxivPaperTool` في arXiv عن أوراق بحثية مطابقة لاستعلام وتقوم اختيارياً بتنزيل ملفات PDF.
+icon: box-archive
+mode: "wide"
+---
+
+# `ArxivPaperTool`
+
+## الوصف
+
+تستعلم `ArxivPaperTool` من واجهة برمجة تطبيقات arXiv عن الأوراق الأكاديمية وتُرجع نتائج مختصرة وقابلة للقراءة. يمكنها أيضاً تنزيل ملفات PDF اختيارياً إلى القرص.
+
+## التثبيت
+
+لا تحتاج هذه الأداة إلى تثبيت خاص بخلاف `crewai-tools`.
+
+```shell
+uv add crewai-tools
+```
+
+لا يتطلب مفتاح API. تستخدم هذه الأداة واجهة Atom API العامة من arXiv.
+
+## خطوات البدء
+
+1. قم بتهيئة الأداة.
+2. قدّم `search_query` (مثل "transformer neural network").
+3. عيّن اختيارياً `max_results` (1-100) وفعّل تنزيل PDF في المُنشئ.
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ArxivPaperTool
+
+tool = ArxivPaperTool(
+    download_pdfs=False,
+    save_dir="./arxiv_pdfs",
+    use_title_as_filename=True,
+)
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant arXiv papers",
+    backstory="Expert at literature discovery",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search arXiv for 'transformer neural network' and list top 5 results.",
+    expected_output="A concise list of 5 relevant papers with titles, links, and summaries.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+### الاستخدام المباشر (بدون وكيل)
+
+```python Code
+from crewai_tools import ArxivPaperTool
+
+tool = ArxivPaperTool(
+    download_pdfs=True,
+    save_dir="./arxiv_pdfs",
+)
+print(tool.run(search_query="mixture of experts", max_results=3))
+```
+
+## المعاملات
+
+### معاملات التهيئة
+
+- `download_pdfs` (bool, الافتراضي `False`): ما إذا كان سيتم تنزيل ملفات PDF.
+- `save_dir` (str, الافتراضي `./arxiv_pdfs`): المجلد لحفظ ملفات PDF.
+- `use_title_as_filename` (bool, الافتراضي `False`): استخدام عناوين الأوراق كأسماء ملفات.
+
+### معاملات التشغيل
+
+- `search_query` (str, مطلوب): استعلام البحث في arXiv.
+- `max_results` (int, الافتراضي `5`, النطاق 1-100): عدد النتائج.
+
+## صيغة الإخراج
+
+تُرجع الأداة قائمة أوراق قابلة للقراءة تتضمن:
+- العنوان
+- الرابط (صفحة الملخص)
+- مقتطف/ملخص (مقتطع)
+
+عند تعيين `download_pdfs=True`، يتم حفظ ملفات PDF على القرص ويشير الملخص إلى الملفات المحفوظة.
+
+## ملاحظات الاستخدام
+
+- تُرجع الأداة نصاً منسقاً مع البيانات الوصفية الرئيسية والروابط.
+- عند تعيين `download_pdfs=True`، سيتم تخزين ملفات PDF في `save_dir`.
+
+## استكشاف الأخطاء وإصلاحها
+
+- إذا تلقيت انتهاء مهلة الشبكة، أعد المحاولة أو قلل `max_results`.
+- أخطاء XML غير صالحة تشير إلى مشكلة في تحليل استجابة arXiv؛ جرب استعلاماً أبسط.
+- قد تحدث أخطاء نظام الملفات (مثل رفض الصلاحية) عند حفظ ملفات PDF؛ تأكد من أن `save_dir` قابل للكتابة.
+
+## روابط ذات صلة
+
+- وثائق واجهة arXiv API: https://info.arxiv.org/help/api/index.html
+
+## معالجة الأخطاء
+
+- يتم التعامل مع مشكلات الشبكة و XML غير الصالح وأخطاء نظام التشغيل برسائل توضيحية.
