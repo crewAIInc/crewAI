@@ -1,0 +1,37 @@
+---
+title: "Seedance by Ace Data Cloud"
+description: "أدوات CrewAI أصلية لإنشاء Seedance واسترجاع المهمة غير المتزامنة نفسها عبر Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Seedance أو CrewAI. دُمج المصدر ويوجد إصدار GitHub ثابت 0.1.0 مع wheel/sdist في مستودع Ace. لا ندّعي نشر PyPI أو الإدراج في AMP. ثبّت المصدر المدمج الثابت أدناه أو استخدم أمر wheel المرتبط بـSHA256 في ملاحظات الإصدار. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
+
+```bash
+uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@8c5ed37d28f2110987d478ed5010df39907b929e'
+```
+
+```bash
+uv add 'crewai-seedance @ https://github.com/AceDataCloud/SeedanceCrewAI/releases/download/v0.1.0/crewai_seedance-0.1.0-py3-none-any.whl#sha256=3b0f4decb7b5e85775e5461c8d433c0976f6316cbc4e4d2e202fd1d14f8ee1da'
+```
+
+سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_api_key) وافتح General application، ثم انسخ Token لاستهلاك API أو أنشئ مفتاحًا مخصصًا عبر Manage Keys → Create. تحقّق من صلاحية Seedance والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_pricing). عند تقييد APIs اسمح بـ `/seedance/videos` و`/seedance/tasks`. اضبط Token الخام في `ACEDATACLOUD_API_KEY` دون Bearer أو مسافات، ولا تضعه في prompt أو ملفات مودعة.
+
+الإدخال content منظم لنص/صورة/صوت/فيديو وليس prompt عامًا. الدقة بحروف صغيرة 480p/720p/1080p/4k وخيارات ratio والمدة/الصوت حسب النموذج. النتيجة data.video_url أو data.content.video_url.
+
+لأول فحص مجاني، استرجع مهمة موجودة تملكها بالمفتاح نفسه. لا ينشئ ذلك وسائط:
+
+```python
+from seedance_crewai import SeedanceRetrieveTaskTool
+
+result = SeedanceRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+بعد الموافقة على النموذج والميزانية، أضف `SeedanceGenerateVideoTool()` و`SeedanceRetrieveTaskTool()` إلى أدوات Agent. هما BaseTool أصليتان بأسماء ومخططات واضحة، دون إعداد MCP. يرسل الإنشاء طلبًا غير متزامن مدفوعًا مرة واحدة؛ احفظ task_id واستعلم عن المعرّف نفسه. accepted/pending ليس نجاحًا. لا تُعد الإنشاء للاستعلام أو بعد مهلة مجهولة النتيجة.
+
+تعيد المهمة المخزنة الناجحة status=succeeded وsuccess=true وmedia_urls والتكلفة الأصلية بوحدة Credits إن توفّرت. الحالات الفاشلة المتداخلة أو غياب الوسائط النهائية ينتج ToolFailure. يُحفظ معنى HTTP دون عرض استجابات خاصة. لا توجد إعادة محاولة مدفوعة تلقائية أو معالج دفع أو نموذج بديل. الاستخدام الواحد لكل مثيل ليس حدًا ماليًا أو نظام إذن.
+
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SeedanceCrewAI/tree/8c5ed37d28f2110987d478ed5010df39907b929e) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و21 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
+
+إصدار Ace الثابت وتثبيت مرتبط بـSHA256: [Seedance0.1.0](https://github.com/AceDataCloud/SeedanceCrewAI/releases/tag/v0.1.0).

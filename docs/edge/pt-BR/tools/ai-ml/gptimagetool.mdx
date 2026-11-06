@@ -1,0 +1,37 @@
+---
+title: "GPT Image by Ace Data Cloud"
+description: "Ferramentas nativas CrewAI para gerar GPT Image e consultar a mesma tarefa assíncrona pela Ace Data Cloud."
+icon: image
+mode: "wide"
+---
+
+Esta integração independente é fornecida pela Ace Data Cloud, não é produto oficial de GPT Image ou CrewAI. O código foi integrado e o repositório Ace publicou wheel/sdist estáveis 0.1.0 no GitHub. Não há alegação de publicação PyPI ou catálogo AMP. Instale o commit integrado abaixo ou o wheel vinculado a SHA256 nas notas da versão. Esta página proposta não comprova listagem oficial.
+
+```bash
+uv add 'crewai-gpt-image @ git+https://github.com/AceDataCloud/GPTImageCrewAI.git@0eea3c3c57067d82680ba54680db29ddce08eb51'
+```
+
+```bash
+uv add 'crewai-gpt-image @ https://github.com/AceDataCloud/GPTImageCrewAI/releases/download/v0.1.0/crewai_gpt_image-0.1.0-py3-none-any.whl#sha256=6051bd70f833e1c05dc9bae405a23ee6316818efc50deeb38e95a4926b37068e'
+```
+
+Cadastre-se/entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_api_key), abra General application e copie o Token de consumo ou use Manage Keys → Create. Confira acesso a GPT Image, saldo e [preços dos modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_pricing). Ao restringir APIs, permita `/openai/images/generations` e `/openai/tasks`. Configure o Token bruto em `ACEDATACLOUD_API_KEY`, sem Bearer ou espaços; nunca em prompts ou arquivos versionados.
+
+GPT Image usa size/quality/n(1..10), background e formato; /openai/images/generations com response_format=url. Não é DallETool ou Nano Banana. Saída data[].url; edição multipart não incluída.
+
+Na primeira verificação gratuita, consulte uma tarefa já existente da mesma Key. Isso não cria mídia:
+
+```python
+from gpt_image_crewai import GPTImageRetrieveTaskTool
+
+result = GPTImageRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+Após aprovar modelo e orçamento, adicione `GPTImageGenerateImageTool()` e `GPTImageRetrieveTaskTool()` à lista tools do Agent. São BaseTool nativas com nomes e schemas do serviço, sem MCP. A geração envia uma solicitação assíncrona paga uma vez; preserve task_id e consulte o mesmo ID. accepted/pending não é sucesso. Não gere novamente para consultar ou após timeout de resultado desconhecido.
+
+Tarefas armazenadas concluídas retornam status=succeeded, success=true, media_urls e o cost original em Credits quando disponível. Falhas aninhadas ou mídia final ausente produzem ToolFailure. HTTP mantém seu significado sem expor corpos privados. Sem repetição automática de HTTP pago, pagamento ou fallback. Uma geração por instância não é teto financeiro nem autorização.
+
+O [guia em inglês/chinês](https://github.com/AceDataCloud/GPTImageCrewAI/tree/0eea3c3c57067d82680ba54680db29ddce08eb51) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,21 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.
+
+Versão estável Ace e instalação vinculada a SHA256: [GPT Image0.1.0](https://github.com/AceDataCloud/GPTImageCrewAI/releases/tag/v0.1.0).
