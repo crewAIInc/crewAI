@@ -289,15 +289,90 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     s2.close()
 
 
+def test_windows_access_denied_pid_is_treated_as_alive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenProcess failing with ERROR_ACCESS_DENIED must not be read as "dead".
+
+    Regression guard: a live process the caller merely lacks permission to
+    open a handle to must not be treated the same as a genuinely dead one --
+    otherwise _cleanup_orphaned_shards would remove an *active* worker's
+    shard. Mocks the Win32 API directly so this runs (and protects against
+    regressions) on any platform, not just Windows.
+    """
+    import ctypes
+    import sys as sys_module
+
+    from crewai.memory.storage.qdrant_edge_storage import _pid_is_alive
+
+    monkeypatch.setattr(sys_module, "platform", "win32")
+
+    mock_kernel32 = MagicMock()
+    mock_kernel32.OpenProcess.return_value = 0  # NULL handle: OpenProcess failed
+    monkeypatch.setattr(
+        ctypes, "WinDLL", MagicMock(return_value=mock_kernel32), raising=False
+    )
+    monkeypatch.setattr(
+        ctypes, "get_last_error", lambda: 5, raising=False  # ERROR_ACCESS_DENIED
+    )
+
+    assert _pid_is_alive(4242) is True
+    mock_kernel32.CloseHandle.assert_not_called()
+
+
+def test_windows_invalid_parameter_pid_is_treated_as_dead(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenProcess failing with ERROR_INVALID_PARAMETER means no such PID."""
+    import ctypes
+    import sys as sys_module
+
+    from crewai.memory.storage.qdrant_edge_storage import _pid_is_alive
+
+    monkeypatch.setattr(sys_module, "platform", "win32")
+
+    mock_kernel32 = MagicMock()
+    mock_kernel32.OpenProcess.return_value = 0
+    monkeypatch.setattr(
+        ctypes, "WinDLL", MagicMock(return_value=mock_kernel32), raising=False
+    )
+    monkeypatch.setattr(
+        ctypes, "get_last_error", lambda: 87, raising=False  # ERROR_INVALID_PARAMETER
+    )
+
+    assert _pid_is_alive(99999999) is False
+
+
+def test_windows_live_process_returns_true_and_closes_handle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A successful OpenProcess means the process is alive; the handle must close."""
+    import ctypes
+    import sys as sys_module
+
+    from crewai.memory.storage.qdrant_edge_storage import _pid_is_alive
+
+    monkeypatch.setattr(sys_module, "platform", "win32")
+
+    mock_kernel32 = MagicMock()
+    mock_kernel32.OpenProcess.return_value = 4321  # non-zero: real handle
+    monkeypatch.setattr(
+        ctypes, "WinDLL", MagicMock(return_value=mock_kernel32), raising=False
+    )
+
+    assert _pid_is_alive(1234) is True
+    mock_kernel32.CloseHandle.assert_called_once_with(4321)
 
 
 def test_memory_with_qdrant_edge(tmp_path: Path) -> None:
+    """Memory.remember/recall work end-to-end against QdrantEdgeStorage."""
     from crewai.memory.unified_memory import Memory
 
     mock_embedder = MagicMock()
     mock_embedder.side_effect = lambda texts: [[0.1, 0.2, 0.3, 0.4] for _ in texts]
 
     storage = _make_storage(str(tmp_path / "edge"))
+
     m = Memory(
         storage=storage,
         llm=MagicMock(),
