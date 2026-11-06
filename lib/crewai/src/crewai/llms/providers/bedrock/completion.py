@@ -1982,7 +1982,12 @@ class BedrockCompletion(BaseLLM):
                     )
                 else:
                     if isinstance(content, list):
-                        converse_messages.append({"role": role, "content": content})
+                        converse_messages.append(
+                            {
+                                "role": role,
+                                "content": self._convert_content_for_converse(content),
+                            }
+                        )
                     else:
                         text_content = content if content else ""
                         converse_messages.append(
@@ -2058,6 +2063,57 @@ class BedrockCompletion(BaseLLM):
             )
 
         return converse_messages, system_message
+
+    @staticmethod
+    def _convert_content_for_converse(content: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Convert OpenAI-style multimodal content parts to Converse blocks.
+
+        ``LLMMessage.content`` documents its list form as multimodal parts,
+        and upstream code (e.g. the agent executor) emits OpenAI-style parts
+        such as ``{"type": "text", "text": ...}`` and ``{"type": "image_url",
+        "image_url": {"url": "data:..."}}``.  The Converse API keys content
+        blocks by type instead (``{"text": ...}``, ``{"image": ...}``), so the
+        raw parts are rejected.  Map those parts here and pass through blocks
+        that are already in Converse shape (e.g. ``{"text": ...}`` or
+        ``{"image": ...}``) unchanged.
+        """
+        converted: list[dict[str, Any]] = []
+        for block in content:
+            if not isinstance(block, dict):
+                converted.append(block)
+                continue
+
+            block_type = block.get("type")
+            if block_type == "image_url":
+                image_info = block.get("image_url", {})
+                url = image_info.get("url", "") if isinstance(image_info, dict) else ""
+                # Converse image blocks require ``{"image": {"format": str,
+                # "source": {"bytes": b"..."}}}``.  Parse the data URI's media
+                # type into the image format and strip the base64 prefix.
+                if isinstance(url, str) and url.startswith("data:") and ";base64," in url:
+                    header, b64_data = url.split(";base64,", 1)
+                    media_type = (
+                        header.split("data:", 1)[1] if "data:" in header else ""
+                    )
+                    image_format = media_type.split("/")[-1] if "/" in media_type else ""
+                    # Converse only accepts jpeg/png/gif/webp.
+                    if image_format in {"jpeg", "png", "gif", "webp"}:
+                        converted.append(
+                            {
+                                "image": {
+                                    "format": image_format,
+                                    "source": {"bytes": b64_data},
+                                }
+                            }
+                        )
+                        continue
+                converted.append(block)
+            elif block_type == "text" and "text" in block:
+                converted.append({"text": block["text"]})
+            else:
+                converted.append(block)
+
+        return converted
 
     @staticmethod
     def _messages_contain_tool_content(messages: list[LLMMessage]) -> bool:

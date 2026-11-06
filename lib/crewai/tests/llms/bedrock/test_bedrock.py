@@ -693,6 +693,62 @@ def test_bedrock_message_formatting():
     assert "text" in formatted_messages[0]["content"][0]
 
 
+def test_bedrock_converts_openai_style_content_parts_to_converse_blocks():
+    """Regression test: OpenAI-style multimodal parts must be converted.
+
+    The agent executor emits ``{"type": "text", ...}`` and
+    ``{"type": "image_url", ...}`` parts, but the Converse API keys content
+    blocks by type (``{"text": ...}``, ``{"image": ...}``). Previously these
+    parts were forwarded unchanged, producing a payload Converse rejects.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "look at this"},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
+                    },
+                },
+            ],
+        },
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    content = converse_msgs[0]["content"]
+    assert content == [
+        {"text": "look at this"},
+        {"image": {"format": "png", "source": {"bytes": "iVBORw0KGgoAAAANSUhEUg=="}}},
+    ]
+
+
+def test_bedrock_passes_through_existing_converse_blocks():
+    """Blocks already in Converse shape must not be double-converted."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"text": "already converted"},
+                {"image": {"format": "jpeg", "source": {"bytes": "abc"}}},
+            ],
+        },
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    assert converse_msgs[0]["content"] == [
+        {"text": "already converted"},
+        {"image": {"format": "jpeg", "source": {"bytes": "abc"}}},
+    ]
+
+
 def test_bedrock_streaming_parameter():
     """
     Test that streaming parameter is properly handled
