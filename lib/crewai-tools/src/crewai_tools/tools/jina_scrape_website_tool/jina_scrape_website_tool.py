@@ -7,7 +7,11 @@ import requests
 from crewai_tools.security.safe_path import validate_url
 
 
-class JinaScrapeWebsiteToolInput(BaseModel):
+class FixedJinaScrapeWebsiteToolInput(BaseModel):
+    """Input schema for a JinaScrapeWebsiteTool with a configured URL."""
+
+
+class JinaScrapeWebsiteToolInput(FixedJinaScrapeWebsiteToolInput):
     """Input schema for JinaScrapeWebsiteTool."""
 
     website_url: str = Field(..., description="Mandatory website url to read the file")
@@ -32,6 +36,7 @@ class JinaScrapeWebsiteTool(BaseTool):
         if website_url is not None:
             self.website_url = website_url
             self.description = f"A tool that can be used to read {website_url}'s content and return markdown content."
+            self.args_schema = FixedJinaScrapeWebsiteToolInput
             self._generate_description()
 
         if custom_headers is not None:
@@ -41,7 +46,7 @@ class JinaScrapeWebsiteTool(BaseTool):
             self.headers["Authorization"] = f"Bearer {api_key}"
 
     def _run(self, website_url: str | None = None) -> str:
-        url = website_url or self.website_url
+        url = self.website_url if self.website_url is not None else website_url
         if not url:
             raise ValueError(
                 "Website URL must be provided either during initialization or execution"
