@@ -526,3 +526,6 @@ class NL2SQLTool(BaseTool):
 
         finally:
             session.close()
+            # Dispose the engine so pooled connections do not keep the
+            # database file locked after the call returns.
+            engine.dispose()

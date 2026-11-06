@@ -101,6 +101,7 @@ class TestDMLEnabled:
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
         uri = f"sqlite:///{db_path}"
+        engine = None
         try:
             tool = _make_tool(allow_dml=True)
             tool.db_uri = uri
@@ -116,6 +117,8 @@ class TestDMLEnabled:
                 rows = conn.execute(text("SELECT id FROM items")).fetchall()
             assert (42,) in rows
         finally:
+            if engine is not None:
+                engine.dispose()
             os.unlink(db_path)
 
 
