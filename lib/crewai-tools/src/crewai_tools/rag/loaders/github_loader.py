@@ -1,5 +1,6 @@
 """GitHub repository content loader."""
 
+from itertools import islice
 from typing import Any
 
 from github import Github, GithubException
@@ -87,7 +88,7 @@ class GithubLoader(BaseLoader):
 
         if "issue" in content_types:
             issues = repo.get_issues(state="open")
-            issue_list = [i for i in list(issues[:10]) if not i.pull_request][:5]
+            issue_list = list(islice((i for i in issues if not i.pull_request), 5))
             if issue_list:
                 all_content.append("Recent Issues:")
                 for issue in issue_list:
