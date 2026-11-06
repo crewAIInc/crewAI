@@ -1140,6 +1140,14 @@ def _handle_task_completion(
             )
             return str(result_text), task_id_config, reference_task_ids, remote_notice
 
+        result_text = a2a_result.get("result", "")
+
+        if result_text:
+            # Escape untrusted remote content to prevent A2A delimiter spoofing.
+            safe_result = result_text.replace("<", "&lt;").replace(">", "&gt;")
+            remote_notice += (
+                f"\n<REMOTE_AGENT_RESULT>\n{safe_result}\n</REMOTE_AGENT_RESULT>\n"
+            )
     return None, task_id_config, reference_task_ids, remote_notice
 
 
