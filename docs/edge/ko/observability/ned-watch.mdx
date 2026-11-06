@@ -1,0 +1,114 @@
+---
+title: Ned Watch 통합
+description: 크루가 조용히 멈추거나, 너무 오래 걸리거나, 실패했을 때 바로 알기
+icon: heart-pulse
+mode: "wide"
+---
+
+# 소개
+
+[Ned Watch](https://ned.watch)는 에이전트를 위한 호스팅형 데드맨(deadman) 및 시간 초과(overrun) 모니터입니다. 크루는 kickoff가 끝날 때 체크인합니다. 체크인이 멈추거나, kickoff가 제한 시간을 넘기거나, kickoff가 실패하면 Ned가 지정한 URL로 서명된 웹훅을 보냅니다. 점검은 서로 독립된 두 스테이션(미국과 EU)에서 이루어지며, 처음 다섯 개의 watch는 무료입니다.
+
+트레이싱 도구는 크루가 무엇을 했는지 보여 줍니다. Ned Watch는 실행됐어야 할 크루가 실행되지 않았을 때 알려 주는데, 이는 어떤 트레이싱도 보여 줄 수 없는 것입니다.
+
+## Ned Watch를 쓰는 이유
+
+- **예약 실행되는 크루**: 매일 밤 돌아가는 리서치 크루가 더 이상 예약되지 않거나, 아무 로그도 남기기 전에 죽으면 아무도 알아채지 못합니다. 데드맨 watch는 알아챕니다.
+- **오래 실행되는 크루**: overrun watch는 kickoff가 설정한 제한을 넘기면 발동하고, 끝나면 해제됩니다.
+- **실패**: 예외를 던진 kickoff는 오류 클래스와 함께 즉시 보고되므로, 누군가 로그를 읽기 전에 알림이 도착합니다.
+- **독립성**: 모니터는 여러분의 인프라 밖에서 동작하므로, 크루를 멈추게 한 장애가 알림까지 함께 멈추게 할 수 없습니다.
+
+## 설치
+
+```bash
+pip install ned-watch
+```
+
+문제가 생겼을 때 Ned가 호출할 URL을 설정합니다:
+
+```bash
+export NED_CALLBACK_URL=https://your-app.example/hooks/ned
+```
+
+미리 계정이나 키를 만들 필요가 없습니다. 첫 실행에서 에이전트가 만들어지고 키는 `~/.config/ned-watch/state.json`에 저장됩니다.
+
+## 빠른 시작
+
+`crew.kickoff(...)`를 래퍼로 바꿉니다:
+
+```python
+from crewai import Agent, Crew, Task
+from nedwatch.integrations.crewai import kickoff
+
+researcher = Agent(
+    role="Researcher",
+    goal="Summarize what changed in {topic} this week",
+    backstory="A careful reader who cites sources.",
+)
+summary = Task(
+    description="Write a short summary of this week's changes in {topic}.",
+    expected_output="Five bullet points with links.",
+    agent=researcher,
+)
+crew = Crew(name="weekly-research", agents=[researcher], tasks=[summary])
+
+# every="1d": wake me if this crew hasn't finished a kickoff in a day
+# max="30m": wake me if one kickoff runs longer than 30 minutes
+result = kickoff(crew, inputs={"topic": "agent frameworks"}, every="1d", max="30m")
+```
+
+Ned가 보는 것:
+
+| 이벤트 | 일어나는 일 |
+|---|---|
+| kickoff 시작 | 데드맨 watch가 준비(arm)되고 overrun 실행이 시작됩니다(`max=` 설정 시). |
+| kickoff 반환 | overrun 실행이 끝나고 데드맨 watch가 체크인합니다. |
+| kickoff가 예외를 던짐 | 체크인이 없으므로 `every`가 지나면 데드맨이 발동합니다. overrun 실행은 오류 클래스와 함께 실패로 종료되어 Ned가 즉시 발동합니다. |
+| 각 에이전트 단계 또는 태스크(`heartbeat=True` 설정 시) | 30초에 최대 한 번 체크인합니다. |
+
+watch 이름은 `crew.name`을 설정했다면 그 값을, 아니면 스크립트 이름을 따릅니다. `akickoff(...)`는 `crew.kickoff_async`를 감쌉니다.
+
+## `crew.kickoff()`를 직접 계속 호출하기
+
+```python
+from nedwatch.integrations.crewai import NedCrew
+
+ned = NedCrew("weekly-research", every="1d", max="30m", heartbeat=True).attach(crew)
+result = ned.kickoff(crew, inputs={"topic": "agent frameworks"})
+```
+
+`attach()`는 `crew.step_callback`과 `crew.task_callback`을 설정하되, 이미 있던 콜백은 유지합니다(여러분의 콜백이 먼저 실행됩니다). `heartbeat=True`이면 각 단계와 완료된 각 태스크가 "살아 있음"으로 계산되어, 몇 시간씩 돌아가는 크루에 알맞습니다. 예약 실행되는 크루에서는 꺼 두세요. 한동안 일하다가 실패하는 크루가 살아 있는 것처럼 보일 수 있습니다.
+
+## 직접 시작하지 않는 크루
+
+`crewai run`, Flows, 또는 다른 코드 깊숙이 있는 크루라면 CrewAI의 이벤트 버스를 대신 수신합니다. 시작 시 리스너를 한 번 만듭니다:
+
+```python
+from nedwatch.integrations.crewai import NedCrewListener
+
+NedCrewListener("weekly-research", every="1d", max="30m")
+```
+
+`CrewKickoffStartedEvent`, `CrewKickoffCompletedEvent`, `CrewKickoffFailedEvent`에 반응합니다. CrewAI는 버스 핸들러를 워커 스레드에서 실행하므로, 체크인은 kickoff가 반환된 직후에 도착합니다.
+
+## 옵션
+
+| 옵션 | 의미 |
+|---|---|
+| `name` | watch 이름. 기본값은 `crew.name`, 없으면 스크립트 이름. |
+| `every` | 데드맨이 발동하기 전까지 허용되는 침묵 시간. `max`가 없으면 기본값 `"1h"`. |
+| `max` | overrun이 발동하기 전까지 단일 kickoff가 실행될 수 있는 최대 시간. |
+| `on_error` | `"report"`(기본값: 실행을 오류 클래스와 함께 실패로 종료), `"leave_open"`(`max`에서 overrun이 발동하도록 둠), 또는 `"finish"`. |
+| `heartbeat` | 각 단계와 완료된 태스크를 체크인으로 계산. |
+| `ned` | 환경 변수 대신 코드에서 키, 리전, 콜백을 설정하기 위한 `nedwatch.Ned` 인스턴스. |
+
+## 웹훅
+
+모든 콜백은 `fire` 또는 `clear`의 `event`, watch id, 사유, 그리고 overrun의 경우 실행 id를 담은 JSON `POST`입니다. 타임스탬프와 본문에 대한 HMAC 서명이 `X-Ned-Signature`에 실리며, `nedwatch.verify_signature()`로 확인합니다. 받아들여지지 않은 콜백은 Ned가 24시간 동안 재시도합니다.
+
+## 참고 자료
+
+- [통합 가이드와 다른 프레임워크](https://ned.watch/integrations/crewai)
+- [소스 코드와 테스트된 예제 크루](https://github.com/ned-mind/ned-watch-integrations)
+- [API 레퍼런스](https://api.ned.watch/docs)
+- [Ned Watch 상태](https://ned.watch/status/)

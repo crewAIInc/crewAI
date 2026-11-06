@@ -1,0 +1,114 @@
+---
+title: التكامل مع Ned Watch
+description: اعرف متى يتوقف طاقمك بصمت، أو يطول تشغيله، أو يفشل
+icon: heart-pulse
+mode: "wide"
+---
+
+# مقدمة
+
+[Ned Watch](https://ned.watch) خدمة مستضافة لمراقبة الوكلاء من نوع deadman وتجاوز الوقت (overrun). يسجّل طاقمك حضوره (check-in) عندما ينتهي kickoff. إذا توقف تسجيل الحضور، أو تجاوز kickoff حدًا زمنيًا، أو فشل kickoff، يرسل Ned webhook موقّعًا إلى العنوان الذي تختاره. تأتي الفحوصات من محطتين مستقلتين (الولايات المتحدة والاتحاد الأوروبي)، وأول خمس مراقبات مجانية.
+
+أدوات التتبع تُظهر ما فعله الطاقم. أما Ned Watch فيخبرك عندما لا يعمل طاقم كان يجب أن يعمل، وهذا ما لا يستطيع أي تتبع إظهاره.
+
+## لماذا تستخدم Ned Watch؟
+
+- **الطواقم المجدولة**: طاقم بحث ليلي يتوقف عن الجدولة، أو ينهار قبل أن يسجّل أي شيء، لا يلاحظه أحد. مراقبة deadman تلاحظه.
+- **الطواقم طويلة التشغيل**: تنطلق مراقبة overrun عندما يتجاوز kickoff الحد الذي حددته، وتُلغى عندما ينتهي.
+- **الأعطال**: يُبلَّغ فورًا عن kickoff يرمي استثناءً، مع فئة الخطأ، فيصل التنبيه قبل أن يقرأ أحد السجلات.
+- **الاستقلالية**: يعمل المراقب خارج بنيتك التحتية، فلا يستطيع عطل يوقف طاقمك أن يوقف التنبيه معه.
+
+## التثبيت
+
+```bash
+pip install ned-watch
+```
+
+حدّد العنوان الذي يجب أن يستدعيه Ned عندما يحدث خطأ:
+
+```bash
+export NED_CALLBACK_URL=https://your-app.example/hooks/ned
+```
+
+لا حاجة إلى حساب أو مفتاح مسبقًا. يُنشئ التشغيل الأول وكيلك ويحفظ المفتاح في `~/.config/ned-watch/state.json`.
+
+## البداية السريعة
+
+استبدل `crew.kickoff(...)` بالغلاف:
+
+```python
+from crewai import Agent, Crew, Task
+from nedwatch.integrations.crewai import kickoff
+
+researcher = Agent(
+    role="Researcher",
+    goal="Summarize what changed in {topic} this week",
+    backstory="A careful reader who cites sources.",
+)
+summary = Task(
+    description="Write a short summary of this week's changes in {topic}.",
+    expected_output="Five bullet points with links.",
+    agent=researcher,
+)
+crew = Crew(name="weekly-research", agents=[researcher], tasks=[summary])
+
+# every="1d": wake me if this crew hasn't finished a kickoff in a day
+# max="30m": wake me if one kickoff runs longer than 30 minutes
+result = kickoff(crew, inputs={"topic": "agent frameworks"}, every="1d", max="30m")
+```
+
+ما يراه Ned:
+
+| الحدث | ما يحدث |
+|---|---|
+| يبدأ kickoff | تُفعَّل مراقبة deadman ويبدأ تشغيل overrun (مع `max=`). |
+| يعود kickoff | ينتهي تشغيل overrun وتسجّل مراقبة deadman حضورها. |
+| يرمي kickoff استثناءً | لا تسجيل حضور، فتنطلق deadman عندما تمر `every`. يُنهى تشغيل overrun كفاشل مع فئة الخطأ، فينطلق Ned فورًا. |
+| كل خطوة وكيل أو مهمة (مع `heartbeat=True`) | تسجيل حضور، بحد أقصى مرة كل 30 ثانية. |
+
+تأخذ المراقبة اسمها من `crew.name` عندما تحدده، وإلا من اسم السكربت. يغلّف `akickoff(...)` الدالة `crew.kickoff_async`.
+
+## الاستمرار في استدعاء `crew.kickoff()` بنفسك
+
+```python
+from nedwatch.integrations.crewai import NedCrew
+
+ned = NedCrew("weekly-research", every="1d", max="30m", heartbeat=True).attach(crew)
+result = ned.kickoff(crew, inputs={"topic": "agent frameworks"})
+```
+
+تضبط `attach()` كلًا من `crew.step_callback` و`crew.task_callback`، مع الإبقاء على أي callbacks كانت لديك (تعمل callbacks الخاصة بك أولًا). مع `heartbeat=True`، تُحسب كل خطوة وكل مهمة منتهية على أنها "حيّة"، وهو ما يناسب الطواقم التي تعمل لساعات. اتركه معطّلًا للطواقم المجدولة: فالطاقم الذي يعمل لفترة ثم يفشل سيبدو حيًا بخلاف ذلك.
+
+## الطواقم التي لا تبدأها بنفسك
+
+مع `crewai run` أو Flows أو الطواقم المدفونة داخل كود آخر، استمع إلى ناقل أحداث CrewAI بدلًا من ذلك. أنشئ المستمع مرة واحدة عند بدء التشغيل:
+
+```python
+from nedwatch.integrations.crewai import NedCrewListener
+
+NedCrewListener("weekly-research", every="1d", max="30m")
+```
+
+يستجيب لـ `CrewKickoffStartedEvent` و`CrewKickoffCompletedEvent` و`CrewKickoffFailedEvent`. يشغّل CrewAI معالجات الناقل في خيوط عاملة، لذا يصل تسجيل الحضور بعد لحظة من عودة kickoff.
+
+## الخيارات
+
+| الخيار | المعنى |
+|---|---|
+| `name` | اسم المراقبة. الافتراضي `crew.name`، وإلا اسم السكربت. |
+| `every` | مدة الصمت المسموح بها قبل أن تنطلق deadman. الافتراضي `"1h"` عندما لا يُحدَّد `max`. |
+| `max` | أطول مدة يمكن أن يعمل فيها kickoff واحد قبل أن تنطلق overrun. |
+| `on_error` | `"report"` (الافتراضي: إنهاء التشغيل كفاشل مع فئة الخطأ)، أو `"leave_open"` (ترك overrun تنطلق عند `max`)، أو `"finish"`. |
+| `heartbeat` | احتساب كل خطوة وكل مهمة منتهية كتسجيل حضور. |
+| `ned` | كائن `nedwatch.Ned` لضبط المفتاح أو المنطقة أو callback في الكود بدلًا من البيئة. |
+
+## الـ webhook
+
+كل callback هو `POST` بصيغة JSON يحمل `event` بقيمة `fire` أو `clear`، ومعرّف المراقبة، والسبب، ومعرّف التشغيل في حالة overrun. ويحمل توقيع HMAC في `X-Ned-Signature` على الطابع الزمني والمتن؛ وتتحقق منه `nedwatch.verify_signature()`. يعيد Ned محاولة إرسال callback لم يُقبل لمدة 24 ساعة.
+
+## الموارد
+
+- [دليل التكامل وأطر عمل أخرى](https://ned.watch/integrations/crewai)
+- [المصدر وطاقم مثال مُختبَر](https://github.com/ned-mind/ned-watch-integrations)
+- [مرجع API](https://api.ned.watch/docs)
+- [حالة Ned Watch](https://ned.watch/status/)
