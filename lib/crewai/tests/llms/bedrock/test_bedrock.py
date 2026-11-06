@@ -1455,7 +1455,11 @@ def test_bedrock_tool_results_not_merged_across_assistant_messages():
 
 
 def test_bedrock_cached_token_tracking():
-    """Test that cached tokens (cacheReadInputTokenCount) are tracked for Bedrock."""
+    """Cache reads count toward prompt_tokens (and cached_prompt_tokens).
+
+    Bedrock reports inputTokens as the non-cached input only; totalTokens
+    already includes cacheReadInputTokenCount.
+    """
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     with patch.object(llm._client, 'converse') as mock_converse:
@@ -1469,7 +1473,7 @@ def test_bedrock_cached_token_tracking():
             'usage': {
                 'inputTokens': 100,
                 'outputTokens': 50,
-                'totalTokens': 150,
+                'totalTokens': 180,
                 'cacheReadInputTokenCount': 30,
             }
         }
@@ -1477,10 +1481,15 @@ def test_bedrock_cached_token_tracking():
 
         result = llm.call("Hello")
         assert result == "test response"
-        assert llm._token_usage['prompt_tokens'] == 100
+        assert llm._token_usage['prompt_tokens'] == 130
         assert llm._token_usage['completion_tokens'] == 50
-        assert llm._token_usage['total_tokens'] == 150
+        assert llm._token_usage['total_tokens'] == 180
         assert llm._token_usage['cached_prompt_tokens'] == 30
+        assert llm._token_usage['cache_creation_tokens'] == 0
+        assert (
+            llm._token_usage['prompt_tokens'] + llm._token_usage['completion_tokens']
+            == llm._token_usage['total_tokens']
+        )
 
 
 def test_bedrock_cached_token_alternate_key():
@@ -1498,14 +1507,50 @@ def test_bedrock_cached_token_alternate_key():
             'usage': {
                 'inputTokens': 80,
                 'outputTokens': 40,
-                'totalTokens': 120,
+                'totalTokens': 145,
                 'cacheReadInputTokens': 25,
             }
         }
         mock_converse.return_value = mock_response
 
         llm.call("Hello")
+        assert llm._token_usage['prompt_tokens'] == 105
         assert llm._token_usage['cached_prompt_tokens'] == 25
+        assert llm._token_usage['cache_creation_tokens'] == 0
+
+
+def test_bedrock_cache_write_tokens_count_toward_prompt():
+    """Cache writes count toward prompt_tokens and cache_creation_tokens."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 18906,
+                'cacheReadInputTokens': 0,
+                'cacheWriteInputTokens': 18891,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['prompt_tokens'] == 18901
+        assert llm._token_usage['completion_tokens'] == 5
+        assert llm._token_usage['total_tokens'] == 18906
+        assert llm._token_usage['cached_prompt_tokens'] == 0
+        assert llm._token_usage['cache_creation_tokens'] == 18891
+        assert (
+            llm._token_usage['prompt_tokens'] + llm._token_usage['completion_tokens']
+            == llm._token_usage['total_tokens']
+        )
 
 
 def test_bedrock_no_cache_tokens_defaults_to_zero():
@@ -1529,4 +1574,6 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
         mock_converse.return_value = mock_response
 
         llm.call("Hello")
+        assert llm._token_usage['prompt_tokens'] == 60
         assert llm._token_usage['cached_prompt_tokens'] == 0
+        assert llm._token_usage['cache_creation_tokens'] == 0

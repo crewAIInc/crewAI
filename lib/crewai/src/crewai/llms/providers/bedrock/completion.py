@@ -2206,10 +2206,19 @@ class BedrockCompletion(BaseLLM):
         return full_error_msg
 
     def _track_token_usage_internal(self, usage: TokenUsageTypeDef) -> None:  # type: ignore[override]
-        """Track token usage from Bedrock response."""
-        input_tokens = usage.get("inputTokens", 0)
-        output_tokens = usage.get("outputTokens", 0)
-        total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+        """Track token usage from Bedrock response.
+
+        Bedrock Converse reports ``inputTokens`` as the non-cached input only.
+        Cache reads and writes are separate (``cacheReadInputTokens`` /
+        ``cacheWriteInputTokens``); AWS documents total input as the sum of
+        those three. Fold them into ``prompt_tokens`` so billed input matches
+        ``totalTokens`` and stays consistent with the Anthropic provider.
+        """
+        raw_input = usage.get("inputTokens", 0) or 0
+        raw_output = usage.get("outputTokens", 0) or 0
+        input_tokens = raw_input if isinstance(raw_input, int) else 0
+        output_tokens = raw_output if isinstance(raw_output, int) else 0
+
         raw_cached = (
             usage.get("cacheReadInputTokenCount")
             or usage.get("cacheReadInputTokens")
@@ -2217,11 +2226,29 @@ class BedrockCompletion(BaseLLM):
         )
         cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
 
-        self._token_usage["prompt_tokens"] += input_tokens
+        raw_cache_write = (
+            usage.get("cacheWriteInputTokenCount")
+            or usage.get("cacheWriteInputTokens")
+            or 0
+        )
+        cache_creation_tokens = (
+            raw_cache_write if isinstance(raw_cache_write, int) else 0
+        )
+
+        prompt_tokens = input_tokens + cached_tokens + cache_creation_tokens
+        raw_total = usage.get("totalTokens")
+        total_tokens = (
+            raw_total
+            if isinstance(raw_total, int)
+            else prompt_tokens + output_tokens
+        )
+
+        self._token_usage["prompt_tokens"] += prompt_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
         self._token_usage["cached_prompt_tokens"] += cached_tokens
+        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
