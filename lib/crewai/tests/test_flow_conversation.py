@@ -1099,6 +1099,72 @@ class TestConversationalFlow:
         mock_finalize.assert_called_once_with()
         assert flow.defer_trace_finalization is False
 
+    def _make_chat_flow(self) -> ConversationalFlow:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        return MyChat()
+
+    def test_chat_restores_defer_setting_when_finalization_raises(self) -> None:
+        """A raising ``finalize_session_traces()`` must still restore
+        ``defer_trace_finalization`` before the error propagates.
+
+        Regression test for GH #8069: ``chat()`` cleanup called
+        ``finalize_session_traces()`` before restoring the deferral setting,
+        so a reused Flow kept ``defer_trace_finalization = True`` after a
+        failed finalization.
+        """
+        flow = self._make_chat_flow()
+        assert flow.defer_trace_finalization is False
+
+        with patch.object(
+            flow,
+            "finalize_session_traces",
+            side_effect=RuntimeError("finalization failed"),
+        ):
+            with pytest.raises(RuntimeError, match="finalization failed"):
+                flow.chat(input_fn=lambda _: "quit", output_fn=lambda _: None)
+
+        assert flow.defer_trace_finalization is False, (
+            "chat() must restore defer_trace_finalization even when "
+            "finalize_session_traces() raises"
+        )
+
+    def test_chat_cleanup_runs_on_eof_exit(self) -> None:
+        """Leaving the REPL through EOF must finalize once and restore the
+        deferral setting."""
+
+        def raise_eof(prompt: str) -> str:
+            raise EOFError
+
+        flow = self._make_chat_flow()
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=raise_eof, output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_cleanup_runs_on_keyboard_interrupt_exit(self) -> None:
+        """Leaving the REPL through KeyboardInterrupt must finalize once and
+        restore the deferral setting."""
+
+        def raise_interrupt(prompt: str) -> str:
+            raise KeyboardInterrupt
+
+        flow = self._make_chat_flow()
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=raise_interrupt, output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
     def test_chat_stringifies_repl_output_like_conversation_helpers(self) -> None:
         class RawResult:
             raw = "raw assistant output"

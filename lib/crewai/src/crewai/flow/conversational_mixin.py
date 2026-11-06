@@ -765,9 +765,11 @@ class _ConversationalMixin:
                         sys.stdout.write("\n")
                         sys.stdout.flush()
         finally:
-            self.finalize_session_traces()
-            if defer_trace_finalization:
-                self.defer_trace_finalization = previous_defer
+            try:
+                self.finalize_session_traces()
+            finally:
+                if defer_trace_finalization:
+                    self.defer_trace_finalization = previous_defer
 
     def build_router_context(self) -> dict[str, Any]:
         """Build context used by the routing policy for the current turn."""
