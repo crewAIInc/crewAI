@@ -121,15 +121,22 @@ def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
                 def_name = ref.replace("#/$defs/", "")
                 if def_name not in defs:
                     raise KeyError(f"Definition '{def_name}' not found in $defs.")
+                siblings = {k: v for k, v in node.items() if k != "$ref"}
                 if def_name in expanding:
                     def_schema = defs[def_name]
                     stub: dict[str, Any] = {"type": def_schema.get("type", "object")}
                     if "description" in def_schema:
                         stub["description"] = def_schema["description"]
+                    stub.update({k: _resolve(v) for k, v in siblings.items()})
                     return stub
                 expanding.add(def_name)
                 try:
-                    return _resolve(deepcopy(defs[def_name]))
+                    resolved_def = _resolve(deepcopy(defs[def_name]))
+                    if isinstance(resolved_def, dict):
+                        resolved_def.update(
+                            {k: _resolve(v) for k, v in siblings.items()}
+                        )
+                    return resolved_def
                 finally:
                     expanding.discard(def_name)
             return {k: _resolve(v) for k, v in node.items()}
