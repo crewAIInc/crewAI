@@ -281,9 +281,15 @@ flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```python
 def kickoff() -> None:
     SupportFlow().chat()
+    # Or open the full terminal UI:
+    SupportFlow().chat(tui=True)
 ```
 
-يلف `chat()` استدعاءات `handle_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً. مع `trace_scope="turn"` تنهي كل جولة trace الخاص بها تلقائياً. دون نطاق صريح، تبقى دورة حياة الجلسة والإنهاء التلقائي عند الخروج من REPL دون تغيير.
+يلف `chat()` استدعاءات `stream_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً. مع `trace_scope="turn"` تنهي كل جولة trace الخاص بها تلقائياً. دون نطاق صريح، تبقى دورة حياة الجلسة والإنهاء التلقائي عند الخروج من REPL دون تغيير.
+
+يفتح `chat(tui=True)` واجهة الطرفية نفسها التي يستخدمها `crewai run`، ويتطلب طرفية تفاعلية. يحافظ على `session_id` و`exit_commands` وتأجيل trace والخيارات الممررة إلى `handle_turn()`. تقتصر المطالبات المخصصة ودوال الإدخال والإخراج و`skip_empty` على REPL، وتُرفض في وضع TUI. توفر Agents التي تدعم المحادثة الطريقتين نفسيهما: `agent.chat()` و`agent.chat(tui=True)`.
+
+يُفعّل بث الرموز في REPL العادي وTUI افتراضيًا ما لم يعطّله LLM صراحةً. استخدم `flow.chat(stream=False)` (وهو مدعوم أيضًا مع `tui=True`) أو `LLM(stream=False)` لتعطيله؛ ولإعداد `stream=True` الصريح في المحادثة الأولوية. يستهلك الوضعان إطارات `stream_turn()` ويحتفظان بنتيجة الدور المكتملة. تقتصر تجاوزات البث على الدور ولا تغيّر إعدادات LLM المشتركة. للنقل المخصص، يطبق `stream_turn(message, stream=None)` الإعداد التلقائي نفسه، بينما تستمر قيمته الافتراضية الحالية `stream=True` بطلب بث الرموز صراحةً. يحافظ `stream=False` على إطارات دورة الحياة والرسائل مع تعطيل رموز LLM. يطبع REPL العادي أجزاء النص فور وصولها، باستثناء أجزاء التفكير ووسائط استدعاء الأدوات. تستمر دالة `output_fn` المخصصة في تلقي رد مكتمل واحد لكل دور. يُعرض النص المباشر من طريقتَي الرد `converse_turn` و`answer_from_history_turn`؛ أما المعالجات الأخرى فتُعرض نتيجتها العامة المكتملة.
 
 ### `ConversationConfig`
 

@@ -405,11 +405,10 @@ class CrewStructuredTool(BaseModel):
         try:
             if inspect.iscoroutinefunction(self.func):
                 return await self.func(**parsed_args, **kwargs)
-            import asyncio
-
-            return await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.func(**parsed_args, **kwargs)
-            )
+            # to_thread, unlike run_in_executor, runs the tool in the caller's
+            # context, so context variables such as the run's integration token
+            # reach it.
+            return await asyncio.to_thread(self.func, **parsed_args, **kwargs)
         except Exception:
             raise
 
