@@ -1,6 +1,7 @@
 """Unit tests for LLM multimodal functionality across all providers."""
 
 import base64
+import copy
 import os
 from unittest.mock import patch
 
@@ -61,6 +62,18 @@ class TestLiteLLMMultimodal:
     These tests use `is_litellm=True` to ensure the litellm wrapper is used
     instead of native providers.
     """
+
+    def test_supports_vision_override_survives_copy(self) -> None:
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True, supports_vision=True)
+
+        assert copy.copy(llm).supports_multimodal() is True
+        assert copy.deepcopy(llm).supports_multimodal() is True
+
+    def test_supports_vision_false_override_survives_copy(self) -> None:
+        llm = LLM(model="gpt-4o", is_litellm=True, supports_vision=False)
+
+        assert copy.copy(llm).supports_multimodal() is False
+        assert copy.deepcopy(llm).supports_multimodal() is False
 
     def test_supports_multimodal_gpt4o(self) -> None:
         """Test GPT-4o model supports multimodal."""
@@ -182,6 +195,11 @@ class TestOpenAIMultimodal:
         llm = LLM(model="openai/gpt-3.5-turbo")
         assert llm.supports_multimodal() is False
 
+    def test_supports_vision_override_applies_to_every_provider(self) -> None:
+        llm = LLM(model="openai/gpt-3.5-turbo", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
     def test_format_multimodal_content_image(self) -> None:
         """Test OpenAI uses image_url format."""
         llm = LLM(model="openai/gpt-4o")
@@ -241,20 +259,237 @@ class TestAzureMultimodal:
         with patch.dict(os.environ, env_vars):
             yield
 
-    def test_supports_multimodal_gpt4o(self) -> None:
-        """Test Azure GPT-4o supports multimodal."""
-        llm = LLM(model="azure/gpt-4o")
+    def test_supports_multimodal_gpt41(self) -> None:
+        """Test Azure GPT-4.1 supports multimodal from the catalog."""
+        llm = LLM(model="azure/gpt-4.1")
         assert llm.supports_multimodal() is True
 
-    def test_supports_multimodal_gpt4_turbo(self) -> None:
-        """Test Azure GPT-4 Turbo supports multimodal."""
-        llm = LLM(model="azure/gpt-4-turbo")
+    def test_supports_multimodal_gpt5(self) -> None:
+        """Test Azure GPT-5 supports multimodal from the catalog."""
+        llm = LLM(model="azure/gpt-5")
         assert llm.supports_multimodal() is True
 
     def test_does_not_support_gpt35(self) -> None:
         """Test Azure GPT-3.5 does not support multimodal."""
         llm = LLM(model="azure/gpt-35-turbo")
         assert llm.supports_multimodal() is False
+
+    @pytest.mark.parametrize("model", ["azure/o1-mini", "azure/o3-mini"])
+    def test_does_not_support_text_only_reasoning_models(self, model: str) -> None:
+        """Text-only o-series models stay rejected even though o1/o3 are vision."""
+        llm = LLM(model=model)
+        assert llm.supports_multimodal() is False
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("azure/gpt-4.1-2025-04-14", True),
+            ("azure/gpt-4o-2024-08-06", True),
+            ("azure/gpt-5-mini", True),
+            ("azure/o3-mini-2025-01-31", False),
+            ("azure/o1-mini-2024-09-12", False),
+            ("azure/gpt-35-turbo-0613", False),
+        ],
+    )
+    def test_versioned_deployment_names(self, model: str, expected: bool) -> None:
+        assert LLM(model=model).supports_multimodal() is expected
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("azure/GPT-4.1", True),
+            ("azure/GPT-5", True),
+            ("azure/GPT-4o", True),
+            ("azure/O3-MINI", False),
+        ],
+    )
+    def test_deployment_names_are_case_insensitive(
+        self, model: str, expected: bool
+    ) -> None:
+        assert LLM(model=model).supports_multimodal() is expected
+
+    @pytest.mark.parametrize(
+        "model", ["azure/claude-sonnet-4-6", "azure/azure_ai/claude-sonnet-4-6"]
+    )
+    def test_azure_ai_catalog_model_supports_multimodal(self, model: str) -> None:
+        """Azure consults the Azure AI catalog entries for model capabilities."""
+        assert LLM(model=model).supports_multimodal() is True
+
+    def test_claude_deployment_accepted_with_override(self) -> None:
+        llm = LLM(model="azure/claude-sonnet-4-6", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
+    def test_double_provider_prefix_still_resolves(self) -> None:
+        assert LLM(model="azure/azure/gpt-4.1").supports_multimodal() is True
+
+    @pytest.mark.parametrize("model", ["azure/ ", "azure///", "azure/azure/"])
+    def test_unusual_model_names_do_not_raise(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
+
+    def test_supports_vision_override_rejects_legacy_vision_name(self) -> None:
+        llm = LLM(model="azure/gpt-4o", supports_vision=False)
+
+        assert llm.supports_multimodal() is False
+
+    def test_supports_vision_override_allows_text_only_model(self) -> None:
+        llm = LLM(model="azure/o1-mini", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [("azure/gpt-4.1", True), ("azure/gpt-35-turbo", False)],
+    )
+    def test_supports_vision_none_matches_unset(self, model: str, expected: bool) -> None:
+        explicit = LLM(model=model, supports_vision=None)
+
+        assert explicit.supports_multimodal() is LLM(model=model).supports_multimodal()
+        assert explicit.supports_multimodal() is expected
+
+    @pytest.mark.parametrize("override", [True, False])
+    def test_supports_vision_override_survives_copy(self, override: bool) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=override)
+
+        assert copy.copy(llm).supports_multimodal() is override
+        assert copy.deepcopy(llm).supports_multimodal() is override
+
+    def test_supports_vision_override_from_config_dict(self) -> None:
+        from crewai.utilities.llm_utils import create_llm
+
+        llm = create_llm({"model": "azure/vision-production", "supports_vision": True})
+
+        assert llm.supports_multimodal() is True
+
+    def test_supports_vision_override_allows_custom_deployment_name(self) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=True)
+
+        assert llm.supports_multimodal() is True
+
+    def test_supports_vision_override_rejects_known_vision_model(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", supports_vision=False)
+
+        assert llm.supports_multimodal() is False
+
+    def test_files_accepted_when_override_enables_custom_deployment(self) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=True)
+        messages = [
+            {"role": "user", "content": "Describe", "files": {"chart": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "image_url"
+
+    @pytest.mark.parametrize("model", ["azure/o1-mini", "azure/o3-mini"])
+    def test_files_rejected_for_text_only_models(self, model: str) -> None:
+        llm = LLM(model=model)
+        messages = [
+            {"role": "user", "content": "Describe", "files": {"chart": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        with pytest.raises(ValueError, match="does not support multimodal input"):
+            llm._process_message_files(messages)
+
+    def test_pdf_rejected_instead_of_silently_dropped(self) -> None:
+        llm = LLM(model="azure/gpt-4.1")
+        messages = [
+            {"role": "user", "content": "Read", "files": {"doc": PDFFile(source=MINIMAL_PDF)}}
+        ]
+
+        with pytest.raises(ValueError, match="'doc' is application/pdf"):
+            llm._process_message_files(messages)
+
+    def test_text_file_rejected_instead_of_silently_dropped(self) -> None:
+        llm = LLM(model="azure/gpt-4.1")
+        messages = [
+            {
+                "role": "user",
+                "content": "Read",
+                "files": {"data": TextFile(source=b"a,b\n1,2", filename="data.csv")},
+            }
+        ]
+
+        with pytest.raises(ValueError, match="'data' is text/"):
+            llm._process_message_files(messages)
+
+    def test_pdf_rejected_even_when_override_enables_vision(self) -> None:
+        llm = LLM(model="azure/vision-production", supports_vision=True)
+        messages = [
+            {"role": "user", "content": "Read", "files": {"doc": PDFFile(source=MINIMAL_PDF)}}
+        ]
+
+        with pytest.raises(ValueError, match="accepts only"):
+            llm._process_message_files(messages)
+
+    def test_pdf_accepted_by_responses_api(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", api="responses")
+        messages = [
+            {"role": "user", "content": "Read", "files": {"doc": PDFFile(source=MINIMAL_PDF)}}
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "input_file"
+
+    def test_image_accepted_by_responses_api(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", api="responses")
+        messages = [
+            {
+                "role": "user",
+                "content": "Look",
+                "files": {"pic": ImageFile(source=MINIMAL_PNG)},
+            }
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "input_image"
+
+    @pytest.mark.parametrize("supports_vision", [True, False])
+    def test_responses_delegate_preserves_vision_override(
+        self, supports_vision: bool
+    ) -> None:
+        llm = LLM(
+            model="azure/vision-production",
+            api="responses",
+            supports_vision=supports_vision,
+        )
+
+        assert llm._responses_delegate.supports_vision is supports_vision
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Look",
+                "files": {"pic": ImageFile(source=MINIMAL_PNG)},
+            }
+        ]
+        if supports_vision:
+            result = llm._responses_delegate._process_message_files(messages)
+            assert result[0]["content"][-1]["type"] == "input_image"
+        else:
+            with pytest.raises(ValueError, match="does not support multimodal input"):
+                llm._responses_delegate._process_message_files(messages)
+
+    def test_image_still_accepted_alongside_validation(self) -> None:
+        llm = LLM(model="azure/gpt-4.1")
+        messages = [
+            {"role": "user", "content": "Look", "files": {"pic": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result[0]["content"][-1]["type"] == "image_url"
+
+    def test_files_rejected_when_override_disables_vision_model(self) -> None:
+        llm = LLM(model="azure/gpt-4.1", supports_vision=False)
+        messages = [
+            {"role": "user", "content": "Describe", "files": {"chart": ImageFile(source=MINIMAL_PNG)}}
+        ]
+
+        with pytest.raises(ValueError, match="does not support multimodal input"):
+            llm._process_message_files(messages)
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Azure uses same format as OpenAI."""
@@ -317,6 +552,11 @@ class TestBedrockMultimodal:
         llm = LLM(model="bedrock/openai.gpt-oss-120b-1:0")
         assert llm.supports_multimodal() is False
 
+    def test_supports_multimodal_converse_catalog_model(self) -> None:
+        """Test Bedrock consults Converse catalog entries for vision support."""
+        llm = LLM(model="bedrock/writer.palmyra-vision-7b")
+        assert llm.supports_multimodal() is True
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")
@@ -356,6 +596,75 @@ class TestBaseLLMMultimodal:
 
         llm = TestLLM(model="test")
         assert llm.supports_multimodal() is False
+
+    def test_model_capability_uses_provider_catalog_entry(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="gpt-4.1", provider="azure")
+        assert (
+            llm.get_model_capability("supports_vision", providers=["azure"])
+            is True
+        )
+
+    def test_model_capability_without_provider_uses_exact_model_key(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="azure/gpt-4.1")
+        assert llm.get_model_capability("supports_vision") is True
+
+    def test_model_capability_checks_multiple_provider_catalog_entries(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="claude-sonnet-4-6")
+        assert (
+            llm.get_model_capability(
+                "supports_vision", providers=["azure", "azure_ai"]
+            )
+            is True
+        )
+
+    def test_model_capability_lookup_is_case_insensitive(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="GPT-4.1", provider="azure")
+        assert llm.get_model_capability("supports_vision", providers=["azure"]) is True
+
+    @pytest.mark.parametrize("model", [" ", "///", "a/b/c"])
+    def test_model_capability_unusual_names_return_none(self, model: str) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model=model, provider="azure")
+        assert llm.get_model_capability("supports_vision", providers=["azure"]) is None
+
+    def test_model_capability_does_not_guess_deployment_names(self) -> None:
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = TestLLM(model="vision-production", provider="azure")
+        assert llm.get_model_capability("supports_vision") is None
 
     def test_base_format_text_content(self) -> None:
         """Test base text formatting uses OpenAI/Anthropic style."""

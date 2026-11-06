@@ -30,6 +30,7 @@ from crewai.llm_overlay import (
 )
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm
+from crewai_files import ImageFile
 import pytest
 
 
@@ -386,6 +387,29 @@ def test_a_same_provider_swap_keeps_the_declared_configuration() -> None:
     assert _configuration_of(swapped) == CONFIGURATION
     assert str(swapped._client.base_url) == "http://localhost:9999/v1/"
     assert swapped._client.timeout == 42
+
+
+def test_overlay_preserves_an_explicit_vision_rejection() -> None:
+    """An overlay must not re-enable file input a caller explicitly disabled."""
+    declared = LLM(
+        model="openai/gpt-4o",
+        api_key="k",
+        supports_vision=False,
+    )
+    with llm_overlay({"Researcher": "openai/gpt-4o"}):
+        agent = Agent(role="Researcher", goal="g", backstory="b", llm=declared)
+
+    assert agent.llm.supports_vision is False
+    with pytest.raises(ValueError, match="does not support multimodal input"):
+        agent.llm._process_message_files(
+            [
+                {
+                    "role": "user",
+                    "content": "Describe",
+                    "files": {"chart": ImageFile(source=b"image")},
+                }
+            ]
+        )
 
 
 def test_a_cross_provider_swap_carries_settings_but_not_credentials() -> None:

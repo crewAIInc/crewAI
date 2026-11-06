@@ -2155,13 +2155,22 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             True if the model supports images and PDFs.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         model_lower = self.model.lower()
-        return (
+        supports_vision = (
             "claude-3" in model_lower
             or "claude-4" in model_lower
             or "claude-sonnet-4" in model_lower
             or "claude-opus-4" in model_lower
             or "claude-haiku-4" in model_lower
+        )
+        if supports_vision:
+            return True
+        return (
+            self.get_model_capability("supports_vision", providers=["anthropic"])
+            is True
         )
 
     def get_file_uploader(self) -> Any:

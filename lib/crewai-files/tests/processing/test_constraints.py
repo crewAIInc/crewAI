@@ -78,6 +78,18 @@ class TestPDFConstraints:
 
         assert "application/pdf" in supported_types
 
+    def test_azure_responses_supports_pdf(self):
+        """Azure Responses uses the OpenAI Responses file constraints."""
+        supported_types = get_supported_content_types("azure", api="responses")
+
+        assert "application/pdf" in supported_types
+
+    def test_azure_completions_does_not_support_pdf(self):
+        """Azure chat completions retains its own file constraints."""
+        supported_types = get_supported_content_types("azure", api="completions")
+
+        assert "application/pdf" not in supported_types
+
 
 class TestAudioConstraints:
     """Tests for AudioConstraints dataclass."""

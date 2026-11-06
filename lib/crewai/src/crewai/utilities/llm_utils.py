@@ -118,6 +118,7 @@ GENERATION_SETTINGS: Final[tuple[str, ...]] = (
     "callbacks",
     "stream",
     "prefer_upload",
+    "supports_vision",
 )
 
 # Carried only to a target on the same provider: credentials and endpoints,
