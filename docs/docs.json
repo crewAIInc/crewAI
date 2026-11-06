@@ -274,7 +274,8 @@
                           "edge/en/tools/search-research/serpapi-googlesearchtool",
                           "edge/en/tools/search-research/serpapi-googleshoppingtool",
                           "edge/en/tools/search-research/databricks-query-tool",
-                          "edge/en/tools/search-research/youai-search"
+                          "edge/en/tools/search-research/youai-search",
+                          "edge/en/tools/search-research/livetennistool"
                         ]
                       },
                       {
