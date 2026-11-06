@@ -13,6 +13,7 @@ from typing import (
     TypeVar,
     overload,
 )
+import warnings
 
 from pydantic import (
     BaseModel,
@@ -39,7 +40,13 @@ from crewai.tools.structured_tool import (
     format_description_for_llm,
 )
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
-from crewai.types.callback import SerializableCallable, _trusted_deserialize
+from crewai.types.callback import (
+    SerializableCallable,
+    _resolve_dotted_path,
+    _trusted_deserialize,
+    callable_to_string,
+    string_to_callable,
+)
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -93,6 +100,30 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
         # not require the opt-in.
         data["cache_function"] = _BUILTIN_CACHE_FUNCTIONS[saved]
     return tool_cls.model_validate(data)  # type: ignore[attr-defined]
+
+
+def _resolve_tool_func(path: str) -> Callable[..., Any]:
+    """Resolve the dotted path a checkpoint stores for ``Tool.func``.
+
+    ``@tool`` rebinds the decorated function's name to the ``Tool`` it builds,
+    so the path may resolve to that tool; its ``func`` is returned instead.
+    The tool is looked up on its module, or on its class when ``@tool`` was
+    used in a class body (``module.Class.name``). Like other checkpointed
+    callables, resolving requires ``CREWAI_DESERIALIZE_CALLBACKS``.
+    """
+    owner_path, _, name = path.rpartition(".")
+    if owner_path and _trusted_deserialize():
+        try:
+            owner: object = importlib.import_module(owner_path)
+        except (ImportError, TypeError, ValueError):
+            try:
+                owner = _resolve_dotted_path(owner_path)
+            except ValueError:
+                owner = None
+        target = getattr(owner, name, None)
+        if isinstance(target, Tool):
+            return target.func
+    return string_to_callable(path)
 
 
 def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
@@ -555,6 +586,26 @@ class Tool(BaseTool, Generic[P, R]):
     """
 
     func: Callable[P, R | Awaitable[R]]
+
+    @field_validator("func", mode="before")
+    @classmethod
+    def _resolve_func_path(cls, value: Any) -> Any:
+        return _resolve_tool_func(value) if isinstance(value, str) else value
+
+    @field_serializer("func", when_used="json")
+    def _serialize_func(self, func: Callable[..., Any]) -> str | None:
+        """Write ``func`` as a dotted path so checkpoints can restore it."""
+        path = callable_to_string(func)
+        if path is None:
+            warnings.warn(
+                f"Callable 'func' of tool {self.name!r} cannot be JSON-serialized "
+                "and will be dropped during checkpointing; checkpoints that "
+                "include this tool cannot be restored. Define the function at "
+                "module level to make the tool checkpointable.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return path
 
     def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the tool synchronously.
