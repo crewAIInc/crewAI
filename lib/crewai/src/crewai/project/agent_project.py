@@ -65,7 +65,6 @@ def load_agent_project(
     namespace = (
         "_crewai_agent_" + hashlib.sha256(str(package_path).encode()).hexdigest()[:16]
     )
-    # ponytail: serialize imports; use per-project locks if loading becomes a bottleneck.
     with _IMPORT_LOCK:
         # A private package namespace avoids replacing an application's imports.
         for name in list(sys.modules):
