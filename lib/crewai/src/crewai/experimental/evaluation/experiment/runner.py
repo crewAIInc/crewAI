@@ -89,9 +89,19 @@ class ExperimentRunner:
                 raise ValueError("Evaluator must be initialized")
             agent_evaluations = self.evaluator.get_agent_evaluation()
 
-            actual_score = self._extract_scores(agent_evaluations)
+            actual_scores = self._extract_scores(agent_evaluations)
+            actual_score: float | dict[str, float] = (
+                next(iter(actual_scores.values()))
+                if len(actual_scores) == 1
+                else actual_scores
+            )
 
-            passed = self._assert_scores(expected_score, actual_score)
+            # Keep metric names when comparing named expectations, even if only
+            # one metric produced a score and the result uses a scalar score.
+            comparison_score = (
+                actual_scores if isinstance(expected_score, dict) else actual_score
+            )
+            passed = self._assert_scores(expected_score, comparison_score)
             return ExperimentResult(
                 identifier=identifier,
                 inputs=inputs,
@@ -113,19 +123,14 @@ class ExperimentRunner:
 
     def _extract_scores(
         self, agent_evaluations: dict[str, AgentAggregatedEvaluationResult]
-    ) -> float | dict[str, float]:
+    ) -> dict[str, float]:
         all_scores: dict[str, list[float]] = defaultdict(list)
         for evaluation in agent_evaluations.values():
             for metric_name, score in evaluation.metrics.items():
                 if score.score is not None:
                     all_scores[metric_name.value].append(score.score)
 
-        avg_scores = {m: sum(s) / len(s) for m, s in all_scores.items()}
-
-        if len(avg_scores) == 1:
-            return next(iter(avg_scores.values()))
-
-        return avg_scores
+        return {m: sum(s) / len(s) for m, s in all_scores.items()}
 
     def _assert_scores(
         self, expected: float | dict[str, float], actual: float | dict[str, float]
@@ -137,7 +142,7 @@ class ExperimentRunner:
         - If both expected and actual scores are single numbers, the actual score must be >= expected.
         - If expected is a single number and actual is a dict, compare against the average of actual values.
         - If expected is a dict and actual is a single number, actual must be >= all expected values.
-        - If both are dicts, actual must have matching keys with values >= expected values.
+        - If both are dicts, actual must contain every expected key with a value >= expected.
         """
 
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
@@ -155,11 +160,9 @@ class ExperimentRunner:
         if isinstance(expected, dict) and isinstance(actual, dict):
             if not expected:
                 return True
-            matching_keys = set(expected.keys()) & set(actual.keys())
-            if not matching_keys:
+            if not expected.keys() <= actual.keys():
                 return False
 
-            # All matching keys must have actual >= expected
-            return all(actual[key] >= expected[key] for key in matching_keys)
+            return all(actual[key] >= threshold for key, threshold in expected.items())
 
         return False
