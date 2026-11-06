@@ -715,6 +715,9 @@ class Agent(BaseAgent):
         get_env_context()
 
         self.reset_tool_failures()
+        # Tool results belong to one attempt: a previous task's
+        # result_as_answer must not override this task's final answer.
+        self.tools_results.clear()
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
