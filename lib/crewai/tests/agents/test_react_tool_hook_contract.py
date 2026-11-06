@@ -6,14 +6,17 @@ from unittest.mock import patch
 
 import pytest
 
+from crewai import Agent
 from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool
 from crewai.tools.base_tool import to_langchain
+from crewai.utilities.tool_utils import aexecute_tool_and_check_finality
 
 
 class LookupTool(BaseTool):
@@ -24,6 +27,19 @@ class LookupTool(BaseTool):
         return f"value:{term}"
 
 
+class _StubLLM(BaseLLM):
+    """Never called: the tool path under test does not reach the model."""
+
+    def __init__(self) -> None:
+        super().__init__(model="stub-model")
+
+    def call(self, *args, **kwargs) -> str:
+        raise AssertionError("the model should not be called")
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+
 @pytest.fixture(autouse=True)
 def clean_hooks():
     clear_all()
@@ -32,7 +48,9 @@ def clean_hooks():
     clear_all()
 
 
-def _react_text_executor() -> tuple[AgentExecutor, AgentAction]:
+def _react_text_executor(
+    tool_input: str = '{"term": "hello"}',
+) -> tuple[AgentExecutor, AgentAction]:
     """Wire an executor for the ReAct text tool route (execute_tool_action)."""
     tool = LookupTool()
     structured = to_langchain([tool])
@@ -43,10 +61,10 @@ def _react_text_executor() -> tuple[AgentExecutor, AgentAction]:
     action = AgentAction(
         thought="I should look this up",
         tool="lookup",
-        tool_input='{"term": "hello"}',
+        tool_input=tool_input,
         text=(
             "Thought: I should look this up\n"
-            'Action: lookup\nAction Input: {"term": "hello"}'
+            f"Action: lookup\nAction Input: {tool_input}"
         ),
     )
     executor.state.current_answer = action
@@ -82,3 +100,53 @@ def test_plain_error_still_becomes_recovery_observation():
 
     assert result == "tool_completed"
     assert "Error executing tool: boom" in action.text
+
+
+@pytest.mark.parametrize(
+    "tool_input", ['{"term": "original"}', "{}"], ids=["original", "empty"]
+)
+def test_pre_tool_hook_edits_reach_the_tool_on_react_text_path(tool_input):
+    """In-place tool_input edits apply even when the call has no arguments."""
+
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def rewrite(context):
+        context.tool_input["term"] = "effective"
+
+    executor, action = _react_text_executor(tool_input)
+    executor.agent = Agent(
+        role="Researcher", goal="Look things up", backstory="Curious.", llm=_StubLLM()
+    )
+
+    executor.execute_tool_action()
+
+    assert action.result == "value:effective"
+
+
+@pytest.mark.asyncio
+async def test_pre_tool_hook_edits_reach_the_tool_on_async_react_path():
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def rewrite(context):
+        context.tool_input["term"] = "effective"
+
+    tool = LookupTool()
+    action = AgentAction(
+        thought="I should look this up",
+        tool="lookup",
+        tool_input="{}",
+        text="Thought: I should look this up\nAction: lookup\nAction Input: {}",
+    )
+
+    result = await aexecute_tool_and_check_finality(
+        agent_action=action,
+        tools=to_langchain([tool]),
+        tools_handler=ToolsHandler(cache=CacheHandler()),
+        agent=Agent(
+            role="Researcher",
+            goal="Look things up",
+            backstory="Curious.",
+            llm=_StubLLM(),
+        ),
+    )
+
+    assert result.result == "value:effective"
+
