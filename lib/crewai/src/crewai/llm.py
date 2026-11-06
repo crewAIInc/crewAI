@@ -983,178 +983,6 @@ class LLM(BaseLLM):
                             call_id=get_current_call_id(),
                         ),
                     )
-            if not full_response.strip() and chunk_count == 0:
-                logging.warning(
-                    "No chunks received in streaming response, falling back to non-streaming"
-                )
-                non_streaming_params = params.copy()
-                non_streaming_params["stream"] = False
-                non_streaming_params.pop("stream_options", None)
-                return self._handle_non_streaming_response(
-                    non_streaming_params,
-                    callbacks,
-                    available_functions,
-                    from_task,
-                    from_agent,
-                )
-
-            if not full_response.strip() and chunk_count > 0:
-                logging.warning(
-                    f"Received {chunk_count} chunks but no content was extracted"
-                )
-                if last_chunk is not None:
-                    try:
-                        choices = None
-                        if isinstance(last_chunk, dict) and "choices" in last_chunk:
-                            choices = last_chunk["choices"]
-                        elif isinstance(last_chunk, ModelResponseStream):
-                            choices = last_chunk.choices
-
-                        if choices and len(choices) > 0:
-                            choice = choices[0]
-
-                            message = None
-                            if isinstance(choice, dict) and "message" in choice:
-                                message = choice["message"]
-                            elif isinstance(choice, Choices):
-                                message = choice.message
-
-                            if message:
-                                content = None
-                                if isinstance(message, dict) and "content" in message:
-                                    content = message["content"]
-                                elif isinstance(message, Message):
-                                    content = message.content
-
-                                if content:
-                                    full_response = content
-                                    logging.info(
-                                        f"Extracted content from last chunk message: {full_response}"
-                                    )
-                    except Exception as e:
-                        logging.debug(f"Error extracting content from last chunk: {e}")
-                        logging.debug(
-                            f"Last chunk format: {type(last_chunk)}, content: {last_chunk}"
-                        )
-
-            if not full_response.strip() and len(accumulated_tool_args) == 0:
-                raise EmptyLLMResponseError(self.model)
-
-            tool_calls = None
-            try:
-                if last_chunk:
-                    choices = None
-                    if isinstance(last_chunk, dict) and "choices" in last_chunk:
-                        choices = last_chunk["choices"]
-                    elif isinstance(last_chunk, ModelResponseStream):
-                        choices = last_chunk.choices
-
-                    if choices and len(choices) > 0:
-                        choice = choices[0]
-
-                        delta = None
-                        if isinstance(choice, dict) and "delta" in choice:
-                            delta = choice["delta"]
-                        elif isinstance(choice, LiteLLMStreamingChoices):
-                            delta = choice.delta
-
-                        if delta:
-                            if isinstance(delta, dict) and "tool_calls" in delta:
-                                tool_calls = delta["tool_calls"]
-                            elif isinstance(delta, LiteLLMDelta):
-                                tool_calls = delta.tool_calls
-            except Exception as e:
-                logging.debug(f"Error checking for tool calls: {e}")
-
-            if usage_info:
-                self._track_token_usage_internal(usage_info)
-            self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
-
-            if accumulated_tool_args and not available_functions:
-                tool_calls_list: list[ChatCompletionDeltaToolCall] = [
-                    ChatCompletionDeltaToolCall(
-                        index=idx,
-                        function=Function(
-                            name=tool_arg.function.name,
-                            arguments=tool_arg.function.arguments,
-                        ),
-                    )
-                    for idx, tool_arg in sorted(accumulated_tool_args.items())
-                    if tool_arg.function.name
-                ]
-                if tool_calls_list:
-                    self._handle_emit_call_events(
-                        response=tool_calls_list,
-                        call_type=LLMCallType.TOOL_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                        usage=self._usage_to_dict(usage_info),
-                        finish_reason=stream_finish_reason,
-                        response_id=stream_response_id,
-                    )
-                    return tool_calls_list
-
-            finish_reason, response_id_last = (
-                stream_finish_reason,
-                stream_response_id,
-            )
-
-            if not tool_calls or not available_functions:
-                if response_model and self.is_litellm:
-                    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-
-                    instructor_instance = InternalInstructor(
-                        content=full_response,
-                        model=response_model,
-                        llm=self,
-                    )
-                    with model_call_hooks_dispatched():
-                        result = instructor_instance.to_pydantic()
-                    structured_response = result.model_dump_json()
-                    usage_dict = self._usage_to_dict(usage_info)
-                    self._handle_emit_call_events(
-                        response=structured_response,
-                        call_type=LLMCallType.LLM_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                        usage=usage_dict,
-                        finish_reason=finish_reason,
-                        response_id=response_id_last,
-                    )
-                    return structured_response
-
-                usage_dict = self._usage_to_dict(usage_info)
-                self._handle_emit_call_events(
-                    response=full_response,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                    usage=usage_dict,
-                    finish_reason=finish_reason,
-                    response_id=response_id_last,
-                )
-                return full_response
-
-            tool_result = self._handle_tool_call(tool_calls, available_functions)
-            if tool_result is not None:
-                return tool_result
-
-            usage_dict = self._usage_to_dict(usage_info)
-            self._handle_emit_call_events(
-                response=full_response,
-                call_type=LLMCallType.LLM_CALL,
-                from_task=from_task,
-                from_agent=from_agent,
-                messages=params["messages"],
-                usage=usage_dict,
-                finish_reason=finish_reason,
-                response_id=response_id_last,
-            )
-            return full_response
-
         except (LLMContextLengthExceededError, EmptyLLMResponseError):
             raise
         except Exception as e:
@@ -1163,7 +991,7 @@ class LLM(BaseLLM):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             logging.error(f"Error in streaming response: {e!s}")
-            if full_response.strip():
+            if full_response.strip() and not response_model:
                 logging.warning(f"Returning partial response despite error: {e!s}")
                 finish_reason, response_id_last = (
                     stream_finish_reason,
@@ -1184,6 +1012,179 @@ class LLM(BaseLLM):
             # call() emits LLMCallFailedEvent for this error; re-raise the
             # provider's exception so its type reaches callers and telemetry.
             raise
+
+        if not full_response.strip() and chunk_count == 0:
+            logging.warning(
+                "No chunks received in streaming response, falling back to non-streaming"
+            )
+            non_streaming_params = params.copy()
+            non_streaming_params["stream"] = False
+            non_streaming_params.pop("stream_options", None)
+            return self._handle_non_streaming_response(
+                non_streaming_params,
+                callbacks,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model=response_model,
+            )
+
+        if not full_response.strip() and chunk_count > 0:
+            logging.warning(
+                f"Received {chunk_count} chunks but no content was extracted"
+            )
+            if last_chunk is not None:
+                try:
+                    choices = None
+                    if isinstance(last_chunk, dict) and "choices" in last_chunk:
+                        choices = last_chunk["choices"]
+                    elif isinstance(last_chunk, ModelResponseStream):
+                        choices = last_chunk.choices
+
+                    if choices and len(choices) > 0:
+                        choice = choices[0]
+
+                        message = None
+                        if isinstance(choice, dict) and "message" in choice:
+                            message = choice["message"]
+                        elif isinstance(choice, Choices):
+                            message = choice.message
+
+                        if message:
+                            content = None
+                            if isinstance(message, dict) and "content" in message:
+                                content = message["content"]
+                            elif isinstance(message, Message):
+                                content = message.content
+
+                            if content:
+                                full_response = content
+                                logging.info(
+                                    f"Extracted content from last chunk message: {full_response}"
+                                )
+                except Exception as e:
+                    logging.debug(f"Error extracting content from last chunk: {e}")
+                    logging.debug(
+                        f"Last chunk format: {type(last_chunk)}, content: {last_chunk}"
+                    )
+
+        if not full_response.strip() and len(accumulated_tool_args) == 0:
+            raise EmptyLLMResponseError(self.model)
+
+        tool_calls = None
+        try:
+            if last_chunk:
+                choices = None
+                if isinstance(last_chunk, dict) and "choices" in last_chunk:
+                    choices = last_chunk["choices"]
+                elif isinstance(last_chunk, ModelResponseStream):
+                    choices = last_chunk.choices
+
+                if choices and len(choices) > 0:
+                    choice = choices[0]
+
+                    delta = None
+                    if isinstance(choice, dict) and "delta" in choice:
+                        delta = choice["delta"]
+                    elif isinstance(choice, LiteLLMStreamingChoices):
+                        delta = choice.delta
+
+                    if delta:
+                        if isinstance(delta, dict) and "tool_calls" in delta:
+                            tool_calls = delta["tool_calls"]
+                        elif isinstance(delta, LiteLLMDelta):
+                            tool_calls = delta.tool_calls
+        except Exception as e:
+            logging.debug(f"Error checking for tool calls: {e}")
+
+        if usage_info:
+            self._track_token_usage_internal(usage_info)
+        self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
+
+        if accumulated_tool_args and not available_functions:
+            tool_calls_list: list[ChatCompletionDeltaToolCall] = [
+                ChatCompletionDeltaToolCall(
+                    index=idx,
+                    function=Function(
+                        name=tool_arg.function.name,
+                        arguments=tool_arg.function.arguments,
+                    ),
+                )
+                for idx, tool_arg in sorted(accumulated_tool_args.items())
+                if tool_arg.function.name
+            ]
+            if tool_calls_list:
+                self._handle_emit_call_events(
+                    response=tool_calls_list,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=self._usage_to_dict(usage_info),
+                    finish_reason=stream_finish_reason,
+                    response_id=stream_response_id,
+                )
+                return tool_calls_list
+
+        finish_reason, response_id_last = (
+            stream_finish_reason,
+            stream_response_id,
+        )
+
+        if not tool_calls or not available_functions:
+            if response_model and self.is_litellm:
+                from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+                instructor_instance = InternalInstructor(
+                    content=full_response,
+                    model=response_model,
+                    llm=self,
+                )
+                with model_call_hooks_dispatched():
+                    result = instructor_instance.to_pydantic()
+                structured_response = result.model_dump_json()
+                usage_dict = self._usage_to_dict(usage_info)
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage_dict,
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
+                )
+                return structured_response
+
+            usage_dict = self._usage_to_dict(usage_info)
+            self._handle_emit_call_events(
+                response=full_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
+            )
+            return full_response
+
+        tool_result = self._handle_tool_call(tool_calls, available_functions)
+        if tool_result is not None:
+            return tool_result
+
+        usage_dict = self._usage_to_dict(usage_info)
+        self._handle_emit_call_events(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+            usage=usage_dict,
+            finish_reason=finish_reason,
+            response_id=response_id_last,
+        )
+        return full_response
 
     def _handle_streaming_tool_calls(
         self,
@@ -1811,6 +1812,31 @@ class LLM(BaseLLM):
                         )
                         return tool_calls_list
 
+            if response_model and self.is_litellm:
+                from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+                from crewai.utilities.internal_instructor import InternalInstructor
+
+                instructor_instance = InternalInstructor(
+                    content=full_response,
+                    model=response_model,
+                    llm=self,
+                )
+                with model_call_hooks_dispatched():
+                    result = instructor_instance.to_pydantic()
+                structured_response = result.model_dump_json()
+                usage_dict = self._usage_to_dict(usage_info)
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params.get("messages"),
+                    usage=usage_dict,
+                    finish_reason=stream_finish_reason,
+                    response_id=stream_response_id,
+                )
+                return structured_response
+
             usage_dict = self._usage_to_dict(usage_info)
             finish_reason, response_id_last = (
                 stream_finish_reason,
@@ -1837,7 +1863,7 @@ class LLM(BaseLLM):
 
             if chunk_count == 0:
                 raise
-            if full_response:
+            if full_response and not response_model:
                 finish_reason, response_id_last = (
                     stream_finish_reason,
                     stream_response_id,

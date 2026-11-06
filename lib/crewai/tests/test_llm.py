@@ -1528,3 +1528,82 @@ def test_an_installed_litellm_loads() -> None:
     from crewai.llm import _ensure_litellm
 
     assert _ensure_litellm() is True
+
+
+def test_streaming_response_model_conversion_failure_raises() -> None:
+    """Regression test for #9181: when response_model is provided in streaming
+    mode, a conversion error in InternalInstructor.to_pydantic must not be swallowed
+    or masked by the partial streaming rescue fallback."""
+    from crewai.utilities import InternalInstructor
+    from pydantic import BaseModel
+
+    class PersonModel(BaseModel):
+        name: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_chunk = {
+        "id": "resp-1",
+        "choices": [{"delta": {"content": "{\"invalid\": 123}"}}],
+    }
+
+    with patch("litellm.completion", return_value=[mock_chunk]):
+        with patch.object(
+            InternalInstructor,
+            "to_pydantic",
+            side_effect=ValueError("Schema validation failed"),
+        ):
+            with pytest.raises(ValueError, match="Schema validation failed"):
+                llm.call("prompt", response_model=PersonModel)
+
+
+def test_streaming_response_model_mid_stream_error_raises() -> None:
+    """When response_model is set and a connection drop occurs mid-stream,
+    the partial raw text must not be returned as a valid structured response."""
+    from pydantic import BaseModel
+
+    class PersonModel(BaseModel):
+        name: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_chunk = {
+        "id": "resp-1",
+        "choices": [{"delta": {"content": "partial text"}}],
+    }
+
+    def failing_stream():
+        yield mock_chunk
+        raise ConnectionResetError("Connection dropped mid-stream")
+
+    with patch("litellm.completion", return_value=failing_stream()):
+        with pytest.raises(ConnectionResetError, match="Connection dropped mid-stream"):
+            llm.call("prompt", response_model=PersonModel)
+
+
+@pytest.mark.asyncio
+async def test_async_streaming_response_model_conversion_failure_raises() -> None:
+    """Async sibling of #9181: acall with response_model and stream=True must
+    raise schema conversion errors instead of returning raw text."""
+    from crewai.utilities import InternalInstructor
+    from pydantic import BaseModel
+
+    class PersonModel(BaseModel):
+        name: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_chunk = {
+        "id": "resp-1",
+        "choices": [{"delta": {"content": "{\"invalid\": 123}"}}],
+    }
+
+    async def async_stream():
+        yield mock_chunk
+
+    with patch("litellm.acompletion", return_value=async_stream()):
+        with patch.object(
+            InternalInstructor,
+            "to_pydantic",
+            side_effect=ValueError("Async schema validation failed"),
+        ):
+            with pytest.raises(ValueError, match="Async schema validation failed"):
+                await llm.acall("prompt", response_model=PersonModel)
+
