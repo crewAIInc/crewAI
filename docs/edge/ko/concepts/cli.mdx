@@ -202,6 +202,8 @@ OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.en
 
 이 확인은 OpenAI, Anthropic, Gemini, Groq처럼 API 키 하나만 받는 provider를 대상으로 합니다. Azure, Bedrock, watsonx, Ollama 같은 로컬 모델, 선언형 flow는 확인하지 않습니다. Python 코드에서 설정한 `llm`은 읽지 않으며, 프로젝트 코드가 `llm`을 설정하면 기본 모델도 확인하지 않습니다. 시크릿 관리자가 제공하는 named pipe처럼 일반 파일이 아닌 `.env`는 실행이 읽도록 그대로 두며 확인하지 않습니다. CLI는 키를 저장하기 전에 `.env`를 본인만 읽을 수 있도록 바꿉니다. 바꿀 수 없으면 키를 저장하지 않고 이번 실행에만 사용하며, 그 사실을 알려 줍니다. 프로젝트의 `.env`가 `OPENAI_BASE_URL`, `OPENAI_API_BASE`, `HTTPS_PROXY`처럼 본인 환경에는 없는 설정으로 요청을 다른 호스트에 보내거나, JSON crew 파일이 어느 위치에서든(`llm`, 그 `client_params`, `planning_llm`, 임베더의 `config` 등) `base_url`, `api_base` 또는 `endpoint`를 설정하면, 프롬프트는 키를 묻기 전에 각 호스트를 알려 줍니다. 그 호스트를 신뢰할 때만 키를 붙여 넣으세요.
 
+그래도 JSON crew가 API 키가 설정되지 않아 실패하면(예: 이 확인이 건너뛰는 모델의 키), 실행은 traceback 대신 같은 줄을 출력하고 멈춥니다. 터미널에서는 CLI가 먼저 위와 같이 그 키를 요청한 뒤, crew를 다시 만들어 첫 번째 작업부터 한 번 더 실행하므로, 이미 끝난 작업도 다시 실행됩니다. 대신 멈추려면 Enter를 누르세요.
+
 <Note>
   이 명령들은 CrewAI 프로젝트가 설정된 디렉터리에서 실행해야 합니다. 일부 명령은
   프로젝트 구조 내에서 추가 구성 또는 설정이 필요할 수 있습니다.
