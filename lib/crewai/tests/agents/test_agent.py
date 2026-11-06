@@ -22,6 +22,7 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.errors import AgentRepositoryError
 import pytest
+from pydantic import ValidationError
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -401,6 +402,20 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
     output = agent.execute_task(task=task, tools=[comapny_customer_data])
     # The tool returns "The company has 42 customers", agent may return full response or extract number
     assert "42" in output
+
+
+@pytest.mark.parametrize("bad_max_iter", [0, -1, -10])
+def test_agent_rejects_non_positive_max_iter(bad_max_iter: int):
+    """Reject max_iter < 1 at construction (issue #7757)."""
+    with pytest.raises(ValidationError, match="max_iter"):
+        Agent(
+            role="assistant",
+            goal="answer",
+            backstory="test",
+            max_iter=bad_max_iter,
+            allow_delegation=False,
+            verbose=False,
+        )
 
 
 @pytest.mark.vcr()

@@ -34,6 +34,7 @@ from pydantic import (
     Field,
     PrivateAttr,
     ValidationError,
+    field_validator,
     model_validator,
 )
 from pydantic.functional_serializers import PlainSerializer
@@ -425,6 +426,14 @@ class Agent(BaseAgent):
         v = process_config(dict(v), cls)
         if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
+        return v
+
+    @field_validator("max_iter")
+    @classmethod
+    def validate_max_iter(cls, v: int) -> int:
+        """Reject non-positive max_iter before kickoff hits the Flow loop detector."""
+        if v < 1:
+            raise ValueError("max_iter must be an integer greater than or equal to 1")
         return v
 
     @model_validator(mode="after")
