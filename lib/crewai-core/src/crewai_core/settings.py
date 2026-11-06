@@ -6,6 +6,7 @@ import json
 from logging import getLogger
 import os
 from pathlib import Path
+import shutil
 import tempfile
 from typing import Any
 
@@ -71,6 +72,20 @@ def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
+
+
+def _backup_corrupt_file(config_path: Path) -> None:
+    """Backup an unreadable or non-dict config file to .json.bak before overwriting."""
+    try:
+        backup_path = config_path.with_suffix(".json.bak")
+        shutil.copy2(config_path, backup_path)
+        logger.info("Preserved corrupted settings at %s", backup_path)
+    except Exception as e:
+        logger.warning(
+            "Could not create backup of corrupted settings from %s: %s",
+            config_path,
+            e,
+        )
 
 
 def get_writable_config_path() -> Path | None:
@@ -224,8 +239,21 @@ class Settings(BaseModel):
         if config_path.is_file():
             try:
                 with config_path.open("r") as f:
-                    file_data = json.load(f)
-            except Exception:
+                    loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    file_data = loaded
+                else:
+                    logger.warning(
+                        "Settings file at %s does not contain a JSON object (found %s). Ignoring corrupted contents.",
+                        config_path,
+                        type(loaded).__name__,
+                    )
+            except Exception as e:
+                logger.warning(
+                    "Could not load settings from %s (file may be corrupted): %s",
+                    config_path,
+                    e,
+                )
                 file_data = {}
 
         merged_data = {**file_data, **data}
@@ -249,17 +277,33 @@ class Settings(BaseModel):
             return
 
         try:
+            existing_data: dict[str, Any] = {}
             if self.config_path.is_file():
-                with self.config_path.open("r") as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {}
+                try:
+                    with self.config_path.open("r") as f:
+                        loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        existing_data = loaded
+                    else:
+                        logger.warning(
+                            "Existing settings file at %s does not contain a JSON object; backing up to .bak and overwriting.",
+                            self.config_path,
+                        )
+                        _backup_corrupt_file(self.config_path)
+                except Exception as e:
+                    logger.warning(
+                        "Could not parse existing settings from %s before writing; backing up to .bak and overwriting: %s",
+                        self.config_path,
+                        e,
+                    )
+                    _backup_corrupt_file(self.config_path)
+                    existing_data = {}
 
             updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
             _write_secure_json(self.config_path, updated_data)
 
-        except Exception:  # noqa: S110
-            pass
+        except Exception as e:
+            logger.error("Failed to write settings to %s: %s", self.config_path, e)
 
     def _reset_user_settings(self) -> None:
         """Reset all user settings to default values."""
