@@ -76,7 +76,8 @@ class TaskOutput(BaseModel):
         """Get the JSON string representation of the task output.
 
         Returns:
-            JSON string representation of the task output.
+            JSON string representation of the task output, or None when the
+            output could not be converted to the task's ``output_json`` model.
 
         Raises:
             ValueError: If output format is not JSON.
@@ -93,6 +94,8 @@ class TaskOutput(BaseModel):
                 """
             )
 
+        if self.json_dict is None:
+            return None
         return json.dumps(self.json_dict)
 
     def to_dict(self) -> dict[str, Any]:

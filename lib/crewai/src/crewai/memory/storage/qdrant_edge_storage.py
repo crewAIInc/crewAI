@@ -27,6 +27,7 @@ from qdrant_edge import (
     FacetRequest,
     FieldCondition,
     Filter,
+    MatchAny,
     MatchValue,
     PayloadSchemaType,
     Point,
@@ -330,7 +331,17 @@ class QdrantEdgeStorage:
                 self._vector_dim, len(query_embedding)
             )
         filt = self._build_scope_filter(scope_prefix)
-        fetch_limit = limit * 3 if (categories or metadata_filter) else limit
+        if categories:
+            # Match categories server-side so they are filtered BEFORE the ANN
+            # fetch limit; a client-side post-filter would silently miss
+            # matching records ranked below limit*3 non-matching neighbours.
+            category_cond = FieldCondition(
+                key="categories", match=MatchAny(any=list(categories))
+            )
+            must = list(filt.must) if filt is not None and filt.must else []
+            must.append(category_cond)
+            filt = Filter(must=must)
+        fetch_limit = limit * 3 if metadata_filter else limit
         all_scored: list[tuple[dict[str, Any], float, bool]] = []
 
         for shard_path in (self._central_path, self._local_path):

@@ -12,6 +12,7 @@ from crewai_core.auth.oauth2 import (
     ProviderFactory as ProviderFactory,
     console,
 )
+from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.settings import Settings
 
 from crewai_cli.authentication.token import get_auth_token
@@ -32,7 +33,11 @@ class AuthenticationCommand(_BaseAuthenticationCommand):
     def _select_organization(self) -> None:
         """Let the user choose the organization for this CLI login."""
         try:
-            response = PlusAPI(api_key=get_auth_token()).get_organizations()
+            settings = Settings()
+            response = PlusAPI(
+                api_key=get_auth_token(),
+                base_url=settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL,
+            ).get_organizations()
             response.raise_for_status()
             organizations = response.json()
         except Exception as error:
@@ -84,7 +89,10 @@ class AuthenticationCommand(_BaseAuthenticationCommand):
                 end="",
             )
 
-            ToolCommand().login()
+            settings = Settings()
+            ToolCommand(
+                base_url=settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+            ).login()
 
             console.print(
                 "Success!\n",

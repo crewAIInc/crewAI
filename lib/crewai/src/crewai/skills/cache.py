@@ -9,7 +9,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import logging
-import os
 from pathlib import Path
 import tarfile
 from typing import TypedDict
@@ -168,35 +167,26 @@ class SkillCacheManager:
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
     """Path-traversal-safe extraction for Python versions without tar filters.
 
-    Validates both the member's own path and, for symlink/hardlink members,
-    the link target. Without the link-target check a malicious archive can
-    plant a symlink that escapes ``dest`` followed by a regular member written
-    through that link, escaping ``dest`` even though every member name resolves
-    inside it. This mirrors the protection that
-    ``tarfile.extractall(..., filter="data")`` provides when available.
+    Only regular files and directories are extracted. Symlink and hardlink
+    members are refused outright: they can redirect a later member's write
+    outside ``dest`` in ways a per-member check cannot see (a member written
+    through an earlier symlink, or a hardlink that ``tarfile`` re-creates as
+    the dangling symlink it names). ``filter="data"`` handles links safely and
+    is used whenever the running Python provides it. Mirrors
+    ``crewai_cli.skills.main._safe_extractall``; change both together.
     """
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
-        member_path = (dest / member.name).resolve()
-        if not member_path.is_relative_to(dest_resolved):
-            raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
-        if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
-            raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
         if member.issym() or member.islnk():
-            link_target = member.linkname
-            if os.path.isabs(link_target):
-                raise ValueError(
-                    f"Blocked link target escaping destination: "
-                    f"{member.name!r} -> {link_target!r}"
-                )
-            anchor = dest if member.islnk() else (dest / member.name).parent
-            resolved_target = (anchor / link_target).resolve()
-            if not resolved_target.is_relative_to(dest_resolved):
-                raise ValueError(
-                    f"Blocked link target escaping destination: "
-                    f"{member.name!r} -> {link_target!r}"
-                )
-    tf.extractall(dest)  # noqa: S202
+            raise ValueError(
+                f"Blocked link member {member.name!r}: installing skills that "
+                "contain links needs Python 3.10.12+, 3.11.4+, or 3.12+"
+            )
+        if not (member.isfile() or member.isdir()):
+            raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
+        if not (dest / member.name).resolve().is_relative_to(dest_resolved):
+            raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
+    tf.extractall(dest)  # noqa: S202 - every member checked above, and no links
 
 
 def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
