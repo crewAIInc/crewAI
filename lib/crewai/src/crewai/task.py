@@ -317,6 +317,7 @@ class Task(BaseModel):
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    _plan_appended: str | None = PrivateAttr(default=None)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
@@ -1197,6 +1198,24 @@ Follow these guidelines:
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
 
+    def clear_plan(self) -> None:
+        """Remove the plan a previous kickoff appended to the description.
+
+        ``Crew._handle_crew_planning`` appends this kickoff's plan to
+        ``description``; without removing the previous one first, repeated
+        kickoffs (and the planner's own task summary) accumulate every plan
+        ever produced. An interpolation rebuild replaced the description with
+        a plan-free one, in which case there is nothing to strip.
+        """
+        if self._plan_appended and self.description.endswith(self._plan_appended):
+            self.description = self.description[: -len(self._plan_appended)]
+        self._plan_appended = None
+
+    def apply_plan(self, plan: str) -> None:
+        """Append this kickoff's planning step to the description."""
+        self.description = f"{self.description}{plan}"
+        self._plan_appended = plan
+
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
@@ -1249,12 +1268,14 @@ Follow these guidelines:
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
 
-        return self.__class__(
+        copied = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        copied._plan_appended = self._plan_appended
+        return copied
 
     def _export_output(
         self, result: str | BaseModel
