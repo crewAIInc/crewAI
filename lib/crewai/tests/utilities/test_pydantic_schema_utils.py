@@ -522,6 +522,92 @@ class TestModelName:
         assert Model.__name__ == "DynamicModel"
 
 
+# Property names that collide with BaseModel attributes
+#
+# Pydantic warns that such a field "shadows an attribute in parent BaseModel". The
+# warning is cosmetic and is left on: the field keeps its own name everywhere, which
+# is what tools, flow state restore and structured output read.
+
+
+class TestBaseModelAttributeNames:
+    @pytest.mark.parametrize("name", ["schema", "json", "copy"])
+    def test_property_keeps_its_name(self, name: str) -> None:
+        schema = {
+            "type": "object",
+            "title": "ActionRequest",
+            "properties": {name: {"type": "string"}},
+            "required": [name],
+        }
+        Model = create_model_from_schema(schema)
+        instance = Model(**{name: "value"})
+
+        assert list(Model.model_fields) == [name]
+        assert getattr(instance, name) == "value"
+        assert instance.model_dump() == {name: "value"}
+        assert list(Model.model_json_schema()["properties"]) == [name]
+
+    def test_nested_object_property_keeps_its_name(self) -> None:
+        schema = {
+            "type": "object",
+            "title": "CreateList",
+            "properties": {
+                "list": {
+                    "type": "object",
+                    "properties": {"schema": {"type": "string"}},
+                    "required": ["schema"],
+                }
+            },
+            "required": ["list"],
+        }
+        Model = create_model_from_schema(schema)
+
+        dumped = Model(list={"schema": "columns"}).model_dump()
+        assert dumped == {"list": {"schema": "columns"}}
+
+    def test_shadowing_property_is_still_validated(self) -> None:
+        schema = {
+            "type": "object",
+            "title": "ActionRequest",
+            "properties": {"schema": {"type": "integer"}},
+            "required": ["schema"],
+        }
+        Model = create_model_from_schema(schema)
+
+        with pytest.raises(ValueError, match="schema\n  Field required"):
+            Model()
+        with pytest.raises(ValueError, match="schema\n  Input should be a valid integer"):
+            Model(schema="not a number")
+
+    def test_recursive_defs_keep_shadowing_names(self) -> None:
+        # B refers back to A, so it is built incomplete and finished by model_rebuild.
+        schema = {
+            "type": "object",
+            "title": "Root",
+            "properties": {"a": {"$ref": "#/$defs/A"}},
+            "$defs": {
+                "A": {
+                    "type": "object",
+                    "properties": {
+                        "schema": {"type": "string"},
+                        "b": {"$ref": "#/$defs/B"},
+                    },
+                },
+                "B": {
+                    "type": "object",
+                    "properties": {
+                        "json": {"type": "string"},
+                        "a": {"$ref": "#/$defs/A"},
+                    },
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+
+        dumped = Model(a={"schema": "s", "b": {"json": "j"}}).model_dump()
+        assert dumped["a"]["schema"] == "s"
+        assert dumped["a"]["b"]["json"] == "j"
+
+
 # enrich_descriptions
 
 

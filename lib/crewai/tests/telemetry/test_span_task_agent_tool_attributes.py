@@ -39,7 +39,7 @@ import pytest
 
 
 # Long and non-repeating, so a truncated or elided copy cannot compare equal.
-# Under the default 32 KiB attribute cap, so it must arrive whole.
+# Under the default attribute bound, so it must arrive whole.
 LONG_TEXT = "".join(
     f"paragraph {i}: the quick brown fox jumps over the lazy dog\n" for i in range(400)
 )

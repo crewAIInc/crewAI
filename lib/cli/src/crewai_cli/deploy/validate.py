@@ -46,6 +46,7 @@ from crewai_core.project import (
     read_toml,
 )
 from rich.console import Console
+from rich.markup import escape
 
 from crewai_cli.utils import normalize_package_name
 
@@ -545,6 +546,13 @@ class DeployValidator:
             return
 
         lockfile = uv_lock if uv_lock.exists() else poetry_lock
+        uv_path = shutil.which("uv")
+        if lockfile is uv_lock and uv_path is not None:
+            self._check_uv_lock_current(uv_path)
+            return
+
+        # Without uv, file times are the only signal. They also flag edits that
+        # leave dependencies alone, which `uv lock --check` above does not.
         try:
             if lockfile.stat().st_mtime < pyproject.stat().st_mtime:
                 self._add(
@@ -560,6 +568,52 @@ class DeployValidator:
                 )
         except OSError:
             pass
+
+    def _check_uv_lock_current(self, uv_path: str) -> None:
+        # Offline so validate never contacts an index: a current lock is
+        # confirmed without one, and a change uv cannot resolve from the cache
+        # fails with a different message, reported below as unverified.
+        try:
+            proc = subprocess.run(  # noqa: S603 - fixed command, trusted uv path
+                [uv_path, "lock", "--check"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                env={**os.environ, "UV_OFFLINE": "1"},
+            )
+        except subprocess.TimeoutExpired:
+            reason = "`uv lock --check` timed out after 60s."
+        except OSError as exc:
+            reason = f"Could not run `uv lock --check`: {exc}"
+        else:
+            if proc.returncode == 0:
+                return
+            if "needs to be updated" in proc.stderr:
+                self._add(
+                    Severity.WARNING,
+                    "stale_lockfile",
+                    "uv.lock is out of date with pyproject.toml",
+                    detail=(
+                        "Your lockfile does not reflect recent dependency changes. "
+                        "The platform resolves from the lockfile, so deployed "
+                        "dependencies may differ from local."
+                    ),
+                    hint="Run `uv lock` and commit the result.",
+                )
+                return
+            reason = (
+                proc.stderr.strip() or f"`uv lock --check` exited {proc.returncode}."
+            )
+
+        self._add(
+            Severity.WARNING,
+            "unverified_lockfile",
+            "Could not verify that uv.lock is up to date",
+            detail=reason,
+            hint="Run `uv lock` and commit the result if it changes uv.lock.",
+        )
 
     def _check_package_dir(self) -> bool:
         if self._package_name is None:
@@ -869,8 +923,18 @@ class DeployValidator:
             return
 
         # crewai.llm.LLM.__new__ wraps provider init errors as
-        # ImportError("Error importing native provider: ...").
-        if "Error importing native provider" in err_msg or "native provider" in err_msg:
+        # ImportError("Error importing native provider: ..."), except a missing
+        # key, which newer crewai raises as MissingAPIKeyError, and which
+        # Agent(llm="<model>") wraps again in a pydantic ValidationError.
+        if (
+            err_type == "MissingAPIKeyError"
+            or (
+                err_type == "ValidationError"
+                and self._extract_missing_api_key(err_msg) is not None
+            )
+            or "Error importing native provider" in err_msg
+            or "native provider" in err_msg
+        ):
             missing_key = self._extract_missing_api_key(err_msg)
             if missing_key:
                 provider = _KNOWN_API_KEY_HINTS.get(missing_key, missing_key)
@@ -1103,21 +1167,27 @@ def render_report(results: list[ValidationResult]) -> None:
     errors = [r for r in results if r.severity is Severity.ERROR]
     warnings = [r for r in results if r.severity is Severity.WARNING]
 
+    # Codes, TOML table names like `[project]`, extras like `crewai[tools]`, and raw
+    # subprocess output all contain brackets that Rich would read as markup.
     for result in errors:
-        console.print(f"[bold red]ERROR[/bold red] [{result.code}] {result.title}")
+        console.print(
+            f"[bold red]ERROR[/bold red] {escape(f'[{result.code}]')} "
+            f"{escape(result.title)}"
+        )
         if result.detail:
-            console.print(f"  {result.detail}")
+            console.print(f"  {escape(result.detail)}")
         if result.hint:
-            console.print(f"  [dim]hint:[/dim] {result.hint}")
+            console.print(f"  [dim]hint:[/dim] {escape(result.hint)}")
 
     for result in warnings:
         console.print(
-            f"[bold yellow]WARNING[/bold yellow] [{result.code}] {result.title}"
+            f"[bold yellow]WARNING[/bold yellow] {escape(f'[{result.code}]')} "
+            f"{escape(result.title)}"
         )
         if result.detail:
-            console.print(f"  {result.detail}")
+            console.print(f"  {escape(result.detail)}")
         if result.hint:
-            console.print(f"  [dim]hint:[/dim] {result.hint}")
+            console.print(f"  [dim]hint:[/dim] {escape(result.hint)}")
 
     summary_parts: list[str] = []
     if errors:
