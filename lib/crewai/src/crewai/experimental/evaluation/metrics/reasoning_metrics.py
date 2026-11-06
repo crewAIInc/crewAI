@@ -25,6 +25,7 @@ from crewai.experimental.evaluation.base_evaluator import (
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.types import LLMMessage
 
 
@@ -236,9 +237,10 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 messages.append(content)
             elif isinstance(content, list) and len(content) > 0:
                 messages.extend(
-                    msg["content"]
+                    text
                     for msg in content
-                    if isinstance(msg, dict) and "content" in msg
+                    if isinstance(msg, dict)
+                    if (text := message_content_text(msg))
                 )
 
         # NOTE: Uses simple n-gram similarity; embedding-based would be more robust
@@ -281,11 +283,13 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             if isinstance(content, str):
                 call_lengths.append(len(content))
             elif isinstance(content, list) and len(content) > 0:
-                total_length = 0
-                for msg in content:
-                    if isinstance(msg, dict) and "content" in msg:
-                        total_length += len(msg["content"])
-                call_lengths.append(total_length)
+                call_lengths.append(
+                    sum(
+                        len(message_content_text(msg))
+                        for msg in content
+                        if isinstance(msg, dict)
+                    )
+                )
 
             start_time = call.get("start_time")
             end_time = call.get("end_time")
@@ -405,9 +409,10 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 sample = content
             elif isinstance(content, list) and len(content) > 0:
                 sample_parts = [
-                    msg["content"]
+                    text
                     for msg in content
-                    if isinstance(msg, dict) and "content" in msg
+                    if isinstance(msg, dict)
+                    if (text := message_content_text(msg))
                 ]
                 sample = "\n".join(sample_parts)
             else:
