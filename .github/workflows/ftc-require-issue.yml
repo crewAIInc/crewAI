@@ -17,6 +17,8 @@ jobs:
     # Allow-list returning contributors. FIRST_TIMER / FIRST_TIME_CONTRIBUTOR
     # are often NONE on pull_request_target at opened time, which skipped the
     # previous deny-list and left first-timer PRs open.
+    # The step below also checks repository permission to avoid closing a PR
+    # from a maintainer whose event association is stale.
     if: >
       github.event.pull_request.user.type != 'Bot' &&
       !contains(fromJSON('["MEMBER","OWNER","COLLABORATOR","CONTRIBUTOR"]'),
@@ -28,6 +30,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+          ACTOR_LOGIN: ${{ github.event.sender.login }}
+          EVENT_ACTION: ${{ github.event.action }}
           AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
         run: |
           python3 << 'PY'
@@ -39,6 +44,8 @@ jobs:
 
           repo = os.environ["REPO"]
           pr_number = os.environ["PR_NUMBER"]
+          author_login = os.environ["AUTHOR_LOGIN"]
+          actor_login = os.environ["ACTOR_LOGIN"]
           owner, name = repo.split("/", 1)
           print(
               "author_association=",
@@ -76,6 +83,34 @@ jobs:
               if "pull_request" in payload:
                   return False
               return (payload.get("state") or "").lower() == "open"
+
+          def has_write_access(login: str) -> bool:
+              result = subprocess.run(
+                  [
+                      "gh",
+                      "api",
+                      f"repos/{repo}/collaborators/{login}/permission",
+                  ],
+                  capture_output=True,
+                  text=True,
+              )
+              if result.returncode != 0:
+                  stderr = result.stderr or ""
+                  if "404" in stderr or "Not Found" in stderr:
+                      return False
+                  raise RuntimeError(
+                      f"GitHub API error checking {login}'s permissions: {stderr}"
+                  )
+              permission = json.loads(result.stdout).get("permission")
+              return permission in {"admin", "maintain", "push", "write"}
+
+          if has_write_access(author_login):
+              print(f"{author_login} has repository write access; skipping issue gate")
+              sys.exit(0)
+
+          if os.environ.get("EVENT_ACTION") == "reopened" and has_write_access(actor_login):
+              print(f"{actor_login} reopened this PR and has repository write access; skipping issue gate")
+              sys.exit(0)
 
           pr = gh_json(
               "pr", "view", pr_number, "--repo", repo, "--json", "title,body,state"

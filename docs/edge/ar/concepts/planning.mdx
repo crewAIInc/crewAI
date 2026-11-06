@@ -1,60 +1,272 @@
 ---
 title: التخطيط
-description: تعرّف على كيفية إضافة التخطيط إلى طاقم CrewAI وتحسين أدائه.
+description: تعرّف على كيفية جعل الوكلاء يخططون قبل التنفيذ باستخدام PlanningConfig، وكيفية التخطيط لطاقم كامل باستخدام Crew(planning=True).
 icon: ruler-combined
 mode: "wide"
 ---
 
 ## نظرة عامة
 
-تتيح لك ميزة التخطيط في CrewAI إضافة قدرة التخطيط إلى طاقمك. عند تفعيلها، قبل كل تكرار للطاقم،
-يتم إرسال جميع معلومات الطاقم إلى AgentPlanner الذي يخطط للمهام خطوة بخطوة، ويُضاف هذا المخطط إلى وصف كل مهمة.
+يمكن لـ CrewAI التخطيط على مستويين:
 
-### استخدام ميزة التخطيط
+- **تخطيط الوكيل**: يكتب الوكيل خطة خطوة بخطوة لعمله، ثم ينفّذ كل خطوة ويتحقق منها. اضبطه باستخدام `Agent(planning_config=PlanningConfig(...))`.
+- **تخطيط الطاقم**: قبل تشغيل الطاقم، يكتب `CrewPlanner` خطة لكل مهمة ويضيفها إلى وصف كل مهمة. فعّله باستخدام `Crew(planning=True)`.
 
-البدء بميزة التخطيط سهل جدًا، الخطوة الوحيدة المطلوبة هي إضافة `planning=True` إلى طاقمك:
+يمكنك استخدام أيٍّ منهما، أو كليهما معًا.
 
-<CodeGroup>
-```python Code
-from crewai import Crew, Agent, Task, Process
+## تخطيط الوكيل
 
-# تجميع طاقمك مع قدرات التخطيط
-my_crew = Crew(
-    agents=self.agents,
-    tasks=self.tasks,
-    process=Process.sequential,
+مرّر `PlanningConfig` إلى الوكيل لتفعيل التخطيط:
+
+```python
+from crewai import Agent, Crew, PlanningConfig, Task
+
+analyst = Agent(
+    role="Market Analyst",
+    goal="Explain market trends with clear evidence",
+    backstory="You are an experienced analyst who breaks big questions into small, checkable steps.",
+    planning_config=PlanningConfig(
+        reasoning_effort="medium",
+        max_attempts=3,
+    ),
+)
+
+trends_task = Task(
+    description="Identify the three most important trends in electric vehicle adoption over the last five years.",
+    expected_output="A short report describing the top 3 trends, with one supporting fact for each.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[trends_task])
+result = crew.kickoff()
+
+print(result)
+```
+
+وجود `PlanningConfig` يفعّل التخطيط. لإيقافه، اترك `planning_config` دون تعيين.
+
+### كيف يعمل
+
+عندما يبدأ الوكيل مهمة، يشغّل حلقة تخطيط وتنفيذ:
+
+1. **التخطيط.** يكتب LLM التخطيط خطة، مع توجيهه بالبقاء ضمن `max_steps` خطوة، ويحدد ما إذا كانت الخطة جاهزة.
+2. **التحسين.** إذا لم تكن الخطة جاهزة، يحسّنها المخطِّط حتى تصبح جاهزة أو حتى الوصول إلى `max_attempts`.
+3. **التنفيذ.** تصبح كل خطوة عنصر todo وتعمل في حلقة أدوات خاصة بها، مقيّدة بـ `max_step_iterations` و `step_timeout`.
+4. **المراقبة.** بعد كل خطوة، يتحقق الوكيل من النتيجة. يعتمد مقدار التحقق على `reasoning_effort`.
+5. **إعادة التخطيط.** بحسب `reasoning_effort`، قد تدفع خطوة فاشلة أو خطة لم تعد مناسبة الوكيل إلى كتابة خطة جديدة، حتى `max_replans` مرة.
+6. **الإجابة.** يبني الوكيل الإجابة النهائية من نتائج الخطوات.
+
+تُحفظ الخطة في حالة تنفيذ الوكيل، ولا تُضاف إلى وصف المهمة.
+
+يحتاج التنفيذ خطوة بخطوة إلى خطة جاهزة ذات خطوات منظمة، يحصل عليها المخطِّط عبر function calling. إذا لم تكن الخطة جاهزة بعد `max_attempts`، أو كان LLM التخطيط لا يدعم function calling، يعمل الوكيل بحلقة التنفيذ القياسية بدلًا من ذلك.
+
+### مستوى جهد الاستدلال
+
+يتحكم `reasoning_effort` فيما يحدث بعد كل خطوة:
+
+| المستوى | بعد كل خطوة | التكلفة |
+| --- | --- | --- |
+| `"low"` | تحقق استدلالي دون استدعاء LLM إضافي. تُعلَّم الخطوة الفاشلة بأنها فاشلة، ويتابع الوكيل بالترتيب دون إعادة التخطيط. | الأسرع |
+| `"medium"` (الافتراضي) | يراجع LLM الخطوة. إذا فشلت الخطوة وقالت المراجعة إن الخطة لم تعد صالحة، يعيد الوكيل التخطيط؛ وإلا يعلّم الخطوة بأنها فاشلة ويتابع. | متوازن |
+| `"high"` | يراجع LLM الخطوة، ثم يقرر ما إذا كان سينهي مبكرًا، أو يعيد التخطيط، أو يحسّن الخطوات المتبقية. | الأكثر تكيفًا، والأبطأ |
+
+يتجاوز `observe_steps` مراجعة LLM في أي مستوى: `True` يضيفها إلى `"low"`، و `False` يزيلها من `"medium"` و `"high"`. مع `observe_steps=True`، يعيد `"low"` التخطيط أيضًا عندما تقول المراجعة إن خطوة فاشلة تحتاج إلى خطة جديدة.
+
+### خيارات الإعداد
+
+<ParamField body="reasoning_effort" type="str" default="medium">
+  مقدار تحقق الوكيل وتكيّفه بعد كل خطوة: `"low"` أو `"medium"` أو `"high"`.
+</ParamField>
+
+<ParamField body="observe_steps" type="bool" default="None">
+  تشغيل مراجعة LLM بعد كل خطوة. القيمة `None` تراجع في `"medium"` و `"high"` فقط.
+</ParamField>
+
+<ParamField body="max_attempts" type="int" default="None">
+  الحد الأقصى لمحاولات التخطيط، بما فيها الخطة الأولى. القيمة `None` تواصل التحسين حتى يعلّم المخطِّط الخطة بأنها جاهزة، مما قد يضيف استدعاءات LLM. عيّن رقمًا لتقييدها.
+</ParamField>
+
+<ParamField body="max_steps" type="int" default="20">
+  حد الخطوات الذي يُطلب من المخطِّط الالتزام به. يُمرَّر إلى الموجّه بصفة `{max_steps}` ولا يُفرض على الخطة المُعادة. يجب ألا يقل عن 1.
+</ParamField>
+
+<ParamField body="max_replans" type="int" default="3">
+  الحد الأقصى لمرات إعادة التخطيط الكاملة قبل أن يُنهي الوكيل إجابته. القيمة `0` تعطّل إعادة التخطيط.
+</ParamField>
+
+<ParamField body="max_step_iterations" type="int" default="15">
+  الحد الأقصى لتكرارات LLM في خطوة واحدة. القيم الأقل تجعل الخطوات أسرع لكن أقل شمولًا.
+</ParamField>
+
+<ParamField body="step_timeout" type="int" default="None">
+  الحد الأقصى بالثواني لخطوة واحدة، ويُفحص قبل كل استدعاء LLM داخل الخطوة. عند تجاوزه، تتوقف الخطوة وتُعيد ما لديها حتى تلك اللحظة. لا تُعلَّم الخطوة بأنها فاشلة، ولا يُقاطَع استدعاء LLM أو أداة قيد التشغيل. القيمة `None` تعني عدم وجود مهلة.
+</ParamField>
+
+<ParamField body="llm" type="str | BaseLLM" default="None">
+  نموذج LLM المستخدم في التخطيط وفي المراجعة بعد كل خطوة. القيمة `None` تستخدم LLM الوكيل.
+</ParamField>
+
+<ParamField body="system_prompt" type="str" default="None">
+  موجّه نظام مخصص للتخطيط. القيمة `None` تستخدم الموجّه المدمج.
+</ParamField>
+
+<ParamField body="plan_prompt" type="str" default="None">
+  موجّه مخصص للخطة الأولى. راجع الموجّهات المخصصة أدناه.
+</ParamField>
+
+<ParamField body="refine_prompt" type="str" default="None">
+  موجّه مخصص لتحسين الخطة. راجع الموجّهات المخصصة أدناه.
+</ParamField>
+
+إليك وكيلًا يستخدم نموذجًا منفصلًا وأقل تكلفة للتخطيط ويقيّد كل جزء من الحلقة:
+
+```python
+from crewai import Agent, PlanningConfig
+
+researcher = Agent(
+    role="Researcher",
+    goal="Produce well-sourced research summaries",
+    backstory="You are a meticulous researcher.",
+    planning_config=PlanningConfig(
+        reasoning_effort="high",
+        max_attempts=2,
+        max_steps=8,
+        max_replans=2,
+        max_step_iterations=10,
+        step_timeout=120,
+        llm="gpt-5.4-mini",
+    ),
+)
+```
+
+### الموجّهات المخصصة
+
+يُملأ `plan_prompt` و `refine_prompt` باستخدام `str.format` في Python. العناصر النائبة التالية متاحة:
+
+| الموجّه | العناصر النائبة |
+| --- | --- |
+| `plan_prompt` | `{role}`, `{goal}`, `{backstory}`, `{description}`, `{expected_output}`, `{tools}`, `{max_steps}` |
+| `refine_prompt` | `{role}`, `{goal}`, `{backstory}`, `{current_plan}`, `{max_steps}` |
+
+إذا لم تتضمن موجّهاتك `{max_steps}`، فلن يتلقى المخطِّط أي حد للخطوات.
+
+```python
+from crewai import Agent, PlanningConfig
+
+writer = Agent(
+    role="Technical Writer",
+    goal="Write clear documentation",
+    backstory="You turn complex systems into readable guides.",
+    planning_config=PlanningConfig(
+        max_attempts=2,
+        plan_prompt=(
+            "You are {role}. Your goal: {goal}.\n"
+            "Plan how to complete this task in at most {max_steps} steps.\n"
+            "Task: {description}\n"
+            "Expected output: {expected_output}\n"
+            "Available tools: {tools}"
+        ),
+        refine_prompt=(
+            "You are {role}. Improve this plan and keep it to at most "
+            "{max_steps} steps:\n{current_plan}"
+        ),
+    ),
+)
+```
+
+<Warning>
+أي عنصر نائب آخر، أو `{` أو `}` حرفي، يؤدي إلى فشل التخطيط. عندها يسجّل الوكيل الخطأ ويعمل دون خطة. اكتب الأقواس الحرفية بالشكل `{{` و `}}`.
+</Warning>
+
+### التخطيط دون مهمة
+
+يعمل التخطيط أيضًا عند استدعاء الوكيل مباشرةً باستخدام `kickoff()`، دون `Task` أو `Crew`. تُستخدم رسالة الإدخال كوصف للمهمة:
+
+```python
+from crewai import Agent, PlanningConfig
+
+planner = Agent(
+    role="Travel Planner",
+    goal="Plan practical trips",
+    backstory="You plan efficient itineraries.",
+    planning_config=PlanningConfig(reasoning_effort="low", max_attempts=1),
+)
+
+result = planner.kickoff("Plan a two-day trip to Lisbon on a mid-range budget.")
+
+print(result.raw)
+```
+
+### الاختصار `planning=True`
+
+يفعّل `Agent(planning=True)` إعدادًا محدودًا ومنخفض التكلفة. وهو مماثل لـ `PlanningConfig(reasoning_effort="low", max_attempts=1)`: محاولة تخطيط واحدة ودون مراجعة LLM بعد كل خطوة.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst.",
     planning=True,
 )
 ```
-</CodeGroup>
 
-من هذه النقطة فصاعدًا، سيكون التخطيط مفعّلًا في طاقمك، وسيتم تخطيط المهام قبل كل تكرار.
+إذا مرّرت `planning_config` أيضًا، فستكون له الأولوية.
 
-<Warning>
-عند تفعيل التخطيط، سيستخدم CrewAI `gpt-4o-mini` كنموذج LLM افتراضي للتخطيط، مما يتطلب مفتاح API صالحًا من OpenAI. نظرًا لأن وكلاءك قد يستخدمون نماذج LLM مختلفة، فقد يسبب ذلك ارتباكًا إذا لم يكن لديك مفتاح OpenAI API مهيأ أو إذا كنت تواجه سلوكًا غير متوقع متعلقًا باستدعاءات LLM API.
-</Warning>
+### عندما يفشل التخطيط
 
-#### LLM التخطيط
+إذا حدث خطأ أثناء تخطيط الوكيل، يُسجَّل الخطأ ويشغّل الوكيل المهمة دون خطة.
 
-يمكنك الآن تحديد نموذج LLM الذي سيُستخدم لتخطيط المهام.
+<Note>
+المعاملان `reasoning=True` و `max_reasoning_attempts` مهملان. راجع [الاستدلال](/edge/ar/concepts/reasoning) لمعرفة كيفية الترحيل.
+</Note>
 
-عند تشغيل مثال الحالة الأساسية، سترى شيئًا مشابهًا للمخرجات أدناه، والتي تمثل مخرجات `AgentPlanner`
-المسؤول عن إنشاء المنطق التدريجي لإضافته إلى مهام الوكلاء.
+## تخطيط الطاقم
+
+عند تفعيل تخطيط الطاقم، تُرسل جميع معلومات الطاقم إلى `CrewPlanner` قبل تشغيل المهام. يخطط لكل مهمة خطوة بخطوة ويضيف الخطة إلى وصف تلك المهمة.
+
+### استخدام تخطيط الطاقم
+
+أضف `planning=True` إلى طاقمك. في كل مرة يبدأ فيها الطاقم، يكتب `CrewPlanner` خطة مثل الموجودة في تبويب **Result** ويضيف جزء كل مهمة إلى وصف تلك المهمة:
 
 <CodeGroup>
 ```python Code
-from crewai import Crew, Agent, Task, Process
+from crewai import Agent, Crew, Process, Task
 
-# تجميع طاقمك مع قدرات التخطيط ونموذج LLM مخصص
-my_crew = Crew(
-    agents=self.agents,
-    tasks=self.tasks,
-    process=Process.sequential,
-    planning=True,
-    planning_llm="gpt-4o"
+researcher = Agent(
+    role="AI LLMs Senior Data Researcher",
+    goal="Uncover cutting-edge developments in AI LLMs",
+    backstory="You find the most relevant new work in AI LLMs.",
 )
 
-# تشغيل الطاقم
+reporting_analyst = Agent(
+    role="AI LLMs Reporting Analyst",
+    goal="Create detailed reports based on AI LLMs data analysis and research findings",
+    backstory="You turn research findings into clear reports.",
+)
+
+research_task = Task(
+    description="Conduct a thorough research about AI LLMs",
+    expected_output="A list with 10 bullet points of the most relevant information about AI LLMs",
+    agent=researcher,
+)
+
+reporting_task = Task(
+    description="Review the context you got and expand each topic into a full section for a report",
+    expected_output="A fully fledged report with the main topics, each with a full section of information. Formatted as markdown.",
+    agent=reporting_analyst,
+)
+
+# Assemble your crew with planning capabilities
+my_crew = Crew(
+    agents=[researcher, reporting_analyst],
+    tasks=[research_task, reporting_task],
+    process=Process.sequential,
+    planning=True,
+)
+
+# Run the crew
 my_crew.kickoff()
 ```
 
@@ -153,3 +365,11 @@ A list with 10 bullet points of the most relevant information about AI LLMs.
 A fully fledged report with the main topics, each with a full section of information. Formatted as markdown without '```'.
 ```
 </CodeGroup>
+
+### LLM التخطيط
+
+يستخدم تخطيط الطاقم `gpt-5.4-mini` افتراضيًا. عيّن `planning_llm` إلى اسم نموذج أو مثيل `LLM` لاستخدام نموذج آخر، مثل `Crew(..., planning=True, planning_llm="gpt-5")`.
+
+<Warning>
+مع LLM التخطيط الافتراضي، يحتاج تخطيط الطاقم إلى مفتاح OpenAI API صالح، حتى لو كان وكلاؤك يستخدمون مزوّدين آخرين. إذا لم يكن لديك مفتاح OpenAI API مُعدّ، فعيّن `planning_llm` إلى نموذج يمكنك الوصول إليه.
+</Warning>
