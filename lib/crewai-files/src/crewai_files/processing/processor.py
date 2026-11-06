@@ -216,6 +216,19 @@ class FileProcessor:
         output: dict[str, FileInput] = {}
         for item in gather_results:
             if isinstance(item, BaseException):
+                # A STRICT-mode failure is an intentional, per-file abort the
+                # caller configured; surface it like the sync path does
+                # instead of silently dropping the file from the batch.
+                if isinstance(
+                    item,
+                    (
+                        FileValidationError,
+                        FileTooLargeError,
+                        UnsupportedFileTypeError,
+                        FileProcessingError,
+                    ),
+                ):
+                    raise item
                 logger.error(f"Processing failed: {item}")
                 continue
             entry_name, processed = item
