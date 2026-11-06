@@ -529,6 +529,92 @@ def test_agent_output_when_guardrail_returns_base_model():
     assert result.pydantic == Player(name="Lionel Messi", country="Argentina")
 
 
+class _Verdict(BaseModel):
+    approved: bool
+    reason: str
+
+
+class _VerdictLLM(BaseLLM):
+    """Answers every call with a JSON verdict, so kickoff yields a _Verdict."""
+
+    def __init__(self) -> None:
+        super().__init__(model="verdict-model")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        return '{"approved": true, "reason": "signature block present"}'
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+
+_APPROVED = _Verdict(approved=True, reason="signature block present")
+
+
+def test_agent_guardrail_returning_its_output_keeps_structured_result():
+    """Approving with (True, output) must not replace the parsed result."""
+    agent = Agent(
+        role="Reviewer",
+        goal="Review contracts",
+        backstory="Reviews contracts.",
+        llm=_VerdictLLM(),
+        guardrail=lambda output: (True, output),
+    )
+
+    result = agent.kickoff("Review this NDA.", response_format=_Verdict)
+
+    assert result.pydantic == _APPROVED
+    assert result.pydantic is not result
+
+
+def test_agent_guardrail_can_replace_the_output():
+    replacement = LiteAgentOutput(
+        raw="rewritten by guardrail", pydantic=_APPROVED, agent_role="Reviewer"
+    )
+    agent = Agent(
+        role="Reviewer",
+        goal="Review contracts",
+        backstory="Reviews contracts.",
+        llm=_VerdictLLM(),
+        guardrail=lambda output: (True, replacement),
+    )
+
+    result = agent.kickoff("Review this NDA.", response_format=_Verdict)
+
+    assert result.raw == "rewritten by guardrail"
+    assert result.pydantic == _APPROVED
+
+
+def test_lite_agent_guardrail_returning_its_output_keeps_structured_result():
+    agent = LiteAgent(
+        role="Reviewer",
+        goal="Review contracts",
+        backstory="Reviews contracts.",
+        llm=_VerdictLLM(),
+        response_format=_Verdict,
+        guardrail=lambda output: (True, output),
+    )
+
+    result = agent.kickoff("Review this NDA.")
+
+    assert result.pydantic == _APPROVED
+    assert result.pydantic is not result
+
+
 def test_lite_agent_with_custom_llm_and_guardrails():
     """Test that CustomLLM (inheriting from BaseLLM) works with guardrails."""
 
