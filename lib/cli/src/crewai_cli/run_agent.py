@@ -7,6 +7,12 @@ from typing import Any
 
 import click
 
+from crewai_cli.api_keys import (
+    PLACEHOLDER_API_KEY,
+    _missing_keys,
+    ask_for_api_key,
+    missing_key_line,
+)
 from crewai_cli.input_prompt import is_interactive, parse_inputs_json
 from crewai_cli.run_crew import (
     _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV,
@@ -95,6 +101,29 @@ def run_agent_in_project_env(inputs: str | None) -> None:
         raise click.ClickException(f"Could not launch agent: {exc}") from exc
 
 
+def _ask_for_missing_api_key(agent: Any) -> None:
+    """Ask for the API key the Agent's model needs before its first turn.
+
+    Providers build their clients lazily, so a missing key would otherwise
+    surface only when the first turn fails.
+    """
+    llm = getattr(agent, "llm", None)
+    if llm is None or getattr(llm, "api_key", None) not in (
+        None,
+        "",
+        PLACEHOLDER_API_KEY,
+    ):
+        return
+    model = f"{getattr(llm, 'provider', '')}/{getattr(llm, 'model', '')}"
+    for name in _missing_keys([model], {}, env_file_wins=False):
+        # Ctrl-C or Ctrl-D at the prompt stops the run there.
+        with stops_run_as("missing_api_key"):
+            pasted = ask_for_api_key(name, Path.cwd(), None)
+        if not pasted:
+            record_run_stopped("missing_api_key")
+            raise click.ClickException(missing_key_line(name, Path.cwd()))
+
+
 def run_agent(inputs: str | None = None) -> None:
     """Load and execute a standalone Agent in the current interpreter."""
     if inputs is None and not is_interactive():
@@ -107,10 +136,13 @@ def run_agent(inputs: str | None = None) -> None:
         from crewai.project import load_agent_project
 
         agent = load_agent_project()
+        _ask_for_missing_api_key(agent)
         if inputs is None:
             agent.chat(tui=True)
             return
         result = asyncio.run(agent.kickoff_async(messages=messages))
+    except click.ClickException:
+        raise
     except Exception as exc:
         raise click.ClickException(f"Agent run failed: {exc}") from exc
     click.echo(result.raw)

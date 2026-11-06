@@ -28,9 +28,7 @@ def create_agent(name: str, *, format: str = "yaml") -> None:
     templates = list(templates_dir.rglob("*"))
     templates.extend(assets_dir.rglob("*"))
     if format != "python":
-        templates.extend(
-            template_root / "agent" / name for name in (".env.example", ".gitignore")
-        )
+        templates.append(template_root / "agent" / ".gitignore")
     for template in templates:
         if not template.is_file() or template.suffix in {".pyc", ".pyo"}:
             continue

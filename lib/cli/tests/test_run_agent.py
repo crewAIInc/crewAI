@@ -294,3 +294,49 @@ async def test_agent_chat_tui_runs_two_turns_with_history(monkeypatch):
             assert len(app._conversation_messages) == (index + 1) * 2
     assert app._conversation_messages == [("user", "first"), ("assistant", "Done"), ("user", "second"), ("assistant", "Done")]
     assert "first" in llm.received[1]
+
+
+@pytest.mark.parametrize("pasted", [True, False])
+def test_missing_api_key_is_asked_for_before_chat(tmp_path, monkeypatch, pasted):
+    import crewai.project
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(runner, "is_interactive", lambda: True)
+    chats = []
+    agent = SimpleNamespace(
+        llm=SimpleNamespace(provider="openai", model="gpt-6.1-sol", api_key=None),
+        chat=lambda **kwargs: chats.append(kwargs),
+    )
+    monkeypatch.setattr(crewai.project, "load_agent_project", lambda: agent)
+    asked = []
+    monkeypatch.setattr(
+        runner, "ask_for_api_key", lambda name, *_: asked.append(name) or pasted
+    )
+    if pasted:
+        runner.run_agent()
+        assert chats == [{"tui": True}]
+    else:
+        with pytest.raises(click.ClickException, match="OPENAI_API_KEY is not set"):
+            runner.run_agent()
+        assert chats == []
+    assert asked == ["OPENAI_API_KEY"]
+
+
+def test_configured_api_key_is_not_asked_for(tmp_path, monkeypatch):
+    import crewai.project
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(runner, "is_interactive", lambda: True)
+    chats = []
+    agent = SimpleNamespace(
+        llm=SimpleNamespace(provider="openai", model="gpt-6.1-sol", api_key=None),
+        chat=lambda **kwargs: chats.append(kwargs),
+    )
+    monkeypatch.setattr(crewai.project, "load_agent_project", lambda: agent)
+    monkeypatch.setattr(
+        runner, "ask_for_api_key", lambda *_: pytest.fail("asked for a set key")
+    )
+    runner.run_agent()
+    assert chats == [{"tui": True}]

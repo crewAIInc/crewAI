@@ -424,3 +424,16 @@ def test_create_help_marks_agent_support_experimental_and_yaml_default() -> None
     assert result.exit_code == 0
     assert "Standalone agent support is experimental" in result.output
     assert "[default: (yaml)]" in result.output
+
+
+@pytest.mark.parametrize("format", ["yaml", "json"])
+def test_config_agent_env_example_lists_only_settings_it_reads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, format: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(
+        crewai, ["create", "agent", "support_agent", "--format", format]
+    )
+    assert result.exit_code == 0, result.output
+    env_example = (tmp_path / "support_agent" / ".env.example").read_text()
+    assert env_example == "OPENAI_API_KEY=YOUR_API_KEY\n"
