@@ -211,6 +211,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "ollama_chat",
     "hosted_vllm",
     "cerebras",
+    "groq",
     "dashscope",
     "snowflake",
     "deepinfra",
@@ -236,6 +237,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "ollama_chat": "ollama_chat",
     "hosted_vllm": "hosted_vllm",
     "cerebras": "cerebras",
+    "groq": "groq",
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
@@ -459,6 +461,11 @@ class LLM(BaseLLM):
             return True
 
         if provider == "cerebras":
+            return True
+
+        if provider == "groq":
+            # Groq serves Llama, Qwen, Kimi, GPT-OSS and more under ids it
+            # retires and adds often, so any id is passed through.
             return True
 
         if provider == "dashscope":
@@ -701,6 +708,7 @@ class LLM(BaseLLM):
             "ollama_chat",
             "hosted_vllm",
             "cerebras",
+            "groq",
             "dashscope",
             "deepinfra",
         }
