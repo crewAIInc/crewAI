@@ -150,8 +150,8 @@ def test_initialize_creates_initial_commit(fp, tmp_path):
 
 def test_deployable_files_uses_git_excludes(fp, repository):
     fp.register(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        stdout="pyproject.toml\nsrc/main.py\n",
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        stdout="pyproject.toml\0src/main.py\0",
     )
 
     assert repository.deployable_files() == ["pyproject.toml", "src/main.py"]

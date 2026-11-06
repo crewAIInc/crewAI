@@ -94,6 +94,44 @@ def test_create_project_zip_without_repository_uses_git_ignore_rules(
     }
 
 
+def test_create_project_zip_keeps_non_ascii_file_names(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / "knowledge").mkdir()
+    (tmp_path / "knowledge" / "café.txt").write_text("menu\n")
+    (tmp_path / "knowledge" / "한글.md").write_text("# notes\n")
+
+    try:
+        subprocess.run(
+            ["git", "init"],
+            cwd=tmp_path,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        subprocess.run(
+            ["git", "add", "knowledge/café.txt"],
+            cwd=tmp_path,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        pytest.skip(f"git is not available in this environment: {exc}")
+
+    archive_path = create_project_zip("demo", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {
+        "pyproject.toml",
+        "knowledge/café.txt",
+        "knowledge/한글.md",
+    }
+
+
 def test_create_project_zip_does_not_fallback_when_repository_listing_fails(
     tmp_path: Path,
 ):
