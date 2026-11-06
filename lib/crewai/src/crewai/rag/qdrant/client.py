@@ -1,7 +1,9 @@
 """Qdrant client implementation."""
 
+import logging
 from typing import Any, cast
 
+from qdrant_client.models import VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -20,6 +22,7 @@ from crewai.rag.qdrant.types import (
 from crewai.rag.qdrant.utils import (
     _create_point_from_document,
     _get_collection_params,
+    _infer_vector_params,
     _is_async_client,
     _is_async_embedding_function,
     _is_sync_client,
@@ -27,6 +30,24 @@ from crewai.rag.qdrant.utils import (
     _process_search_results,
 )
 from crewai.rag.types import SearchResult
+
+
+_logger = logging.getLogger(__name__)
+
+_DIMENSION_PROBE_TEXT = "dimension probe"
+_PROBE_FAILED_MESSAGE = (
+    "Could not infer the Qdrant vector size from the embedding function; "
+    "creating the collection with the default vector params"
+)
+
+
+def _with_vectors_config(
+    kwargs: QdrantCollectionCreateParams, params: VectorParams | None
+) -> QdrantCollectionCreateParams:
+    """Return kwargs with inferred vector params, unchanged if none were inferred."""
+    if params is None:
+        return kwargs
+    return cast(QdrantCollectionCreateParams, {**kwargs, "vectors_config": params})
 
 
 class QdrantClient(BaseClient):
@@ -65,12 +86,51 @@ class QdrantClient(BaseClient):
         self.default_score_threshold = default_score_threshold
         self.default_batch_size = default_batch_size
 
+    def _infer_vectors_config(
+        self, kwargs: QdrantCollectionCreateParams
+    ) -> QdrantCollectionCreateParams:
+        """Size a new collection to the embedding function's output dimension.
+
+        An explicit ``vectors_config`` is kept. An async embedding function cannot
+        be awaited here, and a failing probe is logged; the default vector params
+        apply in both cases.
+        """
+        if "vectors_config" in kwargs or _is_async_embedding_function(
+            self.embedding_function
+        ):
+            return kwargs
+        sync_fn = cast(EmbeddingFunction, self.embedding_function)
+        try:
+            embedding = sync_fn(_DIMENSION_PROBE_TEXT)
+        except Exception:
+            _logger.warning(_PROBE_FAILED_MESSAGE, exc_info=True)
+            return kwargs
+        return _with_vectors_config(kwargs, _infer_vector_params(embedding))
+
+    async def _ainfer_vectors_config(
+        self, kwargs: QdrantCollectionCreateParams
+    ) -> QdrantCollectionCreateParams:
+        """Async variant of ``_infer_vectors_config``."""
+        if "vectors_config" in kwargs:
+            return kwargs
+        try:
+            if _is_async_embedding_function(self.embedding_function):
+                embedding = await self.embedding_function(_DIMENSION_PROBE_TEXT)
+            else:
+                sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                embedding = sync_fn(_DIMENSION_PROBE_TEXT)
+        except Exception:
+            _logger.warning(_PROBE_FAILED_MESSAGE, exc_info=True)
+            return kwargs
+        return _with_vectors_config(kwargs, _infer_vector_params(embedding))
+
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance sized to the
+                embedding function's output dimension (384 if it cannot be inferred).
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -100,7 +160,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(self._infer_vectors_config(kwargs))
         self.client.create_collection(**params)
 
     async def acreate_collection(
@@ -110,7 +170,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance sized to the
+                embedding function's output dimension (384 if it cannot be inferred).
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -140,7 +201,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(await self._ainfer_vectors_config(kwargs))
         await self.client.create_collection(**params)
 
     def get_or_create_collection(
@@ -150,7 +211,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance sized to the
+                embedding function's output dimension (384 if it cannot be inferred).
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -182,7 +244,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(self._infer_vectors_config(kwargs))
         self.client.create_collection(**params)
 
         return self.client.get_collection(collection_name)
@@ -194,7 +256,8 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to cosine distance sized to the
+                embedding function's output dimension (384 if it cannot be inferred).
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -226,7 +289,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(await self._ainfer_vectors_config(kwargs))
         await self.client.create_collection(**params)
 
         return await self.client.get_collection(collection_name)
