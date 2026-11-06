@@ -206,3 +206,33 @@ Final text.
             phrase not in result.content
             for phrase in ["import {", "export {", "<Component>"]
         )
+
+    def test_fenced_code_block_is_preserved(self):
+        content = "```python\nimport json\nprint(json.loads('{}'))\n```"
+        result = MDXLoader().load(SourceContent(content))
+        assert "import json" in result.content
+        assert "print(json.loads('{}'))" in result.content
+
+    def test_inline_code_span_is_preserved(self):
+        content = "Use `List<T>` in the schema."
+        result = MDXLoader().load(SourceContent(content))
+        assert "`List<T>`" in result.content
+
+    def test_code_comparison_operators_are_preserved(self):
+        content = "```python\nassert 0 < count and count > 2\n```"
+        result = MDXLoader().load(SourceContent(content))
+        assert "assert 0 < count and count > 2" in result.content
+
+    def test_jsx_and_imports_outside_code_are_still_removed(self):
+        content = (
+            "import Component from './Component'\n\n"
+            "# Title\n\n"
+            "Real JSX here <Component prop=\"x\" />.\n\n"
+            "```jsx\nimport React from 'react';\n<div className=\"keep\" />\n```"
+        )
+        result = MDXLoader().load(SourceContent(content))
+        assert "import Component" not in result.content
+        assert "<Component" not in result.content
+        assert "# Title" in result.content
+        assert "import React from 'react';" in result.content
+        assert '<div className="keep" />' in result.content
