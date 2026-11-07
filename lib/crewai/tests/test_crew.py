@@ -2071,6 +2071,41 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
                 interpolate_task_inputs.assert_called()
 
 
+def test_crew_kickoff_for_each_after_kickoff_uses_each_input(tmp_path, monkeypatch):
+    # kickoff_for_each runs copies of the crew. A crew that already ran once
+    # holds interpolated text, so the copies must keep the templates.
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+        output_file="{topic}.md",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    runs = []
+
+    def execute_task(self, task, context=None, tools=None):
+        runs.append((self.role, task.description, task.expected_output, task.output_file))
+        return "ok"
+
+    with patch.object(Agent, "execute_task", execute_task):
+        crew.kickoff(inputs={"topic": "AI", "points": 5})
+        crew.kickoff_for_each(
+            inputs=[{"topic": "ML", "points": 3}, {"topic": "DL", "points": 2}]
+        )
+
+    assert runs[1:] == [
+        ("ML Researcher", "Give me an analysis around ML.", "3 bullet points about ML.", "ML.md"),
+        ("DL Researcher", "Give me an analysis around DL.", "2 bullet points about DL.", "DL.md"),
+    ]
+
+
 @pytest.mark.vcr()
 def test_crew_does_not_interpolate_without_inputs():
     agent = Agent(
