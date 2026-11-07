@@ -347,13 +347,14 @@ def eval_crew(
     )
     _load_project_env()
     execution_id = run_id or record.get("execution_id")
+    run_failed: SystemExit | None = None
     if why is not None:
         # The crew runs first, and the app that runs it carries the evaluation
         # on its own screen — link, progress, verdict. It comes back with the
         # run to grade when no app got to it: a crew run without one (no
         # terminal, or a classic crew), a conversational session, or a flow
         # that took the terminal instead.
-        execution_id = _run_the_crew_to_evaluate(
+        execution_id, run_failed = _run_the_crew_to_evaluate(
             why,
             trusted=trusted,
             run_args=run_args,
@@ -428,9 +429,10 @@ def eval_crew(
     # The exit code is what a CI job reads, so it is the gate's: 0 only for a
     # run that PASSED. A failed gate, one without a verdict, and an evaluation
     # that stopped are all 1 — a pipeline that carried on past any of them would
-    # ship what the evaluation did not vouch for.
-    if not _gate_passed(finished):
-        raise SystemExit(1)
+    # ship what the evaluation did not vouch for. So is a run that failed,
+    # graded or not.
+    if not _gate_passed(finished) or run_failed is not None:
+        raise SystemExit(1) from run_failed
 
 
 def _gate_passed(finished: dict[str, Any]) -> bool:
@@ -1083,15 +1085,16 @@ def _run_the_crew_to_evaluate(
     *,
     trusted: set[str] | None = None,
     run_args: dict[str, Any] | None = None,
-) -> str | None:
+) -> tuple[str | None, SystemExit | None]:
     """Run the crew, traced, to have a run to evaluate.
 
     Running `crewai eval` asked for the run to be graded, and the grade is read
     off its trace; the only question is the first enable of tracing, put to a
     person at a terminal (`_ask_before_the_first_enable`). The run app
-    evaluates what it ran, on its own screen, so this returns None when it did
-    — the reader has already seen the link and the verdict. It returns the run
-    to grade when no app got to it, and says so itself when nothing was traced.
+    evaluates what it ran, on its own screen, so this returns no run when it
+    did — the reader has already seen the link and the verdict. It returns the
+    run to grade when no app got to it, with the exit the run failed with, if
+    it failed; and says so itself when nothing was traced.
     """
     run_args = dict(run_args or {})
     # A flow named by its definition runs outside a project too.
@@ -1181,7 +1184,11 @@ def _run_the_crew_to_evaluate(
     if marker is not None:
         if marker.get("execution_id"):
             remember_project_state(str(marker["execution_id"]))
-            return None
+            if failed is not None:
+                # Graded on the app's screen, but the run failed: the command
+                # still exits 1, as it does for a failed run it grades itself.
+                raise SystemExit(1) from failed
+            return None, None
         raise _untraced(run_log, seconds, failed) from failed
 
     # The project's record, only when it was written after this run began: a
@@ -1193,7 +1200,7 @@ def _run_the_crew_to_evaluate(
     )
     if traced:
         _say_what_the_run_left(run_log, seconds, traced=True)
-        return str(traced)
+        return str(traced), failed
 
     raise _untraced(run_log, seconds, failed) from failed
 

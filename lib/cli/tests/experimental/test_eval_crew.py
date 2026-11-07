@@ -4231,10 +4231,46 @@ def test_a_traced_run_that_exits_with_an_error_is_still_graded(
     _a_run_that_exits(directory, monkeypatch, 1, traced=True)
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
 
-    eval_module.eval_crew()
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
 
+    assert exited.value.code == 1  # the run failed, whatever the gate says
     assert amp.calls[0] == ("create", "the-failed-run")
     assert "Goal gate: PASSED" in " ".join(capfd.readouterr().out.split())
+    assert not [f for f in usage if f.startswith("cli_usage:eval_stopped:")]
+
+
+@pytest.mark.parametrize("code", [1, None], ids=["failed", "finished"])
+def test_a_run_the_app_graded_exits_1_only_when_it_failed(
+    project, monkeypatch, usage, code
+):
+    """The run app graded the run on its own screen and left its id in the
+    marker: the command grades nothing more, and exits 1 when the run failed,
+    as it does for a failed run it grades itself."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: False)
+
+    def fake_run_crew() -> None:
+        if code is not None:
+            raise SystemExit(code)
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.setattr(
+        eval_module, "evaluation_marker", lambda after: {"execution_id": "app-graded"}
+    )
+    amp = install(monkeypatch, FakeAMP())
+
+    if code is None:
+        eval_module.eval_crew()
+    else:
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew()
+        assert exited.value.code == 1
+
+    assert amp.calls == []  # graded by the app, not again here
+    assert eval_module._remembered_project_state("app-graded") is not None
     assert not [f for f in usage if f.startswith("cli_usage:eval_stopped:")]
 
 
