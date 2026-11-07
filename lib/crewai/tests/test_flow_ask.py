@@ -108,6 +108,30 @@ class MockInputProvider:
         return response
 
 
+class ScriptedInputProvider:
+    """Input provider that replays scripted answers, as in the docs example.
+
+    Returns each answer as an ``InputResponse`` carrying response metadata,
+    then returns ``None`` once the scripted answers are exhausted to signal
+    that input is unavailable.
+    """
+
+    def __init__(self, answers: list[str]) -> None:
+        self.answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self, message: str, flow: Flow[Any], metadata: dict[str, Any] | None = None
+    ) -> InputResponse | None:
+        self.received_metadata.append(metadata)
+        if not self.answers:
+            return None
+        return InputResponse(
+            text=self.answers.pop(0),
+            metadata={"responded_by": "scripted-user"},
+        )
+
+
 class SlowMockProvider:
     """Mock provider that delays before returning, for timeout tests."""
 
@@ -1194,3 +1218,61 @@ class TestAskMetadata:
         assert bob_entry is not None
         assert bob_entry["response"] == "answer from bob"
         assert bob_entry["response_metadata"] == {"responded_by": "bob"}
+
+
+class TestInputProviderExampleDocs:
+    """Smoke check for the Custom Input Providers docs example.
+
+    Mirrors the scripted provider example in
+    ``docs/edge/en/concepts/flows.mdx``: request metadata reaches the
+    provider, the ``InputResponse`` carries response metadata back, and an
+    exhausted provider signals unavailable input with ``None``.
+    """
+
+    def test_scripted_provider_metadata_and_unavailable_paths(self) -> None:
+        """Metadata round-trips through input_history and None is handled."""
+
+        class TicketFlow(Flow):
+            input_provider = ScriptedInputProvider(["My printer is on fire"])
+
+            @start()
+            def triage(self):
+                issue = self.ask("Describe the issue:", metadata={"channel": "web"})
+                if issue is None:
+                    return "untriaged"
+
+                priority = self.ask(
+                    "What priority is this?", metadata={"channel": "web"}
+                )
+                if priority is None:
+                    return "normal"
+
+                return priority
+
+        flow = TicketFlow()
+        result = flow.kickoff()
+
+        # First ask() got the scripted answer; the second got None.
+        assert result == "normal"
+
+        # Request metadata reached the provider on both calls.
+        provider = flow.input_provider
+        assert provider.received_metadata == [
+            {"channel": "web"},
+            {"channel": "web"},
+        ]
+
+        # ask() returns the response text; metadata is inspectable via the
+        # public input_history API.
+        history = flow.input_history
+        assert len(history) == 2
+        assert [entry["response"] for entry in history] == [
+            "My printer is on fire",
+            None,
+        ]
+        assert [entry["metadata"] for entry in history] == [
+            {"channel": "web"},
+            {"channel": "web"},
+        ]
+        assert history[0]["response_metadata"] == {"responded_by": "scripted-user"}
+        assert history[1]["response_metadata"] is None
