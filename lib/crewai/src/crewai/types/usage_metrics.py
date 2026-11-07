@@ -136,7 +136,11 @@ class UsageMetrics(BaseModel):
             )
 
         return _first_int(
-            usage_data, "prompt_tokens", "prompt_token_count", "input_tokens"
+            usage_data,
+            "prompt_tokens",
+            "prompt_token_count",
+            "input_tokens",
+            "inputTokens",
         )
 
     @classmethod
@@ -145,7 +149,8 @@ class UsageMetrics(BaseModel):
 
         Accepts the full set of key aliases CrewAI providers emit:
         ``prompt_tokens`` / ``prompt_token_count`` (Gemini) / ``input_tokens``
-        (Anthropic), and the equivalent completion / cached-prompt aliases.
+        (Anthropic) / ``inputTokens`` (Bedrock), and the equivalent
+        completion / cached-prompt aliases.
         Mirrors ``BaseLLM._track_token_usage_internal`` so per-LLM totals,
         flow-level aggregation, and OTel spans agree on every provider.
 
@@ -162,12 +167,15 @@ class UsageMetrics(BaseModel):
             "completion_tokens",
             "candidates_token_count",
             "output_tokens",
+            "outputTokens",
         )
         cached_prompt_tokens = _first_int(
             usage_data,
             "cached_tokens",
             "cached_prompt_tokens",
             "cache_read_input_tokens",
+            "cacheReadInputTokens",
+            "cacheReadInputTokenCount",
         )
         if not cached_prompt_tokens:
             details = usage_data.get("prompt_tokens_details")
@@ -178,8 +186,14 @@ class UsageMetrics(BaseModel):
             usage_data.get("cache_creation_tokens")
         ) or _coerce_int(usage_data.get("cache_creation_input_tokens"))
 
+        # Bedrock's inputTokens leaves out cache reads and writes, but its
+        # totalTokens counts them, as BedrockCompletion's own tracker does.
+        total_tokens = _coerce_int(usage_data.get("totalTokens")) or (
+            prompt_tokens + completion_tokens
+        )
+
         return cls(
-            total_tokens=prompt_tokens + completion_tokens,
+            total_tokens=total_tokens,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             cached_prompt_tokens=cached_prompt_tokens,
