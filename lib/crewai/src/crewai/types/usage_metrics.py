@@ -4,6 +4,8 @@ This module provides models for tracking token usage and request metrics
 during crew and agent execution.
 """
 
+import contextvars
+import threading
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -187,3 +189,30 @@ class UsageMetrics(BaseModel):
             cache_creation_tokens=cache_creation_tokens,
             successful_requests=1,
         )
+
+
+_usage_agent: contextvars.ContextVar[Any] = contextvars.ContextVar(
+    "usage_agent", default=None
+)
+_usage_lock = threading.Lock()
+
+
+def set_usage_agent(agent: Any) -> contextvars.Token[Any]:
+    """Credit LLM usage in the current context to ``agent``. Returns a reset token."""
+    return _usage_agent.set(agent)
+
+
+def reset_usage_agent(token: contextvars.Token[Any]) -> None:
+    """Restore the agent that was credited before ``set_usage_agent``."""
+    _usage_agent.reset(token)
+
+
+def get_usage_agent() -> Any:
+    """Return the agent that LLM usage in the current context is credited to."""
+    return _usage_agent.get()
+
+
+def add_usage_metrics_locked(target: UsageMetrics, usage: UsageMetrics) -> None:
+    """Add ``usage`` into ``target`` safely when several threads share it."""
+    with _usage_lock:
+        target.add_usage_metrics(usage)
