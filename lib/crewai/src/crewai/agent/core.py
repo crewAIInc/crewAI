@@ -42,8 +42,11 @@ from typing_extensions import Self, TypeIs
 from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.spreadsheet_inputs import (
     SpreadsheetInputs,
+    enter_spreadsheet_scope,
+    exit_spreadsheet_scope,
     kickoff_input_text,
     read_spreadsheet_inputs,
+    task_input_text,
     with_spreadsheet_tools,
 )
 from crewai.agent.utils import (
@@ -740,7 +743,7 @@ class Agent(BaseAgent):
         spreadsheets the task's URLs point to; unchanged when there are none."""
         if not spreadsheets.overview:
             return task_prompt, tools
-        configured = tools if tools is not None else list(self.tools or [])
+        configured = tools or list(self.tools or [])
         return (
             f"{task_prompt}\n\n{spreadsheets.overview}",
             with_spreadsheet_tools(configured, spreadsheets),
@@ -1018,8 +1021,21 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        spreadsheets = read_spreadsheet_inputs(task_input_text(task))
+        scope = enter_spreadsheet_scope(spreadsheets)
+        try:
+            return self._execute_task(task, context, tools, spreadsheets)
+        finally:
+            exit_spreadsheet_scope(scope)
+
+    def _execute_task(
+        self,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> Any:
         task_prompt = self._prepare_task_execution(task, context)
-        spreadsheets = read_spreadsheet_inputs(task.prompt())
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -1162,9 +1178,24 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context)
         # Downloading and parsing block, so they stay off the event loop.
-        spreadsheets = await asyncio.to_thread(read_spreadsheet_inputs, task.prompt())
+        spreadsheets = await asyncio.to_thread(
+            read_spreadsheet_inputs, task_input_text(task)
+        )
+        scope = enter_spreadsheet_scope(spreadsheets)
+        try:
+            return await self._aexecute_task(task, context, tools, spreadsheets)
+        finally:
+            exit_spreadsheet_scope(scope)
+
+    async def _aexecute_task(
+        self,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> Any:
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
@@ -1962,10 +1993,12 @@ class Agent(BaseAgent):
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
+        spreadsheets = read_spreadsheet_inputs(kickoff_input_text(messages))
         execution_token = begin_execution()
+        scope = enter_spreadsheet_scope(spreadsheets)
         try:
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-                messages, response_format, input_files
+                messages, response_format, input_files, spreadsheets
             )
 
             try:
@@ -1998,6 +2031,7 @@ class Agent(BaseAgent):
             except Exception as e:
                 self._emit_kickoff_error(agent_info, e)
         finally:
+            exit_spreadsheet_scope(scope)
             end_execution(execution_token)
 
     def _finalize_kickoff(
@@ -2340,12 +2374,13 @@ class Agent(BaseAgent):
                 input_files=input_files,
             )
 
+        # Downloading and parsing block, so they stay off the event loop.
+        spreadsheets = await asyncio.to_thread(
+            read_spreadsheet_inputs, kickoff_input_text(messages)
+        )
         execution_token = begin_execution()
+        scope = enter_spreadsheet_scope(spreadsheets)
         try:
-            # Downloading and parsing block, so they stay off the event loop.
-            spreadsheets = await asyncio.to_thread(
-                read_spreadsheet_inputs, kickoff_input_text(messages)
-            )
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
                 messages, response_format, input_files, spreadsheets
             )
@@ -2380,6 +2415,7 @@ class Agent(BaseAgent):
             except Exception as e:
                 self._emit_kickoff_error(agent_info, e)
         finally:
+            exit_spreadsheet_scope(scope)
             end_execution(execution_token)
 
     async def akickoff(

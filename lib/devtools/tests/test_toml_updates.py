@@ -530,11 +530,22 @@ class TestUpdatePyprojectDependencies:
             [project.optional-dependencies]
             spreadsheets = [
                 "crewai-files[spreadsheets]==2.0.0",
-                "crewai-tools[a,b] == 1.0.0",
+                "crewai-tools[a,b] == 2.0.0",
                 'crewai-core==2.0.0',
                 "crewai-files==2.0.0; python_version >= '3.11'",
             ]
         """)
+
+    def test_every_pin_on_one_line_is_bumped(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            'spreadsheets = ["crewai-files[spreadsheets]==1.0.0", "crewai-tools==1.0.0"]\n'
+        )
+
+        assert update_pyproject_dependencies(pyproject, "2.0.0")
+        assert pyproject.read_text() == (
+            'spreadsheets = ["crewai-files[spreadsheets]==2.0.0", "crewai-tools==2.0.0"]\n'
+        )
 
     def test_a_longer_name_ending_in_a_package_is_left_alone(
         self, tmp_path: Path

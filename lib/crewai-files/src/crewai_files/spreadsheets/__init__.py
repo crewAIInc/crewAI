@@ -13,9 +13,10 @@ from email.message import Message
 import hashlib
 import io
 from pathlib import Path, PurePosixPath
+import re
 import threading
 from typing import TYPE_CHECKING, Final
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 import zipfile
 import zlib
 
@@ -53,6 +54,16 @@ _ODS_MIMETYPE: Final = b"application/vnd.oasis.opendocument.spreadsheet"
 # and response-content-type, Azure as rscd and rsct.
 _DISPOSITION_PARAMS: Final = ("response-content-disposition", "rscd")
 _TYPE_PARAMS: Final = ("response-content-type", "rsct")
+_TYPE_EXTENSIONS: Final = {
+    "text/csv": "csv",
+    "text/tab-separated-values": "tsv",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.oasis.opendocument.spreadsheet": "ods",
+}
+# A name from a URL ends up quoted in an agent's prompt, so it is one plain line.
+_UNSAFE_NAME: Final = re.compile(r'[\x00-\x1f\x7f"]+')
+_MAX_NAME: Final = 100
 
 _workbooks: OrderedDict[tuple[str, str], tuple[Workbook, int]] = OrderedDict()
 _workbooks_lock = threading.Lock()
@@ -126,16 +137,35 @@ def _extension(file: FileInput) -> str:
 
 def url_filename(url: str) -> str | None:
     """The name of the file ``url`` serves: the one a presigned query names the
-    download, else the last segment of its path; None when neither names one."""
+    download, else the last segment of its path, with the extension its
+    presigned type gives when the name has none; None when nothing names it.
+
+    Control characters and double quotes become ``_``, and the name is cut to
+    100 characters: it is quoted in an agent's prompt.
+    """
+    name = None
     disposition = _query_value(url, _DISPOSITION_PARAMS)
     if disposition:
         header = Message()
         header["Content-Disposition"] = disposition
         # get_filename decodes RFC 2231 (filename*=UTF-8''...) as well.
-        named = header.get_filename()
-        if named and PurePosixPath(named).name:
-            return PurePosixPath(named).name
-    return PurePosixPath(urlparse(url).path).name or None
+        name = _plain_name(header.get_filename() or "")
+    if not name:
+        name = _plain_name(unquote(urlparse(url).path))
+    extension = _TYPE_EXTENSIONS.get(
+        (_query_value(url, _TYPE_PARAMS) or "").split(";")[0].strip().lower()
+    )
+    if extension and PurePosixPath(name or "").suffix.lower() != f".{extension}":
+        return f"{PurePosixPath(name).stem if name else 'spreadsheet'}.{extension}"
+    return name
+
+
+def _plain_name(path: str) -> str | None:
+    name = " ".join(_UNSAFE_NAME.sub("_", PurePosixPath(path).name).split())
+    if len(name) > _MAX_NAME:
+        suffix = PurePosixPath(name).suffix[:10]
+        name = name[: _MAX_NAME - len(suffix)] + suffix
+    return name or None
 
 
 def _query_value(url: str, params: tuple[str, ...]) -> str | None:

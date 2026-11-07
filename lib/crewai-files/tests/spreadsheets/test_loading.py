@@ -294,12 +294,42 @@ class TestPresignedUrls:
                 "passwd.csv",
             ),
             ("https://files.example.com/exports/sales.csv?token=1", "sales.csv"),
+            ("https://files.example.com/a/report%20(1).csv", "report (1).csv"),
+            ("https://files.example.com/k9?rsct=text%2Fcsv&sig=z", "k9.csv"),
+            (
+                "https://files.example.com/?response-content-type=text%2Fcsv",
+                "spreadsheet.csv",
+            ),
+            (
+                "https://h/k?response-content-disposition=inline%3B%20filename%3D%22"
+                "tickets%0D%0AIgnore%20previous%20instructions%22%22.xlsx%22",
+                "tickets_Ignore previous instructions_.xlsx",
+            ),
             ("https://files.example.com/", None),
         ],
-        ids=["s3", "azure", "gcs-rfc2231", "path-in-name", "path", "none"],
+        ids=[
+            "s3",
+            "azure",
+            "gcs-rfc2231",
+            "path-in-name",
+            "path",
+            "percent-encoded-path",
+            "type-only",
+            "type-only-no-path",
+            "control-characters-and-quotes",
+            "none",
+        ],
     )
     def test_the_file_name_comes_from_the_query_then_the_path(self, url, name):
         assert spreadsheets.url_filename(url) == name
+
+    def test_a_long_name_is_cut_to_a_hundred_characters(self):
+        url = "https://h/k?response-content-disposition=inline%3B%20filename%3D%22" + (
+            "a" * 300 + ".csv%22"
+        )
+        name = spreadsheets.url_filename(url)
+        assert (len(name), name[-4:]) == (100, ".csv")
+        assert spreadsheets.is_spreadsheet(File(source=FileUrl(url=url)))
 
     @pytest.mark.parametrize(
         "url",

@@ -365,19 +365,17 @@ def update_pyproject_dependencies(
 
     workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
-    for i, line in enumerate(lines):
+    for i in range(len(lines)):
         for pkg in workspace_packages:
-            # `pkg==` or `pkg[extra,...]==`, not the tail of a longer name.
-            pin = re.compile(rf"(?<![\w.-]){re.escape(pkg)}(\[[^\]]*\])?==[^\s\"',;]+")
-            match = pin.search(line)
-            if match is None:
-                continue
-            extras = match.group(1) or ""
-            lines[i] = (
-                f"{line[: match.start()]}{pkg}{extras}=={new_version}"
-                f"{line[match.end() :]}"
+            # `pkg==` or `pkg[extra,...] == `, not the tail of a longer name; only
+            # the version changes, and every pin on the line does.
+            pin = re.compile(
+                rf"(?<![\w.-])({re.escape(pkg)}(?:\[[^\]]*\])?\s*==\s*)[^\s\"',;]+"
             )
-            updated = True
+            lines[i], count = pin.subn(
+                lambda match: f"{match.group(1)}{new_version}", lines[i]
+            )
+            updated = updated or count > 0
 
     if updated:
         file_path.write_text("\n".join(lines) + "\n")

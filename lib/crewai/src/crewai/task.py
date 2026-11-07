@@ -315,6 +315,9 @@ class Task(BaseModel):
         default_factory=dict,
     )
     _original_description: str | None = PrivateAttr(default=None)
+    # The description as the inputs filled it in, before a crew chat's history or
+    # crew planning is added: the text of it a caller wrote.
+    _input_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
@@ -615,6 +618,14 @@ class Task(BaseModel):
                 stacklevel=2,
             )
             self.guardrail_max_retries = self.max_retries
+        return self
+
+    @model_validator(mode="after")
+    def _record_input_description(self) -> Self:
+        # Until inputs fill it in, the description as written is the caller's;
+        # crew planning, which runs without inputs too, appends to it later.
+        if self._input_description is None:
+            self._input_description = self.description
         return self
 
     def execute_sync(
@@ -1116,6 +1127,7 @@ Follow these guidelines:
             self._original_output_file = self.output_file
 
         if not inputs:
+            self._input_description = self.description
             return
 
         try:
@@ -1130,6 +1142,7 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
         self.description = process_content(self.description, {"task": self})
+        self._input_description = self.description
         self._original_expected_output = process_content(
             self._original_expected_output, {"task": self}
         )
