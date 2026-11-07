@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 import logging
 import os
@@ -1200,12 +1201,7 @@ class AzureCompletion(BaseLLM):
                     stream_response_id = chunk_id
 
                 if update.usage:
-                    usage = update.usage
-                    usage_data = {
-                        "prompt_tokens": usage.prompt_tokens,
-                        "completion_tokens": usage.completion_tokens,
-                        "total_tokens": usage.total_tokens,
-                    }
+                    usage_data = self._extract_azure_token_usage(update)
                     continue
 
                 full_response = self._process_streaming_update(
@@ -1279,12 +1275,7 @@ class AzureCompletion(BaseLLM):
                     stream_response_id = chunk_id
 
                 if hasattr(update, "usage") and update.usage:
-                    usage = update.usage
-                    usage_data = {
-                        "prompt_tokens": getattr(usage, "prompt_tokens", 0),
-                        "completion_tokens": getattr(usage, "completion_tokens", 0),
-                        "total_tokens": getattr(usage, "total_tokens", 0),
-                    }
+                    usage_data = self._extract_azure_token_usage(update)
                     continue
 
                 full_response = self._process_streaming_update(
@@ -1365,20 +1356,34 @@ class AzureCompletion(BaseLLM):
         return extract_choices_finish_reason_and_id(response_or_update)
 
     @staticmethod
-    def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:
-        """Extract token usage and response metadata from Azure response."""
+    def _usage_detail(usage: Any, details_key: str, field: str) -> int:
+        """Read a nested usage count such as ``prompt_tokens_details.cached_tokens``.
+
+        The SDK's ``CompletionsUsage`` does not declare the ``*_details`` fields,
+        so they are only reachable as mapping items, not attributes.
+        """
+        details = getattr(usage, details_key, None)
+        if details is None and isinstance(usage, Mapping):
+            details = usage.get(details_key)
+        if details is None:
+            return 0
+        if isinstance(details, Mapping):
+            return details.get(field) or 0
+        return getattr(details, field, 0) or 0
+
+    @staticmethod
+    def _extract_azure_token_usage(
+        response: ChatCompletions | StreamingChatCompletionsUpdate,
+    ) -> dict[str, Any]:
+        """Extract token usage from an Azure response or a streaming update's usage chunk."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            cached_tokens = 0
-            prompt_details = getattr(usage, "prompt_tokens_details", None)
-            if prompt_details:
-                cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
-            reasoning_tokens = 0
-            completion_details = getattr(usage, "completion_tokens_details", None)
-            if completion_details:
-                reasoning_tokens = (
-                    getattr(completion_details, "reasoning_tokens", 0) or 0
-                )
+            cached_tokens = AzureCompletion._usage_detail(
+                usage, "prompt_tokens_details", "cached_tokens"
+            )
+            reasoning_tokens = AzureCompletion._usage_detail(
+                usage, "completion_tokens_details", "reasoning_tokens"
+            )
             result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
