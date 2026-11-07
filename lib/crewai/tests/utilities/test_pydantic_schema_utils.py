@@ -871,18 +871,65 @@ class TestStripUnsupportedFormats:
 
 
 class TestEnsureTypeInSchemas:
-    def test_empty_schema_in_anyof_gets_type(self) -> None:
+    def test_empty_schema_in_anyof_expands_without_duplicates(self) -> None:
         schema = {"anyOf": [{}, {"type": "string"}]}
         result = ensure_type_in_schemas(deepcopy(schema))
-        assert result["anyOf"][0] == {"type": "object"}
+        assert result["anyOf"] == [
+            {"type": "number"},
+            {"type": "boolean"},
+            {"type": "object"},
+            {"type": "null"},
+            {"type": "string"},
+        ]
 
-    def test_empty_schema_in_oneof_gets_type(self) -> None:
+    def test_empty_schema_in_oneof_expands(self) -> None:
         schema = {"oneOf": [{}, {"type": "integer"}]}
         result = ensure_type_in_schemas(deepcopy(schema))
-        assert result["oneOf"][0] == {"type": "object"}
+        assert result["oneOf"] == [
+            {"type": "string"},
+            {"type": "number"},
+            {"type": "boolean"},
+            {"type": "object"},
+            {"type": "null"},
+            {"type": "integer"},
+        ]
+
+    def test_optional_any_in_anyof_accepts_scalars(self) -> None:
+        schema = {"anyOf": [{}, {"type": "null"}]}
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert result["anyOf"] == [
+            {"type": "string"},
+            {"type": "number"},
+            {"type": "boolean"},
+            {"type": "object"},
+            {"type": "null"},
+        ]
+
+    def test_optional_any_in_oneof_accepts_scalars(self) -> None:
+        schema = {"oneOf": [{}, {"type": "null"}]}
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert result["oneOf"] == [
+            {"type": "string"},
+            {"type": "number"},
+            {"type": "boolean"},
+            {"type": "object"},
+            {"type": "null"},
+        ]
 
     def test_non_empty_unchanged(self) -> None:
         schema = {"anyOf": [{"type": "string"}, {"type": "integer"}]}
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert result == schema
+
+    def test_nested_schema_without_empty_branch_unchanged(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "a": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                "b": {"oneOf": [{"type": "object", "properties": {}}, {"type": "array", "items": {"type": "integer"}}]},
+                "c": {},
+            },
+        }
         result = ensure_type_in_schemas(deepcopy(schema))
         assert result == schema
 
@@ -1193,6 +1240,24 @@ class TestSanitizeStrictSchemas:
         items = san["properties"]["children"]["items"]
         assert items != {}
         assert items.get("type") == "object"
+
+    def test_openai_strict_optional_any_field_accepts_scalars(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        class Args(BaseModel):
+            value: Any | None = None
+
+        san = sanitize_tool_params_for_openai_strict(Args.model_json_schema())
+        branches = san["properties"]["value"]["anyOf"]
+
+        assert all("type" in branch for branch in branches)
+        assert [branch["type"] for branch in branches] == [
+            "string",
+            "number",
+            "boolean",
+            "object",
+            "null",
+        ]
 
 
 class TestCreateModelFromSchemaRecursive:
