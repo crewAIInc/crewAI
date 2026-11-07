@@ -338,6 +338,23 @@ class TurnTracingOnScreen(TraceConsentScreen):
         return t
 
 
+class EvaluateConsentScreen(TraceConsentScreen):
+    """Evaluate, pressed on a run of a project that never turned tracing on:
+    the run has to happen again, traced, so its trace is shared to be graded.
+    Enter shares (the share button has the focus), since the person asked for
+    the evaluation; Cancel or Esc runs nothing. Nothing times out."""
+
+    YES_LABEL = "Share & Evaluate"
+
+    def _build_content(self) -> Text:
+        t = Text()
+        t.append("  Evaluating this run needs its trace.\n\n", style=f"bold {_C_TEXT}")
+        t.append("  The crew runs again, traced, and its trace\n", style=_C_DIM)
+        t.append("  goes to CrewAI AMP, which grades it.\n\n", style=_C_DIM)
+        t.append("  Enter shares it; Cancel runs nothing.\n", style=_C_MUTED)
+        return t
+
+
 _AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
     "crewai_tui_auto_eval", default=None
 )
@@ -1511,9 +1528,8 @@ FooterKey .footer-key--key {
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
                 return
             if not tracing_already_on():
-                # Never turned on: asked first, on the same consent screen a
-                # run's trace is shared from.
-                self.push_screen(TraceConsentScreen(), self._tracing_on_answered)
+                # Never turned on: asked first, saying the evaluation needs it.
+                self.push_screen(EvaluateConsentScreen(), self._tracing_on_answered)
                 return
             self._run_again_traced()
             return
