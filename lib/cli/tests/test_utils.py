@@ -193,6 +193,17 @@ def test_write_env_file_makes_an_existing_readable_env_owner_only(tmp_path):
     assert env_file.stat().st_mode & 0o777 == 0o600
 
 
+def test_write_env_file_on_windows_writes_without_posix_modes(tmp_path, monkeypatch):
+    """Windows has no fchmod and no owner-only bits to set: the keys are still
+    written, without a crash."""
+    monkeypatch.setattr(utils.sys, "platform", "win32")
+    monkeypatch.delattr(utils.os, "fchmod", raising=False)
+
+    utils.write_env_file(tmp_path, {"openai_api_key": "sk-test"})
+
+    assert (tmp_path / ".env").read_text() == "OPENAI_API_KEY=sk-test\n"
+
+
 def test_write_env_file_never_writes_keys_through_a_symlink(tmp_path):
     target = tmp_path / "elsewhere"
     target.write_text("untouched\n")
