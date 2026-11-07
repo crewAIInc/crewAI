@@ -509,6 +509,42 @@ class TestUpdatePyprojectDependencies:
             "crewai-tools": "99.0.0",
         }
 
+    def test_bumps_a_pin_with_extras_and_keeps_them(self, tmp_path: Path) -> None:
+        """`crewai[spreadsheets]` pins `crewai-files[spreadsheets]==`; a pin the
+        bump missed would leave every later release asking for an old version."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            dedent("""\
+            [project.optional-dependencies]
+            spreadsheets = [
+                "crewai-files[spreadsheets]==1.0.0",
+                "crewai-tools[a,b] == 1.0.0",
+                'crewai-core==1.0.0',
+                "crewai-files==1.0.0; python_version >= '3.11'",
+            ]
+        """)
+        )
+
+        assert update_pyproject_dependencies(pyproject, "2.0.0")
+        assert pyproject.read_text() == dedent("""\
+            [project.optional-dependencies]
+            spreadsheets = [
+                "crewai-files[spreadsheets]==2.0.0",
+                "crewai-tools[a,b] == 1.0.0",
+                'crewai-core==2.0.0',
+                "crewai-files==2.0.0; python_version >= '3.11'",
+            ]
+        """)
+
+    def test_a_longer_name_ending_in_a_package_is_left_alone(
+        self, tmp_path: Path
+    ) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text('dependencies = ["acme-crewai-tools==1.0.0"]\n')
+
+        assert not update_pyproject_dependencies(pyproject, "2.0.0")
+        assert pyproject.read_text() == 'dependencies = ["acme-crewai-tools==1.0.0"]\n'
+
     def test_leaves_bare_crewai_pin_alone(self, tmp_path: Path) -> None:
         """`crewai==` must not collide with `crewai-core==` etc."""
         pyproject = tmp_path / "pyproject.toml"

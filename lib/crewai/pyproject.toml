@@ -121,6 +121,12 @@ a2a = [
 file-processing = [
     "crewai-files==1.15.37",
 ]
+# crewai-tools carries the SSRF-guarded download an agent fetches its
+# spreadsheet URLs through.
+spreadsheets = [
+    "crewai-files[spreadsheets]==1.15.37",
+    "crewai-tools==1.15.37",
+]
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]

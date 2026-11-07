@@ -9,12 +9,13 @@ answers live in ``crewai_files.spreadsheets.answers``.
 from __future__ import annotations
 
 from collections import OrderedDict
+from email.message import Message
 import hashlib
 import io
 from pathlib import Path, PurePosixPath
 import threading
 from typing import TYPE_CHECKING, Final
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 import zipfile
 import zlib
 
@@ -47,6 +48,11 @@ _CACHED_CELLS: Final = 10_000_000
 # cap and reads no more of ``mimetype`` than the value it compares.
 _MAX_MEMBERS: Final = 10_000
 _ODS_MIMETYPE: Final = b"application/vnd.oasis.opendocument.spreadsheet"
+# A presigned URL (an AMP upload among them) keeps a random key in its path and
+# names the file only in its query: S3 and GCS as response-content-disposition
+# and response-content-type, Azure as rscd and rsct.
+_DISPOSITION_PARAMS: Final = ("response-content-disposition", "rscd")
+_TYPE_PARAMS: Final = ("response-content-type", "rsct")
 
 _workbooks: OrderedDict[tuple[str, str], tuple[Workbook, int]] = OrderedDict()
 _workbooks_lock = threading.Lock()
@@ -67,6 +73,8 @@ def is_spreadsheet(file: FileInput) -> bool:
     content_type = file.content_type
     if content_type in _CONTENT_TYPES:
         return True
+    if isinstance(source, FileUrl):
+        return _query_value(source.url, _TYPE_PARAMS) in _CONTENT_TYPES
     if isinstance(source, FilePath) and content_type in _ARCHIVE_TYPES:
         return _holds_a_workbook(source.path)
     if isinstance(source, FileBytes) and content_type in _ARCHIVE_TYPES:
@@ -116,10 +124,29 @@ def _extension(file: FileInput) -> str:
     return suffix[1:].lower() if suffix else ""
 
 
+def url_filename(url: str) -> str | None:
+    """The name of the file ``url`` serves: the one a presigned query names the
+    download, else the last segment of its path; None when neither names one."""
+    disposition = _query_value(url, _DISPOSITION_PARAMS)
+    if disposition:
+        header = Message()
+        header["Content-Disposition"] = disposition
+        # get_filename decodes RFC 2231 (filename*=UTF-8''...) as well.
+        named = header.get_filename()
+        if named and PurePosixPath(named).name:
+            return PurePosixPath(named).name
+    return PurePosixPath(urlparse(url).path).name or None
+
+
+def _query_value(url: str, params: tuple[str, ...]) -> str | None:
+    query = parse_qs(urlparse(url).query)
+    return next((query[param][0] for param in params if param in query), None)
+
+
 def _url_name(file: FileInput) -> str | None:
     source = file.source
     if isinstance(source, FileUrl):
-        return PurePosixPath(urlparse(source.url).path).name or None
+        return url_filename(source.url)
     return None
 
 

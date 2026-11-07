@@ -40,6 +40,12 @@ from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self, TypeIs
 
 from crewai.agent.planning_config import PlanningConfig
+from crewai.agent.spreadsheet_inputs import (
+    SpreadsheetInputs,
+    kickoff_input_text,
+    read_spreadsheet_inputs,
+    with_spreadsheet_tools,
+)
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -724,6 +730,22 @@ class Agent(BaseAgent):
         task_prompt = format_task_with_context(task_prompt, context)
         return self._retrieve_memory_context(task, task_prompt)
 
+    def _with_spreadsheets(
+        self,
+        task_prompt: str,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> tuple[str, list[BaseTool] | None]:
+        """The task prompt and tools, plus the overview and tools for the
+        spreadsheets the task's URLs point to; unchanged when there are none."""
+        if not spreadsheets.overview:
+            return task_prompt, tools
+        configured = tools if tools is not None else list(self.tools or [])
+        return (
+            f"{task_prompt}\n\n{spreadsheets.overview}",
+            with_spreadsheet_tools(configured, spreadsheets),
+        )
+
     def _finalize_task_prompt(
         self,
         task_prompt: str,
@@ -997,6 +1019,7 @@ class Agent(BaseAgent):
             RuntimeError: If the agent execution fails for other reasons.
         """
         task_prompt = self._prepare_task_execution(task, context)
+        spreadsheets = read_spreadsheet_inputs(task.prompt())
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -1010,6 +1033,7 @@ class Agent(BaseAgent):
             else lambda *a, **k: None,
         )
 
+        task_prompt, tools = self._with_spreadsheets(task_prompt, tools, spreadsheets)
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
@@ -1139,12 +1163,15 @@ class Agent(BaseAgent):
             RuntimeError: If the agent execution fails for other reasons.
         """
         task_prompt = self._prepare_task_execution(task, context)
+        # Downloading and parsing block, so they stay off the event loop.
+        spreadsheets = await asyncio.to_thread(read_spreadsheet_inputs, task.prompt())
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
 
+        task_prompt, tools = self._with_spreadsheets(task_prompt, tools, spreadsheets)
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
@@ -1621,6 +1648,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        spreadsheets: SpreadsheetInputs | None = None,
     ) -> tuple[AgentExecutor, dict[str, Any], dict[str, Any], list[CrewStructuredTool]]:
         """Prepare common setup for kickoff execution.
 
@@ -1632,10 +1660,14 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
+            spreadsheets: The spreadsheets the input's URLs point to, already
+                read; read here when not given.
 
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        if spreadsheets is None:
+            spreadsheets = read_spreadsheet_inputs(kickoff_input_text(messages))
         self.reset_tool_failures()
 
         if self.tools_handler:
@@ -1654,7 +1686,7 @@ class Agent(BaseAgent):
                     self.tools = []
                 self.tools.extend(mcps)
 
-        raw_tools = list(self.tools or [])
+        raw_tools = with_spreadsheet_tools(list(self.tools or []), spreadsheets)
 
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
@@ -1761,6 +1793,9 @@ class Agent(BaseAgent):
 
         if input_files:
             all_files.update(input_files)
+
+        if spreadsheets.overview:
+            formatted_messages += "\n\n" + spreadsheets.overview
 
         if agent_memory is not None:
             try:
@@ -2307,8 +2342,12 @@ class Agent(BaseAgent):
 
         execution_token = begin_execution()
         try:
+            # Downloading and parsing block, so they stay off the event loop.
+            spreadsheets = await asyncio.to_thread(
+                read_spreadsheet_inputs, kickoff_input_text(messages)
+            )
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-                messages, response_format, input_files
+                messages, response_format, input_files, spreadsheets
             )
 
             try:

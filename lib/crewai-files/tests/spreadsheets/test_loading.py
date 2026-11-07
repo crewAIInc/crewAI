@@ -260,3 +260,73 @@ def test_a_workbook_over_the_cell_budget_is_still_kept_while_newest(monkeypatch)
         File(source=FileBytes(data=data, filename="b.csv"))
     )
     assert first is again
+
+
+class TestPresignedUrls:
+    """A presigned URL (an AMP upload among them) keeps a random key in its path
+    and names the file only in its query."""
+
+    S3 = (
+        "https://crewai-production.s3.us-west-2.amazonaws.com/prfw2fkquhmefbj6"
+        "?response-content-disposition=attachment%3B%20filename%3D%22Tickets%20Q3.xlsx"
+        "%22%3B%20filename%2A%3DUTF-8%27%27Tickets%2520Q3.xlsx"
+        "&response-content-type=application%2Fvnd.openxmlformats-officedocument"
+        ".spreadsheetml.sheet&X-Amz-Signature=abc"
+    )
+    AZURE = (
+        "https://x.blob.core.windows.net/c/b?sv=2018-11-09"
+        "&rscd=attachment%3B+filename%3Dexport.csv&rsct=text%2Fcsv&sig=z"
+    )
+
+    @pytest.mark.parametrize(
+        ("url", "name"),
+        [
+            (S3, "Tickets Q3.xlsx"),
+            (AZURE, "export.csv"),
+            (
+                "https://storage.googleapis.com/b/o?response-content-disposition="
+                "inline%3B%20filename%2A%3DUTF-8%27%27relat%25C3%25B3rio.csv&X-Goog-Signature=s",
+                "relatório.csv",
+            ),
+            (
+                "https://h/k?response-content-disposition=inline%3B%20filename%3D"
+                "%22..%2F..%2Fetc%2Fpasswd.csv%22",
+                "passwd.csv",
+            ),
+            ("https://files.example.com/exports/sales.csv?token=1", "sales.csv"),
+            ("https://files.example.com/", None),
+        ],
+        ids=["s3", "azure", "gcs-rfc2231", "path-in-name", "path", "none"],
+    )
+    def test_the_file_name_comes_from_the_query_then_the_path(self, url, name):
+        assert spreadsheets.url_filename(url) == name
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            S3,
+            AZURE,
+            "https://h/k?rsct=text%2Fcsv&sig=z",
+            "https://h/k?response-content-type=application%2Fvnd.ms-excel",
+        ],
+        ids=["s3", "azure", "type-only", "xls-type"],
+    )
+    def test_a_presigned_spreadsheet_is_recognised(self, url):
+        assert spreadsheets.is_spreadsheet(File(source=FileUrl(url=url)))
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://h/k?response-content-disposition=inline%3B%20filename%3D%22"
+            "report.pdf%22&response-content-type=application%2Fpdf",
+            "https://h/k?X-Amz-Signature=abc",
+        ],
+        ids=["a-pdf", "names-nothing"],
+    )
+    def test_other_presigned_files_are_not(self, url, monkeypatch):
+        def refuse(*args, **kwargs):
+            raise AssertionError("must not download")
+
+        monkeypatch.setattr("httpx.get", refuse)
+        monkeypatch.setattr("httpx.stream", refuse)
+        assert not spreadsheets.is_spreadsheet(File(source=FileUrl(url=url)))
