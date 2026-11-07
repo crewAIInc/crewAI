@@ -4115,6 +4115,76 @@ def test_with_nobody_watching_a_missing_key_is_named_in_the_run_log_not_asked_fo
     assert "cli_usage:run_api_key:warned" in usage
 
 
+def _a_crew_whose_script_fails(
+    directory: Path, monkeypatch, *, traced: bool, failure: Exception | None = None
+) -> None:
+    """The real `crewai run` on a classic crew whose `uv run run_crew` exits 3,
+    or raises FAILURE."""
+    (directory / "pyproject.toml").write_text('[project]\nname = "demo"\n\n[tool.crewai]\ntype = "crew"\n')
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+    monkeypatch.delenv(run_crew_module.RUN_COUNTED_ENV, raising=False)
+    monkeypatch.setattr(run_crew_module, "ask_for_missing_api_keys", lambda *args: None)
+
+    def uv_run(command, **kwargs):
+        os.write(2, b"KeyError: 'topic'\n")
+        if traced:
+            record_last_run(directory, "the-failed-run", recorded_at=_now())
+        raise failure or subprocess.CalledProcessError(3, command)
+
+    monkeypatch.setattr(subprocess, "run", uv_run)
+    monkeypatch.setattr(run_crew_module, "run_crew", _REAL_RUN_CREW)
+
+
+def test_a_traced_run_whose_script_failed_is_still_graded(project, monkeypatch, capfd):
+    """`crewai run` exits with a failed script's code; `crewai eval` grades
+    that run all the same, as it did before `crewai run` exited non-zero."""
+    directory, _ = project
+    _a_crew_whose_script_fails(directory, monkeypatch, traced=True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    said = " ".join(capfd.readouterr().out.split())
+    assert "Goal gate: PASSED" in said
+    assert amp.calls[0] == ("create", "the-failed-run")
+
+
+@pytest.mark.parametrize(
+    ("failure", "said_by_run"),
+    [
+        (None, "An error occurred while running the crew"),
+        (FileNotFoundError("uv not found"), "An unexpected error occurred: uv not found"),
+    ],
+)
+def test_an_untraced_run_whose_script_failed_shows_its_last_lines(
+    project, monkeypatch, capfd, usage, failure, said_by_run
+):
+    directory, _ = project
+    _a_crew_whose_script_fails(directory, monkeypatch, traced=False, failure=failure)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    amp = install(monkeypatch, FakeAMP())
+
+    # This process's own stdout and stderr, as outside pytest: on descriptors 1
+    # and 2, which the command moves to the run log.
+    with (
+        open(1, "w", closefd=False, buffering=1) as stdout,
+        open(2, "w", closefd=False, buffering=1) as stderr,
+        monkeypatch.context() as streams,
+        pytest.raises(SystemExit) as exited,
+    ):
+        streams.setattr(sys, "stdout", stdout)
+        streams.setattr(sys, "stderr", stderr)
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1  # eval's own "not traced" exit, not the script's 3
+    said = " ".join(capfd.readouterr().out.split())
+    assert "KeyError: 'topic'" in said
+    assert said_by_run in said
+    assert "(its last lines are above)" in said
+    assert amp.calls == [] and usage[-1] == "cli_usage:eval_stopped:untraced_after_run"
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
 def test_the_run_log_is_the_owners_alone_even_one_left_by_an_earlier_run(tmp_path):
     log = tmp_path / "last_run.log"
