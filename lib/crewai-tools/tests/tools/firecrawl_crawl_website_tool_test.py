@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from crewai_tools.tools.firecrawl_crawl_website_tool.firecrawl_crawl_website_tool import (
@@ -16,3 +18,17 @@ def test_firecrawl_crawl_tool_integration():
     assert result is not None
     assert hasattr(result, 'status')
     assert result.status in ["completed", "scraping"]
+
+
+def test_crawl_tool_accepts_explicit_none_config():
+    """An explicit config=None means no extra crawl options, not a crash."""
+    with patch("firecrawl.FirecrawlApp"):
+        tool = FirecrawlCrawlWebsiteTool(api_key="test-key", config=None)
+
+    tool._firecrawl = MagicMock()
+
+    tool._run(url="https://example.com")
+
+    tool._firecrawl.crawl.assert_called_once_with(
+        url="https://example.com", poll_interval=2
+    )
