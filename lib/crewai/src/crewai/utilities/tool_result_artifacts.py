@@ -10,8 +10,30 @@ from tempfile import TemporaryDirectory
 
 TOOL_RESULT_PREVIEW_LINE_COUNT = 10
 TOOL_RESULT_PREVIEW_MAX_CHARS = 2_000
+TOOL_RESULT_MAX_LINE_CHARS = 2_000
 TOOL_RESULT_READ_CONTEXT_WINDOW_RATIO = 0.05
 _TOOL_RESULT_TEMP_DIR = Path("/tmp")  # noqa: S108 - intentional POSIX temp dir
+
+
+def _split_long_lines(content: str) -> list[str]:
+    """Split lines longer than ``TOOL_RESULT_MAX_LINE_CHARS`` into chunks.
+
+    The reader pages by line, so a single huge line (e.g. compact JSON) would
+    otherwise always be returned whole, defeating the bounded read.
+    """
+    lines: list[str] = []
+    for line in content.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        if len(body) <= TOOL_RESULT_MAX_LINE_CHARS:
+            lines.append(line)
+            continue
+        chunks = [
+            body[start : start + TOOL_RESULT_MAX_LINE_CHARS]
+            for start in range(0, len(body), TOOL_RESULT_MAX_LINE_CHARS)
+        ]
+        lines.extend(f"{chunk}\n" for chunk in chunks[:-1])
+        lines.append(chunks[-1] + line[len(body) :])
+    return lines
 
 
 @dataclass(frozen=True)
@@ -72,9 +94,9 @@ class ToolResultArtifactStore:
         artifact_directory = self._directory / artifact_id
         artifact_directory.mkdir(mode=0o700)
         path = artifact_directory / "result.md"
-        path.write_text(content, encoding="utf-8")
+        preview_lines = _split_long_lines(content)
+        path.write_text("".join(preview_lines), encoding="utf-8")
         self._artifact_ids.add(artifact_id)
-        preview_lines = content.splitlines(keepends=True)
         line_count = len(preview_lines)
         preview = "".join(preview_lines[:TOOL_RESULT_PREVIEW_LINE_COUNT])
         preview_truncated = len(preview_lines) > TOOL_RESULT_PREVIEW_LINE_COUNT

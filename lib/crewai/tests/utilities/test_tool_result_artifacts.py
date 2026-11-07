@@ -73,3 +73,30 @@ def test_cleanup_removes_execution_directory_and_is_idempotent(tmp_path: Path) -
     store.cleanup()
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_store_splits_overlong_lines_so_reads_stay_bounded(tmp_path: Path) -> None:
+    from crewai.tools.agent_tools.deferred_tool_result_reader import (
+        DeferredToolResultReader,
+    )
+
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+    # Compact JSON and similar tool output is often a single huge line.
+    content = "a" * 2_000 + "b" * 2_000 + "c" * 500 + "\nshort\n"
+
+    try:
+        artifact = store.store(content, estimated_token_count=1_200)
+        alias = artifact.relative_path.as_posix()
+        reader = DeferredToolResultReader()
+        reader.allow_file(str(artifact.file_path), alias)
+
+        assert artifact.line_count == 4
+        first_line = reader.run(file_path=alias, start_line=1, line_count=1)
+        assert first_line == "a" * 2_000 + "\n"
+        assert reader.run(file_path=alias, start_line=3, line_count=2) == (
+            "c" * 500 + "\nshort\n"
+        )
+        full = reader.run(file_path=alias)
+        assert full.replace("\n", "") == content.replace("\n", "")
+    finally:
+        store.cleanup()
