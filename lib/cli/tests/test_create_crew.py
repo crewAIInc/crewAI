@@ -2205,7 +2205,18 @@ def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
     )
 
 
-@pytest.mark.parametrize("provider", [None, "openai", "ollama", "cerebras/llama3.1-8b"])
+@pytest.mark.parametrize(
+    "provider",
+    [
+        None,
+        "openai",
+        "ollama",
+        "cerebras/llama3.1-8b",
+        "acedatacloud",
+        "acedatacloud/gpt-4.1-mini",
+        "acedatacloud/public/model-id",
+    ],
+)
 def test_json_create_keeps_the_tools_only_dependency_when_no_extra_is_needed(
     tmp_path, monkeypatch, provider
 ):
@@ -2362,6 +2373,7 @@ def _pick_classic_provider(
         ("openai", "gpt-5.6-luna", ["sk-openai"], "crewai[tools]"),
         ("ollama", "ollama/llama3.1", [], "crewai[tools]"),
         ("cerebras", None, ["cerebras/llama3.1-8b", "csk"], "crewai[tools]"),
+        ("acedatacloud", "acedatacloud/gpt-4.1-mini", ["ace-key"], "crewai[tools]"),
     ],
 )
 def test_classic_create_adds_the_selected_provider_extra_to_the_crewai_dependency(

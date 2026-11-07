@@ -230,6 +230,7 @@ _NATIVE_MODEL_PREFIXES: dict[str, tuple[str, ...]] = {
 # LiteLLM.
 _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
     {
+        "acedatacloud",
         "azure",
         "cerebras",
         "dashscope",
