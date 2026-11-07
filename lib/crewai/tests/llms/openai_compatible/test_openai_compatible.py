@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_otari_config(self):
+        """Test Otari gateway provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["otari"]
+        assert config.base_url == "https://api.otari.ai/api/v1"
+        assert config.api_key_env == "OTARI_API_KEY"
+        assert config.base_url_env == "OTARI_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -394,6 +402,61 @@ class TestLLMIntegration:
         ) as exc_info:
             LLM(model=model)
         assert model in str(exc_info.value)
+
+    def test_llm_creates_openai_compatible_for_otari(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Otari."""
+        with patch.dict(os.environ, {"OTARI_API_KEY": "test-key"}):
+            llm = LLM(model="otari/openai:gpt-4o")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "otari"
+            # The selector after the provider prefix is Otari's own address for
+            # the model, so it must reach the gateway unchanged.
+            assert llm.model == "openai:gpt-4o"
+            assert llm.base_url == "https://api.otari.ai/api/v1"
+
+    @pytest.mark.parametrize(
+        "selector",
+        [
+            "openai:gpt-4o",
+            "anthropic:claude-sonnet-4-6",
+            "support-agent",
+            "org/model",
+        ],
+    )
+    def test_otari_passes_every_selector_through(self, selector):
+        """Otari resolves provider:model, aliases and routing policies, so any id is valid."""
+        with patch.dict(os.environ, {"OTARI_API_KEY": "test-key"}):
+            llm = LLM(model=f"otari/{selector}")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.model == selector
+
+    def test_otari_base_url_env_override(self):
+        """OTARI_BASE_URL points at a self-hosted gateway or otari.ai."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTARI_API_KEY": "test-key",
+                "OTARI_BASE_URL": "https://gateway.example.com/api/v1",
+            },
+        ):
+            llm = LLM(model="otari/openai:gpt-4o")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://gateway.example.com/api/v1"
+
+    def test_llm_creates_openai_compatible_for_otari_explicit_provider(self):
+        """Explicit provider="otari" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"OTARI_API_KEY": "test-key"}):
+            llm = LLM(model="openai:gpt-4o", provider="otari")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "otari"
+            assert llm.model == "openai:gpt-4o"
+
+    def test_llm_rejects_empty_otari_selector(self):
+        """An empty otari/ id raises rather than falling through to LiteLLM."""
+        with patch.dict(os.environ, {"OTARI_API_KEY": "test-key"}), pytest.raises(
+            ValueError, match="Otari model is empty"
+        ):
+            LLM(model="otari/")
 
     @pytest.mark.parametrize(
         ("model", "expected"),

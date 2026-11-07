@@ -1045,6 +1045,39 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Otari">
+    يتصل CrewAI بـ Otari عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # مطلوب
+    OTARI_API_KEY=<your-api-key>
+
+    # اختياري، للاتصال ببوابة مستضافة ذاتيًا بدلًا من otari.ai
+    OTARI_BASE_URL=https://api.otari.ai/api/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="otari/openai:gpt-4o",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Otari:
+      - نقطة نهاية واحدة متوافقة مع OpenAI أمام مزوّدين متعددين، يختارها إعداد البوابة
+      - مفاتيح API افتراضية بميزانيات وتتبع استخدام لكل مفتاح
+      - سياسات توجيه وأسماء بديلة تتجاوز بين النماذج عند الفشل
+    </Info>
+
+    ما يأتي بعد `otari/` هو عنوان Otari للنموذج، لذا يصل إلى البوابة كما هو. استخدم محدد
+    `provider:model`، مثل `otari/openai:gpt-4o` أو `otari/anthropic:claude-sonnet-4-6`؛
+    أو اسمًا بديلًا، مثل `otari/support-agent`؛ أو اسم سياسة توجيه، وعندها يختار Otari
+    المرشح ويتجاوز إلى التالي عند الفشل. يشير `OTARI_BASE_URL` إلى نسختك المستضافة، وينتهي بـ `/api/v1`.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

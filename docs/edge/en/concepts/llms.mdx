@@ -1188,6 +1188,40 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Otari">
+    CrewAI talks to Otari through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    OTARI_API_KEY=<your-api-key>
+
+    # Optional, point at a self-hosted gateway instead of otari.ai
+    OTARI_BASE_URL=https://api.otari.ai/api/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="otari/openai:gpt-4o",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Otari features:
+      - One OpenAI-compatible endpoint in front of many providers, chosen by gateway config
+      - Virtual API keys with per-key budgets and usage tracking
+      - Routing policies and aliases that fail over between models
+    </Info>
+
+    Whatever follows `otari/` is Otari's own address for the model, so it reaches the gateway
+    unchanged. Use a `provider:model` selector, for example `otari/openai:gpt-4o` or
+    `otari/anthropic:claude-sonnet-4-6`; an alias, for example `otari/support-agent`; or a
+    routing policy name, in which case Otari picks the candidate and falls over to the next one
+    on failure. `OTARI_BASE_URL` points at your own deployment and ends in `/api/v1`.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
