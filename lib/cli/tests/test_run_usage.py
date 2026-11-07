@@ -1838,3 +1838,24 @@ def test_at_a_terminal_a_key_an_env_file_others_can_read_would_hold_runs_the_cre
     assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
     assert events == ["load", "run", "summary", "prompt", "load", "run", "summary"]
     assert usage == []
+
+
+@pytest.mark.parametrize("inputs", ['{"messages":"hello"}', '{}', 'not-json'])
+def test_agent_run_counts_its_own_kind(project, usage, commands, inputs) -> None:
+    write(
+        project / "pyproject.toml",
+        CREW_PYPROJECT.replace('type = "crew"', 'type = "agent"'),
+    )
+    write(project / "uv.lock", "")
+    (project / ".venv").mkdir()
+
+    result = crewai_run("--inputs", inputs)
+
+    if inputs == '{"messages":"hello"}':
+        assert result.exit_code == 0, result.output
+        assert usage == [started("agent")]
+        assert commands
+    else:
+        assert result.exit_code == (2 if inputs == '{}' else 1)
+        assert usage == [started("agent"), stopped("invalid_inputs")]
+        assert not commands
