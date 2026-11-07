@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_together_config(self):
+        """Test Together AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["together"]
+        assert config.base_url == "https://api.together.ai/v1"
+        assert config.api_key_env == "TOGETHER_API_KEY"
+        assert config.base_url_env == "TOGETHER_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -180,6 +188,24 @@ class TestOpenAICompatibleCompletion:
         ):
             OpenAICompatibleCompletion(
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
+            )
+
+    def test_together_missing_api_key_names_env_var(self):
+        """Together requires a key; the error names TOGETHER_API_KEY."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="TOGETHER_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo", provider="together"
+            )
+
+    def test_together_does_not_borrow_openai_credentials(self):
+        """An OpenAI key alone must not satisfy Together."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai"}, clear=True), pytest.raises(
+            ValueError, match="TOGETHER_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo", provider="together"
             )
 
     def test_api_key_from_env(self):
@@ -420,6 +446,75 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepseek"
             assert llm.model == "deepseek-chat"
+
+    def test_llm_creates_openai_compatible_for_together(self):
+        """together/<org>/<model> routes natively instead of falling back to LiteLLM."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            llm = LLM(model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "together"
+            assert llm.model == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+            assert llm.base_url == "https://api.together.ai/v1"
+
+    def test_together_route_names_the_native_class(self):
+        """Routing resolves to the native class, so no LiteLLM fallback is built."""
+        route = LLM._resolve_route("together/meta-llama/Llama-3.3-70B-Instruct-Turbo", {})
+        assert route.native_class is OpenAICompatibleCompletion
+        assert route.provider == "together"
+
+    def test_together_keeps_the_organization_and_model_segments(self):
+        """Only the provider prefix is removed; the org/model path reaches the SDK."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            llm = LLM(model="together/Qwen/Qwen3-235B-A22B-Instruct-2507-tput")
+            assert llm.provider == "together"
+            assert llm.model == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
+
+    def test_llm_creates_openai_compatible_for_together_explicit_provider(self):
+        """Explicit provider="together" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            llm = LLM(
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo", provider="together"
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "together"
+            assert llm.model == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+
+    def test_together_base_url_env_override(self):
+        """TOGETHER_BASE_URL redirects Together to a proxy or gateway."""
+        with patch.dict(
+            os.environ,
+            {
+                "TOGETHER_API_KEY": "test-key",
+                "TOGETHER_BASE_URL": "https://together-gateway.example.com/v1",
+            },
+        ):
+            llm = LLM(model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo")
+            assert llm.base_url == "https://together-gateway.example.com/v1"
+
+    def test_together_explicit_configuration_wins_over_env(self):
+        """Explicit api_key/base_url beat TOGETHER_API_KEY and TOGETHER_BASE_URL."""
+        with patch.dict(
+            os.environ,
+            {
+                "TOGETHER_API_KEY": "env-key",
+                "TOGETHER_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(
+                model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/v1",
+            )
+            assert llm.api_key == "explicit-key"
+            assert llm.base_url == "https://explicit.example.com/v1"
+
+    def test_together_client_params_use_together_endpoint_and_key(self):
+        """The OpenAI client is built against Together, not api.openai.com."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "tg-test"}):
+            llm = LLM(model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo")
+            params = llm._get_client_params()
+            assert params["api_key"] == "tg-test"
+            assert params["base_url"] == "https://api.together.ai/v1"
 
     def test_llm_passes_kwargs_to_completion(self):
         """Test LLM passes kwargs to OpenAICompatibleCompletion."""
