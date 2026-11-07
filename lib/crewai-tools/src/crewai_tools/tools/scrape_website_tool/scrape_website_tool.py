@@ -1,4 +1,3 @@
-import os
 import re
 from typing import Any
 
@@ -64,7 +63,7 @@ class ScrapeWebsiteTool(BaseTool):
             self.args_schema = FixedScrapeWebsiteToolSchema
             self._generate_description()
             if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
+                self.cookies = cookies
 
     def _run(
         self,
