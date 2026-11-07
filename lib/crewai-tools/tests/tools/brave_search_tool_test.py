@@ -5,6 +5,7 @@ import pytest
 import requests as requests_lib
 
 from crewai_tools.tools.brave_search_tool.base import BraveSearchToolBase
+from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
 from crewai_tools.tools.brave_search_tool.brave_web_tool import BraveWebSearchTool
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
 from crewai_tools.tools.brave_search_tool.brave_news_tool import BraveNewsSearchTool
@@ -464,6 +465,28 @@ def test_save_file_called_when_enabled(mock_save, mock_get):
 
     tool = BraveWebSearchTool(save_file=True)
     tool._run(query="test")
+
+    mock_save.assert_called_once()
+
+
+@patch("crewai_tools.tools.brave_search_tool.brave_search_tool.requests.get")
+@patch("crewai_tools.tools.brave_search_tool.brave_search_tool._save_results_to_file")
+def test_legacy_tool_run_honours_per_call_save_file(mock_save, mock_get):
+    """A per-call save_file reaches _run instead of being dropped by the schema."""
+    mock_get.return_value = _mock_response(json_data={"web": {"results": []}})
+
+    BraveSearchTool().run(q="test", save_file=True)
+
+    mock_save.assert_called_once()
+
+
+@patch("crewai_tools.tools.brave_search_tool.brave_search_tool.requests.get")
+@patch("crewai_tools.tools.brave_search_tool.brave_search_tool._save_results_to_file")
+def test_legacy_tool_run_keeps_instance_save_file_default(mock_save, mock_get):
+    """Omitting save_file keeps the tool-level setting."""
+    mock_get.return_value = _mock_response(json_data={"web": {"results": []}})
+
+    BraveSearchTool(save_file=True).run(q="test")
 
     mock_save.assert_called_once()
 
