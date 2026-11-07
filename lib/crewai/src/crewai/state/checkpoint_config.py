@@ -212,12 +212,20 @@ class CheckpointConfig(BaseModel):
         return set(self.on_events)
 
 
-def apply_checkpoint(instance: Any, from_checkpoint: CheckpointConfig | None) -> Any:
+def apply_checkpoint(
+    instance: Any,
+    from_checkpoint: CheckpointConfig | None,
+    *,
+    definition: Any = None,
+) -> Any:
     """Handle checkpoint config for a kickoff method.
 
     If *from_checkpoint* carries a ``restore_from`` path, builds and returns a
     restored instance (with ``restore_from`` cleared).  The caller should
     dispatch into its own kickoff variant on that restored instance.
+
+    *definition* lets declarative flows pass the declaration that their concrete
+    class (``Flow``) does not retain; other entities leave it unset.
 
     If *from_checkpoint* is present but has no ``restore_from``, sets
     ``instance.checkpoint`` and returns ``None`` (proceed normally).
@@ -227,7 +235,12 @@ def apply_checkpoint(instance: Any, from_checkpoint: CheckpointConfig | None) ->
     if from_checkpoint is None:
         return None
     if from_checkpoint.restore_from is not None:
-        restored = type(instance).from_checkpoint(from_checkpoint)
+        if definition is not None:
+            restored = type(instance).from_checkpoint(
+                from_checkpoint, definition=definition
+            )
+        else:
+            restored = type(instance).from_checkpoint(from_checkpoint)
         restored.checkpoint = from_checkpoint.model_copy(update={"restore_from": None})
         return restored
     instance.checkpoint = from_checkpoint

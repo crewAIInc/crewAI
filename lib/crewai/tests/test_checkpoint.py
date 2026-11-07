@@ -20,7 +20,7 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -34,6 +34,13 @@ from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
 
 
+class _DeclarativeCheckpointFlowMethods:
+    calls = 0
+
+    def begin(self) -> str:
+        _DeclarativeCheckpointFlowMethods.calls += 1
+        self.state["ran"] = True
+        return "ok"
 
 
 class TestResolve:
@@ -593,9 +600,145 @@ class TestSqliteProviderFork:
         return RuntimeState(root=[crew])
 
 
-
-
 class TestKickoffFromCheckpoint:
+    @pytest.mark.parametrize("suppress_events", [False, True])
+    def test_restore_preserves_custom_no_argument_constructor(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suppress_events: bool
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        calls: list[bool] = []
+
+        class CustomFlow(Flow):
+            def __init__(self) -> None:
+                super().__init__(suppress_flow_events=suppress_events)
+                calls.append(self.suppress_flow_events)
+
+        original = CustomFlow()
+        original._completed_methods = {"reserve"}
+        original.state["order"] = 42
+        location = RuntimeState(root=[original]).checkpoint(str(tmp_path))
+        old_state = RuntimeState(root=[])
+        crewai_event_bus.set_runtime_state(old_state)
+        observed: list[tuple[Any, Any, Any]] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if isinstance(source, CustomFlow) and isinstance(event, FlowCreatedEvent):
+                observed.append((source, crewai_event_bus.runtime_state, source.state.get("order")))
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        try:
+            restored = CustomFlow.from_checkpoint(CheckpointConfig(restore_from=location))
+            assert calls == [suppress_events, suppress_events]
+            assert restored.suppress_flow_events is suppress_events
+            assert restored._completed_methods == {"reserve"}
+            assert restored.state["order"] == 42
+            assert old_state.root == []
+            state = crewai_event_bus.runtime_state
+            assert state is not None and state.root == [restored]
+            assert observed == ([] if suppress_events else [(restored, state, 42)])
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    @pytest.mark.parametrize("suppress_events", [False, True])
+    def test_in_place_restore_emits_creation_event_after_state_install(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suppress_events: bool
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        original = Flow(suppress_flow_events=suppress_events)
+        original._completed_methods = {"reserve"}
+        original.state["order"] = 42
+        location = RuntimeState(root=[original]).checkpoint(str(tmp_path))
+        old_state = RuntimeState(root=[])
+        crewai_event_bus.set_runtime_state(old_state)
+        observed: list[tuple[Any, Any, Any]] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if type(source) is Flow and isinstance(event, FlowCreatedEvent):
+                observed.append(
+                    (source, crewai_event_bus.runtime_state, source.state.get("order"))
+                )
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        try:
+            restored = Flow.from_checkpoint(CheckpointConfig(restore_from=location))
+            assert restored._completed_methods == {"reserve"}
+            assert restored.state["order"] == 42
+            assert old_state.root == []
+            state = crewai_event_bus.runtime_state
+            assert state is not None and state.root == [restored]
+            assert observed == ([] if suppress_events else [(restored, state, 42)])
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    @pytest.mark.parametrize("suppress_events", [False, True])
+    @pytest.mark.parametrize("use_definition", [False, True])
+    def test_restored_flow_creation_event_uses_restored_runtime_state(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        suppress_events: bool,
+        use_definition: bool,
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        class OrderFlow(Flow):
+            suppress_flow_events: bool = suppress_events
+
+        entity = Flow(suppress_flow_events=suppress_events)
+        entity.checkpoint_completed_methods = {"reserve"}
+        entity.checkpoint_state = {"id": "restored", "order": 42}
+        restored_state = RuntimeState(root=[entity])
+        old_state = RuntimeState(root=[])
+        crewai_event_bus.set_runtime_state(old_state)
+        observed: list[tuple[Any, Any, set[str]]] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if isinstance(source, OrderFlow) and isinstance(event, FlowCreatedEvent):
+                observed.append(
+                    (
+                        source,
+                        crewai_event_bus.runtime_state,
+                        set(source._completed_methods),
+                    )
+                )
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        with patch.object(RuntimeState, "from_checkpoint", return_value=restored_state):
+            try:
+                definition = OrderFlow.flow_definition() if use_definition else None
+                if definition is not None:
+                    definition = definition.model_copy(
+                        update={
+                            "config": definition.config.model_copy(
+                                update={"suppress_flow_events": suppress_events}
+                            )
+                        }
+                    )
+                restored = OrderFlow.from_checkpoint(
+                    CheckpointConfig(restore_from="unused.json"), definition=definition
+                )
+                assert old_state.root == []
+                assert restored_state.root == [restored]
+                assert restored.suppress_flow_events is suppress_events
+                assert observed == (
+                    [] if suppress_events else [(restored, restored_state, {"reserve"})]
+                )
+            finally:
+                crewai_event_bus.flush()
+                crewai_event_bus.reset_runtime_state()
+
     def test_crew_kickoff_delegates_to_from_checkpoint(self) -> None:
         mock_restored = MagicMock(spec=Crew)
         mock_restored.kickoff.return_value = "result"
@@ -664,7 +807,294 @@ class TestKickoffFromCheckpoint:
         assert mock_restored.checkpoint.restore_from is None
         assert result == "flow_result"
 
+    def test_flow_can_resume_twice_from_checkpoints(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state import checkpoint_listener
 
+        crewai_event_bus.reset_runtime_state()
+        monkeypatch.setattr(checkpoint_listener, "_handlers_registered", False)
+        runs: list[str] = []
+        failures = {"charge": True, "ship": True}
+
+        class OrderFlow(Flow):
+            @start()
+            def reserve(self) -> None:
+                runs.append("reserve")
+                self.state["reserved"] = True
+
+            @listen(reserve)
+            def charge(self) -> None:
+                runs.append("charge")
+                if failures["charge"]:
+                    failures["charge"] = False
+                    raise RuntimeError("charge failed")
+
+            @listen(charge)
+            def ship(self) -> dict[str, Any]:
+                runs.append("ship")
+                if failures["ship"]:
+                    failures["ship"] = False
+                    raise RuntimeError("ship failed")
+                return {key: value for key, value in self.state.items() if key != "id"}
+
+        settings = {
+            "location": str(tmp_path),
+            "on_events": ["method_execution_finished"],
+        }
+        with pytest.raises(RuntimeError, match="charge failed"):
+            OrderFlow(checkpoint=CheckpointConfig(**settings)).kickoff(
+                inputs={"order": 42}
+            )
+        assert crewai_event_bus.flush()
+        first_checkpoint = next(tmp_path.rglob("*.json"))
+
+        with pytest.raises(RuntimeError, match="ship failed"):
+            OrderFlow().kickoff(
+                from_checkpoint=CheckpointConfig(
+                    restore_from=first_checkpoint, **settings
+                )
+            )
+        assert crewai_event_bus.flush()
+        second_checkpoint = next(
+            path for path in tmp_path.rglob("*.json") if path != first_checkpoint
+        )
+
+        result = OrderFlow().kickoff(
+            from_checkpoint=CheckpointConfig(
+                restore_from=second_checkpoint, **settings
+            )
+        )
+
+        assert runs == ["reserve", "charge", "charge", "ship", "ship"]
+        assert result == {"order": 42, "reserved": True}
+
+    def test_from_checkpoint_prefers_flow_entity_with_restore_data(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Checkpoints written by resumed runs before the runtime-state fix
+        stored a blank deserialized flow ahead of the instance that ran."""
+        import copy
+
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state import checkpoint_listener
+
+        crewai_event_bus.reset_runtime_state()
+        monkeypatch.setattr(checkpoint_listener, "_handlers_registered", False)
+
+        class OrderFlow(Flow):
+            @start()
+            def reserve(self) -> None:
+                self.state["reserved"] = True
+
+            @listen(reserve)
+            def charge(self) -> None:
+                raise RuntimeError("charge failed")
+
+        settings = {
+            "location": str(tmp_path),
+            "on_events": ["method_execution_finished"],
+        }
+        with pytest.raises(RuntimeError, match="charge failed"):
+            OrderFlow(checkpoint=CheckpointConfig(**settings)).kickoff(
+                inputs={"order": 42}
+            )
+        assert crewai_event_bus.flush()
+        real_checkpoint = next(tmp_path.rglob("*.json"))
+
+        payload = json.loads(real_checkpoint.read_text(encoding="utf-8"))
+        blank = copy.deepcopy(payload["entities"][0])
+        payload["entities"][0].pop("checkpoint_flow_name", None)
+        blank.pop("checkpoint_flow_name", None)
+        blank["checkpoint_completed_methods"] = None
+        blank["checkpoint_method_outputs"] = None
+        blank["checkpoint_method_counts"] = None
+        blank["checkpoint_state"] = {"id": "blank"}
+        payload["entities"].insert(0, blank)
+        legacy = tmp_path / "legacy.json"
+        legacy.write_text(json.dumps(payload), encoding="utf-8")
+
+        restored = OrderFlow.from_checkpoint(
+            CheckpointConfig(restore_from=str(legacy))
+        )
+
+        assert restored._completed_methods == {"reserve"}
+        assert restored._state["order"] == 42
+        assert restored._state["reserved"] is True
+        state = crewai_event_bus.runtime_state
+        assert state is not None
+        assert state.root[1] is restored
+
+    def test_from_checkpoint_matches_flow_name_with_multiple_restorable_entities(
+        self,
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.runtime import _sync_checkpoint_fields
+
+        class OtherFlow(Flow[dict[str, Any]]):
+            pass
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        other: Flow[Any] = Flow(suppress_flow_events=True)
+        other.checkpoint_flow_name = OtherFlow.flow_definition().name
+        other.checkpoint_completed_methods = {"other_step"}
+        other.checkpoint_state = {"id": "other", "order": 1}
+
+        target: Flow[Any] = Flow(suppress_flow_events=True)
+        target.checkpoint_flow_name = OrderFlow.flow_definition().name
+        target.checkpoint_completed_methods = {"reserve"}
+        target.checkpoint_state = {"id": "target", "order": 42}
+
+        restored_state = RuntimeState(root=[other, target])
+        with patch.object(RuntimeState, "from_checkpoint", return_value=restored_state):
+            try:
+                restored = OrderFlow.from_checkpoint(
+                    CheckpointConfig(restore_from="unused.json")
+                )
+
+                assert restored._completed_methods == {"reserve"}
+                assert restored.state["id"] == "target"
+                assert restored.state["order"] == 42
+                assert restored_state.root == [other, restored]
+                _sync_checkpoint_fields(other)
+                assert other.checkpoint_flow_name == OtherFlow.flow_definition().name
+            finally:
+                crewai_event_bus.flush()
+                crewai_event_bus.reset_runtime_state()
+
+    def test_from_checkpoint_matches_stable_name_when_name_is_overridden(
+        self, tmp_path: Path
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+
+        class OtherFlow(Flow[dict[str, Any]]):
+            pass
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        other = OtherFlow(name="custom-other", suppress_flow_events=True)
+        other._completed_methods = {"other_step"}
+        other.state["order"] = 1
+
+        target = OrderFlow(name="custom-target", suppress_flow_events=True)
+        target._completed_methods = {"reserve"}
+        target.state["order"] = 42
+
+        location = RuntimeState(root=[other, target]).checkpoint(str(tmp_path))
+        try:
+            restored = OrderFlow.from_checkpoint(
+                CheckpointConfig(restore_from=location)
+            )
+
+            assert restored._completed_methods == {"reserve"}
+            assert restored.state["order"] == 42
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    def test_from_checkpoint_preserves_public_name_override(
+        self, tmp_path: Path
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        original = OrderFlow(name="custom-order", suppress_flow_events=True)
+        original._completed_methods = {"reserve"}
+        original.state["order"] = 42
+        location = RuntimeState(root=[original]).checkpoint(str(tmp_path))
+        try:
+            restored = OrderFlow.from_checkpoint(
+                CheckpointConfig(restore_from=location)
+            )
+
+            assert restored.name == "custom-order"
+            assert restored._definition.name == "custom-order"
+            assert restored._completed_methods == {"reserve"}
+            assert restored.state["order"] == 42
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    def test_declarative_kickoff_resumes_from_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.flow.flow_definition import FlowDefinition
+
+        _DeclarativeCheckpointFlowMethods.calls = 0
+        definition = FlowDefinition.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "DeclarativeCheckpointFlow",
+                "methods": {
+                    "begin": {
+                        "do": {
+                            "call": "code",
+                            "ref": (
+                                f"{__name__}:"
+                                "_DeclarativeCheckpointFlowMethods.begin"
+                            ),
+                        },
+                        "start": True,
+                    }
+                },
+            }
+        )
+        flow = Flow.from_declaration(contents=definition)
+        try:
+            flow.kickoff()
+            flow._completed_methods = {"begin"}
+            location = RuntimeState(root=[flow]).checkpoint(str(tmp_path))
+
+            resumed = Flow.from_declaration(contents=definition)
+            result = resumed.kickoff(
+                from_checkpoint=CheckpointConfig(restore_from=location)
+            )
+
+            assert result == "ok"
+            assert _DeclarativeCheckpointFlowMethods.calls == 1
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    def test_from_checkpoint_preserves_suppress_flow_events(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        class OrderFlow(Flow[dict[str, Any]]):
+            pass
+
+        original = OrderFlow(suppress_flow_events=True)
+        original._completed_methods = {"reserve"}
+        original.state["order"] = 42
+        location = RuntimeState(root=[original]).checkpoint(str(tmp_path))
+        observed: list[Any] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if isinstance(source, OrderFlow) and isinstance(event, FlowCreatedEvent):
+                observed.append(source)
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        try:
+            restored = OrderFlow.from_checkpoint(
+                CheckpointConfig(restore_from=location)
+            )
+
+            assert restored.suppress_flow_events is True
+            assert observed == []
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
 
 
 class TestLegacyMethodOutputsRestore:

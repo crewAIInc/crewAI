@@ -172,6 +172,19 @@ ExecutionContext = Any  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
+# Restoring a checkpoint rebuilds the flow instance before its runtime state is
+# installed. Construction emits ``FlowCreatedEvent``, so suppress it for that
+# window and emit it once the restored instance is in place.
+_suppress_flow_created_event: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "crewai_suppress_flow_created_event", default=False
+)
+# The public ``name`` field is part of the checkpoint, but rebuilt instances are
+# constructed without keyword arguments. Apply the saved name during post-init
+# for the flow class being rebuilt, preserving its memory scope and events.
+_restore_flow_name: contextvars.ContextVar[tuple[type[Any], str] | None] = (
+    contextvars.ContextVar("crewai_restore_flow_name", default=None)
+)
+
 
 def _condition_branches(
     condition: dict[str, Any],
@@ -680,27 +693,107 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if definition is not None:
             context["flow_definition"] = definition
         state = RuntimeState.from_checkpoint(config, context=context)
-        crewai_event_bus.set_runtime_state(state)
-        for entity in state.root:
-            if not isinstance(entity, Flow):
-                continue
-            if entity.execution_context is not None:
-                apply_execution_context(entity.execution_context)
-            if isinstance(entity, cls):
-                entity._restore_from_checkpoint()
-                return entity
+        flow_slots: list[tuple[int, Flow[Any]]] = []
+        for i, candidate in enumerate(state.root):
+            if isinstance(candidate, Flow):
+                flow_slots.append((i, candidate))
+        if not flow_slots:
+            crewai_event_bus.set_runtime_state(state)
+            raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+        # Entities deserialize as plain ``Flow`` objects, so match the stable
+        # definition name recorded at checkpoint time. Older checkpoints do
+        # not carry it; retain their restore-data fallback only when it selects
+        # exactly one flow instead of silently restoring the wrong one.
+        expected_flow_name = (
+            definition.name if definition is not None else cls.flow_definition().name
+        )
+        named_slots = [
+            slot
+            for slot in flow_slots
+            if slot[1].checkpoint_flow_name == expected_flow_name
+        ]
+        if len(named_slots) > 1:
+            raise ValueError(
+                f"Checkpoint contains multiple flows named {expected_flow_name!r}; "
+                "flow names must be unique for restore"
+            )
+        if named_slots:
+            index, entity = named_slots[0]
+        elif any(candidate.checkpoint_flow_name for _, candidate in flow_slots):
+            raise ValueError(
+                f"No Flow named {expected_flow_name!r} found in checkpoint: "
+                f"{config.restore_from}"
+            )
+        else:
+            restorable_slots = [
+                slot
+                for slot in flow_slots
+                if (
+                    slot[1].checkpoint_completed_methods
+                    or slot[1].checkpoint_method_outputs
+                    or slot[1].checkpoint_method_counts
+                )
+            ]
+            if len(restorable_slots) > 1:
+                raise ValueError(
+                    "Checkpoint contains multiple legacy Flow entities with "
+                    "restore data; recreate the checkpoint with unique flow names"
+                )
+            if restorable_slots:
+                index, entity = restorable_slots[0]
+            elif len(flow_slots) == 1:
+                index, entity = flow_slots[0]
+            else:
+                raise ValueError(
+                    "Checkpoint contains multiple legacy Flow entities and no "
+                    "unambiguous restore target"
+                )
+        if entity.execution_context is not None:
+            apply_execution_context(entity.execution_context)
+        if isinstance(entity, cls):
+            entity._restore_from_checkpoint()
+            crewai_event_bus.set_runtime_state(state)
+            if not entity.suppress_flow_events:
+                crewai_event_bus.emit(
+                    entity,
+                    FlowCreatedEvent(
+                        type="flow_created", flow_name=entity._definition.name
+                    ),
+                )
+            return entity
+        # Construction emits FlowCreatedEvent. Suppress it until the instance
+        # is hydrated and installed, so listeners never observe the old runtime
+        # state or a newly-created, empty flow during restore. Custom flows may
+        # only expose a no-argument constructor, so do not inject keywords.
+        token = _suppress_flow_created_event.set(True)
+        name_token = _restore_flow_name.set(
+            (cls, entity.name) if entity.name is not None else None
+        )
+        try:
             instance = (
                 cls.from_declaration(contents=definition)
                 if definition is not None
                 else cls()
             )
-            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
-            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
-            instance.checkpoint_method_counts = entity.checkpoint_method_counts
-            instance.checkpoint_state = entity.checkpoint_state
-            instance._restore_from_checkpoint()
-            return instance
-        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+        finally:
+            _restore_flow_name.reset(name_token)
+            _suppress_flow_created_event.reset(token)
+        instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+        instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+        instance.checkpoint_method_counts = entity.checkpoint_method_counts
+        instance.checkpoint_state = entity.checkpoint_state
+        instance.suppress_flow_events = entity.suppress_flow_events
+        instance._restore_from_checkpoint()
+        state.root[index] = cast(Any, instance)
+        crewai_event_bus.set_runtime_state(state)
+        if not instance.suppress_flow_events:
+            crewai_event_bus.emit(
+                instance,
+                FlowCreatedEvent(
+                    type="flow_created", flow_name=instance._definition.name
+                ),
+            )
+        return instance
 
     @classmethod
     def fork(
@@ -736,6 +829,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             object.__setattr__(flow._state, "id", new_id)
         return flow
 
+    checkpoint_flow_name: str | None = Field(default=None)
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
@@ -784,6 +878,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     )
     _method_outputs: list[Any] = PrivateAttr(default_factory=list)
     _definition: FlowDefinition = PrivateAttr()
+    # Definition supplied by ``from_declaration``. ``type(self)`` stays ``Flow``
+    # for declarative flows, so the restore path must receive this explicitly.
+    _declaration: FlowDefinition | None = PrivateAttr(default=None)
+    # Definition name before the public ``name`` field overrides it. Checkpoint
+    # matching must use this stable name, not the per-instance display name.
+    _stable_definition_name: str = PrivateAttr(default="")
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
@@ -838,10 +938,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             object.__setattr__(self, name, value)
 
     def model_post_init(self, __context: Any) -> None:
-        definition = (
-            __context.get("flow_definition") if isinstance(__context, dict) else None
+        context = __context if isinstance(__context, dict) else {}
+        token = (
+            _suppress_flow_created_event.set(True)
+            if context.get("from_checkpoint")
+            else None
         )
-        self._flow_post_init(definition)
+        try:
+            self._flow_post_init(context.get("flow_definition"))
+        finally:
+            if token is not None:
+                _suppress_flow_created_event.reset(token)
 
     def _flow_post_init(self, definition: FlowDefinition | None = None) -> None:
         """Heavy initialization: state creation, events, memory, method registration."""
@@ -851,6 +958,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._initialize_runtime_extension_attrs()
 
         self._definition = definition or type(self).flow_definition()
+        self._declaration = definition
+        self._stable_definition_name = self._definition.name
+        restore_target = _restore_flow_name.get()
+        if restore_target is not None and type(self) is restore_target[0]:
+            self.name = restore_target[1]
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
         self._definition = self._extend_definition(self._definition)
@@ -878,7 +990,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
 
-        if not self.suppress_flow_events:
+        if not self.suppress_flow_events and not _suppress_flow_created_event.get():
             crewai_event_bus.emit(
                 self,
                 FlowCreatedEvent(
@@ -2148,7 +2260,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
-        restored = apply_checkpoint(self, from_checkpoint)
+        restored = apply_checkpoint(self, from_checkpoint, definition=self._declaration)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
         if self.stream:
@@ -2214,7 +2326,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "These parameters target different state systems "
                 "(Checkpointing and @persist) and cannot be used together."
             )
-        restored = apply_checkpoint(self, from_checkpoint)
+        restored = apply_checkpoint(self, from_checkpoint, definition=self._declaration)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
