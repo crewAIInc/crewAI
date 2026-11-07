@@ -653,6 +653,34 @@ class TestInputHistory:
         assert len(flow._input_history) == 1
         assert flow._input_history[0]["response"] is None
 
+    def test_input_history_public_accessor(self) -> None:
+        """input_history returns a copy of the recorded ask() entries."""
+
+        class MetadataProvider:
+            def request_input(self, message, flow, metadata=None):
+                return InputResponse(text="AI", metadata={"answered_by": "test"})
+
+        class TestFlow(Flow):
+            input_provider = MetadataProvider()
+
+            @start()
+            def gather(self):
+                self.ask("Topic?", metadata={"channel": "#research"})
+                return "done"
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        history = flow.input_history
+        assert len(history) == 1
+        assert history[0]["message"] == "Topic?"
+        assert history[0]["response"] == "AI"
+        assert history[0]["metadata"] == {"channel": "#research"}
+        assert history[0]["response_metadata"] == {"answered_by": "test"}
+
+        history.clear()
+        assert len(flow.input_history) == 1, "input_history must hand out a copy"
+
 
 
 
