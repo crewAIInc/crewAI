@@ -1,22 +1,47 @@
 """Test Agent creation and execution basic functionality."""
 
 import ast
+import asyncio
 import json
 import os
 import time
 from functools import partial
 from hashlib import md5
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
 from crewai import Agent, Crew, Process, Task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.task_events import TaskFailedEvent
+from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools import BaseTool
 from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
+from crewai.utilities.types import LLMMessage
+
+
+class _TaskTestLLM(BaseLLM):
+    def __init__(self) -> None:
+        super().__init__(model="test")
+
+    def call(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str:
+        return "unused"
 
 
 def test_task_tool_reflect_agent_tools():
@@ -165,6 +190,115 @@ def test_task_callback_returns_task_output():
             "tool_failures": [],
         }
         assert output_dict == expected_output
+
+
+@pytest.mark.parametrize("native_async", [False, True], ids=["sync", "native-async"])
+@pytest.mark.parametrize(
+    "failure_point", ["task_callback", "crew_callback", "output_file"]
+)
+def test_task_failure_after_output_assignment_clears_output(
+    native_async: bool,
+    failure_point: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agent = Agent(
+        role="Researcher", goal="Research", backstory="Researcher", llm=_TaskTestLLM()
+    )
+    task_ref: dict[str, Task] = {}
+    callback_outputs: list[TaskOutput] = []
+
+    def failing_callback(output: TaskOutput) -> None:
+        assert task_ref["task"].output is output
+        callback_outputs.append(output)
+        raise RuntimeError("callback failed")
+
+    task = Task(
+        description="Produce a result",
+        expected_output="A result",
+        agent=agent,
+        callback=failing_callback if failure_point == "task_callback" else None,
+        output_file="unused.txt" if failure_point == "output_file" else None,
+    )
+    task_ref["task"] = task
+
+    if failure_point == "crew_callback":
+        crew = Crew(agents=[agent], tasks=[task], task_callback=failing_callback)
+        agent.crew = crew
+
+    events: list[Any] = []
+
+    def capture_event(source: Any, event: Any) -> None:
+        if isinstance(event, TaskFailedEvent):
+            assert source.output is None
+        events.append(event)
+
+    monkeypatch.setattr(crewai_event_bus, "emit", capture_event)
+    if failure_point == "output_file":
+        def fail_save(*_args: Any, **_kwargs: Any) -> None:
+            raise RuntimeError("file write failed")
+
+        monkeypatch.setattr(
+            Task, "_save_file", fail_save
+        )
+
+    expected_error = (
+        "file write failed" if failure_point == "output_file" else "callback failed"
+    )
+    with pytest.raises(RuntimeError, match=expected_error):
+        if native_async:
+            with patch.object(
+                Agent, "aexecute_task", new=AsyncMock(return_value="result")
+            ):
+                asyncio.run(task.aexecute_sync(agent=agent))
+        else:
+            with patch.object(Agent, "execute_task", return_value="result"):
+                task.execute_sync(agent=agent)
+
+    assert task.output is None
+    assert any(isinstance(event, TaskFailedEvent) for event in events)
+    if failure_point in {"task_callback", "crew_callback"}:
+        assert len(callback_outputs) == 1
+        assert callback_outputs[0].raw == "result"
+
+
+@pytest.mark.parametrize("native_async", [False, True], ids=["sync", "native-async"])
+def test_task_failure_before_output_assignment_preserves_previous_output(
+    native_async: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    agent = Agent(
+        role="Researcher", goal="Research", backstory="Researcher", llm=_TaskTestLLM()
+    )
+    task = Task(
+        description="Produce a result", expected_output="A result", agent=agent
+    )
+    previous_output = TaskOutput(
+        description=task.description,
+        expected_output=task.expected_output,
+        raw="previous result",
+        agent=agent.role,
+    )
+    task.output = previous_output
+    events = []
+    monkeypatch.setattr(
+        crewai_event_bus, "emit", lambda _source, event: events.append(event)
+    )
+
+    with pytest.raises(RuntimeError, match="agent failed"):
+        if native_async:
+            with patch.object(
+                Agent,
+                "aexecute_task",
+                new=AsyncMock(side_effect=RuntimeError("agent failed")),
+            ):
+                asyncio.run(task.aexecute_sync(agent=agent))
+        else:
+            with patch.object(
+                Agent, "execute_task", side_effect=RuntimeError("agent failed")
+            ):
+                task.execute_sync(agent=agent)
+
+    assert task.output is previous_output
+    assert any(isinstance(event, TaskFailedEvent) for event in events)
 
 
 def test_execute_with_agent():
