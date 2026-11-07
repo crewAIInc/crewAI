@@ -800,6 +800,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _telemetry_turn_error: type[BaseException] | None = PrivateAttr(default=None)
 
     _is_execution_resuming: bool = PrivateAttr(default=False)
+    # Methods that actually ran during the current resumed run, so a method that
+    # completed only after the resume is not mistaken for one the checkpoint
+    # recorded as completed.
+    _executed_since_resume: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _restored_from_checkpoint: bool = PrivateAttr(default=False)
     # Monotonic stamp set by the telemetry listener at flow start, so the
     # duration span emitted at the end does not need to hold a span open for
@@ -2343,6 +2347,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # suppress cyclic re-execution on the second iteration.
                 if self._completed_methods:
                     self._is_execution_resuming = True
+                    self._executed_since_resume.clear()
 
             # Restore is single-shot: a later kickoff on the same instance
             # starts fresh.
@@ -3047,6 +3052,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
 
             self._completed_methods.add(method_name)
+            self._executed_since_resume.add(method_name)
 
             await asyncio.to_thread(self._persist_method_completion, method_name)
 
@@ -3387,8 +3393,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._method_call_counts[listener_name] = count
 
         if listener_name in self._completed_methods:
-            if self._is_execution_resuming:
-                # During resumption, skip execution but continue listeners
+            if (
+                self._is_execution_resuming
+                and listener_name not in self._executed_since_resume
+            ):
+                # During resumption, skip execution but continue listeners.
+                # Mark it so a later visit in the same run executes normally.
+                self._executed_since_resume.add(listener_name)
                 await self._execute_listeners(listener_name, None)
 
                 # For routers, also check if any conditional starts they triggered are completed
