@@ -109,6 +109,53 @@ def test_serper_tool_news_search(mock_post):
 
 
 @patch("requests.post")
+def test_per_call_search_type_overrides_instance_default(mock_post):
+    tool = SerperDevTool()
+    mock_post.return_value.json.return_value = {
+        "news": [
+            {
+                "title": "News Title",
+                "link": "http://news.com",
+                "snippet": "News Description",
+                "date": "2024-01-01",
+                "source": "News Source",
+                "imageUrl": "http://image.com",
+            }
+        ]
+    }
+    mock_post.return_value.status_code = 200
+
+    result = tool.run(search_query="test", search_type="news")
+
+    assert mock_post.call_args.args[0].endswith("/news")
+    assert result["news"][0]["title"] == "News Title"
+
+
+@patch("requests.post")
+@patch("crewai_tools.tools.serper_dev_tool.serper_dev_tool._save_results_to_file")
+def test_per_call_save_file_overrides_instance_default(mock_save, mock_post):
+    tool = SerperDevTool()
+    mock_post.return_value.json.return_value = {"organic": []}
+    mock_post.return_value.status_code = 200
+
+    tool.run(search_query="test", save_file=True)
+
+    mock_save.assert_called_once()
+
+
+@patch("requests.post")
+@patch("crewai_tools.tools.serper_dev_tool.serper_dev_tool._save_results_to_file")
+def test_instance_save_file_default_is_kept_without_override(mock_save, mock_post):
+    tool = SerperDevTool(save_file=True)
+    mock_post.return_value.json.return_value = {"organic": []}
+    mock_post.return_value.status_code = 200
+
+    tool.run(search_query="test")
+
+    mock_save.assert_called_once()
+
+
+@patch("requests.post")
 def test_serper_tool_with_location_params(mock_post):
     tool = SerperDevTool(n_results=2, country="US", location="New York", locale="en")
 
