@@ -36,15 +36,15 @@ class BrightDataSearchToolSchema(BaseModel):
 
     query: str = Field(..., description="Search query to perform")
     search_engine: str | None = Field(
-        default="google",
+        default=None,
         description="Search engine domain (e.g., 'google', 'bing', 'yandex')",
     )
     country: str | None = Field(
-        default="us",
+        default=None,
         description="Two-letter country code for geo-targeting (e.g., 'us', 'gb')",
     )
     language: str | None = Field(
-        default="en",
+        default=None,
         description="Language code (e.g., 'en', 'es') used in the query URL",
     )
     search_type: str | None = Field(
@@ -52,11 +52,11 @@ class BrightDataSearchToolSchema(BaseModel):
         description="Type of search (e.g., 'isch' for images, 'nws' for news)",
     )
     device_type: str | None = Field(
-        default="desktop",
+        default=None,
         description="Device type to simulate (e.g., 'mobile', 'desktop', 'ios')",
     )
     parse_results: bool | None = Field(
-        default=True,
+        default=None,
         description="Whether to parse and return JSON (True) or raw HTML/text (False)",
     )
 
