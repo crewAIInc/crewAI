@@ -11,6 +11,12 @@ CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN = "login.crewai.com"
 # "secret": False. An entry with "optional": True has a runtime default, so
 # leaving it blank is not reported as a missing key.
 ENV_VARS: dict[str, list[dict[str, Any]]] = {
+    "acedatacloud": [
+        {
+            "prompt": "Enter your Ace Data Cloud API key (press Enter to skip)",
+            "key_name": "ACEDATACLOUD_API_KEY",
+        }
+    ],
     "openai": [
         {
             "prompt": "Enter your OPENAI API key (press Enter to skip)",
@@ -140,6 +146,7 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "acedatacloud",
 ]
 
 # The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
@@ -223,6 +230,7 @@ _NATIVE_MODEL_PREFIXES: dict[str, tuple[str, ...]] = {
 # LiteLLM.
 _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
     {
+        "acedatacloud",
         "azure",
         "cerebras",
         "dashscope",
@@ -266,6 +274,7 @@ def crewai_extras_for_model(model: str) -> set[str]:
 
 
 MODELS: dict[str, list[str]] = {
+    "acedatacloud": ["acedatacloud/gpt-4.1-mini"],
     "openai": [
         "gpt-6-luna",
         "gpt-6.1-sol",

@@ -63,6 +63,7 @@ _PROVIDERS: list[tuple[str, str]] = [
     ("cerebras", "Cerebras"),
     ("sambanova", "SambaNova"),
     ("watson", "IBM watsonx"),
+    ("acedatacloud", "Ace Data Cloud"),
 ]
 
 # Curated offline fallback / label source. The picker prefers models pulled
@@ -73,6 +74,7 @@ _PROVIDERS: list[tuple[str, str]] = [
 # and what people with no key see first, so it is a small, current, generally
 # available model. A preview model is labeled as one and goes last.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
+    "acedatacloud": [("gpt-4.1-mini", "GPT-4.1 Mini")],
     "openai": [
         ("gpt-6-luna", "GPT-6 Luna"),
         ("gpt-6.1-sol", "GPT-6.1 Sol"),
