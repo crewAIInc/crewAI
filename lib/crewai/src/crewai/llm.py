@@ -1788,6 +1788,25 @@ class LLM(BaseLLM):
 
             raise
 
+        if not full_response.strip() and chunk_count == 0:
+            logging.warning(
+                "No chunks received in streaming response, falling back to non-streaming"
+            )
+            non_streaming_params = params.copy()
+            non_streaming_params["stream"] = False
+            non_streaming_params.pop("stream_options", None)
+            return await self._ahandle_non_streaming_response(
+                non_streaming_params,
+                callbacks,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model=response_model,
+            )
+
+        if not full_response.strip() and len(accumulated_tool_args) == 0:
+            raise EmptyLLMResponseError(self.model)
+
         if callbacks and len(callbacks) > 0 and usage_info:
             for callback in callbacks:
                 if isinstance(callback, TokenCalcHandler):
@@ -1838,25 +1857,6 @@ class LLM(BaseLLM):
                         response_id=stream_response_id,
                     )
                     return tool_calls_list
-
-        if not full_response.strip() and chunk_count == 0:
-            logging.warning(
-                "No chunks received in streaming response, falling back to non-streaming"
-            )
-            non_streaming_params = params.copy()
-            non_streaming_params["stream"] = False
-            non_streaming_params.pop("stream_options", None)
-            return await self._ahandle_non_streaming_response(
-                non_streaming_params,
-                callbacks,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model=response_model,
-            )
-
-        if not full_response.strip() and len(accumulated_tool_args) == 0:
-            raise EmptyLLMResponseError(self.model)
 
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched

@@ -1611,8 +1611,11 @@ async def test_async_streaming_response_model_conversion_failure_raises() -> Non
 @pytest.mark.asyncio
 async def test_async_streaming_empty_stream_raises_empty_response_error() -> None:
     """When an async stream completes with empty content and no tool calls,
-    EmptyLLMResponseError must be raised instead of invoking Instructor with blank input."""
+    EmptyLLMResponseError must be raised instead of invoking Instructor with blank input,
+    and token usage must not be recorded as successful."""
+    from unittest.mock import MagicMock
     from crewai.llms.base_llm import EmptyLLMResponseError
+    from crewai.utilities.token_counter_callback import TokenCalcHandler
     from pydantic import BaseModel
 
     class PersonModel(BaseModel):
@@ -1622,14 +1625,21 @@ async def test_async_streaming_empty_stream_raises_empty_response_error() -> Non
     mock_empty_chunk = {
         "id": "resp-empty",
         "choices": [{"delta": {"content": ""}}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 0, "total_tokens": 10},
     }
+
+    mock_callback = MagicMock(spec=TokenCalcHandler)
+    llm.callbacks = [mock_callback]
 
     async def empty_stream():
         yield mock_empty_chunk
 
-    with patch("litellm.acompletion", return_value=empty_stream()):
+    with patch("litellm.acompletion", return_value=empty_stream()), \
+         patch.object(llm, "_track_token_usage_internal") as mock_track:
         with pytest.raises(EmptyLLMResponseError):
             await llm.acall("prompt", response_model=PersonModel)
+        mock_track.assert_not_called()
+        mock_callback.log_success_event.assert_not_called()
 
 
 @pytest.mark.asyncio
