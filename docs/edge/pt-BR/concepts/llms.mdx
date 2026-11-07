@@ -452,26 +452,27 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
   </Accordion>
 
   <Accordion title="Nvidia NIM">
+    O CrewAI se comunica com o NVIDIA NIM pelo cliente OpenAI nativo, então não é necessário instalar o LiteLLM.
+
     Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
     ```toml Code
-    NVIDIA_API_KEY=<your-api-key>
+    # Required
+    NVIDIA_NIM_API_KEY=<your-api-key>
+
+    # Optional, point at a self-hosted NIM endpoint
+    NVIDIA_NIM_BASE_URL=https://integrate.api.nvidia.com/v1
     ```
 
     Exemplo de uso em seu projeto CrewAI:
     ```python Code
     llm = LLM(
-        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
+        model="nvidia_nim/nvidia/nemotron-3-super-120b-a12b",
         temperature=0.7
     )
     ```
 
+    Os IDs de modelo já estão no formato `publisher/model`, então uma referência completa tem três segmentos, por exemplo `nvidia_nim/nvidia/nemotron-3-super-120b-a12b`.
     O catálogo hospedado do NVIDIA NIM muda com frequência. Use o [catálogo de modelos NVIDIA NIM](https://build.nvidia.com/models) para escolher um endpoint atual e confirmar o ID, as modalidades e os limites de contexto.
-
-
-    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
-    ```bash
-    uv add 'crewai[litellm]'
-    ```
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
