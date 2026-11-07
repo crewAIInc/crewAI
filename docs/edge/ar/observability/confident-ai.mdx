@@ -1,0 +1,154 @@
+---
+title: Confident AI
+description: تكامل Confident AI مع CrewAI مع تتبع أصلي عبر OpenTelemetry وتقييم
+icon: shield-check
+mode: "wide"
+---
+
+# تكامل Confident AI
+
+يوضح هذا الدليل كيفية دمج **Confident AI** مع **CrewAI** باستخدام `confident-trace`. بنهاية هذا الدليل، سيظهر كل kickoff لـ crew كتتبع (trace) يحتوي على التسلسل الهرمي الكامل crew ← task ← agent ← tool، مما يتيح لك معرفة ما قامت به agents وتقييم مدى جودة أدائها.
+
+> **ما هو Confident AI؟** [Confident AI](https://www.confident-ai.com/) هو منصة لمراقبة وتقييم نماذج LLM موجهة للفرق التي تبني تطبيقات ذكاء اصطناعي موثوقة في مرحلتي التطوير والإنتاج. و[`confident-trace`](https://github.com/confident-ai/confident-trace) هو حزمة SDK للتتبع الأصلي عبر OpenTelemetry الخاصة به.
+
+## البدء
+
+سنستعرض مثالاً بسيطاً لاستخدام CrewAI ودمجه مع Confident AI للتتبع والتقييم.
+
+### الخطوة 1: تثبيت الاعتماديات
+
+```bash
+pip install confident-trace crewai openai
+```
+
+### الخطوة 2: إعداد متغيرات البيئة
+
+احصل على مفتاح API الخاص بمشروعك من [Confident AI](https://app.confident-ai.com) وقم بتعيينه إلى جانب مفتاح مزوّد النموذج الذي تستخدمه crew:
+
+```bash
+export CONFIDENT_API_KEY="<your-confident-api-key>"
+export OPENAI_API_KEY="<your-openai-key>"
+```
+
+للمستخدمين في منطقة الاتحاد الأوروبي، اضبط نقطة نهاية OTEL على نسخة الاتحاد الأوروبي، وإلا فسيتم إرسال تتبعاتك إلى خوادم الولايات المتحدة:
+
+```bash
+export CONFIDENT_OTEL_ENDPOINT="https://eu.otel.confident-ai.com/v1/traces"
+```
+
+### الخطوة 3: إنشاء تطبيق CrewAI
+
+استدعِ `init()` مرة واحدة عند بدء التشغيل، قبل تشغيل أي crew. استمر في استيراد `Agent` و`Task` و`Crew` من `crewai` كالمعتاد، إذ يتم اكتشاف إطار العمل المثبت تلقائياً، لذا لا يوجد exporter أو instrumentor بحاجة إلى إعداد.
+
+```python
+from confident_trace import init, shutdown
+from crewai import Agent, Crew, Task
+
+init()
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanations.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    llm="openai/gpt-4o-mini",
+)
+
+task = Task(
+    description="Explain the given topic",
+    expected_output="A clear and concise explanation.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+
+try:
+    result = crew.kickoff({"input": "What are LLMs?"})
+    print(result.raw)
+finally:
+    shutdown()
+```
+
+تبقى شيفرة crew الخاصة بك كما هي تماماً. يقوم `confident-trace` تلقائياً بإرفاق وسم التكامل `CrewAI` بالـ spans الخاصة بك، ويلتقط ما يلي:
+
+- **تنفيذ crew وtask وflow** — أسماء العمليات والتوقيت والحالة والعلاقات بين الخطوات الأصل والفرعية.
+- **تنفيذ agents** — موجّه task المُرسل إلى كل agent والإجابة النهائية للـ agent.
+- **استدعاءات النموذج** — الرسائل وتفاصيل النموذج وطلبات tools وأسباب الإنهاء و[استهلاك الرموز](https://www.confident-ai.com/docs/llm-tracing/features/token-usage-cost).
+- **استدعاءات tools** — أسماء tools و[المدخلات/المخرجات](https://www.confident-ai.com/docs/llm-tracing/features/input-output) الخاصة بها.
+- **spans مخصصة** — أي spans تطبيقية مخصصة يتم إنشاؤها داخل tool أو flow تبقى متداخلة تحتها.
+
+تخضع المدخلات والمخرجات والرسائل الملتقطة لـ[سياسة المحتوى](https://www.confident-ai.com/docs/llm-tracing/features/masking). أما إعدادات agents وبيانات الاعتماد ومخازن الذاكرة وحالة checkpoint فلا يتم تصديرها.
+
+تصف spans الخاصة بـ CrewAI *بنية* التشغيل. أما استدعاء OpenAI (أو Anthropic أو Gemini أو Bedrock) داخل كل task فيظهر كـ[LLM span](https://www.confident-ai.com/docs/llm-tracing/features/span-types#llm-spans) يلتقطه تكامل المزوّد الذي يفعّله `init()` إلى جانب CrewAI. لا تظهر spans النموذج إلا عندما يمر LLM الخاص بـ crew عبر حزمة SDK مدعومة لأحد المزوّدين، أما تطبيقات `LLM` المخصصة ومسارات LiteLLM التي تتجاوز تلك الحزم فستُظهر بنية crew دون أي LLM spans.
+
+يعترض `init()` حدود التنفيذ في CrewAI، وهي `Crew.kickoff` ونظائرها غير المتزامنة، وتنفيذ tasks، و`Agent.execute_task` / `aexecute_task`، و`Flow.kickoff_async` / `resume_async` وطرق Flow، إضافة إلى طرق تشغيل واستدعاء tools. وتفوّض الطرق غير المتزامنة المختصرة إلى تلك الحدود، لذا لن ترى spans مكررة.
+
+في خادم يعمل لفترة طويلة، استدعِ `init()` عند بدء التشغيل و`shutdown()` أثناء الإيقاف السلس بعد انتهاء عمل crew النشط، ولا تستدعِهما مع كل طلب.
+
+### الخطوة 4: عرض التتبعات
+
+شغّل السكربت الخاص بك:
+
+```bash
+python main.py
+```
+
+افتح **Observatory** في مشروعك على [Confident AI](https://app.confident-ai.com) لفحص التتبع وspans الفرعية الخاصة به.
+
+إذا لم تظهر لك أي تتبعات، فالسبب في الغالب أن البرنامج أُنهي قبل إرسال التتبعات. تأكد من استدعاء `shutdown()` قبل الخروج.
+
+## Online Evals
+
+يمكنك ضبط ما يحدث للتتبعات الواردة من صفحة [workflows](https://www.confident-ai.com/docs/llm-tracing/workflows) في Confident AI.
+
+![صفحة workflows في Confident AI](https://confident-docs.s3.us-east-1.amazonaws.com/confident-trace-workflows.png)
+
+فيما يلي الـ workflows التي يمكنك ضبطها:
+
+- **قواعد التقييم** — تقييم التتبعات الواردة استناداً إلى [metric collection](https://www.confident-ai.com/docs/metrics/metric-collections).
+- **المصنّفات** — وسم تتبعاتك حسب المشكلة أو المشاعر أو أي بُعد تحدده، مما يتيح لك تجميعها أو تصفيتها لاحقاً.
+- **الإدخال إلى قوائم الانتظار** — توجيه تتبعات الإنتاج إلى قوائم انتظار التعليقات التوضيحية ليقوم فريق المراجعة الداخلي لديك بتوصيفها يدوياً.
+- **الإدخال إلى مجموعات البيانات** — إدخال تتبعات الإنتاج إلى datasets لإعادة استخدامها كحالات اختبار والتحسين التدريجي للنتائج بمرور الوقت.
+
+يمكنك إنشاء workflows مخصصة لنماذج بيانات مختلفة مثل traces وspans وthreads كلٌّ على حدة وفقاً لاحتياجاتك.
+
+لتقييم مكوّن أو تتبع يدوياً، مرّر metric collection عبر `update_trace`، وراجع [online evaluations](https://www.confident-ai.com/docs/llm-tracing/online-evals).
+
+## خصائص التتبع
+
+استخدم trace context لإرفاق tags وmetadata ومعرّف المستخدم التي تعرفها قبل بدء kickoff. لا ينشئ ذلك أي span إضافي، إذ يرث التتبع الذي يبدأه `crew.kickoff()` كل ما تمرره:
+
+```python
+from confident_trace import init, trace_context
+
+init()
+
+with trace_context(
+    tags=["support"],
+    metadata={"release": "2026-09"},
+    user_id="user-42",
+):
+    result = crew.kickoff({"input": "What are LLMs?"})
+```
+
+## تجميع التتبعات في threads
+
+يوفر `confident-trace` طريقة `turn()` التي يمكنك استخدامها لتجميع عمليتي kickoff متتاليتين في CrewAI ضمن turn واحد. أعد استخدام معرّف thread نفسه في الـ turns اللاحقة لتجميعها في thread واحد يمكنك عرضه وتقييمه على Confident AI:
+
+```python
+from confident_trace import init, turn
+
+init()
+
+with turn("support-turn", thread_id="chat-42"):
+    context = crew.kickoff({"input": "Find the relevant account details."})
+    answer = crew.kickoff({"input": f"Summarize these details: {context.raw}"})
+```
+
+## المراجع
+
+- [دليل تكامل CrewAI](https://www.confident-ai.com/docs/integrations/third-party/crew-ai) - مرجع كامل للإعداد والتهيئة
+- [تتبع LLM على Confident AI](https://www.confident-ai.com/docs/llm-tracing/introduction) - كيفية عمل traces وspans وthreads
+- [Online evals](https://www.confident-ai.com/docs/llm-tracing/online-evals) - تقييم التتبعات فور إدخالها
+- [Threads](https://www.confident-ai.com/docs/llm-tracing/features/threads) - تجميع عمليات kickoff في محادثات
+- [confident-trace على GitHub](https://github.com/confident-ai/confident-trace) - الشيفرة المصدرية والمشكلات
+- **هل تحتاج مساعدة في التكامل؟** [تحدّث إلى أحد المختصين.](https://www.confident-ai.com/book-a-demo)
