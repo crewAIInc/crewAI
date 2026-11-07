@@ -84,8 +84,7 @@ def log_tool_result(context):
 특정 크루 인스턴스에만 훅을 적용합니다:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
+from crewai.project import CrewBase, crew
 from crewai.hooks import before_llm_call_crew, after_tool_call_crew
 
 @CrewBase

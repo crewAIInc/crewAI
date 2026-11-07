@@ -37,13 +37,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Crie um novo crew ou flow.
+Crie um novo projeto crew, flow, Agent independente (experimental), tool, skill ou template.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: Escolha entre "crew" ou "flow"
+- `TYPE`: `crew`, `flow`, `agent` (experimental), `tool`, `skill` ou `template`
 - `NAME`: Nome do crew ou flow
 
 Exemplo:
@@ -54,6 +54,32 @@ crewai create flow my_new_flow
 ```
 
 Por padrão, `crewai create crew` cria um projeto JSON-first com `crew.jsonc` e `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` somente quando quiser o scaffold antigo em Python/YAML com `crew.py`, `config/agents.yaml` e `config/tasks.yaml`.
+
+#### Executar agora
+
+Quando você cria um crew ou um flow em um terminal, o `crewai create` oferece executar o novo projeto:
+
+```text
+  Run it now? [Y/n]:
+```
+
+Pressione Enter para iniciar o `crewai run` na pasta do projeto. Em seguida, o `crewai create` sai com o código de saída da execução. A primeira execução também instala as dependências do projeto. Responda `n` para pular a execução, e o CLI imprime o comando para depois:
+
+```text
+  Run it later: cd my_new_crew && crewai run
+```
+
+O `crewai create` não pergunta com `CREWAI_DMN=true`, nem quando stdin ou stdout não é um terminal, como quando um agente de programação ou um job de CI o executa. Criar uma ferramenta, uma skill ou um template nunca pergunta.
+
+#### Agent (Experimental)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+Projetos de Agent independente usam `agent.yaml` por padrão. Use `--format json` para configuração em JSON ou `--format python` para exportar um Agent em Python. Este contrato experimental de projeto e carregamento pode mudar e exige builds de prévia compatíveis da CLI e do SDK. Consulte [Projetos de Agent Independente](/edge/pt-BR/guides/agents/standalone-agent-projects) para configuração, ferramentas, entradas de execução e limites de implantação.
 
 #### Aliases de flags obsoletas
 
@@ -195,6 +221,18 @@ crewai run
   flows.
 </Note>
 
+Antes de um crew ou um flow em Python começar, o `crewai run` verifica se a chave de API de que cada um dos seus modelos precisa está definida, no seu ambiente ou no `.env` que o crewAI carrega: o do próprio projeto ou, se não houver, o mais próximo em uma pasta acima. Em um crew JSON, ele lê os campos `llm`, `manager_llm` e `function_calling_llm` do `crew.jsonc` e dos arquivos de agentes que ele lista; um agente sem `llm` roda com `MODEL` ou, se não houver, com o modelo padrão do crewAI, `gpt-4.1-mini`, então esse modelo também é verificado. Para um crew ou flow em Python, ele lê `MODEL` e qualquer `llm:` em `config/agents.yaml`, e verifica `gpt-4.1-mini` quando nenhum dos dois indica um modelo. Um valor vazio ou o placeholder `YOUR_API_KEY` conta como ausente.
+
+Em um terminal, o CLI pede cada chave ausente. O que você cola fica oculto, é salvo no `.env` do projeto e é usado pela execução que começa em seguida. Pressione Enter para pular uma chave. Sem um terminal, por exemplo sob um agente de código ou em CI, o CLI imprime a linha a adicionar e inicia a execução mesmo assim. Ele também imprime a linha, em vez de salvar, quando o `.env` está em uma pasta acima ou é um link simbólico:
+
+```text
+OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.env, then run `crewai run` again.
+```
+
+A verificação cobre provedores que usam uma única chave de API, como OpenAI, Anthropic, Gemini e Groq. Ela ignora Azure, Bedrock e watsonx, modelos locais como Ollama e flows declarativos. Ela não lê um `llm` definido em código Python e, quando o código do projeto define um, também não verifica o modelo padrão. Um `.env` que não é um arquivo comum, como um named pipe servido por um gerenciador de segredos, fica para a execução ler e não é verificado. Antes de salvar uma chave, o CLI deixa o `.env` legível apenas por você; quando não consegue, ele usa a chave só nesta execução e avisa, em vez de salvá-la. Quando o `.env` do projeto envia requisições para outro host por meio de uma configuração que o seu próprio ambiente não define, como `OPENAI_BASE_URL`, `OPENAI_API_BASE` ou `HTTPS_PROXY`, ou quando os arquivos de um crew JSON definem `base_url`, `api_base` ou `endpoint` em qualquer lugar, como em um `llm`, no seu `client_params`, em um `planning_llm` ou no `config` de um embedder, o prompt mostra cada host antes de pedir a chave. Cole uma chave apenas se você confiar nesse host.
+
+Se um crew JSON ainda falhar porque uma chave de API não está definida, por exemplo a chave de um modelo que essa verificação ignora, a execução para com a mesma linha em vez de um traceback. Em um terminal, o CLI primeiro pede essa chave como descrito acima, depois monta o crew de novo e o executa mais uma vez a partir da primeira tarefa, então as tarefas que já terminaram rodam de novo; pressione Enter para parar em vez disso.
+
 <Note>
   Certifique-se de executar estes comandos a partir do diretório onde seu
   projeto CrewAI está configurado. Alguns comandos podem exigir configuração ou
@@ -261,6 +299,8 @@ Implemente o crew ou flow no [CrewAI AMP](https://app.crewai.com).
   ```
   - Lê a configuração do seu projeto local.
   - Solicita a confirmação das variáveis de ambiente (como `OPENAI_API_KEY`, `SERPER_API_KEY`) encontradas localmente. Elas serão armazenadas de forma segura junto ao deployment na plataforma Enterprise. Verifique se suas chaves sensíveis estão corretamente configuradas localmente (por exemplo, em um arquivo `.env`) antes de executar este comando.
+  - `--zip` envia o projeto como um ZIP mesmo quando ele tem um `origin` git, sem fazer fetch dele.
+  - Quando o projeto é um repositório git com pelo menos um commit, todo envio de ZIP, na criação ou no push, mostra o commit local a partir do qual ele foi gerado e se o diretório do projeto tinha alterações não commitadas.
 
 ### 11. Gerenciamento de Organização
 
@@ -347,7 +387,7 @@ crewai org switch <organization_id>
   ```
   Isto exibe a mensagem de ajuda para o CLI CrewAI Deploy.
 
-Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantação do seu crew no [CrewAI AMP](http://app.crewai.com) usando o CLI.
+Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantação do seu crew no [CrewAI AMP](https://app.crewai.com) usando o CLI.
 
 <iframe
   className="w-full aspect-video rounded-xl"
@@ -362,7 +402,28 @@ Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantaçã
 
 Ao executar o comando `crewai create crew`, o CLI mostrará provedores de LLM disponíveis e depois a seleção de modelo para o provedor escolhido. O modelo selecionado é salvo no `.env` gerado, e cada agente JSONC pode definir seu próprio `llm`.
 
-Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API.
+O `crewai create flow` faz as mesmas perguntas em um terminal e salva o modelo como `MODEL` no `.env` do flow, que os agentes da crew inicial usam. Com `--provider`, ele pula as perguntas de provedor e modelo. Passe um provedor da lista, como `anthropic` ou `bedrock`, para usar o primeiro modelo listado dele, ou uma string `provider/model` completa para qualquer outro modelo. Um flow declarativo (`--declarative`) não pergunta nada nem indica nenhuma chave nos próximos passos, porque o seu ponto de partida não chama nenhum modelo.
+
+Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API. Em um terminal, o que você digita para uma chave ou um segredo fica oculto; outros valores, como uma URL de endpoint, uma região ou o nome de um deployment do Azure, continuam visíveis. Pressione Enter para pular um campo.
+
+Uma chave pulada não é salva. A menos que a chave já esteja definida no seu ambiente, o CLI mostra a linha exata a adicionar ao `.env` antes de `crewai run`:
+
+```text
+  API key not saved. Add this line to my_new_crew/.env before `crewai run`:
+    OPENAI_API_KEY=<your key>
+```
+
+Valores que têm um padrão, como a região da AWS e a versão da API do Azure, não são listados.
+
+Se seus agentes usam modelos de mais de um provedor, o CLI pede as chaves uma vez por provedor, e o modelo do primeiro agente é salvo como `MODEL`.
+
+O `pyproject.toml` gerado também depende dos extras do crewai que os modelos escolhidos precisam, por exemplo `crewai[tools,anthropic]` para Anthropic, `crewai[tools,google-genai]` para Gemini, ou `crewai[tools,litellm]` para provedores que o crewAI acessa via LiteLLM, como o Groq. O crewAI também executa alguns nomes de modelo via LiteLLM em vez do SDK do provedor, como `bedrock/claude-sonnet-4-5-20250929-v1:0`, então esses adicionam `litellm` também. O `crewai install`, ou o primeiro `crewai run`, os instala. Um projeto que usa apenas OpenAI depende só de `crewai[tools]`. Se depois você trocar um agente para outro modelo, adicione você mesmo o extra que ele precisa, por exemplo `uv add "crewai[anthropic]"`.
+
+Com `--skip-provider`, ou com `CREWAI_DMN=true`, o CLI não pede nem salva nenhuma chave. O `crewai create flow` também não pergunta nada quando não está rodando em um terminal, como quando um agente de código ou um job de CI o executa. Na crew JSON padrão, os agentes usam `openai/gpt-6-luna`, a menos que você passe `--provider`. Um flow salva o modelo do `--provider` como `MODEL` e, sem ele, roda no modelo OpenAI padrão do crewAI. Os próximos passos indicam cada variável que ainda não está definida no seu ambiente:
+
+```text
+  Set OPENAI_API_KEY in .env before `crewai run`
+```
 
 #### Provedores iniciais de chave de API
 

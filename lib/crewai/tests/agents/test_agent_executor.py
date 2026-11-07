@@ -7,6 +7,8 @@ flow methods, routing logic, and error handling.
 from __future__ import annotations
 
 import asyncio
+import json
+import re
 import threading
 from types import SimpleNamespace
 import time
@@ -15,7 +17,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.core.providers.human_input import SyncHumanInputProvider
@@ -82,6 +84,11 @@ from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.file_store import clear_files, clear_task_files, store_files
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai_files import TextFile
+from crewai import Agent, Crew, Task
+from crewai.llms.base_llm import BaseLLM
+from crewai.tools import BaseTool
+from crewai.utilities.message_utils import message_content_text
+from crewai.utilities.types import LLMMessage
 
 class TestAgentExecutorState:
     """Test AgentExecutorState Pydantic model."""
@@ -491,7 +498,8 @@ class TestAgentExecutor:
             result = executor.call_llm_and_parse()
 
         assert result == "parsed"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        loop_call = get_llm_response_mock.call_args_list[0]
+        assert loop_call.kwargs["response_model"] is None
 
     def test_call_llm_and_parse_summarizes_before_the_model_call(
         self, mock_dependencies
@@ -509,8 +517,8 @@ class TestAgentExecutor:
         executor.llm.call.return_value = "Final Answer: done"
         events: list[str] = []
 
-        with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
-            summarize.side_effect = lambda **_: events.append("summarize")
+        with patch.object(executor.llm, "summarize_messages") as summarize:
+            summarize.side_effect = lambda *_args, **_kwargs: events.append("summarize")
             executor.llm.call.side_effect = (
                 lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
             )
@@ -550,7 +558,38 @@ class TestAgentExecutor:
             result = executor.call_llm_native_tools()
 
         assert result == "native_finished"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        loop_call = get_llm_response_mock.call_args_list[0]
+        assert loop_call.kwargs["response_model"] is None
+
+    @pytest.mark.parametrize("native", [True, False], ids=["native", "react"])
+    def test_todo_step_answer_is_not_requested_in_the_response_model(
+        self, mock_dependencies, native
+    ):
+        """A step result is not the task's answer, so it keeps its text."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor._openai_tools = [{"type": "function", "function": {"name": "lookup"}}]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Look it up", status="running")]
+        )
+
+        with patch(
+            "crewai.agents.agent_executor.get_llm_response",
+            return_value="step done" if native else "Final Answer: step done",
+        ) as get_llm_response_mock:
+            if native:
+                assert executor.call_llm_native_tools() == "todo_satisfied"
+            else:
+                assert executor.call_llm_and_parse() == "parsed"
+                assert executor.route_by_answer_type() == "todo_satisfied"
+
+        assert get_llm_response_mock.call_count == 1
+        assert executor.state.current_answer.output == "step done"
 
     def test_call_llm_native_tools_falls_back_when_provider_rejects_tools(
         self, mock_dependencies
@@ -885,7 +924,7 @@ class TestStepExecutorCriticalFixes:
 
         crewai_event_bus.flush()
 
-        assert output == "2"
+        assert output.result == "2"
         assert len(started_events) >= 1
         assert len(finished_events) >= 1
         assert started_events[-1].plan_step_number == 2
@@ -914,7 +953,7 @@ class TestStepExecutorCriticalFixes:
             patch.object(
                 step_executor,
                 "_execute_text_tool_with_events",
-                return_value="2 words",
+                return_value=ToolResult(result="2 words"),
             ),
         ):
             result = step_executor._execute_text_parsed(
@@ -2426,6 +2465,7 @@ class TestMaxIterationsRouting:
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5)
         executor.max_iter = 20
+        executor._tool_call_counts = {}
 
         result = AgentExecutor.check_max_iterations(executor)
         assert result == "continue_reasoning"
@@ -2436,9 +2476,29 @@ class TestMaxIterationsRouting:
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
         executor.max_iter = 20
+        executor._tool_call_counts = {}
 
         result = AgentExecutor.check_max_iterations(executor)
         assert result == "continue_reasoning_native"
+
+    def test_repeated_tool_call_limit_routes_to_force_final_answer(self):
+        from crewai.agents.agent_executor import AgentExecutor
+        from crewai.utilities.agent_utils import (
+            MAX_REPEATED_TOOL_CALLS,
+            check_repeated_tool_call,
+        )
+
+        executor = Mock(spec=AgentExecutor)
+        executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
+        executor.max_iter = 20
+        executor._tool_call_counts = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS):
+            check_repeated_tool_call(
+                executor._tool_call_counts, tool_name="t", tool_args={}, result="r"
+            )
+
+        result = AgentExecutor.check_max_iterations(executor)
+        assert result == "force_final_answer"
 
 
 # Native Tool Call Edge Cases
@@ -2939,6 +2999,185 @@ class TestDeferredNativeToolResults:
         )
 
 
+ARTIFACT_ALIAS = re.compile(r"tool-result-[A-Za-z0-9_-]+/result\.md")
+DEFERRED_READER_NAME = "read_a_deferred_tool_result"
+
+
+class _TicketTool(BaseTool):
+    name: str = "fetch_ticket"
+    description: str = "Fetch a support ticket."
+
+    def _run(self, ticket: str) -> str:
+        return "\n".join(f"{ticket} line {index} " + "x" * 80 for index in range(60))
+
+
+def _tool_call(name: str, **arguments: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"call-{uuid4().hex}",
+            "type": "function",
+            "function": {"name": name, "arguments": json.dumps(arguments)},
+        }
+    ]
+
+
+class _DeferringLLM(BaseLLM):
+    """Fetches a ticket large enough to be deferred, then reads artifacts.
+
+    ``read_as`` is how it first passes its own artifact path to the reader:
+    ``"cite"`` skips the read and cites the path in the final answer, while
+    ``"artifact_id"`` and ``"dot_prefixed"`` are near-misses a model makes and
+    are retried with the first path the reader's error lists. A task that sees
+    an earlier task's path in its context reads that path, after fetching its
+    own ticket only when ``follow_up_fetches`` is set.
+    """
+
+    read_as: str = "cite"
+    follow_up_fetches: bool = True
+    references: list[str] = Field(default_factory=list)
+    reader_results: list[str] = Field(default_factory=list)
+
+    def get_context_window_size(self) -> int:
+        return 4_000
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+    def call(
+        self, messages: list[LLMMessage], *args: Any, **kwargs: Any
+    ) -> str | list[dict[str, Any]]:
+        earlier_aliases = [
+            alias
+            for message in messages
+            if message.get("role") != "tool"
+            for alias in ARTIFACT_ALIAS.findall(message_content_text(message))
+        ]
+        tool_messages = [m for m in messages if m.get("role") == "tool"]
+        if not tool_messages:
+            if earlier_aliases and not self.follow_up_fetches:
+                return _tool_call(DEFERRED_READER_NAME, file_path=earlier_aliases[0])
+            return _tool_call("fetch_ticket", ticket="T-1")
+
+        last = tool_messages[-1]
+        text = message_content_text(last)
+        if last.get("name") == DEFERRED_READER_NAME:
+            self.reader_results.append(text)
+            listed = ARTIFACT_ALIAS.search(text)
+            if self.read_as != "cite" and len(self.reader_results) == 1 and listed:
+                return _tool_call(
+                    DEFERRED_READER_NAME, file_path=listed.group(), line_count=2
+                )
+            return f"Read result: {text}"
+
+        self.references.append(text)
+        current = ARTIFACT_ALIAS.search(text)
+        if current is None:
+            return "The ticket result was not deferred."
+        if earlier_aliases:
+            return _tool_call(DEFERRED_READER_NAME, file_path=earlier_aliases[0])
+        if self.read_as == "artifact_id":
+            artifact_id = current.group().split("/")[0]
+            return _tool_call(DEFERRED_READER_NAME, file_path=artifact_id)
+        if self.read_as == "dot_prefixed":
+            return _tool_call(DEFERRED_READER_NAME, file_path=f"./{current.group()}")
+        return f"Summary of T-1. Full ticket at {current.group()}"
+
+    async def acall(
+        self, messages: list[LLMMessage], *args: Any, **kwargs: Any
+    ) -> str | list[dict[str, Any]]:
+        return self.call(messages, *args, **kwargs)
+
+
+def _kickoff_ticket_crew(
+    llm: _DeferringLLM, *, follow_up: bool, use_async: bool
+) -> list[str]:
+    agent = Agent(
+        role="Investigator",
+        goal="Investigate support tickets",
+        backstory="You read tickets.",
+        llm=llm,
+        tools=[_TicketTool()],
+    )
+    first = Task(
+        description="Read ticket T-1", expected_output="A summary", agent=agent
+    )
+    tasks = [first]
+    if follow_up:
+        tasks.append(
+            Task(
+                description="Follow up on ticket T-1",
+                expected_output="A summary",
+                agent=agent,
+                context=[first],
+            )
+        )
+    crew = Crew(agents=[agent], tasks=tasks)
+    output = asyncio.run(crew.akickoff()) if use_async else crew.kickoff()
+    return [task.raw for task in output.tasks_output]
+
+
+class TestDeferredToolResultLifetime:
+    """A deferred artifact is readable by its exact path until its run ends."""
+
+    @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+    @pytest.mark.parametrize("read_as", ["artifact_id", "dot_prefixed"])
+    def test_wrong_path_in_the_same_run_lists_the_path_to_retry_with(
+        self, read_as: str, use_async: bool
+    ) -> None:
+        llm = _DeferringLLM(model="deferring-fake", read_as=read_as)
+
+        (raw,) = _kickoff_ticket_crew(llm, follow_up=False, use_async=use_async)
+
+        alias = ARTIFACT_ALIAS.search(llm.references[0])
+        assert alias is not None
+        wrong_path_error, retried_read = llm.reader_results
+        assert wrong_path_error == (
+            "Error: This temporary tool-result artifact is not available. "
+            f"Pass one of these paths exactly as given: `{alias.group()}`. "
+            "Artifacts from earlier runs are deleted."
+        )
+        assert retried_read.startswith("T-1 line 0 ")
+        assert raw.startswith("Read result: T-1 line 0 ")
+
+    @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+    def test_follow_up_task_that_defers_is_told_earlier_artifacts_are_deleted(
+        self, use_async: bool
+    ) -> None:
+        llm = _DeferringLLM(model="deferring-fake")
+
+        first_raw, follow_up_raw = _kickoff_ticket_crew(
+            llm, follow_up=True, use_async=use_async
+        )
+
+        first_alias = ARTIFACT_ALIAS.search(first_raw)
+        follow_up_alias = ARTIFACT_ALIAS.search(llm.references[1])
+        assert first_alias is not None and follow_up_alias is not None
+        assert first_alias.group() != follow_up_alias.group()
+        assert (
+            "deleted when this run ends, so do not cite its path" in llm.references[0]
+        )
+        assert llm.reader_results == [
+            "Error: This temporary tool-result artifact is not available. "
+            f"Pass one of these paths exactly as given: `{follow_up_alias.group()}`. "
+            "Artifacts from earlier runs are deleted."
+        ]
+        assert "T-1 line 0" not in follow_up_raw
+
+    @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+    def test_follow_up_task_that_defers_nothing_has_no_reader(
+        self, use_async: bool
+    ) -> None:
+        llm = _DeferringLLM(model="deferring-fake", follow_up_fetches=False)
+
+        first_raw, follow_up_raw = _kickoff_ticket_crew(
+            llm, follow_up=True, use_async=use_async
+        )
+
+        assert ARTIFACT_ALIAS.search(first_raw) is not None
+        assert llm.reader_results == ["Tool not found"]
+        assert follow_up_raw == "Read result: Tool not found"
+
+
 # Executor State Reset on Re-invoke
 
 
@@ -2987,6 +3226,22 @@ class TestPlanGenerationIsolation:
         assert "task.description =" not in source or "Plan is stored in state" in source, (
             "generate_plan should store plan in state, not task.description"
         )
+
+    def test_failed_replan_restores_task_description(self):
+        task = SimpleNamespace(description="What is the capital of France?")
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False),
+            task=task,
+        )
+
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            reasoning.return_value.handle_agent_reasoning.side_effect = ValueError(
+                "planner failed"
+            )
+            executor._trigger_replan("step 1 is blocked")
+
+        assert task.description == "What is the capital of France?"
+        assert executor.state.last_replan_reason == "Replan failed: planner failed"
 
 
 # Todo Status Tracking
@@ -3235,15 +3490,3 @@ def test_legacy_experimental_discriminator_is_rejected() -> None:
 
     with pytest.raises(ValidationError):
         AgentExecutor.model_validate({"executor_type": "experimental"})
-
-
-def test_experimental_executor_import_is_removed() -> None:
-    import importlib
-
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("crewai.experimental.agent_executor")
-
-    experimental = importlib.import_module("crewai.experimental")
-    for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
-        with pytest.raises(AttributeError):
-            getattr(experimental, name)

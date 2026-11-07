@@ -84,8 +84,7 @@ def log_tool_result(context):
 Aplica hooks apenas a instâncias específicas de crew:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
+from crewai.project import CrewBase, crew
 from crewai.hooks import before_llm_call_crew, after_tool_call_crew
 
 @CrewBase

@@ -10,6 +10,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+from threading import Lock
 import time
 from typing import (
     TYPE_CHECKING,
@@ -21,6 +22,11 @@ from typing import (
 )
 import warnings
 
+from crewai_core.platform_apps import (
+    PlatformAppsUnavailableError,
+    UnresolvedPlatformAppsWarning,
+)
+from crewai_core.printer import set_suppress_console_output
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -86,6 +92,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
+from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
@@ -99,10 +106,10 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
-    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
+from crewai.utilities.config import process_config
 from crewai.utilities.constants import (
     CREWAI_TRAINED_AGENTS_FILE_ENV,
     TRAINED_AGENTS_DATA_FILE,
@@ -114,6 +121,7 @@ from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_fo
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -132,6 +140,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.flow.flow import Flow
     from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
@@ -149,6 +158,7 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "AgentExecutor": AgentExecutor,
 }
+_conversation_flow_lock = Lock()
 
 
 def _is_resuming_agent_executor(
@@ -250,6 +260,11 @@ class Agent(BaseAgent):
     _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _conversation_flow: Any = PrivateAttr(default=None)
+    conversational: bool = Field(
+        default=False,
+        description="Experimental: enable standalone conversations through a Flow session.",
+    )
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time in seconds for an agent to execute a task",
@@ -402,7 +417,13 @@ class Agent(BaseAgent):
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
         """Merge repository agent config with provided values before validation."""
-        if v is not None and (from_repository := v.get("from_repository")):
+        if v is None:
+            return v
+        # Flatten ``config`` first so a ``from_repository`` set in agents.yaml is
+        # seen here, and its config fields override the repository's values.
+        # Copy so the caller's mapping keeps its ``config`` key.
+        v = process_config(dict(v), cls)
+        if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
         return v
 
@@ -1364,29 +1385,33 @@ class Agent(BaseAgent):
 
         Returns:
             The resolved tools, or an empty list when none resolve or resolution
-            fails. A non-empty ``apps`` that resolves to no tools emits a
-            ``UserWarning`` naming the agent and its apps.
+            fails. A non-empty ``apps`` that resolves to no tools emits an
+            ``UnresolvedPlatformAppsWarning`` naming the agent, its apps, and
+            the apps CrewAI AMP said it could not resolve.
         """
         platform_tools: list[BaseTool] = []
+        cause = ""
+        missing_apps: list[str] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
             platform_tools = CrewaiPlatformTools(apps=apps)
+        except PlatformAppsUnavailableError as e:
+            self._logger.log("error", f"Error getting platform tools: {e!s}")
+            missing_apps = e.missing_apps
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
+            cause = f" Cause: {e!s}"
 
         if apps and not platform_tools:
             # Logger.log above is verbose-gated; without a warning a bad `apps`
             # entry only shows up later as a task the agent couldn't do.
-            app_names = ", ".join(str(app) for app in apps)
             warnings.warn(
-                f"Agent '{self.role}' declares apps [{app_names}] but none "
-                "resolved to any tools; the agent will run without them and may "
-                "be unable to complete its goal. Check that these apps exist and "
-                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
-                UserWarning,
+                UnresolvedPlatformAppsWarning(
+                    self.role, [str(app) for app in apps], missing_apps, cause
+                ),
                 stacklevel=2,
             )
 
@@ -1795,6 +1820,60 @@ class Agent(BaseAgent):
             inputs["trailing"] = trailing
 
         return executor, inputs, agent_info, parsed_tools
+
+    def __copy__(self) -> Self:
+        copied = super().__copy__()
+        copied._conversation_flow = None
+        return copied
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        # Sessions contain locks and a loader bound to their original Agent.
+        return BaseModel.__deepcopy__(self.__copy__(), memo)
+
+    def as_flow(self) -> Flow[Any]:
+        """Return this Agent's experimental conversational Flow session.
+
+        Requires ``conversational=True``. Reuse the returned Flow for multiple
+        turns, or configure its persistence to restore sessions across processes.
+        Direct ``kickoff`` calls remain independent executions.
+        """
+        if not self.conversational:
+            raise ValueError("Agent conversations require conversational=True")
+        with _conversation_flow_lock:
+            if self._conversation_flow is None:
+                from crewai.agent.conversation import agent_flow
+
+                self._conversation_flow = agent_flow(lambda: self, name=self.role)()
+        return cast("Flow[Any]", self._conversation_flow)
+
+    def handle_turn(self, message: str, **kwargs: Any) -> Any:
+        """Run a turn with the history of this experimental Agent conversation.
+
+        ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
+        persistence restore options. One Agent owns one session; use a new Agent
+        for another session. Overlapping turns on one Agent are rejected.
+        """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span("standalone_agent:handle_turn")
+        context = contextvars.copy_context()
+        if not self.verbose:
+            context.run(set_suppress_console_output, True)
+        return context.run(flow.handle_turn, message, **kwargs)
+
+    def chat(self, *, tui: bool = False, **kwargs: Any) -> None:
+        """Start an experimental conversation using the same options as Flow.chat.
+
+        Requires ``conversational=True``. Use ``tui=True`` for the terminal UI,
+        or omit it for a plain REPL. Other options are forwarded to Flow.chat.
+        """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span(
+            "standalone_agent:chat:tui" if tui else "standalone_agent:chat:repl"
+        )
+        context = contextvars.copy_context()
+        if not self.verbose and not tui:
+            context.run(set_suppress_console_output, True)
+        context.run(flow.chat, tui=tui, **kwargs)
 
     def kickoff(
         self,

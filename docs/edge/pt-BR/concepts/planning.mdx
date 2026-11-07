@@ -1,58 +1,272 @@
 ---
 title: Planejamento
-description: Aprenda como adicionar planejamento à sua CrewAI Crew e melhorar sua performance.
+description: Aprenda como fazer agentes planejarem antes de agir com PlanningConfig e como planejar uma crew inteira com Crew(planning=True).
 icon: ruler-combined
 mode: "wide"
 ---
 
 ## Visão geral
 
-O recurso de planejamento no CrewAI permite que você adicione capacidade de planejamento à sua crew. Quando ativado, antes de cada iteração da Crew, todas as informações da Crew são enviadas para um AgentPlanner que irá planejar as tarefas passo a passo, e este plano será adicionado à descrição de cada tarefa.
+O CrewAI pode planejar em dois níveis:
 
-### Usando o recurso de Planejamento
+- **Planejamento do agente**: o agente escreve um plano passo a passo para o próprio trabalho e depois executa e verifica cada passo. Configure com `Agent(planning_config=PlanningConfig(...))`.
+- **Planejamento da crew**: antes de a crew rodar, um `CrewPlanner` escreve um plano para cada tarefa e o adiciona à descrição de cada tarefa. Ative com `Crew(planning=True)`.
 
-Começar a usar o recurso de planejamento é muito simples, o único passo necessário é adicionar `planning=True` à sua Crew:
+Você pode usar qualquer um deles, ou os dois juntos.
 
-<CodeGroup>
-```python Code
-from crewai import Crew, Agent, Task, Process
+## Planejamento do agente
 
-# Monte sua crew com capacidades de planejamento
-minha_crew = Crew(
-    agents=self.agents,
-    tasks=self.tasks,
-    process=Process.sequential,
+Passe um `PlanningConfig` para um agente para ativar o planejamento:
+
+```python
+from crewai import Agent, Crew, PlanningConfig, Task
+
+analyst = Agent(
+    role="Market Analyst",
+    goal="Explain market trends with clear evidence",
+    backstory="You are an experienced analyst who breaks big questions into small, checkable steps.",
+    planning_config=PlanningConfig(
+        reasoning_effort="medium",
+        max_attempts=3,
+    ),
+)
+
+trends_task = Task(
+    description="Identify the three most important trends in electric vehicle adoption over the last five years.",
+    expected_output="A short report describing the top 3 trends, with one supporting fact for each.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[trends_task])
+result = crew.kickoff()
+
+print(result)
+```
+
+A presença de um `PlanningConfig` ativa o planejamento. Para desativá-lo, deixe `planning_config` sem valor.
+
+### Como funciona
+
+Quando o agente inicia uma tarefa, ele executa um ciclo de planejar e executar:
+
+1. **Planejar.** O LLM de planejamento escreve um plano, com a instrução de ficar dentro de `max_steps` passos, e informa se o plano está pronto.
+2. **Refinar.** Se o plano não estiver pronto, o planejador o refina até que esteja pronto ou até atingir `max_attempts`.
+3. **Executar.** Cada passo vira um item de todo e roda no próprio loop de ferramentas, limitado por `max_step_iterations` e `step_timeout`.
+4. **Observar.** Depois de cada passo, o agente verifica o resultado. O quanto ele verifica depende de `reasoning_effort`.
+5. **Replanejar.** Dependendo de `reasoning_effort`, um passo que falha ou um plano que deixa de servir faz o agente escrever um novo plano, até `max_replans` vezes.
+6. **Responder.** O agente monta a resposta final a partir dos resultados dos passos.
+
+O plano fica no estado de execução do agente. Ele não é adicionado à descrição da tarefa.
+
+A execução passo a passo precisa de um plano pronto com passos estruturados, que o planejador obtém por meio de function calling. Se o plano ainda não estiver pronto depois de `max_attempts`, ou se o LLM de planejamento não suportar function calling, o agente usa o loop de execução padrão.
+
+### Esforço de raciocínio
+
+`reasoning_effort` controla o que acontece depois de cada passo:
+
+| Nível | Depois de cada passo | Custo |
+| --- | --- | --- |
+| `"low"` | Uma verificação heurística, sem chamada extra ao LLM. Um passo que falha é marcado como falho e o agente segue em ordem, sem replanejar. | Mais rápido |
+| `"medium"` (padrão) | Um LLM revisa o passo. Se o passo falhou e a revisão diz que o plano não funciona mais, o agente replaneja; caso contrário, marca o passo como falho e continua. | Equilibrado |
+| `"high"` | Um LLM revisa o passo e depois decide se termina antes, replaneja ou refina os passos restantes. | Mais adaptável, mais lento |
+
+`observe_steps` substitui a revisão por LLM em qualquer nível: `True` a adiciona ao `"low"`, e `False` a remove de `"medium"` e `"high"`. Com `observe_steps=True`, o `"low"` também replaneja quando a revisão diz que um passo que falhou precisa de um novo plano.
+
+### Opções de configuração
+
+<ParamField body="reasoning_effort" type="str" default="medium">
+  Quanto o agente verifica e se adapta depois de cada passo: `"low"`, `"medium"` ou `"high"`.
+</ParamField>
+
+<ParamField body="observe_steps" type="bool" default="None">
+  Executa uma revisão por LLM depois de cada passo. `None` revisa apenas em `"medium"` e `"high"`.
+</ParamField>
+
+<ParamField body="max_attempts" type="int" default="None">
+  Número máximo de tentativas de planejamento, contando o primeiro plano. `None` continua refinando até o planejador marcar o plano como pronto, o que pode gerar mais chamadas ao LLM. Defina um número para limitar.
+</ParamField>
+
+<ParamField body="max_steps" type="int" default="20">
+  O limite de passos que o planejador deve respeitar. Ele é passado ao prompt como `{max_steps}` e não é aplicado ao plano retornado. Deve ser pelo menos 1.
+</ParamField>
+
+<ParamField body="max_replans" type="int" default="3">
+  Número máximo de replanejamentos completos antes de o agente finalizar a resposta. `0` desativa o replanejamento.
+</ParamField>
+
+<ParamField body="max_step_iterations" type="int" default="15">
+  Número máximo de iterações do LLM em um único passo. Valores menores deixam os passos mais rápidos, porém menos completos.
+</ParamField>
+
+<ParamField body="step_timeout" type="int" default="None">
+  Tempo máximo, em segundos, para um único passo, verificado antes de cada chamada ao LLM no passo. Quando ele é excedido, o passo para e retorna o que tem até então. O passo não é marcado como falho, e uma chamada ao LLM ou a uma ferramenta já em andamento não é interrompida. `None` significa sem limite de tempo.
+</ParamField>
+
+<ParamField body="llm" type="str | BaseLLM" default="None">
+  O LLM usado no planejamento e na revisão depois de cada passo. `None` usa o LLM do agente.
+</ParamField>
+
+<ParamField body="system_prompt" type="str" default="None">
+  Prompt de sistema personalizado para o planejamento. `None` usa o prompt padrão.
+</ParamField>
+
+<ParamField body="plan_prompt" type="str" default="None">
+  Prompt personalizado para o primeiro plano. Veja Prompts personalizados abaixo.
+</ParamField>
+
+<ParamField body="refine_prompt" type="str" default="None">
+  Prompt personalizado para refinar um plano. Veja Prompts personalizados abaixo.
+</ParamField>
+
+Este agente usa um modelo separado e mais barato para o planejamento e limita cada parte do ciclo:
+
+```python
+from crewai import Agent, PlanningConfig
+
+researcher = Agent(
+    role="Researcher",
+    goal="Produce well-sourced research summaries",
+    backstory="You are a meticulous researcher.",
+    planning_config=PlanningConfig(
+        reasoning_effort="high",
+        max_attempts=2,
+        max_steps=8,
+        max_replans=2,
+        max_step_iterations=10,
+        step_timeout=120,
+        llm="gpt-5.4-mini",
+    ),
+)
+```
+
+### Prompts personalizados
+
+`plan_prompt` e `refine_prompt` são preenchidos com `str.format` do Python. Estes placeholders estão disponíveis:
+
+| Prompt | Placeholders |
+| --- | --- |
+| `plan_prompt` | `{role}`, `{goal}`, `{backstory}`, `{description}`, `{expected_output}`, `{tools}`, `{max_steps}` |
+| `refine_prompt` | `{role}`, `{goal}`, `{backstory}`, `{current_plan}`, `{max_steps}` |
+
+Se seus prompts não incluírem `{max_steps}`, o planejador não recebe nenhum limite de passos.
+
+```python
+from crewai import Agent, PlanningConfig
+
+writer = Agent(
+    role="Technical Writer",
+    goal="Write clear documentation",
+    backstory="You turn complex systems into readable guides.",
+    planning_config=PlanningConfig(
+        max_attempts=2,
+        plan_prompt=(
+            "You are {role}. Your goal: {goal}.\n"
+            "Plan how to complete this task in at most {max_steps} steps.\n"
+            "Task: {description}\n"
+            "Expected output: {expected_output}\n"
+            "Available tools: {tools}"
+        ),
+        refine_prompt=(
+            "You are {role}. Improve this plan and keep it to at most "
+            "{max_steps} steps:\n{current_plan}"
+        ),
+    ),
+)
+```
+
+<Warning>
+Qualquer outro placeholder, ou um `{` ou `}` literal, faz o planejamento falhar. O agente então registra o erro no log e roda sem plano. Escreva chaves literais como `{{` e `}}`.
+</Warning>
+
+### Planejamento sem tarefa
+
+O planejamento também roda quando você chama um agente diretamente com `kickoff()`, sem uma `Task` ou uma `Crew`. A mensagem de entrada é usada como descrição da tarefa:
+
+```python
+from crewai import Agent, PlanningConfig
+
+planner = Agent(
+    role="Travel Planner",
+    goal="Plan practical trips",
+    backstory="You plan efficient itineraries.",
+    planning_config=PlanningConfig(reasoning_effort="low", max_attempts=1),
+)
+
+result = planner.kickoff("Plan a two-day trip to Lisbon on a mid-range budget.")
+
+print(result.raw)
+```
+
+### O atalho `planning=True`
+
+`Agent(planning=True)` ativa uma configuração limitada e de baixo custo. Ela equivale a `PlanningConfig(reasoning_effort="low", max_attempts=1)`: uma tentativa de planejamento e nenhuma revisão por LLM depois de cada passo.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst.",
     planning=True,
 )
 ```
-</CodeGroup>
 
-A partir deste ponto, sua crew terá o planejamento ativado, e as tarefas serão planejadas antes de cada iteração.
+Se você também passar `planning_config`, ele tem prioridade.
 
-<Warning>
-Quando o planejamento está ativado, o crewAI irá usar `gpt-4o-mini` como o LLM padrão para planejamento, o que requer uma chave de API válida da OpenAI. Como seus agentes podem estar usando LLMs diferentes, isso pode causar confusão se você não tiver uma chave de API da OpenAI configurada ou se estiver experimentando um comportamento inesperado relacionado a chamadas de API de LLM.
-</Warning>
+### Quando o planejamento falha
 
-#### LLM de Planejamento
+Se ocorrer um erro enquanto o agente planeja, o erro é registrado no log e o agente executa a tarefa sem plano.
 
-Agora você pode definir qual LLM será usado para planejar as tarefas.
+<Note>
+`reasoning=True` e `max_reasoning_attempts` estão obsoletos. Veja [Reasoning](/edge/pt-BR/concepts/reasoning) para saber como migrar.
+</Note>
 
-Ao executar o exemplo básico, você verá algo semelhante ao resultado abaixo, que representa a saída do `AgentPlanner` responsável por criar a lógica passo a passo a ser adicionada às tarefas dos Agents.
+## Planejamento da crew
+
+Quando o planejamento da crew está ativado, todas as informações da crew são enviadas para um `CrewPlanner` antes de as tarefas rodarem. Ele planeja cada tarefa passo a passo e adiciona o plano à descrição dessa tarefa.
+
+### Usando o planejamento da crew
+
+Adicione `planning=True` à sua Crew. Sempre que a crew é iniciada, o `CrewPlanner` escreve um plano como o da aba **Result** e adiciona a parte de cada tarefa à descrição dessa tarefa:
 
 <CodeGroup>
 ```python Code
-from crewai import Crew, Agent, Task, Process
+from crewai import Agent, Crew, Process, Task
 
-# Monte sua crew com capacidades de planejamento e LLM personalizado
-my_crew = Crew(
-    agents=self.agents,
-    tasks=self.tasks,
-    process=Process.sequential,
-    planning=True,
-    planning_llm="gpt-4o"
+researcher = Agent(
+    role="AI LLMs Senior Data Researcher",
+    goal="Uncover cutting-edge developments in AI LLMs",
+    backstory="You find the most relevant new work in AI LLMs.",
 )
 
-# Execute a crew
+reporting_analyst = Agent(
+    role="AI LLMs Reporting Analyst",
+    goal="Create detailed reports based on AI LLMs data analysis and research findings",
+    backstory="You turn research findings into clear reports.",
+)
+
+research_task = Task(
+    description="Conduct a thorough research about AI LLMs",
+    expected_output="A list with 10 bullet points of the most relevant information about AI LLMs",
+    agent=researcher,
+)
+
+reporting_task = Task(
+    description="Review the context you got and expand each topic into a full section for a report",
+    expected_output="A fully fledged report with the main topics, each with a full section of information. Formatted as markdown.",
+    agent=reporting_analyst,
+)
+
+# Assemble your crew with planning capabilities
+my_crew = Crew(
+    agents=[researcher, reporting_analyst],
+    tasks=[research_task, reporting_task],
+    process=Process.sequential,
+    planning=True,
+)
+
+# Run the crew
 my_crew.kickoff()
 ```
 
@@ -151,3 +365,11 @@ Uma lista com 10 tópicos dos dados mais relevantes sobre LLMs de IA.
 Um relatório completo com os principais tópicos, cada um com uma seção cheia de informações. Formatado em markdown sem '```'.
 ```
 </CodeGroup>
+
+### LLM de planejamento
+
+O planejamento da crew usa `gpt-5.4-mini` por padrão. Defina `planning_llm` com o nome de um modelo ou uma instância de `LLM` para usar outro modelo, por exemplo `Crew(..., planning=True, planning_llm="gpt-5")`.
+
+<Warning>
+Com o LLM de planejamento padrão, o planejamento da crew precisa de uma chave de API da OpenAI válida, mesmo que seus agentes usem outros provedores. Se você não tiver uma chave de API da OpenAI configurada, defina `planning_llm` com um modelo ao qual você tenha acesso.
+</Warning>

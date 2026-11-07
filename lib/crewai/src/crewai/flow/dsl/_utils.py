@@ -368,6 +368,7 @@ def _build_conversational_definition(
     return FlowConversationalDefinition(
         enabled=True,
         system_prompt=getattr(config, "system_prompt", None),
+        respect_context_window=getattr(config, "respect_context_window", True),
         llm=_serialize_static_value(getattr(config, "llm", None), "conversational.llm"),
         router=_build_conversational_router_definition(
             getattr(config, "router", None),
@@ -397,6 +398,7 @@ def _build_conversational_definition(
         defer_trace_finalization=bool(
             getattr(config, "defer_trace_finalization", True)
         ),
+        trace_scope=getattr(config, "trace_scope", None),
         builtin_routes=[str(route) for route in builtin_routes],
         internal_routes=[str(route) for route in internal_routes],
     )

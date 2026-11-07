@@ -6,7 +6,7 @@ import click
 from crewai_core.telemetry import Telemetry
 import tomli
 
-from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.constants import ENV_VARS, MODELS, PROVIDER_EXTRAS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.provider import (
     get_provider_data,
@@ -16,9 +16,11 @@ from crewai_cli.provider import (
 from crewai_cli.utils import (
     copy_assistant_instructions,
     copy_template,
+    echo_missing_keys,
     get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
+    missing_provider_keys,
     write_env_file,
 )
 
@@ -205,17 +207,19 @@ def create_crew(
     provider: str | None = None,
     skip_provider: bool = False,
     parent_folder: str | None = None,
-) -> None:
+) -> Path | None:
+    """Scaffold a classic Python/YAML crew project.
+
+    Returns:
+        The crew's folder, or None when nothing runnable was created: the crew
+        was added to ``parent_folder``, or the provider step stopped early.
+    """
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
+    extras: list[str] = []
     if is_dmn_mode_enabled():
         skip_provider = True
     if not skip_provider:
-        if not provider:
-            provider_models = get_provider_data()
-            if not provider_models:
-                return
-
         existing_provider = None
         for provider, env_keys in ENV_VARS.items():
             if any(
@@ -230,11 +234,11 @@ def create_crew(
                 f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
             ):
                 click.secho("Keeping existing provider configuration.", fg="yellow")
-                return
+                return None
 
-        provider_models = get_provider_data()
-        if not provider_models:
-            return
+        # Without the LiteLLM catalog, the curated PROVIDERS and MODELS still
+        # work; only the "other" list loses the providers they do not name.
+        provider_models = get_provider_data() or {}
 
         while True:
             selected_provider = select_provider(provider_models)
@@ -246,6 +250,9 @@ def create_crew(
             click.secho(
                 "No provider selected. Please try again or press 'q' to exit.", fg="red"
             )
+
+        if selected_provider in PROVIDER_EXTRAS:
+            extras.append(PROVIDER_EXTRAS[selected_provider])
 
         if MODELS.get(selected_provider):
             while True:
@@ -271,18 +278,24 @@ def create_crew(
                 elif "key_name" in details:
                     prompt = details["prompt"]
                     key_name = details["key_name"]
+                    # Hidden input goes through getpass, which reads the
+                    # terminal and not piped stdin, so hide it only at a terminal.
                     api_key_value = click.prompt(
                         prompt,
                         default="",
                         show_default=False,
-                        hide_input=details.get("hide_input", False),
+                        hide_input=details.get("secret", True) and sys.stdin.isatty(),
                     )
 
                     if api_key_value.strip():
                         env_vars[key_name] = api_key_value
 
+        missing = missing_provider_keys(selected_provider, env_vars)
         if env_vars:
             write_env_file(folder_path, env_vars)
+        if missing:
+            echo_missing_keys(folder_path, missing)
+        elif env_vars:
             click.secho("API keys and model saved to .env file", fg="green")
         else:
             click.secho(
@@ -308,7 +321,7 @@ def create_crew(
     for file_name in root_template_files:
         src_file = templates_dir / file_name
         dst_file = folder_path / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
+        copy_template(src_file, dst_file, name, class_name, folder_name, extras)
 
     src_folder = folder_path / "src" / folder_name if not parent_folder else folder_path
 
@@ -332,3 +345,4 @@ def create_crew(
         initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)
+    return None if parent_folder else folder_path
