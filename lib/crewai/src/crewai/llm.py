@@ -41,6 +41,9 @@ from crewai.llms.base_llm import (
     EmptyLLMResponseError,
     JsonResponseFormat,
     LLMCallBlockedError,
+    # Unused here since the key check moved to the first call; kept because
+    # `from crewai.llm import MissingAPIKeyError` works in released 1.15.34+.
+    MissingAPIKeyError,  # noqa: F401
     get_current_call_id,
     llm_call_context,
 )
