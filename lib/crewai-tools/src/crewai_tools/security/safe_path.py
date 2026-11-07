@@ -8,6 +8,9 @@ Set CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true to bypass validation (not
 recommended for production). Managed workers should set
 CREWAI_TOOLS_FORCE_SAFE_PATHS=true so a tenant cannot disable these
 checks by exporting the escape hatch on their own deployment.
+
+Set CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS to a comma-separated list of hosts
+(bare hostname, host:port or URL) that may resolve to private IPs.
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
 _FORCE_SAFE_PATHS_ENV = "CREWAI_TOOLS_FORCE_SAFE_PATHS"
+_ALLOWED_PRIVATE_HOSTS_ENV = "CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS"
 _BYPASS_HINT = f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
 
 
@@ -222,6 +226,49 @@ def is_blocked_ip(ip_str: str) -> bool:
         return True  # If we can't parse, block it
 
 
+def _normalize_hostname(hostname: str) -> str:
+    """Return a hostname suitable for exact allowlist comparisons."""
+    try:
+        return hostname.rstrip(".").encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return ""
+
+
+def _entry_hostname(entry: str) -> str:
+    """Extract the hostname from an allowlist entry.
+
+    Entries may be a bare hostname, ``host:port`` or a full URL, so an
+    administrator can paste whichever form they have. Only the hostname is
+    kept, matching how the requested URL is reduced before comparison.
+    """
+    entry = entry.strip()
+    if "://" not in entry:
+        entry = f"//{entry}"
+    try:
+        hostname = urlparse(entry).hostname
+    except ValueError:
+        return ""
+    return _normalize_hostname(hostname) if hostname else ""
+
+
+def allows_private_host(hostname: str) -> bool:
+    """Whether *hostname* is explicitly allowed to resolve privately.
+
+    Matching is exact on the hostname: no wildcards, and IP addresses are
+    never allowed.
+    """
+    normalized = _normalize_hostname(hostname)
+    try:
+        ipaddress.ip_address(normalized)
+        return False
+    except ValueError:
+        pass
+    return bool(normalized) and any(
+        normalized == _entry_hostname(entry)
+        for entry in os.environ.get(_ALLOWED_PRIVATE_HOSTS_ENV, "").split(",")
+    )
+
+
 def validate_url(url: str) -> str:
     """Validate that a URL is safe to fetch.
 
@@ -277,7 +324,7 @@ def validate_url(url: str) -> str:
 
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
-        if is_blocked_ip(ip_str):
+        if is_blocked_ip(ip_str) and not allows_private_host(parsed.hostname):
             raise ValueError(
                 f"URL '{url}' resolves to private/reserved IP {ip_str}. "
                 f"Access to internal networks is not allowed. "

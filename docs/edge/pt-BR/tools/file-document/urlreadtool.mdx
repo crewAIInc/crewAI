@@ -1,0 +1,85 @@
+---
+title: Leitura de URL
+description: O `URLReadTool` busca uma URL e retorna o conteúdo como texto.
+icon: globe
+mode: "wide"
+---
+
+## Visão geral
+
+O `URLReadTool` lê o conteúdo de uma URL e o retorna como texto. Em corpos PDF, DOCX e XLSX o texto é extraído, o HTML é reduzido ao texto visível e os tipos baseados em texto (texto simples, Markdown, JSON, XML, YAML, CSV) são decodificados como estão. Funciona com links pré-assinados de armazenamento em nuvem (S3, R2, Google Drive, OneDrive, SharePoint), mesmo quando o servidor identifica o arquivo como `application/octet-stream`.
+
+A ferramenta não autentica, portanto o link já deve conceder acesso.
+
+## Instalação
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo de Uso
+
+```python Code
+from crewai_tools import URLReadTool
+
+url_read_tool = URLReadTool()
+
+content = url_read_tool.run(url="https://example.com/report.pdf")
+
+# Leia uma janela de linhas em vez do documento inteiro
+head = url_read_tool.run(url="https://example.com/data.csv", line_count=20)
+```
+
+## Argumentos
+
+O agente fornece estes em tempo de execução:
+
+- `url`: A URL a ser lida.
+- `start_line`: (Opcional) A linha inicial (começando em 1). O padrão é `1`.
+- `line_count`: (Opcional) O número de linhas a retornar. Se omitido, retorna tudo a partir de `start_line`.
+
+Você define estes ao construir a ferramenta:
+
+- `max_bytes`: (Opcional) Maior corpo de resposta aceito. O padrão é 5 MiB.
+- `timeout`: (Opcional) Tempo limite por requisição, em segundos. O padrão é `30`.
+- `headers`: (Opcional) Cabeçalhos extras da requisição.
+- `encoding`: (Opcional) Força uma codificação de texto em vez da declarada pelo servidor.
+
+Se a busca falhar, a ferramenta retorna uma falha com o motivo, como um endereço bloqueado ou um erro de conexão.
+
+## Segurança de rede
+
+Como a URL geralmente é escolhida por um LLM em tempo de execução, as requisições são verificadas contra SSRF:
+
+- Cada hostname é resolvido e a requisição é rejeitada se algum endereço resolvido for privado, de loopback, link-local ou de outra forma reservado. Isso cobre endpoints de metadados de nuvem e serviços internos.
+- Redirecionamentos não são seguidos automaticamente. Cada salto é verificado novamente e as credenciais são descartadas em saltos entre origens diferentes.
+
+### Permitir um host interno
+
+Alguns ambientes servem arquivos a partir de um host que resolve para um endereço privado, como uma plataforma auto-hospedada atrás de um balanceador de carga interno. Para permiti-lo, liste o hostname exato em `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`:
+
+```shell
+export CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS="files.internal.example.com,assets.internal.example.com"
+```
+
+Exemplos do que cada valor permite, para uma requisição a `https://files.internal.example.com/report.pdf`:
+
+| Valor de `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS` | Resultado | Motivo |
+| --- | --- | --- |
+| `files.internal.example.com` | Permitido | Correspondência exata do hostname. |
+| `https://files.internal.example.com/blobs` | Permitido | Apenas o hostname é usado. O esquema e o caminho são ignorados. |
+| `files.internal.example.com:8443` | Permitido | A porta é ignorada, então qualquer porta desse host é permitida. |
+| `Files.Internal.Example.com` | Permitido | A comparação não diferencia maiúsculas de minúsculas e os espaços ao redor são ignorados. |
+| `other.example.com,files.internal.example.com` | Permitido | Cada entrada é verificada separadamente, então listar vários hosts funciona. |
+| `other.internal.example.com` | Bloqueado | Um host diferente não é coberto. |
+| `*.internal.example.com` | Bloqueado | Curingas não são suportados. Liste cada host. |
+| `10.10.0.115` | Bloqueado | Endereços IP nunca são permitidos por esta lista. |
+
+- As entradas são separadas por vírgula. Cada uma pode ser um hostname simples, `host:porta` ou uma URL completa. Apenas o hostname é usado, comparado de forma exata e sem diferenciar maiúsculas de minúsculas. Curingas como `*.example.com` não são suportados.
+- Endereços IP nunca são permitidos por esta lista.
+- Um host listado pode resolver para qualquer endereço privado, então liste apenas hostnames cujo DNS você controla e em que confia.
+- Os redirecionamentos continuam sendo verificados, portanto um redirecionamento para outro host interno também deve estar na lista.
+- A configuração vale para todas as ferramentas do crewai-tools que fazem requisições seguras, não apenas o `URLReadTool`.
+- Os certificados TLS continuam sendo verificados. Um host que usa uma autoridade certificadora privada deve ter uma cadeia que leve a uma CA em que a ferramenta confie.
+
+Isto é mais restrito que `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`, que desativa a proteção de caminhos e SSRF em todo o processo e deve ser evitado. Workers gerenciados podem definir `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` e ainda usar a lista de permissões.
