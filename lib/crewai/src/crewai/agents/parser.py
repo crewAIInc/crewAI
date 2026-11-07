@@ -110,6 +110,11 @@ def parse(text: str) -> AgentAction | AgentFinish:
         tool_input = action_input
         if not tool_input.startswith(("{", "[")):
             tool_input = tool_input.strip('"')
+        elif tool_input.endswith(('}"', ']"')):
+            # Some model responses append one extra quote after an otherwise
+            # complete JSON object or array. Keep it from being mistaken for
+            # the start of a truncated string by the validation scanner.
+            tool_input = tool_input[:-1]
         safe_tool_input = _safe_repair_json(tool_input)
 
         return AgentAction(
