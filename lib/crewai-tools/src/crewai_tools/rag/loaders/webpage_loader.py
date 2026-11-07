@@ -14,6 +14,7 @@ _NEWLINE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\s+\n\s+")
 
 class WebPageLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
+        """Extract webpage text, wrapping HTTP and parsing failures as ValueError."""
         url = source_content.source
         headers = kwargs.get(
             "headers",
@@ -26,6 +27,7 @@ class WebPageLoader(BaseLoader):
 
         try:
             response = safe_get(url, timeout=15, headers=headers)
+            response.raise_for_status()
             response.encoding = response.apparent_encoding
 
             soup = BeautifulSoup(response.text, "html.parser")
