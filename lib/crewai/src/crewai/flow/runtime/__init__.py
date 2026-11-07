@@ -1843,6 +1843,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return cast(T, self._state)
 
     @property
+    def input_history(self) -> list[InputHistoryEntry]:
+        """Every ``ask()`` exchange so far, oldest first.
+
+        Each entry carries the question, the answer, the asking method, the
+        timestamp, the request metadata and the provider's response metadata.
+        The list is a copy: mutating it does not change what the flow recorded.
+        """
+        return list(self._input_history)
+
+    @property
     def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
         outputs: list[Any] = []
