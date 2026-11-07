@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import tarfile
+from tempfile import TemporaryDirectory
 from typing import TypedDict
 import zipfile
 
@@ -197,26 +198,30 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 cache = SkillCacheManager()
                 cache.store(org, name, version, archive_bytes)
             except ImportError:
-                # Fallback if SDK not installed — write directly
+                # Fallback if SDK not installed — stage before replacing the cache.
                 cache_dir = Path.home() / ".crewai" / "skills" / org / name
-                if cache_dir.exists():
-                    import shutil
+                cache_dir.parent.mkdir(parents=True, exist_ok=True)
+                with TemporaryDirectory(dir=cache_dir.parent) as temporary_dir:
+                    staged = Path(temporary_dir) / "skill"
+                    staged.mkdir()
+                    self._unpack_archive(archive_bytes, staged)
+                    # Write metadata so `crewai skill list` can discover it
+                    from datetime import datetime, timezone
 
-                    shutil.rmtree(cache_dir)
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                self._unpack_archive(archive_bytes, cache_dir)
-                # Write metadata so `crewai skill list` can discover it
-                from datetime import datetime, timezone
+                    meta = {
+                        "org": org,
+                        "name": name,
+                        "version": version,
+                        "installed_at": datetime.now(tz=timezone.utc).isoformat(),
+                    }
+                    (staged / ".crewai_meta.json").write_text(
+                        json.dumps(meta, indent=2), encoding="utf-8"
+                    )
+                    if cache_dir.exists():
+                        import shutil
 
-                meta = {
-                    "org": org,
-                    "name": name,
-                    "version": version,
-                    "installed_at": datetime.now(tz=timezone.utc).isoformat(),
-                }
-                (cache_dir / ".crewai_meta.json").write_text(
-                    json.dumps(meta, indent=2), encoding="utf-8"
-                )
+                        shutil.rmtree(cache_dir)
+                    staged.replace(cache_dir)
             console.print(
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to global cache.[/green]"
             )
