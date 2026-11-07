@@ -51,5 +51,5 @@ class S3ReaderTool(BaseTool):
             return f"Error reading file from S3: {e!s}"
 
     def _parse_s3_path(self, file_path: str) -> tuple[str, str]:
-        parts = file_path.replace("s3://", "").split("/", 1)
+        parts = file_path.removeprefix("s3://").split("/", 1)
         return parts[0], parts[1]
