@@ -144,7 +144,9 @@ def test_project_id_lookups_default_to_the_cwd_pyproject(tmp_path, monkeypatch):
         ("azure", {}, ["AZURE_API_KEY", "AZURE_API_BASE"]),
         ("watson", {}, ["WATSONX_URL", "WATSONX_APIKEY", "WATSONX_PROJECT_ID"]),
         ("ollama", {}, []),
-        ("deepseek", {}, []),
+        ("deepseek", {}, ["DEEPSEEK_API_KEY"]),
+        ("deepseek", {"DEEPSEEK_API_KEY": "sk-test"}, []),
+        ("mistral", {}, []),
     ],
 )
 def test_missing_provider_keys_names_each_required_value_left_unset(

@@ -1340,6 +1340,11 @@ def _warn_if_old_poetry_project(pyproject_data: dict[str, Any]) -> None:
         )
 
 
+class ProjectScriptFailed(SystemExit):
+    """A project's `uv run` script exited non-zero, with its exit code; or uv
+    could not start it, with 1."""
+
+
 def _execute_uv_script(
     script_name: str,
     *,
@@ -1353,6 +1358,10 @@ def _execute_uv_script(
         entity_type: The user-facing entity being run.
         trained_agents_file: Optional trained-agents pickle path forwarded to
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
+
+    Raises:
+        ProjectScriptFailed: The script exited non-zero, with its code; or
+            uv could not be started, with 1.
     """
     command = ["uv", "run", script_name]
 
@@ -1366,10 +1375,12 @@ def _execute_uv_script(
     except subprocess.CalledProcessError as e:
         record_run_stopped("script_failed")
         _handle_run_error(e, entity_type)
+        raise ProjectScriptFailed(e.returncode) from e
 
     except Exception as e:
         record_run_stopped("launch_failed")
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise ProjectScriptFailed(1) from e
 
 
 def _handle_run_error(error: subprocess.CalledProcessError, entity_type: str) -> None:
