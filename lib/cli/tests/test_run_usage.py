@@ -1376,6 +1376,44 @@ def missing_key(name: str = "OPENAI_API_KEY") -> Exception:
     return MissingAPIKeyError(name, "gpt-4.1-mini")
 
 
+def a_key_missing_as_an_older_crewai_loads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Exception:
+    """Loading the JSON crew fails the first time as crewai 1.15.34 to 1.15.37
+    fail it, and builds it for real after that; returns the error.
+
+    Those versions check an OpenAI-compatible provider's key as the Agent is
+    validated: a JSONProjectError around the Agent's ValidationError around
+    MissingAPIKeyError. Later crewai builds the crew and raises on the first
+    call, but the runner child imports the project's own crewai."""
+    from crewai.llms.base_llm import MissingAPIKeyError
+    from crewai.project import crew_loader
+    from crewai.project.json_loader import JSONProjectError
+    from pydantic import BaseModel, ValidationError, model_validator
+
+    class Agent(BaseModel):
+        @model_validator(mode="after")
+        def build_llm(self) -> Any:
+            raise MissingAPIKeyError("DEEPSEEK_API_KEY", "deepseek-chat")
+
+    try:
+        Agent()
+    except ValidationError as invalid:
+        error = JSONProjectError(f"agents/researcher.jsonc: validation failed: {invalid}")
+        error.__cause__ = invalid
+    real_load = crew_loader.load_crew
+    loads: list[Path] = []
+
+    def load_crew(path: Path, *args: Any, **kwargs: Any) -> Any:
+        loads.append(path)
+        if len(loads) == 1:
+            raise error
+        return real_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(crew_loader, "load_crew", load_crew)
+    return error
+
+
 def its_own_cause(error: Exception) -> Exception:
     """ERROR as crewAI's providers re-raise a failed call: `raise e from e`."""
     try:
@@ -1386,17 +1424,24 @@ def its_own_cause(error: Exception) -> Exception:
 
 
 @pytest.mark.parametrize(
-    ("llm", "name"),
-    [("openai/gpt-4.1-mini", "OPENAI_API_KEY"), ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY")],
-    ids=["at_kickoff", "as_it_loads"],
+    ("llm", "name", "older_crewai"),
+    [
+        ("openai/gpt-4.1-mini", "OPENAI_API_KEY", False),
+        ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY", False),
+        ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY", True),
+    ],
+    ids=["at_kickoff", "compatible_at_kickoff", "older_crewai_as_it_loads"],
 )
 def test_a_json_crew_without_its_key_stops_with_the_line_to_add(
-    project, usage, monkeypatch, llm, name
+    project, usage, monkeypatch, llm, name, older_crewai
 ) -> None:
-    """OpenAI raises for its key once kickoff calls the model, after the
-    agent's retries; an OpenAI-compatible provider as the crew loads, inside
-    the agent's ValidationError inside the loader's JSONProjectError."""
+    """A provider raises for its key once kickoff calls the model, after the
+    agent's retries; with crewai 1.15.34 to 1.15.37 an OpenAI-compatible one
+    raises as the crew loads, inside the agent's ValidationError inside the
+    loader's JSONProjectError."""
     keyless_json_crew(project, monkeypatch, llm)
+    if older_crewai:
+        a_key_missing_as_an_older_crewai_loads(monkeypatch)
 
     with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
         run_crew_module._run_json_crew()
@@ -1515,10 +1560,7 @@ def test_a_crewai_without_missing_api_key_error_stops_as_before(
         return raise_it
 
     if where == "as_it_loads":
-        # The real error, made while crewai still has MissingAPIKeyError.
-        with pytest.raises(ValueError, match="DEEPSEEK_API_KEY") as loading:
-            crew_loader.load_crew(project / "crew.jsonc")
-        error = loading.value
+        error = a_key_missing_as_an_older_crewai_loads(monkeypatch)
         monkeypatch.setattr(crew_loader, "load_crew", raises(error))
     else:
         error = missing_key("DEEPSEEK_API_KEY")
@@ -1635,6 +1677,7 @@ def test_at_a_terminal_a_key_missing_as_the_crew_loads_is_asked_for_after_the_sp
     project, usage, monkeypatch
 ) -> None:
     keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+    a_key_missing_as_an_older_crewai_loads(monkeypatch)
     events: list[str] = []
 
     @contextmanager
@@ -1685,6 +1728,7 @@ def test_at_a_terminal_quitting_at_the_key_prompt_counts_the_stop(
         events = run_app_ends(monkeypatch, project, missing_key())
     else:
         keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+        a_key_missing_as_an_older_crewai_loads(monkeypatch)
         monkeypatch.setattr(
             run_crew_module, "_json_loading_status", lambda _message: nullcontext()
         )

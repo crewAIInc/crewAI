@@ -10,6 +10,7 @@ import logging
 import os
 from threading import Lock
 
+from crewai_core.eval_handshake import run_awaited_by_evaluation
 from crewai_core.user_data import update_user_data
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
@@ -42,9 +43,9 @@ _trace_consent: ContextVar[Callable[[], bool] | None] = ContextVar(
 def trace_consent(callback: Callable[[], bool]) -> Iterator[None]:
     """Choose how executions in this context ask permission to share traces.
 
-    The callback runs once after a successful execution has finished. It
-    receives no trace data and must return ``True`` to authorize uploading.
-    This lets hosts such as the terminal UI present their own consent prompt.
+    The callback runs once after a successful execution has finished, or after
+    a failed one that ``crewai eval`` started to grade. It receives no trace
+    data and must return ``True`` to authorize uploading. This lets hosts such as the terminal UI present their own consent prompt.
     """
     token = _trace_consent.set(callback)
     try:
@@ -184,10 +185,42 @@ def ephemeral_tracing(
     """Own buffering and consent; activation can change between deferred turns."""
     buffer = EphemeralSpanBuffer()
     session = TraceSession(execution_uuid, processors=[SimpleSpanProcessor(buffer)])
-    try:
-        yield session
+
+    def share() -> None:
         if session.finish_spans() and session.flush():
             buffer.share(execution_uuid, first_time=first_time)
+
+    failed = False
+    try:
+        yield session
+    except Exception:
+        failed = True
+        # A failed run is shared only when `crewai eval` started it: the grade
+        # is read off its trace, and running the command was the request to
+        # share it, as a logged-in failed run already is. Any other failed run,
+        # and a run stopped by Ctrl-C or cancellation, is discarded.
+        if run_awaited_by_evaluation():
+            _logged_instead(share, "Trace of a failed run was not shared")
+        raise
+    else:
+        share()
     finally:
         buffer.shutdown()
-        session.shutdown()
+        if failed:
+            _logged_instead(
+                session.shutdown, "Trace of a failed run did not shut down cleanly"
+            )
+        else:
+            session.shutdown()
+
+
+def _logged_instead(step: Callable[[], object], what: str) -> None:
+    """Run STEP of finishing a failed run's trace, logging what it raises.
+
+    The run's own error is what its caller must see; a trace that cannot be
+    finished, flushed or shut down must never be raised in its place.
+    """
+    try:
+        step()
+    except Exception as error:
+        logger.warning("%s (%s)", what, type(error).__name__)
