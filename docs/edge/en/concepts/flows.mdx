@@ -414,7 +414,7 @@ The @persist decorator enables automatic state persistence in CrewAI Flows, allo
 When applied at the class level, the @persist decorator automatically persists all flow method states:
 
 ```python
-@persist  # Using SQLiteFlowPersistence by default
+@persist()  # Using SQLiteFlowPersistence by default
 class MyFlow(Flow[MyState]):
     @start()
     def initialize_flow(self):
@@ -435,7 +435,7 @@ For more granular control, you can apply @persist to specific methods:
 
 ```python
 class AnotherFlow(Flow[dict]):
-    @persist  # Persists only this method's state
+    @persist()  # Persists only this method's state
     @start()
     def begin(self):
         if "runs" not in self.state:
@@ -460,7 +460,7 @@ class CounterState(BaseModel):
     id: str = ""
     counter: int = 0
 
-@persist
+@persist()
 class CounterFlow(Flow[CounterState]):
     @start()
     def step(self):

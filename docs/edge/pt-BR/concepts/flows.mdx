@@ -404,7 +404,7 @@ O decorador @persist permite a persistência automática do estado nos flows do 
 Quando aplicado no nível da classe, o decorador @persist garante a persistência automática de todos os estados dos métodos do flow:
 
 ```python
-@persist  # Usa SQLiteFlowPersistence por padrão
+@persist()  # Usa SQLiteFlowPersistence por padrão
 class MyFlow(Flow[MyState]):
     @start()
     def initialize_flow(self):
@@ -425,7 +425,7 @@ Para um controle mais granular, você pode aplicar @persist em métodos específ
 
 ```python
 class AnotherFlow(Flow[dict]):
-    @persist  # Persiste apenas o estado deste método
+    @persist()  # Persiste apenas o estado deste método
     @start()
     def begin(self):
         if "runs" not in self.state:
@@ -450,7 +450,7 @@ class CounterState(BaseModel):
     id: str = ""
     counter: int = 0
 
-@persist
+@persist()
 class CounterFlow(Flow[CounterState]):
     @start()
     def step(self):
