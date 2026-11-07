@@ -2304,7 +2304,8 @@ class Crew(FlowTrackable, BaseModel):
         [
             task.interpolate_inputs_and_add_conversation_history(
                 # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-                inputs
+                inputs,
+                prompt_file=self.prompt_file,
             )
             for task in self.tasks
         ]
