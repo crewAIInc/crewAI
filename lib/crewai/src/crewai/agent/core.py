@@ -1451,12 +1451,13 @@ class Agent(BaseAgent):
         )
         return []
 
-    @staticmethod
     def get_output_converter(
-        llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
+        self, llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
     ) -> Converter:
         """Create a Converter instance for transforming LLM output to a structured model."""
-        return Converter(llm=llm, text=text, model=model, instructions=instructions)
+        return Converter(
+            llm=llm, text=text, model=model, instructions=instructions, agent=self
+        )
 
     def _training_handler(self, task_prompt: str) -> str:
         """Handle training data for the agent task prompt to improve output on Training."""
@@ -2109,7 +2110,13 @@ class Agent(BaseAgent):
                         "formatted_task_instructions"
                     ).format(output_format=schema)
 
-                    converter = Converter(
+                    # Build the fallback converter through get_output_converter
+                    # so it carries the agent: the partial-JSON path can then
+                    # run the (bounded) instructions-based refit instead of
+                    # aborting with the #7984 TypeError. The refit converter
+                    # itself is still agent-less (see convert_with_instructions),
+                    # so no nested LLM call tree can form here either.
+                    converter = self.get_output_converter(
                         llm=cast(BaseLLM, self.llm),
                         text=raw_output,
                         model=response_format,

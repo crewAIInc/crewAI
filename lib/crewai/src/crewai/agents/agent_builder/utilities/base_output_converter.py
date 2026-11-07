@@ -32,6 +32,11 @@ class OutputConverter(BaseModel, ABC):
         description="Max number of attempts to try to get the output formatted.",
         default=3,
     )
+    agent: Any = Field(
+        default=None,
+        description="Optional reference to the calling agent, used when the "
+        "partial-JSON fallback needs to run another LLM round-trip.",
+    )
 
     @abstractmethod
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
