@@ -162,13 +162,22 @@ def ask_for_missing_api_keys(
     return outcome
 
 
-def ask_for_api_key(name: str, project_dir: Path, json_crew: Path | None) -> bool:
+def ask_for_api_key(
+    name: str,
+    project_dir: Path,
+    json_crew: Path | None,
+    *,
+    llm_endpoints: Mapping[str, str | None] | None = None,
+) -> bool:
     """Ask for ``name``, an API key a run failed without, and save it.
 
     The key is asked for, exported and saved as
     :func:`ask_for_missing_api_keys` does, with the hosts the project's
     ``.env`` and the JSON crew ``json_crew`` send requests to named first, and
     not asked for where that function would only print the line to add.
+    ``llm_endpoints`` are the endpoint settings of a model that is already
+    built, such as a standalone agent's, named too unless the machine or the
+    ``.env`` already set them.
 
     Returns:
         Whether a key was pasted.
@@ -177,7 +186,14 @@ def ask_for_api_key(name: str, project_dir: Path, json_crew: Path | None) -> boo
     if not _askable(name) or not _can_ask(project_dir, env_file):
         return False
     saved = dotenv_values(env_file) if env_file.exists() else {}
-    return _ask_and_save(name, env_file, _run_endpoints(saved, json_crew, project_dir))
+    endpoints = _run_endpoints(saved, json_crew, project_dir)
+    known = {*_MACHINE_ENDPOINTS.values(), *saved.values()}
+    endpoints += _named_hosts(
+        (value, f"{key} of the agent's llm")
+        for key, value in (llm_endpoints or {}).items()
+        if value and value not in known
+    )
+    return _ask_and_save(name, env_file, list(dict.fromkeys(endpoints)))
 
 
 # crewAI's providers name the key they miss `<PROVIDER>_API_KEY`.
@@ -354,6 +370,11 @@ def _project_endpoints(
             )
             if _YAML_EXPLICIT_KEY.search(_text(path))
         ]
+    return _named_hosts(found)
+
+
+def _named_hosts(found: Iterable[tuple[str, str]]) -> list[str]:
+    """Each (value, source) as `host (source)`, once each."""
     # Escaped: a control character the project put in a setting could move the
     # cursor and print over the host.
     return list(

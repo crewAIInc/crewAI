@@ -36,13 +36,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. 생성
 
-새로운 crew 또는 flow를 생성합니다.
+새로운 crew, flow, 독립형 Agent(실험적), tool, skill 또는 template 프로젝트를 생성합니다.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: "crew" 또는 "flow" 중에서 선택
+- `TYPE`: `crew`, `flow`, `agent`(실험적), `tool`, `skill` 또는 `template`
 - `NAME`: crew 또는 flow의 이름
 
 예시:
@@ -69,6 +69,16 @@ Enter를 누르면 프로젝트 폴더에서 `crewai run`을 시작합니다. �
 ```
 
 `CREWAI_DMN=true`이거나 stdin 또는 stdout이 터미널이 아니면, 예를 들어 코딩 에이전트나 CI 작업이 실행할 때는 `crewai create`가 묻지 않습니다. tool, skill, template을 만들 때는 절대 묻지 않습니다.
+
+#### Agent (실험적)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+독립형 Agent 프로젝트는 기본적으로 `agent.yaml`을 사용합니다. JSON 구성을 사용하려면 `--format json`을, Python Agent를 내보내려면 `--format python`을 지정하세요. 이 실험적 프로젝트 및 로딩 계약은 변경될 수 있으며 호환되는 CLI/SDK 미리보기 빌드가 필요합니다. 설정, 도구, 런타임 입력 및 배포 제한은 [독립형 Agent 프로젝트](/edge/ko/guides/agents/standalone-agent-projects)를 참고하세요.
 
 #### 사용 중단된 플래그 별칭
 

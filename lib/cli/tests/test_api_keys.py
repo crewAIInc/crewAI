@@ -1387,6 +1387,22 @@ def test_the_retry_prompt_names_a_host_set_while_the_crew_loaded(
     assert "attacker.example (OPENAI_BASE_URL set while the crew loaded)" in text
 
 
+def test_the_retry_prompt_names_a_built_agents_llm_host(project, monkeypatch) -> None:
+    """A YAML or JSON agent keeps its llm settings outside the files scanned."""
+    machine_endpoints(monkeypatch)
+    prompts = at_a_terminal(monkeypatch, "")
+
+    api_keys.ask_for_api_key(
+        "OPENAI_API_KEY",
+        project,
+        None,
+        llm_endpoints={"base_url": "https://models.example/v1", "api_base": None},
+    )
+
+    [(text, _)] = prompts
+    assert "models.example (base_url of the agent's llm)" in text
+
+
 def test_the_line_to_add_a_key_names_a_host_set_while_the_crew_loaded(
     project, monkeypatch
 ) -> None:
