@@ -971,15 +971,23 @@ def test_uv_could_not_be_started(project, usage, monkeypatch) -> None:
 
     result = crewai_run()
 
-    # Unchanged: this path has always reported the error and exited 0.
-    assert result.exit_code == 0
-    assert "An unexpected error occurred" in result.output
+    # Exit 1, as a JSON crew or declarative flow uv could not start does.
+    assert result.exit_code == 1
+    assert "An unexpected error occurred: [Errno 2] No such file or directory: 'uv'" in (
+        result.output
+    )
     assert usage == [started("crew"), stopped("launch_failed")]
+
+
+# Not 1, so an exit code from anywhere else cannot pass for the script's.
+SCRIPT_EXIT_CODE = 3
 
 
 def fail_project_scripts(monkeypatch: pytest.MonkeyPatch) -> None:
     def failing(command: list[str], **kwargs: Any) -> None:
-        raise subprocess.CalledProcessError(1, command, output=f"{SECRET} failed")
+        raise subprocess.CalledProcessError(
+            SCRIPT_EXIT_CODE, command, output=f"{SECRET} failed"
+        )
 
     monkeypatch.setattr(subprocess, "run", failing)
 
@@ -997,9 +1005,10 @@ def test_a_project_script_that_fails(project, usage, monkeypatch, pyproject, kin
 
     result = crewai_run()
 
-    # Unchanged: this path has always reported the error and exited 0.
-    assert result.exit_code == 0
+    # The script's own exit code, so CI and coding agents see the failure.
+    assert result.exit_code == SCRIPT_EXIT_CODE
     assert f"An error occurred while running the {kind}" in result.output
+    assert f"returned non-zero exit status {SCRIPT_EXIT_CODE}" in result.output
     assert f"{SECRET} failed" in result.output
     assert usage == [started(kind), stopped("script_failed")]
     assert_events_are_anonymous(usage)
@@ -1120,13 +1129,14 @@ def test_an_opted_out_process_sends_nothing(
     for name in OPT_OUT_FLAGS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv(flag, "true")
+    exit_code = SCRIPT_EXIT_CODE if script_fails else 0
     monkeypatch.setattr(core_telemetry.Telemetry, "_instance", None)
-    assert crewai_run().exit_code == 0
+    assert crewai_run().exit_code == exit_code
     assert sent() == []
 
     monkeypatch.delenv(flag)
     monkeypatch.setattr(core_telemetry.Telemetry, "_instance", None)
-    assert crewai_run().exit_code == 0
+    assert crewai_run().exit_code == exit_code
     assert sent() == [started("crew")] + ([stopped("script_failed")] if script_fails else [])
 
 
@@ -1158,7 +1168,7 @@ def test_a_project_env_opt_out_covers_a_failed_script(
     write(project / ".env", f"{flag}=true\n")
     fail_project_scripts(monkeypatch)
 
-    assert crewai_run().exit_code == 0
+    assert crewai_run().exit_code == SCRIPT_EXIT_CODE
     assert usage == []
 
 
