@@ -69,7 +69,7 @@ pandas = [
 openpyxl = [
     "openpyxl~=3.1.5",
 ]
-mem0 = ["mem0ai>=2.0.0,<3"]
+mem0 = ["mem0ai>=2.0.18,<3"]
 docling = [
     # <2.118.1 has GHSA-q43m-vhcp-mhvm (enable_local_fetch is not enforced in
     # HTML browser-rendering mode). 2.132.0 is the newest release outside the
