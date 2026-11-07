@@ -80,6 +80,9 @@ from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
 from crewai_tools.tools.files_compressor_tool.files_compressor_tool import (
     FileCompressorTool,
 )
+from crewai_tools.tools.firecrawl_alexandria_tool.firecrawl_alexandria_tool import (
+    FirecrawlAlexandriaTool,
+)
 from crewai_tools.tools.firecrawl_crawl_website_tool.firecrawl_crawl_website_tool import (
     FirecrawlCrawlWebsiteTool,
 )
@@ -268,6 +271,7 @@ __all__ = [
     "FileCompressorTool",
     "FileReadTool",
     "FileWriterTool",
+    "FirecrawlAlexandriaTool",
     "FirecrawlCrawlWebsiteTool",
     "FirecrawlScrapeWebsiteTool",
     "FirecrawlSearchTool",
