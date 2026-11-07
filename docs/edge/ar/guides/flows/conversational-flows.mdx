@@ -84,6 +84,75 @@ flow.handle_turn("Where is my order?", session_id=session_id)
 flow.handle_turn("What about returns?", session_id=session_id)
 ```
 
+## حفظ الجلسة واستئنافها
+
+معرّف الجلسة مع `@persist` هو ما يتيح لنسخة `Flow` **جديدة** أن تستأنف المحادثة.
+أما إعادة استخدام النسخة نفسها في الذاكرة فأمر مختلف: فهي لم تغادر أصلًا.
+
+يحفظ `SQLiteFlowPersistence` صفًا واحدًا لكل جلسة. وإنشاء نسخة جديدة بالمخزن نفسه واستدعاء
+`handle_turn(..., session_id=...)` يستعيد الرسائل المحفوظة أولًا ثم يضيف الجولة الجديدة،
+فيحافظ السجل على ترتيبه ولا يتكرر.
+
+```python resume_session.py
+from typing import Any
+
+from crewai.flow import Flow, listen, start
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+store = SQLiteFlowPersistence("./notes.db")
+SESSION = "notes-demo"
+
+
+@persist(store)
+class NoteTaker(Flow):
+    conversational = True
+
+    @start()
+    def begin(self) -> None:
+        pass
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        return "note"
+
+    @listen("note")
+    def take_note(self) -> str:
+        reply = f"noted: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+first = NoteTaker()
+first.handle_turn("buy milk", session_id=SESSION)
+print("first:", [(message.role, message.content) for message in first.state.messages])
+
+second = NoteTaker()
+second.handle_turn("and eggs", session_id=SESSION)
+print("second:", [(message.role, message.content) for message in second.state.messages])
+
+other = NoteTaker()
+other.handle_turn("different", session_id="other-session")
+print("other:", [(message.role, message.content) for message in other.state.messages])
+```
+
+عند التشغيل ستظهر النتيجة التالية:
+
+```text
+first: [('user', 'buy milk'), ('assistant', 'noted: buy milk')]
+second: [('user', 'buy milk'), ('assistant', 'noted: buy milk'), ('user', 'and eggs'), ('assistant', 'noted: and eggs')]
+other: [('user', 'different'), ('assistant', 'noted: different')]
+```
+
+النسخة `second` كائن جديد وليست `first`، وهي تحمل المحادثة كاملة؛ أما `other` فتبيّن أن
+معرّف جلسة مختلفًا يبدأ محادثة منفصلة.
+
+ما يعيده التشغيل من جديد هو **حالة المحادثة المحفوظة**: الرسائل وحالة التدفق المحفوظة وصف الجلسة.
+ولا يعيد العمل الخلفي الجاري ولا تنفيذات الطرق التي كانت قيد التشغيل ولا الموارد المفتوحة مثل
+بث LLM نشط، فهي كانت تخص العملية التي انتهت، وتبدأ النسخة الجديدة عملًا جديدًا في الجولة التالية.
+
+إذا ضبطت `defer_trace_finalization=True` (في `ConversationConfig` أو في النسخة)، فإن إنهاء
+التتبع لكل جولة يُتخطّى عن قصد؛ استدعِ `flow.finalize_session_traces()` مرة واحدة عند انتهاء
+الجلسة فعليًا لتفريغ الدفعة المؤجلة.
+
 ## بث جولة
 
 استخدم `stream_turn()` عندما تحتاج واجهة مستخدم أو بيئة تشغيل إلى أحداث منظّمة لجولة دردشة واحدة. يعيد جلسة بث تحتوي على إطارات مرتبة لتوجيه Flow، وأجزاء LLM، ونشاط الأدوات، ورسائل المحادثة.
