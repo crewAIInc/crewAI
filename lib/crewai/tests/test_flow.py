@@ -3,7 +3,7 @@
 import asyncio
 import threading
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 import pytest
 from pydantic import BaseModel
@@ -1801,12 +1801,63 @@ def test_flow_copy_state_with_dict_state():
 
     flow = DictFlow()
     flow.state["test"] = "value"
+    flow.state["nested"] = {"items": [1]}
 
     copied_state = flow._copy_state()
     assert copied_state["test"] == "value"
 
     flow.state["test"] = "modified"
+    flow.state["nested"]["items"].append(2)
     assert copied_state["test"] == "value"
+    assert copied_state["nested"] == {"items": [1]}
+
+
+@pytest.mark.parametrize("remove_key", [False, True])
+def test_flow_copy_state_during_worker_thread_write(remove_key: bool) -> None:
+    """A listener's top-level state writes must not interrupt event snapshots."""
+    copying = threading.Event()
+    mutated = threading.Event()
+
+    class CopyBarrier:
+        def __deepcopy__(self, memo: dict[int, Any]) -> str:
+            copying.set()
+            assert mutated.wait(timeout=5), "worker did not mutate the state"
+            return "copied"
+
+    class DictFlow(Flow[dict[str, Any]]):
+        @start()
+        def begin(self) -> None:
+            pass
+
+    flow = DictFlow()
+    flow.state["barrier"] = CopyBarrier()
+    flow.state["existing"] = {"items": [1]}
+
+    def write_state() -> None:
+        if not copying.wait(timeout=5):
+            return
+        if remove_key:
+            del flow.state["existing"]
+        else:
+            flow.state["late"] = 2
+        mutated.set()
+
+    worker = threading.Thread(target=write_state)
+    worker.start()
+    try:
+        copied_state = flow._copy_state()
+    finally:
+        copying.set()
+        worker.join(timeout=5)
+
+    assert not worker.is_alive()
+    assert mutated.is_set()
+    assert copied_state["barrier"] == "copied"
+    assert copied_state["existing"] == {"items": [1]}
+    assert "late" not in copied_state
+    if not remove_key:
+        flow.state["existing"]["items"].append(2)
+        assert copied_state["existing"] == {"items": [1]}
 
 
 class TestFlowAkickoff:
