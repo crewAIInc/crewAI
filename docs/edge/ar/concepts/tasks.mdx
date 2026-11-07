@@ -65,6 +65,7 @@ crew = Crew(
 | **حارس** _(اختياري)_                   | `guardrail`             | `Optional[Callable]`        | دالة للتحقق من مخرجات المهمة قبل الانتقال إلى المهمة التالية.                                                   |
 | **حراس** _(اختياري)_                   | `guardrails`            | `Optional[List[Callable]]`  | قائمة حراس للتحقق من مخرجات المهمة قبل الانتقال إلى المهمة التالية.                                             |
 | **أقصى محاولات الحارس** _(اختياري)_    | `guardrail_max_retries` | `Optional[int]`             | الحد الأقصى لعدد المحاولات عند فشل التحقق من الحارس. الافتراضي 3.                                               |
+| **LLM للحارس** _(اختياري)_ | `guardrail_llm` | `Optional[Union[str, LLM, dict]]` | يتجاوز LLM الخاص بحارس الوكيل للحراس النصيين. |
 
 <Note type="warning" title="مهمل: max_retries">
   خاصية المهمة `max_retries` مهملة وستتم إزالتها في v1.0.0.
@@ -423,11 +424,11 @@ blog_task = Task(
 
 ### الحراس القائمون على LLM (أوصاف نصية)
 
-بدلاً من كتابة دوال تحقق مخصصة، يمكنك استخدام أوصاف نصية تستفيد من التحقق القائم على LLM. عندما تقدم سلسلة نصية لمعامل `guardrail` أو `guardrails`، ينشئ CrewAI تلقائيًا `LLMGuardrail` يستخدم LLM الخاص بالوكيل للتحقق من المخرجات بناءً على وصفك.
+بدلاً من كتابة دوال تحقق مخصصة، يمكنك استخدام أوصاف نصية تستفيد من التحقق القائم على LLM. عندما تقدم سلسلة نصية لمعامل `guardrail` أو `guardrails`، ينشئ CrewAI تلقائيًا `LLMGuardrail` يستخدم LLM الخاص بالوكيل افتراضيًا للتحقق من المخرجات بناءً على وصفك.
 
 **المتطلبات**:
 
-- يجب أن يكون للمهمة وكيل (`agent`) مُعيّن (يستخدم الحارس LLM الخاص بالوكيل)
+- يجب أن يكون للمهمة وكيل (`agent`) مُعيّن (يستخدم الحارس LLM الخاص بالوكيل افتراضيًا)
 - قدم سلسلة نصية واضحة ووصفية تشرح معايير التحقق
 
 ```python Code
@@ -439,6 +440,25 @@ blog_task = Task(
     expected_output="A blog post under 200 words",
     agent=blog_agent,
     guardrail="The blog post must be under 200 words and contain no technical jargon"
+)
+```
+
+### اختيار LLM مستقل للحارس
+
+تستخدم الحراس النصية افتراضيًا مثيل LLM الخاص بالوكيل نفسه. عيّن `guardrail_llm` على Agent لاختيار نموذج آخر للتحقق، أو على Task لتجاوز اختيار Agent. يمكنك تمرير مثيل LLM أو اسم نموذج أو قاموس إعدادات النموذج. تحتفظ الحراس القائمة على الدوال بسلوكها الحالي.
+
+عندما تُنفَّذ المهمة بواسطة وكيل بديل، تستخدم الحراس النصية إعدادات الوكيل المنفِّذ. ويظل `guardrail_llm` المحدد على Task ذا أولوية.
+
+```python Code
+from crewai import LLM, Task
+
+judge_llm = LLM(model="gpt-4o-mini", temperature=0)
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="The blog post must be under 200 words",
+    guardrail_llm=judge_llm,
 )
 ```
 

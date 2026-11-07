@@ -61,6 +61,7 @@ crew = Crew(
 | **콜백** _(선택 사항)_            | `callback`            | `Optional[Any]`                  | 태스크 완료 후 실행할 함수/객체입니다.                                                                         |
 | **가드레일** _(선택 사항)_        | `guardrail`           | `Optional[Callable]`                | 다음 태스크로 진행하기 전에 태스크 출력을 검증하는 함수입니다.                                               |
 | **가드레일 최대 재시도** _(선택 사항)_ | `guardrail_max_retries` | `Optional[int]`          | 가드레일 검증 실패 시 최대 재시도 횟수입니다. 기본값은 3입니다.                                                |
+| **Guardrail LLM** _(선택 사항)_ | `guardrail_llm` | `Optional[Union[str, LLM, dict]]` | 문자열 가드레일에서 에이전트의 가드레일 LLM 설정을 재정의합니다. |
 
 ## 작업 생성하기
 
@@ -397,6 +398,25 @@ blog_task = Task(
     expected_output="A blog post under 200 words",
     agent=blog_agent,
     guardrail=validate_blog_content  # Add the guardrail function
+)
+```
+
+### 가드레일용 별도 LLM 선택
+
+문자열 가드레일은 기본적으로 에이전트와 동일한 LLM 인스턴스를 사용합니다. 다른 검증 모델을 사용하려면 Agent에 `guardrail_llm`을 설정하고, Agent의 설정을 재정의하려면 Task에 설정하세요. LLM 인스턴스, 모델 이름 또는 모델 구성 딕셔너리를 전달할 수 있습니다. 함수 기반 가드레일의 동작은 변경되지 않습니다.
+
+태스크를 다른 에이전트로 실행하면 문자열 가드레일은 실행 중인 에이전트의 설정을 사용합니다. Task에 설정한 `guardrail_llm`이 여전히 우선합니다.
+
+```python Code
+from crewai import LLM, Task
+
+judge_llm = LLM(model="gpt-4o-mini", temperature=0)
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="The blog post must be under 200 words",
+    guardrail_llm=judge_llm,
 )
 ```
 

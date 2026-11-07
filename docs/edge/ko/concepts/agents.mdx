@@ -39,6 +39,7 @@ CrewAI AOP에는 코드를 작성하지 않고도 에이전트 생성 및 구성
 | **목표**                                | `goal`                   | `str`                         | 에이전트의 의사결정을 이끄는 개별 목표입니다.                                                                          |
 | **배경 이야기**                         | `backstory`              | `str`                         | 에이전트에게 맥락과 개성을 부여하여 상호작용을 풍부하게 합니다.                                                        |
 | **LLM** _(옵션)_                        | `llm`                    | `Union[str, LLM, Any]`        | 에이전트를 구동하는 언어 모델입니다. `OPENAI_MODEL_NAME`에 지정된 모델 또는 "gpt-4"가 기본값입니다.                    |
+| **Guardrail LLM** _(선택 사항)_ | `guardrail_llm` | `Optional[Union[str, LLM, dict]]` | 문자열 가드레일에 사용할 언어 모델입니다. 기본값은 에이전트의 LLM입니다. |
 | **도구** _(옵션)_                       | `tools`                  | `List[BaseTool]`              | 에이전트가 사용할 수 있는 기능 혹은 역량입니다. 기본값은 빈 리스트입니다.                                               |
 | **Function Calling LLM** _(옵션)_       | `function_calling_llm`   | `Optional[Any]`               | 도구 호출을 위한 언어 모델로, 지정 시 crew의 LLM을 재정의합니다.                                                       |
 | **최대 반복 횟수** _(옵션)_             | `max_iter`               | `int`                         | 에이전트가 최선의 답변을 제공하기 전 최대 반복 수입니다. 기본값은 20입니다.                                             |
