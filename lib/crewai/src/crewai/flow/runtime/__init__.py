@@ -169,6 +169,8 @@ from crewai.utilities.streaming import (
 # module is imported through ``crewai.__init__`` (circular).
 ExecutionContext = Any  # type: ignore[assignment,misc]
 
+_STATE_COPY_RETRIES = 8
+
 
 logger = logging.getLogger(__name__)
 
@@ -1837,6 +1839,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return cast(T, copy.deepcopy(self._state))
             except (TypeError, AttributeError):
                 return cast(T, self._state.copy())
+            except RuntimeError:
+                # A plain-dict state is mutated in place by plain (``def``)
+                # flow methods running on worker threads, while this copy
+                # runs on the event loop. ``copy.deepcopy`` raises
+                # "dictionary changed size during iteration" when the dict
+                # grows mid-copy. The window is tiny, so retrying on a
+                # shallow snapshot succeeds almost immediately.
+                attempts = 0
+                while True:
+                    try:
+                        attempts += 1
+                        snapshot = dict(self._state)
+                        return cast(T, copy.deepcopy(snapshot))
+                    except (TypeError, AttributeError):
+                        # The snapshot may also hold unpickleable values; keep
+                        # the shallow snapshot, matching the fallback of the
+                        # first attempt above.
+                        return cast(T, snapshot)
+                    except RuntimeError:  # noqa: PERF203 - retry loop for a tiny race window
+                        if attempts >= _STATE_COPY_RETRIES:
+                            raise
 
     @property
     def state(self) -> T:
