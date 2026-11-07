@@ -393,3 +393,19 @@ def test_truncated_single_quoted_contraction_is_not_repaired():
     result = parser.parse(f"Thought: Search\nAction: search\nAction Input: {tool_input}")
     assert isinstance(result, AgentAction)
     assert result.tool_input == tool_input
+
+
+@pytest.mark.parametrize(
+    ("tool_input", "expected"),
+    [
+        ('{"query": "ends with }"', '{"query": "ends with }"}'),
+        ('["ends with ]"', '["ends with ]"]'),
+        ('{"query": "value"}"', '{"query": "value"}'),
+    ],
+)
+def test_parser_preserves_bracket_suffixes_in_json_strings(
+    tool_input: str, expected: str
+):
+    result = parser.parse(f"Thought: Search\nAction: search\nAction Input: {tool_input}")
+    assert isinstance(result, AgentAction)
+    assert result.tool_input == expected

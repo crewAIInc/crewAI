@@ -5,6 +5,7 @@ the ReAct (Reasoning and Acting) format, converting them into structured
 AgentAction or AgentFinish objects.
 """
 
+import json
 from dataclasses import dataclass
 
 from json_repair import repair_json
@@ -114,7 +115,12 @@ def parse(text: str) -> AgentAction | AgentFinish:
             # Some model responses append one extra quote after an otherwise
             # complete JSON object or array. Keep it from being mistaken for
             # the start of a truncated string by the validation scanner.
-            tool_input = tool_input[:-1]
+            try:
+                json.loads(tool_input[:-1])
+            except json.JSONDecodeError:
+                pass
+            else:
+                tool_input = tool_input[:-1]
         safe_tool_input = _safe_repair_json(tool_input)
 
         return AgentAction(
