@@ -250,6 +250,7 @@
                           "edge/en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "edge/en/tools/web-scraping/oxylabsscraperstool",
                           "edge/en/tools/web-scraping/brightdata-tools",
+                          "edge/en/tools/web-scraping/geekflare-tools",
                           "edge/en/tools/web-scraping/youai-contents"
                         ]
                       },
