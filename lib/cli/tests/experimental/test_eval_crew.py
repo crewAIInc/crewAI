@@ -167,6 +167,50 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
     assert "Goal gate: PASSED" in out and "goal 5/5" in out and "cost not measured" in out
 
 
+@pytest.mark.parametrize("run_id", [None, EXECUTION_ID])
+def test_no_open_prints_the_link_and_hands_nothing_to_a_browser(project, monkeypatch, capsys, run_id):
+    """`--no-open` (#7728): over SSH or in CI the link is printed for somebody to
+    copy, and the verdict and exit code are what they always were."""
+    directory, opened = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(run_id=run_id, open_report=False)
+
+    out = capsys.readouterr().out
+    assert opened == []
+    assert amp.calls == [("create", EXECUTION_ID), ("get", "ev-1")]
+    assert f"Follow it at {URL}" in out
+    assert "Goal gate: PASSED" in out
+
+
+def test_no_open_is_kept_by_the_app_that_runs_the_crew_first(project, monkeypatch):
+    """With nothing traced the run app evaluates on its own screen, in this
+    process or a child: both are told not to open the report."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    told: list[tuple[str | None, object]] = []
+
+    def fake_run_crew() -> None:
+        from crewai_cli.crew_run_tui import _AUTO_EVAL
+        from crewai_core.eval_handshake import awaited_evaluation
+
+        told.append(((_AUTO_EVAL.get() or {}).get("no_open"), (awaited_evaluation() or {}).get("open_report")))
+        record_last_run(directory, "run-it-just-did")
+        eval_module.record_evaluation_outcome("run-it-just-did")
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(open_report=False)
+    eval_module.eval_crew(run_again=True)
+
+    assert told == [("true", False), (None, True)]
+    assert amp.calls == []
+
+
 def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkeypatch, capsys):
     # The areas are the evaluator's to name. A client printing its own list
     # would drop the ones it had not heard of and invent "not measured" for
@@ -829,6 +873,7 @@ def test_with_no_traced_run_a_coding_agent_gets_its_verdict_from_this_one_comman
         "said": {
             "trusted_amp_origins": ["https://amp.test", "https://app.crewai.com"],
             "tracing_turned_on": True,
+            "open_report": True,
         },
     }
     assert amp.calls[0] == ("create", "fresh-run")
@@ -1302,10 +1347,18 @@ def test_the_cli_command_maps_to_the_implementation(monkeypatch):
 
     assert runner.invoke(eval_command, []).exit_code == 0
     assert runner.invoke(eval_command, ["--run", EXECUTION_ID]).exit_code == 0
-    assert calls == [{"run_id": None}, {"run_id": EXECUTION_ID}]
+    assert runner.invoke(eval_command, ["--no-open"]).exit_code == 0
+    assert runner.invoke(eval_command, ["--run", EXECUTION_ID, "--no-open"]).exit_code == 0
+    assert calls == [
+        {"run_id": None, "open_report": True},
+        {"run_id": EXECUTION_ID, "open_report": True},
+        {"run_id": None, "open_report": False},
+        {"run_id": EXECUTION_ID, "open_report": False},
+    ]
     help_text = " ".join(runner.invoke(eval_command, ["--help"]).output.split())
     assert "Evaluate this crew through CrewAI AMP" in help_text
     assert "it runs the crew first and grades that run" in help_text
+    assert "--no-open Print the report link without opening a browser" in help_text
 
 
 def test_only_a_missing_login_reads_as_anonymous(monkeypatch, capsys):
@@ -1475,7 +1528,8 @@ def deployed(project, monkeypatch):
     return directory, opened
 
 
-def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, monkeypatch, capsys):
+@pytest.mark.parametrize("open_report", [True, False])
+def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, monkeypatch, capsys, open_report):
     directory, opened = deployed
     (directory / "eval.jsonc").write_text('{"dataset": []}')
     running = httpx.Response(200, json={"id": "ev-9", "status": "running", "progress": {
@@ -1484,7 +1538,7 @@ def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, m
         "event": "judging", "payload": {"subject": "agent 'Poem composer'", "index": 1, "total": 3}}})
     amp = install(monkeypatch, FakeModelsAMP(statuses=[running, running, judging, compared()]))
 
-    eval_module.eval_models(MODELS)
+    eval_module.eval_models(MODELS, open_report=open_report)
 
     out = capsys.readouterr().out
     assert amp.api_key == "login-token"
@@ -1492,7 +1546,7 @@ def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, m
         "models": ["openai/gpt-4o-mini", "openrouter/meta-llama/llama-4-maverick"],
         "project_id": "proj-1", "eval_config": '{"dataset": []}', "deployment_id": None,
     }
-    assert opened == [URL] and URL in out
+    assert opened == ([URL] if open_report else []) and f"Follow it at {URL}" in out
     # Progress: said once per change, never once per poll.
     assert out.count("running · model 2 of 3 · mini") == 1
     assert "judging agent 'Poem composer' · model 2 of 3" in out
@@ -1905,13 +1959,18 @@ def test_the_cli_maps_models_and_deployment_to_the_comparison(monkeypatch):
 
     assert runner.invoke(eval_command, ["--models", MODELS]).exit_code == 0
     assert runner.invoke(eval_command, ["--models", "openai/gpt-4o", "--deployment", DEPLOYMENT]).exit_code == 0
-    assert calls == [((MODELS,), {"deployment_id": None}), (("openai/gpt-4o",), {"deployment_id": DEPLOYMENT})]
+    assert runner.invoke(eval_command, ["--models", MODELS, "--no-open"]).exit_code == 0
+    assert calls == [
+        ((MODELS,), {"deployment_id": None, "open_report": True}),
+        (("openai/gpt-4o",), {"deployment_id": DEPLOYMENT, "open_report": True}),
+        ((MODELS,), {"deployment_id": None, "open_report": False}),
+    ]
 
     both = runner.invoke(eval_command, ["--models", MODELS, "--run", EXECUTION_ID])
     alone = runner.invoke(eval_command, ["--deployment", DEPLOYMENT])
     assert both.exit_code == 2 and "Give one of them" in both.output
     assert alone.exit_code == 2 and "add --models LIST" in alone.output
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert "--models" in runner.invoke(eval_command, ["--help"]).output
 
 
@@ -2619,15 +2678,18 @@ def test_the_eval_group_keeps_every_old_invocation_and_adds_export(monkeypatch):
     assert runner.invoke(crewai, ["eval", "--models", MODELS, "--deployment", DEPLOYMENT]).exit_code == 0
     assert runner.invoke(crewai, ["eval", "export", EVALUATION_ID]).exit_code == 0
     assert calls == [
-        ("run", {"run_id": None}),
-        ("run", {"run_id": EXECUTION_ID}),
-        ("models", (MODELS,), {"deployment_id": DEPLOYMENT}),
+        ("run", {"run_id": None, "open_report": True}),
+        ("run", {"run_id": EXECUTION_ID, "open_report": True}),
+        ("models", (MODELS,), {"deployment_id": DEPLOYMENT, "open_report": True}),
         ("export", (EVALUATION_ID,)),
     ]
 
     # an option meant for `crewai eval` itself is refused, never dropped
+    refused = "takes no --run, --models, --deployment or --no-open"
     mixed = runner.invoke(eval_command, ["--run", EXECUTION_ID, "export", EVALUATION_ID])
-    assert mixed.exit_code == 2 and "takes no --run, --models or --deployment" in mixed.output
+    assert mixed.exit_code == 2 and refused in mixed.output
+    headless = runner.invoke(eval_command, ["--no-open", "export", EVALUATION_ID])
+    assert headless.exit_code == 2 and refused in headless.output
     assert runner.invoke(eval_command, ["export"]).exit_code == 2  # the id is required
     assert len(calls) == 4
 

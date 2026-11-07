@@ -405,7 +405,10 @@ def _awaiting_dir() -> Path:
 
 @contextmanager
 def evaluating_after_run(
-    *, trusted_amp_origins: Iterable[str] = (), tracing_turned_on: bool = False
+    *,
+    trusted_amp_origins: Iterable[str] = (),
+    tracing_turned_on: bool = False,
+    open_report: bool = True,
 ) -> Iterator[dict[str, str | None]]:
     """Run the crew for an evaluation that is already under way.
 
@@ -420,11 +423,13 @@ def evaluating_after_run(
     before the project's `.env` was loaded: which AMP origins may receive the
     saved login (TRUSTED_AMP_ORIGINS), and whether it just turned tracing on for
     the project (TRACING_TURNED_ON) — the one case its app says where the trace
-    goes.
+    goes — and whether the app may open the report in a browser (OPEN_REPORT,
+    False for `crewai eval --no-open`).
     """
     holder: dict[str, str | None] = {
         "execution_id": None,
         "tracing_turned_on": "true" if tracing_turned_on else None,
+        "no_open": None if open_report else "true",
     }
     token = _AUTO_EVAL.set(holder)
     before = os.environ.get(_AWAITING_EVAL_ENV)
@@ -440,6 +445,7 @@ def evaluating_after_run(
                 {
                     "trusted_amp_origins": sorted(set(trusted_amp_origins)),
                     "tracing_turned_on": tracing_turned_on,
+                    "open_report": open_report,
                 },
                 out,
             )
@@ -480,8 +486,13 @@ def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
     said: Any = {}
     with contextlib.suppress(ValueError):
         said = _json.loads(text)
-    turned_on = isinstance(said, dict) and said.get("tracing_turned_on") is True
-    return {"execution_id": None, "tracing_turned_on": "true" if turned_on else None}
+    if not isinstance(said, dict):
+        said = {}
+    return {
+        "execution_id": None,
+        "tracing_turned_on": "true" if said.get("tracing_turned_on") is True else None,
+        "no_open": "true" if said.get("open_report") is False else None,
+    }
 
 
 def _recorded_run(execution_uuid: str) -> dict[str, Any] | None:
@@ -1648,7 +1659,7 @@ FooterKey .footer-key--key {
             {"state": "running", "id": started.get("id"), "url": url, "note": None}
         )
         self._refresh_eval_button()
-        if isinstance(url, str) and url:
+        if isinstance(url, str) and url and not (self._auto_eval or {}).get("no_open"):
             self._open_report(url)
 
     def _evaluation_progress(self, payload: dict[str, Any]) -> None:
