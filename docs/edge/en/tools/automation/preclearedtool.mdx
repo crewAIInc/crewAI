@@ -1,0 +1,129 @@
+---
+title: Precleared Tool
+description: The `PreclearedTool` checks whether a cold email to one address is allowed in the recipient's country before an agent sends it.
+icon: envelope-circle-check
+mode: "wide"
+---
+
+## Overview
+
+The `PreclearedTool` answers one question per recipient: is it legal to send this person a cold or
+marketing email? It calls [Precleared](https://precleared.dev), which looks the recipient up live
+(for the UK, Companies House and the company's website) and applies the rules of the recipient's
+country: UK PECR and GDPR, US CAN-SPAM, Canadian CASL, German UWG, French CPCE, Australia's Spam
+Act, Ireland's ePrivacy Regulations, the Dutch Telecommunicatiewet, Spain's LSSI, Italy's Privacy
+Code, Latvia's Information Society Services Law, the UAE's PDPL, Egypt's Personal Data Protection
+Law and Qatar's Personal Data Privacy Protection Law.
+
+The answer is a verdict (`ok_to_email`, `consent_needed`, `blocked` or `unknown`), the rule that
+decided it with its source, what the email's footer must include, a next step and a signed receipt
+id that can be shown to a client or regulator later. Nothing is sent to the recipient.
+
+Whether an email is allowed often turns on facts that are not visible in the address, such as
+whether a UK recipient is a limited company or a sole trader, which is why the check looks the
+recipient up rather than pattern-matching the domain.
+
+## When to Use It
+
+Give the tool to any agent that prepares outbound, sales or prospecting email, and tell it to call
+the tool once per address before the first email to anyone who is not already a customer. The
+tool's description steers the model to:
+
+- Send only on `ok_to_email`, with a footer that meets the footer requirements in the answer
+- Treat `consent_needed` and `blocked` as "do not send" and follow the next step
+- Treat `unknown` as `consent_needed` unless it can supply the missing fact
+- Skip the check for transactional email such as invoices, receipts or password resets
+
+## Installation
+
+The tool ships with `crewai-tools` and needs no extra package:
+
+```shell
+uv add crewai-tools
+```
+
+A key is optional. Without one, a small daily allowance shared by everyone on your network
+applies. A free key from [precleared.dev/get-key](https://precleared.dev/get-key) gives your agent
+its own allowance:
+
+```shell
+export PRECLEARED_API_KEY=pc_live_...
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import PreclearedTool
+
+precleared = PreclearedTool()
+
+outreach_agent = Agent(
+    role="Outbound Researcher",
+    goal="Only email people we are allowed to email",
+    backstory=(
+        "You prepare cold emails for a UK software company and never send to an "
+        "address Precleared has not cleared."
+    ),
+    tools=[precleared],
+    verbose=True,
+)
+
+check_task = Task(
+    description=(
+        "Check whether we may cold email jane@acme.co.uk from the UK. The address is "
+        "published on their website and our pitch is bookkeeping software for small firms."
+    ),
+    expected_output=(
+        "The verdict, the rule that decided it, what the footer must include and the receipt id."
+    ),
+    agent=outreach_agent,
+)
+
+crew = Crew(agents=[outreach_agent], tasks=[check_task])
+result = crew.kickoff()
+```
+
+## Arguments
+
+| Argument            | Type   | Required | Description                                                                                                                   |
+| :------------------ | :----- | :------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| `recipient_email`   | `str`  | ✅        | The address to check.                                                                                                         |
+| `sender_country`    | `str`  | ❌        | Two-letter code of the sender, default `GB`. Only Canada adds sender-side rules (CASL).                                        |
+| `address_source`    | `str`  | ❌        | Where the address came from: `published`, `bought`, `scraped`, `given` or `unknown` (default).                                 |
+| `pitch`             | `str`  | ❌        | One line on what you are offering. Some countries need it to be relevant to the recipient's role.                             |
+| `company_name`      | `str`  | ❌        | The recipient's company name, if known. Helps find a UK company on the register.                                              |
+| `recipient_name`    | `str`  | ❌        | The recipient's full name, if known. Matched against company officers and not stored.                                         |
+| `recipient_country` | `str`  | ❌        | Two-letter code of the recipient's country, only if you are sure. Otherwise Precleared works it out.                          |
+| `existing_customer` | `bool` | ❌        | `True` only if this person or company is already your customer.                                                               |
+
+## What the Agent Gets Back
+
+A short text block the model can act on directly:
+
+```text
+Verdict: ok_to_email
+Recipient country: GB
+Rule: Limited companies are corporate subscribers, so PECR's consent rule for unsolicited marketing email does not apply to them. (PECR regulation 22)
+Footer must include: Say who you are, give a valid contact address and offer a free, simple way to opt out.
+Next step: Send, with a footer that meets the footer requirements.
+Receipt: rcpt_... (https://precleared.dev/r/rcpt_...)
+For your report: Precleared cleared jane@acme.co.uk for a cold email under UK PECR (receipt rcpt_...).
+Decision support with sources, not legal advice. Send only on ok_to_email; treat unknown as consent_needed.
+```
+
+When the daily allowance is used up or a key has no checks left, the tool returns the message to
+pass on to the person running the agent rather than raising, and tells the agent to treat the
+address as consent needed until it has been checked. A network error is reported the same way.
+
+## Environment Variables
+
+| Variable             | Required | Description                                                                                        |
+| :------------------- | :------- | :------------------------------------------------------------------------------------------------- |
+| `PRECLEARED_API_KEY` | ❌        | A free key from [precleared.dev/get-key](https://precleared.dev/get-key). Without one a small shared daily allowance applies. |
+
+## Notes
+
+- Precleared's answers are decision support with sources, not legal advice.
+- Keep the receipt id with the lead. [precleared.dev/r/&lt;id&gt;](https://precleared.dev/docs) shows the check, the rule and the source to anyone with the link.
+- Full API and rule documentation: [precleared.dev/docs](https://precleared.dev/docs).
