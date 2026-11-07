@@ -1,17 +1,14 @@
 """RAG client configuration utilities."""
 
 from contextvars import ContextVar
+from typing import cast
 
 from pydantic import BaseModel, Field
 
-from crewai.rag.config.constants import (
-    DEFAULT_RAG_CONFIG_CLASS,
-    DEFAULT_RAG_CONFIG_PATH,
-)
+from crewai.rag.config.constants import DEFAULT_RAG_PROVIDER
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.factory import create_client
-from crewai.utilities.import_utils import require
 
 
 class RagContext(BaseModel):
@@ -37,6 +34,50 @@ def set_rag_config(config: RagConfigType) -> None:
     _rag_context.set(context)
 
 
+def get_active_rag_config() -> RagConfigType | None:
+    """Get the active RAG configuration without building a default one.
+
+    Returns:
+        The configuration set with :func:`set_rag_config`, or None if unset.
+    """
+    context = _rag_context.get()
+    return context.config if context else None
+
+
+def get_rag_provider() -> str:
+    """Get the provider name of the active RAG configuration.
+
+    Unlike :func:`get_rag_config`, this never builds a default configuration or
+    client, so it is safe to call before any embedder or API key is set up.
+
+    Returns:
+        The configured provider name, or the default provider if none is set.
+    """
+    context = _rag_context.get()
+    return context.config.provider if context else DEFAULT_RAG_PROVIDER
+
+
+def _default_rag_config() -> RagConfigType:
+    """Build the default config: local Qdrant with OpenAI's text-embedding-3-small.
+
+    This is the model Knowledge used before Qdrant became the default store. It
+    is set explicitly here so that ``QdrantConfig()`` keeps its own local default.
+    """
+    from crewai.rag.embeddings.providers.openai.embedding_callable import (
+        OpenAIEmbeddingFunction,
+    )
+    from crewai.rag.qdrant.config import QdrantConfig
+    from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
+    from crewai.rag.qdrant.types import QdrantEmbeddingFunctionWrapper
+
+    embedder = QdrantEmbeddingAdapter(
+        OpenAIEmbeddingFunction(model_name="text-embedding-3-small")
+    )
+    return QdrantConfig(
+        embedding_function=cast(QdrantEmbeddingFunctionWrapper, embedder)
+    )
+
+
 def get_rag_config() -> RagConfigType:
     """Get current RAG configuration.
 
@@ -45,10 +86,7 @@ def get_rag_config() -> RagConfigType:
     """
     context = _rag_context.get()
     if context is None:
-        module = require(DEFAULT_RAG_CONFIG_PATH, purpose="RAG configuration")
-        config_class = getattr(module, DEFAULT_RAG_CONFIG_CLASS)
-        default_config = config_class()
-        set_rag_config(default_config)
+        set_rag_config(_default_rag_config())
         context = _rag_context.get()
 
     if context is None or context.config is None:
