@@ -187,8 +187,8 @@ RUNNING_THE_CREW: dict[RunReason, str] = {
     ),
     "run_again": "That run was not traced: running the crew again to evaluate it.",
 }
-# Said before the consent screen, at a terminal: that screen asks about a trace
-# before there is a run, so the person reads first why `crewai eval` needs one.
+# Said before the consent question, at a terminal: it asks about a trace before
+# there is a run, so the person reads first why `crewai eval` needs one.
 BEFORE_ASKING: dict[RunReason, str] = {
     "no_traced_run": (
         "No traced run of this crew yet. To evaluate it, the crew runs now and its "
@@ -203,6 +203,12 @@ BEFORE_ASKING: dict[RunReason, str] = {
         "goes to CrewAI AMP, which grades it."
     ),
 }
+# The person asked for the evaluation, so Enter means yes, as for a project that
+# turned tracing off. There is no timeout: an unanswered question sends nothing.
+SHARE_TO_EVALUATE_QUESTION = (
+    "The trace may include prompts, inputs, outputs and tool calls. "
+    "Run the crew and share its trace?"
+)
 TRACING_NOW_ON = (
     "Tracing is now on for this project: its runs' traces are sent to CrewAI AMP, "
     "which grades them."
@@ -1041,12 +1047,10 @@ def _at_a_terminal() -> bool:
 
 def _ask_before_the_first_enable(why: RunReason) -> None:
     """Nobody turned tracing on yet, and a person is here: say why the crew
-    runs, then ask on crewAI's trace consent screen before turning tracing on.
-    A no, or no answer before it times out, runs nothing."""
-    from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
-
+    runs, then ask before turning tracing on. Enter means yes; a no runs
+    nothing."""
     console.print(Text(BEFORE_ASKING[why]), style="bold")
-    if not prompt_user_for_trace_viewing(sharing=True):
+    if not click.confirm(SHARE_TO_EVALUATE_QUESTION, default=True):
         record_stop("declined")
         console.print(NOT_SHARED, style="yellow")
         raise SystemExit(0)
@@ -1107,8 +1111,8 @@ def _run_the_crew_to_evaluate(
         _fail(stop)
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
-    # Nobody turned tracing on. At a terminal the person is asked first, on
-    # crewAI's own consent screen; with nobody there (a coding agent, a
+    # Nobody turned tracing on. At a terminal the person is asked first
+    # (Enter means yes); with nobody there (a coding agent, a
     # script) the yes is inferred from this command and tracing is turned on
     # for the project — said once, plainly, here and in the run app. From
     # then on the project traces, and nothing more is asked or said.

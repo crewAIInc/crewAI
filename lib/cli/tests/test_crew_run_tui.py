@@ -49,7 +49,9 @@ from crewai_cli.crew_run_tui import (
 import httpx
 import pytest
 from rich.text import Text
+from textual.app import App
 from textual.pilot import Pilot
+from textual.widgets import Button, Static
 
 
 @pytest.fixture(autouse=True)
@@ -2723,7 +2725,7 @@ def stops(monkeypatch) -> list[str]:
     ("tracing", "asked_on"),
     [
         ("turned off", crew_run_tui.TurnTracingOnScreen),
-        ("never turned on", crew_run_tui.TraceConsentScreen),
+        ("never turned on", crew_run_tui.EvaluateConsentScreen),
     ],
 )
 def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
@@ -2731,8 +2733,8 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
 ) -> None:
     """The project said no to tracing, or nobody ever turned it on: only a yes
     turns it on (in its .env) and runs the crew again; a no leaves everything
-    as it was. A project that never turned it on is asked on the screen a
-    run's trace is shared from."""
+    as it was. Each case is asked on a screen that says the evaluation needs
+    the trace."""
     monkeypatch.chdir(tmp_path)
     if tracing == "turned off":
         (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
@@ -2769,6 +2771,56 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
         assert env == ("CREWAI_TRACING_ENABLED=false\n" if tracing == "turned off" else "")
         assert app._want_traced_rerun is False and exits == []
         assert stops == ["cli_usage:eval_stopped:declined"]
+
+
+class _ScreenHost(App[None]):
+    """Shows one consent screen and keeps what it was dismissed with."""
+
+    def __init__(self, screen: crew_run_tui.TraceConsentScreen) -> None:
+        super().__init__()
+        self._screen = screen
+        self.answers: list[bool | None] = []
+
+    def on_mount(self) -> None:
+        self.push_screen(self._screen, self.answers.append)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("key", "shared"), [("enter", True), ("y", True), ("n", False), ("escape", False)])
+async def test_evaluate_consent_screen_shares_on_enter_and_says_why(key, shared) -> None:
+    """Evaluate on a project that never traced: the screen says the evaluation
+    needs the trace and that Enter shares it; Enter or y shares, n or Esc runs
+    nothing. Nothing on it counts down."""
+    screen = crew_run_tui.EvaluateConsentScreen()
+    app = _ScreenHost(screen)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        text = str(screen.query_one("#consent-text", Static).render())
+        label = str(screen.query_one("#btn-consent-yes", Button).label)
+        await pilot.press(key)
+        await pilot.pause()
+
+    assert app.answers == [shared]
+    assert label == "Share & Evaluate"
+    assert "Evaluating this run needs its trace." in text
+    assert "Enter shares it; Cancel runs nothing." in text
+    assert "seconds" not in text
+
+
+@pytest.mark.asyncio
+async def test_the_end_of_run_sharing_screen_is_unchanged() -> None:
+    """Sharing a finished run's trace still asks on its own screen, which a
+    20-second wait dismisses (its caller times out): only Evaluate changed."""
+    screen = crew_run_tui.TraceConsentScreen()
+    app = _ScreenHost(screen)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        text = str(screen.query_one("#consent-text", Static).render())
+        label = str(screen.query_one("#btn-consent-yes", Button).label)
+
+    assert label == "Share Trace"
+    assert "Share this execution trace with CrewAI?" in text
+    assert "Cancel or wait 20 seconds" in text
 
 
 @pytest.mark.parametrize("tracing", ["turned off", "never turned on", "on"])

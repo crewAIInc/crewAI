@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 from datetime import datetime, timedelta, timezone
+import io
 import json
 import os
 import subprocess
@@ -40,22 +41,25 @@ def _tracing_setting_put_back(monkeypatch):
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
 
 
+REAL_CONFIRM = click.confirm
+
+
 @pytest.fixture(autouse=True)
 def consent_screen(monkeypatch):
-    """At a terminal, `crewai eval` asks on crewAI's trace consent screen
-    before it first turns tracing on; the person here says yes unless a test
-    says otherwise. Each question is recorded with how it was asked."""
+    """At a terminal, `crewai eval` asks before it first turns tracing on; the
+    person here says yes unless a test says otherwise. Each question is
+    recorded with how it was asked. Any other confirmation goes to click."""
     asked: list[dict] = []
     answer = {"yes": True}
 
-    def prompt(timeout_seconds=20, **kwargs):
+    def confirm(text, **kwargs):
+        if text != eval_module.SHARE_TO_EVALUATE_QUESTION:
+            return REAL_CONFIRM(text, **kwargs)
         asked.append(kwargs)
         print("[the consent screen]")  # where it showed, in the captured output
         return answer["yes"]
 
-    monkeypatch.setattr(
-        "crewai.events.listeners.tracing.utils.prompt_user_for_trace_viewing", prompt
-    )
+    monkeypatch.setattr(eval_module.click, "confirm", confirm)
     return SimpleNamespace(asked=asked, answer=answer)
 
 
@@ -3272,10 +3276,9 @@ def test_tracing_is_turned_on_and_said_once_only_when_nobody_had(
 def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
     project, monkeypatch, capsys, usage, consent_screen, answer
 ):
-    """A person at the terminal is asked first, on the screen crewAI shows to
-    share a run's trace; a yes turns tracing on for the project and runs the
-    crew, a no (or no answer before it times out) runs nothing. A project that
-    traces already is not asked."""
+    """A person at the terminal is asked first, with Enter meaning yes; a yes
+    turns tracing on for the project and runs the crew, a no runs nothing. A
+    project that traces already is not asked."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     if answer == "already on":
@@ -3302,7 +3305,7 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
         eval_module.eval_crew()
     out = " ".join(capsys.readouterr().out.split())
 
-    assert consent_screen.asked == ([] if answer == "already on" else [{"sharing": True}])
+    assert consent_screen.asked == ([] if answer == "already on" else [{"default": True}])
     assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
     why = "No traced run of this crew yet. To evaluate it, the crew runs now and its trace goes to CrewAI AMP, which grades it."
     if answer == "already on":
@@ -3322,6 +3325,57 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
         assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
         assert ("Tracing is on for this project" in out) is (answer == "yes")
         assert usage[0] == "cli_usage:eval_ran_crew:no_traced_run"
+
+
+class _Keyboard(io.StringIO):
+    """What a person types at a terminal."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+@pytest.mark.parametrize(("typed", "shared"), [("\n", True), ("y\n", True), ("n\n", False)])
+def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
+    project, monkeypatch, capsys, usage, typed, shared
+):
+    """The person asked for the evaluation, so pressing Enter shares the trace
+    and runs the crew; only an explicit no runs nothing. The question waits for
+    a key: it never times out into either answer."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", REAL_CONFIRM)
+    monkeypatch.setattr(eval_module.sys, "stdin", _Keyboard(typed))
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils.prompt_user_for_trace_viewing",
+        lambda *a, **k: pytest.fail("the evaluation asks its own question, with no timeout"),
+    )
+    ran: list[str] = []
+
+    def fake_run_crew() -> None:
+        ran.append(os.environ.get("CREWAI_TRACING_ENABLED", ""))
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    if shared:
+        eval_module.eval_crew()
+    else:
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew()
+        assert exited.value.code == 0
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert "The trace may include prompts, inputs, outputs and tool calls. Run the crew and share its trace? [Y/n]" in out
+    if shared:
+        assert ran == ["true"] and amp.calls[0] == ("create", "the-new-run")
+        assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
+        assert "cli_usage:eval_stopped:declined" not in usage
+    else:
+        assert ran == [] and amp.calls == []
+        assert not (directory / ".env").exists()
+        assert "Nothing was run: evaluating a run needs its trace, and no trace was shared." in out
+        assert usage == ["cli_usage:eval_stopped:declined"]
 
 
 # ── a project that turned tracing off is asked, never overruled ─────────────
