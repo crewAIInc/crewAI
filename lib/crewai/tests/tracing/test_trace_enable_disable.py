@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 from crewai import Agent, Crew, Task
+from crewai.events.listeners.tracing.utils import is_tracing_enabled_in_context
 from crewai.llms.base_llm import BaseLLM
 from crewai.telemetry.tracing.grants import (
     GrantSpanExporter,
@@ -69,3 +70,30 @@ def test_tracing_controls_gate_execution_export(
     assert grant.call_count == int(enabled)
     assert bool(exporter.get_finished_spans()) is enabled
     legacy.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "environment,override,enabled",
+    [
+        ("false", None, False),
+        ("true", None, True),
+        ("true", False, False),
+        ("false", True, True),
+    ],
+)
+def test_explicit_crew_tracing_survives_agent_execution(
+    monkeypatch, environment, override, enabled
+):
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", environment)
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
+    seen = []
+
+    class ObservingLLM(LocalLLM):
+        def call(self, messages, **kwargs):
+            seen.append(is_tracing_enabled_in_context())
+            return super().call(messages, **kwargs)
+
+    agent = Agent(role="tester", goal="greet", backstory="tester", llm=ObservingLLM())
+    task = Task(description="say hello", expected_output="hello", agent=agent)
+    Crew(agents=[agent], tasks=[task], tracing=override).kickoff()
+    assert seen == [enabled]
