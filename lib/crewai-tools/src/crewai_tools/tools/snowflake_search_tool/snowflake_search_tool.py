@@ -193,16 +193,40 @@ class SnowflakeSearchTool(BaseTool):
 
         return snowflake.connector.connect(**conn_params)
 
-    def _get_cache_key(self, query: str, timeout: int) -> str:
-        """Generate a cache key for the query."""
-        return f"{self.config.account}:{self.config.database}:{self.config.snowflake_schema}:{query}:{timeout}"
+    def _get_cache_key(
+        self,
+        query: str,
+        timeout: int,
+        database: str | None = None,
+        snowflake_schema: str | None = None,
+    ) -> str:
+        """Generate a cache key scoped to the effective session context.
+
+        Per-call overrides change which database and schema the query runs in,
+        and the user, role and warehouse can change row visibility, so all of
+        them must be part of the key.
+        """
+        effective_database = database or self.config.database
+        effective_schema = snowflake_schema or self.config.snowflake_schema
+        return (
+            f"{self.config.account}:{self.config.user}:{self.config.role}:"
+            f"{self.config.warehouse}:{effective_database}:{effective_schema}:"
+            f"{query}:{timeout}"
+        )
 
     async def _execute_query(
-        self, query: str, timeout: int = 300
+        self,
+        query: str,
+        timeout: int = 300,
+        database: str | None = None,
+        snowflake_schema: str | None = None,
+        *,
+        use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """Execute a query with retries and return results."""
-        if self.enable_caching:
-            cache_key = self._get_cache_key(query, timeout)
+        caching = self.enable_caching and use_cache
+        if caching:
+            cache_key = self._get_cache_key(query, timeout, database, snowflake_schema)
             with _cache_lock:
                 if cache_key in _query_cache:
                     logger.info("Returning cached result")
@@ -224,9 +248,13 @@ class SnowflakeSearchTool(BaseTool):
                         for row in cursor.fetchall()
                     ]
 
-                    if self.enable_caching:
+                    if caching:
                         with _cache_lock:
-                            _query_cache[self._get_cache_key(query, timeout)] = results
+                            _query_cache[
+                                self._get_cache_key(
+                                    query, timeout, database, snowflake_schema
+                                )
+                            ] = results
 
                     return results
                 finally:
@@ -256,11 +284,18 @@ class SnowflakeSearchTool(BaseTool):
         """Execute the search query."""
         try:
             if database:
-                await self._execute_query(f"USE DATABASE {database}")
+                await self._execute_query(f"USE DATABASE {database}", use_cache=False)
             if snowflake_schema:
-                await self._execute_query(f"USE SCHEMA {snowflake_schema}")
+                await self._execute_query(
+                    f"USE SCHEMA {snowflake_schema}", use_cache=False
+                )
 
-            return await self._execute_query(query, timeout)
+            return await self._execute_query(
+                query,
+                timeout,
+                database=database,
+                snowflake_schema=snowflake_schema,
+            )
         except Exception as e:
             logger.error(f"Error executing query: {e!s}")
             raise
