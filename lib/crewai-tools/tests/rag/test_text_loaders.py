@@ -128,6 +128,43 @@ class TestTextFileLoaderURLs:
         assert result.doc_id == hashlib.sha256((url + content).encode()).hexdigest()
         assert fetch.call_args.kwargs["headers"]["Accept"] == "text/plain"
 
+    @pytest.mark.parametrize(
+        ("content_type", "body", "expected"),
+        [
+            ("text/plain", "café 上海".encode(), "café 上海"),
+            ("text/csv; header=present", "café 上海".encode(), "café 上海"),
+            ("text/plain", "﻿café 上海".encode(), "café 上海"),
+            ("text/plain", "Montréal".encode("latin-1"), "Montréal"),
+            ("text/plain; charset=gb18030", "上海".encode("gb18030"), "上海"),
+            ('text/plain; charset="ISO-8859-1"', "café".encode(), "cafÃ©"),
+        ],
+        ids=[
+            "no-charset-utf8",
+            "other-param-utf8",
+            "no-charset-utf8-bom",
+            "no-charset-not-utf8",
+            "declared-gb18030",
+            "declared-latin1",
+        ],
+    )
+    def test_response_charset(
+        self, content_type: str, body: bytes, expected: str
+    ) -> None:
+        response = requests.Response()
+        response.status_code = 200
+        response.headers["Content-Type"] = content_type
+        response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+        response._content = body
+
+        with patch(
+            "crewai_tools.security.safe_requests._raw_get", return_value=response
+        ):
+            result = TextFileLoader().load(
+                SourceContent("https://example.com/notes.txt")
+            )
+
+        assert result.content == expected
+
     def test_custom_headers(self) -> None:
         response = Mock(status_code=200, text="Notes")
         headers = {"Accept": "text/plain", "X-Document-Version": "2"}
