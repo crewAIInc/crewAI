@@ -986,3 +986,53 @@ def test_a_flow_kickoff_counts_its_trace(
     assert sent_features == [
         "tracing:authenticated_sent" if authenticated else "tracing:ephemeral_sent"
     ]
+
+
+@pytest.mark.parametrize(
+    "failure", [KeyboardInterrupt, asyncio.CancelledError, GeneratorExit]
+)
+def test_an_interrupted_run_crewai_eval_started_is_not_uploaded(
+    collector, monkeypatch, tmp_path, failure
+):
+    """Only a run that failed is graded: one that was stopped, by Ctrl-C, a
+    cancelled task or a discarded deferred lifetime, is discarded as before."""
+    from crewai_core import eval_handshake
+
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    buffer = EphemeralSpanBuffer()
+    monkeypatch.setattr(ephemeral, "EphemeralSpanBuffer", lambda: buffer)
+    consent = Mock(return_value=True)
+
+    def stop_execution():
+        with trace_consent(consent), ephemeral_tracing(str(uuid4())) as session:
+            record(session)
+            raise failure("execution stopped")
+
+    with eval_handshake.awaiting_evaluation(), pytest.raises(failure):
+        stop_execution()
+    consent.assert_not_called()
+    assert buffer._closed and not buffer._spans
+    assert not collector.grants and not collector.batches
+
+
+def test_a_failed_run_crewai_eval_started_is_shared_after_its_consent(
+    collector, monkeypatch, tmp_path
+):
+    """The host's consent callback stays authoritative for a failed run too."""
+    from crewai_core import eval_handshake
+
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    consent = Mock(return_value=True)
+
+    def fail_execution():
+        with trace_consent(consent), ephemeral_tracing(str(uuid4())) as session:
+            record(session)
+            raise RuntimeError("execution failed")
+
+    with eval_handshake.awaiting_evaluation(), pytest.raises(
+        RuntimeError, match="execution failed"
+    ):
+        fail_execution()
+    consent.assert_called_once_with()
+    assert len(collector.grants) == 1
+    assert {span.name for span in spans(collector.batches[0][1])} == {"execute flow"}
