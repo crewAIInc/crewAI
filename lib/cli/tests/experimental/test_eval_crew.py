@@ -4149,3 +4149,152 @@ def test_tracing_already_on_lets_the_project_env_beat_a_shell_false(
 
     assert eval_module.tracing_turned_off() is False
     assert eval_module.tracing_already_on() is True
+
+
+# ── a run that exits with an error is a failed run, not an untraced one ─────
+
+
+def _a_run_that_exits(directory: Path, monkeypatch, code, *, traced: bool) -> None:
+    """`run_crew` printing an error, then exiting with CODE, as the JSON crew,
+    declarative flow and agent paths do when their run fails."""
+
+    def fake_run_crew() -> None:
+        os.write(2, b"KeyError: 'topic'\n")
+        if traced:
+            record_last_run(directory, "the-failed-run", recorded_at=_now())
+        raise SystemExit(code)
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+
+
+@pytest.mark.parametrize("app_saw_the_run", [False, True])
+@pytest.mark.parametrize("code", [1, 3])
+def test_a_run_that_exits_with_an_error_counts_as_failed_not_untraced(
+    project, monkeypatch, capfd, usage, code, app_saw_the_run
+):
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    _a_run_that_exits(directory, monkeypatch, code, traced=False)
+    monkeypatch.setattr(
+        eval_module,
+        "evaluation_marker",
+        lambda after: {"execution_id": None} if app_saw_the_run else None,
+    )
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    said = " ".join(capfd.readouterr().out.split())
+    assert "KeyError: 'topic'" in said
+    assert (
+        "The run exited with an error (its last lines are above) before a trace of it "
+        "reached CrewAI AMP, so there is nothing to evaluate. Fix that error and run "
+        "`crewai eval` again."
+    ) in said
+    assert "tracing=False" not in said
+    assert amp.calls == []
+    assert [f for f in usage if f.startswith("cli_usage:eval_stopped:")] == [
+        "cli_usage:eval_stopped:run_failed"
+    ]
+
+
+def test_at_a_terminal_a_failed_run_points_at_its_output_above(
+    project, monkeypatch, capfd, usage
+):
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: False)
+    _a_run_that_exits(directory, monkeypatch, 1, traced=False)
+    install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    out, err = capfd.readouterr()
+    assert "KeyError: 'topic'" in err
+    assert "The run exited with an error (its output is above)" in " ".join(out.split())
+    assert usage[-1] == "cli_usage:eval_stopped:run_failed"
+
+
+def test_a_traced_run_that_exits_with_an_error_is_still_graded(
+    project, monkeypatch, capfd, usage
+):
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    _a_run_that_exits(directory, monkeypatch, 1, traced=True)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", "the-failed-run")
+    assert "Goal gate: PASSED" in " ".join(capfd.readouterr().out.split())
+    assert not [f for f in usage if f.startswith("cli_usage:eval_stopped:")]
+
+
+@pytest.mark.parametrize("code", [0, None, 130])
+def test_a_run_that_exits_cleanly_or_is_interrupted_is_not_a_failure(
+    project, monkeypatch, usage, code
+):
+    """A clean exit and Ctrl-C (130) leave the command as they always did."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    _a_run_that_exits(directory, monkeypatch, code, traced=False)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == code
+    assert amp.calls == []
+    assert not [f for f in usage if f.startswith("cli_usage:eval_stopped:")]
+
+
+def test_a_json_crew_whose_run_fails_counts_as_failed(
+    project, monkeypatch, capfd, usage
+):
+    """The real `crewai run` on a JSON crew whose run exits 1 in the project's
+    environment: it raises SystemExit(1), which the command used to let through
+    with no stop counted and, with nobody watching, the error left in the log."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\n\n[tool.crewai]\ntype = "crew"\ndefinition = "crew.json"\n'
+    )
+    (directory / "crew.json").write_text("{}")
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+    monkeypatch.delenv(run_crew_module.RUN_COUNTED_ENV, raising=False)
+    monkeypatch.setattr(run_crew_module, "ask_for_missing_api_keys", lambda *args: None)
+    monkeypatch.setattr(run_crew_module, "_install_project_dependencies_if_needed", lambda: None)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def uv_run(command, **kwargs):
+        os.write(2, b"KeyError: 'topic'\n")
+        raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(subprocess, "run", uv_run)
+    monkeypatch.setattr(run_crew_module, "run_crew", _REAL_RUN_CREW)
+    amp = install(monkeypatch, FakeAMP())
+
+    with (
+        open(1, "w", closefd=False, buffering=1) as stdout,
+        open(2, "w", closefd=False, buffering=1) as stderr,
+        monkeypatch.context() as streams,
+        pytest.raises(SystemExit) as exited,
+    ):
+        streams.setattr(sys, "stdout", stdout)
+        streams.setattr(sys, "stderr", stderr)
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    said = " ".join(capfd.readouterr().out.split())
+    assert "KeyError: 'topic'" in said
+    assert "The run exited with an error (its last lines are above)" in said
+    assert amp.calls == [] and usage[-1] == "cli_usage:eval_stopped:run_failed"

@@ -129,6 +129,7 @@ def _record_usage(*, logged_in: bool) -> None:
 
 StopReason = Literal[
     "untraced_after_run",
+    "run_failed",
     "untrusted_amp",
     "tracing_off",
     "declined",
@@ -167,6 +168,13 @@ NOT_TRACED = (
     "or this project's crewai is older than the version that records runs for evaluation "
     f"({LAST_RUN_FILE})."
 )
+RUN_FAILED = (
+    "The run exited with an error (its output is above) before a trace of it reached "
+    "CrewAI AMP, so there is nothing to evaluate. Fix that error and run `crewai eval` again."
+)
+# A run ended with Ctrl-C, by the shell's convention (128 + SIGINT): stopped by
+# whoever started it, not failed.
+_INTERRUPTED_EXIT_CODE = 130
 
 # With no terminal, what the crew prints while it runs (its panels, the final
 # answer, every tool call) goes to this file in the project's `.crewai/`, not to
@@ -1148,13 +1156,21 @@ def _run_the_crew_to_evaluate(
         )
     began = datetime.now(timezone.utc)
     started = time.monotonic()
+    failed: SystemExit | None = None
     with (
         evaluating_after_run(
             trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
         ) as watched,
         _run_output_to(run_log) as run_log,
     ):
-        run_crew(**run_args)
+        try:
+            run_crew(**run_args)
+        except SystemExit as exited:
+            # A run that failed is still a run to grade when it was traced; when
+            # it was not, it is said and counted as failed, not as untraced.
+            if exited.code in (0, None, _INTERRUPTED_EXIT_CODE):
+                raise
+            failed = exited
     seconds = time.monotonic() - started
 
     # The app says what it did with the run it watched, and its word settles
@@ -1166,10 +1182,7 @@ def _run_the_crew_to_evaluate(
         if marker.get("execution_id"):
             remember_project_state(str(marker["execution_id"]))
             return None
-        record_stop("untraced_after_run")
-        _say_what_the_run_left(run_log, seconds, traced=False)
-        console.print(_not_traced(run_log), style="bold red")
-        raise SystemExit(1)
+        raise _untraced(run_log, seconds, failed) from failed
 
     # The project's record, only when it was written after this run began: a
     # record is the project's LAST run, and another run finishing in the same
@@ -1182,17 +1195,26 @@ def _run_the_crew_to_evaluate(
         _say_what_the_run_left(run_log, seconds, traced=True)
         return str(traced)
 
-    record_stop("untraced_after_run")
+    raise _untraced(run_log, seconds, failed) from failed
+
+
+def _untraced(
+    run_log: Path | None, seconds: float, failed: SystemExit | None
+) -> SystemExit:
+    """Say and count a run that left nothing to evaluate, one that FAILED or one
+    that finished untraced, and return the exit to stop with."""
+    record_stop("untraced_after_run" if failed is None else "run_failed")
     _say_what_the_run_left(run_log, seconds, traced=False)
-    console.print(_not_traced(run_log), style="bold red")
-    raise SystemExit(1)
+    said = NOT_TRACED if failed is None else RUN_FAILED
+    console.print(_not_traced(run_log, said), style="bold red")
+    return SystemExit(1)
 
 
-def _not_traced(run_log: Path | None) -> str:
-    """NOT_TRACED, pointing at where the run's output went."""
+def _not_traced(run_log: Path | None, said: str) -> str:
+    """SAID, pointing at where the run's output went."""
     if run_log is None:
-        return NOT_TRACED
-    return NOT_TRACED.replace("(its output is above)", "(its last lines are above)")
+        return said
+    return said.replace("(its output is above)", "(its last lines are above)")
 
 
 def _run_log_path() -> Path | None:
