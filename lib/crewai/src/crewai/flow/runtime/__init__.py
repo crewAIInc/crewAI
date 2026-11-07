@@ -3401,6 +3401,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         ):
                             # This conditional start was executed, continue its chain
                             await self._execute_start_method(start_method_name)
+                    # Replay the router's recorded outcome so listeners of the
+                    # router result (e.g. "approved") fire during resumption.
+                    recorded_entry = next(
+                        (
+                            entry
+                            for entry in reversed(self._method_outputs)
+                            if entry.get("method") == str(listener_name)
+                        ),
+                        None,
+                    )
+                    recorded_output = None
+                    if recorded_entry is not None:
+                        feedback = recorded_entry.get("human_feedback")
+                        # HITL approval routers route on the collapsed human
+                        # outcome, not the reviewed artifact kept as output.
+                        if isinstance(feedback, dict):
+                            outcome = feedback.get("outcome")
+                        else:
+                            outcome = getattr(feedback, "outcome", None)
+                        if outcome is not None:
+                            recorded_output = outcome
+                        else:
+                            recorded_output = recorded_entry.get("output")
+                    return (recorded_output, None)
                 return (None, None)
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(listener_name)
