@@ -716,6 +716,126 @@ Acesse todo o feedback coletado durante um flow via `self.last_human_feedback` (
 
 Para um guia completo sobre feedback humano em flows, incluindo feedback assíncrono/não-bloqueante com providers customizados (Slack, webhooks, etc.), veja [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
 
+## Providers de Entrada Personalizados
+
+<Note>
+`Flow.ask()` e o protocolo `InputProvider` exigem a **versão 1.10.0 ou superior do CrewAI**.
+</Note>
+
+`Flow.ask()` permite que um método do flow solicite entrada **dentro de um passo em execução** — uma pergunta de wizard, um esclarecimento, um campo que falta. Por padrão, `ask()` bloqueia lendo do console. Para coletar entrada em outro lugar (uma UI web, uma fila de tickets, um teste), defina `input_provider` no seu Flow como qualquer objeto que implemente o protocolo `InputProvider`: um único método `request_input(message, flow, metadata=None)` que retorna a resposta como uma string, um `InputResponse` com metadados de resposta opcionais, ou `None` quando a entrada não está disponível.
+
+### Exemplo: provider de entrada com respostas roteirizadas
+
+O exemplo completo a seguir reproduz respostas roteirizadas — sem console, sem chamadas de modelo, sem credenciais — para que você possa executá-lo como está e ver todo o contrato: metadados de requisição chegando ao provider, metadados de resposta voltando pelo `InputResponse`, e `None` sinalizando entrada indisponível.
+
+```python
+from typing import Any
+
+from crewai.flow import Flow, InputResponse, start
+
+
+class ScriptedInputProvider:
+    """Replays scripted answers, then reports that input is unavailable."""
+
+    def __init__(self, answers: list[str]) -> None:
+        self.answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | None:
+        # metadata is whatever the caller passed to ask()
+        self.received_metadata.append(metadata)
+
+        if not self.answers:
+            return None  # no input available (queue closed, user left)
+
+        answer = self.answers.pop(0)
+        return InputResponse(
+            text=answer,
+            metadata={"responded_by": "scripted-user"},  # response metadata
+        )
+
+
+class TicketFlow(Flow):
+    input_provider = ScriptedInputProvider(["My printer is on fire"])
+
+    @start()
+    def triage(self) -> str:
+        issue = self.ask("Describe the issue:", metadata={"channel": "web"})
+        if issue is None:
+            # ask() returns None when input is unavailable - handle it
+            # explicitly instead of treating it as an answer.
+            print("No answer received; opening the ticket as untriaged.")
+            return "untriaged"
+
+        print(f"Ticket issue: {issue}")
+        priority = self.ask("What priority is this?", metadata={"channel": "web"})
+        if priority is None:
+            print("Priority unavailable; defaulting to normal.")
+            return "normal"
+
+        print(f"Ticket priority: {priority}")
+        return priority
+
+
+flow = TicketFlow(suppress_flow_events=True)  # keep console output clean
+result = flow.kickoff()
+print(f"Final result: {result}")
+
+# ask() returns the response text; response metadata stays in input_history
+for entry in flow.input_history:
+    print(f"Q: {entry['message']}")
+    print(f"A: {entry['response']}")
+    print(f"Request metadata: {entry['metadata']}")
+    print(f"Response metadata: {entry['response_metadata']}")
+```
+
+Execute-o:
+
+```bash
+python ticket_flow.py
+```
+
+Saída esperada:
+
+```text
+Ticket issue: My printer is on fire
+Priority unavailable; defaulting to normal.
+Final result: normal
+Q: Describe the issue:
+A: My printer is on fire
+Request metadata: {'channel': 'web'}
+Response metadata: {'responded_by': 'scripted-user'}
+Q: What priority is this?
+A: None
+Request metadata: {'channel': 'web'}
+Response metadata: None
+```
+
+Pontos importantes:
+
+- **Os metadados de requisição fluem para fora.** Ambas as chamadas `ask()` passam `metadata={"channel": "web"}`, e o provider as recebe — use isso para rotear a pergunta para o lugar certo (canal, usuário, sessão).
+- **Os metadados de resposta fluem de volta.** O provider envolve a resposta em um `InputResponse`. `ask()` ainda retorna apenas o texto da resposta; os campos extras ficam em `flow.input_history`.
+- **`None` significa indisponível, não vazio.** Uma string vazia significa que o usuário não enviou nada de propósito; `None` significa que nenhuma entrada pôde ser coletada. O flow verifica `None` explicitamente e nunca o trata como uma resposta.
+- **`input_history` é a trilha de auditoria.** Cada chamada `ask()` adiciona uma entrada com `message`, `response`, `method_name`, `timestamp`, `metadata` (enviado ao provider) e `response_metadata` (retornado pelo provider).
+
+### `ask()` vs `handle_turn()`
+
+`ask()` coleta entrada para o passo que **já está em execução**. `handle_turn()` inicia um **novo turno conversacional** pelo grafo conversacional — é o ponto de entrada de cada mensagem do usuário em um app de chat, não um prompt no meio de um passo.
+
+| | `ask()` | `handle_turn()` |
+|---|---------|-----------------|
+| Chamado de | Dentro de um método do flow (`@start`, `@listen`) | Sua camada de transporte (REST, WebSocket, REPL) |
+| Propósito | Entrada no meio do passo: wizard, esclarecimento | Um turno de chat com o grafo completo |
+| Requer | Um `InputProvider` (console por padrão) | Modo conversacional (`@ConversationConfig`) |
+| Retorna | Texto da resposta, ou `None` se indisponível | A resposta do assistente para aquele turno |
+
+Para o padrão baseado em turnos, veja [Flows Conversacionais](/pt-BR/guides/flows/conversational-flows).
+
 ## Adicionando Agentes aos Flows
 
 Os agentes podem ser integrados facilmente aos seus flows, oferecendo uma alternativa leve às crews completas quando você precisar executar tarefas simples e focadas. Veja um exemplo de como utilizar um agente em um flow para realizar uma pesquisa de mercado:

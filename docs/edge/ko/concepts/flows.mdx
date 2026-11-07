@@ -719,6 +719,126 @@ def next_step(self, result: HumanFeedbackResult):
 
 플로우에서의 인간 피드백에 대한 완전한 가이드는 비동기/논블로킹 피드백과 커스텀 프로바이더(Slack, 웹훅 등)를 포함하여 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows)을 참조하세요.
 
+## 커스텀 입력 프로바이더
+
+<Note>
+`Flow.ask()`와 `InputProvider` 프로토콜은 **CrewAI 버전 1.10.0 이상**이 필요합니다.
+</Note>
+
+`Flow.ask()`는 실행 중인 스텝 **내부에서** 입력을 요청할 수 있게 해줍니다 — 마법사 질문, 확인 요청, 누락된 필드 등입니다. 기본적으로 `ask()`는 콘솔 입력을 읽으며 블로킹합니다. 웹 UI, 티켓 큐, 테스트처럼 다른 곳에서 입력을 수집하려면 Flow의 `input_provider`를 `InputProvider` 프로토콜을 구현하는 객체로 설정하세요. 이 프로토콜은 메서드 `request_input(message, flow, metadata=None)` 하나로 구성되며, 답변을 문자열로 반환하거나, 선택적 응답 메타데이터가 담긴 `InputResponse`를 반환하거나, 입력을 사용할 수 없을 때 `None`을 반환합니다.
+
+### 예제: 스크립트화된 입력 프로바이더
+
+다음 완전한 예제는 스크립트화된 답변을 재생합니다 — 콘솔, 모델 호출, 자격 증명이 없으므로 그대로 실행하면서 전체 계약을 확인할 수 있습니다: 요청 메타데이터가 프로바이더에 도달하고, 응답 메타데이터가 `InputResponse`로 돌아오며, `None`이 입력 불가를 알리는 과정입니다.
+
+```python
+from typing import Any
+
+from crewai.flow import Flow, InputResponse, start
+
+
+class ScriptedInputProvider:
+    """Replays scripted answers, then reports that input is unavailable."""
+
+    def __init__(self, answers: list[str]) -> None:
+        self.answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | None:
+        # metadata is whatever the caller passed to ask()
+        self.received_metadata.append(metadata)
+
+        if not self.answers:
+            return None  # no input available (queue closed, user left)
+
+        answer = self.answers.pop(0)
+        return InputResponse(
+            text=answer,
+            metadata={"responded_by": "scripted-user"},  # response metadata
+        )
+
+
+class TicketFlow(Flow):
+    input_provider = ScriptedInputProvider(["My printer is on fire"])
+
+    @start()
+    def triage(self) -> str:
+        issue = self.ask("Describe the issue:", metadata={"channel": "web"})
+        if issue is None:
+            # ask() returns None when input is unavailable - handle it
+            # explicitly instead of treating it as an answer.
+            print("No answer received; opening the ticket as untriaged.")
+            return "untriaged"
+
+        print(f"Ticket issue: {issue}")
+        priority = self.ask("What priority is this?", metadata={"channel": "web"})
+        if priority is None:
+            print("Priority unavailable; defaulting to normal.")
+            return "normal"
+
+        print(f"Ticket priority: {priority}")
+        return priority
+
+
+flow = TicketFlow(suppress_flow_events=True)  # keep console output clean
+result = flow.kickoff()
+print(f"Final result: {result}")
+
+# ask() returns the response text; response metadata stays in input_history
+for entry in flow.input_history:
+    print(f"Q: {entry['message']}")
+    print(f"A: {entry['response']}")
+    print(f"Request metadata: {entry['metadata']}")
+    print(f"Response metadata: {entry['response_metadata']}")
+```
+
+실행 방법:
+
+```bash
+python ticket_flow.py
+```
+
+예상 출력:
+
+```text
+Ticket issue: My printer is on fire
+Priority unavailable; defaulting to normal.
+Final result: normal
+Q: Describe the issue:
+A: My printer is on fire
+Request metadata: {'channel': 'web'}
+Response metadata: {'responded_by': 'scripted-user'}
+Q: What priority is this?
+A: None
+Request metadata: {'channel': 'web'}
+Response metadata: None
+```
+
+주목할 점:
+
+- **요청 메타데이터가 외부로 흐릅니다.** 두 `ask()` 호출 모두 `metadata={"channel": "web"}`를 전달하며 프로바이더가 이를 받습니다 — 이를 사용해 질문을 올바른 대상(채널, 사용자, 세션)으로 라우팅하세요.
+- **응답 메타데이터가 돌아옵니다.** 프로바이더는 답변을 `InputResponse`로 감쌉니다. `ask()`는 여전히 응답 텍스트만 반환하고, 추가 필드는 `flow.input_history`에 기록됩니다.
+- **`None`은 비어 있음이 아니라 사용 불가를 의미합니다.** 빈 문자열은 사용자가 의도적으로 아무것도 입력하지 않은 것이고, `None`은 입력을 수집할 수 없었음을 의미합니다. 플로우는 `None`을 명시적으로 확인하며 절대 답변으로 취급하지 않습니다.
+- **`input_history`는 감사 기록입니다.** 모든 `ask()` 호출은 `message`, `response`, `method_name`, `timestamp`, `metadata`(프로바이더에게 보낸 값), `response_metadata`(프로바이더가 반환한 값)를 담은 항목 하나를 추가합니다.
+
+### `ask()` vs `handle_turn()`
+
+`ask()`는 **이미 실행 중인** 스텝을 위한 입력을 수집합니다. `handle_turn()`은 대화 그래프를 통해 **새로운 대화 턴**을 시작합니다 — 이는 스텝 중간 프롬프트가 아니라 채팅 앱에서 각 사용자 메시지의 진입점입니다.
+
+| | `ask()` | `handle_turn()` |
+|---|---------|-----------------|
+| 호출 위치 | 플로우 메서드 내부 (`@start`, `@listen`) | 트랜스포트 계층 (REST, WebSocket, REPL) |
+| 목적 | 스텝 중간 입력: 마법사, 확인 | 전체 그래프를 거치는 하나의 채팅 턴 |
+| 필요 조건 | `InputProvider` (기본값은 콘솔) | 대화 모드 (`@ConversationConfig`) |
+| 반환 값 | 응답 텍스트, 사용 불가 시 `None` | 해당 턴의 어시스턴트 응답 |
+
+턴 기반 패턴은 [대화형 Flow](/ko/guides/flows/conversational-flows)를 참조하세요.
+
 ## 플로우에 에이전트 추가하기
 
 에이전트는 플로우에 원활하게 통합할 수 있으며, 단순하고 집중된 작업 실행이 필요할 때 전체 Crew의 경량 대안으로 활용됩니다. 아래는 에이전트를 플로우 내에서 사용하여 시장 조사를 수행하는 예시입니다:
