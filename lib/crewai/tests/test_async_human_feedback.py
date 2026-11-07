@@ -489,6 +489,57 @@ class TestFlowResumeWithFeedback:
             assert flow._is_execution_resuming is True
             assert flow.state.counter == 42
 
+    @staticmethod
+    def _paused_review_flow(persistence: SQLiteFlowPersistence) -> tuple[type, str]:
+        class PauseProvider(HumanFeedbackProvider):
+            def request_feedback(self, context: Any, flow: Any) -> str:
+                raise HumanFeedbackPending(context=context)
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", provider=PauseProvider())
+            def review(self):
+                return "draft"
+
+        paused = ReviewFlow(persistence=persistence).kickoff()
+        assert isinstance(paused, HumanFeedbackPending)
+        return ReviewFlow, paused.context.flow_id
+
+    def test_resume_does_not_leave_the_flow_in_the_runtime_state(self) -> None:
+        """from_pending() registers the flow in the caller's runtime state.
+
+        resume() has to close that scope like kickoff() does, otherwise the
+        resumed flow is kept in the checkpoints of every later run (#8688).
+        """
+        from crewai.events.event_bus import crewai_event_bus
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            flow_cls, flow_id = self._paused_review_flow(persistence)
+
+            flow = flow_cls.from_pending(flow_id, persistence)
+            flow.resume("approved")
+
+            assert crewai_event_bus.runtime_state is None
+
+    def test_resume_async_does_not_leave_the_flow_in_the_runtime_state(
+        self,
+    ) -> None:
+        import asyncio
+
+        from crewai.events.event_bus import crewai_event_bus
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            flow_cls, flow_id = self._paused_review_flow(persistence)
+
+            async def resume_in_handler() -> Any:
+                flow = flow_cls.from_pending(flow_id, persistence)
+                await flow.resume_async("approved")
+                return crewai_event_bus.runtime_state
+
+            assert asyncio.run(resume_in_handler()) is None
+
     def test_suppressed_resume_emits_a_matched_lifecycle_pair(self) -> None:
         """A suppressed resume emits exactly one start and one finish.
 
