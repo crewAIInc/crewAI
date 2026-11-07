@@ -17,6 +17,7 @@ from crewai.events.types.knowledge_events import (
 )
 from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
+from crewai.tools.tool_results import active_tool_results
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
@@ -247,7 +248,9 @@ def process_tool_results(agent: Agent, result: Any) -> Any:
     Returns:
         The final result, potentially overridden by tool result_as_answer.
     """
-    for tool_result in agent.tools_results:
+    active = active_tool_results()
+    recorded = active if active is not None else getattr(agent, "tools_results", [])
+    for tool_result in recorded:
         if tool_result.get("result_as_answer", False):
             result = tool_result["result"]
     return result
