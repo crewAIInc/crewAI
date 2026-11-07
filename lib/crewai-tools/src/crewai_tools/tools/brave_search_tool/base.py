@@ -23,7 +23,7 @@ _QUOTA_CODES = frozenset({"QUOTA_LIMITED", "USAGE_LIMIT_EXCEEDED"})
 def _save_results_to_file(content: str) -> None:
     """Saves the search results to a file."""
     filename = f"search_results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-    with open(filename, "w") as file:
+    with open(filename, "w", encoding="utf-8") as file:
         file.write(content)
 
 
@@ -265,7 +265,7 @@ class BraveSearchToolBase(BaseTool, ABC):
             response = self._refine_response(response)
 
         if self.save_file:
-            _save_results_to_file(json.dumps(response, indent=2))
+            _save_results_to_file(json.dumps(response, indent=2, ensure_ascii=False))
 
         return response
 

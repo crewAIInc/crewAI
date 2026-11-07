@@ -91,7 +91,7 @@ def _save_results_to_file(content: str) -> None:
     """Saves the search results to a file."""
     try:
         filename = f"search_results_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-        with open(filename, "w") as file:
+        with open(filename, "w", encoding="utf-8") as file:
             file.write(content)
         logger.info(f"Results saved to {filename}")
     except IOError as e:
@@ -337,6 +337,8 @@ class SerperDevTool(BaseTool):
         formatted_results["credits"] = results.get("credits", 1)
 
         if save_file:
-            _save_results_to_file(json.dumps(formatted_results, indent=2))
+            _save_results_to_file(
+                json.dumps(formatted_results, indent=2, ensure_ascii=False)
+            )
 
         return formatted_results  # type: ignore[return-value]
