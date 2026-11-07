@@ -107,9 +107,9 @@ STATUSES = {"queued", "running"} | FINISHED
 EvalTarget = Literal["last_run", "given_run", "app"]
 
 # A random id for the evaluation under way, so its start, its verdict and its
-# stop can be joined in the usage stats. Set, never reset: the run app counts a
-# stop after `evaluate_run` raised, on the same thread, and it is that
-# evaluation's stop.
+# stop can be joined in the usage stats. Cleared by the count of its outcome
+# (`record_finished`, `record_stop`), not when `evaluate_run` returns: the run
+# app counts a stop after `evaluate_run` raised, and it is that evaluation's.
 _EVAL_ID: ContextVar[str | None] = ContextVar("crewai_eval_id", default=None)
 
 
@@ -122,6 +122,14 @@ def _begin_evaluation() -> None:
 def _eval_id_attribute() -> dict[str, str]:
     eval_id = _EVAL_ID.get()
     return {"eval_id": eval_id} if eval_id else {}
+
+
+def _end_evaluation() -> dict[str, str]:
+    """The `eval_id` attribute for the outcome being counted, which ends the
+    evaluation: a later stop in the same context belongs to none."""
+    attribute = _eval_id_attribute()
+    _EVAL_ID.set(None)
+    return attribute
 
 
 def _record_usage(*, logged_in: bool, target: EvalTarget) -> None:
@@ -192,7 +200,7 @@ def record_stop(reason: StopReason) -> None:
     The reason is a word from a closed list and never the message, which can
     carry AMP's own words or a local path.
     """
-    _count_usage(f"cli_usage:eval_stopped:{reason}", _eval_id_attribute())
+    _count_usage(f"cli_usage:eval_stopped:{reason}", _end_evaluation())
 
 
 NOT_TRACED = (
@@ -323,7 +331,7 @@ def record_finished(finished: dict[str, Any]) -> None:
     gate = str(verdict.get("gate") if isinstance(verdict, dict) else "").lower()
     _count_usage(
         f"cli_usage:eval_finished:{gate if gate in GATE_WORDS else 'unknown'}",
-        _eval_id_attribute(),
+        _end_evaluation(),
     )
 
 

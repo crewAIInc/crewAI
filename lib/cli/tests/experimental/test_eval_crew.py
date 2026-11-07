@@ -1043,6 +1043,36 @@ def test_the_run_apps_own_count_of_a_stop_carries_the_evaluations_id(project, mo
     assert app._evaluation["state"] == "failed"
 
 
+@pytest.mark.parametrize("ended", ["finished", "failed", "stopped"])
+def test_a_later_stop_in_the_same_app_does_not_inherit_an_ended_evaluations_id(
+    project, monkeypatch, counted, ended
+):
+    """A long-lived run app: one evaluation ends (a verdict, a failed
+    evaluation, or a stop the app counts after `evaluate_run` raised), then a
+    later Evaluate is declined or refused before anything starts. That stop
+    belongs to no evaluation, so it carries no `eval_id`."""
+    from crewai_cli.crew_run_tui import CrewRunApp
+
+    answer = {
+        "finished": done(),
+        "failed": httpx.Response(200, json={"id": "ev-1", "status": "failed", "error": "the judge gave up"}),
+        "stopped": httpx.Response(403, json={"detail": "not yours"}),
+    }[ended]
+    install(monkeypatch, FakeAMP(statuses=[answer]))
+    monkeypatch.setattr(CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args))
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+
+    app._evaluate_now(EXECUTION_ID)
+    ended_id = counted[0][1]["eval_id"]
+    assert all(attributes.get("eval_id") == ended_id for _, attributes in counted)
+    counted.clear()
+    eval_module.record_stop("declined")
+    eval_module.record_stop("untrusted_amp")
+
+    assert counted == [("cli_usage:eval_stopped:declined", {}), ("cli_usage:eval_stopped:untrusted_amp", {})]
+
+
 def test_a_stop_outside_any_evaluation_carries_no_id(counted):
     """The run app's Evaluate, declined before anything started: nothing to join."""
     eval_module.record_stop("declined")
