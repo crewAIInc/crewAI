@@ -228,6 +228,79 @@ def route_turn(self, context):
 
 لا تستخدم `@human_feedback` لأسطر المتابعة في الدردشة إلا عند الحاجة لموافقة بشرية على مخرجات خطوة محددة.
 
+## حفظ واستعادة المحادثة عبر النسخ
+
+يحفظ `@persist` لقطة من حالة الـ flow في خلفية الحفظ بعد تنفيذ الطريقة المزخرفة. تستعيد نسخة **جديدة** من `Flow` بنفس إعدادات الحفظ ونفس `session_id` تلك اللقطة، بحيث يمكن متابعة المحادثة عبر إعادة تشغيل العملية دون إعادة استخدام النسخة الموجودة في الذاكرة.
+
+المثال أدناه حتمي بالكامل: يحل `route_turn` مخصص ومعالج `@listen` واحد محل موجّه LLM ونموذج الدردشة، لذا يعمل دون بيانات اعتماد المزود أو استدعاءات نموذج مدفوعة. يستخدم مسار SQLite صريحاً ومعرّف جلسة ثابتاً.
+
+```python
+from crewai import Flow
+from crewai.flow import ConversationConfig, ConversationState, listen, persist
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+DB_PATH = "conversation.db"
+SESSION_ID = "session-1"
+
+store = SQLiteFlowPersistence(DB_PATH)
+
+
+@ConversationConfig()
+class RecallFlow(Flow[ConversationState]):
+    def route_turn(self, context: dict) -> str | None:
+        # Deterministic routing: no LLM required.
+        return "recall"
+
+    @listen("recall")
+    @persist(store)
+    def handle_recall(self) -> str:
+        reply = f"echo: {self.state.current_user_message or ''}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+# Turn 1 — first instance.
+flow_a = RecallFlow()
+flow_a.handle_turn("hello", session_id=SESSION_ID)
+
+# Turn 2 — a *fresh* instance with the same persistence and session id.
+flow_b = RecallFlow()
+flow_b.handle_turn("are you there?", session_id=SESSION_ID)
+
+# The restored history keeps both sides of the conversation, in order,
+# with no duplicate messages.
+for message in flow_b.state.messages:
+    print(f"{message.role}: {message.content}")
+```
+
+الناتج المتوقع:
+
+```
+user: hello
+assistant: echo: hello
+user: are you there?
+assistant: echo: are you there?
+```
+
+شغّله كسكربت:
+
+```bash
+python conversation_persistence.py
+```
+
+استخدام `session_id` مختلف في نسخة جديدة يبدأ محادثة منفصلة؛ ولا يحمّل سجل الجلسة السابقة:
+
+```python
+flow_c = RecallFlow()
+flow_c.handle_turn("first message", session_id="session-2")
+
+# session-2 starts fresh — its history has only its own turn.
+print([m.content for m in flow_c.state.messages])
+# ['first message', 'echo: first message']
+```
+
+هذه التجربة لإعادة تشغيل النسخة تمثل **استعادة الحالة المحفوظة** فقط. إنها تستعيد الرسائل والأعلام من اللقطة، لكنها لا تستعيد عمل الخلفية الجاري أو موارد التنفيذ المباشرة أو أي trace قيد التقدم. إذا كانت جلستك تؤجّل إنهاء الـ trace، فاستدعِ `finalize_session_traces()` عند انتهاء المحادثة لإغلاق trace الجلسة المؤجّل.
+
 ## `Flow` المحادثاتي
 
 اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation`. يظل المستمع المهمل `answer_from_history_turn` متاحاً للتوافق. يدير الإطار `state.messages`، ويمكنه تشغيل LLM للموجّه، ويمكنه إنهاء trace كل جولة تلقائياً باستخدام `trace_scope="turn"`. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
