@@ -179,3 +179,34 @@ def test_blocked_hook_does_not_return_a_cached_result(backend):
     assert from_cache is False
     assert tool.calls == []
     assert cache.read("lookup", key) == "cached:original"
+
+
+class FinalLookupTool(LookupTool):
+    result_as_answer: bool = True
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+def test_blocked_result_as_answer_tool_does_not_finish_the_agent(async_entry):
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def block(_context):
+        return False
+
+    llm = ScriptedLLM(batch_size=1)
+    tool = FinalLookupTool()
+    agent = Agent(
+        role="Tester",
+        goal="Look up values",
+        backstory="Test hooks",
+        llm=llm,
+        tools=[tool],
+        verbose=False,
+    )
+
+    if async_entry:
+        result = asyncio.run(agent.kickoff_async("Look up values"))
+    else:
+        result = agent.kickoff("Look up values")
+
+    assert result.raw == "Finished"
+    assert llm.calls == 2
+    assert tool.calls == []
