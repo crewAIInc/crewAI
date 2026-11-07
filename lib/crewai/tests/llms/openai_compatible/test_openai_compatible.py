@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_groq_config(self):
+        """Test Groq provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["groq"]
+        assert config.base_url == "https://api.groq.com/openai/v1"
+        assert config.api_key_env == "GROQ_API_KEY"
+        assert config.base_url_env == "GROQ_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -180,6 +188,24 @@ class TestOpenAICompatibleCompletion:
         ):
             OpenAICompatibleCompletion(
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
+            )
+
+    def test_groq_missing_api_key_names_env_var(self):
+        """Groq requires a key; the error names GROQ_API_KEY rather than OpenAI's."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="GROQ_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="llama-3.3-70b-versatile", provider="groq"
+            )
+
+    def test_groq_does_not_borrow_openai_credentials(self):
+        """An OpenAI key alone must not satisfy Groq."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai"}, clear=True), pytest.raises(
+            ValueError, match="GROQ_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="llama-3.3-70b-versatile", provider="groq"
             )
 
     def test_api_key_from_env(self):
@@ -420,6 +446,74 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepseek"
             assert llm.model == "deepseek-chat"
+
+    def test_llm_creates_openai_compatible_for_groq(self):
+        """groq/<model> routes natively instead of falling back to LiteLLM."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            llm = LLM(model="groq/llama-3.3-70b-versatile")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.model == "llama-3.3-70b-versatile"
+            assert llm.base_url == "https://api.groq.com/openai/v1"
+
+    def test_groq_route_names_the_native_class(self):
+        """Routing resolves to the native class, so no LiteLLM fallback is built."""
+        route = LLM._resolve_route("groq/llama-3.3-70b-versatile", {})
+        assert route.native_class is OpenAICompatibleCompletion
+        assert route.provider == "groq"
+
+    def test_groq_preserves_model_ids_with_a_slash(self):
+        """Groq serves org/model ids such as openai/gpt-oss-120b; only the prefix is split."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            llm = LLM(model="groq/openai/gpt-oss-120b")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.model == "openai/gpt-oss-120b"
+
+    def test_llm_creates_openai_compatible_for_groq_explicit_provider(self):
+        """Explicit provider="groq" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            llm = LLM(model="llama-3.3-70b-versatile", provider="groq")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.model == "llama-3.3-70b-versatile"
+
+    def test_groq_base_url_env_override(self):
+        """GROQ_BASE_URL redirects Groq to a proxy or gateway."""
+        with patch.dict(
+            os.environ,
+            {
+                "GROQ_API_KEY": "test-key",
+                "GROQ_BASE_URL": "https://groq-gateway.example.com/openai/v1",
+            },
+        ):
+            llm = LLM(model="groq/llama-3.3-70b-versatile")
+            assert llm.base_url == "https://groq-gateway.example.com/openai/v1"
+
+    def test_groq_explicit_configuration_wins_over_env(self):
+        """Explicit api_key/base_url beat GROQ_API_KEY and GROQ_BASE_URL."""
+        with patch.dict(
+            os.environ,
+            {
+                "GROQ_API_KEY": "env-key",
+                "GROQ_BASE_URL": "https://env.example.com/openai/v1",
+            },
+        ):
+            llm = LLM(
+                model="groq/llama-3.3-70b-versatile",
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/openai/v1",
+            )
+            assert llm.api_key == "explicit-key"
+            assert llm.base_url == "https://explicit.example.com/openai/v1"
+
+    def test_groq_client_params_use_groq_endpoint_and_key(self):
+        """The OpenAI client is built against Groq, not api.openai.com."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "gsk-test"}):
+            llm = LLM(model="groq/llama-3.3-70b-versatile")
+            params = llm._get_client_params()
+            assert params["api_key"] == "gsk-test"
+            assert params["base_url"] == "https://api.groq.com/openai/v1"
 
     def test_llm_passes_kwargs_to_completion(self):
         """Test LLM passes kwargs to OpenAICompatibleCompletion."""
