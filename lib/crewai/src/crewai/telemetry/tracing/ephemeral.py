@@ -190,18 +190,37 @@ def ephemeral_tracing(
         if session.finish_spans() and session.flush():
             buffer.share(execution_uuid, first_time=first_time)
 
+    failed = False
     try:
         yield session
     except Exception:
+        failed = True
         # A failed run is shared only when `crewai eval` started it: the grade
         # is read off its trace, and running the command was the request to
         # share it, as a logged-in failed run already is. Any other failed run,
         # and a run stopped by Ctrl-C or cancellation, is discarded.
         if run_awaited_by_evaluation():
-            share()
+            _logged_instead(share, "Trace of a failed run was not shared")
         raise
     else:
         share()
     finally:
         buffer.shutdown()
-        session.shutdown()
+        if failed:
+            _logged_instead(
+                session.shutdown, "Trace of a failed run did not shut down cleanly"
+            )
+        else:
+            session.shutdown()
+
+
+def _logged_instead(step: Callable[[], object], what: str) -> None:
+    """Run STEP of finishing a failed run's trace, logging what it raises.
+
+    The run's own error is what its caller must see; a trace that cannot be
+    finished, flushed or shut down must never be raised in its place.
+    """
+    try:
+        step()
+    except Exception as error:
+        logger.warning("%s (%s)", what, type(error).__name__)

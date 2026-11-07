@@ -1036,3 +1036,39 @@ def test_a_failed_run_crewai_eval_started_is_shared_after_its_consent(
     consent.assert_called_once_with()
     assert len(collector.grants) == 1
     assert {span.name for span in spans(collector.batches[0][1])} == {"execute flow"}
+
+
+@pytest.mark.parametrize("evaluated", [True, False], ids=["crewai_eval", "any_run"])
+@pytest.mark.parametrize("step", ["finish_spans", "flush"])
+def test_a_trace_that_cannot_be_finished_never_replaces_the_runs_error(
+    collector, monkeypatch, tmp_path, caplog, step, evaluated
+):
+    """Finishing a failed run's trace is best effort: whatever sharing it or
+    shutting it down raises is logged, and the run's own error is what escapes."""
+    import contextlib
+
+    from crewai_core import eval_handshake
+
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+
+    def broken(self, *args, **kwargs):
+        raise OSError("the exporter broke")
+
+    monkeypatch.setattr(TraceSession, step, broken)
+
+    def fail_execution():
+        with ephemeral_tracing(str(uuid4())) as session:
+            record(session)
+            raise RuntimeError("execution failed")
+
+    with (
+        caplog.at_level("WARNING", logger=ephemeral.logger.name),
+        eval_handshake.awaiting_evaluation() if evaluated else contextlib.nullcontext(),
+        pytest.raises(RuntimeError, match="execution failed") as raised,
+    ):
+        fail_execution()
+    assert raised.value.__context__ is None
+    assert ("Trace of a failed run was not shared (OSError)" in caplog.text) is evaluated
+    assert "Trace of a failed run did not shut down cleanly (OSError)" in caplog.text
+    assert "the exporter broke" not in caplog.text
+    assert not collector.grants and not collector.batches
