@@ -60,12 +60,8 @@ def build_pdf(text: str = "Quarterly revenue was 42") -> bytes:
         document.close()
 
 
-PRESIGNED_URL = (
-    "https://temp.4d4f16c61d89ec64e760039c4ec50717.r2.cloudflarestorage.com/"
-    "668641/share_point/SHARE_POINT_DOWNLOAD_FILE_BY_SERVER_RELATIVE_URL/"
-    "response/34e077085d293bdb832a6b7c93b9e222"
-    "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=1954b3d4"
-)
+# Extensionless on purpose: these cases sniff the body, not a path suffix.
+PRESIGNED_URL = "https://example.com/file?X-Amz-Signature=test"
 
 
 def build_docx(text: str = "Signed and delivered") -> bytes:
