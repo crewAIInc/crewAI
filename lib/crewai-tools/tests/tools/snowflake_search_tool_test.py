@@ -95,3 +95,25 @@ def test_config_validation():
 
     with pytest.raises(ValueError):
         SnowflakeConfig(account="test_account", user="test_user")
+
+
+@pytest.mark.asyncio
+async def test_arun_executes_the_query(snowflake_tool, mock_snowflake_connection):
+    """The async tool interface must not fall back to a missing _arun."""
+    import crewai_tools.tools.snowflake_search_tool.snowflake_search_tool as sf
+
+    sf._query_cache.clear()
+
+    with patch.object(
+        snowflake_tool, "_create_connection", return_value=mock_snowflake_connection
+    ):
+        results = await snowflake_tool.arun(
+            query="SELECT * FROM arun_test_table", timeout=300
+        )
+
+    sf._query_cache.clear()
+
+    assert results == [
+        {"col1": 1, "col2": "value1"},
+        {"col1": 2, "col2": "value2"},
+    ]
