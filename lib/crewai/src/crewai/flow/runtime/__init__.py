@@ -1539,6 +1539,29 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self.last_human_feedback = previous_feedback
                     raise
 
+            # Dispatch POST_STEP for the resumed method, matching the inline
+            # completion path: a @human_feedback method that finishes via
+            # resume() must still run step hooks (payload replacement, route
+            # replacement, HookAborted) after feedback finalization.
+            from crewai.hooks.contexts import StepContext
+            from crewai.hooks.dispatch import InterceptionPoint as _InterceptionPoint
+
+            if not self._skip_interception(_InterceptionPoint.POST_STEP):
+                step_output = collapsed_outcome if emit else result
+                post_step_ctx = StepContext(
+                    kind="flow_method",
+                    step_name=context.method_name,
+                    flow=self,
+                    output=step_output,
+                    payload=step_output,
+                )
+                self._dispatch_interception(_InterceptionPoint.POST_STEP, post_step_ctx)
+                if emit:
+                    collapsed_outcome = post_step_ctx.payload
+                else:
+                    result = post_step_ctx.payload
+                    resumed_method_output = result
+
             self._completed_methods.add(FlowMethodName(context.method_name))
 
             await asyncio.to_thread(
