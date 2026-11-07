@@ -2,7 +2,6 @@
 # https://github.com/un33k/python-slugify
 # MIT License
 
-import functools
 import hashlib
 import re
 from typing import Any, Final
@@ -16,11 +15,6 @@ _CAMEL_UPPER_LOWER: Final[re.Pattern[str]] = re.compile(r"([A-Z]+)([A-Z][a-z])")
 _DISALLOWED_CHARS_PATTERN: Final[re.Pattern[str]] = re.compile(r"[^a-zA-Z0-9]+")
 _DUPLICATE_UNDERSCORE_PATTERN: Final[re.Pattern[str]] = re.compile(r"_+")
 _MAX_TOOL_NAME_LENGTH: Final[int] = 64
-
-
-@functools.lru_cache(maxsize=8)
-def _duplicate_separator_pattern(separator: str) -> re.Pattern[str]:
-    return re.compile(f"(?:{re.escape(separator)}){{2,}}")
 
 
 def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> str:
@@ -71,9 +65,7 @@ def slugify(text: str, separator: str = "_") -> str:
     text = text.encode("ascii", "ignore").decode("ascii")
     text = text.lower()
     text = _QUOTE_PATTERN.sub("", text)
-    text = _DISALLOWED_CHARS_PATTERN.sub(separator, text)
-    text = _duplicate_separator_pattern(separator).sub(separator, text)
-    return text.strip(separator)
+    return separator.join(filter(None, _DISALLOWED_CHARS_PATTERN.split(text)))
 
 
 def interpolate_only(
