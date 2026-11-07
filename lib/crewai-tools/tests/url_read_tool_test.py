@@ -860,6 +860,44 @@ class TestSafeGetBounded:
 
         safe_get.assert_not_called()
 
+    def test_a_body_still_arriving_at_the_deadline_is_abandoned(self):
+        """A server that trickles bytes under the read timeout is cut off."""
+        chunks_yielded = 0
+
+        class TricklingResponse(FakeResponse):
+            def iter_content(self, chunk_size: int = 65536):
+                nonlocal chunks_yielded
+                for _ in range(1000):
+                    chunks_yielded += 1
+                    yield b"x"
+
+        response = TricklingResponse(url="https://cdn.example.com/slow")
+        with patch(
+            "crewai_tools.security.safe_requests.safe_get", return_value=response
+        ):
+            with pytest.raises(ValueError, match="was still arriving at the deadline"):
+                safe_get_bounded(
+                    "https://example.com/slow",
+                    max_bytes=1024,
+                    deadline=time.monotonic() - 1,
+                )
+
+        assert chunks_yielded == 1
+        assert response.closed
+
+    def test_a_body_that_arrives_before_the_deadline_is_returned(self):
+        response = FakeResponse(b"payload", chunk_size=2)
+        with patch(
+            "crewai_tools.security.safe_requests.safe_get", return_value=response
+        ):
+            body, _, _ = safe_get_bounded(
+                "https://example.com/f",
+                max_bytes=1024,
+                deadline=time.monotonic() + 60,
+            )
+
+        assert body == b"payload"
+
     def test_stops_reading_once_the_limit_is_crossed(self):
         """The cap must abandon the stream, not buffer the whole body first."""
         chunks_yielded = 0

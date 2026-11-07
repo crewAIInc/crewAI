@@ -117,14 +117,21 @@ class _SpreadsheetTool(BaseTool):
     def _find(self, file: str) -> tuple[str, FileInput] | None:
         """The spreadsheet ``file`` names. Only the agent's own spreadsheets are
         found: any other name or URL is not fetched."""
-        given = file.strip().strip("\"'")
-        name = self._urls.get(given)
-        if name is not None:
-            return name, self._files[name]
-        wanted = given.casefold()
-        for name, source in self._files.items():
-            if wanted in (name.casefold(), (source.filename or "").casefold()):
-                return name, source
+        given = file.strip()
+        candidates = [given]
+        # Then without the quotes the overview asks for, which can wrap a name
+        # that itself starts or ends with one.
+        if len(given) > 1 and given[0] == given[-1] and given[0] in "\"'":
+            candidates.append(given[1:-1])
+        candidates.append(given.strip("\"'"))
+        for candidate in dict.fromkeys(candidates):
+            name = self._urls.get(candidate)
+            if name is not None:
+                return name, self._files[name]
+            wanted = candidate.casefold()
+            for name, source in self._files.items():
+                if wanted in (name.casefold(), (source.filename or "").casefold()):
+                    return name, source
         return None
 
 

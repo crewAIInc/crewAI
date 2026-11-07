@@ -615,7 +615,7 @@ print(result.raw)
 ```
 
 <Note>
-O agente só abre URLs que aparecem na sua própria entrada, nunca uma que um modelo ou uma ferramenta produza. Os downloads recusam endereços de redes privadas e internas, e um arquivo pode ter até 50 MB e 10 milhões de células. Arquivos `.xls` legados, OpenDocument `.ods` e pastas de trabalho protegidas por senha não podem ser lidos, e o agente é avisado disso. Sem o extra, a URL de uma planilha é só texto na entrada.
+O agente só abre URLs que aparecem na sua própria entrada, nunca uma que um modelo ou uma ferramenta produza. Os downloads recusam endereços de redes privadas e internas, e um arquivo pode ter até 50 MB e 10 milhões de células. O agente lê até 10 planilhas por execução, e os downloads delas compartilham um limite de 60 segundos que não faz parte de `max_execution_time`. Arquivos `.xls` legados, OpenDocument `.ods` e pastas de trabalho protegidas por senha não podem ser lidos, e o agente é avisado disso. Sem o extra, a URL de uma planilha é só texto na entrada.
 </Note>
 
 ## Agents conversacionais (experimental)

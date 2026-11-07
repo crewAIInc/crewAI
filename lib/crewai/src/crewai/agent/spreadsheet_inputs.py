@@ -43,17 +43,27 @@ logger = logging.getLogger(__name__)
 # ASCII URL characters only: prose around a URL (quotes, brackets, CJK
 # punctuation) ends it, and urlparse never sees text it rejects.
 _URL: Final = re.compile(r"https?://[A-Za-z0-9\-._~:/?#@!$&*+,;=%()]+")
+# Markup escapes a URL's "&" as "&amp;". Only references ending in ";" are
+# decoded: html.unescape alone also reads "&para=2" in a query as "¶=2".
+_CHARACTER_REFERENCE: Final = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z]+);")
 _TRAILING: Final = ".,;:!?"
 _MAX_URLS: Final = 10
 _UNREADABLE: Final = (
     "can't be read: it could not be downloaded from its URL (it may be over "
-    "the {limit} MB limit, expired, or at an address that can't be fetched)."
+    "the {limit} MB limit, too slow to download, expired, or at an address "
+    "that can't be fetched)."
 )
 _WEB_PAGE: Final = (
     "can't be read: its URL serves a web page, not the file (a share or preview "
     "link); a direct download link works."
 )
-_OVER_LIMIT: Final = f"not read: only the first {_MAX_URLS} spreadsheets are read."
+_OVER_LIMIT: Final = (
+    f"  - {{count}} more spreadsheet URLs were not read: only the first "
+    f"{_MAX_URLS} are."
+)
+# For all of one run's downloads together: they happen before the run starts,
+# outside its max_execution_time.
+_DOWNLOAD_SECONDS: Final = 60.0
 # A retry, a guardrail retry or the next turn of a conversation reads the same
 # URLs again within minutes; a URL's content can change, so not for longer.
 _DOWNLOAD_TTL_SECONDS: Final = 300.0
@@ -112,16 +122,23 @@ def spreadsheet_urls(text: str) -> dict[str, str]:
     from crewai_files import File, FileUrl
     from crewai_files.spreadsheets import is_spreadsheet, url_filename
 
+    text = _CHARACTER_REFERENCE.sub(lambda m: html.unescape(m.group()), text)
     found: dict[str, str] = {}
+    seen: set[str] = set()
     taken: set[str] = set()
+    last_number: dict[str, int] = {}
     for match in _URL.finditer(text):
-        url = html.unescape(_trim(match.group()))
-        if url in found.values() or not is_spreadsheet(File(source=FileUrl(url=url))):
+        url = _trim(match.group())
+        if url in seen:
+            continue
+        seen.add(url)
+        if not is_spreadsheet(File(source=FileUrl(url=url))):
             continue
         stem = url_filename(url) or "spreadsheet"
-        name, n = stem, 1
+        name = stem
         while name.casefold() in taken:
-            n += 1
+            n = last_number.get(stem.casefold(), 1) + 1
+            last_number[stem.casefold()] = n
             path = PurePosixPath(stem)
             name = f"{path.stem} ({n}){path.suffix}"
         found[name] = url
@@ -152,20 +169,22 @@ def read_spreadsheet_inputs(text: str) -> SpreadsheetInputs:
         spreadsheet_tools,
     )
 
+    over = len(urls) - _MAX_URLS
     files: dict[str, FileInput] = {}
     unread: dict[str, str] = {}
-    for i, (name, url) in enumerate(urls.items()):
-        if i >= _MAX_URLS:
-            unread[name] = _OVER_LIMIT
-            continue
-        downloaded = _download(name, url)
+    deadline = time.monotonic() + _DOWNLOAD_SECONDS
+    for name, url in list(urls.items())[:_MAX_URLS]:
+        downloaded = _download(name, url, deadline)
         if isinstance(downloaded, str):
             unread[name] = downloaded
         else:
             files[name] = File(source=FileBytes(data=downloaded, filename=name))
     read = {url: name for name, url in urls.items() if name in files}
+    overview = spreadsheet_overviews(files, unread)
+    if over > 0:
+        overview += "\n" + _OVER_LIMIT.format(count=over)
     return SpreadsheetInputs(
-        spreadsheet_overviews(files, unread),
+        overview,
         spreadsheet_tools(files, read) if files else [],
         frozenset(read),
     )
@@ -220,9 +239,10 @@ def _trim(url: str) -> str:
         url = trimmed
 
 
-def _download(name: str, url: str) -> bytes | str:
+def _download(name: str, url: str, deadline: float) -> bytes | str:
     """The file at ``url``, through the guard URLReadTool uses: private and
-    reserved addresses are refused on every redirect, and the body is capped.
+    reserved addresses are refused on every redirect, and the body is capped
+    and abandoned at ``deadline`` (a ``time.monotonic()`` value).
 
     The reason it can't be read otherwise, without the guard's own message,
     which carries the URL and so its signature.
@@ -233,18 +253,33 @@ def _download(name: str, url: str) -> bytes | str:
 
     now = time.monotonic()
     with _downloads_lock:
+        for stale in [
+            key
+            for key, (stored, _) in _downloads.items()
+            if now - stored >= _DOWNLOAD_TTL_SECONDS
+        ]:
+            del _downloads[stale]
         cached = _downloads.get(url)
-        if cached is not None and now - cached[0] < _DOWNLOAD_TTL_SECONDS:
+        if cached is not None:
             _downloads.move_to_end(url)
             return cached[1]
+    unreadable = _UNREADABLE.format(limit=MAX_BYTES // 1_048_576)
+    if now >= deadline:
+        return unreadable
     try:
-        body, content_type, _ = safe_get_bounded(url, max_bytes=MAX_BYTES)
-    # ValueError: a refused address, too many redirects, or over the cap.
+        body, content_type, _ = safe_get_bounded(
+            url,
+            max_bytes=MAX_BYTES,
+            timeout=min(30.0, deadline - now),
+            deadline=deadline,
+        )
+    # ValueError: a refused address, too many redirects, over the cap, or
+    # past the deadline.
     except (ValueError, requests.RequestException) as e:
         logger.warning(
             "Could not download the spreadsheet %s (%s)", name, type(e).__name__
         )
-        return _UNREADABLE.format(limit=MAX_BYTES // 1_048_576)
+        return unreadable
     if content_type.split(";")[0].strip().lower() in (
         "text/html",
         "application/xhtml+xml",

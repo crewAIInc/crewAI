@@ -532,6 +532,8 @@ class Crew(FlowTrackable, BaseModel):
                 task._original_expected_output = (
                     task.checkpoint_original_expected_output
                 )
+            if task.checkpoint_input_description is not None:
+                task._input_description = task.checkpoint_input_description
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:
@@ -1484,7 +1486,7 @@ class Crew(FlowTrackable, BaseModel):
         for idx, task in enumerate(self.tasks):
             task_number = idx + 1
             if task_number in plan_map:
-                task.description += plan_map[task_number]
+                task._append_model_text(plan_map[task_number])
             else:
                 self._logger.log(
                     "warning",

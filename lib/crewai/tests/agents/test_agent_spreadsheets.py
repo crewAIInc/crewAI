@@ -13,6 +13,7 @@ import io
 import json
 import logging
 import threading
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -83,10 +84,14 @@ class Downloads:
     def __init__(self, served: dict[str, bytes | tuple[bytes, str] | Exception]) -> None:
         self.served = served
         self.fetched: list[str] = []
+        self.options: list[dict[str, Any]] = []
         self.threads: list[threading.Thread] = []
 
-    def __call__(self, url: str, *, max_bytes: int, **_: Any) -> tuple[bytes, str, str]:
+    def __call__(
+        self, url: str, *, max_bytes: int, **options: Any
+    ) -> tuple[bytes, str, str]:
         self.fetched.append(url)
+        self.options.append(options)
         self.threads.append(threading.current_thread())
         answer = self.served[url]
         if isinstance(answer, Exception):
@@ -648,19 +653,31 @@ def test_a_string_guardrail_never_fetches_a_url_in_the_output(downloads):
     assert all(tools is None or "query_spreadsheet" not in str(tools) for tools in llm.tools)
 
 
-def test_crew_planning_text_is_not_read_for_urls(downloads, monkeypatch):
+def plan_naming(url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Crew planning writes a plan that tells the agent to open ``url``."""
     from crewai.utilities.planning_handler import PlannerTaskPydanticOutput, PlanPerTask
 
     def plan(_self: Any) -> PlannerTaskPydanticOutput:
         return PlannerTaskPydanticOutput(
             list_of_plans_per_task=[
-                PlanPerTask(task_number=1, task="t", plan=f" Open {SALES_URL} first.")
+                PlanPerTask(task_number=1, task="t", plan=f" Open {url} first.")
             ]
         )
 
-    monkeypatch.setattr(
-        "crewai.crew.CrewPlanner._handle_crew_planning", plan
+    monkeypatch.setattr("crewai.crew.CrewPlanner._handle_crew_planning", plan)
+
+
+def planned_crew(llm: BaseLLM, description: str) -> Crew:
+    agent = reader(llm)
+    return Crew(
+        agents=[agent],
+        tasks=[Task(description=description, expected_output="A summary", agent=agent)],
+        planning=True,
     )
+
+
+def test_crew_planning_text_is_not_read_for_urls(downloads, monkeypatch):
+    plan_naming(SALES_URL, monkeypatch)
     llm = ScriptedLLM("done")
     agent = reader(llm)
     crew = Crew(
@@ -692,6 +709,106 @@ def test_crew_chat_history_is_not_read_for_urls(downloads):
     assert downloads.fetched == []
 
 
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [({}, {}), (None, None), (None, {"week": "45"})],
+    ids=["empty-inputs-twice", "no-inputs-twice", "no-inputs-then-inputs"],
+)
+def test_a_second_kickoff_never_reads_the_last_runs_plan(
+    downloads, monkeypatch, first, second
+):
+    plan_naming(SALES_URL, monkeypatch)
+    llm = ScriptedLLM("done")
+    crew = planned_crew(llm, "Summarize the week")
+
+    crew.kickoff(inputs=first)
+    crew.kickoff(inputs=second)
+
+    assert SALES_URL in llm.prompt(-1)
+    assert downloads.fetched == []
+
+
+def test_a_task_restored_from_a_checkpoint_never_reads_its_plan(
+    downloads, monkeypatch, tmp_path
+):
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.state.checkpoint_config import CheckpointConfig
+    from crewai.state.provider.json_provider import JsonProvider
+    from crewai.state.runtime import RuntimeState
+
+    plan_naming(SALES_URL, monkeypatch)
+    crew = planned_crew(ScriptedLLM("done"), f"Count the tickets in {TICKETS_URL}")
+    crew.kickoff()
+    state = RuntimeState(root=[crew])
+    state._provider = JsonProvider()
+    try:
+        restored = Crew.from_checkpoint(
+            CheckpointConfig(restore_from=state.checkpoint(str(tmp_path)))
+        )
+    finally:
+        # from_checkpoint attaches the restored state to the bus for good.
+        crewai_event_bus.reset_runtime_state()
+    llm = ScriptedLLM("done")
+
+    reader(llm).execute_task(restored.tasks[0])
+
+    assert SALES_URL in llm.prompt()
+    assert '"tickets.xlsx"' in llm.prompt()
+    assert downloads.fetched == [TICKETS_URL]
+
+
+def test_a_copied_task_never_reads_its_plan(downloads, monkeypatch):
+    plan_naming(SALES_URL, monkeypatch)
+    crew = planned_crew(ScriptedLLM("done"), f"Count the tickets in {TICKETS_URL}")
+    crew.kickoff()
+    llm = ScriptedLLM("done")
+
+    copied = crew.tasks[0].copy(agents=crew.agents, task_mapping={})
+    reader(llm).execute_task(copied)
+
+    assert SALES_URL in llm.prompt()
+    assert '"tickets.xlsx"' in llm.prompt()
+    assert downloads.fetched == [TICKETS_URL]
+
+
+def test_a_description_set_after_the_task_is_built_is_read(downloads):
+    llm = ScriptedLLM("done")
+    task = Task(description=f"Total the sales in {SALES_URL}", expected_output="Counts")
+
+    task.description = f"Count the tickets in {TICKETS_URL}"
+    reader(llm).execute_task(task)
+
+    assert downloads.fetched == [TICKETS_URL]
+
+
+def test_a_remote_agents_text_is_not_read_for_urls(downloads, monkeypatch):
+    pytest.importorskip("a2a")
+    from crewai.a2a import wrapper
+
+    monkeypatch.setattr(
+        wrapper,
+        "_fetch_agent_cards_concurrently",
+        lambda _agents: ({}, {f"{SALES_URL} is down": "unreachable"}),
+    )
+    llm = ScriptedLLM("done")
+    task = Task(description="Summarize the week", expected_output="A summary")
+
+    wrapper._execute_task_with_a2a(
+        reader(llm),
+        a2a_agents=[object()],
+        original_fn=Agent.execute_task,
+        task=task,
+        agent_response_model=None,
+        context=None,
+        tools=None,
+        extension_registry=None,
+    )
+
+    assert SALES_URL in llm.prompt()
+    assert downloads.fetched == []
+    assert task.description == "Summarize the week"
+
+
 def test_a_run_crewai_makes_on_model_text_reads_no_url(downloads):
     llm = ScriptedLLM("done")
 
@@ -711,8 +828,18 @@ def test_a_run_crewai_makes_on_model_text_reads_no_url(downloads):
         "見てください https://example.com？ ありがとう",
         "Report: https://example.com：done",
         "Visit http://[broken",
+        "参见 https://example.com&#65306;第二部分",
+        "See https://example.com&#93;",
+        f"See https://files.example.com/sales&#65306;.csv",
     ],
-    ids=["fullwidth-question-mark", "fullwidth-colon", "broken-ipv6"],
+    ids=[
+        "fullwidth-question-mark",
+        "fullwidth-colon",
+        "broken-ipv6",
+        "escaped-fullwidth-colon",
+        "escaped-bracket",
+        "escaped-fullwidth-colon-in-path",
+    ],
 )
 def test_text_around_a_url_never_fails_the_run(downloads, text):
     llm = ScriptedLLM("done")
@@ -720,6 +847,14 @@ def test_text_around_a_url_never_fails_the_run(downloads, text):
     result = reader(llm).kickoff(text)
 
     assert result.raw == "done"
+    assert downloads.fetched == []
+
+
+def test_text_around_a_url_never_fails_a_task(downloads):
+    llm = ScriptedLLM("done")
+    task = Task(description="Read https://example.com&#65306;第二部分", expected_output="x")
+
+    assert reader(llm).execute_task(task) == "done"
     assert downloads.fetched == []
 
 
@@ -731,8 +866,25 @@ def test_text_around_a_url_never_fails_the_run(downloads, text):
         (f"See [the file]({SALES_URL}).", SALES_URL),
         ("Get https://files.example.com/report%20(1).csv now", "https://files.example.com/report%20(1).csv"),
         (TICKETS_URL.replace("&", "&amp;"), TICKETS_URL),
+        (f"&quot;{SALES_URL}&quot;", SALES_URL),
+        (f"&lt;{SALES_URL}&gt;", SALES_URL),
+        (f"{SALES_URL}&#x22; and more", SALES_URL),
+        (
+            "Get https://files.example.com/sales.csv?a=1&para=2&copy=3 now",
+            "https://files.example.com/sales.csv?a=1&para=2&copy=3",
+        ),
     ],
-    ids=["cjk-full-stop", "cjk-quotes", "markdown-link", "parentheses", "html-escaped"],
+    ids=[
+        "cjk-full-stop",
+        "cjk-quotes",
+        "markdown-link",
+        "parentheses",
+        "html-escaped",
+        "escaped-quotes",
+        "escaped-angle-brackets",
+        "escaped-quote-after",
+        "query-names-like-entities",
+    ],
 )
 def test_a_url_inside_prose_or_markup_is_read_whole(downloads, text, url):
     downloads.served[url] = SALES_CSV
@@ -779,7 +931,53 @@ def test_at_most_ten_spreadsheets_are_read(downloads):
     reader(llm).kickoff("Combine " + " ".join(urls))
 
     assert downloads.fetched == urls[:10]
-    assert '"part10.csv": not read: only the first 10 spreadsheets are read.' in llm.prompt()
+    assert "  - 2 more spreadsheet URLs were not read: only the first 10 are." in llm.prompt()
+    assert '"part10.csv"' not in llm.prompt().split("Spreadsheets at the URLs")[-1]
+
+
+def test_thousands_of_spreadsheet_urls_add_one_line_to_the_prompt(downloads):
+    urls = [f"https://files.example.com/{i}/data.csv" for i in range(2_000)]
+    for url in urls[:10]:
+        downloads.served[url] = SALES_CSV
+
+    read = spreadsheet_inputs.read_spreadsheet_inputs(" ".join(urls))
+
+    assert downloads.fetched == urls[:10]
+    assert read.overview.endswith(
+        "  - 1990 more spreadsheet URLs were not read: only the first 10 are."
+    )
+    assert len(read.overview) < 5_000
+
+
+def test_downloads_are_bounded_by_one_deadline_for_the_run(downloads):
+    before = time.monotonic()
+
+    reader(ScriptedLLM("done")).kickoff(f"Compare {SALES_URL} with {TICKETS_URL}")
+
+    first, second = downloads.options
+    assert first["deadline"] == second["deadline"]
+    assert before < first["deadline"] <= time.monotonic() + 60
+    assert first["timeout"] <= 30
+
+
+def test_a_spreadsheet_past_the_deadline_is_named_as_too_slow(downloads, monkeypatch):
+    monkeypatch.setattr(spreadsheet_inputs, "_DOWNLOAD_SECONDS", 0.0)
+    llm = ScriptedLLM("done")
+
+    reader(llm).kickoff(f"Total the sales in {SALES_URL}")
+
+    assert downloads.fetched == []
+    assert '"sales.csv": can\'t be read' in llm.prompt()
+    assert "too slow to download" in llm.prompt()
+
+
+def test_an_expired_download_is_let_go(downloads):
+    old = "https://files.example.com/old.csv"
+    spreadsheet_inputs._downloads[old] = (time.monotonic() - 301, SALES_CSV)
+
+    reader(ScriptedLLM("done")).kickoff(f"Total the sales in {SALES_URL}")
+
+    assert list(spreadsheet_inputs._downloads) == [SALES_URL]
 
 
 def test_a_web_page_at_a_spreadsheet_path_is_named_as_one(downloads):
@@ -873,6 +1071,17 @@ def test_an_unknown_operation_is_explained(sales_tools):
     result = sales_tools[1].run(file="sales.csv", operation="pivot")
 
     assert result.startswith("Invalid arguments for query_spreadsheet: operation")
+
+
+def test_a_name_that_starts_with_a_quote_is_found():
+    from crewai.tools.agent_tools.spreadsheet_tools import spreadsheet_tools
+    from crewai_files import File, FileBytes
+
+    files = {"'q'.csv": File(source=FileBytes(data=SALES_CSV, filename="'q'.csv"))}
+    inspect, _ = spreadsheet_tools(files, {})
+
+    assert "region" in inspect.run(file="'q'.csv")
+    assert "region" in inspect.run(file="\"'q'.csv\"")
 
 
 def test_overviews_past_the_budget_are_named_without_one():

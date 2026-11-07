@@ -84,6 +84,7 @@ def _sync_checkpoint_fields(entity: object) -> None:
         for task in entity.tasks:
             task.checkpoint_original_description = task._original_description
             task.checkpoint_original_expected_output = task._original_expected_output
+            task.checkpoint_input_description = task._input_description
 
 
 def _migrate(data: dict[str, Any]) -> dict[str, Any]:
