@@ -72,9 +72,7 @@ _MAX_OUTPUT_TOKENS_BY_PREFIX: Final[tuple[tuple[str, int], ...]] = (
 _DEFAULT_MODEL_MAX_TOKENS: Final[int] = 32000
 DEFAULT_MODEL: Final[str] = "claude-sonnet-4-6"
 
-_CLAUDE_MAJOR_VERSION: Final[re.Pattern[str]] = re.compile(
-    r"claude-(?:[a-z]+-)?(\d+)"
-)
+_CLAUDE_MAJOR_VERSION: Final[re.Pattern[str]] = re.compile(r"claude-(?:[a-z]+-)?(\d+)")
 
 
 def _default_max_tokens_for_model(model: str) -> int:
