@@ -205,10 +205,7 @@ BEFORE_ASKING: dict[RunReason, str] = {
 }
 # The person asked for the evaluation, so Enter means yes, as for a project that
 # turned tracing off. There is no timeout: an unanswered question sends nothing.
-SHARE_TO_EVALUATE_QUESTION = (
-    "The trace may include prompts, inputs, outputs and tool calls. "
-    "Run the crew and share its trace?"
-)
+SHARE_TO_EVALUATE_QUESTION = "Run the crew and share its trace?"
 TRACING_NOW_ON = (
     "Tracing is now on for this project: its runs' traces are sent to CrewAI AMP, "
     "which grades them."

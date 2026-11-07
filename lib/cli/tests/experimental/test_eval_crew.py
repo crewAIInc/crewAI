@@ -3366,7 +3366,7 @@ def test_at_a_terminal_enter_shares_the_trace_and_only_a_no_runs_nothing(
         assert exited.value.code == 0
     out = " ".join(capsys.readouterr().out.split())
 
-    assert "The trace may include prompts, inputs, outputs and tool calls. Run the crew and share its trace? [Y/n]" in out
+    assert "Run the crew and share its trace? [Y/n]" in out
     if shared:
         assert ran == ["true"] and amp.calls[0] == ("create", "the-new-run")
         assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()

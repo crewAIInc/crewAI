@@ -350,8 +350,7 @@ class EvaluateConsentScreen(TraceConsentScreen):
         t = Text()
         t.append("  Evaluating this run needs its trace.\n\n", style=f"bold {_C_TEXT}")
         t.append("  The crew runs again, traced, and its trace\n", style=_C_DIM)
-        t.append("  goes to CrewAI AMP, which grades it. It may\n", style=_C_DIM)
-        t.append("  hold prompts, inputs, outputs, tool calls.\n\n", style=_C_DIM)
+        t.append("  goes to CrewAI AMP, which grades it.\n\n", style=_C_DIM)
         t.append("  Enter shares it; Cancel runs nothing.\n", style=_C_MUTED)
         return t
 

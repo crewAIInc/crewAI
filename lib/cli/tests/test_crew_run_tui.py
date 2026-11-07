@@ -2803,6 +2803,7 @@ async def test_evaluate_consent_screen_shares_on_enter_and_says_why(key, shared)
     assert app.answers == [shared]
     assert label == "Share & Evaluate"
     assert "Evaluating this run needs its trace." in text
+    assert "goes to CrewAI AMP, which grades it." in text
     assert "Enter shares it; Cancel runs nothing." in text
     assert "seconds" not in text
 
