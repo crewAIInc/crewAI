@@ -1148,14 +1148,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if not method_definition.router
         }
 
-        events_by_listener: dict[FlowMethodName, set[str]] = {
-            listener_name: set(_iter_condition_events(condition))
-            for listener_name, condition in listener_conditions.items()
-        }
-
+        # Routers also consume events and need their producers to finish.
         listeners_by_event: dict[str, set[FlowMethodName]] = {}
-        for listener_name, events in events_by_listener.items():
-            for event in events:
+        for listener_name, _, condition in self._listener_methods():
+            for event in _iter_condition_events(condition):
                 listeners_by_event.setdefault(event, set()).add(listener_name)
 
         for listener_name, condition in listener_conditions.items():

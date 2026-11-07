@@ -2391,3 +2391,100 @@ def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
         assert finished.wait(timeout=5)
 
     assert order.index("save-done") < order.index("flow-finished")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_async", [False, True])
+@pytest.mark.parametrize("combined_condition", [False, True])
+async def test_or_join_preserves_branch_consumed_by_router(
+    use_async: bool, combined_condition: bool
+) -> None:
+    slow_started = asyncio.Event()
+    release_slow = threading.Event()
+    join_finished = threading.Event()
+    routed: list[str] = []
+    joined: list[str] = []
+    completed: list[str] = []
+
+    class RouterConsumerFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "input"
+
+        @listen(begin)
+        async def fast(self, value: str) -> str:
+            await slow_started.wait()
+            return "fast"
+
+        @listen(begin)
+        async def slow(self, value: str) -> str:
+            slow_started.set()
+            await asyncio.to_thread(release_slow.wait)
+            return "slow"
+
+        @router(and_(fast, slow) if combined_condition else slow)
+        def route(self, value: str) -> str:
+            routed.append(value)
+            return "routed"
+
+        @listen("routed")
+        def finish(self, value: str) -> str:
+            completed.append(value)
+            return "finished"
+
+        @listen(or_(fast, slow))
+        def join(self, value: str) -> None:
+            joined.append(value)
+            join_finished.set()
+
+    flow = RouterConsumerFlow()
+    run = asyncio.create_task(
+        flow.kickoff_async() if use_async else asyncio.to_thread(flow.kickoff)
+    )
+    try:
+        assert await asyncio.to_thread(join_finished.wait, 5)
+        # The OR join is done, but the router still needs the blocked branch.
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(asyncio.shield(run), timeout=0.1)
+    finally:
+        release_slow.set()
+        await run
+
+    assert routed == ["slow"]
+    assert completed == ["routed"]
+    assert joined == ["fast"]
+
+
+@pytest.mark.asyncio
+async def test_or_join_still_cancels_exclusive_alternatives() -> None:
+    loser_started = asyncio.Event()
+    loser_cancelled = asyncio.Event()
+    joined: list[str] = []
+
+    class ExclusiveRaceFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "input"
+
+        @listen(begin)
+        async def winner(self, value: str) -> str:
+            await loser_started.wait()
+            return "winner"
+
+        @listen(begin)
+        async def loser(self, value: str) -> str:
+            loser_started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                loser_cancelled.set()
+            return "loser"
+
+        @listen(or_(winner, loser))
+        def join(self, value: str) -> None:
+            joined.append(value)
+
+    await asyncio.wait_for(ExclusiveRaceFlow().kickoff_async(), timeout=1)
+    await asyncio.wait_for(loser_cancelled.wait(), timeout=1)
+
+    assert joined == ["winner"]
