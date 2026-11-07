@@ -1130,7 +1130,7 @@ def _run_the_crew_to_evaluate(
         console.print(Text(said), style="bold")
 
     from crewai_cli.crew_run_tui import evaluating_after_run
-    from crewai_cli.run_crew import run_crew
+    from crewai_cli.run_crew import ProjectScriptFailed, run_crew
 
     # The app is told an evaluation is waiting and starts it itself when the run
     # ends. It runs in this process for some projects and in a child for others,
@@ -1153,6 +1153,9 @@ def _run_the_crew_to_evaluate(
             trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
         ) as watched,
         _run_output_to(run_log) as run_log,
+        # A run that failed is still a run to grade, and with nobody watching
+        # its error is in the run log, shown below.
+        contextlib.suppress(ProjectScriptFailed),
     ):
         run_crew(**run_args)
     seconds = time.monotonic() - started
