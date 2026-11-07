@@ -136,6 +136,12 @@ from crewai_tools.tools.oxylabs_google_search_scraper_tool.oxylabs_google_search
 from crewai_tools.tools.oxylabs_universal_scraper_tool.oxylabs_universal_scraper_tool import (
     OxylabsUniversalScraperTool,
 )
+from crewai_tools.tools.oxylabs_web_scrape_tool.oxylabs_web_scrape_tool import (
+    OxylabsWebScrapeTool,
+)
+from crewai_tools.tools.oxylabs_web_search_tool.oxylabs_web_search_tool import (
+    OxylabsWebSearchTool,
+)
 from crewai_tools.tools.parallel_tools import ParallelSearchTool
 from crewai_tools.tools.patronus_eval_tool import (
     PatronusEvalTool,
@@ -296,6 +302,8 @@ __all__ = [
     "OxylabsAmazonSearchScraperTool",
     "OxylabsGoogleSearchScraperTool",
     "OxylabsUniversalScraperTool",
+    "OxylabsWebScrapeTool",
+    "OxylabsWebSearchTool",
     "PDFSearchTool",
     "ParallelSearchTool",
     "PatronusEvalTool",

@@ -15,12 +15,24 @@ from crewai.tools.tool_failure import ToolFailure
 from pydantic import ConfigDict, Field
 
 
-__all__ = ["OxylabsBaseTool"]
+__all__ = ["OxylabsBaseTool", "sdk_type"]
 
 
 _HTTP_ERROR_PATTERN = re.compile(
     r"(\d{3})\s+(?:Client|Server) Error:\s*(.+?)\s+for url", re.IGNORECASE
 )
+
+
+def sdk_type() -> str:
+    """The ``x-oxylabs-sdk`` value Oxylabs uses to attribute requests to CrewAI."""
+    try:
+        crewai_version = version("crewai")
+    except PackageNotFoundError:
+        # Only ever reported as telemetry; not worth failing a call over.
+        crewai_version = "unknown"
+
+    bits, _ = architecture()
+    return f"oxylabs-crewai-sdk-python/{crewai_version} ({python_version()}; {bits})"
 
 
 _active_capture: ContextVar[list[str] | None] = ContextVar(
@@ -216,22 +228,8 @@ class OxylabsBaseTool(BaseTool):
     @classmethod
     def _build_client(cls, username: str, password: str) -> Any:
         realtime_client = cls._resolve_realtime_client()
-
-        try:
-            crewai_version = version("crewai")
-        except PackageNotFoundError:
-            # Only ever reported as telemetry; not worth failing construction.
-            crewai_version = "unknown"
-
-        bits, _ = architecture()
         return realtime_client(
-            username=username,
-            password=password,
-            sdk_type=(
-                f"oxylabs-crewai-sdk-python/"
-                f"{crewai_version} "
-                f"({python_version()}; {bits})"
-            ),
+            username=username, password=password, sdk_type=sdk_type()
         )
 
     def _scrape(self, scraper: Callable[..., Any], target: str) -> str | ToolFailure:

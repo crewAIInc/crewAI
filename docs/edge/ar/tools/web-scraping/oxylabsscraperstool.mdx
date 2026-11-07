@@ -6,6 +6,7 @@ description: >
     - `Amazon Search`
     - `Google Search`
     - `Universal`
+    - `Web Search` و`Web Scrape` (Oxylabs Web API)
 icon: globe
 mode: "wide"
 ---
@@ -235,3 +236,76 @@ result = tool.run(url="https://ip.oxylabs.io")
 
 print(result)
 ```
+
+# أدوات Oxylabs Web API
+
+تستخدم `OxylabsWebSearchTool` و`OxylabsWebScrapeTool` واجهة Oxylabs Web API، التي تعتمد على مفتاح API واحد بدلاً من اسم المستخدم وكلمة المرور. أنشئ مثيل Web API في [لوحة تحكم Oxylabs](https://dashboard.oxylabs.io) واضبط مفتاحه في `OXYLABS_WEB_API_KEY`. لا تحتاج هذه الأدوات إلى حزمة `oxylabs`:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+# `OxylabsWebSearchTool`
+
+### مثال
+
+```python
+from crewai_tools import OxylabsWebSearchTool
+
+# make sure the OXYLABS_WEB_API_KEY variable is set
+tool = OxylabsWebSearchTool()
+
+result = tool.run(query="best hiking boots", max_results=5, location="DE")
+
+print(result)
+```
+
+### المعاملات
+
+- `query` - ما تريد البحث عنه.
+- `max_results` - الحد الأقصى لعدد النتائج، من 1 إلى 20. القيمة الافتراضية 10.
+- `location` - رمز الدولة المكون من حرفين لترتيب النتائج حسبها، مثل `DE` أو `US` أو `LT`.
+
+تُرجع سلسلة JSON تحتوي على عناوين النتائج وروابطها ومقتطفاتها، بالإضافة إلى الأسئلة ذات الصلة عندما يعرضها محرك البحث.
+
+# `OxylabsWebScrapeTool`
+
+### مثال
+
+```python
+from crewai_tools import OxylabsWebScrapeTool
+
+# make sure the OXYLABS_WEB_API_KEY variable is set
+tool = OxylabsWebScrapeTool()
+
+result = tool.run(url="https://sandbox.oxylabs.io/products/1")
+
+print(result)
+```
+
+### المعاملات
+
+- `url` - الصفحة المراد قراءتها.
+- `output` - `markdown` (الافتراضي) أو `html`.
+- `location` - رمز الدولة المكون من حرفين لجلب الصفحة منها.
+- `device` - `desktop` (الافتراضي) أو `mobile`.
+- `run_js` - يشغّل JavaScript الخاص بالصفحة. استخدمه عندما تعود الصفحة شبه فارغة.
+- `json_prompt` - الحقول المراد استخراجها، بلغة بسيطة. تُرجعها بصيغة JSON بدلاً من الصفحة.
+
+### مثال متقدم
+
+```python
+from crewai_tools import OxylabsWebScrapeTool
+
+# make sure the OXYLABS_WEB_API_KEY variable is set
+tool = OxylabsWebScrapeTool(max_content_chars=20_000, max_wait=900)
+
+result = tool.run(
+    url="https://sandbox.oxylabs.io/products/1",
+    json_prompt="the game title, price and platforms",
+)
+
+print(result)
+```
+
+يقتطع `max_content_chars` الصفحات الطويلة (الافتراضي 50,000 حرف، و`None` يعطّله). ويحدد `max_wait` عدد الثواني لانتظار صفحة بطيئة تُكملها API في الخلفية (الافتراضي 600).

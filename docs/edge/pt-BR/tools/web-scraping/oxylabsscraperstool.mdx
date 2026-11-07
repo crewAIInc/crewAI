@@ -6,6 +6,7 @@ description: >
     - `Amazon Search`
     - `Google Search`
     - `Universal`
+    - `Web Search` e `Web Scrape` (Oxylabs Web API)
 icon: globe
 mode: "wide"
 ---
@@ -234,3 +235,76 @@ result = tool.run(url="https://ip.oxylabs.io")
 
 print(result)
 ```
+
+# Ferramentas da Oxylabs Web API
+
+`OxylabsWebSearchTool` e `OxylabsWebScrapeTool` usam a Oxylabs Web API, que autentica com uma única chave de API em vez de usuário e senha. Crie uma instância da Web API no [painel da Oxylabs](https://dashboard.oxylabs.io) e defina a chave dela em `OXYLABS_WEB_API_KEY`. Essas ferramentas não precisam do pacote `oxylabs`:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+# `OxylabsWebSearchTool`
+
+### Exemplo
+
+```python
+from crewai_tools import OxylabsWebSearchTool
+
+# certifique-se de que a variável OXYLABS_WEB_API_KEY esteja definida
+tool = OxylabsWebSearchTool()
+
+result = tool.run(query="best hiking boots", max_results=5, location="DE")
+
+print(result)
+```
+
+### Parâmetros
+
+- `query` - o que pesquisar.
+- `max_results` - número máximo de resultados, de 1 a 20. O padrão é 10.
+- `location` - código de país de duas letras para classificar os resultados, como `DE`, `US` ou `LT`.
+
+Retorna uma string JSON com os títulos, URLs e trechos dos resultados, além de perguntas relacionadas quando o buscador as exibe.
+
+# `OxylabsWebScrapeTool`
+
+### Exemplo
+
+```python
+from crewai_tools import OxylabsWebScrapeTool
+
+# certifique-se de que a variável OXYLABS_WEB_API_KEY esteja definida
+tool = OxylabsWebScrapeTool()
+
+result = tool.run(url="https://sandbox.oxylabs.io/products/1")
+
+print(result)
+```
+
+### Parâmetros
+
+- `url` - página a ser lida.
+- `output` - `markdown` (padrão) ou `html`.
+- `location` - código de país de duas letras de onde buscar a página.
+- `device` - `desktop` (padrão) ou `mobile`.
+- `run_js` - executa o JavaScript da página. Use quando a página voltar quase vazia.
+- `json_prompt` - os campos a extrair, em linguagem simples. Retorna esses campos em JSON em vez da página.
+
+### Exemplo avançado
+
+```python
+from crewai_tools import OxylabsWebScrapeTool
+
+# certifique-se de que a variável OXYLABS_WEB_API_KEY esteja definida
+tool = OxylabsWebScrapeTool(max_content_chars=20_000, max_wait=900)
+
+result = tool.run(
+    url="https://sandbox.oxylabs.io/products/1",
+    json_prompt="the game title, price and platforms",
+)
+
+print(result)
+```
+
+`max_content_chars` corta páginas longas (padrão de 50.000 caracteres; `None` desativa). `max_wait` é quantos segundos esperar por uma página lenta que a API conclui em segundo plano (padrão de 600).

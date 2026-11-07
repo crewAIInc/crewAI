@@ -6,6 +6,7 @@ description: >
     - `Amazon Search`
     - `Google Search`
     - `Universal`
+    - `Web Search` 및 `Web Scrape` (Oxylabs Web API)
 icon: globe
 mode: "wide"
 ---
@@ -234,3 +235,76 @@ result = tool.run(url="https://ip.oxylabs.io")
 
 print(result)
 ```
+
+# Oxylabs Web API 도구
+
+`OxylabsWebSearchTool`과 `OxylabsWebScrapeTool`은 사용자 이름과 비밀번호 대신 API 키 하나로 인증하는 Oxylabs Web API를 사용합니다. [Oxylabs 대시보드](https://dashboard.oxylabs.io)에서 Web API 인스턴스를 만들고 해당 키를 `OXYLABS_WEB_API_KEY`로 설정하세요. 이 도구들은 `oxylabs` 패키지가 필요하지 않습니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+# `OxylabsWebSearchTool`
+
+### 예시
+
+```python
+from crewai_tools import OxylabsWebSearchTool
+
+# make sure the OXYLABS_WEB_API_KEY variable is set
+tool = OxylabsWebSearchTool()
+
+result = tool.run(query="best hiking boots", max_results=5, location="DE")
+
+print(result)
+```
+
+### 매개변수
+
+- `query` - 검색할 내용.
+- `max_results` - 최대 결과 수(1~20). 기본값은 10입니다.
+- `location` - 결과 순위를 매길 국가의 두 글자 코드(예: `DE`, `US`, `LT`).
+
+결과의 제목, URL, 스니펫과 검색 엔진이 표시하는 경우 관련 질문을 담은 JSON 문자열을 반환합니다.
+
+# `OxylabsWebScrapeTool`
+
+### 예시
+
+```python
+from crewai_tools import OxylabsWebScrapeTool
+
+# make sure the OXYLABS_WEB_API_KEY variable is set
+tool = OxylabsWebScrapeTool()
+
+result = tool.run(url="https://sandbox.oxylabs.io/products/1")
+
+print(result)
+```
+
+### 매개변수
+
+- `url` - 읽을 페이지.
+- `output` - `markdown`(기본값) 또는 `html`.
+- `location` - 페이지를 가져올 국가의 두 글자 코드.
+- `device` - `desktop`(기본값) 또는 `mobile`.
+- `run_js` - 페이지의 JavaScript를 실행합니다. 페이지가 거의 비어 있는 상태로 반환될 때 사용하세요.
+- `json_prompt` - 추출할 필드를 평이한 말로 적습니다. 페이지 대신 해당 필드를 JSON으로 반환합니다.
+
+### 고급 예시
+
+```python
+from crewai_tools import OxylabsWebScrapeTool
+
+# make sure the OXYLABS_WEB_API_KEY variable is set
+tool = OxylabsWebScrapeTool(max_content_chars=20_000, max_wait=900)
+
+result = tool.run(
+    url="https://sandbox.oxylabs.io/products/1",
+    json_prompt="the game title, price and platforms",
+)
+
+print(result)
+```
+
+`max_content_chars`는 긴 페이지를 잘라냅니다(기본값 50,000자, `None`이면 끔). `max_wait`는 API가 백그라운드에서 처리하는 느린 페이지를 기다릴 시간(초)입니다(기본값 600).
