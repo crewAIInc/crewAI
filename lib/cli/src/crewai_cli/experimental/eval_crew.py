@@ -314,6 +314,7 @@ def eval_crew(
     run_again: bool = False,
     run_args: dict[str, Any] | None = None,
     trusted_amp_origins: set[str] | None = None,
+    open_report: bool = True,
 ) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID.
 
@@ -324,7 +325,8 @@ def eval_crew(
     person pressed Evaluate on (its definition, inputs and trained agents).
     TRUSTED_AMP_ORIGINS: where the saved login may go, from a caller whose
     process already loaded the project's `.env` (the run app); otherwise read
-    here, before this command loads it.
+    here, before this command loads it. OPEN_REPORT False (`--no-open`) prints
+    the report link and opens no browser, here or in the run app it opens.
     """
     # Before anything here writes to the project (the project id), so this
     # command's own writes never read as a change.
@@ -349,6 +351,7 @@ def eval_crew(
             why,
             trusted=trusted,
             run_args=run_args,
+            open_report=open_report,
         )
         if execution_id is None:
             return
@@ -398,7 +401,8 @@ def eval_crew(
         # carrying `[link=…]` would print a trustworthy label over a hostile
         # target. The style belongs to the span, not to the string.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_report:
+            _open(url)
 
     console.print("Waiting for the verdict…", style="dim")
     try:
@@ -1075,6 +1079,7 @@ def _run_the_crew_to_evaluate(
     *,
     trusted: set[str] | None = None,
     run_args: dict[str, Any] | None = None,
+    open_report: bool = True,
 ) -> str | None:
     """Run the crew, traced, to have a run to evaluate.
 
@@ -1150,7 +1155,9 @@ def _run_the_crew_to_evaluate(
     started = time.monotonic()
     with (
         evaluating_after_run(
-            trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
+            trusted_amp_origins=trusted or (),
+            tracing_turned_on=turned_on_now,
+            open_report=open_report,
         ) as watched,
         _run_output_to(run_log) as run_log,
     ):
@@ -1758,12 +1765,15 @@ def _record_models_usage(models: list[str]) -> None:
         pass
 
 
-def eval_models(models_text: str, deployment_id: str | None = None) -> None:
+def eval_models(
+    models_text: str, deployment_id: str | None = None, *, open_report: bool = True
+) -> None:
     """Run this project's deployment once as deployed and once per model, and compare.
 
     The deployment is AMP's to find, by the project id, unless DEPLOYMENT_ID
     names one; its own models are the baseline, read off the deployment rather
-    than this checkout, which may differ from what was deployed.
+    than this checkout, which may differ from what was deployed. OPEN_REPORT
+    False (`--no-open`) prints the report link and opens no browser.
     """
     try:
         models = parse_models(models_text)
@@ -1816,7 +1826,8 @@ def eval_models(models_text: str, deployment_id: str | None = None) -> None:
     if url:
         # Appended, never interpolated — the same reason as `eval_crew`'s link.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_report:
+            _open(url)
 
     console.print("Waiting for the comparison…", style="dim")
     # Every line once: setups run in parallel, so consecutive polls alternate

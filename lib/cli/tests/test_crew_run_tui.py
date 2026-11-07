@@ -276,6 +276,45 @@ def test_the_button_spins_while_it_evaluates_and_still_opens_the_report(
     assert str(button.label) == "Open eval report"
 
 
+@pytest.mark.parametrize("process", ["this process", "a child process"])
+@pytest.mark.parametrize("open_report", [True, False])
+def test_the_app_opens_the_report_unless_crewai_eval_said_no_open(
+    monkeypatch, process, open_report
+) -> None:
+    """`crewai eval --no-open` with nothing traced: the app that runs the crew
+    and evaluates it leaves the browser alone, in this process or in a child
+    that only has the token file; without the flag it opens the report."""
+    opened: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
+    monkeypatch.setattr(CrewRunApp, "_refresh_eval_button", lambda self: None)
+
+    with crew_run_tui.evaluating_after_run(open_report=open_report):
+        token = crew_run_tui._AUTO_EVAL.set(None) if process == "a child process" else None
+        try:
+            app = CrewRunApp()
+        finally:
+            if token is not None:
+                crew_run_tui._AUTO_EVAL.reset(token)
+    app._evaluation = {"state": "starting", "execution_id": "run-this-app"}
+    app._evaluation_started({"id": "ev-1", "url": "https://optimize.example/e/1"})
+
+    assert opened == (["https://optimize.example/e/1"] if open_report else [])
+    assert app._evaluation["url"] == "https://optimize.example/e/1"  # still on screen
+
+
+def test_an_app_nobody_opened_for_an_evaluation_opens_the_report(monkeypatch) -> None:
+    """The run app's own Evaluate, after `crewai run`: unchanged."""
+    opened: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
+    monkeypatch.setattr(CrewRunApp, "_refresh_eval_button", lambda self: None)
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting", "execution_id": "run-this-app"}
+
+    app._evaluation_started({"id": "ev-1", "url": "https://optimize.example/e/1"})
+
+    assert opened == ["https://optimize.example/e/1"]
+
+
 def test_pressing_evaluate_again_opens_the_report_it_already_made(monkeypatch) -> None:
     """One evaluation per run: the second press is somebody looking for the
     report, not asking to pay for another."""
@@ -478,6 +517,7 @@ def test_the_token_this_app_sets_is_the_one_crewais_tracing_reads(
         assert eval_handshake.awaited_evaluation() == {
             "trusted_amp_origins": ["https://app.crewai.com"],
             "tracing_turned_on": True,
+            "open_report": True,
         }
     assert eval_handshake.run_awaited_by_evaluation() is False
 
