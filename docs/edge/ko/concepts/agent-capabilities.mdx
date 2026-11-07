@@ -88,7 +88,7 @@ agent = Agent(
 
 ```python
 from crewai import Agent
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 # 완전히 갖춘 리서치 에이전트
 researcher = Agent(
@@ -100,7 +100,6 @@ researcher = Agent(
     tools=[
         SerperDevTool(),         # 웹 검색
         FileReadTool(),          # 로컬 파일 읽기
-        CodeInterpreterTool(),   # 분석을 위한 Python 코드 실행
     ],
     mcps=["https://data-api.example.com/sse"],  # 원격 데이터 API 접근
     apps=["google_sheets"],                      # Google Sheets에 쓰기

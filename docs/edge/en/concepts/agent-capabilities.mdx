@@ -88,7 +88,7 @@ In practice, agents often use **multiple capability types together**. Here's a r
 
 ```python
 from crewai import Agent
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 # A fully-equipped research agent
 researcher = Agent(
@@ -100,7 +100,6 @@ researcher = Agent(
     tools=[
         SerperDevTool(),         # Search the web
         FileReadTool(),          # Read local files
-        CodeInterpreterTool(),   # Run Python code for analysis
     ],
     mcps=["https://data-api.example.com/sse"],  # Access remote data API
     apps=["google_sheets"],                      # Write to Google Sheets
