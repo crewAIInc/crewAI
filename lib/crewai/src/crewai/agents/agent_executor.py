@@ -2141,6 +2141,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     and original_tool.result_as_answer
                     # A failed tool must not become the final answer.
                     and execution_result.get("tool_failure") is None
+                    # Neither may a hook-blocked call: it never ran, so its
+                    # block notice is context for the model, not the answer.
+                    and not execution_result.get("hook_blocked")
                 ):
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
@@ -2183,6 +2186,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 and original_tool.result_as_answer
                 # A failed tool must not become the final answer.
                 and execution_result.get("tool_failure") is None
+                # Neither may a hook-blocked call: it never ran, so its
+                # block notice is context for the model, not the answer.
+                and not execution_result.get("hook_blocked")
             ):
                 # Set the result as the final answer
                 self.state.current_answer = AgentFinish(
@@ -2465,6 +2471,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "from_cache": from_cache,
             "original_tool": original_tool,
             "tool_failure": tool_failure,
+            "hook_blocked": hook_blocked,
         }
 
     @staticmethod
