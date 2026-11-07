@@ -1,5 +1,5 @@
 from typing import Any
-from xml.etree.ElementTree import ParseError, fromstring, parse
+from xml.etree.ElementTree import ParseError, fromstring
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.loaders.utils import load_from_url
@@ -34,15 +34,14 @@ class XMLLoader(BaseLoader):
 
     @staticmethod
     def _load_from_file(path: str) -> str:
+        """Read local XML content as UTF-8 text before parsing it."""
         with open(path, encoding="utf-8") as file:
             return file.read()
 
     def _parse_xml(self, content: str, source_ref: str) -> LoaderResult:
+        """Parse resolved XML text and retain malformed content with error metadata."""
         try:
-            if content.strip().startswith("<"):
-                root = fromstring(content)  # noqa: S314
-            else:
-                root = parse(source_ref).getroot()  # noqa: S314
+            root = fromstring(content)  # noqa: S314
 
             text_parts = []
             for text_content in root.itertext():
