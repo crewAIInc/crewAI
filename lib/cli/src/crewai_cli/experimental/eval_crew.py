@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 import contextlib
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -102,13 +103,50 @@ FINISHED = {"done", "failed"}
 STATUSES = {"queued", "running"} | FINISHED
 
 
-def _record_usage(*, logged_in: bool) -> None:
-    """Count an evaluation that is actually starting, and whether the caller was
-    logged in.
+# Which run an evaluation grades, as far as the CLI can know it.
+EvalTarget = Literal["last_run", "given_run", "app"]
+
+# A random id for the evaluation under way, so its start, its verdict and its
+# stop can be joined in the usage stats. Cleared by the count of its outcome
+# (`record_finished`, `record_stop`), not when `evaluate_run` returns: the run
+# app counts a stop after `evaluate_run` raised, and it is that evaluation's.
+_EVAL_ID: ContextVar[str | None] = ContextVar("crewai_eval_id", default=None)
+
+
+def _begin_evaluation() -> None:
+    """A fresh `eval_id` for the evaluation starting now: a uuid4, never derived
+    from the run, the project or the account."""
+    _EVAL_ID.set(str(uuid.uuid4()))
+
+
+def _eval_id_attribute() -> dict[str, str]:
+    eval_id = _EVAL_ID.get()
+    return {"eval_id": eval_id} if eval_id else {}
+
+
+def _end_evaluation() -> dict[str, str]:
+    """The `eval_id` attribute for the outcome being counted, which ends the
+    evaluation: a later stop in the same context belongs to none."""
+    attribute = _eval_id_attribute()
+    _EVAL_ID.set(None)
+    return attribute
+
+
+def _record_usage(*, logged_in: bool, target: EvalTarget) -> None:
+    """Count an evaluation that is actually starting, whether the caller was
+    logged in, and which run it grades.
+
+    TARGET is `last_run` when `crewai eval` grades the project's recorded run
+    or the one it just ran (always local), `given_run` for an execution id
+    passed with `--run` (a local run or a deployment's execution: the CLI
+    cannot tell which, AMP can), and `app` when the run app grades the run it
+    just showed (always local).
 
     Usage stats are anonymous, so nothing that names the run or the account is
     sent — no execution id, no organization, and nothing about the run's content.
     Which runs were evaluated, and by whom, is AMP's record, not these stats'.
+    `eval_id` is random per evaluation and joins this count to its
+    `eval_finished:*` or `eval_stopped:*`.
 
     The TUI's button counts `cli_usage:evaluate` when it is pressed, so the
     difference between that and `cli_usage:eval` is intent that never became an
@@ -121,7 +159,11 @@ def _record_usage(*, logged_in: bool) -> None:
         telemetry.set_tracer()
         telemetry.feature_usage_span(
             "cli_usage:eval",
-            {"authenticated": "true" if logged_in else "false"},
+            {
+                "authenticated": "true" if logged_in else "false",
+                "target": target,
+                **_eval_id_attribute(),
+            },
         )
     except Exception:  # noqa: S110 - telemetry must never break a command
         pass
@@ -158,7 +200,7 @@ def record_stop(reason: StopReason) -> None:
     The reason is a word from a closed list and never the message, which can
     carry AMP's own words or a local path.
     """
-    _count_usage(f"cli_usage:eval_stopped:{reason}")
+    _count_usage(f"cli_usage:eval_stopped:{reason}", _end_evaluation())
 
 
 NOT_TRACED = (
@@ -187,8 +229,8 @@ RUNNING_THE_CREW: dict[RunReason, str] = {
     ),
     "run_again": "That run was not traced: running the crew again to evaluate it.",
 }
-# Said before the consent screen, at a terminal: that screen asks about a trace
-# before there is a run, so the person reads first why `crewai eval` needs one.
+# Said before the consent question, at a terminal: it asks about a trace before
+# there is a run, so the person reads first why `crewai eval` needs one.
 BEFORE_ASKING: dict[RunReason, str] = {
     "no_traced_run": (
         "No traced run of this crew yet. To evaluate it, the crew runs now and its "
@@ -203,6 +245,9 @@ BEFORE_ASKING: dict[RunReason, str] = {
         "goes to CrewAI AMP, which grades it."
     ),
 }
+# The person asked for the evaluation, so Enter means yes, as for a project that
+# turned tracing off. There is no timeout: an unanswered question sends nothing.
+SHARE_TO_EVALUATE_QUESTION = "Run the crew and share its trace?"
 TRACING_NOW_ON = (
     "Tracing is now on for this project: its runs' traces are sent to CrewAI AMP, "
     "which grades them."
@@ -262,7 +307,7 @@ def turn_tracing_on() -> None:
     os.environ[TRACING_ENV_VAR] = "true"
 
 
-def _count_usage(feature: str) -> None:
+def _count_usage(feature: str, attributes: dict[str, str] | None = None) -> None:
     """One usage count, never more: a word from a closed list, nothing that
     names the run, the account or its content."""
     try:
@@ -270,7 +315,7 @@ def _count_usage(feature: str) -> None:
 
         telemetry = Telemetry()
         telemetry.set_tracer()
-        telemetry.feature_usage_span(feature)
+        telemetry.feature_usage_span(feature, attributes)
     except Exception:  # noqa: S110 - telemetry must never break a command
         pass
 
@@ -289,7 +334,10 @@ def record_finished(finished: dict[str, Any]) -> None:
         return
     verdict = finished.get("verdict")
     gate = str(verdict.get("gate") if isinstance(verdict, dict) else "").lower()
-    _count_usage(f"cli_usage:eval_finished:{gate if gate in GATE_WORDS else 'unknown'}")
+    _count_usage(
+        f"cli_usage:eval_finished:{gate if gate in GATE_WORDS else 'unknown'}",
+        _end_evaluation(),
+    )
 
 
 class EvaluationStoppedError(RuntimeError):
@@ -316,6 +364,7 @@ def eval_crew(
     run_again: bool = False,
     run_args: dict[str, Any] | None = None,
     trusted_amp_origins: set[str] | None = None,
+    open_report: bool = True,
 ) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID.
 
@@ -326,8 +375,10 @@ def eval_crew(
     person pressed Evaluate on (its definition, inputs and trained agents).
     TRUSTED_AMP_ORIGINS: where the saved login may go, from a caller whose
     process already loaded the project's `.env` (the run app); otherwise read
-    here, before this command loads it.
+    here, before this command loads it. OPEN_REPORT False (`--no-open`) prints
+    the report link and opens no browser, here or in the run app it opens.
     """
+    _begin_evaluation()
     # Before anything here writes to the project (the project id), so this
     # command's own writes never read as a change.
     record = read_last_run() or {}
@@ -351,6 +402,7 @@ def eval_crew(
             why,
             trusted=trusted,
             run_args=run_args,
+            open_report=open_report,
         )
         if execution_id is None:
             return
@@ -392,7 +444,10 @@ def eval_crew(
     # After, not before: `cli_usage:eval` counts an evaluation, and a refused
     # request — a run AMP does not hold, a credential it will not take — is not
     # one. `_start_evaluation` raises rather than returning on those.
-    _record_usage(logged_in=client.api_key is not None)
+    _record_usage(
+        logged_in=client.api_key is not None,
+        target="given_run" if run_id else "last_run",
+    )
     url = started.get("url")
     console.print(Text("Evaluating run ").append(execution_id, style="bold"))
     if url:
@@ -400,7 +455,8 @@ def eval_crew(
         # carrying `[link=…]` would print a trustworthy label over a hostile
         # target. The style belongs to the span, not to the string.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_report:
+            _open(url)
 
     console.print("Waiting for the verdict…", style="dim")
     try:
@@ -588,6 +644,7 @@ def evaluate_run(
     LOG_IN is how the caller offers a new login when AMP refuses the saved one
     (`_start_logging_in_once`); without it that refusal stops the evaluation.
     """
+    _begin_evaluation()
     trusted = _machine_amp_origins()
     project_id = get_project_id()
     client, started = _start_logging_in_once(
@@ -605,7 +662,7 @@ def evaluate_run(
     )
     # After the start, exactly as the command counts it: `cli_usage:eval` is the
     # count of evaluations that began, and an evaluation the app runs is one.
-    _record_usage(logged_in=client.api_key is not None)
+    _record_usage(logged_in=client.api_key is not None, target="app")
     record_evaluation_outcome(execution_id)
     remember_project_state(execution_id)
     on_started(started)
@@ -1043,12 +1100,10 @@ def _at_a_terminal() -> bool:
 
 def _ask_before_the_first_enable(why: RunReason) -> None:
     """Nobody turned tracing on yet, and a person is here: say why the crew
-    runs, then ask on crewAI's trace consent screen before turning tracing on.
-    A no, or no answer before it times out, runs nothing."""
-    from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
-
+    runs, then ask before turning tracing on. Enter means yes; a no runs
+    nothing."""
     console.print(Text(BEFORE_ASKING[why]), style="bold")
-    if not prompt_user_for_trace_viewing(sharing=True):
+    if not click.confirm(SHARE_TO_EVALUATE_QUESTION, default=True):
         record_stop("declined")
         console.print(NOT_SHARED, style="yellow")
         raise SystemExit(0)
@@ -1077,6 +1132,7 @@ def _run_the_crew_to_evaluate(
     *,
     trusted: set[str] | None = None,
     run_args: dict[str, Any] | None = None,
+    open_report: bool = True,
 ) -> str | None:
     """Run the crew, traced, to have a run to evaluate.
 
@@ -1109,8 +1165,8 @@ def _run_the_crew_to_evaluate(
         _fail(stop)
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
-    # Nobody turned tracing on. At a terminal the person is asked first, on
-    # crewAI's own consent screen; with nobody there (a coding agent, a
+    # Nobody turned tracing on. At a terminal the person is asked first
+    # (Enter means yes); with nobody there (a coding agent, a
     # script) the yes is inferred from this command and tracing is turned on
     # for the project — said once, plainly, here and in the run app. From
     # then on the project traces, and nothing more is asked or said.
@@ -1132,7 +1188,7 @@ def _run_the_crew_to_evaluate(
         console.print(Text(said), style="bold")
 
     from crewai_cli.crew_run_tui import evaluating_after_run
-    from crewai_cli.run_crew import run_crew
+    from crewai_cli.run_crew import ProjectScriptFailed, run_crew
 
     # The app is told an evaluation is waiting and starts it itself when the run
     # ends. It runs in this process for some projects and in a child for others,
@@ -1152,9 +1208,14 @@ def _run_the_crew_to_evaluate(
     started = time.monotonic()
     with (
         evaluating_after_run(
-            trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
+            trusted_amp_origins=trusted or (),
+            tracing_turned_on=turned_on_now,
+            open_report=open_report,
         ) as watched,
         _run_output_to(run_log) as run_log,
+        # A run that failed is still a run to grade, and with nobody watching
+        # its error is in the run log, shown below.
+        contextlib.suppress(ProjectScriptFailed),
     ):
         run_crew(**run_args)
     seconds = time.monotonic() - started
@@ -1760,12 +1821,15 @@ def _record_models_usage(models: list[str]) -> None:
         pass
 
 
-def eval_models(models_text: str, deployment_id: str | None = None) -> None:
+def eval_models(
+    models_text: str, deployment_id: str | None = None, *, open_report: bool = True
+) -> None:
     """Run this project's deployment once as deployed and once per model, and compare.
 
     The deployment is AMP's to find, by the project id, unless DEPLOYMENT_ID
     names one; its own models are the baseline, read off the deployment rather
-    than this checkout, which may differ from what was deployed.
+    than this checkout, which may differ from what was deployed. OPEN_REPORT
+    False (`--no-open`) prints the report link and opens no browser.
     """
     try:
         models = parse_models(models_text)
@@ -1818,7 +1882,8 @@ def eval_models(models_text: str, deployment_id: str | None = None) -> None:
     if url:
         # Appended, never interpolated — the same reason as `eval_crew`'s link.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_report:
+            _open(url)
 
     console.print("Waiting for the comparison…", style="dim")
     # Every line once: setups run in parallel, so consecutive polls alternate
