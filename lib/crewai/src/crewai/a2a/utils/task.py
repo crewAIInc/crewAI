@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
@@ -95,7 +95,7 @@ def _parse_redis_url(url: str) -> RedisCacheConfig:
         except ValueError:
             pass
     if parsed.password:
-        config["password"] = parsed.password
+        config["password"] = unquote(parsed.password)
     return config
 
 
