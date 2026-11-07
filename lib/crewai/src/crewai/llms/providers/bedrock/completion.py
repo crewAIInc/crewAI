@@ -6,7 +6,8 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+import re
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -50,6 +51,10 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+_BEDROCK_CLAUDE_MAJOR_VERSION: Final[re.Pattern[str]] = re.compile(
+    r"anthropic\.claude-(?:[a-z]+-)?(\d+)"
+)
 
 
 def _normalize_litellm_bedrock_kwargs(data: dict[str, Any]) -> dict[str, Any]:
@@ -2261,11 +2266,10 @@ class BedrockCompletion(BaseLLM):
             True if the model supports images.
         """
         model_lower = self.model.lower()
+        claude = _BEDROCK_CLAUDE_MAJOR_VERSION.search(model_lower)
+        if claude is not None:
+            return int(claude.group(1)) >= 3
         vision_models = (
-            "anthropic.claude-3",
-            "anthropic.claude-sonnet-4",
-            "anthropic.claude-opus-4",
-            "anthropic.claude-haiku-4",
             "openai.gpt-6",
             "us.openai.gpt-6",
             "global.openai.gpt-6",
@@ -2275,9 +2279,6 @@ class BedrockCompletion(BaseLLM):
             "us.amazon.nova-lite",
             "us.amazon.nova-pro",
             "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
         )
         return any(model_lower.startswith(m) for m in vision_models)
 
