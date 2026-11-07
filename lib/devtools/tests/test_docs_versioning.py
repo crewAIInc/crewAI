@@ -26,25 +26,25 @@ def _build_docs_root(tmp_path: Path) -> Path:
     # Edge sources (what the release will freeze).
     edge_en = docs / "edge" / "en"
     edge_en.mkdir(parents=True)
-    (edge_en / "introduction.mdx").write_text("# Intro (Edge)\n")
-    (edge_en / "changelog.mdx").write_text("---\ntitle: Changelog\n---\n")
+    (edge_en / "introduction.mdx").write_text("# Intro (Edge)\n", encoding="utf-8")
+    (edge_en / "changelog.mdx").write_text("---\ntitle: Changelog\n---\n", encoding="utf-8")
     (edge_en / "api.mdx").write_text(
         '---\nopenapi: "/enterprise-api.en.yaml GET /foo"\n---\n'
-    )
+    , encoding="utf-8")
     # A page added to Edge after the previous release. It exists as a file and
     # is wired into the Edge nav, but is intentionally absent from the v1.14.7
     # nav below — the freeze must still surface it in the new version.
-    (edge_en / "datadog.mdx").write_text("# Datadog (Edge)\n")
-    (docs / "edge" / "enterprise-api.en.yaml").write_text("openapi: 3.0.0\n")
+    (edge_en / "datadog.mdx").write_text("# Datadog (Edge)\n", encoding="utf-8")
+    (docs / "edge" / "enterprise-api.en.yaml").write_text("openapi: 3.0.0\n", encoding="utf-8")
 
     # A pre-existing frozen snapshot to clone the nav structure from.
     snap_en = docs / "v1.14.7" / "en"
     snap_en.mkdir(parents=True)
-    (snap_en / "introduction.mdx").write_text("# Intro (1.14.7)\n")
-    (snap_en / "changelog.mdx").write_text("---\ntitle: Changelog\n---\n")
+    (snap_en / "introduction.mdx").write_text("# Intro (1.14.7)\n", encoding="utf-8")
+    (snap_en / "changelog.mdx").write_text("---\ntitle: Changelog\n---\n", encoding="utf-8")
     (snap_en / "api.mdx").write_text(
         '---\nopenapi: "/v1.14.7/enterprise-api.en.yaml GET /foo"\n---\n'
-    )
+    , encoding="utf-8")
 
     docs_json = {
         "navigation": {
@@ -94,7 +94,7 @@ def _build_docs_root(tmp_path: Path) -> Path:
             }
         ],
     }
-    (docs / "docs.json").write_text(json.dumps(docs_json, indent=2) + "\n")
+    (docs / "docs.json").write_text(json.dumps(docs_json, indent=2) + "\n", encoding="utf-8")
     return docs
 
 
@@ -106,8 +106,8 @@ class TestFreeze:
 
         snapshot = docs / "v1.15.0"
         assert snapshot.is_dir()
-        assert (snapshot / "en" / "introduction.mdx").read_text() == "# Intro (Edge)\n"
-        assert (snapshot / "enterprise-api.en.yaml").read_text() == "openapi: 3.0.0\n"
+        assert (snapshot / "en" / "introduction.mdx").read_text(encoding="utf-8") == "# Intro (Edge)\n"
+        assert (snapshot / "enterprise-api.en.yaml").read_text(encoding="utf-8") == "openapi: 3.0.0\n"
         assert result.snapshot_path == snapshot
         assert result.files_copied >= 4
         assert result.snapshot_already_existed is False
@@ -117,11 +117,11 @@ class TestFreeze:
 
         result = freeze("1.15.0", docs)
 
-        frozen_api = (docs / "v1.15.0" / "en" / "api.mdx").read_text()
+        frozen_api = (docs / "v1.15.0" / "en" / "api.mdx").read_text(encoding="utf-8")
         assert "/v1.15.0/enterprise-api.en.yaml" in frozen_api
         # The Edge source must NOT be rewritten — it stays generic so the next
         # release freezes pick up the same edit.
-        edge_api = (docs / "edge" / "en" / "api.mdx").read_text()
+        edge_api = (docs / "edge" / "en" / "api.mdx").read_text(encoding="utf-8")
         assert "/v1.15.0/" not in edge_api
         assert "/enterprise-api.en.yaml" in edge_api
         assert result.openapi_refs_rewritten >= 1
@@ -133,7 +133,7 @@ class TestFreeze:
 
         freeze("1.15.0", docs)
 
-        data = json.loads((docs / "docs.json").read_text())
+        data = json.loads((docs / "docs.json").read_text(encoding="utf-8"))
         versions = data["navigation"]["languages"][0]["versions"]
         labels = [v["version"] for v in versions]
         assert labels == ["Edge", "v1.15.0", "v1.14.7"]
@@ -162,7 +162,7 @@ class TestFreeze:
 
         freeze("1.15.0", docs)
 
-        data = json.loads((docs / "docs.json").read_text())
+        data = json.loads((docs / "docs.json").read_text(encoding="utf-8"))
         versions = data["navigation"]["languages"][0]["versions"]
         new_entry = next(v for v in versions if v["version"] == "v1.15.0")
         pages = [p for tab in new_entry["tabs"] for p in tab["pages"]]
@@ -177,7 +177,7 @@ class TestFreeze:
 
         result = freeze("1.15.0", docs)
 
-        data = json.loads((docs / "docs.json").read_text())
+        data = json.loads((docs / "docs.json").read_text(encoding="utf-8"))
         en_redirect = next(r for r in data["redirects"] if r["source"] == "/en/:slug*")
         assert en_redirect["destination"] == "/v1.15.0/en/:slug*"
         assert en_redirect["permanent"] is False
@@ -191,7 +191,7 @@ class TestFreeze:
         # need to land on the current default version directly because
         # Mintlify's link-checker doesn't follow redirect chains.
         docs = _build_docs_root(tmp_path)
-        data = json.loads((docs / "docs.json").read_text())
+        data = json.loads((docs / "docs.json").read_text(encoding="utf-8"))
         data["redirects"].extend(
             [
                 {"source": "/concepts/:path*", "destination": "/en/concepts/:path*"},
@@ -203,11 +203,11 @@ class TestFreeze:
                 {"source": "/external", "destination": "https://example.com/"},
             ]
         )
-        (docs / "docs.json").write_text(json.dumps(data, indent=2) + "\n")
+        (docs / "docs.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
         freeze("1.15.0", docs)
 
-        data = json.loads((docs / "docs.json").read_text())
+        data = json.loads((docs / "docs.json").read_text(encoding="utf-8"))
         by_source = {r["source"]: r["destination"] for r in data["redirects"]}
         assert by_source["/concepts/:path*"] == "/v1.15.0/en/concepts/:path*"
         assert by_source["/api-reference/:path*"] == "/v1.15.0/en/api-reference/:path*"
@@ -219,7 +219,7 @@ class TestFreeze:
         docs = _build_docs_root(tmp_path)
 
         freeze("1.15.0", docs)
-        before = (docs / "docs.json").read_text()
+        before = (docs / "docs.json").read_text(encoding="utf-8")
         result = freeze("1.15.0", docs)
 
         assert result.snapshot_already_existed is True
@@ -228,7 +228,7 @@ class TestFreeze:
         # docs.json shape doesn't change on the second run because the version
         # is already registered.
         assert result.docsjson_entries_inserted == 0
-        assert (docs / "docs.json").read_text() == before
+        assert (docs / "docs.json").read_text(encoding="utf-8") == before
 
     def test_rejects_invalid_version_string(self, tmp_path: Path) -> None:
         docs = _build_docs_root(tmp_path)

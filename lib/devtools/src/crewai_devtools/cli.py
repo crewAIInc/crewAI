@@ -288,7 +288,7 @@ def update_version_in_file(file_path: Path, new_version: str) -> bool:
     if not file_path.exists():
         return False
 
-    content = file_path.read_text()
+    content = file_path.read_text(encoding="utf-8")
     lines = content.splitlines()
     updated = False
 
@@ -299,7 +299,7 @@ def update_version_in_file(file_path: Path, new_version: str) -> bool:
             break
 
     if updated:
-        file_path.write_text("\n".join(lines) + "\n")
+        file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return True
 
     return False
@@ -318,7 +318,7 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
     if not file_path.exists():
         return False
 
-    doc = tomlkit.parse(file_path.read_text())
+    doc = tomlkit.parse(file_path.read_text(encoding="utf-8"))
     project = doc.get("project")
     if project is None:
         return False
@@ -327,7 +327,7 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
         return False
 
     project["version"] = new_version
-    file_path.write_text(tomlkit.dumps(doc))
+    file_path.write_text(tomlkit.dumps(doc), encoding="utf-8")
     return True
 
 
@@ -359,7 +359,7 @@ def update_pyproject_dependencies(
     if not file_path.exists():
         return False
 
-    content = file_path.read_text()
+    content = file_path.read_text(encoding="utf-8")
     lines = content.splitlines()
     updated = False
 
@@ -381,7 +381,7 @@ def update_pyproject_dependencies(
                 updated = True
 
     if updated:
-        file_path.write_text("\n".join(lines) + "\n")
+        file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return True
 
     return False
@@ -581,7 +581,7 @@ def update_changelog(
         f"</Update>"
     )
 
-    content = changelog_path.read_text()
+    content = changelog_path.read_text(encoding="utf-8")
 
     # Insert after the frontmatter closing ---
     parts = content.split("---", 2)
@@ -598,7 +598,7 @@ def update_changelog(
     else:
         new_content = entry + "\n\n" + content
 
-    changelog_path.write_text(new_content)
+    changelog_path.write_text(new_content, encoding="utf-8")
     return True
 
 
@@ -658,10 +658,10 @@ def update_template_dependencies(templates_dir: Path, new_version: str) -> list[
     pattern = re.compile(r"(crewai(?:\[[\w,]+\])?)(?:==|>=)[^\s\"']+")
     updated = []
     for pyproject in templates_dir.rglob("pyproject.toml"):
-        content = pyproject.read_text()
+        content = pyproject.read_text(encoding="utf-8")
         new_content = pattern.sub(rf"\1=={new_version}", content)
         if new_content != content:
-            pyproject.write_text(new_content)
+            pyproject.write_text(new_content, encoding="utf-8")
             updated.append(pyproject)
 
     return updated
@@ -679,7 +679,7 @@ def find_version_files(base_path: Path) -> list[Path]:
     return [
         init_file
         for init_file in base_path.rglob("__init__.py")
-        if "__version__" in init_file.read_text()
+        if "__version__" in init_file.read_text(encoding="utf-8")
     ]
 
 
@@ -1344,10 +1344,10 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
         return False
 
     changed = False
-    content = pyproject_path.read_text()
+    content = pyproject_path.read_text(encoding="utf-8")
     new_content = _pin_crewai_deps(content, version)
     if new_content != content:
-        pyproject_path.write_text(new_content)
+        pyproject_path.write_text(new_content, encoding="utf-8")
         changed = True
 
     if update_pyproject_dependencies(
@@ -1374,7 +1374,7 @@ def _update_workflow_crewai_pins(workflow_path: Path, version: str) -> bool:
     if not workflow_path.exists():
         return False
 
-    raw = workflow_path.read_text()
+    raw = workflow_path.read_text(encoding="utf-8")
     lines = raw.splitlines(keepends=True)
     changed = False
     for i, line in enumerate(lines):
@@ -1387,7 +1387,7 @@ def _update_workflow_crewai_pins(workflow_path: Path, version: str) -> bool:
 
     if not changed:
         return False
-    workflow_path.write_text("".join(lines))
+    workflow_path.write_text("".join(lines), encoding="utf-8")
     return True
 
 
@@ -1645,11 +1645,11 @@ def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -
         console.print(f"[green]✓[/green] Cloned {repo}")
 
         pyproject = repo_dir / "pyproject.toml"
-        content = pyproject.read_text()
+        content = pyproject.read_text(encoding="utf-8")
         new_content = _pin_crewai_deps(content, version)
         pyproject_changed = new_content != content
         if pyproject_changed:
-            pyproject.write_text(new_content)
+            pyproject.write_text(new_content, encoding="utf-8")
             console.print(f"[green]✓[/green] Updated crewai pin to {version}")
         else:
             console.print("[yellow]Warning:[/yellow] No crewai pin found to update")
@@ -2254,7 +2254,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
             for pkg in packages:
                 version_files = find_version_files(pkg)
                 for vfile in version_files:
-                    content = vfile.read_text()
+                    content = vfile.read_text(encoding="utf-8")
                     for line in content.splitlines():
                         if line.strip().startswith("__version__"):
                             ver = line.split("=")[1].strip().strip('"').strip("'")

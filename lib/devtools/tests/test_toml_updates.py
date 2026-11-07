@@ -48,7 +48,7 @@ def test_deployment_repo_validation_rejects_missing_crewai_pin(tmp_path: Path) -
 def test_deployment_repo_validation_accepts_workflow_pin(tmp_path: Path) -> None:
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
-    (workflows / "test.yml").write_text('run: uv pip install "crewai[a2a]==2.0.0"\n')
+    (workflows / "test.yml").write_text('run: uv pip install "crewai[a2a]==2.0.0"\n', encoding="utf-8")
 
     _validate_deployment_repo_crewai_pin(
         tmp_path,
@@ -85,7 +85,7 @@ def test_deployment_repo_validation_accepts_quoted_workflow_pin(
 def test_deployment_repo_validation_rejects_mixed_versions(tmp_path: Path) -> None:
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
-    (workflows / "test.yml").write_text('run: uv pip install "crewai[a2a]==2.0.0"\n')
+    (workflows / "test.yml").write_text('run: uv pip install "crewai[a2a]==2.0.0"\n', encoding="utf-8")
 
     with pytest.raises(RuntimeError, match=r"must all pin 2\.0\.0"):
         _validate_deployment_repo_crewai_pin(
@@ -100,7 +100,7 @@ def test_deployment_repo_validation_ignores_comments_and_echo(tmp_path: Path) ->
     workflows.mkdir(parents=True)
     (workflows / "test.yml").write_text(
         'run: echo "crewai==2.0.0"\n# run: pip install crewai==2.0.0\n'
-    )
+    , encoding="utf-8")
 
     with pytest.raises(RuntimeError, match="No effective CrewAI dependency"):
         _validate_deployment_repo_crewai_pin(
@@ -149,7 +149,7 @@ def test_deployment_repo_validation_reads_multiline_workflow_install(
         "    run: |\n"
         "      uv pip install \\\n"
         "        \"crewai[tools, embeddings]==2.0.0; python_version >= '3.10'\"\n"
-    )
+    , encoding="utf-8")
 
     _validate_deployment_repo_crewai_pin(
         tmp_path,
@@ -227,10 +227,10 @@ class TestUpdatePyprojectVersion:
             name = "my-pkg"
             version = "1.0.0"
         """)
-        )
+        , encoding="utf-8")
 
         assert update_pyproject_version(pyproject, "2.0.0") is True
-        assert 'version = "2.0.0"' in pyproject.read_text()
+        assert 'version = "2.0.0"' in pyproject.read_text(encoding="utf-8")
 
     def test_returns_false_when_already_current(self, tmp_path: Path) -> None:
         pyproject = tmp_path / "pyproject.toml"
@@ -240,13 +240,13 @@ class TestUpdatePyprojectVersion:
             name = "my-pkg"
             version = "1.0.0"
         """)
-        )
+        , encoding="utf-8")
 
         assert update_pyproject_version(pyproject, "1.0.0") is False
 
     def test_returns_false_when_no_project_section(self, tmp_path: Path) -> None:
         pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("[tool.ruff]\nline-length = 88\n")
+        pyproject.write_text("[tool.ruff]\nline-length = 88\n", encoding="utf-8")
 
         assert update_pyproject_version(pyproject, "1.0.0") is False
 
@@ -258,10 +258,10 @@ class TestUpdatePyprojectVersion:
             name = "my-pkg"
             dynamic = ["version"]
         """)
-        )
+        , encoding="utf-8")
 
         assert update_pyproject_version(pyproject, "1.0.0") is False
-        assert 'version = "1.0.0"' not in pyproject.read_text()
+        assert 'version = "1.0.0"' not in pyproject.read_text(encoding="utf-8")
 
     def test_returns_false_for_missing_file(self, tmp_path: Path) -> None:
         assert update_pyproject_version(tmp_path / "nope.toml", "1.0.0") is False
@@ -275,10 +275,10 @@ class TestUpdatePyprojectVersion:
             description = "A package"
         """)
         pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(content)
+        pyproject.write_text(content, encoding="utf-8")
 
         update_pyproject_version(pyproject, "2.0.0")
-        result = pyproject.read_text()
+        result = pyproject.read_text(encoding="utf-8")
 
         assert "# This is important" in result
         assert 'description = "A package"' in result
@@ -434,11 +434,11 @@ class TestUpdatePyprojectDependencies:
         import tomlkit
 
         workspace_root = Path(__file__).resolve().parents[3]
-        root_pyproject = (workspace_root / "pyproject.toml").read_text()
+        root_pyproject = (workspace_root / "pyproject.toml").read_text(encoding="utf-8")
 
         members = tomlkit.parse(root_pyproject)["tool"]["uv"]["workspace"]["members"]
         expected = {
-            tomlkit.parse((workspace_root / m / "pyproject.toml").read_text())[
+            tomlkit.parse((workspace_root / m / "pyproject.toml").read_text(encoding="utf-8"))[
                 "project"
             ]["name"]
             for m in members
@@ -465,10 +465,10 @@ class TestUpdatePyprojectDependencies:
                 "crewai-files==1.0.0",
             ]
         """)
-        )
+        , encoding="utf-8")
 
         assert update_pyproject_dependencies(pyproject, "2.0.0") is True
-        result = pyproject.read_text()
+        result = pyproject.read_text(encoding="utf-8")
         assert '"crewai-core==2.0.0"' in result
         assert '"crewai-cli==2.0.0"' in result
         assert '"crewai-tools==2.0.0"' in result
@@ -484,10 +484,10 @@ class TestUpdatePyprojectDependencies:
                 "crewai-files==1.0.0",
             ]
         """)
-        )
+        , encoding="utf-8")
 
         assert update_pyproject_dependencies(pyproject, "2.0.0")
-        assert pyproject.read_text() == dedent("""\
+        assert pyproject.read_text(encoding="utf-8") == dedent("""\
             [project.optional-dependencies]
             file-processing = [
                 "crewai-files==2.0.0",
@@ -498,7 +498,7 @@ class TestUpdatePyprojectDependencies:
         self, tmp_path: Path
     ) -> None:
         pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(_CREWAI_PYPROJECT.read_text())
+        pyproject.write_text(_CREWAI_PYPROJECT.read_text(encoding="utf-8"), encoding="utf-8")
 
         update_pyproject_dependencies(pyproject, "99.0.0")
 
@@ -520,10 +520,10 @@ class TestUpdatePyprojectDependencies:
                 "crewai-core==1.0.0",
             ]
         """)
-        )
+        , encoding="utf-8")
 
         update_pyproject_dependencies(pyproject, "2.0.0")
-        result = pyproject.read_text()
+        result = pyproject.read_text(encoding="utf-8")
         assert '"crewai==2.0.0"' in result
         assert '"crewai-core==2.0.0"' in result
 
@@ -545,32 +545,32 @@ class TestUpdateTemplateDependencies:
             [project.scripts]
             {{folder_name}} = "{{folder_name}}.main:run"
         """)
-        )
+        , encoding="utf-8")
 
         updated = update_template_dependencies(tmp_path, "2.0.0")
 
         assert len(updated) == 1
-        content = tpl.read_text()
+        content = tpl.read_text(encoding="utf-8")
         assert '"crewai[tools]==2.0.0"' in content
         assert "{{folder_name}}" in content
 
     def test_updates_bare_crewai(self, tmp_path: Path) -> None:
         tpl = tmp_path / "pyproject.toml"
-        tpl.write_text('dependencies = [\n    "crewai==1.0.0"\n]\n')
+        tpl.write_text('dependencies = [\n    "crewai==1.0.0"\n]\n', encoding="utf-8")
 
         updated = update_template_dependencies(tmp_path, "3.0.0")
 
         assert len(updated) == 1
-        assert '"crewai==3.0.0"' in tpl.read_text()
+        assert '"crewai==3.0.0"' in tpl.read_text(encoding="utf-8")
 
     def test_skips_unrelated_deps(self, tmp_path: Path) -> None:
         tpl = tmp_path / "pyproject.toml"
-        tpl.write_text('dependencies = [\n    "requests>=2.0"\n]\n')
+        tpl.write_text('dependencies = [\n    "requests>=2.0"\n]\n', encoding="utf-8")
 
         updated = update_template_dependencies(tmp_path, "2.0.0")
 
         assert len(updated) == 0
-        assert '"requests>=2.0"' in tpl.read_text()
+        assert '"requests>=2.0"' in tpl.read_text(encoding="utf-8")
 
 
 _CREWAI_PYPROJECT = Path(__file__).parents[2] / "crewai" / "pyproject.toml"
@@ -578,7 +578,7 @@ _CREWAI_PYPROJECT = Path(__file__).parents[2] / "crewai" / "pyproject.toml"
 
 def _sibling_pins(pyproject: Path) -> dict[str, str]:
     """Map each workspace sibling crewai requires (core or extra) to its pin."""
-    project = tomlkit.parse(pyproject.read_text())["project"]
+    project = tomlkit.parse(pyproject.read_text(encoding="utf-8"))["project"]
     requirements = [str(r) for r in project["dependencies"]]
     for extra in project["optional-dependencies"].values():
         requirements.extend(str(r) for r in extra)
@@ -605,6 +605,6 @@ def test_crewai_pins_every_workspace_sibling_to_its_own_version() -> None:
 
 def _crewai_version() -> str:
     init = _CREWAI_PYPROJECT.parent / "src" / "crewai" / "__init__.py"
-    match = re.search(r'__version__\s*=\s*"([^"]+)"', init.read_text())
+    match = re.search(r'__version__\s*=\s*"([^"]+)"', init.read_text(encoding="utf-8"))
     assert match is not None
     return match.group(1)

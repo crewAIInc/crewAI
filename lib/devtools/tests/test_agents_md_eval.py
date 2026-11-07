@@ -120,8 +120,8 @@ def repo(tmp_path, monkeypatch):
     templates.mkdir(parents=True)
     (templates / "AGENTS.md").write_text(
         f"base\n{ev.EVALUATION_START}\neval\n{ev.EVALUATION_END}\n"
-    )
-    (templates / "CLAUDE.md").write_text("@AGENTS.md\n")
+    , encoding="utf-8")
+    (templates / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
     _git(tmp_path, "init", "-q", "-b", "main")
     _git(tmp_path, "add", "-A")
     _git(
@@ -135,7 +135,7 @@ def repo(tmp_path, monkeypatch):
         "-m",
         "base",
     )
-    (templates / "AGENTS.md").write_text("head\n")
+    (templates / "AGENTS.md").write_text("head\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
@@ -143,9 +143,9 @@ def repo(tmp_path, monkeypatch):
 def test_write_project_takes_the_file_at_the_ref_or_the_working_tree(repo, tmp_path):
     ev.write_project(tmp_path / "base", "main")
     ev.write_project(tmp_path / "head", None)
-    assert (tmp_path / "base" / "AGENTS.md").read_text() == "base\neval\n"
-    assert (tmp_path / "head" / "AGENTS.md").read_text() == "head\n"
-    assert (tmp_path / "head" / "CLAUDE.md").read_text() == "@AGENTS.md\n"
+    assert (tmp_path / "base" / "AGENTS.md").read_text(encoding="utf-8") == "base\neval\n"
+    assert (tmp_path / "head" / "AGENTS.md").read_text(encoding="utf-8") == "head\n"
+    assert (tmp_path / "head" / "CLAUDE.md").read_text(encoding="utf-8") == "@AGENTS.md\n"
 
 
 def test_write_project_rejects_an_unknown_ref(repo, tmp_path):

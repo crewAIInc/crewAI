@@ -418,7 +418,7 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
                 if parent.exists():
                     siblings = list(parent.glob("*.mdx"))
                     if siblings:
-                        ref_content = siblings[0].read_text()
+                        ref_content = siblings[0].read_text(encoding="utf-8")
                 content = _generate_doc(action_item.reason, ref_content, diff, client)
 
             if dry_run:
@@ -426,7 +426,7 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
                 console.print(f"  [dim]Preview: {content[:200]}...[/dim]")
             else:
                 en_path.parent.mkdir(parents=True, exist_ok=True)
-                en_path.write_text(content)
+                en_path.write_text(content, encoding="utf-8")
                 console.print(f"  [green]✓[/green] Created {en_path}")
 
         elif action_item.action == "update":
@@ -434,7 +434,7 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
                 console.print("  [yellow]⚠[/yellow] File not found, skipping update")
                 continue
 
-            existing = en_path.read_text()
+            existing = en_path.read_text(encoding="utf-8")
             with console.status(f"  [cyan]Updating {rel_path}..."):
                 content = _update_doc(
                     action_item.reason,
@@ -451,7 +451,7 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
             if dry_run:
                 console.print(f"  [dim][DRY RUN] Would update {en_path}[/dim]")
             else:
-                en_path.write_text(content)
+                en_path.write_text(content, encoding="utf-8")
                 console.print(f"  [green]✓[/green] Updated {en_path}")
 
         if not content:
@@ -470,7 +470,7 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
                 console.print(f"  [dim][DRY RUN] Would write {lang_path}[/dim]")
             else:
                 lang_path.parent.mkdir(parents=True, exist_ok=True)
-                lang_path.write_text(translated)
+                lang_path.write_text(translated, encoding="utf-8")
                 console.print(f"  [green]✓[/green] Translated → {lang_path}")
 
     console.print("\n[green]✓ Done.[/green]")
