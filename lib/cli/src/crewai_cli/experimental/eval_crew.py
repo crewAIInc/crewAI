@@ -255,7 +255,9 @@ def turn_tracing_on() -> None:
     """`CREWAI_TRACING_ENABLED=true` in the project's .env, and in this process:
     what somebody asked whether to turn tracing on said yes to."""
     env_file = Path.cwd() / ".env"
-    env_file.touch(exist_ok=True)
+    # The project's `.env` holds its API keys: one created here is owner-only,
+    # as `crewai create` writes it. set_key keeps an existing file's mode.
+    env_file.touch(mode=0o600, exist_ok=True)
     set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
     os.environ[TRACING_ENV_VAR] = "true"
 

@@ -3999,6 +3999,43 @@ def test_with_nobody_watching_a_missing_key_is_named_in_the_run_log_not_asked_fo
     assert "cli_usage:run_api_key:warned" in usage
 
 
+@pytest.fixture
+def tracing_unset(monkeypatch):
+    """`turn_tracing_on` sets the variable in this process: restored after."""
+    monkeypatch.setenv(eval_module.TRACING_ENV_VAR, "")
+    monkeypatch.delenv(eval_module.TRACING_ENV_VAR)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+@pytest.mark.usefixtures("tracing_unset")
+def test_turning_tracing_on_creates_an_env_only_its_owner_can_read(tmp_path, monkeypatch):
+    """The `.env` it creates is where the project's API keys go next."""
+    monkeypatch.chdir(tmp_path)
+    old_umask = os.umask(0o022)
+    try:
+        eval_module.turn_tracing_on()
+    finally:
+        os.umask(old_umask)
+
+    env_file = tmp_path / ".env"
+    assert env_file.read_text() == "CREWAI_TRACING_ENABLED=true\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+@pytest.mark.usefixtures("tracing_unset")
+def test_turning_tracing_on_keeps_an_owner_only_env_and_its_keys(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=sk-test\n")
+    env_file.chmod(0o600)
+
+    eval_module.turn_tracing_on()
+
+    assert env_file.read_text() == "OPENAI_API_KEY=sk-test\nCREWAI_TRACING_ENABLED=true\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
 def test_the_run_log_is_the_owners_alone_even_one_left_by_an_earlier_run(tmp_path):
     log = tmp_path / "last_run.log"
