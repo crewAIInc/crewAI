@@ -1349,3 +1349,23 @@ def test_convert_to_model_refits_off_schema_json_for_output_json_with_function_c
     assert json.loads(output) == json.loads(REFIT_ANSWER)
     assert requests[0]["messages"] == [{"role": "user", "content": OFF_SCHEMA_ANSWER}]
     assert llm.received == []
+
+
+def test_handle_partial_json_with_trailing_braces_in_prose() -> None:
+    """Valid JSON followed by prose containing braces must parse the JSON
+    instead of matching the whole string with the greedy regex and falling
+    back to an LLM refit (which raises TypeError when agent is None)."""
+    result = '{"name": "Charlie", "age": 35}\n\nNote: configuration uses {"debug": true} mode.'
+    output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Charlie"
+    assert output.age == 35
+
+
+def test_handle_partial_json_prefers_first_complete_object() -> None:
+    """Two adjacent objects: the first complete one wins (previously the whole
+    string was matched and failed to parse)."""
+    result = '{"name": "A", "age": 1}{"name": "B", "age": 2}'
+    output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "A"
