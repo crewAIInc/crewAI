@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import unquote, urlparse
 
 from pydantic import BaseModel, ValidationError
+import yaml
 
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_class_ref
 
@@ -237,11 +238,59 @@ def _instantiate_agent_from_data(
         raise JSONProjectError(f"{source_label}: failed to load agent: {exc}") from exc
 
 
-def load_agent(source: str | Path) -> Any:
-    """Load an existing ``Agent`` from a ``.json`` / ``.jsonc`` definition file."""
+def _read_agent_definition(path: Path) -> dict[str, Any]:
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise JSONProjectError(f"{path}: invalid YAML: {exc}") from exc
+    else:
+        data = load_jsonc_file(path)
+    return _expect_object(data, path)
+
+
+def validate_agent_definition(source: str | Path, *, project_root: str | Path) -> None:
+    """Check a JSON/JSONC or YAML Agent without executing project Python.
+
+    Check fields, Python-reference syntax and tool declarations without importing
+    referenced classes, constructing tools, or initializing an Agent or providers.
+    """
     path = Path(source)
-    defn = _expect_object(load_jsonc_file(path), path)
-    root = path.parent.parent if path.parent.name == "agents" else path.parent
+    _agent_kwargs_from_definition(
+        _read_agent_definition(path),
+        path,
+        resolve_tools=False,
+        resolve_python_refs=False,
+        project_root=Path(project_root).resolve(),
+    )
+
+
+def load_agent(source: str | Path, *, project_root: str | Path | None = None) -> Any:
+    """Load an ``Agent`` from a JSON/JSONC or YAML constructor definition.
+
+    ``project_root`` anchors local Python references, custom tools, and skill paths. When
+    omitted, files in ``agents/`` retain their parent-project convention.
+    Definitions contain Agent fields; kickoff messages are supplied separately.
+    """
+    path = Path(source)
+    defn = _read_agent_definition(path)
+    root = (
+        Path(project_root).resolve()
+        if project_root is not None
+        else path.parent.parent
+        if path.parent.name == "agents"
+        else path.parent
+    )
+    if project_root is not None and isinstance(defn.get("skills"), list):
+        defn["skills"] = [
+            str(root / skill)
+            if isinstance(skill, str)
+            and not skill.startswith("@")
+            and not skill.lstrip().startswith(("---\n", "---\r\n"))
+            and not _is_python_ref(skill)
+            else skill
+            for skill in defn["skills"]
+        ]
     return _instantiate_agent_from_data(defn, str(path), root)
 
 
@@ -1150,6 +1199,8 @@ def _field_errors(
     *,
     skip_unknown: bool = False,
 ) -> list[str]:
+    if any(not isinstance(key, str) for key in data):
+        return [f"{source}: constructor field names must be strings"]
     extra_allowed = extra_allowed or set()
     keys = set(data)
     runtime = sorted(keys & runtime_fields)
