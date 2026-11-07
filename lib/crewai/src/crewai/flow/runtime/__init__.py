@@ -19,6 +19,7 @@ import inspect
 import logging
 from pathlib import Path
 import threading
+import time
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -343,6 +344,12 @@ def _serialize_input_provider(value: Any) -> str | None:
 
 
 _INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
+
+# A dict state can be written from another thread while we snapshot it for an
+# event. Snapshotting the entries first makes that rare, but the entry list
+# itself can still be taken mid-write, so retry a few times before giving up.
+_STATE_COPY_ATTEMPTS = 5
+_STATE_COPY_BACKOFF = 0.01
 
 
 def _serialize_initial_state(value: Any) -> Any:
@@ -1834,9 +1841,34 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     return cast(T, self._state.model_copy(deep=False))
         else:
             try:
-                return cast(T, copy.deepcopy(self._state))
+                return cast(T, self._deepcopy_state())
             except (TypeError, AttributeError):
                 return cast(T, self._state.copy())
+
+    def _deepcopy_state(self) -> T:
+        """Deep copy a dict state that another thread may be writing to.
+
+        Plain methods run on worker threads and mutate the state directly, so a
+        copy taken while another method starts can hit "dictionary changed size
+        during iteration". The snapshot only feeds events, so take it from a
+        point-in-time copy of the entries: once the entries are detached, the
+        per-entry deepcopy can no longer trip over a concurrent insert.
+        """
+        for attempt in range(_STATE_COPY_ATTEMPTS):
+            try:
+                items = list(self._state.items())
+            except RuntimeError as exc:
+                # Same race, one step earlier. Anything else raised while copying
+                # is a real problem with the state, so let it surface.
+                if "changed size during iteration" not in str(exc):
+                    raise
+                if attempt + 1 == _STATE_COPY_ATTEMPTS:
+                    raise
+                time.sleep(_STATE_COPY_BACKOFF * (attempt + 1))
+                continue
+            copy_of_items = copy.deepcopy(items)
+            return cast(T, dict(copy_of_items))
+        return cast(T, copy.deepcopy(self._state))
 
     @property
     def state(self) -> T:
