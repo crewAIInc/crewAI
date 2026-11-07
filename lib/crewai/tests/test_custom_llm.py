@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List, Optional, Union
 from unittest.mock import AsyncMock, patch
 
@@ -5,6 +6,7 @@ import pytest
 from crewai import Agent, Crew, Process, Task
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm
+from pydantic import BaseModel
 
 
 class CustomLLM(BaseLLM):
@@ -147,6 +149,82 @@ def test_base_llm_input_token_count_estimates_text_characters(caplog):
 
     assert custom_llm.get_input_tokens_count("12345") == 2
     assert "assuming one token per four characters" in caplog.text
+
+
+_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "search_the_web",
+        "description": "Search the web for a query and return the top results.",
+        "parameters": {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        },
+    },
+}
+
+
+def test_base_llm_input_token_count_includes_tool_schemas():
+    """Tool schemas are sent with the messages, so the fallback counts them."""
+    custom_llm = CustomLLM(model="test-model")
+
+    text_only = custom_llm.get_input_tokens_count("12345")
+    with_tools = custom_llm.get_input_tokens_count("12345", tools=[_TOOL_SCHEMA])
+
+    assert with_tools > text_only
+    assert with_tools == (len("12345") + len(json.dumps([_TOOL_SCHEMA])) + 3) // 4
+
+
+def test_base_llm_input_token_count_includes_response_model():
+    """A structured-output schema is sent with the request, so it is counted."""
+
+    class Answer(BaseModel):
+        value: str
+
+    custom_llm = CustomLLM(model="test-model")
+
+    text_only = custom_llm.get_input_tokens_count("12345")
+    with_model = custom_llm.get_input_tokens_count("12345", response_model=Answer)
+
+    assert with_model > text_only
+    assert with_model == (
+        len("12345") + len(json.dumps(Answer.model_json_schema())) + 3
+    ) // 4
+
+
+def test_base_llm_input_token_count_tolerates_unencodable_payloads():
+    """Payloads that cannot be encoded contribute 0 instead of breaking the count."""
+    custom_llm = CustomLLM(model="test-model")
+
+    circular: dict[str, Any] = {}
+    circular["self"] = circular
+
+    assert custom_llm.get_input_tokens_count("12345", tools=[circular]) == 2
+
+
+def test_base_llm_input_token_count_accepts_response_model_without_schema():
+    """A response model exposing no JSON schema still yields an estimate."""
+    custom_llm = CustomLLM(model="test-model")
+
+    class WithoutSchema:
+        pass
+
+    assert custom_llm.get_input_tokens_count("12345", response_model=WithoutSchema) >= 2
+
+
+def test_base_llm_input_token_count_tolerates_unavailable_json_schema() -> None:
+    """A real Pydantic model may validate values without supporting JSON schema."""
+
+    class Arbitrary:
+        pass
+
+    class Answer(BaseModel):
+        model_config = {"arbitrary_types_allowed": True}
+        value: Arbitrary
+
+    custom_llm = CustomLLM(model="test-model")
+    assert custom_llm.get_input_tokens_count("12345", response_model=Answer) == 2
 
 
 def test_base_llm_summarize_messages_compacts_history():

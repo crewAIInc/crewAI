@@ -184,14 +184,18 @@ class GeminiCompletion(BaseLLM):
                 if value is not None
             ]
             if unsupported_context:
-                return super().get_input_tokens_count(messages, tools, response_model)
+                return super().get_input_tokens_count(
+                    messages, tools, response_model or self.response_format
+                )
             try:
                 response = client.models.count_tokens(
                     model=self.model,
                     contents=formatted_content,
                 )
             except Exception:
-                return super().get_input_tokens_count(messages, tools, response_model)
+                return super().get_input_tokens_count(
+                    messages, tools, response_model or self.response_format
+                )
             return int(response.total_tokens)
 
         count_config_params: dict[str, Any] = {
@@ -214,7 +218,9 @@ class GeminiCompletion(BaseLLM):
                 config=count_config,
             )
         except Exception:
-            return super().get_input_tokens_count(messages, tools, response_model)
+            return super().get_input_tokens_count(
+                messages, tools, response_model or self.response_format
+            )
         return int(response.total_tokens)
 
     def to_config_dict(self) -> dict[str, Any]:
