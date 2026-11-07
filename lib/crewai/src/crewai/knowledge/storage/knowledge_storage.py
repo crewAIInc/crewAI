@@ -1,9 +1,15 @@
 import logging
 import traceback
-from typing import Any, cast
+from typing import Annotated, Any, cast
 import warnings
 
-from pydantic import Field, PrivateAttr, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PrivateAttr,
+    SerializeAsAny,
+    model_validator,
+)
 from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
@@ -230,3 +236,27 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             logging.error(
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
+
+
+def _resolve_knowledge_storage(value: Any) -> Any:
+    """Restore a serialized knowledge storage, which the abstract field type cannot.
+
+    A checkpoint stores the storage as a plain dict of its own fields (its embedder
+    and client are excluded). It is rebuilt the way ``Knowledge`` builds its default
+    storage: the registered factory's backend for that collection, else
+    ``KnowledgeStorage``. Pass-through for anything else (instances, mocks, ``None``).
+    """
+    if not isinstance(value, dict):
+        return value
+    from crewai.knowledge.storage.factory import resolve_knowledge_storage
+
+    custom = resolve_knowledge_storage(None, value.get("collection_name"))
+    return custom if custom is not None else KnowledgeStorage.model_validate(value)
+
+
+# A storage field typed to the base interface that survives a checkpoint: it is
+# dumped with the concrete class's fields and restored by the resolver above.
+KnowledgeStorageField = Annotated[
+    SerializeAsAny[BaseKnowledgeStorage] | None,
+    BeforeValidator(_resolve_knowledge_storage),
+]

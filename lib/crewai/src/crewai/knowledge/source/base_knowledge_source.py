@@ -4,8 +4,10 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.knowledge.storage.knowledge_storage import (
+    KnowledgeStorage,
+    KnowledgeStorageField,
+)
 
 
 # ``KnowledgeStorage`` is re-exported for backwards compatibility; the ``storage``
@@ -24,7 +26,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: BaseKnowledgeStorage | None = Field(default=None)
+    storage: KnowledgeStorageField = Field(default=None)
     metadata: dict[str, Any] = Field(default_factory=dict)  # Currently unused
     collection_name: str | None = Field(default=None)
 
