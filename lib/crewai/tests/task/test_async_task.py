@@ -1,10 +1,18 @@
 """Tests for async task execution."""
 
+import asyncio
+from io import StringIO
+import threading
+from typing import Any
+
 import pytest
 from pydantic import BaseModel
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agent import Agent
+from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
+from crewai.events.event_listener import EventListener
+from crewai.events.types.task_events import TaskFailedEvent, TaskStartedEvent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.tasks.output_format import OutputFormat
@@ -441,11 +449,12 @@ class TestAsyncOutputConversion:
         )
 
         sentinel = '{"value": "ok"}'
-        with patch.object(
-            converter, "_create_instructor"
-        ) as mock_create, patch(
-            "crewai.utilities.converter.asyncio.to_thread", new_callable=AsyncMock
-        ) as mock_to_thread:
+        with (
+            patch.object(converter, "_create_instructor") as mock_create,
+            patch(
+                "crewai.utilities.converter.asyncio.to_thread", new_callable=AsyncMock
+            ) as mock_to_thread,
+        ):
             instructor = MagicMock()
             instructor.to_json = MagicMock(return_value=sentinel)
             mock_create.return_value = instructor
@@ -455,3 +464,374 @@ class TestAsyncOutputConversion:
 
         assert result == sentinel
         mock_to_thread.assert_awaited_once_with(instructor.to_json)
+
+
+class TestCancelledTaskCleanup:
+    """A cancelled task must still report a terminal event.
+
+    ``asyncio.CancelledError`` derives from ``BaseException``, so the
+    ``except Exception`` in ``_aexecute_core`` never saw it: no terminal
+    event was emitted at all, and everything downstream -- tracing,
+    telemetry, the console formatter -- kept treating the task as running
+    after it was already gone.
+
+    The assertion is on the event rather than on
+    ``EventListener.execution_spans`` on purpose. Handlers run on a thread
+    pool with no ordering between them, so whether the started or the
+    terminal handler runs first is not deterministic; asserting on the
+    dict from this test produced one that failed roughly one run in five.
+    ``TestTerminalEventOrdering`` covers the span bookkeeping itself, by
+    driving the two handlers in a fixed order instead of racing them.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cancelled_task_emits_terminal_event(self, test_agent: Agent) -> None:
+        """Cancelling a task emits TaskFailedEvent instead of nothing."""
+        seen = threading.Event()
+        captured: dict[str, Any] = {}
+
+        @crewai_event_bus.on(TaskFailedEvent)
+        def on_failed(source: Task, event: TaskFailedEvent) -> None:
+            captured["source"] = source
+            captured["error_type"] = event.error_type
+            seen.set()
+
+        async def cancelled(self: Agent, *args: object, **kwargs: object) -> None:
+            raise asyncio.CancelledError()
+
+        task = Task(
+            description="Cancelled task",
+            expected_output="Never produced",
+            agent=test_agent,
+        )
+        try:
+            with patch.object(Agent, "aexecute_task", cancelled):
+                with pytest.raises(asyncio.CancelledError):
+                    await task.aexecute_sync()
+
+            assert seen.wait(timeout=5), "a cancelled task emitted no terminal event"
+            assert captured["source"] is task
+            assert captured["error_type"] is asyncio.CancelledError
+        finally:
+            crewai_event_bus.off(TaskFailedEvent, on_failed)
+
+
+class TestTerminalEventOrdering:
+    """A task's span must be closed even when its events arrive out of order.
+
+    ``emit`` dispatches synchronous handlers on a ``ThreadPoolExecutor``, so a
+    task's ``TaskStartedEvent`` and its terminal event carry no happens-before
+    relation. When the terminal handler ran first there was no span to pop,
+    and the started handler then stored one that nothing would ever remove --
+    pinning the task, and its agent, crew and tooling, for the life of the
+    process. These tests drive both fixed orders and pause span creation to cover
+    overlapping handlers without relying on scheduler timing.
+    """
+
+    @pytest.fixture
+    def handlers(self) -> tuple[Any, Any, Any]:
+        """Register a throwaway listener and return its (started, failed) handlers.
+
+        The two handlers have to be driven in an order the thread pool would not
+        guarantee, and ``emit`` offers no way to pin that, so they are invoked
+        directly. Registration uses a temporary handler scope and the instance is built
+        with ``object.__new__`` so the ``EventListener`` singleton -- whose
+        ``__new__`` clears ``_initialized`` and would re-register handlers on
+        the shared bus -- is left untouched.
+        """
+        bus = CrewAIEventsBus()
+        listener = object.__new__(EventListener)
+        listener._telemetry = MagicMock()
+        listener.logger = MagicMock()
+        listener.execution_spans = {}
+        listener.next_chunk = 0
+        listener.text_stream = StringIO()
+        listener.knowledge_retrieval_in_progress = False
+        listener.knowledge_query_in_progress = False
+        listener._task_span_lock = threading.RLock()
+        listener._terminal_task_outcomes = {}
+        listener.formatter = MagicMock()
+
+        def find(event_type: type, name: str) -> Any:
+            matches = [
+                handler
+                for handler in bus._sync_handlers.get(event_type, ())
+                if getattr(handler, "__name__", "") == name
+            ]
+            assert matches, f"{name} is not registered for {event_type.__name__}"
+            return matches[-1]
+
+        with bus.scoped_handlers():
+            listener.setup_listeners(bus)
+            return (
+                listener,
+                find(TaskStartedEvent, "on_task_started"),
+                find(TaskFailedEvent, "on_task_failed"),
+            )
+
+    @staticmethod
+    def _task(agent: Agent) -> Task:
+        task = Task(
+            description="Ordered task",
+            expected_output="Never produced",
+            agent=agent,
+        )
+        task._task_started_event_id = str(task.id)
+        return task
+
+    def test_terminal_before_started_does_not_leak_a_span(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """The losing order for the started handler leaves no span behind."""
+        listener, on_started, on_failed = handlers
+        task = self._task(test_agent)
+
+        on_failed(
+            task,
+            TaskFailedEvent(
+                error="cancelled",
+                task=task,
+                started_event_id=str(task.id),
+                error_type=asyncio.CancelledError,
+            ),
+        )
+        on_started(
+            task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+        )
+
+        assert task not in listener.execution_spans, (
+            "started handler ran after the terminal event and stored a span "
+            "that will never be popped"
+        )
+        assert str(task.id) not in listener._terminal_task_outcomes, (
+            "reconciled task id was not discarded"
+        )
+
+    def test_repeated_out_of_order_events_do_not_accumulate(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """Repeated cancellations must not grow the tracking sets."""
+        listener, on_started, on_failed = handlers
+        tasks = [self._task(test_agent) for _ in range(20)]
+
+        for task in tasks:
+            on_failed(
+                task,
+                TaskFailedEvent(
+                    error="cancelled",
+                    task=task,
+                    started_event_id=str(task.id),
+                    error_type=asyncio.CancelledError,
+                ),
+            )
+            on_started(
+                task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+            )
+
+        assert not listener._terminal_task_outcomes
+        assert not listener.execution_spans
+
+    def test_started_before_terminal_still_closes_the_span(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """The common order is unaffected: the span is stored, then closed."""
+        listener, on_started, on_failed = handlers
+        task = self._task(test_agent)
+
+        on_started(
+            task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+        )
+        assert task in listener.execution_spans
+
+        on_failed(
+            task,
+            TaskFailedEvent(
+                error="cancelled",
+                task=task,
+                started_event_id=str(task.id),
+                error_type=asyncio.CancelledError,
+            ),
+        )
+        assert task not in listener.execution_spans
+        assert not listener._terminal_task_outcomes
+
+    def test_early_failure_preserves_error_type(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """An early cancellation closes telemetry as failed, with its exception class."""
+        listener, on_started, on_failed = handlers
+        task = self._task(test_agent)
+        span = listener._telemetry.task_started.return_value
+        on_failed(
+            task,
+            TaskFailedEvent(
+                error="cancelled",
+                error_type=asyncio.CancelledError,
+                task=task,
+                started_event_id=str(task.id),
+            ),
+        )
+        on_started(
+            task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+        )
+        listener._telemetry.task_failed.assert_called_once_with(
+            span, task, asyncio.CancelledError
+        )
+        listener._telemetry.task_ended.assert_not_called()
+
+    def test_terminal_without_new_start_keeps_no_marker(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """Pre-start failures and restored scopes have no pending start handler."""
+        listener, _, on_failed = handlers
+        for started_event_id in (None, "restored-start"):
+            task = self._task(test_agent)
+            task._task_started_event_id = None
+            on_failed(
+                task,
+                TaskFailedEvent(
+                    error="failed", task=task, started_event_id=started_event_id
+                ),
+            )
+        task = Task(description="No agent", expected_output="None")
+        on_failed(task, TaskFailedEvent(error="no agent", task=task))
+        assert not listener._terminal_task_outcomes
+        assert not listener.execution_spans
+
+    def test_overlapping_start_and_failure_leave_no_span(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """A failure cannot slip between the terminal check and span storage."""
+        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import TimeoutError as FutureTimeoutError
+
+        listener, on_started, on_failed = handlers
+        entered = threading.Event()
+        release = threading.Event()
+        failing = threading.Event()
+        span = listener._telemetry.task_started.return_value
+
+        class PausedSpanMap(dict):
+            def __setitem__(self, key: Task, value: Any) -> None:
+                entered.set()
+                assert release.wait(5)
+                super().__setitem__(key, value)
+
+        listener.execution_spans = PausedSpanMap()
+        task = self._task(test_agent)
+
+        def fail() -> None:
+            failing.set()
+            on_failed(
+                task,
+                TaskFailedEvent(
+                    error="cancelled",
+                    error_type=asyncio.CancelledError,
+                    task=task,
+                    started_event_id=str(task.id),
+                ),
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            started = executor.submit(
+                on_started,
+                task,
+                TaskStartedEvent(context=None, task=task, event_id=str(task.id)),
+            )
+            try:
+                assert entered.wait(5)
+                failed = executor.submit(fail)
+                assert failing.wait(5)
+                with pytest.raises(FutureTimeoutError):
+                    failed.result(timeout=0.1)
+            finally:
+                release.set()
+            started.result(timeout=5)
+            failed.result(timeout=5)
+
+        assert not listener.execution_spans
+        assert not listener._terminal_task_outcomes
+        listener._telemetry.task_failed.assert_called_once_with(
+            span, task, asyncio.CancelledError
+        )
+
+    @pytest.mark.asyncio
+    async def test_repeated_cancellations_close_real_event_bus_spans(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """Task execution and event metadata reconcile repeated real cancellations."""
+        listener, on_started, on_failed = handlers
+        bus = crewai_event_bus
+
+        async def cancelled(self: Agent, *args: object, **kwargs: object) -> None:
+            raise asyncio.CancelledError()
+
+        assert await asyncio.to_thread(bus.flush, 5)
+        with bus.scoped_handlers(), patch.object(Agent, "aexecute_task", cancelled):
+            bus.on(TaskStartedEvent)(on_started)
+            bus.on(TaskFailedEvent)(on_failed)
+            for _ in range(20):
+                task = Task(
+                    description="Cancelled task",
+                    expected_output="Never produced",
+                    agent=test_agent,
+                )
+                with pytest.raises(asyncio.CancelledError):
+                    await task.aexecute_sync()
+                assert await asyncio.to_thread(bus.flush, 5)
+                assert task not in listener.execution_spans
+                assert not listener._terminal_task_outcomes
+        assert listener._telemetry.task_failed.call_count == 20
+        listener._telemetry.task_ended.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("cancelled", [True, False])
+    async def test_nested_agent_scope_failure_before_started_handler(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any], cancelled: bool
+    ) -> None:
+        """Nested cancellation and passthrough failures must both close task spans."""
+        from crewai.events.types.agent_events import AgentExecutionStartedEvent
+        from crewai.tools.tool_failure import (
+            ToolExecutionFailedError, ToolFailure, ToolFailureRecord,
+        )
+
+        error = (
+            asyncio.CancelledError() if cancelled else ToolExecutionFailedError(
+                ToolFailureRecord(tool_name="failing_tool", failure=ToolFailure(message="failed"))
+            )
+        )
+
+        listener, on_started, on_failed = handlers
+        bus = crewai_event_bus
+        pending: list[tuple[Any, Any]] = []
+
+        def delay_started(source: Any, event: TaskStartedEvent) -> None:
+            pending.append((source, event))
+
+        async def failed(self: Agent, task: Task, **kwargs: Any) -> None:
+            bus.emit(
+                self,
+                AgentExecutionStartedEvent(
+                    agent=self, task=task, tools=[], task_prompt="cancelled task"
+                ),
+            )
+            raise error
+
+        assert await asyncio.to_thread(bus.flush, 5)
+        with bus.scoped_handlers(), patch.object(Agent, "aexecute_task", failed):
+            bus.on(TaskStartedEvent)(delay_started)
+            bus.on(TaskFailedEvent)(on_failed)
+            for _ in range(20):
+                task = Task(
+                    description="Nested cancellation",
+                    expected_output="None",
+                    agent=test_agent,
+                )
+                with pytest.raises(type(error)):
+                    await task.aexecute_sync()
+                assert await asyncio.to_thread(bus.flush, 5)
+                source, started = pending.pop()
+                on_started(source, started)
+                assert task not in listener.execution_spans
+                assert not listener._terminal_task_outcomes
+        assert listener._telemetry.task_failed.call_count == 20
