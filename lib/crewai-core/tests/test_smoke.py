@@ -385,7 +385,8 @@ def test_core_eval_spans_carry_target_and_eval_id_and_nothing_else(
         sent = {
             call.args[0]: call.args[1] for call in span.set_attribute.call_args_list
         }
-        assert sent.pop("feature") == feature
+        sent_feature = sent.pop("feature")
+        assert sent_feature == feature
         sent.pop("crewai_version")
         return sent
 
