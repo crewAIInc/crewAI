@@ -1398,6 +1398,40 @@ def test_streaming_response_model_conversion_failure_raises():
         llm.call("What is the capital of France?", response_model=Answer)
 
 
+def test_streaming_conversion_failure_text_cannot_trigger_stop_retry():
+    """Model output quoted in a conversion error must not look like an
+    unsupported 'stop' error, or LLM.call would retry without limit."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", side_effect=lambda **_: iter(chunks)) as completion,
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError("Unsupported parameter: 'stop'"),
+        ),
+        pytest.raises(Exception, match="Failed to convert streaming response"),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+    assert completion.call_count == 1
+
+
 def test_streaming_response_model_context_limit_keeps_its_error_type():
     """A context-limit failure during conversion must not look like a schema
     mismatch, or callers lose their context-window handling."""

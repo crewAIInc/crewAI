@@ -1130,9 +1130,11 @@ class LLM(BaseLLM):
                             e
                         ):
                             raise
+                        # Leave out {e}: it quotes model output, which call()'s
+                        # 'stop' retry check reads. The cause stays on __cause__.
                         raise _ResponseModelConversionError(
-                            f"Failed to convert streaming response to "
-                            f"{response_model.__name__}: {e!s}"
+                            "Failed to convert streaming response to "
+                            f"{response_model.__name__}"
                         ) from e
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
