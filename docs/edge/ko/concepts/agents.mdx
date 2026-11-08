@@ -654,6 +654,41 @@ asyncio.run(main())
 `kickoff()` 메서드는 crew 안의 에이전트가 쓰는 것과 같은 `AgentExecutor`로 작업이나 crew 없이 에이전트를 실행하며, 모든 agent 설정(역할, 목표, 백스토리, 도구 등)을 유지합니다.
 </Note>
 
+## 스프레드시트
+
+`spreadsheets` extra를 설치하면, 입력에서 CSV, TSV 또는 Excel(`.xlsx`) 파일의 URL을 받은 에이전트는 파일 전체를 컨텍스트로 읽어 들이는 대신 도구로 그 파일을 다룹니다:
+
+```bash
+uv add 'crewai[spreadsheets]'
+```
+
+에이전트의 입력(`kickoff()` 메시지, 또는 실행하는 태스크의 설명)에 스프레드시트 URL이 있으면 에이전트는:
+
+- 파일을 한 번 내려받고 각 시트의 개요(열, 타입, 샘플 값)를 프롬프트에 추가합니다
+- `inspect_spreadsheet`를 받아 모든 시트와 그 열을 나열하거나, 한 시트의 열을 자세히 봅니다
+- `query_spreadsheet`를 받아 최대 다섯 개의 필터를 적용한 뒤 행 탐색, 열 요약, 값 개수 세기, 그룹별 집계, 숫자 열 간 상관관계 계산을 합니다
+
+답은 모든 행을 대상으로 계산되므로 파일이 아무리 커도 합계와 개수가 정확합니다. URL은 파일 이름으로 인식되며, CrewAI AMP가 업로드된 파일에 주는 URL처럼 쿼리 문자열에만 파일 이름이 있는 사전 서명된 URL도 포함됩니다.
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Sales Analyst",
+    goal="Answer questions from sales data",
+    backstory="You work from the numbers, not impressions.",
+)
+
+result = analyst.kickoff(
+    "Which region sold the most? The data is at https://example.com/exports/sales.csv"
+)
+print(result.raw)
+```
+
+<Note>
+에이전트는 자신의 입력에 있는 URL만 열고, 모델이나 도구가 만든 URL은 절대 열지 않습니다. 입력은 코드가 에이전트에 전달하는 내용이므로, 이전 flow 단계의 결과처럼 그 안에 넣은 모델 출력도 입력으로 간주되어 그 안의 스프레드시트 URL을 읽습니다. 다운로드는 사설 및 내부 네트워크 주소를 거부하며, 파일은 최대 50 MB, 1,000만 셀까지 가능합니다. 에이전트는 실행당 최대 10개의 스프레드시트를 읽으며, 이 다운로드들은 `max_execution_time`에 포함되지 않는 60초 제한을 함께 사용합니다. 레거시 `.xls`, OpenDocument `.ods`, 암호로 보호된 통합 문서는 읽을 수 없으며, 에이전트에게 그 사실이 전달됩니다. extra가 없으면 스프레드시트 URL은 입력 속의 텍스트일 뿐입니다.
+</Note>
+
 ## 대화형 Agent (실험적)
 
 직접 사용하는 Agent에 대화형 Flow 세션을 제공하려면 `conversational=True`를 설정하세요. `handle_turn()`은 매 턴 세션의 사용자/어시스턴트 기록을 설정된 Agent와 도구에 전달하고 일반 Agent 출력을 반환합니다.

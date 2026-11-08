@@ -352,6 +352,68 @@ def test_core_models_span_carries_the_models_compared_and_nothing_else(
     assert "evaluation_id" not in sent and "organization_id" not in sent
 
 
+def test_core_eval_spans_carry_target_and_eval_id_and_nothing_else(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`cli_usage:eval` keeps `target` and `eval_id`; every `eval_finished:*` and
+    `eval_stopped:*` keeps `eval_id` alone; no other feature keeps either."""
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setattr(Telemetry, "_instance", None)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
+    )
+    offered = {
+        "authenticated": "true",
+        "target": "given_run",
+        "eval_id": "0b0f6a3e-6f0e-4c56-9d3b-7a1b2c3d4e5f",
+        "execution_id": "run-1",
+        "error_class": "ImportError",
+    }
+
+    def sent_for(feature: str) -> dict[str, str]:
+        span.set_attribute.reset_mock()
+        Telemetry().feature_usage_span(feature, offered)
+        sent = {
+            call.args[0]: call.args[1] for call in span.set_attribute.call_args_list
+        }
+        sent_feature = sent.pop("feature")
+        assert sent_feature == feature
+        sent.pop("crewai_version")
+        return sent
+
+    assert sent_for("cli_usage:eval") == {
+        "authenticated": "true",
+        "target": "given_run",
+        "eval_id": offered["eval_id"],
+    }
+    for feature in (
+        "cli_usage:eval_finished:passed",
+        "cli_usage:eval_finished:unknown",
+        "cli_usage:eval_stopped:amp_403",
+        "cli_usage:eval_stopped:untraced_after_run",
+    ):
+        assert sent_for(feature) == {"eval_id": offered["eval_id"]}, feature
+    for feature in (
+        "cli_usage:eval_ran_crew:no_traced_run",
+        "cli_usage:eval_login_prompted",
+        "cli_usage:evaluate",
+        "cli_usage:run_stopped:script_failed",
+    ):
+        assert sent_for(feature) == {}, feature
+    assert sent_for("cli_usage:run_stopped:load_failed") == {
+        "error_class": "ImportError"
+    }
+
+
 def test_core_load_failed_stop_carries_its_error_class_and_no_other_stop_does(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

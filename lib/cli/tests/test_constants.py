@@ -400,7 +400,11 @@ def test_classic_provider_extra_covers_every_model_it_lists() -> None:
         ("bedrock", ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]),
         ("watson", ["WATSONX_URL", "WATSONX_APIKEY", "WATSONX_PROJECT_ID"]),
         ("ollama", []),
-        ("openrouter", []),
+        ("openrouter", ["OPENROUTER_API_KEY"]),
+        ("deepseek", ["DEEPSEEK_API_KEY"]),
+        ("dashscope", ["DASHSCOPE_API_KEY"]),
+        ("deepinfra", ["DEEPINFRA_API_KEY"]),
+        ("mistral", []),
     ],
 )
 def test_required_key_names_lists_what_a_provider_cannot_run_without(

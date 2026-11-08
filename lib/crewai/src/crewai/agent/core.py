@@ -40,6 +40,15 @@ from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self, TypeIs
 
 from crewai.agent.planning_config import PlanningConfig
+from crewai.agent.spreadsheet_inputs import (
+    SpreadsheetInputs,
+    enter_spreadsheet_scope,
+    exit_spreadsheet_scope,
+    kickoff_input_text,
+    read_spreadsheet_inputs,
+    task_input_text,
+    with_spreadsheet_tools,
+)
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -724,6 +733,22 @@ class Agent(BaseAgent):
         task_prompt = format_task_with_context(task_prompt, context)
         return self._retrieve_memory_context(task, task_prompt)
 
+    def _with_spreadsheets(
+        self,
+        task_prompt: str,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> tuple[str, list[BaseTool] | None]:
+        """The task prompt and tools, plus the overview and tools for the
+        spreadsheets the task's URLs point to; unchanged when there are none."""
+        if not spreadsheets.overview:
+            return task_prompt, tools
+        configured = tools or list(self.tools or [])
+        return (
+            f"{task_prompt}\n\n{spreadsheets.overview}",
+            with_spreadsheet_tools(configured, spreadsheets),
+        )
+
     def _finalize_task_prompt(
         self,
         task_prompt: str,
@@ -996,6 +1021,20 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        spreadsheets = read_spreadsheet_inputs(task_input_text(task))
+        scope = enter_spreadsheet_scope(spreadsheets)
+        try:
+            return self._execute_task(task, context, tools, spreadsheets)
+        finally:
+            exit_spreadsheet_scope(scope)
+
+    def _execute_task(
+        self,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> Any:
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1010,6 +1049,7 @@ class Agent(BaseAgent):
             else lambda *a, **k: None,
         )
 
+        task_prompt, tools = self._with_spreadsheets(task_prompt, tools, spreadsheets)
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
@@ -1138,6 +1178,23 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        # Downloading and parsing block, so they stay off the event loop.
+        spreadsheets = await asyncio.to_thread(
+            read_spreadsheet_inputs, task_input_text(task)
+        )
+        scope = enter_spreadsheet_scope(spreadsheets)
+        try:
+            return await self._aexecute_task(task, context, tools, spreadsheets)
+        finally:
+            exit_spreadsheet_scope(scope)
+
+    async def _aexecute_task(
+        self,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> Any:
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1145,6 +1202,7 @@ class Agent(BaseAgent):
             self, task, task_prompt, knowledge_config
         )
 
+        task_prompt, tools = self._with_spreadsheets(task_prompt, tools, spreadsheets)
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
@@ -1621,6 +1679,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        spreadsheets: SpreadsheetInputs | None = None,
     ) -> tuple[AgentExecutor, dict[str, Any], dict[str, Any], list[CrewStructuredTool]]:
         """Prepare common setup for kickoff execution.
 
@@ -1632,10 +1691,14 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
+            spreadsheets: The spreadsheets the input's URLs point to, already
+                read; read here when not given.
 
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        if spreadsheets is None:
+            spreadsheets = read_spreadsheet_inputs(kickoff_input_text(messages))
         self.reset_tool_failures()
 
         if self.tools_handler:
@@ -1654,7 +1717,7 @@ class Agent(BaseAgent):
                     self.tools = []
                 self.tools.extend(mcps)
 
-        raw_tools = list(self.tools or [])
+        raw_tools = with_spreadsheet_tools(list(self.tools or []), spreadsheets)
 
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
@@ -1761,6 +1824,9 @@ class Agent(BaseAgent):
 
         if input_files:
             all_files.update(input_files)
+
+        if spreadsheets.overview:
+            formatted_messages += "\n\n" + spreadsheets.overview
 
         if agent_memory is not None:
             try:
@@ -1927,10 +1993,12 @@ class Agent(BaseAgent):
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
+        spreadsheets = read_spreadsheet_inputs(kickoff_input_text(messages))
         execution_token = begin_execution()
+        scope = enter_spreadsheet_scope(spreadsheets)
         try:
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-                messages, response_format, input_files
+                messages, response_format, input_files, spreadsheets
             )
 
             try:
@@ -1963,6 +2031,7 @@ class Agent(BaseAgent):
             except Exception as e:
                 self._emit_kickoff_error(agent_info, e)
         finally:
+            exit_spreadsheet_scope(scope)
             end_execution(execution_token)
 
     def _finalize_kickoff(
@@ -2305,10 +2374,15 @@ class Agent(BaseAgent):
                 input_files=input_files,
             )
 
+        # Downloading and parsing block, so they stay off the event loop.
+        spreadsheets = await asyncio.to_thread(
+            read_spreadsheet_inputs, kickoff_input_text(messages)
+        )
         execution_token = begin_execution()
+        scope = enter_spreadsheet_scope(spreadsheets)
         try:
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-                messages, response_format, input_files
+                messages, response_format, input_files, spreadsheets
             )
 
             try:
@@ -2341,6 +2415,7 @@ class Agent(BaseAgent):
             except Exception as e:
                 self._emit_kickoff_error(agent_info, e)
         finally:
+            exit_spreadsheet_scope(scope)
             end_execution(execution_token)
 
     async def akickoff(
