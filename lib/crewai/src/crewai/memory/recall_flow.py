@@ -53,6 +53,8 @@ class RecallState(BaseModel):
     confidence: float = 0.0
     final_results: list[MemoryMatch] = Field(default_factory=list)
     exploration_budget: int = 1
+    last_search_plan: tuple[Any, ...] | None = Field(default=None, exclude=True)
+    last_search_succeeded: bool = Field(default=False, exclude=True)
 
 
 class RecallFlow(Flow[RecallState]):
@@ -86,12 +88,28 @@ class RecallFlow(Flow[RecallState]):
         """Return caller-supplied categories, or None if empty."""
         return self.state.categories or None
 
+    def _search_plan(self) -> tuple[Any, ...]:
+        """Return the effective search inputs for the current recall."""
+        return (
+            tuple(
+                (query, tuple(embedding))
+                for query, embedding in self.state.query_embeddings
+            ),
+            tuple(self.state.candidate_scopes),
+            tuple(self._merged_categories() or ()),
+            self.state.time_cutoff.isoformat() if self.state.time_cutoff else None,
+            self.state.source,
+            self.state.include_private,
+            self.state.limit,
+        )
+
     def _do_search(self) -> list[dict[str, Any]]:
         """Run parallel search across (embeddings x scopes) with filters.
 
         Populates ``state.chunk_findings`` and ``state.confidence``.
         Returns the findings list.
         """
+        search_plan = self._search_plan()
         search_categories = self._merged_categories()
 
         def _search_one(
@@ -121,11 +139,13 @@ class RecallFlow(Flow[RecallState]):
         ]
 
         findings: list[dict[str, Any]] = []
+        search_succeeded = not tasks
 
         if len(tasks) <= 1:
             for emb, sc in tasks:
                 try:
                     scope, results = _search_one(emb, sc)
+                    search_succeeded = True
                 except Exception:
                     logger.warning(
                         "Storage search failed in recall flow, skipping scope",
@@ -155,6 +175,7 @@ class RecallFlow(Flow[RecallState]):
                 for future in as_completed(futures):
                     try:
                         scope, results = future.result()
+                        search_succeeded = True
                     except Exception:
                         logger.warning(
                             "Storage search failed in recall flow, skipping scope",
@@ -175,6 +196,8 @@ class RecallFlow(Flow[RecallState]):
 
         self.state.chunk_findings = findings
         self.state.confidence = max((f["top_score"] for f in findings), default=0.0)
+        self.state.last_search_plan = search_plan
+        self.state.last_search_succeeded = search_succeeded
         return findings
 
     @start()
@@ -339,6 +362,11 @@ class RecallFlow(Flow[RecallState]):
     @listen(recursive_exploration)
     def re_search(self) -> list[Any]:
         """Re-search after exploration to update confidence for the router loop."""
+        if (
+            self.state.last_search_succeeded
+            and self.state.last_search_plan == self._search_plan()
+        ):
+            return self.state.chunk_findings
         return self._do_search()
 
     @router(re_search)
