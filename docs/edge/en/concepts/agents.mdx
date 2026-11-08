@@ -682,7 +682,7 @@ print(result.raw)
 ```
 
 <Note>
-The agent opens only URLs that appear in its own input, never one a model or a tool produces. Downloads refuse private and internal network addresses, and a file can be up to 50 MB and 10 million cells. The agent reads up to 10 spreadsheets per run, and their downloads share a 60-second limit that isn't part of `max_execution_time`. Legacy `.xls`, OpenDocument `.ods` and password-protected workbooks can't be read, and the agent is told so. Without the extra, a spreadsheet URL is just text in the input.
+The agent opens only URLs that appear in its own input, never one a model or a tool produces. Its input is whatever your code passes it, so model output you put there, such as an earlier flow step's result, counts as input and its spreadsheet URLs are read. Downloads refuse private and internal network addresses, and a file can be up to 50 MB and 10 million cells. The agent reads up to 10 spreadsheets per run, and their downloads share a 60-second limit that isn't part of `max_execution_time`. Legacy `.xls`, OpenDocument `.ods` and password-protected workbooks can't be read, and the agent is told so. Without the extra, a spreadsheet URL is just text in the input.
 </Note>
 
 ## Conversational Agents (Experimental)
