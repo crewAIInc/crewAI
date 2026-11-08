@@ -147,7 +147,7 @@ class JevScoreTool(BaseTool):
 
 def _score_result(response: Any) -> dict[str, Any]:
     """Convert a System One response into the tool's structured Score result."""
-    answer = getattr(response, "scores", {}).get("score")
+    answer = (getattr(response, "scores", None) or {}).get("score")
     if answer is None:
         return {
             "success": False,

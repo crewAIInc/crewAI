@@ -132,8 +132,11 @@ def test_score_is_reported_as_is_not_as_pass_fail(
     assert type(result["score"]) is float
 
 
-def test_run_reports_missing_score_answer(typesafe_stub: ModuleType) -> None:
-    client = _client_returning(SimpleNamespace(scores={}))
+@pytest.mark.parametrize("scores", [{}, None])
+def test_run_reports_missing_score_answer(
+    typesafe_stub: ModuleType, scores: dict[str, Any] | None
+) -> None:
+    client = _client_returning(SimpleNamespace(scores=scores))
 
     result = _run(JevScoreTool(client=client))
 
