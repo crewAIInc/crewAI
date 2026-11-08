@@ -1,0 +1,114 @@
+---
+title: Ned Watch Integration
+description: Know when your crew silently stops, runs too long, or fails
+icon: heart-pulse
+mode: "wide"
+---
+
+# Introduction
+
+[Ned Watch](https://ned.watch) is a hosted deadman and overrun monitor for agents. Your crew checks in when a kickoff finishes. If the check-ins stop, a kickoff runs past a time limit, or a kickoff fails, Ned sends a signed webhook to the URL you choose. Checks come from two independent stations (US and EU), and the first five watches are free.
+
+Tracing tools show you what a crew did. Ned Watch tells you when a crew that should have run didn't, which no amount of tracing can show.
+
+## Why use Ned Watch?
+
+- **Scheduled crews**: a nightly research crew that stops being scheduled, or crashes before it logs anything, is noticed by nobody. A deadman watch notices.
+- **Long-running crews**: an overrun watch fires when a kickoff runs past the limit you set, and clears when it finishes.
+- **Failures**: a kickoff that raises is reported at once, with the error class, so the alert arrives before anyone reads the logs.
+- **Independent**: the watcher runs outside your infrastructure, so an outage that takes your crew down can't take the alert down with it.
+
+## Installation
+
+```bash
+pip install ned-watch
+```
+
+Set the URL that Ned should call when something is wrong:
+
+```bash
+export NED_CALLBACK_URL=https://your-app.example/hooks/ned
+```
+
+No account or key is needed in advance. The first run creates your agent and stores the key in `~/.config/ned-watch/state.json`.
+
+## Quickstart
+
+Replace `crew.kickoff(...)` with the wrapper:
+
+```python
+from crewai import Agent, Crew, Task
+from nedwatch.integrations.crewai import kickoff
+
+researcher = Agent(
+    role="Researcher",
+    goal="Summarize what changed in {topic} this week",
+    backstory="A careful reader who cites sources.",
+)
+summary = Task(
+    description="Write a short summary of this week's changes in {topic}.",
+    expected_output="Five bullet points with links.",
+    agent=researcher,
+)
+crew = Crew(name="weekly-research", agents=[researcher], tasks=[summary])
+
+# every="1d": wake me if this crew hasn't finished a kickoff in a day
+# max="30m": wake me if one kickoff runs longer than 30 minutes
+result = kickoff(crew, inputs={"topic": "agent frameworks"}, every="1d", max="30m")
+```
+
+What Ned sees:
+
+| Event | What happens |
+|---|---|
+| The kickoff starts | The deadman watch is armed and an overrun run starts (with `max=`). |
+| The kickoff returns | The overrun run finishes and the deadman watch checks in. |
+| The kickoff raises | No check-in, so the deadman fires when `every` passes. The overrun run is finished as failed with the error class, so Ned fires at once. |
+| Each agent step or task (with `heartbeat=True`) | A check-in, at most one every 30 seconds. |
+
+The watch is named after `crew.name` when you set one, otherwise after the script. `akickoff(...)` wraps `crew.kickoff_async`.
+
+## Keep calling `crew.kickoff()` yourself
+
+```python
+from nedwatch.integrations.crewai import NedCrew
+
+ned = NedCrew("weekly-research", every="1d", max="30m", heartbeat=True).attach(crew)
+result = ned.kickoff(crew, inputs={"topic": "agent frameworks"})
+```
+
+`attach()` sets `crew.step_callback` and `crew.task_callback`, keeping any callbacks you already had (yours run first). With `heartbeat=True`, each step and each finished task counts as "alive", which suits crews that run for hours. Leave it off for scheduled crews: a crew that works for a while and then fails would otherwise look alive.
+
+## Crews you don't kick off yourself
+
+For `crewai run`, Flows, or crews deep inside other code, listen on CrewAI's event bus instead. Create the listener once at startup:
+
+```python
+from nedwatch.integrations.crewai import NedCrewListener
+
+NedCrewListener("weekly-research", every="1d", max="30m")
+```
+
+It reacts to `CrewKickoffStartedEvent`, `CrewKickoffCompletedEvent` and `CrewKickoffFailedEvent`. CrewAI runs bus handlers on worker threads, so the check-in lands a moment after the kickoff returns.
+
+## Options
+
+| Option | Meaning |
+|---|---|
+| `name` | The watch name. Defaults to `crew.name`, else the script name. |
+| `every` | How long silence is allowed before the deadman fires. Defaults to `"1h"` when `max` isn't set. |
+| `max` | The longest a single kickoff may run before the overrun fires. |
+| `on_error` | `"report"` (default: finish the run as failed, with the error class), `"leave_open"` (let the overrun fire at `max`), or `"finish"`. |
+| `heartbeat` | Count each step and finished task as a check-in. |
+| `ned` | A `nedwatch.Ned` instance, to set the key, region or callback in code instead of the environment. |
+
+## The webhook
+
+Every callback is a JSON `POST` with an `event` of `fire` or `clear`, the watch id, the reason, and the run id for overruns. It carries an HMAC signature in `X-Ned-Signature` over the timestamp and body; `nedwatch.verify_signature()` checks it. Ned retries a callback that isn't accepted for 24 hours.
+
+## Resources
+
+- [Integration guide and other frameworks](https://ned.watch/integrations/crewai)
+- [Source and a tested example crew](https://github.com/ned-mind/ned-watch-integrations)
+- [API reference](https://api.ned.watch/docs)
+- [Ned Watch status](https://ned.watch/status/)
