@@ -62,7 +62,11 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
                     end = index
                     break
         if end == -1:
-            break  # unbalanced rest of the text: no complete object remains
+            # This span never closes (stray prose brace), but a later ``{``
+            # can still start a complete object — keep scanning instead of
+            # giving up on the rest of the response.
+            search_from = start + 1
+            continue
         try:
             parsed: dict[str, Any] = json.loads(text[start : end + 1])
             return parsed
