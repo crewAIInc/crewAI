@@ -299,3 +299,106 @@ def test_fixed_public_url_is_accepted_and_navigated(_mocked_chrome_driver):
 
     assert "fixed url content" in result
     mock_driver.get.assert_called_once_with("https://example.com")
+
+
+# A backslash is an authority delimiter to Chrome's WHATWG URL parser but
+# ordinary data to urllib.parse, so this URL validates as the public host
+# example.com yet navigates a real browser to 127.0.0.1:8899.
+BACKSLASH_URL = r"http://127.0.0.1:8899\@example.com/"
+
+
+def test_schema_rejects_backslash_url():
+    with pytest.raises(ValidationError, match="backslash"):
+        SeleniumScrapingToolSchema(
+            website_url=BACKSLASH_URL, css_element="div"
+        )
+
+
+@patch("selenium.webdriver.Chrome")
+def test_fixed_backslash_url_rejected_before_driver_creation(mocked_chrome):
+    with pytest.raises(ValueError, match="backslash"):
+        SeleniumScrapingTool(website_url=BACKSLASH_URL)
+
+    mocked_chrome.assert_not_called()
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_backslash_url_without_navigating(_mocked_chrome_driver):
+    mock_driver = MagicMock()
+    tool = initialize_tool_with(mock_driver)
+
+    result = tool._run(website_url=BACKSLASH_URL)
+
+    assert "Error scraping website" in result
+    assert "backslash" in result
+    mock_driver.get.assert_not_called()
+
+
+class RedirectingDriver:
+    """Driver double whose get() lands on a different URL, as a browser
+    does after following a redirect, and serves that page's content."""
+
+    def __init__(self, final_url: str, page_text: str) -> None:
+        self._final_url = final_url
+        self._page_text = page_text
+        self.current_url = "about:blank"
+        self.get_calls: list[str] = []
+
+    def get(self, url: str) -> None:
+        self.get_calls.append(url)
+        self.current_url = self._final_url
+
+    def find_element(self, by: str, selector: str):
+        page_text = self._page_text
+
+        class Element:
+            def __init__(self, text: str) -> None:
+                self.text = text
+
+            def get_attribute(self, name: str) -> str:
+                return f"<html><body>{page_text}</body></html>"
+
+        return Element(page_text)
+
+    def find_elements(self, by: str, selector: str):
+        return [self.find_element(by, selector)]
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_redirect_to_loopback_url(_mocked_chrome_driver):
+    """A public URL that redirects to loopback must not leak its content."""
+    driver = RedirectingDriver("http://127.0.0.1/admin", "internal secret")
+    tool = SeleniumScrapingTool(driver=driver, wait_time=0)
+
+    result = tool._run(website_url="https://example.com")
+
+    assert driver.get_calls == ["https://example.com"]
+    assert "Error scraping website" in result
+    assert "private/reserved IP" in result
+    assert "internal secret" not in result
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_redirect_to_cloud_metadata_url(_mocked_chrome_driver):
+    driver = RedirectingDriver(
+        "http://169.254.169.254/latest/meta-data/", "metadata secret"
+    )
+    tool = SeleniumScrapingTool(driver=driver, wait_time=0)
+
+    result = tool._run(website_url="https://example.com")
+
+    assert "Error scraping website" in result
+    assert "private/reserved IP" in result
+    assert "metadata secret" not in result
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_allows_redirect_to_public_url(_mocked_chrome_driver):
+    """Redirects that land on another public URL keep working."""
+    driver = RedirectingDriver("https://example.com/landing", "landed content")
+    tool = SeleniumScrapingTool(driver=driver, wait_time=0)
+
+    result = tool._run(website_url="https://example.com")
+
+    assert "landed content" in result
+    assert driver.get_calls == ["https://example.com"]
