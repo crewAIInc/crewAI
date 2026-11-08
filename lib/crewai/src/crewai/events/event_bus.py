@@ -422,8 +422,10 @@ class CrewAIEventsBus:
 
         if errors:
             for handler, error in errors:
+                # Sync handlers may be registered as functools.partial objects,
+                # which have no __name__ (the async path already guards this).
                 self._console.print(
-                    f"[CrewAIEventsBus] Sync handler error in {handler.__name__}: {error}"
+                    f"[CrewAIEventsBus] Sync handler error in {getattr(handler, '__name__', handler)}: {error}"
                 )
 
     async def _acall_handlers(
