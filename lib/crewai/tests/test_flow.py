@@ -206,6 +206,47 @@ def test_or_listener_fires_once_across_parallel_starts():
     assert fire_count == 1
 
 
+def test_or_racing_preserves_branch_consumed_by_router():
+    """A racing OR listener must not cancel a branch still needed by a router."""
+    started = asyncio.Event()
+    routed, completed, joined = [], [], []
+
+    class RouterConsumerFlow(Flow):
+        @start()
+        def begin(self):
+            return "input"
+
+        @listen(begin)
+        async def fast(self, value):
+            await started.wait()
+            return "fast"
+
+        @listen(begin)
+        async def slow(self, value):
+            started.set()
+            await asyncio.sleep(0.02)
+            return "slow"
+
+        @router(slow)
+        def route(self, value):
+            routed.append(value)
+            return "routed"
+
+        @listen("routed")
+        def finish(self, value):
+            completed.append(value)
+
+        @listen(or_(fast, slow))
+        def join(self, value):
+            joined.append(value)
+
+    asyncio.run(RouterConsumerFlow().kickoff_async())
+
+    assert routed == ["slow"]
+    assert completed == ["routed"]
+    assert joined == ["fast"]
+
+
 def test_or_listener_re_arms_across_router_loop():
     """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
     fire_count = 0

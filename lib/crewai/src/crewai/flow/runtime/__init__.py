@@ -1144,6 +1144,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         racing_groups: dict[frozenset[FlowMethodName], FlowMethodName] = {}
         listener_conditions: dict[FlowMethodName, FlowDefinitionCondition] = {
             listener_name: condition
+            for listener_name, _method_definition, condition in self._listener_methods()
+        }
+        # Routers also consume method-completion events. Keep them in the
+        # consumer map so an event shared with a router is not treated as an
+        # exclusive OR alternative, but never make a router itself a racing
+        # group owner.
+        racing_listener_conditions = {
+            listener_name: condition
             for listener_name, method_definition, condition in self._listener_methods()
             if not method_definition.router
         }
@@ -1158,7 +1166,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             for event in events:
                 listeners_by_event.setdefault(event, set()).add(listener_name)
 
-        for listener_name, condition in listener_conditions.items():
+        for listener_name, condition in racing_listener_conditions.items():
             if not isinstance(condition, dict):
                 continue
             alternatives = set(_or_alternative_events(condition))
