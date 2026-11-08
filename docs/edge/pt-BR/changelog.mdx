@@ -4,6 +4,37 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="08 nov 2026">
+  ## v1.15.38
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.38)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Tornar o gpt-6-luna o modelo padrão do crewAI em todos os lugares
+  - Ler URLs de planilhas na entrada de um agente com ferramentas sobre cada linha
+  - Marcar os períodos de uso da avaliação com alvo e um id por avaliação
+  - Adicionar --no-open à avaliação do crewAI para uso sem interface gráfica
+
+  ### Correções de Bugs
+  - Contar uma execução de avaliação do crewAI que sai com um erro como run_failed
+  - Criar o .env do projeto somente para o proprietário quando a avaliação do crewAI ativa o rastreamento
+  - Fazer upload de uma execução anônima falha que a avaliação do crewAI iniciou
+  - Verificar a chave da API dos provedores compatíveis com OpenAI na primeira chamada
+  - Escopar os métodos de equipe memorizados à sua instância
+  - Sair com código diferente de zero quando o script do projeto da execução do crewAI falha
+  - A avaliação solicita compartilhar o rastreamento com Enter significando sim e explica o porquê
+
+  ### Documentação
+  - Documentar required_inputs em GET /inputs e quais campos de fluxo são entradas
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
 <Update label="06 nov 2026">
   ## v1.15.37
 
