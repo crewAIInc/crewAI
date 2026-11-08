@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 _MISSING_SDK_MESSAGE = (
     "The 'typesafe-sdk' package is required to use JevScoreTool. "
-    "Install it with: uv add --optional typesafe-sdk typesafe-sdk"
+    "Install it with: uv add 'crewai-tools[typesafe-sdk]'"
 )
 
 

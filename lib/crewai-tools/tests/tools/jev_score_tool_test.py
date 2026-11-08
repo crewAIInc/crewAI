@@ -184,7 +184,7 @@ def test_missing_dependency_error_is_actionable(
     result = _run(JevScoreTool())
 
     assert result["success"] is False
-    assert "uv add --optional typesafe-sdk typesafe-sdk" in result["error"]
+    assert "uv add 'crewai-tools[typesafe-sdk]'" in result["error"]
 
 
 def test_real_sdk_score_round_trip() -> None:

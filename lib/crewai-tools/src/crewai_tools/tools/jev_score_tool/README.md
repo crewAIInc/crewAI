@@ -1,17 +1,21 @@
 # Jev Score Tool
 
+## Description
+
 Use `JevScoreTool` to rate task state against one TypeSafe Jev Score rubric and
 return the expected score, the probability of each level, and confidence.
+
+## Installation
 
 Install the optional dependency before using the tool:
 
 ```bash
-uv add --optional typesafe-sdk typesafe-sdk
+uv add "crewai-tools[typesafe-sdk]"
 ```
 
-Set `TYPESAFE_API_KEY`, then opt in from a task or direct tool call. List the
-score levels in order, lowest first: each level's position is its score,
-starting at 0.
+Set `TYPESAFE_API_KEY`, then opt in from a task or direct tool call.
+
+## Example
 
 ```python
 from crewai_tools import JevScoreTool
@@ -35,6 +39,13 @@ if result["success"]:
 else:
     print(result["error"])
 ```
+
+## Arguments
+
+- `state`: Text, JSON object, or array for Jev to evaluate.
+- `question`: Score question or instruction to rate the state against.
+- `criteria`: Ordered descriptions of the score levels, lowest first. Each
+  level's position is its score, starting at 0.
 
 `score` is the probability-weighted average of the levels, not a pass/fail
 flag. `success` only reports whether TypeSafe returned a usable answer; decide
