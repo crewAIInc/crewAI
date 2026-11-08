@@ -12,6 +12,7 @@ _EXPORT_PATTERN: Final[re.Pattern[str]] = re.compile(
 )
 _JSX_TAG_PATTERN: Final[re.Pattern[str]] = re.compile(r"<[^>]+>")
 _EXTRA_NEWLINES_PATTERN: Final[re.Pattern[str]] = re.compile(r"\n\s*\n\s*\n")
+_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"```[\s\S]*?```|`[^`\n]*`")
 
 
 class MDXLoader(BaseLoader):
@@ -37,7 +38,16 @@ class MDXLoader(BaseLoader):
             return file.read()
 
     def _parse_mdx(self, content: str, source_ref: str) -> LoaderResult:
-        cleaned_content = content
+        # Protect fenced and inline code while removing MDX syntax.  Imports,
+        # exports, and JSX-looking text inside code are literal documentation,
+        # not executable MDX, and must remain available to RAG consumers.
+        protected_code: list[str] = []
+
+        def protect(match: re.Match[str]) -> str:
+            protected_code.append(match.group(0))
+            return f"\x00MDX_CODE_{len(protected_code) - 1}\x00"
+
+        cleaned_content = _CODE_PATTERN.sub(protect, content)
 
         cleaned_content = _IMPORT_PATTERN.sub("", cleaned_content)
 
@@ -47,6 +57,9 @@ class MDXLoader(BaseLoader):
 
         cleaned_content = _EXTRA_NEWLINES_PATTERN.sub("\n\n", cleaned_content)
         cleaned_content = cleaned_content.strip()
+
+        for index, code in enumerate(protected_code):
+            cleaned_content = cleaned_content.replace(f"\x00MDX_CODE_{index}\x00", code)
 
         metadata = {"format": "mdx"}
         return LoaderResult(
