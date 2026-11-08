@@ -723,7 +723,7 @@ memory = Memory(embedder=my_embedder)
 ```python
 from crewai import Memory, LLM
 
-# 기본값: gpt-6.1-sol
+# 기본값: gpt-6-luna
 memory = Memory()
 
 # 다른 OpenAI 모델 사용
@@ -860,7 +860,7 @@ memory.reset(scope="/project/old")  # 해당 하위 트리만
 
 | 매개변수 | 기본값 | 설명 |
 | :--- | :--- | :--- |
-| `llm` | `"gpt-6.1-sol"` | 분석용 LLM (모델 이름 또는 `BaseLLM` 인스턴스). |
+| `llm` | `"gpt-6-luna"` | 분석용 LLM (모델 이름 또는 `BaseLLM` 인스턴스). |
 | `storage` | `"lancedb"` | 스토리지 백엔드 (`"lancedb"`, 경로 문자열 또는 `StorageBackend` 인스턴스). |
 | `embedder` | `None` (OpenAI 기본값) | Embedder (설정 dict, callable 또는 `None`으로 기본 OpenAI). |
 | `recency_weight` | `0.3` | 복합 점수에서 최신성 가중치. |

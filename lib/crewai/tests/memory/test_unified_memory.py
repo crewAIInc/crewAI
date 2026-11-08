@@ -54,7 +54,7 @@ def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
     assert mem._llm.stream is False
 
 
-def test_memory_without_an_llm_analyses_with_gpt_6_1_sol(
+def test_memory_without_an_llm_analyses_with_gpt_6_luna(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The default analysis model runs on OpenAI's chat completions, which the
@@ -69,7 +69,7 @@ def test_memory_without_an_llm_analyses_with_gpt_6_1_sol(
     )
 
     assert isinstance(mem._llm, OpenAICompletion)
-    assert mem._llm.model == "gpt-6.1-sol"
+    assert mem._llm.model == "gpt-6-luna"
     assert mem._llm.api == "completions"
 
 
