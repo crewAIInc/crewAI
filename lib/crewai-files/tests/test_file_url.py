@@ -1,11 +1,15 @@
 """Tests for FileUrl source type and URL resolution."""
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai_files import FileBytes, FileUrl, ImageFile
 from crewai_files.core.resolved import InlineBase64, UrlReference
 from crewai_files.core.sources import FilePath, _normalize_source
+from crewai_files.processing.constraints import ImageConstraints
+from crewai_files.processing.validators import validate_image
 from crewai_files.resolution.resolver import FileResolver
+import httpx
 import pytest
 
 
@@ -124,6 +128,51 @@ class TestFileUrl:
             url.read()
 
             assert url.content_type == "image/webp"
+
+    @pytest.mark.parametrize("use_async", [False, True], ids=["read", "aread"])
+    @pytest.mark.parametrize(
+        "content_type",
+        [
+            "image/png",
+            "image/png; charset=utf-8",
+            "Image/PNG",
+            "image/png ; charset=utf-8",
+            "IMAGE/PNG\t; charset=utf-8",
+            None,
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_downloaded_image_accepts_equivalent_content_types(
+        self, content_type: str | None, use_async: bool
+    ) -> None:
+        """Equivalent HTTP media types remain valid for downstream image validation."""
+        png = (Path(__file__).parent / "fixtures" / "revenue_chart.png").read_bytes()
+        headers = {"Content-Type": content_type} if content_type is not None else {}
+        transport = httpx.MockTransport(
+            lambda _: httpx.Response(200, content=png, headers=headers)
+        )
+        source = FileUrl(url="https://example.com/image.png")
+
+        if use_async:
+            client = httpx.AsyncClient(transport=transport)
+            with patch("httpx.AsyncClient", return_value=client):
+                content = await source.aread()
+        else:
+            with httpx.Client(transport=transport) as sync_client:
+                with patch("httpx.get", side_effect=sync_client.get):
+                    content = source.read()
+
+        assert content == png
+        assert source.content_type == "image/png"
+        assert (
+            validate_image(
+                ImageFile(source=source),
+                ImageConstraints(
+                    max_size_bytes=len(png), max_width=5000, max_height=5000
+                ),
+            )
+            == []
+        )
 
     @pytest.mark.asyncio
     async def test_aread_fetches_content(self):
