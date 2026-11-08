@@ -1093,6 +1093,24 @@ def test_an_expired_download_is_let_go(downloads):
     assert list(spreadsheet_inputs._downloads) == [SALES_URL]
 
 
+def test_a_prompt_placeholder_in_a_file_is_not_filled_in(downloads):
+    class LookupTool(BaseTool):
+        name: str = "lookup"
+        description: str = "Looks things up."
+
+        def _run(self, **_: Any) -> str:
+            return "found"
+
+    downloads.served[SALES_URL] = b"{tools},{tool_names}\n{input},1\n"
+    llm = ScriptedLLM("Thought: done\nFinal Answer: done", native_tools=False)
+    task = Task(description=f"Total the sales in {SALES_URL}", expected_output="x")
+
+    reader(llm, tools=[LookupTool()]).execute_task(task)
+
+    assert llm.prompt().count("Tool Name: lookup") == 1
+    assert "{ tools }" in llm.prompt()
+
+
 def test_a_long_run_of_closing_parentheses_is_read_quickly(downloads):
     started = time.monotonic()
 

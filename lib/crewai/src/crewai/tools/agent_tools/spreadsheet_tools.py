@@ -7,6 +7,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import BaseModel, Field, PrivateAttr, ValidationError
@@ -79,6 +80,11 @@ class QuerySpreadsheetSchema(BaseModel):
     offset: int = Field(default=0, description="Rows or groups to skip.")
     limit: int = Field(default=0, description="Rows or groups, up to 50; 0 for 20.")
     method: str = Field(default="", description="correlation: pearson or spearman.")
+
+
+# The executor fills these into the prompt after the input is in place, so one
+# in a file's text would pull the tool catalog into the file's data.
+_PLACEHOLDER: Final = re.compile(r"\{(input|tools|tool_names)\}")
 
 
 class _SpreadsheetTool(BaseTool):
@@ -284,7 +290,7 @@ def spreadsheet_overviews(
         lines.append(f'  - "{name}":')
         lines += [f"    {line}" for line in text.splitlines()]
     lines += [f'  - "{name}": {reason}' for name, reason in unread.items()]
-    return "\n".join(lines)
+    return _PLACEHOLDER.sub(r"{ \1 }", "\n".join(lines))
 
 
 def _overview(name: str, source: FileInput) -> str:
