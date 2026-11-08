@@ -1139,7 +1139,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # alternatives and never race -- cancelling one would make the AND
         # unsatisfiable.
         racing_groups: dict[frozenset[FlowMethodName], FlowMethodName] = {}
-        listener_conditions: dict[FlowMethodName, FlowDefinitionCondition] = {
+        all_listener_conditions: dict[FlowMethodName, FlowDefinitionCondition] = {
+            listener_name: condition
+            for listener_name, _, condition in self._listener_methods()
+        }
+        racing_listener_conditions = {
             listener_name: condition
             for listener_name, method_definition, condition in self._listener_methods()
             if not method_definition.router
@@ -1147,7 +1151,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         events_by_listener: dict[FlowMethodName, set[str]] = {
             listener_name: set(_iter_condition_events(condition))
-            for listener_name, condition in listener_conditions.items()
+            for listener_name, condition in all_listener_conditions.items()
         }
 
         listeners_by_event: dict[str, set[FlowMethodName]] = {}
@@ -1155,7 +1159,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             for event in events:
                 listeners_by_event.setdefault(event, set()).add(listener_name)
 
-        for listener_name, condition in listener_conditions.items():
+        for listener_name, condition in racing_listener_conditions.items():
             if not isinstance(condition, dict):
                 continue
             alternatives = set(_or_alternative_events(condition))
