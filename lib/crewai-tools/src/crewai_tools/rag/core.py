@@ -12,7 +12,7 @@ from crewai_tools.rag.base_loader import BaseLoader
 from crewai_tools.rag.chunkers.base_chunker import BaseChunker
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.embedding_service import EmbeddingService
-from crewai_tools.rag.misc import compute_sha256
+from crewai_tools.rag.misc import compute_sha256, sanitize_metadata_for_chromadb
 from crewai_tools.rag.source_content import SourceContent
 from crewai_tools.tools.rag.rag_tool import Adapter
 
@@ -136,7 +136,7 @@ class RAG(Adapter):
                     "doc_id": doc_id,
                 }
             )
-            metadatas.append(doc_metadata)
+            metadatas.append(sanitize_metadata_for_chromadb(doc_metadata))
 
         with store_lock(self._lock_name):
             existing_doc = self._collection.get(
