@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import BaseModel, Field, PrivateAttr, ValidationError
 
-from crewai.tools.base_tool import BaseTool
+from crewai.tools.base_tool import BaseTool, _never_cache_function
+from crewai.types.callback import SerializableCallable
 
 
 if TYPE_CHECKING:
@@ -81,6 +82,9 @@ class QuerySpreadsheetSchema(BaseModel):
 
 
 class _SpreadsheetTool(BaseTool):
+    # Never cached: an answer is about this run's file, and another run's or
+    # another task's file can have the same name and so the same arguments.
+    cache_function: SerializableCallable = Field(default=_never_cache_function)
     _files: dict[str, FileInput] = PrivateAttr(default_factory=dict)
     _urls: dict[str, str] = PrivateAttr(default_factory=dict)
 

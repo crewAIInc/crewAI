@@ -1072,6 +1072,44 @@ def test_an_expired_download_is_let_go(downloads):
     assert list(spreadsheet_inputs._downloads) == [SALES_URL]
 
 
+def test_a_long_run_of_closing_parentheses_is_read_quickly(downloads):
+    started = time.monotonic()
+
+    found = spreadsheet_inputs.spreadsheet_urls(f"See {SALES_URL}" + ")" * 200_000)
+
+    assert found == {"sales.csv": SALES_URL}
+    assert time.monotonic() - started < 2
+
+
+@pytest.mark.parametrize("entry", ["kickoff", "crew"])
+def test_a_second_file_with_the_same_name_is_answered_from_its_own_rows(downloads, entry):
+    first, second = (
+        "https://files.example.com/a/sales.csv",
+        "https://files.example.com/b/sales.csv",
+    )
+    downloads.served[first] = b"region,amount\nNorth,10\n"
+    downloads.served[second] = b"region,amount\nSouth,99\n"
+    rows = tool_call("query_spreadsheet", file="sales.csv", operation="rows")
+    llm = ScriptedLLM(rows, answer_with_result, rows, answer_with_result)
+    agent = reader(llm)
+
+    if entry == "kickoff":
+        agent.kickoff(f"List the rows of {first}")
+        answer = agent.kickoff(f"List the rows of {second}").raw
+    else:
+        crew = Crew(
+            agents=[agent],
+            tasks=[
+                Task(description=f"List the rows of {url}", expected_output="Rows", agent=agent)
+                for url in (first, second)
+            ],
+            cache=True,
+        )
+        answer = crew.kickoff().tasks_output[1].raw
+
+    assert "South" in answer and "North" not in answer
+
+
 def test_a_web_page_at_a_spreadsheet_path_is_named_as_one(downloads):
     page = "https://github.com/acme/data/blob/main/sales.csv"
     downloads.served[page] = (b"<html><body>sales.csv</body></html>", "text/html; charset=utf-8")

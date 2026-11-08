@@ -232,14 +232,18 @@ def no_spreadsheet_urls() -> Iterator[None]:
 
 def _trim(url: str) -> str:
     """``url`` without the punctuation and unbalanced ``)`` that end the
-    sentence or markup around it."""
-    while True:
-        trimmed = url.rstrip(_TRAILING)
-        if trimmed.endswith(")") and trimmed.count(")") > trimmed.count("("):
-            trimmed = trimmed[:-1]
-        if trimmed == url:
-            return url
-        url = trimmed
+    sentence or markup around it. One pass from the end: a match can be as long
+    as the input."""
+    unbalanced = url.count(")") - url.count("(")
+    end = len(url)
+    while end:
+        char = url[end - 1]
+        if char == ")" and unbalanced > 0:
+            unbalanced -= 1
+        elif char not in _TRAILING:
+            break
+        end -= 1
+    return url[:end]
 
 
 def _download(name: str, url: str, deadline: float) -> bytes | str:
