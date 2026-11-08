@@ -1,0 +1,81 @@
+---
+title: Zenrows Scrape Tool
+description: تستخدم `ZenRowsScrapeTool` خدمة Zenrows لاستخراج بيانات صفحة ويب واحدة، مع التعامل تلقائيًا مع تجاوز أنظمة مكافحة البوتات، وتنفيذ JavaScript، وتدوير البروكسي.
+icon: spider
+mode: "wide"
+---
+
+# `ZenRowsScrapeTool`
+
+## الوصف
+
+[Zenrows](https://www.zenrows.com/) هي واجهة برمجة تطبيقات لاستخراج بيانات الويب تتعامل مع تجاوز أنظمة مكافحة البوتات، وتنفيذ JavaScript عبر متصفح بلا واجهة، وتدوير بروكسي سكني، كل ذلك من خلال نقطة نهاية HTTP واحدة. تقوم `ZenRowsScrapeTool` باستخراج بيانات رابط واحد وإرجاع محتواه بصيغة markdown أو نص عادي أو HTML خام.
+
+بشكل افتراضي، يتم إرسال كل طلب في [وضع Adaptive Stealth](https://docs.zenrows.com/universal-scraper-api/features/adaptive-stealth-mode) (`mode: "auto"`): تبدأ Zenrows بأرخص إعداد ممكن وتصعّد تلقائيًا إلى تنفيذ JS أو البروكسي المميز فقط عند حاجة الصفحة المستهدفة لذلك، مع فوترة الإعداد الناجح فقط. هذا خيار تصميم مقصود لهذه الأداة — فهو يُبقي الواجهة الظاهرة للوكيل مقتصرة على `url` و`response_type` بدلاً من قائمة طويلة من خيارات مكافحة البوتات (`js_render`، `premium_proxy`، `proxy_country`، ...) لا يملك النموذج اللغوي طريقة موثوقة لاختيارها بشكل صحيح لكل صفحة.
+
+## التثبيت
+
+- احصل على مفتاح API من [zenrows.com](https://www.zenrows.com/) وضعه في متغير البيئة `ZENROWS_API_KEY` (أو مرره مباشرة عبر `api_key=`).
+- لا حاجة لأي حزمة إضافية — تستخدم الأداة `requests`، وهي بالفعل من تبعيات `crewai-tools`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+```python Code
+from crewai_tools import ZenRowsScrapeTool
+
+tool = ZenRowsScrapeTool()
+
+result = tool.run(url="https://example.com")
+```
+
+لطلب نص عادي بدلاً من markdown الافتراضي:
+
+```python Code
+result = tool.run(url="https://example.com", response_type="plaintext")
+```
+
+## إعدادات متقدمة
+
+المعاملات التي يحتاجها فريق عمل معيّن باستمرار — مثل تنفيذ `js_instructions`، أو الانتظار لعنصر محدد، أو تثبيت `proxy_country` — تُضبط مرة واحدة عند الإنشاء عبر `config`، وتُطبَّق بعدها على كل طلب تصدره هذه النسخة من الأداة.
+
+```python Code
+tool = ZenRowsScrapeTool(
+    config={
+        "mode": "auto",
+        "proxy_country": "us",
+    }
+)
+```
+
+<Note>
+  يعمل `proxy_country` جنبًا إلى جنب مع `mode: "auto"` — إذ تُفعّل Zenrows خاصية `premium_proxy` تلقائيًا من أجله. أما خارج `mode: "auto"`، فيتطلب `proxy_country` تفعيل `premium_proxy: True` صراحةً، وإلا فإن Zenrows لا تطبّق تحديد الموقع الجغرافي إلا على البروكسي المميز (السكني) وستتجاهله بصمت. أما ضبط `premium_proxy` (أو `js_render`) يدويًا مع `mode: "auto"` فهو تركيبة مختلفة، وغير صالحة أيضًا — إذ تدير Adaptive Stealth Mode هذين الخيارين بنفسها وترفض الطلب إذا تم ضبطهما يدويًا أيضًا. تتحقق `ZenRowsScrapeTool` من كلتا القاعدتين عند الإنشاء وتُطلق `ValueError` بدلاً من ترك أي منهما يفشل بصمت أو عند وقت الطلب.
+</Note>
+
+للتحكم اليدوي الكامل بدلاً من Adaptive Stealth:
+
+```python Code
+tool = ZenRowsScrapeTool(
+    config={
+        "js_render": True,
+        "premium_proxy": True,
+        "proxy_country": "us",
+    }
+)
+```
+
+راجع [توثيق واجهة برمجة تطبيقات Zenrows](https://docs.zenrows.com/universal-scraper-api/api-reference) للاطلاع على المرجع الكامل للمعاملات.
+
+## المعاملات
+
+- `api_key`: اختياري. مفتاح API الخاص بك في Zenrows. الافتراضي هو متغير البيئة `ZENROWS_API_KEY`.
+- `config`: اختياري. معاملات إضافية لواجهة برمجة تطبيقات Zenrows تُدمج في كل طلب تصدره هذه النسخة من الأداة. الافتراضي هو `{"mode": "auto"}` (Adaptive Stealth Mode).
+- `timeout`: اختياري. مهلة الطلب بالثواني. الافتراضي هو `140` لاستيعاب الصفحات التي تُنفَّذ عبر JS.
+
+معاملات لكل استدعاء (ظاهرة للوكيل):
+
+- `url`: مطلوب. الرابط الكامل للصفحة المراد استخراج بياناتها، بما في ذلك المخطط (scheme).
+- `response_type`: اختياري. واحد من `"markdown"` (افتراضي)، `"plaintext"`، أو `"html"`.
