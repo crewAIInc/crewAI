@@ -221,6 +221,32 @@ async def test_ainvoke(basic_function):
     assert result == "test 0"
 
 
+@pytest.mark.asyncio
+async def test_ainvoke_runs_a_sync_tool_in_the_callers_context():
+    """A sync tool runs on another thread, and still sees the caller's context
+    variables, such as the run's platform integration token."""
+    import threading
+
+    from crewai.context import get_platform_integration_token, platform_context
+
+    seen: dict[str, object] = {}
+
+    def lookup(param1: str) -> str:
+        """Report the token and thread this call sees."""
+        seen["token"] = get_platform_integration_token()
+        seen["thread"] = threading.get_ident()
+        return param1
+
+    tool = CrewStructuredTool.from_function(func=lookup, name="lookup")
+
+    with platform_context("run-token"):
+        result = await tool.ainvoke(input={"param1": "ok"})
+
+    assert result == "ok"
+    assert seen["token"] == "run-token"
+    assert seen["thread"] != threading.get_ident()
+
+
 def test_parse_args_dict(basic_function):
     """Test parsing dictionary arguments"""
     tool = CrewStructuredTool.from_function(func=basic_function, name="test_tool")

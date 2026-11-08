@@ -2763,6 +2763,67 @@ def test_get_platform_tools_warns_when_apps_resolve_to_zero_tools(monkeypatch):
     assert result == []
 
 
+def test_get_platform_tools_names_the_apps_amp_cannot_resolve(monkeypatch):
+    from crewai_core.platform_apps import (
+        PlatformAppsUnavailableError,
+        UnresolvedPlatformAppsWarning,
+    )
+
+    def unavailable(apps):
+        raise PlatformAppsUnavailableError(["slack"])
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", unavailable)
+    agent = Agent(role="Mailer", goal="g", backstory="b", apps=["slack"])
+
+    with pytest.warns(
+        UnresolvedPlatformAppsWarning,
+        match=r"^Agent 'Mailer' declares apps \[slack\] but none resolved to any "
+        r"tools; .* CrewAI AMP could not resolve slack: connect them in AMP, or "
+        r"check their names\.$",
+    ) as caught:
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+    [warning] = caught.list
+    assert isinstance(warning.message, UnresolvedPlatformAppsWarning)
+    assert warning.message.agent_role == "Mailer"
+    assert warning.message.apps == ["slack"]
+    assert warning.message.missing_apps == ["slack"]
+
+
+def test_get_platform_tools_names_no_app_for_another_failure(monkeypatch):
+    from crewai_core.platform_apps import UnresolvedPlatformAppsWarning
+
+    def broken(apps):
+        raise RuntimeError("AMP unreachable")
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", broken)
+    agent = Agent(role="Mailer", goal="g", backstory="b", apps=["slack"])
+
+    with pytest.warns(
+        UnresolvedPlatformAppsWarning, match=r"Cause: AMP unreachable$"
+    ) as caught:
+        agent.get_platform_tools(agent.apps)
+
+    assert caught.list[0].message.missing_apps == []
+
+
+def test_unresolved_apps_still_raise_where_user_warnings_are_errors(monkeypatch):
+    """Code that turns this UserWarning into an error, as CrewAI AMP's runtime
+    does, keeps working."""
+    import warnings
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Mailer", goal="g", backstory="b", apps=["gmail"])
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "error", message=r"Agent '.*' declares apps", category=UserWarning
+        )
+        with pytest.raises(UserWarning, match=r"Agent 'Mailer' declares apps"):
+            agent.get_platform_tools(agent.apps)
+
+
 def test_get_platform_tools_warns_when_no_action_matches_a_selector(monkeypatch):
     # Runs the real CrewaiPlatformTools factory (it returns a plain list) against an
     # integrations API that knows no action by this name.

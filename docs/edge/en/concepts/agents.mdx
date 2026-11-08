@@ -650,6 +650,80 @@ asyncio.run(main())
   configuration (role, goal, backstory, tools, etc.).
 </Note>
 
+## Spreadsheets
+
+With the `spreadsheets` extra installed, an agent that receives the URL of a CSV, TSV or Excel (`.xlsx`) file in its input works on it with tools, instead of reading the whole file into its context:
+
+```bash
+uv add 'crewai[spreadsheets]'
+```
+
+When the agent's input (a `kickoff()` message, or the description of a task it runs) holds a spreadsheet URL, the agent:
+
+- downloads the file once and adds an overview of each sheet (columns, types and sample values) to its prompt
+- gets `inspect_spreadsheet`, to list every sheet and its columns, or see one sheet's columns in full
+- gets `query_spreadsheet`, to page through rows, describe columns, count values, group and aggregate, or correlate numeric columns, after up to five filters
+
+Answers are computed over every row, so totals and counts are exact however large the file is. A URL is recognized by its file name, including presigned URLs that name the file only in their query string, like the ones CrewAI AMP gives uploaded files.
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Sales Analyst",
+    goal="Answer questions from sales data",
+    backstory="You work from the numbers, not impressions.",
+)
+
+result = analyst.kickoff(
+    "Which region sold the most? The data is at https://example.com/exports/sales.csv"
+)
+print(result.raw)
+```
+
+<Note>
+The agent opens only URLs that appear in its own input, never one a model or a tool produces. Its input is whatever your code passes it, so model output you put there, such as an earlier flow step's result, counts as input and its spreadsheet URLs are read. Downloads refuse private and internal network addresses, and a file can be up to 50 MB and 10 million cells. The agent reads up to 10 spreadsheets per run, and their downloads share a 60-second limit that isn't part of `max_execution_time`. Legacy `.xls`, OpenDocument `.ods` and password-protected workbooks can't be read, and the agent is told so. Without the extra, a spreadsheet URL is just text in the input.
+</Note>
+
+## Conversational Agents (Experimental)
+
+Enable `conversational=True` to give a directly used Agent a conversational Flow session. `handle_turn()` passes the session's user/assistant history to the configured Agent and tools on each turn and returns the usual Agent output.
+
+<Warning>
+This API is experimental and requires a matching SDK build. Its contract may change before release.
+</Warning>
+
+```python
+from crewai import Agent, LLM
+
+agent = Agent(
+    role="Assistant",
+    goal="Help the user accurately.",
+    backstory="A general-purpose assistant.",
+    llm=LLM(model="openai/gpt-6.1-sol", api="responses"),
+    conversational=True,
+)
+
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+For interactive conversations, use the same `chat()` convention as conversational Flows:
+
+```python
+agent.chat()          # Plain terminal REPL
+agent.chat(tui=True)  # Full terminal UI
+```
+
+`tui=True` requires an interactive terminal and a matching CLI build. Both modes accept `session_id`, `exit_commands`, and options forwarded to `handle_turn()`. Custom prompts, input/output callables, and `skip_empty` are REPL-only options. You do not need to create or pass a Flow to start chatting.
+
+Both the plain REPL and TUI stream responses automatically; you do not need `LLM(stream=True)`. Disable token streaming with `agent.chat(stream=False)` (also supported with `tui=True`) or an explicit `LLM(stream=False)`. An explicit chat `stream=True` overrides the LLM setting. Streaming is scoped to each turn and does not change the LLM configuration or independent `kickoff()` behavior. A custom `output_fn` receives one completed response per turn; use `stream_turn()` for custom streaming transports.
+
+Reuse one Agent for one conversation. The first turn binds its session ID; switching to another ID raises `ValueError` before history reaches the model. Overlapping turns on that Agent raise `RuntimeError`, including streamed turns used by the REPL, TUI and managed Flow bridge. Create a separate Agent for each independent conversation. Python and Pydantic Agent copies start with fresh history and session guards, even when copied during an active turn. For advanced persistence configuration, `agent.as_flow()` exposes the underlying session. History is in memory by default; process recovery requires explicit Flow persistence. A session ID identifies state; applications must still authorize access to persisted sessions.
+
+Ordinary Agents default to `conversational=False`. Direct `kickoff()` and `kickoff_async()` calls remain independent executions even when conversation is enabled; use `handle_turn()` to retain the session history. Existing Crew/Task execution keeps its current behavior.
+
 ## Upgrading Agents from Earlier Releases
 
 Release 1.15.29 removed `CrewAgentExecutor` and changed how every agent handles large tool results, long conversations, and repeated tool calls. These changes apply to agents in a crew, in a Flow, and called with `kickoff()`. The exception is the plan steps of an agent that [plans](/en/concepts/planning): their tool results are not deferred, their conversation is not summarized, and the repeated-call count restarts for each step. If you are moving from 1.15.28 or earlier, check each one below.

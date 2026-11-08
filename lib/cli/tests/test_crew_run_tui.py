@@ -49,7 +49,9 @@ from crewai_cli.crew_run_tui import (
 import httpx
 import pytest
 from rich.text import Text
+from textual.app import App
 from textual.pilot import Pilot
+from textual.widgets import Button, Static
 
 
 @pytest.fixture(autouse=True)
@@ -276,6 +278,45 @@ def test_the_button_spins_while_it_evaluates_and_still_opens_the_report(
     assert str(button.label) == "Open eval report"
 
 
+@pytest.mark.parametrize("process", ["this process", "a child process"])
+@pytest.mark.parametrize("open_report", [True, False])
+def test_the_app_opens_the_report_unless_crewai_eval_said_no_open(
+    monkeypatch, process, open_report
+) -> None:
+    """`crewai eval --no-open` with nothing traced: the app that runs the crew
+    and evaluates it leaves the browser alone, in this process or in a child
+    that only has the token file; without the flag it opens the report."""
+    opened: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
+    monkeypatch.setattr(CrewRunApp, "_refresh_eval_button", lambda self: None)
+
+    with crew_run_tui.evaluating_after_run(open_report=open_report):
+        token = crew_run_tui._AUTO_EVAL.set(None) if process == "a child process" else None
+        try:
+            app = CrewRunApp()
+        finally:
+            if token is not None:
+                crew_run_tui._AUTO_EVAL.reset(token)
+    app._evaluation = {"state": "starting", "execution_id": "run-this-app"}
+    app._evaluation_started({"id": "ev-1", "url": "https://optimize.example/e/1"})
+
+    assert opened == (["https://optimize.example/e/1"] if open_report else [])
+    assert app._evaluation["url"] == "https://optimize.example/e/1"  # still on screen
+
+
+def test_an_app_nobody_opened_for_an_evaluation_opens_the_report(monkeypatch) -> None:
+    """The run app's own Evaluate, after `crewai run`: unchanged."""
+    opened: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
+    monkeypatch.setattr(CrewRunApp, "_refresh_eval_button", lambda self: None)
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting", "execution_id": "run-this-app"}
+
+    app._evaluation_started({"id": "ev-1", "url": "https://optimize.example/e/1"})
+
+    assert opened == ["https://optimize.example/e/1"]
+
+
 def test_pressing_evaluate_again_opens_the_report_it_already_made(monkeypatch) -> None:
     """One evaluation per run: the second press is somebody looking for the
     report, not asking to pay for another."""
@@ -478,6 +519,7 @@ def test_the_token_this_app_sets_is_the_one_crewais_tracing_reads(
         assert eval_handshake.awaited_evaluation() == {
             "trusted_amp_origins": ["https://app.crewai.com"],
             "tracing_turned_on": True,
+            "open_report": True,
         }
     assert eval_handshake.run_awaited_by_evaluation() is False
 
@@ -749,31 +791,52 @@ def test_conversation_turn_done_records_assistant_message() -> None:
 
 
 @pytest.mark.asyncio
-async def test_conversation_input_submits_turn() -> None:
-    class FakeFlow:
-        defer_trace_finalization = False
+@pytest.mark.parametrize("defer_trace_finalization", [False, True])
+async def test_conversation_input_submits_turn(defer_trace_finalization) -> None:
+    from crewai.flow import ConversationState, Flow, listen
 
-        def handle_turn(self, message: str) -> str:
-            return f"reply: {message}"
+    calls = []
 
-        def finalize_session_traces(self) -> None:
-            pass
+    class FakeFlow(Flow[ConversationState]):
+        conversational = True
+
+        def stream_turn(self, message: str, **kwargs):
+            calls.append((message, kwargs))
+            return super().stream_turn(message, **kwargs)
+
+        @listen("converse")
+        def converse_turn(self) -> str:
+            return f"reply: {self.state.current_user_message}"
 
     app = CrewRunApp(crew_name="Demo", conversational=True)
     app._flow = FakeFlow()
+    app._conversation_defer_trace_finalization = defer_trace_finalization
+    app._conversation_turn_kwargs = {"session_id": "session-1"}
+    app._conversation_exit_commands = {"bye"}
 
     async with app.run_test() as pilot:
-        await pilot.click("#conversation-input")
-        await pilot.press("h", "i", "enter")
-        for _ in range(50):
-            await pilot.pause(0.05)
-            if app._conversation_messages[-1:] == [("assistant", "reply: hi")]:
-                break
+        assert app._flow.defer_trace_finalization is defer_trace_finalization
+        for message in ("hi", "again"):
+            app.query_one("#conversation-input").value = message
+            await pilot.press("enter")
+            for _ in range(50):
+                await pilot.pause(0.05)
+                if app._conversation_messages[-1:] == [("assistant", f"reply: {message}")]:
+                    break
+        app.query_one("#conversation-input").value = "bye"
+        await pilot.press("enter")
 
     assert app._conversation_messages == [
         ("user", "hi"),
         ("assistant", "reply: hi"),
+        ("user", "again"),
+        ("assistant", "reply: again"),
     ]
+    assert calls == [
+        ("hi", {"session_id": "session-1", "stream": None}),
+        ("again", {"session_id": "session-1", "stream": None}),
+    ]
+    assert app._flow.defer_trace_finalization is False
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:
@@ -2702,7 +2765,7 @@ def stops(monkeypatch) -> list[str]:
     ("tracing", "asked_on"),
     [
         ("turned off", crew_run_tui.TurnTracingOnScreen),
-        ("never turned on", crew_run_tui.TraceConsentScreen),
+        ("never turned on", crew_run_tui.EvaluateConsentScreen),
     ],
 )
 def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
@@ -2710,8 +2773,8 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
 ) -> None:
     """The project said no to tracing, or nobody ever turned it on: only a yes
     turns it on (in its .env) and runs the crew again; a no leaves everything
-    as it was. A project that never turned it on is asked on the screen a
-    run's trace is shared from."""
+    as it was. Each case is asked on a screen that says the evaluation needs
+    the trace."""
     monkeypatch.chdir(tmp_path)
     if tracing == "turned off":
         (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
@@ -2748,6 +2811,57 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
         assert env == ("CREWAI_TRACING_ENABLED=false\n" if tracing == "turned off" else "")
         assert app._want_traced_rerun is False and exits == []
         assert stops == ["cli_usage:eval_stopped:declined"]
+
+
+class _ScreenHost(App[None]):
+    """Shows one consent screen and keeps what it was dismissed with."""
+
+    def __init__(self, screen: crew_run_tui.TraceConsentScreen) -> None:
+        super().__init__()
+        self._screen = screen
+        self.answers: list[bool | None] = []
+
+    def on_mount(self) -> None:
+        self.push_screen(self._screen, self.answers.append)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("key", "shared"), [("enter", True), ("y", True), ("n", False), ("escape", False)])
+async def test_evaluate_consent_screen_shares_on_enter_and_says_why(key, shared) -> None:
+    """Evaluate on a project that never traced: the screen says the evaluation
+    needs the trace and that Enter shares it; Enter or y shares, n or Esc runs
+    nothing. Nothing on it counts down."""
+    screen = crew_run_tui.EvaluateConsentScreen()
+    app = _ScreenHost(screen)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        text = str(screen.query_one("#consent-text", Static).render())
+        label = str(screen.query_one("#btn-consent-yes", Button).label)
+        await pilot.press(key)
+        await pilot.pause()
+
+    assert app.answers == [shared]
+    assert label == "Share & Evaluate"
+    assert "Evaluating this run needs its trace." in text
+    assert "goes to CrewAI AMP, which grades it." in text
+    assert "Enter shares it; Cancel runs nothing." in text
+    assert "seconds" not in text
+
+
+@pytest.mark.asyncio
+async def test_the_end_of_run_sharing_screen_is_unchanged() -> None:
+    """Sharing a finished run's trace still asks on its own screen, which a
+    20-second wait dismisses (its caller times out): only Evaluate changed."""
+    screen = crew_run_tui.TraceConsentScreen()
+    app = _ScreenHost(screen)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        text = str(screen.query_one("#consent-text", Static).render())
+        label = str(screen.query_one("#btn-consent-yes", Button).label)
+
+    assert label == "Share Trace"
+    assert "Share this execution trace with CrewAI?" in text
+    assert "Cancel or wait 20 seconds" in text
 
 
 @pytest.mark.parametrize("tracing", ["turned off", "never turned on", "on"])
@@ -2810,6 +2924,9 @@ def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
     app._execution_uuid = "run-this-app"
     app._unsubscribe = lambda: None  # type: ignore[method-assign]
     app.exit = lambda result=None: None  # type: ignore[method-assign]
+    # The app isn't running: a real push needs an event loop, which a test that
+    # called asyncio.run() earlier in this process has taken away.
+    app.push_screen = lambda *a, **k: None  # type: ignore[method-assign]
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
 
     app.action_evaluate_crew()

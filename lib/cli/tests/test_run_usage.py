@@ -971,15 +971,23 @@ def test_uv_could_not_be_started(project, usage, monkeypatch) -> None:
 
     result = crewai_run()
 
-    # Unchanged: this path has always reported the error and exited 0.
-    assert result.exit_code == 0
-    assert "An unexpected error occurred" in result.output
+    # Exit 1, as a JSON crew or declarative flow uv could not start does.
+    assert result.exit_code == 1
+    assert "An unexpected error occurred: [Errno 2] No such file or directory: 'uv'" in (
+        result.output
+    )
     assert usage == [started("crew"), stopped("launch_failed")]
+
+
+# Not 1, so an exit code from anywhere else cannot pass for the script's.
+SCRIPT_EXIT_CODE = 3
 
 
 def fail_project_scripts(monkeypatch: pytest.MonkeyPatch) -> None:
     def failing(command: list[str], **kwargs: Any) -> None:
-        raise subprocess.CalledProcessError(1, command, output=f"{SECRET} failed")
+        raise subprocess.CalledProcessError(
+            SCRIPT_EXIT_CODE, command, output=f"{SECRET} failed"
+        )
 
     monkeypatch.setattr(subprocess, "run", failing)
 
@@ -997,9 +1005,10 @@ def test_a_project_script_that_fails(project, usage, monkeypatch, pyproject, kin
 
     result = crewai_run()
 
-    # Unchanged: this path has always reported the error and exited 0.
-    assert result.exit_code == 0
+    # The script's own exit code, so CI and coding agents see the failure.
+    assert result.exit_code == SCRIPT_EXIT_CODE
     assert f"An error occurred while running the {kind}" in result.output
+    assert f"returned non-zero exit status {SCRIPT_EXIT_CODE}" in result.output
     assert f"{SECRET} failed" in result.output
     assert usage == [started(kind), stopped("script_failed")]
     assert_events_are_anonymous(usage)
@@ -1120,13 +1129,14 @@ def test_an_opted_out_process_sends_nothing(
     for name in OPT_OUT_FLAGS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv(flag, "true")
+    exit_code = SCRIPT_EXIT_CODE if script_fails else 0
     monkeypatch.setattr(core_telemetry.Telemetry, "_instance", None)
-    assert crewai_run().exit_code == 0
+    assert crewai_run().exit_code == exit_code
     assert sent() == []
 
     monkeypatch.delenv(flag)
     monkeypatch.setattr(core_telemetry.Telemetry, "_instance", None)
-    assert crewai_run().exit_code == 0
+    assert crewai_run().exit_code == exit_code
     assert sent() == [started("crew")] + ([stopped("script_failed")] if script_fails else [])
 
 
@@ -1158,7 +1168,7 @@ def test_a_project_env_opt_out_covers_a_failed_script(
     write(project / ".env", f"{flag}=true\n")
     fail_project_scripts(monkeypatch)
 
-    assert crewai_run().exit_code == 0
+    assert crewai_run().exit_code == SCRIPT_EXIT_CODE
     assert usage == []
 
 
@@ -1366,6 +1376,44 @@ def missing_key(name: str = "OPENAI_API_KEY") -> Exception:
     return MissingAPIKeyError(name, "gpt-4.1-mini")
 
 
+def a_key_missing_as_an_older_crewai_loads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Exception:
+    """Loading the JSON crew fails the first time as crewai 1.15.34 to 1.15.37
+    fail it, and builds it for real after that; returns the error.
+
+    Those versions check an OpenAI-compatible provider's key as the Agent is
+    validated: a JSONProjectError around the Agent's ValidationError around
+    MissingAPIKeyError. Later crewai builds the crew and raises on the first
+    call, but the runner child imports the project's own crewai."""
+    from crewai.llms.base_llm import MissingAPIKeyError
+    from crewai.project import crew_loader
+    from crewai.project.json_loader import JSONProjectError
+    from pydantic import BaseModel, ValidationError, model_validator
+
+    class Agent(BaseModel):
+        @model_validator(mode="after")
+        def build_llm(self) -> Any:
+            raise MissingAPIKeyError("DEEPSEEK_API_KEY", "deepseek-chat")
+
+    try:
+        Agent()
+    except ValidationError as invalid:
+        error = JSONProjectError(f"agents/researcher.jsonc: validation failed: {invalid}")
+        error.__cause__ = invalid
+    real_load = crew_loader.load_crew
+    loads: list[Path] = []
+
+    def load_crew(path: Path, *args: Any, **kwargs: Any) -> Any:
+        loads.append(path)
+        if len(loads) == 1:
+            raise error
+        return real_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(crew_loader, "load_crew", load_crew)
+    return error
+
+
 def its_own_cause(error: Exception) -> Exception:
     """ERROR as crewAI's providers re-raise a failed call: `raise e from e`."""
     try:
@@ -1376,17 +1424,24 @@ def its_own_cause(error: Exception) -> Exception:
 
 
 @pytest.mark.parametrize(
-    ("llm", "name"),
-    [("openai/gpt-4.1-mini", "OPENAI_API_KEY"), ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY")],
-    ids=["at_kickoff", "as_it_loads"],
+    ("llm", "name", "older_crewai"),
+    [
+        ("openai/gpt-4.1-mini", "OPENAI_API_KEY", False),
+        ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY", False),
+        ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY", True),
+    ],
+    ids=["at_kickoff", "compatible_at_kickoff", "older_crewai_as_it_loads"],
 )
 def test_a_json_crew_without_its_key_stops_with_the_line_to_add(
-    project, usage, monkeypatch, llm, name
+    project, usage, monkeypatch, llm, name, older_crewai
 ) -> None:
-    """OpenAI raises for its key once kickoff calls the model, after the
-    agent's retries; an OpenAI-compatible provider as the crew loads, inside
-    the agent's ValidationError inside the loader's JSONProjectError."""
+    """A provider raises for its key once kickoff calls the model, after the
+    agent's retries; with crewai 1.15.34 to 1.15.37 an OpenAI-compatible one
+    raises as the crew loads, inside the agent's ValidationError inside the
+    loader's JSONProjectError."""
     keyless_json_crew(project, monkeypatch, llm)
+    if older_crewai:
+        a_key_missing_as_an_older_crewai_loads(monkeypatch)
 
     with pytest.raises(run_crew_module.ApiKeyNotSetError) as stop:
         run_crew_module._run_json_crew()
@@ -1505,10 +1560,7 @@ def test_a_crewai_without_missing_api_key_error_stops_as_before(
         return raise_it
 
     if where == "as_it_loads":
-        # The real error, made while crewai still has MissingAPIKeyError.
-        with pytest.raises(ValueError, match="DEEPSEEK_API_KEY") as loading:
-            crew_loader.load_crew(project / "crew.jsonc")
-        error = loading.value
+        error = a_key_missing_as_an_older_crewai_loads(monkeypatch)
         monkeypatch.setattr(crew_loader, "load_crew", raises(error))
     else:
         error = missing_key("DEEPSEEK_API_KEY")
@@ -1625,6 +1677,7 @@ def test_at_a_terminal_a_key_missing_as_the_crew_loads_is_asked_for_after_the_sp
     project, usage, monkeypatch
 ) -> None:
     keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+    a_key_missing_as_an_older_crewai_loads(monkeypatch)
     events: list[str] = []
 
     @contextmanager
@@ -1675,6 +1728,7 @@ def test_at_a_terminal_quitting_at_the_key_prompt_counts_the_stop(
         events = run_app_ends(monkeypatch, project, missing_key())
     else:
         keyless_json_crew(project, monkeypatch, "deepseek/deepseek-chat")
+        a_key_missing_as_an_older_crewai_loads(monkeypatch)
         monkeypatch.setattr(
             run_crew_module, "_json_loading_status", lambda _message: nullcontext()
         )
@@ -1838,3 +1892,24 @@ def test_at_a_terminal_a_key_an_env_file_others_can_read_would_hold_runs_the_cre
     assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
     assert events == ["load", "run", "summary", "prompt", "load", "run", "summary"]
     assert usage == []
+
+
+@pytest.mark.parametrize("inputs", ['{"messages":"hello"}', '{}', 'not-json'])
+def test_agent_run_counts_its_own_kind(project, usage, commands, inputs) -> None:
+    write(
+        project / "pyproject.toml",
+        CREW_PYPROJECT.replace('type = "crew"', 'type = "agent"'),
+    )
+    write(project / "uv.lock", "")
+    (project / ".venv").mkdir()
+
+    result = crewai_run("--inputs", inputs)
+
+    if inputs == '{"messages":"hello"}':
+        assert result.exit_code == 0, result.output
+        assert usage == [started("agent")]
+        assert commands
+    else:
+        assert result.exit_code == (2 if inputs == '{}' else 1)
+        assert usage == [started("agent"), stopped("invalid_inputs")]
+        assert not commands
