@@ -231,12 +231,10 @@ class GeminiCompletion(BaseLLM):
         if self.max_output_tokens is not None:
             config["max_output_tokens"] = self.max_output_tokens
         if self.safety_settings:
-            config["safety_settings"] = [
-                {"category": str(s.category), "threshold": str(s.threshold)}
-                if hasattr(s, "category") and hasattr(s, "threshold")
-                else s
-                for s in self.safety_settings
-            ]
+            # Keep the documented {category: threshold} mapping so LLM(**config)
+            # can rebuild the same LLM; converting to a bare category list here
+            # would lose the thresholds.
+            config["safety_settings"] = dict(self.safety_settings)
         return config
 
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:
@@ -606,12 +604,28 @@ class GeminiCompletion(BaseLLM):
                 config_params["response_schema"] = response_model
 
         if self.safety_settings:
-            config_params["safety_settings"] = self.safety_settings
+            config_params["safety_settings"] = self._safety_settings_for_request()
 
         if self.thinking_config is not None:
             config_params["thinking_config"] = self.thinking_config
 
         return types.GenerateContentConfig(**config_params)
+
+    def _safety_settings_for_request(self) -> list[dict[str, Any]]:
+        """Normalize safety_settings into the list form the Gen AI SDK expects.
+
+        Accepts the documented ``{category: threshold}`` mapping (category as a
+        name string or enum member) as well as an already-normalized list.
+        """
+        if isinstance(self.safety_settings, list):
+            return self.safety_settings
+        return [
+            {
+                "category": str(getattr(category, "value", category)),
+                "threshold": str(getattr(threshold, "value", threshold)),
+            }
+            for category, threshold in self.safety_settings.items()
+        ]
 
     def _convert_tools_for_interference(  # type: ignore[override]
         self, tools: list[dict[str, Any]]
