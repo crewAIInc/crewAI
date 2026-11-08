@@ -338,3 +338,34 @@ def test_memory_string_storage_qdrant_edge(tmp_path: Path) -> None:
         m.close()
     finally:
         os.environ.pop("CREWAI_STORAGE_DIR", None)
+
+
+def test_delete_record_ids_respects_scope_prefix(storage: QdrantEdgeStorage) -> None:
+    """Scoped ID deletes must not remove records outside the scope prefix."""
+    keep = _rec(content="keep", scope="/team/b", embedding=[1.0, 0.0, 0.0, 0.0])
+    storage.save([keep])
+    deleted = storage.delete(scope_prefix="/team/a", record_ids=[keep.id])
+    assert deleted == 0
+    assert storage.get_record(keep.id) is not None
+
+
+def test_delete_record_ids_does_not_match_sibling_scope_prefix(
+    storage: QdrantEdgeStorage,
+) -> None:
+    """`/team/a` must not delete `/team/ab` when deleting by record id."""
+    sibling = _rec(content="sibling", scope="/team/ab", embedding=[0.0, 1.0, 0.0, 0.0])
+    storage.save([sibling])
+    deleted = storage.delete(scope_prefix="/team/a", record_ids=[sibling.id])
+    assert deleted == 0
+    assert storage.get_record(sibling.id) is not None
+
+
+def test_delete_record_ids_within_scope_still_works(storage: QdrantEdgeStorage) -> None:
+    target = _rec(content="target", scope="/team/a", embedding=[0.0, 0.0, 1.0, 0.0])
+    other = _rec(content="other", scope="/team/b", embedding=[0.0, 0.0, 0.0, 1.0])
+    storage.save([target, other])
+    deleted = storage.delete(scope_prefix="/team/a", record_ids=[target.id])
+    assert deleted == 1
+    assert storage.get_record(target.id) is None
+    assert storage.get_record(other.id) is not None
+
