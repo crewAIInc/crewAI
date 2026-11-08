@@ -2216,12 +2216,22 @@ class BedrockCompletion(BaseLLM):
             or 0
         )
         cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
+        raw_cache_creation = (
+            usage.get("cacheWriteInputTokenCount")
+            or usage.get("cacheWriteInputTokens")
+            or 0
+        )
+        cache_creation_tokens = (
+            raw_cache_creation if isinstance(raw_cache_creation, int) else 0
+        )
+        prompt_tokens = input_tokens + cached_tokens + cache_creation_tokens
 
-        self._token_usage["prompt_tokens"] += input_tokens
+        self._token_usage["prompt_tokens"] += prompt_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
         self._token_usage["cached_prompt_tokens"] += cached_tokens
+        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
