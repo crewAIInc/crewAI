@@ -332,6 +332,73 @@ class ResponsesAPIResult:
         return bool(self.reasoning_summaries)
 
 
+@dataclass
+class _StreamedFunctionCall:
+    """A function call being assembled from Responses stream events."""
+
+    call_id: str
+    name: str
+    arguments: str = ""
+    done: bool = False
+
+
+class _StreamedFunctionCallAccumulator:
+    """Assemble Responses function calls from fragmented stream events.
+
+    Calls are keyed by their output item id, which every argument event
+    carries as ``item_id``. Argument fragments are appended as they arrive,
+    and a call counts as complete only after its ``response.output_item.done``
+    event. Hosted ``tool_search_call`` and ``tool_search_output`` items run
+    server-side and are ignored.
+    """
+
+    EVENT_TYPES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "response.output_item.added",
+            "response.function_call_arguments.delta",
+            "response.function_call_arguments.done",
+            "response.output_item.done",
+        }
+    )
+
+    def __init__(self) -> None:
+        self._calls: dict[str, _StreamedFunctionCall] = {}
+
+    def add(self, event: Any) -> None:
+        """Record one stream event whose type is in ``EVENT_TYPES``."""
+        if event.type in {
+            "response.output_item.added",
+            "response.output_item.done",
+        }:
+            item = event.item
+            if item.type != "function_call":
+                return
+            key = getattr(item, "id", None) or item.call_id
+            call = self._calls.setdefault(
+                key, _StreamedFunctionCall(call_id=item.call_id, name=item.name)
+            )
+            call.arguments = item.arguments or call.arguments
+            call.done = event.type == "response.output_item.done"
+        elif (pending := self._calls.get(event.item_id)) is not None:
+            if event.type == "response.function_call_arguments.delta":
+                pending.arguments += event.delta
+            else:
+                pending.arguments = event.arguments
+
+    @property
+    def has_calls(self) -> bool:
+        """Whether any function call started, complete or not."""
+        return bool(self._calls)
+
+    def completed_calls(self) -> list[dict[str, Any]]:
+        """Completed calls in arrival order, shaped like non-streamed calls."""
+        return [
+            {"id": call.call_id, "name": call.name, "arguments": call.arguments}
+            for call in self._calls.values()
+            if call.done
+        ]
+
+
 class OpenAIToolSearchConfig(BaseModel):
     """Configuration for OpenAI's hosted tool search (Responses API only).
 
@@ -1306,25 +1373,11 @@ class OpenAICompletion(BaseLLM):
                 return function_calls
 
             if function_calls and available_functions:
-                for call in function_calls:
-                    function_name = call.get("name", "")
-                    function_args = call.get("arguments", {})
-                    if isinstance(function_args, str):
-                        try:
-                            function_args = json.loads(function_args)
-                        except json.JSONDecodeError:
-                            function_args = {}
-
-                    result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if result is not None:
-                        return result
+                result = self._execute_responses_function_calls(
+                    function_calls, available_functions, from_task, from_agent
+                )
+                if result is not None:
+                    return result
 
             content = response.output_text or ""
 
@@ -1453,25 +1506,11 @@ class OpenAICompletion(BaseLLM):
                 return function_calls
 
             if function_calls and available_functions:
-                for call in function_calls:
-                    function_name = call.get("name", "")
-                    function_args = call.get("arguments", {})
-                    if isinstance(function_args, str):
-                        try:
-                            function_args = json.loads(function_args)
-                        except json.JSONDecodeError:
-                            function_args = {}
-
-                    result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if result is not None:
-                        return result
+                result = await self._aexecute_responses_function_calls(
+                    function_calls, available_functions, from_task, from_agent
+                )
+                if result is not None:
+                    return result
 
             content = response.output_text or ""
 
@@ -1545,7 +1584,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle streaming Responses API call."""
         full_response = ""
-        function_calls: list[dict[str, Any]] = []
+        streamed_calls = _StreamedFunctionCallAccumulator()
         final_response: Response | None = None
         completed_response_seen = False
         usage: dict[str, Any] | None = None
@@ -1567,19 +1606,8 @@ class OpenAICompletion(BaseLLM):
                     response_id=response_id_stream,
                 )
 
-            elif event.type == "response.function_call_arguments.delta":
-                pass
-
-            elif event.type == "response.output_item.done":
-                item = event.item
-                if item.type == "function_call":
-                    function_calls.append(
-                        {
-                            "id": item.call_id,
-                            "name": item.name,
-                            "arguments": item.arguments,
-                        }
-                    )
+            elif event.type in _StreamedFunctionCallAccumulator.EVENT_TYPES:
+                streamed_calls.add(event)
 
             elif event.type in {
                 "response.completed",
@@ -1607,6 +1635,9 @@ class OpenAICompletion(BaseLLM):
 
         self._raise_for_unsuccessful_streaming_response(final_response)
 
+        if streamed_calls.has_calls and not completed_response_seen:
+            raise self._incomplete_stream_error(final_response)
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1624,10 +1655,7 @@ class OpenAICompletion(BaseLLM):
 
             return parsed_result
 
-        if function_calls and not completed_response_seen:
-            raise RuntimeError(
-                "OpenAI Responses API stream ended before response.completed"
-            )
+        function_calls = self._streamed_function_calls(final_response, streamed_calls)
 
         if function_calls and not available_functions:
             self._emit_call_completed_event(
@@ -1643,25 +1671,11 @@ class OpenAICompletion(BaseLLM):
             return function_calls
 
         if function_calls and available_functions:
-            for call in function_calls:
-                function_name = call.get("name", "")
-                function_args = call.get("arguments", {})
-                if isinstance(function_args, str):
-                    try:
-                        function_args = json.loads(function_args)
-                    except json.JSONDecodeError:
-                        function_args = {}
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
+            result = self._execute_responses_function_calls(
+                function_calls, available_functions, from_task, from_agent
+            )
+            if result is not None:
+                return result
 
         if response_model:
             try:
@@ -1709,7 +1723,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle async streaming Responses API call."""
         full_response = ""
-        function_calls: list[dict[str, Any]] = []
+        streamed_calls = _StreamedFunctionCallAccumulator()
         final_response: Response | None = None
         completed_response_seen = False
         usage: dict[str, Any] | None = None
@@ -1731,19 +1745,8 @@ class OpenAICompletion(BaseLLM):
                     response_id=response_id_stream,
                 )
 
-            elif event.type == "response.function_call_arguments.delta":
-                pass
-
-            elif event.type == "response.output_item.done":
-                item = event.item
-                if item.type == "function_call":
-                    function_calls.append(
-                        {
-                            "id": item.call_id,
-                            "name": item.name,
-                            "arguments": item.arguments,
-                        }
-                    )
+            elif event.type in _StreamedFunctionCallAccumulator.EVENT_TYPES:
+                streamed_calls.add(event)
 
             elif event.type in {
                 "response.completed",
@@ -1771,6 +1774,9 @@ class OpenAICompletion(BaseLLM):
 
         self._raise_for_unsuccessful_streaming_response(final_response)
 
+        if streamed_calls.has_calls and not completed_response_seen:
+            raise self._incomplete_stream_error(final_response)
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1788,10 +1794,7 @@ class OpenAICompletion(BaseLLM):
 
             return parsed_result
 
-        if function_calls and not completed_response_seen:
-            raise RuntimeError(
-                "OpenAI Responses API stream ended before response.completed"
-            )
+        function_calls = self._streamed_function_calls(final_response, streamed_calls)
 
         if function_calls and not available_functions:
             self._emit_call_completed_event(
@@ -1807,25 +1810,11 @@ class OpenAICompletion(BaseLLM):
             return function_calls
 
         if function_calls and available_functions:
-            for call in function_calls:
-                function_name = call.get("name", "")
-                function_args = call.get("arguments", {})
-                if isinstance(function_args, str):
-                    try:
-                        function_args = json.loads(function_args)
-                    except json.JSONDecodeError:
-                        function_args = {}
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
+            result = await self._aexecute_responses_function_calls(
+                function_calls, available_functions, from_task, from_agent
+            )
+            if result is not None:
+                return result
 
         if response_model:
             try:
@@ -1862,6 +1851,23 @@ class OpenAICompletion(BaseLLM):
         return full_response
 
     @staticmethod
+    def _incomplete_stream_error(response: Response | None) -> RuntimeError:
+        """Error for a stream that started a function call but never completed.
+
+        Names the terminal status and its reason when a terminal event did
+        arrive, so a ``max_output_tokens`` cut-off is distinguishable from a
+        dropped connection.
+        """
+        message = "OpenAI Responses API stream ended before response.completed"
+        status = getattr(response, "status", None)
+        if status is None:
+            return RuntimeError(f"{message} (no terminal event received)")
+        details = getattr(response, "incomplete_details", None)
+        reason = getattr(details, "reason", None)
+        suffix = f", reason: {reason}" if reason else ""
+        return RuntimeError(f"{message} (status: {status}{suffix})")
+
+    @staticmethod
     def _raise_for_unsuccessful_streaming_response(response: Response | None) -> None:
         """Raise when a streamed Responses API response ended unsuccessfully."""
         status = getattr(response, "status", None)
@@ -1872,6 +1878,93 @@ class OpenAICompletion(BaseLLM):
         raise RuntimeError(
             f"OpenAI Responses API stream ended with {status}: {message}"
         )
+
+    def _streamed_function_calls(
+        self,
+        final_response: Response | None,
+        streamed_calls: _StreamedFunctionCallAccumulator,
+    ) -> list[dict[str, Any]]:
+        """Function calls from a completed stream.
+
+        The ``response.completed`` event carries the full response, so its
+        output is the source of truth and keeps streamed calls identical to
+        the non-streaming path. The accumulated fragments are the fallback
+        when that output holds no function calls.
+        """
+        if final_response is not None:
+            function_calls = self._extract_function_calls_from_response(final_response)
+            if function_calls:
+                return function_calls
+        return streamed_calls.completed_calls()
+
+    @staticmethod
+    def _parse_responses_function_args(call: dict[str, Any]) -> dict[str, Any]:
+        """Decode a Responses function call's JSON arguments.
+
+        Malformed JSON and non-object values such as ``null`` or ``[]`` both
+        decode to ``{}`` so the call never reaches ``fn(**args)`` with
+        something that is not a mapping.
+        """
+        function_args: Any = call.get("arguments", {})
+        if isinstance(function_args, str):
+            try:
+                function_args = json.loads(function_args)
+            except json.JSONDecodeError as e:
+                logging.error(f"Failed to parse tool arguments: {e}")
+                return {}
+        if not isinstance(function_args, dict):
+            logging.error(
+                f"Tool arguments must be a JSON object, got {type(function_args).__name__}"
+            )
+            return {}
+        return function_args
+
+    def _execute_responses_function_calls(
+        self,
+        function_calls: list[dict[str, Any]],
+        available_functions: dict[str, Any],
+        from_task: Any | None,
+        from_agent: Any | None,
+    ) -> str | None:
+        """Run completed function calls against ``available_functions``.
+
+        Returns the first non-``None`` result, matching the Chat Completions
+        path. Names missing from ``available_functions`` are never executed.
+        """
+        for call in function_calls:
+            result = self._handle_tool_execution(
+                function_name=call.get("name", ""),
+                function_args=self._parse_responses_function_args(call),
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+            if result is not None:
+                return result
+        return None
+
+    async def _aexecute_responses_function_calls(
+        self,
+        function_calls: list[dict[str, Any]],
+        available_functions: dict[str, Any],
+        from_task: Any | None,
+        from_agent: Any | None,
+    ) -> str | None:
+        """Async variant of ``_execute_responses_function_calls``.
+
+        Awaits coroutine functions so async tools run to completion.
+        """
+        for call in function_calls:
+            result = await self._ahandle_tool_execution(
+                function_name=call.get("name", ""),
+                function_args=self._parse_responses_function_args(call),
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+            if result is not None:
+                return result
+        return None
 
     def _extract_function_calls_from_response(
         self, response: Response
