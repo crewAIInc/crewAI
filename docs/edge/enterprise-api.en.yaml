@@ -55,16 +55,22 @@ security:
 paths:
   /inputs:
     get:
-      summary: Get Required Inputs
+      summary: Get Inputs
       description: |
         **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
 
-        Retrieves the list of all required input parameters that your crew expects for execution.
-        Use this endpoint to discover what inputs you need to provide when starting a crew execution.
+        Retrieves the inputs your crew or flow accepts. `inputs` lists every input a caller can pass, and
+        `required_inputs` lists the ones `POST /kickoff` refuses to run without. Inputs that aren't in
+        `required_inputs` are optional and fall back to their defaults.
+
+        For a flow, the inputs are its state's required fields plus the optional inputs it declares: fields
+        with a `description` in a code flow's Pydantic state, and fields with a default in a declarative flow.
+        Working and output fields the flow writes itself aren't listed. A code flow whose state describes none
+        of its fields lists every field.
       operationId: getRequiredInputs
       responses:
         "200":
-          description: Successfully retrieved required inputs
+          description: Successfully retrieved inputs
           content:
             application/json:
               schema:
@@ -74,13 +80,20 @@ paths:
                     type: array
                     items:
                       type: string
-                    description: Array of required input parameter names
+                    description: Every input a caller can pass, required and optional
                     example: ["budget", "interests", "duration", "age"]
+                  required_inputs:
+                    type: array
+                    items:
+                      type: string
+                    description: The inputs `POST /kickoff` refuses to run without; a subset of `inputs`
+                    example: ["budget", "interests", "duration"]
               examples:
                 travel_crew:
                   summary: Travel planning crew inputs
                   value:
                     inputs: ["budget", "interests", "duration", "age"]
+                    required_inputs: ["budget", "interests", "duration", "age"]
                 outreach_crew:
                   summary: Outreach crew inputs
                   value:
@@ -93,6 +106,12 @@ paths:
                         "our_product",
                         "linkedin_url",
                       ]
+                    required_inputs: ["name", "title", "company", "industry", "our_product"]
+                content_flow:
+                  summary: Content flow with optional inputs
+                  value:
+                    inputs: ["core_idea", "requester_email", "post_type"]
+                    required_inputs: ["core_idea", "requester_email"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
