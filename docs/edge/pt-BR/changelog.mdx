@@ -4,6 +4,254 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="06 nov 2026">
+  ## v1.15.37
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.37)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar funcionalidade para ler planilhas para agentes em crewai-files.
+  - Estruturar e carregar projetos de agentes independentes.
+
+  ### Documentação
+  - Atualizar a descrição do RagTool para melhor análise pelo Mintlify.
+
+  ## Contribuidores
+
+  @Vidit-Ostwal, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="05 nov 2026">
+  ## v1.15.36
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.36)
+
+  # O Que Mudou
+
+  ### Recursos
+  - Adicionar sessões experimentais de Agente Conversacional.
+  - Solicitar uma chave de API ausente quando a execução do crewai iniciar.
+  - Registrar a classe de erro quando a execução do crewai não consegue carregar um projeto.
+  - Nomear os aplicativos que o CrewAI AMP não consegue resolver para um agente.
+
+  ### Correções de Bugs
+  - Corrigir a execução de chamadas assíncronas no contexto do chamador para ferramentas síncronas.
+  - Resolver problema com a precedência de valores vazios na verificação de chave da execução.
+  - Parar uma execução de crew JSON de forma limpa quando sua chave de API estiver ausente.
+  - Chamar as ferramentas GPT-6 Astra e GPT-6.1 Sol através da API de Respostas.
+  - Lidar corretamente com a forma de saída sourcedAnswer.
+  - Remover valores de metadados None antes de escrever no ChromaDB.
+  - Adicionar o extra crewai do provedor escolhido a novos projetos.
+  - Fixar crewai-files no extra de processamento de arquivos como seus irmãos.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.35.
+
+  ## Contribuidores
+
+  @Kiko0301, @StoyanD, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="03 nov 2026">
+  ## v1.15.35
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.35)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar o catálogo de modelos litellm para v1.15.35
+  - Adicionar snapshot e changelog para v1.15.34
+
+  ## Contributors
+
+  @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="01 nov 2026">
+  ## v1.15.34
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.34)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar catálogo LiteLLM autônomo PR antes do aumento de versão
+  - Registrar onde a execução do crewai para antes do início
+  - Adicionar busca de habilidades do crewai para listar as habilidades da organização
+  - Passar crewai run --inputs para um fluxo Python
+  - Adicionar deploy create --zip e imprimir o commit de onde um zip é construído
+  - Documentar planejamento de agentes com planningconfig e migrar página de raciocínio
+
+  ### Correções de Bugs
+  - Parar de oferecer modelos Gemini para desligamento em crewai create
+  - Levantar MissingAPIKeyError para provedores compatíveis com OpenAI
+  - Contar paradas de chamadas de ferramentas repetidas na telemetria anônima
+  - Contar uma execução do crewai cujo script do projeto falha
+  - Permitir que crewai[litellm] importe no Python 3.10; levantar joserfc, pyasn1, pypdf floors
+  - Tentar novamente uma resposta LLM vazia uma vez e levantar um erro tipado
+  - Pedir saída estruturada quando um agente que usa ferramenta termina
+  - Refatorar JSON que não corresponde ao modelo de saída em vez de falhar
+  - Avisar sobre chamadas de ferramentas repetidas e manter o trabalho ao parar
+  - Honrar context_window_size e avisar sobre a janela de fallback
+  - Levantar MissingAPIKeyError para uma chave de API ausente ou de espaço reservado
+  - Restaurar caminhos de importação removidos com avisos de depreciação
+  - Manter a exceção do provedor em erros de streaming do LiteLLM
+  - Informar ao modelo como se recuperar de um resultado diferido ilegível
+  - Oferecer um login e tentar novamente uma vez quando o AMP rejeitar o login salvo durante a avaliação
+  - Parar a repintura rica do painel ao vivo em logs redirecionados
+  - Carregar from_repository definido dentro da configuração de um agente
+  - Salvar callbacks não restauráveis como nulos em vez de quebrar a restauração
+  - Mostrar a razão do AMP em um 401 e permitir que o log de implantação do aplicativo de execução faça login novamente
+  - Aguardar toda a duração do código do dispositivo no login e sair 1 em caso de timeout
+  - Manter a identidade do módulo quando o crewai reconstrói namespaces de referência avançada
+  - Imprimir comandos de atualização em vez de reescrever projetos UV na atualização do crewai
+  - Retornar a postagem da última etapa do scaffold do fluxo
+  - Sair 1 quando um comando crewai+ precisar de um login
+  - Sair com orientações quando um fluxo conversacional Python não tiver terminal
+  - Manter JSON profundamente aninhado como texto na TUI de execução no Python 3.12
+  - Permitir que o executor JSON crew carregue contra um crewai-core mais antigo
+  - Relatar uso de token para chamadas de ferramenta LiteLLM e chamadas de saída estruturada
+
+  ### Mudanças Quebradoras
+  - Documentar a remoção do executor de agente 1.15.29 com notas de migração
+
+  ## Contribuidores
+
+  @Vidit-Ostwal, @alexmarchenko-crewai, @dependabot[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="27 out 2026">
+  ## v1.15.32
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.32)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir testes intermitentes que falharam
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.31
+
+  ## Contributors
+
+  @lorenzejay
+
+</Update>
+
+<Update label="27 out 2026">
+  ## v1.15.31
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.31)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Suporte à compactação de contexto de fluxo conversacional.
+
+  ### Correções de Bugs
+  - Atualizar dependências de auditoria vulneráveis.
+  - Parar de enviar 'stop' para modelos GPT-6 e mais novos.
+  - Executar a listagem de provedores fora do loop em `acleanup_provider_files`.
+  - Emitir `LLMGuardrailCompletedEvent` para um resultado de guardrail malformado.
+  - Nomear o token de integração renomeado quando estiver ausente.
+  - Corrigir a travessia de caminho em `output_file` via interpolação de template.
+  - Corrigir vulnerabilidades de desserialização, injeção de SQL e travessia de caminho.
+  - Restaurar os níveis de log configurados após a supressão.
+  - Descartar o estado de retomar ponto de verificação ao copiar uma equipe.
+  - Honrar uma sessão `aioboto3` injetada em `BedrockFileUploader`.
+  - Usar o corte de tarefa correto com templates personalizados.
+  - Proteger contra falhas de listagem de armazenamento na análise de fluxo de codificação.
+  - Impor a exclusividade de resultado/erro de guardrail com o validador de modelo.
+  - Filtrar categorias do lado do servidor na busca de borda Qdrant.
+
+  ### Documentação
+  - Usar HTTPS para o link CrewAI AMP na documentação do conceito CLI.
+  - Corrigir links âncora internos apontando para slugs em inglês em páginas traduzidas.
+  - Corrigir importações de `CrewBase` em exemplos de documentação.
+
+  ## Contributors
+
+  @Kiko0301, @Trenyx, @Velmet44, @Vidit-Ostwal, @Wilson0511, @gabemilani, @iris-clawd, @joaomdmoura, @lakers-abing, @leom1919, @lester076, @lorenzejay, @subhashpolisetti
+
+</Update>
+
+<Update label="23 out 2026">
+  ## v1.15.30
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.30)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir AGENTS.md para iniciar o processo de login durante a avaliação e parar após três rodadas.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.29.
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="23 out 2026">
+  ## v1.15.29
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.29)
+
+  ## O que Mudou
+
+  ### Mudanças Quebradoras
+  - Remover `CrewAgentExecutor`. `executor_class=CrewAgentExecutor` agora falha com "CrewAgentExecutor has been removed", e estes caminhos de importação deixaram de existir: `crewai.agents.crew_agent_executor`, `crewai.agents.CrewAgentExecutor`, o módulo `crewai.experimental.agent_executor`, `crewai.experimental.AgentExecutor` e `crewai.experimental.CrewAgentExecutorFlow`. Importe `AgentExecutor` de `crewai.agents`.
+  - Mudar a forma como todo agente é executado: resultados de ferramentas grandes demais são adiados para arquivos temporários, a conversa é resumida antes de estourar a janela de contexto, e a quinta chamada idêntica a uma ferramenta interrompe a tarefa. Veja [Atualizando Agentes de Versões Anteriores](/pt-BR/concepts/agents#atualizando-agentes-de-versões-anteriores) para cada mudança e como ela é controlada.
+
+  ### Funcionalidades
+  - Adicionar suporte para kwargs compatíveis com LiteLLM.
+  - Implementar busca de aplicativos de plataforma na CLI.
+  - Destacar a busca do seletor de ações na CLI.
+  - Rastrear rotas de conversa e respostas públicas no fluxo.
+  - Selecionar organização durante o login na CLI.
+  - Adicionar roteamento offline de jev e executor de avaliação de guardrail.
+  - Executar ações de aplicativos de integração diretamente com call: tool.
+  - Promover AgentExecutor para fora do status experimental.
+  - Adicionar integração de busca vetorial do Azure DocumentDB.
+  - Adicionar carregador de texto de notebook somente leitura e carregador jsonl da biblioteca padrão.
+  - Garantir que a avaliação do crewAI mantenha todos os dados da avaliação no projeto.
+  - Permitir que a avaliação do crewAI execute o próprio crew para o veredicto a partir de um comando.
+  - Permitir que a avaliação do crewAI exporte avaliações como arquivos.
+
+  ### Correções de Bugs
+  - Corrigir a derivação do token de integração da plataforma a partir do login.
+  - Resolver problemas de registro ao preservar logs JSON em erros de serialização.
+  - Ignorar metadados de habilidade em cache que não sejam UTF-8.
+  - Corrigir ações de ferramentas para respeitar políticas de falha e obter orçamentos de uso atualizados por kickoff.
+  - Impedir que memórias privadas sem uma fonte vazem para cada recordação.
+  - Corrigir a ordem de recuperação de registros de memória no LanceDBStorage.
+  - Restaurar a descrição da tarefa quando o replanejamento falhar.
+  - Impedir que agentes repitam a mesma chamada de ferramenta.
+  - Escapar valores de escopo e id nos filtros do LanceDB.
+
+  ### Documentação
+  - Atualizar links quebrados nos exemplos do crewAI e guias de observabilidade.
+  - Corrigir links mortos na documentação de ferramentas.
+
+  ### Refatoração
+  - Refatorar a compactação de contexto para ser uma capacidade do BaseLLM.
+
+  ## Contribuidores
+
+  @Akaliup, @Arxsher, @Copilot, @D41910, @LindseyZ1205, @RaycarlLei, @Rohitkanithi, @Sakura-798, @Vidit-Ostwal, @Wilson0511, @Winoren, @abdullahajaz14, @bballhaus, @gabemilani, @iris-clawd, @joaomdmoura, @leom1919, @lorenzejay, @marcreniel, @mattatcha, @reubenjrouse, @rohitkanithi, @sandeepsnairms, @stepchanges, @subhashpolisetti, @theCyberTech, @vatsalyd
+
+</Update>
+
 <Update label="14 out 2026">
   ## v1.15.28
 

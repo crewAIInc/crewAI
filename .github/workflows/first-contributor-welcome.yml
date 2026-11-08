@@ -15,6 +15,7 @@ permissions:
 jobs:
   welcome:
     # Match the first-time contributor definition used by ftc-require-issue.
+    # Confirm repository access because author_association can be stale.
     if: >
       github.event.pull_request.merged == true &&
       github.event.pull_request.user.type != 'Bot' &&
@@ -30,6 +31,19 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const marker = "<!-- crewai-first-merged-pr-welcome -->";
+
+            try {
+              const { data } = await github.request(
+                "GET /repos/{owner}/{repo}/collaborators/{username}/permission",
+                { owner, repo, username: pullRequest.user.login },
+              );
+              if (["admin", "write"].includes(data.permission)) {
+                core.info("Author has repository write access; skipping welcome comment.");
+                return;
+              }
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
 
             const existingComments = await github.paginate(
               github.rest.issues.listComments,

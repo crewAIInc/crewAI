@@ -49,15 +49,22 @@ security:
 paths:
   /inputs:
     get:
-      summary: Obter Inputs Requeridos
+      summary: Obter Inputs
       description: |
         **📋 Exemplo de Referência** - *Mostra o formato da requisição. Para testar com sua crew real, copie o cURL e substitua URL + token.*
 
-        Retorna a lista de parâmetros de entrada que sua crew espera.
+        Retorna os inputs que sua crew ou flow aceita. `inputs` lista todos os inputs que quem chama pode
+        enviar, e `required_inputs` lista aqueles sem os quais o `POST /kickoff` não executa. Inputs que não
+        estão em `required_inputs` são opcionais e usam seus valores padrão.
+
+        Em um flow, os inputs são os campos obrigatórios do estado mais os inputs opcionais que ele declara:
+        campos com `description` no estado Pydantic de um flow de código, e campos com valor padrão em um flow
+        declarativo. Campos de trabalho e de saída que o próprio flow escreve não aparecem. Um flow de código
+        cujo estado não descreve nenhum campo lista todos eles.
       operationId: getRequiredInputs
       responses:
         "200":
-          description: Inputs requeridos obtidos com sucesso
+          description: Inputs obtidos com sucesso
           content:
             application/json:
               schema:
@@ -67,8 +74,14 @@ paths:
                     type: array
                     items:
                       type: string
-                    description: Nomes dos parâmetros de entrada
+                    description: Todos os inputs que quem chama pode enviar, obrigatórios e opcionais
                     example: ["budget", "interests", "duration", "age"]
+                  required_inputs:
+                    type: array
+                    items:
+                      type: string
+                    description: Inputs sem os quais o `POST /kickoff` não executa; um subconjunto de `inputs`
+                    example: ["budget", "interests", "duration"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
