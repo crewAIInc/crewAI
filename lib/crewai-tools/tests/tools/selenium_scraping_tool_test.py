@@ -1,12 +1,45 @@
 import os
+import socket
 import tempfile
+from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from bs4 import BeautifulSoup
 from crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool import (
+    FixedSeleniumScrapingToolSchema,
     SeleniumScrapingTool,
+    SeleniumScrapingToolSchema,
 )
+from pydantic import ValidationError
 from selenium.webdriver.chrome.options import Options
+
+
+@pytest.fixture(autouse=True)
+def public_example_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resolve example.com to a public IP so URL validation is deterministic.
+
+    Mirrors the fixture in tests/rag/conftest.py: validate_url resolves DNS,
+    and the real example.com answer depends on the host resolver.
+    """
+    original_getaddrinfo = socket.getaddrinfo
+
+    def fake_getaddrinfo(
+        host: str, port: int, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        if host == "example.com":
+            return [
+                (
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("93.184.216.34", port),
+                )
+            ]
+        return original_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
 
 
 def mock_driver_with_html(html_content):
@@ -202,3 +235,67 @@ def test_close_ends_the_session(_mocked_chrome_driver):
     tool.close()
 
     assert driver.quit_calls == 1
+
+
+def test_schema_rejects_loopback_url():
+    with pytest.raises(ValidationError):
+        SeleniumScrapingToolSchema(
+            website_url="http://127.0.0.1/admin", css_element="div"
+        )
+
+
+def test_schema_rejects_cloud_metadata_url():
+    with pytest.raises(ValidationError):
+        SeleniumScrapingToolSchema(
+            website_url="http://169.254.169.254/latest/meta-data/",
+            css_element="div",
+        )
+
+
+@patch("selenium.webdriver.Chrome")
+def test_fixed_localhost_url_rejected_before_driver_creation(mocked_chrome):
+    """A private fixed URL must fail before any WebDriver is created."""
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        SeleniumScrapingTool(website_url="http://localhost/admin")
+
+    mocked_chrome.assert_not_called()
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_loopback_url_without_navigating(_mocked_chrome_driver):
+    mock_driver = MagicMock()
+    tool = initialize_tool_with(mock_driver)
+
+    result = tool._run(website_url="http://127.0.0.1/admin")
+
+    assert "Error scraping website" in result
+    assert "private/reserved IP" in result
+    mock_driver.get.assert_not_called()
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_cloud_metadata_url_without_navigating(_mocked_chrome_driver):
+    mock_driver = MagicMock()
+    tool = initialize_tool_with(mock_driver)
+
+    result = tool._run(website_url="http://169.254.169.254/latest/meta-data/")
+
+    assert "Error scraping website" in result
+    assert "private/reserved IP" in result
+    mock_driver.get.assert_not_called()
+
+
+@patch("selenium.webdriver.Chrome")
+def test_fixed_public_url_is_accepted_and_navigated(_mocked_chrome_driver):
+    html_content = "<html><body><div>fixed url content</div></body></html>"
+    mock_driver = mock_driver_with_html(html_content)
+    tool = SeleniumScrapingTool(
+        website_url="https://example.com", driver=mock_driver, wait_time=0
+    )
+
+    assert tool.args_schema is FixedSeleniumScrapingToolSchema
+
+    result = tool._run()
+
+    assert "fixed url content" in result
+    mock_driver.get.assert_called_once_with("https://example.com")
