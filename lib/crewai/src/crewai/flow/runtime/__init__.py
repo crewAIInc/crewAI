@@ -1584,14 +1584,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._method_outputs.append(method_output_entry)
 
         try:
+            # A resumed routed feedback method has two triggers, just like the
+            # immediate kickoff path: its method name and the collapsed outcome.
+            # The method trigger is required for direct listeners and for
+            # ``and_`` joins that combine the method with the route outcome.
+            await self._execute_listeners(
+                FlowMethodName(context.method_name),
+                result,
+            )
             if emit and collapsed_outcome:
                 await self._execute_listeners(
                     FlowMethodName(collapsed_outcome),
-                    result,
-                )
-            else:
-                await self._execute_listeners(
-                    FlowMethodName(context.method_name),
                     result,
                 )
         except Exception as e:
