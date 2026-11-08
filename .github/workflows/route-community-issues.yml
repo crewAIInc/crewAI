@@ -1,0 +1,121 @@
+name: Route community-tool issues
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: route-community-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  route:
+    if: >
+      github.event.label.name == 'crewai-community' &&
+      github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close the issue and linked pull requests
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue = context.payload.issue;
+            const marker = "<!-- crewai-community-routing -->";
+            const message = [
+              marker,
+              "",
+              "Thanks for the contribution! This request is a better fit for the [CrewAI Community Tools repository](https://github.com/crewAIInc/crewai-community-tools).",
+              "",
+              "Please open an issue there and submit the corresponding pull request there as well.",
+            ].join("\n");
+
+            const timeline = await github.paginate(
+              github.rest.issues.listEventsForTimeline,
+              { owner, repo, issue_number: issue.number, per_page: 100 },
+            );
+            const pullRequestNumbers = new Set(
+              timeline
+                .filter(
+                  (event) =>
+                    event.event === "cross-referenced" &&
+                    event.source?.issue?.pull_request &&
+                    event.source.issue.repository_url ===
+                      `https://api.github.com/repos/${owner}/${repo}`,
+                )
+                .map((event) => event.source.issue.number),
+            );
+
+            let cursor = null;
+            do {
+              const result = await github.graphql(
+                `query($owner: String!, $repo: String!, $issueNumber: Int!, $cursor: String) {
+                  repository(owner: $owner, name: $repo) {
+                    issue(number: $issueNumber) {
+                      closedByPullRequestsReferences(first: 100, after: $cursor) {
+                        nodes { number }
+                        pageInfo { hasNextPage endCursor }
+                      }
+                    }
+                  }
+                }`,
+                { owner, repo, issueNumber: issue.number, cursor },
+              );
+              const references =
+                result.repository.issue.closedByPullRequestsReferences;
+              references.nodes.forEach((pull) =>
+                pullRequestNumbers.add(pull.number),
+              );
+              cursor = references.pageInfo.hasNextPage
+                ? references.pageInfo.endCursor
+                : null;
+            } while (cursor);
+
+            for (const pull_number of pullRequestNumbers) {
+              const { data: pull } = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number,
+              });
+              if (pull.state === "open") {
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number,
+                  state: "closed",
+                });
+              }
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number: issue.number, per_page: 100 },
+            );
+            if (
+              !comments.some(
+                (comment) =>
+                  comment.user?.login === "github-actions[bot]" &&
+                  comment.body?.includes(marker),
+              )
+            ) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: message,
+              });
+            }
+
+            if (issue.state === "open") {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: "closed",
+              });
+            }
