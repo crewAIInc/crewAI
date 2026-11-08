@@ -1,0 +1,78 @@
+---
+title: sebbi Receipts
+description: Tamper-evident receipts for every CrewAI agent step and task, checkable by anyone
+icon: receipt
+mode: "wide"
+---
+
+# sebbi receipts for CrewAI
+
+[sebbi](https://sebbi.pro/receipts) gives every step your crew takes a sealed receipt with a public link anyone can check: your customer, your auditor, your insurer or a regulator. Receipts are Merkle-batched, sealed into an append-only chain, witnessed by independent chains and timestamped into Bitcoin, so a record of what an agent did cannot be quietly edited afterwards.
+
+The sebbi client hashes inputs and outputs (SHA-256) inside your process and sends only the fingerprints, a short label and a timestamp. The client source is public: [github.com/justrightdecorators-ops/sebbi-sdk](https://github.com/justrightdecorators-ops/sebbi-sdk). Sealing runs in a background thread and never raises into your crew.
+
+## Installation
+
+Pin the release you have reviewed:
+
+```bash
+echo "sebbi==1.2.1 --hash=sha256:dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f" > requirements-sebbi.txt
+pip install --require-hashes -r requirements-sebbi.txt
+```
+
+`--require-hashes` makes pip install exactly `sebbi-1.2.1-py3-none-any.whl` (sha256 `dc72eae50155e7e1d36a486c4a1b30b73075dc187e5b4400106a25cf6a0a443f`) and nothing else. That file was built and uploaded by the public workflow [`release.yml`](https://github.com/justrightdecorators-ops/sebbi-sdk/blob/d735bb292bee309546a64d5351a711a13f26156a/.github/workflows/release.yml) at commit [`d735bb2`](https://github.com/justrightdecorators-ops/sebbi-sdk/tree/d735bb292bee309546a64d5351a711a13f26156a) of the public sebbi-sdk repository, using PyPI Trusted Publishing; its PyPI publish attestation names that repository, workflow and commit. The client has no dependencies.
+
+No account is needed to start (1,000 receipts a day). Set `SEBBI_API_KEY` from [sebbi.pro/connect](https://sebbi.pro/connect) for full volume.
+
+## Usage
+
+```python
+from crewai import Agent, Crew, Task
+from sebbi.integrations.crewai import step_callback, task_callback
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    step_callback=step_callback,   # a receipt for every agent step
+    task_callback=task_callback,   # a receipt for every finished task
+)
+
+result = crew.kickoff()
+```
+
+Get the link for the latest receipt:
+
+```python
+import sebbi
+print(sebbi.last().url)   # https://sebbi.pro/r/...
+```
+
+## Sealing a specific action
+
+Wrap any tool function your agents call:
+
+```python
+import sebbi
+
+@sebbi.receipt("issue-refund")
+def issue_refund(order_id: str, amount: float) -> dict:
+    ...
+```
+
+## Reversals
+
+If an action is undone (a refund, a cancelled payment), seal the reversal. The original receipt stays on record and is shown as reversed, linked to the new receipt and the reason:
+
+```python
+sebbi.reverse(receipt, "Customer cancelled; refund returned")
+```
+
+## Checking a receipt
+
+Open the receipt link, or call `GET https://sebbi.pro/v1/receipts/<id>`. Each check re-runs the Merkle inclusion proof and confirms the root is sealed in the chain.
+
+## Resources
+
+- [sebbi receipts](https://sebbi.pro/receipts)
+- [Client source code](https://github.com/justrightdecorators-ops/sebbi-sdk)
+- [PyPI package](https://pypi.org/project/sebbi/)
