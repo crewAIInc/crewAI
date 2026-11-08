@@ -8,6 +8,7 @@ from crewai.rag.chromadb.utils import (
     _is_ipv4_pattern,
     _prepare_documents_for_chromadb,
     _sanitize_collection_name,
+    _sanitize_metadata_for_chromadb,
 )
 from crewai.rag.types import BaseRecord
 
@@ -158,6 +159,28 @@ class TestPrepareDocumentsForChromaDB:
         result = _prepare_documents_for_chromadb(documents)
 
         assert result.metadatas == [{}, {}]
+
+    def test_prepare_documents_sanitizes_none_metadata(self) -> None:
+        """ChromaDB metadata must not contain None values."""
+        documents: list[BaseRecord] = [
+            {
+                "content": "Test",
+                "metadata": {
+                    "title": "Video",
+                    "description": None,
+                    "tags": ["a", "b"],
+                },
+            }
+        ]
+
+        result = _prepare_documents_for_chromadb(documents)
+
+        assert result.metadatas == [{"title": "Video", "tags": "a | b"}]
+
+    def test_sanitize_metadata_for_chromadb_drops_none(self) -> None:
+        assert _sanitize_metadata_for_chromadb({"ok": 1, "missing": None}) == {
+            "ok": 1
+        }
 
     def test_prepare_documents_hash_consistency(self) -> None:
         """Test that identical content produces identical hashes."""

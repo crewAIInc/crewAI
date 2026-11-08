@@ -29,6 +29,23 @@ from crewai.rag.chromadb.types import (
 from crewai.rag.types import BaseRecord, SearchResult
 
 
+def _sanitize_metadata_for_chromadb(
+    metadata: Mapping[str, object],
+) -> dict[str, str | int | float | bool]:
+    """Drop or stringify metadata values unsupported by ChromaDB."""
+    sanitized: dict[str, str | int | float | bool] = {}
+    for key, value in metadata.items():
+        if value is None:
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            sanitized[key] = value
+        elif isinstance(value, (list, tuple)):
+            sanitized[key] = " | ".join(str(item) for item in value)
+        else:
+            sanitized[key] = str(value)
+    return sanitized
+
+
 def _is_sync_client(client: ChromaDBClientType) -> TypeGuard[ClientAPI]:
     """Type guard to check if the client is a synchronous ClientAPI.
 
@@ -90,6 +107,13 @@ def _prepare_documents_for_chromadb(
                     processed_metadata = metadata[0] if metadata and metadata[0] else {}
                 else:
                     processed_metadata = metadata
+            else:
+                processed_metadata = {}
+
+            if isinstance(processed_metadata, Mapping):
+                processed_metadata = _sanitize_metadata_for_chromadb(
+                    processed_metadata
+                )
             else:
                 processed_metadata = {}
 
