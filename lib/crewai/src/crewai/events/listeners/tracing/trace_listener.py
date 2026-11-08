@@ -101,6 +101,7 @@ from crewai.events.types.memory_events import (
     MemoryQueryFailedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -526,10 +527,25 @@ class TraceCollectionListener(BaseEventListener):
         def on_memory_save_failed(source: Any, event: MemorySaveFailedEvent) -> None:
             self._handle_action_event("memory_save_failed", source, event)
             if self.formatter and self.memory_save_in_progress:
+                # The listener is a process-wide singleton: leaving the flag set
+                # here would suppress the "started" display of every later save.
+                self.memory_save_in_progress = False
                 self.formatter.handle_memory_save_failed(
                     event.error,
                     event.source_type or "memory",
                 )
+
+        @self._on(event_bus, MemoryRetrievalFailedEvent)
+        def on_memory_retrieval_failed(
+            source: Any, event: MemoryRetrievalFailedEvent
+        ) -> None:
+            self._handle_action_event("memory_retrieval_failed", source, event)
+            if self.formatter and self.memory_retrieval_in_progress:
+                # Mirrors the failed-save fix: without a handler the flag stuck
+                # after the first failed retrieval and swallowed every later
+                # retrieval's display.
+                self.memory_retrieval_in_progress = False
+                self.formatter.handle_memory_retrieval_failed(event.error)
 
         @self._on(event_bus, MemoryRetrievalStartedEvent)
         def on_memory_retrieval_started(

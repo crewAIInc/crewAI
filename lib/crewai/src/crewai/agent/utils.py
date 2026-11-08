@@ -191,6 +191,18 @@ def handle_knowledge_retrieval(
                     retrieved_knowledge=_combine_knowledge_context(agent),
                 ),
             )
+        else:
+            # A rewrite that yields no query still started a retrieval; emit
+            # the completed event so listeners release their in-progress state.
+            crewai_event_bus.emit(
+                agent,
+                event=KnowledgeRetrievalCompletedEvent(
+                    query="",
+                    from_task=task,
+                    from_agent=agent,
+                    retrieved_knowledge="",
+                ),
+            )
     except Exception as e:
         crewai_event_bus.emit(
             agent,
@@ -388,6 +400,18 @@ async def ahandle_knowledge_retrieval(
                     from_task=task,
                     from_agent=agent,
                     retrieved_knowledge=_combine_knowledge_context(agent),
+                ),
+            )
+        else:
+            # A rewrite that yields no query still started a retrieval; emit
+            # the completed event so listeners release their in-progress state.
+            crewai_event_bus.emit(
+                agent,
+                event=KnowledgeRetrievalCompletedEvent(
+                    query="",
+                    from_task=task,
+                    from_agent=agent,
+                    retrieved_knowledge="",
                 ),
             )
     except Exception as e:
