@@ -153,3 +153,12 @@ def test_namespace_rebuild_still_resolves_forward_refs():
 
     assert restored.root[0].agents[0].role == "r"
     assert restored.root[0].tasks[0].description == "d"
+
+
+def test_missing_api_key_error_still_imports_from_crewai_llm():
+    """`crewai.llm` re-exported it in released 1.15.34-1.15.37; the class it
+    names must stay the one every provider raises."""
+    from crewai.llm import MissingAPIKeyError as from_llm
+    from crewai.llms.base_llm import MissingAPIKeyError
+
+    assert from_llm is MissingAPIKeyError
