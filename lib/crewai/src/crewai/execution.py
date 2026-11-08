@@ -121,14 +121,33 @@ def begin_execution(
     return token
 
 
+def _evaluation_trusts_this_amp() -> bool:
+    """For a run `crewai eval` started: may the saved login go to the AMP this
+    run would trace to? Any other run is not this rule's to decide (True)."""
+    from crewai_core.eval_handshake import (
+        evaluation_trusts_amp,
+        run_awaited_by_evaluation,
+    )
+    from crewai_core.plus_api import PlusAPI
+
+    if not run_awaited_by_evaluation():
+        return True
+    try:
+        base_url = PlusAPI(api_key=None).base_url
+    except Exception:
+        return False
+    return evaluation_trusts_amp(base_url)
+
+
 def _tracing_disabled(tracing: bool | None) -> bool:
-    return (
-        os.getenv("OTEL_SDK_DISABLED", "").lower() == "true"
-        or tracing is False
-        or (
-            tracing is None
-            and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
-        )
+    """Tracing turned off for this run: `tracing=False`, or
+    `CREWAI_TRACING_ENABLED` false when the run says nothing.
+
+    `OTEL_SDK_DISABLED` is not one of them: it is the telemetry opt-out, a
+    separate setting, and tracing has its own."""
+    return tracing is False or (
+        tracing is None
+        and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
     )
 
 
@@ -156,6 +175,14 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     # The credential and its source are resolved ONCE: the pair that is sent is
     # the pair a refusal names, whatever the environment says afterwards.
     resolved = resolve_tracing_credential() if enabled else None
+    if resolved is not None and not _evaluation_trusts_this_amp():
+        # `crewai eval` started this run and decided, before the project's
+        # `.env` was loaded, which AMP may receive the saved login. One that
+        # `.env` chose instead gets an anonymous grant — never the login.
+        logger.info(
+            "Tracing this run anonymously: its AMP is not one crewai eval trusted"
+        )
+        resolved = None
     if resolved is None:
         from crewai.telemetry.tracing.ephemeral import ephemeral_tracing
 

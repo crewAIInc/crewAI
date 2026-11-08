@@ -1,0 +1,44 @@
+---
+title: Reasoning
+description: "에이전트 reasoning은 이제 에이전트 계획의 일부입니다. reasoning=True에서 planning_config로 옮기는 방법을 알아보세요."
+icon: brain
+mode: "wide"
+---
+
+## 개요
+
+에이전트 reasoning은 에이전트가 행동하기 전에 작업을 되돌아보고 계획을 작성하게 합니다. 이제 이 기능은 에이전트 계획의 일부이며, 에이전트 계획은 계획을 단계별로 실행하고, 각 단계를 확인하고, 단계가 실패하면 재계획할 수 있습니다.
+
+`reasoning`과 `max_reasoning_attempts` 파라미터는 여전히 동작하지만 더 이상 권장되지 않습니다. `reasoning=True`는 `DeprecationWarning`을 발생시키지만 Python의 기본 경고 필터에서는 표시되지 않으며, `max_reasoning_attempts`는 `reasoning=True`와 함께 쓸 때만 효과가 있습니다. 대신 `planning_config`로 계획을 설정하세요. 전체 가이드는 [계획](/edge/ko/concepts/planning)을 참고하세요.
+
+## `reasoning=True`에서 마이그레이션하기
+
+`reasoning=True`를 `planning_config=PlanningConfig()`로 바꾸고, `max_reasoning_attempts`는 `PlanningConfig(max_attempts=...)`로 옮기세요:
+
+```python
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    planning_config=PlanningConfig(max_attempts=3),
+)
+```
+
+| 더 이상 권장되지 않음 | 대체 |
+| --- | --- |
+| `reasoning=True` | `planning_config=PlanningConfig()` |
+| `reasoning=True, max_reasoning_attempts=3` | `planning_config=PlanningConfig(max_attempts=3)` |
+
+이 대체 설정은 동작이 같습니다: 중간 추론 노력 수준을 사용하고, 계획이 준비되거나 `max_attempts`에 도달할 때까지 개선합니다. `max_attempts`가 없으면 계획기가 계획을 준비 완료로 표시할 때까지 계속 개선하므로, 제한을 설정하는 것을 권장합니다.
+
+<Warning>
+`planning=True`는 `reasoning=True`와 같지 않습니다. `PlanningConfig(reasoning_effort="low", max_attempts=1)`을 사용합니다: 계획 시도는 한 번이며, 각 단계 이후 LLM 검토를 하지 않습니다. 더 저렴한 계획이 필요할 때 사용하고, 그대로 대체하는 용도로 사용하지 마세요.
+</Warning>
+
+## 동작 방식
+
+계획은 에이전트의 실행 상태에 보관되며 작업 설명에 추가되지 않습니다. 계획의 각 단계는 별도의 todo 항목으로 실행되고, 에이전트는 다음으로 넘어가기 전에 결과를 확인합니다. 계획이 실패하면 에이전트는 계획 없이 작업을 실행합니다.
+
+추론 노력 수준, 단계 제한, 별도의 계획 LLM, 사용자 지정 프롬프트, `Agent.kickoff()`에서의 계획은 [계획](/edge/ko/concepts/planning)을 참고하세요.

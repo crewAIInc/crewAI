@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai_core.platform_apps import PlatformAppsUnavailableError
 from crewai_core.plus_api import PlusAPI
 import requests
 
@@ -132,9 +133,12 @@ class ClipperClient:
 
     _RESOURCE = "/clipper/v1"
 
+    def __init__(self, *, base_url: str | None = None) -> None:
+        self._base_url = base_url
+
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         base_url = f"{plus_api.base_url.rstrip('/')}{self._RESOURCE}"
         headers = self._headers()
         tool_infos: list[ToolInfo] = []
@@ -156,6 +160,8 @@ class ClipperClient:
                 timeout=30,
                 verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
             )
+            if _clipper_says_unavailable(response):
+                raise PlatformAppsUnavailableError([selector.app])
             response.raise_for_status()
             data = response.json()["data"]
             actions = data if selector.action is None else [data]
@@ -177,7 +183,7 @@ class ClipperClient:
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         payload: dict[str, Any] = {"arguments": arguments}
         if tool.connection_id is not None:
             payload["connection_id"] = str(tool.connection_id)
@@ -230,9 +236,12 @@ class ClipperClient:
 class LegacyClient:
     """Use the existing CrewAI platform integrations API."""
 
+    def __init__(self, *, base_url: str | None = None) -> None:
+        self._base_url = base_url
+
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         apps = [
             f"{selector.app}/{selector.action}"
             if selector.action is not None
@@ -246,6 +255,8 @@ class LegacyClient:
             params={"apps": ",".join(apps)},
             verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
         )
+        if missing_apps := _missing_apps(response):
+            raise PlatformAppsUnavailableError(missing_apps)
         response.raise_for_status()
 
         tool_infos: list[ToolInfo] = []
@@ -279,7 +290,7 @@ class LegacyClient:
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        plus_api = PlusAPI()
+        plus_api = PlusAPI(base_url=self._base_url)
         response = requests.post(
             url=(
                 f"{plus_api.base_url.rstrip('/')}{plus_api.INTEGRATIONS_RESOURCE}"
@@ -314,8 +325,45 @@ class LegacyClient:
         return ToolExecutionSuccess(output=data)
 
 
-def client_for_selector(selector: ApplicationSelector) -> IntegrationsClient:
+# Clipper's own error codes, by status: no active connection to the app, and an
+# app or action it does not know. Another server's 404 or 409 (a proxy, a wrong
+# base URL) keeps its own error.
+_CLIPPER_UNAVAILABLE_CODES = {409: "conflict", 404: "clipper_not_found"}
+
+
+def _clipper_says_unavailable(response: requests.Response) -> bool:
+    """Whether Clipper answered that the selected app is not available."""
+    code = _CLIPPER_UNAVAILABLE_CODES.get(response.status_code)
+    if code is None:
+        return False
+    try:
+        body = response.json()
+    except requests.exceptions.JSONDecodeError:
+        return False
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if not isinstance(errors, list) or not errors or not isinstance(errors[0], dict):
+        return False
+    return bool(errors[0].get("code") == code)
+
+
+def _missing_apps(response: requests.Response) -> list[str]:
+    """The apps a 422 from AMP's actions endpoint names as missing."""
+    if response.status_code != 422:
+        return []
+    try:
+        body = response.json()
+    except requests.exceptions.JSONDecodeError:
+        return []
+    missing = body.get("missing") if isinstance(body, dict) else None
+    if not isinstance(missing, list):
+        return []
+    return [app for app in missing if isinstance(app, str)]
+
+
+def client_for_selector(
+    selector: ApplicationSelector, *, base_url: str | None = None
+) -> IntegrationsClient:
     """Select the integrations client for an application selector."""
     if selector.connection_id is not None:
-        return ClipperClient()
-    return LegacyClient()
+        return ClipperClient(base_url=base_url)
+    return LegacyClient(base_url=base_url)

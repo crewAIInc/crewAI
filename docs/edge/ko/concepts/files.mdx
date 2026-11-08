@@ -20,6 +20,10 @@ uv add 'crewai[file-processing]'
 파일 처리 API는 현재 얼리 액세스 단계입니다.
 </Note>
 
+<Tip>
+에이전트가 URL로 받은 스프레드시트를 다루게 하려면 [스프레드시트](/ko/concepts/agents)를 참고하세요.
+</Tip>
+
 ## 파일 타입
 
 CrewAI는 5가지 특정 파일 타입과 타입을 자동 감지하는 일반 `File` 클래스를 지원합니다:
@@ -243,8 +247,8 @@ pdf = PDFFile(source="large.pdf", mode="chunk")
 - **비디오**: 최대 2 GB, 최대 1시간
 
 ### AWS Bedrock
-- **이미지**: 최대 4.5 MB, 최대 8000x8000 픽셀
-- **PDF**: 최대 3.75 MB, 최대 100 페이지
+- **이미지**: 최대 3.75 MB, 최대 8000x8000 픽셀
+- **PDF**: 최대 4.5 MB, 최대 100 페이지
 
 ## 프롬프트에서 파일 참조하기
 

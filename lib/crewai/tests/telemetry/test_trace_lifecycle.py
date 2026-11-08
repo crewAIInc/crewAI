@@ -32,7 +32,7 @@ import pytest
 def tracing_environment(monkeypatch):
     monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
     monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
-    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     monkeypatch.delenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", raising=False)
     monkeypatch.delenv("CREWAI_EPHEMERAL_TRACE_MAX_BYTES", raising=False)
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
@@ -305,7 +305,8 @@ def test_first_time_uses_local_session_even_with_saved_login(
     assert get_trace_session() is None and get_execution_uuid() is None
 
 
-@pytest.mark.parametrize("disabled", ["flag", "env", "sdk"])
+# `OTEL_SDK_DISABLED` is not a tracing setting: it is the telemetry opt-out.
+@pytest.mark.parametrize("disabled", ["flag", "env"])
 def test_explicit_disable_prevents_first_time_collection(monkeypatch, disabled):
     monkeypatch.setattr(
         "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
@@ -316,8 +317,6 @@ def test_explicit_disable_prevents_first_time_collection(monkeypatch, disabled):
     monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
     if disabled == "env":
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
-    if disabled == "sdk":
-        monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
     flow = ExampleFlow(tracing=False if disabled == "flag" else None)
     assert flow.kickoff() == "hello world"
     grant.assert_not_called()
@@ -437,3 +436,286 @@ def test_a_blank_credential_runs_untraced_too(monkeypatch, caplog):
     assert get_trace_session() is None and get_execution_uuid() is None
     assert any("not traced" in record.getMessage() for record in caplog.records)
 
+
+
+@pytest.mark.parametrize("streamed", [False, True])
+@pytest.mark.parametrize("authenticated", [False, True])
+def test_conversation_turns_finish_and_resume_with_stable_identity(
+    in_memory_grant_collectors, monkeypatch, tmp_path, streamed, authenticated
+):
+    from crewai.flow.conversational import ConversationConfig, ConversationState
+    from crewai.flow.persistence import persist
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    issued, recorders = in_memory_grant_collectors
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    store = SQLiteFlowPersistence(str(tmp_path / "conversation.db"))
+
+    @persist(store)
+    @ConversationConfig(trace_scope="turn")
+    class Conversation(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "reply"
+
+        @listen("reply")
+        def answer(self):
+            return f"Remembered {len(self.state.messages)} messages"
+
+    sid = str(uuid4())
+    first = Conversation(tracing=True)
+    with trace_consent(lambda: True):
+        if streamed:
+            list(first.stream_turn("first", session_id=sid).events)
+        else:
+            first.handle_turn("first", session_id=sid)
+    assert first._deferred_execution_trace is None
+    assert get_execution_uuid() is None and get_trace_session() is None
+    assert len(issued) == 1  # Finished and exported before another turn arrives.
+
+    restored = Conversation(
+        initial_state=ConversationState.model_validate(store.load_state(sid)),
+        tracing=True,
+    )
+    assert len(restored.state.messages) == 2
+    with trace_consent(lambda: True):
+        if streamed:
+            list(restored.stream_turn("second", session_id=sid).events)
+        else:
+            restored.handle_turn("second", session_id=sid)
+    assert restored.state.id == sid
+    assert len(restored.state.messages) == 4
+    assert restored._deferred_execution_trace is None
+    assert len(issued) == 2
+    assert issued[0].execution_uuid != issued[1].execution_uuid
+    traces = []
+    for grant in issued:
+        spans = recorders[grant.execution_uuid].get_finished_spans()
+        roots = [span for span in spans if span.name == "execute flow"]
+        assert len(roots) == 1
+        assert roots[0].status.status_code == trace.StatusCode.OK
+        assert all(span.attributes["gen_ai.conversation.id"] == sid for span in spans)
+        assert all(span.end_time is not None for span in spans)
+        traces.append(roots[0].context.trace_id)
+    assert traces[0] != traces[1]
+    restored.finalize_session_traces()
+    restored.finalize_session_traces()
+    assert len(issued) == 2  # Existing cleanup remains safe in turn scope.
+
+
+@pytest.mark.parametrize("streamed", [False, True])
+@pytest.mark.parametrize("authenticated", [False, True])
+def test_conversation_hitl_pause_is_not_a_completed_turn(
+    in_memory_grant_collectors, monkeypatch, tmp_path, streamed, authenticated
+):
+    from crewai.events.types.flow_events import (
+        ConversationTurnCompletedEvent,
+        ConversationTurnFailedEvent,
+        FlowFinishedEvent,
+        FlowPausedEvent,
+    )
+    from crewai.flow import human_feedback
+    from crewai.flow.async_feedback import HumanFeedbackPending
+    from crewai.flow.conversational import ConversationConfig, ConversationState
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    issued, recorders = in_memory_grant_collectors
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    class PausingProvider:
+        def request_feedback(self, context, flow):
+            raise HumanFeedbackPending(context)
+
+    @ConversationConfig(trace_scope="turn")
+    class Conversation(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "review"
+
+        @listen("review")
+        @human_feedback(message="Approve draft?", provider=PausingProvider())
+        def draft(self):
+            return "draft"
+
+        @listen(draft)
+        def finish(self, feedback):
+            return feedback.feedback
+
+    events = []
+    flow = Conversation(
+        tracing=True,
+        persistence=SQLiteFlowPersistence(str(tmp_path / "pending.db")),
+    )
+    with crewai_event_bus.scoped_handlers(), trace_consent(lambda: True):
+        for event_type in (
+            ConversationTurnCompletedEvent,
+            ConversationTurnFailedEvent,
+            FlowFinishedEvent,
+            FlowPausedEvent,
+        ):
+            crewai_event_bus.on(event_type)(
+                lambda source, event: events.append(event.type)
+            )
+        if streamed:
+            stream = flow.stream_turn("Write a draft")
+            list(stream.events)
+            pending = stream.result
+        else:
+            pending = flow.handle_turn("Write a draft")
+        crewai_event_bus.flush()
+        assert isinstance(pending, HumanFeedbackPending)
+        assert events == ["flow_paused"]
+        execution_uuid = pending.context.execution_uuid
+        paused_spans = recorders[execution_uuid].get_finished_spans()
+        paused_root = next(span for span in paused_spans if span.parent is None)
+        assert paused_root.attributes["crewai.event_name"] == "flow_paused"
+        assert flow._pending_user_message is None
+        assert get_execution_uuid() is None and get_trace_session() is None
+
+        # Resume from persisted feedback, as a different worker/process would.
+        resumed = Conversation.from_pending(
+            flow.flow_id, persistence=flow.persistence, tracing=True
+        )
+        assert resumed.resume("Approved") == "Approved"
+        crewai_event_bus.flush()
+
+    assert events == ["flow_paused", "flow_finished"]
+    assert [grant.execution_uuid for grant in issued] == [execution_uuid] * 2
+    resumed_spans = recorders[execution_uuid].get_finished_spans()
+    resumed_root = next(span for span in resumed_spans if span.parent is None)
+    assert resumed_root.attributes["crewai.event_name"] == "flow_finished"
+    (link,) = resumed_root.links
+    assert link.context.trace_id == paused_root.context.trace_id
+    assert link.context.span_id == paused_root.context.span_id
+    assert link.attributes["crewai.link.type"] == "follows_from"
+    for spans in (paused_spans, resumed_spans):
+        span_ids = {span.context.span_id for span in spans}
+        assert all(
+            span.parent is None or span.parent.span_id in span_ids for span in spans
+        )
+        assert all(span.status.status_code == trace.StatusCode.OK for span in spans)
+        assert all(
+            span.attributes["gen_ai.conversation.id"] == flow.flow_id for span in spans
+        )
+    assert get_execution_uuid() is None and get_trace_session() is None
+
+
+@pytest.mark.parametrize("streamed", [False, True])
+def test_failed_conversation_turn_closes_without_poisoning_next_turn(
+    in_memory_grant_collectors, monkeypatch, streamed
+):
+    from crewai.flow.conversational import ConversationConfig, ConversationState
+
+    issued, recorders = in_memory_grant_collectors
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    @ConversationConfig(trace_scope="turn")
+    class Conversation(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "reply"
+
+        @listen("reply")
+        def answer(self):
+            if self.state.current_user_message == "fail":
+                raise ValueError("failed turn")
+            return "recovered"
+
+    flow = Conversation(tracing=True)
+    with pytest.raises(ValueError, match="failed turn"):
+        if streamed:
+            list(flow.stream_turn("fail").events)
+        else:
+            flow.handle_turn("fail")
+    assert flow._deferred_execution_trace is None
+    assert get_execution_uuid() is None and get_trace_session() is None
+    if streamed:
+        list(flow.stream_turn("retry").events)
+    else:
+        assert flow.handle_turn("retry") == "recovered"
+    assert len(issued) == 2
+    roots = [
+        next(span for span in recorders[grant.execution_uuid].get_finished_spans()
+             if span.name == "execute flow")
+        for grant in issued
+    ]
+    assert [span.status.status_code for span in roots] == [
+        trace.StatusCode.ERROR, trace.StatusCode.OK
+    ]
+    assert "orphaned" not in (roots[0].status.description or "")
+    assert all(span.attributes["gen_ai.conversation.id"] == flow.state.id for span in roots)
+
+
+@pytest.mark.parametrize("public_id", [None, "durable-public-conversation"])
+def test_host_supplied_conversation_identity_survives_turn_execution_id(public_id):
+    from crewai.flow.conversational import ConversationConfig, ConversationState
+    from crewai.telemetry.tracing.session import telemetry_session
+
+    @ConversationConfig(trace_scope="turn")
+    class HostedConversation(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "reply"
+
+        @listen("reply")
+        def answer(self):
+            return Agent(role="tester", goal="greet", backstory="tester", llm=LocalLLM()).kickoff("hello").raw
+
+    recorder = InMemorySpanExporter()
+    kickoff = str(uuid4())
+    with telemetry_session(
+        kickoff, "hosted-chat", [recorder],
+        attributes={"gen_ai.conversation.id": public_id} if public_id else None,
+    ):
+        HostedConversation().handle_turn("hello", session_id=kickoff)
+    spans = recorder.get_finished_spans()
+    assert any(span.name == "call llm" for span in spans)
+    assert all(span.attributes["gen_ai.conversation.id"] == (public_id or kickoff)
+               for span in spans)
+    assert all(span.attributes["crewai.execution_uuid"] == kickoff for span in spans)
+    assert all(span.status.status_code == trace.StatusCode.OK for span in spans)
+
+
+@pytest.mark.parametrize("legacy_defer", [None, True, False])
+def test_legacy_session_finalization_preserves_lifecycle_and_conversation_identity(
+    in_memory_grant_collectors, monkeypatch, legacy_defer
+):
+    from crewai.flow.conversational import ConversationConfig, ConversationState
+
+    issued, recorders = in_memory_grant_collectors
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    config = {} if legacy_defer is None else {"defer_trace_finalization": legacy_defer}
+
+    @ConversationConfig(**config)
+    class LegacyConversation(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "reply"
+
+        @listen("reply")
+        def answer(self):
+            return Agent(
+                role="tester", goal="greet", backstory="tester", llm=LocalLLM()
+            ).kickoff("hello").raw
+
+    flow = LegacyConversation(tracing=True)
+    flow.handle_turn("first")
+    flow.handle_turn("second")
+    deferred = legacy_defer is not False
+    assert len(issued) == (1 if deferred else 2)
+    if deferred:
+        assert flow._deferred_execution_trace is not None
+        assert not flow._deferred_execution_trace.closed
+    flow.finalize_session_traces()
+    exported = [
+        span for recorder in recorders.values() for span in recorder.get_finished_spans()
+    ]
+    roots = [span for span in exported if span.name == "execute flow" and span.parent is None]
+    assert len(roots) == (1 if deferred else 2)
+    assert all(span.status.status_code == trace.StatusCode.OK for span in roots)
+    assert all(span.attributes["gen_ai.conversation.id"] == flow.state.id
+               for span in roots)
+    llm_spans = [span for span in exported if span.name == "call llm"]
+    assert llm_spans
+    assert all(span.attributes["gen_ai.conversation.id"] == flow.state.id
+               for span in llm_spans)
+    before = len(exported)
+    flow.finalize_session_traces()
+    assert sum(len(recorder.get_finished_spans()) for recorder in recorders.values()) == before

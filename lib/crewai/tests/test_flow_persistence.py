@@ -619,3 +619,22 @@ def test_save_pending_feedback_complex_types(tmp_path):
     assert loaded_state["session_id"] == str(uid)
     assert set(loaded_state["categories"]) == {"ai", "agents"}
 
+
+def test_persist_from_flow_flow_path_saves_state(tmp_path):
+    """The import path AGENTS.md taught for 1.10.0-1.15.28 persists state."""
+    from crewai.flow.flow import persist as flow_flow_persist
+
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    @flow_flow_persist(persistence)
+    class ClassPersistedFlow(Flow[TestState]):
+        @start()
+        def count_up(self):
+            self.state.counter += 1
+
+    flow = ClassPersistedFlow()
+    flow.kickoff()
+
+    saved_state = persistence.load_state(flow.state.id)
+    assert saved_state is not None
+    assert saved_state["counter"] == 1

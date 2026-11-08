@@ -10,7 +10,7 @@ from hashlib import md5
 import inspect
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import threading
 from typing import (
     Annotated,
@@ -29,6 +29,7 @@ from pydantic import (
     BeforeValidator,
     Field,
     PrivateAttr,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -115,6 +116,15 @@ def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
 
         return create_model_from_schema(v)
     return None
+
+
+def _path_anchor(path: str) -> int:
+    """Rank how *path* is anchored: 0 relative, 1 drive-relative (``C:x``),
+    2 rooted (``/x``, ``\\x``, ``C:\\x``, or UNC)."""
+    windows_path = PureWindowsPath(path)
+    if path.startswith(("/", "\\")) or windows_path.root:
+        return 2
+    return 1 if windows_path.drive else 0
 
 
 class Task(BaseModel):
@@ -305,10 +315,15 @@ class Task(BaseModel):
         default_factory=dict,
     )
     _original_description: str | None = PrivateAttr(default=None)
+    # The description as a caller wrote it (filled in by the inputs), without the
+    # model text crewAI appends: a crew chat's history and crew or agent planning.
+    # None while nothing has been appended and no inputs filled it in.
+    _input_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
+    checkpoint_input_description: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
@@ -497,6 +512,56 @@ class Task(BaseModel):
                 result[key] = value
         return result
 
+    @staticmethod
+    def _validate_output_file_path(value: str, *, allow_templates: bool = False) -> str:
+        """Validate an output file path for security concerns.
+
+        Args:
+            value: The output file path to validate.
+            allow_templates: If True, permit ``{var}`` template placeholders and
+                preserve leading slashes for template paths.  When False (the
+                default), template syntax is rejected and the path is returned
+                unchanged — this is the mode used after interpolation, where
+                the caller decides whether an absolute result is allowed.
+
+        Returns:
+            The validated (and potentially modified) path string.
+
+        Raises:
+            ValueError: If the path contains path traversal sequences, shell
+                expansion characters, shell special characters, or (when
+                *allow_templates* is ``False``) unresolved template variables.
+        """
+        if ".." in value:
+            raise ValueError(
+                "Path traversal attempts are not allowed in output_file paths"
+            )
+
+        if value.startswith(("~", "$")):
+            raise ValueError(
+                "Shell expansion characters are not allowed in output_file paths"
+            )
+
+        if any(char in value for char in ["|", ">", "<", "&", ";"]):
+            raise ValueError(
+                "Shell special characters are not allowed in output_file paths"
+            )
+
+        if "{" in value or "}" in value:
+            if not allow_templates:
+                raise ValueError(
+                    "Unresolved template variables are not allowed in interpolated output_file paths"
+                )
+            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
+            for var in template_vars:
+                if not var.isidentifier():
+                    raise ValueError(f"Invalid template variable name: {var}")
+            return value
+
+        if allow_templates and value.startswith("/"):
+            return value[1:]
+        return value
+
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
@@ -516,32 +581,7 @@ class Task(BaseModel):
         """
         if value is None:
             return None
-
-        if ".." in value:
-            raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
-            )
-
-        if value.startswith(("~", "$")):
-            raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
-            )
-
-        if any(char in value for char in ["|", ">", "<", "&", ";"]):
-            raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
-            )
-
-        if "{" in value or "}" in value:
-            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
-            for var in template_vars:
-                if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
-            return value
-
-        if value.startswith("/"):
-            return value[1:]
-        return value
+        return cls._validate_output_file_path(value, allow_templates=True)
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
@@ -1074,13 +1114,17 @@ Follow these guidelines:
             ValueError: If a required template variable is missing from inputs.
         """
         if self._original_description is None:
-            self._original_description = self.description
+            # Without the plan a run before this one appended.
+            self._original_description = self._input_description or self.description
         if self._original_expected_output is None:
             self._original_expected_output = self.expected_output
         if self.output_file is not None and self._original_output_file is None:
             self._original_output_file = self.output_file
 
         if not inputs:
+            # The description stays as the last inputs filled it in, and so
+            # does the text of it a caller wrote.
+            self._record_input_description()
             return
 
         try:
@@ -1095,6 +1139,11 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
         self.description = process_content(self.description, {"task": self})
+        # "" marks a task restored from a checkpoint that didn't record its
+        # caller's text (before 1.15.38), so its description may hold a plan: it
+        # stays unknown, and no spreadsheet URL is read from it.
+        if self._input_description != "":
+            self._input_description = self.description
         self._original_expected_output = process_content(
             self._original_expected_output, {"task": self}
         )
@@ -1108,11 +1157,32 @@ Follow these guidelines:
 
         if self.output_file is not None:
             try:
-                self.output_file = interpolate_only(
+                output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
+
+            # Re-validate after interpolation: inputs are caller-controlled, so
+            # they must not add traversal segments or make the path absolute.
+            # Only the developer's template may anchor the path at a root.
+            # Assign only once every check passes, so a rejected path never
+            # stays on the task for a later run that skips interpolation.
+            try:
+                output_file = self._validate_output_file_path(
+                    output_file, allow_templates=False
+                )
+                # Set at the top of this method whenever output_file is.
+                template = cast(str, self._original_output_file)
+                if _path_anchor(output_file) > _path_anchor(template):
+                    raise ValueError(
+                        "Template inputs cannot make output_file an absolute path"
+                    )
+            except ValueError as e:
+                raise ValueError(
+                    f"Interpolated output_file path failed validation: {e!s}"
+                ) from e
+            self.output_file = output_file
 
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(
@@ -1141,6 +1211,17 @@ Follow these guidelines:
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
 
+    def _record_input_description(self) -> None:
+        """Keep the description as the caller wrote it, before crewAI adds text a
+        caller didn't write: the agent reads spreadsheet URLs from this text only."""
+        if self._input_description is None:
+            self._input_description = self.description
+
+    def _append_model_text(self, text: str) -> None:
+        """Add a plan, which is model text, to the description."""
+        self._record_input_description()
+        self.description += text
+
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
@@ -1168,6 +1249,13 @@ Follow these guidelines:
             "agent",
             "context",
             "tools",
+            # Run artifacts of the run this task already had; a copy is
+            # built for a fresh execution, and a carried output would
+            # make a checkpointed crew's copy skip the task entirely.
+            "output",
+            "checkpoint_original_description",
+            "checkpoint_original_expected_output",
+            "checkpoint_input_description",
         }
 
         copied_data = self.model_dump(exclude=exclude)
@@ -1187,12 +1275,14 @@ Follow these guidelines:
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
 
-        return self.__class__(
+        copied = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        copied._input_description = self._input_description
+        return copied
 
     def _export_output(
         self, result: str | BaseModel
@@ -1200,7 +1290,7 @@ Follow these guidelines:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
 
-        if self.output_pydantic or self.output_json:
+        if model := self.output_pydantic or self.output_json:
             model_output = convert_to_model(
                 result,
                 self.output_pydantic,
@@ -1208,7 +1298,9 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-            pydantic_output, json_output = self._unpack_model_output(model_output)
+            pydantic_output, json_output = self._unpack_model_output(
+                model_output, model
+            )
 
         return pydantic_output, json_output
 
@@ -1219,7 +1311,7 @@ Follow these guidelines:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
 
-        if self.output_pydantic or self.output_json:
+        if model := self.output_pydantic or self.output_json:
             model_output = await async_convert_to_model(
                 result,
                 self.output_pydantic,
@@ -1227,24 +1319,28 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-            pydantic_output, json_output = self._unpack_model_output(model_output)
+            pydantic_output, json_output = self._unpack_model_output(
+                model_output, model
+            )
 
         return pydantic_output, json_output
 
     @staticmethod
     def _unpack_model_output(
         model_output: dict[str, Any] | BaseModel | str,
+        model: type[BaseModel],
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
         if isinstance(model_output, BaseModel):
             return model_output, None
         if isinstance(model_output, dict):
             return None, model_output
-        if isinstance(model_output, str):
-            try:
-                return None, json.loads(model_output)
-            except json.JSONDecodeError:
-                return None, None
-        return None, None
+        # A string is either JSON a converter produced or the original answer
+        # that conversion fell back to; keep it only when it fits the model.
+        try:
+            model.model_validate_json(model_output)
+        except ValidationError:
+            return None, None
+        return None, json.loads(model_output)
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
