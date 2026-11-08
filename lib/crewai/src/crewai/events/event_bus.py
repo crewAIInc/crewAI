@@ -633,8 +633,9 @@ class CrewAIEventsBus:
                 sync_future = self._sync_executor.submit(
                     ctx.run, self._call_handlers, source, event, sync_handlers, state
                 )
+                self._track_future(sync_future)
                 if not async_handlers:
-                    return self._track_future(sync_future)
+                    return sync_future
 
         if async_handlers:
             return self._track_future(
