@@ -2453,3 +2453,46 @@ def test_conditional_start_with_and_condition_on_methods():
     flow.kickoff()
     assert ran == ["a", "b", "c"]
 
+
+def test_conditional_start_with_or_condition_runs_once():
+    ran: list[str] = []
+
+    class OrStartFlow(Flow):
+        @start()
+        def step_a(self):
+            ran.append("a")
+
+        @start()
+        def step_b(self):
+            ran.append("b")
+
+        @start(or_(step_a, step_b))
+        def step_c(self):
+            ran.append("c")
+
+    OrStartFlow().kickoff()
+    assert ran.count("c") == 1
+
+
+def test_conditional_start_with_or_condition_refires_on_router_loop():
+    runs: list[str] = []
+
+    class OrStartLoopFlow(Flow):
+        @start()
+        def init(self):
+            pass
+
+        @router(init)
+        def first(self):
+            return "go"
+
+        @start(or_("go", "retry"))
+        def work(self):
+            runs.append("w")
+
+        @router(work)
+        def check(self):
+            return "retry" if len(runs) < 3 else "done"
+
+    OrStartLoopFlow().kickoff()
+    assert runs == ["w", "w", "w"]
