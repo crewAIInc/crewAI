@@ -1,0 +1,81 @@
+---
+title: Alion 도구
+description: Alion 도구는 Alion의 실시간 기업 그래프에서 기업, 스타트업, 채용 공고를 검색하고 기업 프로필을 조회합니다.
+icon: building
+mode: "wide"
+---
+
+# Alion 도구
+
+## 설명
+
+[Alion](https://alion.io/developers)은 기업의 자체 웹사이트, 채용 사이트, 공공 등록부에서 수집해 계속 갱신되는 전 세계 기업 그래프입니다. 각 기업이 무엇을 하는지, 어디에서 활동하는지, 기술 스택, 투자 라운드와 투자자, 채용 속도, 그리고 검증된 채용 공고를 제공합니다. Alion 도구를 사용하면 에이전트가 잠재 고객 목록을 만들고, 시장을 조사하고, 유사한 기업을 찾고, 기업이 어떤 직무를 채용하는지 확인할 수 있습니다.
+
+| 도구 | 기능 | API 키 |
+|---|---|---|
+| `AlionCompanySearchTool` | 산업, 국가, 규모, 스타트업 여부, 투자 단계, 최근 라운드, 투자자, 기술, 채용 여부로 기업 검색 | 필요 없음 |
+| `AlionSimilarCompaniesTool` | 특정 기업과 유사한 기업 찾기 (국가 지정 가능) | 필요 없음 |
+| `AlionJobSearchTool` | 직무, 기업, 국가, 도시, 근무 형태, 경력 수준, 기술, 급여, 비자 지원으로 검증된 채용 공고 검색 | 필요 없음 |
+| `AlionCompanyProfileTool` | 기업 상세 정보: 투자, 채용, 기술 스택, 사무소, 비자 지원 | 전체 프로필에 필요 |
+
+## 설치
+
+이 도구는 `crewai-tools`의 의존성만 사용합니다:
+
+```shell
+uv add crewai-tools
+```
+
+## 시작하기
+
+1. **키 없이 시작**: 검색 도구는 Alion 계정 없이 네트워크당 일일 한도(하루 300회) 내에서 작동합니다.
+2. **선택 사항인 API 키**: [alion.io/developers/keys](https://alion.io/developers/keys)에서 키를 만들고 `ALION_API_KEY`로 설정하면 전체 기업 프로필을 받을 수 있습니다.
+
+## 예시
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlionCompanySearchTool, AlionJobSearchTool, AlionSimilarCompaniesTool
+
+scout = Agent(
+    role="Startup scout",
+    goal="Find recently funded startups in a market and what they hire for",
+    backstory="You map markets from live company data and never guess.",
+    tools=[AlionCompanySearchTool(), AlionSimilarCompaniesTool(), AlionJobSearchTool()],
+)
+
+task = Task(
+    description=(
+        "Find fintech startups in Germany that raised an early-stage round in the last 180 days, "
+        "then list the roles the three largest of them are hiring for."
+    ),
+    expected_output="A markdown table of company, domain, last round, round date and open roles.",
+    agent=scout,
+)
+
+print(Crew(agents=[scout], tasks=[task]).kickoff())
+```
+
+## 매개변수
+
+### 생성자 매개변수
+
+네 가지 도구 모두 다음을 받습니다:
+
+- **api_key**: 선택 사항. Alion API 키입니다. 기본값은 `ALION_API_KEY` 환경 변수이며, 키가 없으면 Alion의 무료 공개 주소를 사용합니다.
+- **timeout**: 선택 사항. 호출당 초 단위 시간 (기본값 `60`).
+
+### 실행 매개변수
+
+- `AlionCompanySearchTool`: `query`, `country`, `industry`, `size`, `startup`, `funding_stage`, `raised_since`, `investor`, `technology`, `hiring`, `sort`, `limit`.
+- `AlionSimilarCompaniesTool`: `company` (필수), `country`, `limit`.
+- `AlionJobSearchTool`: `query`, `role`, `company`, `country`, `city`, `work_mode`, `seniority`, `technology`, `salary_min_usd`, `posted_since`, `visa_sponsorship`, `limit`.
+- `AlionCompanyProfileTool`: `domain` 또는 `name`.
+
+## 출력
+
+각 도구는 Alion의 응답과 함께 `{"success": True, "result": {...}}`를 반환하거나, 호출이 실패하면 `{"success": False, "error": "..."}`를 반환하여 에이전트가 대응할 수 있게 합니다. 키가 없으면 `AlionCompanyProfileTool`은 도메인이나 이름이 가리키는 기업을 반환하고, 전체 프로필에는 `ALION_API_KEY`가 필요하다는 안내를 함께 제공합니다.
+
+## 결론
+
+Alion 도구는 별도 설정 없이 에이전트에게 실시간 기업, 스타트업, 채용 데이터를 제공합니다. 에이전트에 추가하고 바로 검색을 시작하세요. 전체 기업 프로필, 투자자, 급여 통계가 필요하면 Alion API 키를 추가하세요. Alion은 `https://alion.io/mcp/open`에서 MCP 서버도 운영하며, 에이전트의 `mcps` 필드로 연결할 수 있습니다.
