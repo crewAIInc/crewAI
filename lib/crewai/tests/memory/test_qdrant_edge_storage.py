@@ -247,6 +247,33 @@ def test_worker_process_is_alive_detects_dead_and_live_pids() -> None:
     assert not QdrantEdgeStorage._worker_process_is_alive(99999999)
 
 
+def test_worker_process_is_alive_reports_exited_handle_held_child_as_dead() -> None:
+    import subprocess
+    import sys
+    import time
+
+    if sys.platform != "win32":
+        pytest.skip("Windows-only: a held handle keeps a process openable after it exits")
+
+    from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+
+    # Keep the Popen object referenced so its process handle stays open. On
+    # Windows OpenProcess then still succeeds after the child exits, so the
+    # probe must consult the exit code rather than report the shard's worker
+    # as alive and skip the orphaned-shard sweep.
+    child = subprocess.Popen(
+        ["cmd", "/c", "exit", "0"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        while child.poll() is None:
+            time.sleep(0.01)
+        assert not QdrantEdgeStorage._worker_process_is_alive(child.pid)
+    finally:
+        child.wait()
+
+
 def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     base = tmp_path / "edge"
     fake_pid = 99999999

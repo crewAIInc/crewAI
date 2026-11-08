@@ -825,15 +825,17 @@ class QdrantEdgeStorage:
         usable nor safe on Windows: Python routes a non CTRL signal through
         ``TerminateProcess``, and it raises a generic ``OSError`` (not
         ``ProcessLookupError``) for an unknown pid, which is what crashes the
-        orphaned-shard sweep. On Windows this opens a query-only handle
-        instead. A process that exists but cannot be inspected is treated as
-        alive, so the sweep never deletes a live worker's shard.
+        orphaned-shard sweep. On Windows this opens a query-only handle and
+        checks the exit code instead. A process that exists but cannot be
+        inspected is treated as alive, so the sweep never deletes a live
+        worker's shard.
         """
         if sys.platform == "win32":
             from ctypes import wintypes
 
             query_limited_information = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
             invalid_parameter = 87  # ERROR_INVALID_PARAMETER: no such process
+            still_active = 259  # STILL_ACTIVE: the process has not exited yet
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
             # Declare pointer-sized HANDLE types so the handle is not truncated
             # to the default c_int and CloseHandle marshals it correctly.
@@ -843,12 +845,24 @@ class QdrantEdgeStorage:
                 wintypes.DWORD,
             )
             kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.GetExitCodeProcess.argtypes = (
+                wintypes.HANDLE,
+                ctypes.POINTER(wintypes.DWORD),
+            )
+            kernel32.GetExitCodeProcess.restype = wintypes.BOOL
             kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
             kernel32.CloseHandle.restype = wintypes.BOOL
             handle = kernel32.OpenProcess(query_limited_information, False, pid)
             if handle:
+                # A handle keeps the process object openable after the worker
+                # exits (a parent still holding a subprocess/multiprocessing
+                # handle is enough), so OpenProcess alone reports a crashed
+                # child as alive. STILL_ACTIVE confirms it is genuinely running;
+                # a real exit code means it is gone and its shard can be swept.
+                exit_code = wintypes.DWORD()
+                queried = kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))
                 kernel32.CloseHandle(handle)
-                return True
+                return (not queried) or exit_code.value == still_active
             return ctypes.get_last_error() != invalid_parameter
         try:
             os.kill(pid, 0)
