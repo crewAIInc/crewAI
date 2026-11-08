@@ -667,3 +667,52 @@ class TestTodoListIntegration:
         todo_list.mark_completed(3)
 
         assert can_execute(todo_list.items[3]) is True
+
+
+class TestDetectReady:
+    """Regression tests for issue #6204 (bare READY never detected)."""
+
+    def test_bare_and_formatted_ready(self):
+        """Bare, bulleted, numbered, and legacy verdicts count as ready."""
+        from crewai.utilities.reasoning_handler import _detect_ready
+
+        assert _detect_ready("READY")
+        assert _detect_ready("- READY")
+        assert _detect_ready("1. READY")
+        assert _detect_ready("**READY**")
+        assert _detect_ready("READY.")
+        assert _detect_ready("READY: I am ready to execute the task.")
+
+    def test_not_ready_never_counts_as_ready(self):
+        """NOT READY in any formatting never counts as ready."""
+        from crewai.utilities.reasoning_handler import _detect_ready
+
+        assert not _detect_ready("NOT READY")
+        assert not _detect_ready("NOT **READY**")
+        assert not _detect_ready("**NOT READY**")
+        assert not _detect_ready("")
+
+    def test_prose_mentions_are_not_verdicts(self):
+        """Ordinary prose mentioning ready must not count as a verdict."""
+        from crewai.utilities.reasoning_handler import _detect_ready
+
+        assert not _detect_ready("once the tools are ready")
+        assert not _detect_ready("I am ready to start")
+        assert not _detect_ready("The agent is not ready yet")
+
+    def test_last_verdict_wins(self):
+        """When several verdict lines exist, the last one decides."""
+        from crewai.utilities.reasoning_handler import _detect_ready
+
+        assert _detect_ready("Conclude with READY or NOT READY\n\nREADY") is True
+        assert _detect_ready("READY then NOT READY") is False
+        assert _detect_ready("READY\nSome notes\nNOT READY") is False
+
+    def test_parse_planning_response_uses_detector(self):
+        """The planning parser delegates readiness to the detector."""
+        from crewai.utilities.reasoning_handler import AgentReasoning
+
+        _, ready = AgentReasoning._parse_planning_response("Plan...\n\nREADY")
+        assert ready is True
+        _, not_ready = AgentReasoning._parse_planning_response("Plan...\n\nNOT READY")
+        assert not_ready is False
