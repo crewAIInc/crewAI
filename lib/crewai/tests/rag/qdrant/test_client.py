@@ -488,7 +488,7 @@ class TestQdrantClient:
 
         call_args = mock_qdrant_client.query_points.call_args
         assert call_args.kwargs["limit"] == 5
-        assert call_args.kwargs["score_threshold"] == 0.8
+        assert call_args.kwargs["score_threshold"] == pytest.approx(0.6)
 
     def test_search_collection_not_exists(self, client, mock_qdrant_client):
         """Test that search raises error if collection doesn't exist."""
