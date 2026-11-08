@@ -14,15 +14,12 @@ if TYPE_CHECKING:
     from snowflake.connector.connection import (
         SnowflakeConnection,
     )
-    from snowflake.connector.errors import (
-        DatabaseError,
-        OperationalError,
-    )
 
 try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
     import snowflake.connector
+    from snowflake.connector.errors import DatabaseError, OperationalError
 
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
@@ -211,6 +208,7 @@ class SnowflakeSearchTool(BaseTool):
         for attempt in range(self.max_retries):
             try:
                 conn = await self._get_connection()
+                cursor = None
                 try:
                     cursor = conn.cursor()
                     cursor.execute(query, timeout=timeout)
@@ -230,7 +228,8 @@ class SnowflakeSearchTool(BaseTool):
 
                     return results
                 finally:
-                    cursor.close()
+                    if cursor is not None:
+                        cursor.close()
                     if (
                         self._pool_lock is not None
                         and self._connection_pool is not None
