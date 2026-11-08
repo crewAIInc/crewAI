@@ -687,9 +687,13 @@ def _streamed_function_call() -> list[SimpleNamespace]:
         name="multiply",
         arguments='{"a": 17, "b": 23}',
     )
+    response = SimpleNamespace(
+        id="resp_1", status="completed", output=[item], usage=None
+    )
     return [
-        SimpleNamespace(type="response.created", response=SimpleNamespace(id="resp_1")),
+        SimpleNamespace(type="response.created", response=response),
         SimpleNamespace(type="response.output_item.done", item=item),
+        SimpleNamespace(type="response.completed", response=response),
     ]
 
 
