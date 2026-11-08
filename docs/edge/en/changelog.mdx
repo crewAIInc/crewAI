@@ -4,6 +4,106 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Nov 08, 2026">
+  ## v1.15.38
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.38)
+
+  ## What's Changed
+
+  ### Features
+  - Make gpt-6-luna crewAI's default model everywhere
+  - Read spreadsheet URLs in an agent's input with tools over every row
+  - Tag eval usage spans with target and a per-evaluation id
+  - Add --no-open to crewai eval for headless use
+
+  ### Bug Fixes
+  - Count a crewai eval run that exits with an error as run_failed
+  - Create the project .env owner-only when crewai eval turns tracing on
+  - Upload a failed anonymous run that crewai eval started
+  - Check openai-compatible providers' API key on the first call
+  - Scope memoized crew methods to their instance
+  - Exit non-zero when crewai run's project script fails
+  - Eval asks to share the trace with Enter meaning yes, and explains why
+
+  ### Documentation
+  - Document required_inputs on GET /inputs and which flow fields are inputs
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="Nov 06, 2026">
+  ## v1.15.37
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.37)
+
+  ## What's Changed
+
+  ### Features
+  - Add functionality to read spreadsheets for agents in crewai-files.
+  - Scaffold and load standalone agent projects.
+
+  ### Documentation
+  - Update RagTool description for better parsing by Mintlify.
+
+  ## Contributors
+
+  @Vidit-Ostwal, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="Nov 05, 2026">
+  ## v1.15.36
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.36)
+
+  # What's Changed
+
+  ### Features
+  - Add experimental conversational Agent sessions.
+  - Ask for a missing API key when crewai run starts.
+  - Record the error class when crewai run cannot load a project.
+  - Name the apps CrewAI AMP cannot resolve for an agent.
+
+  ### Bug Fixes
+  - Fix async call execution in the caller's context for sync tools.
+  - Resolve issue with empty value precedence in the run's key check.
+  - Stop a JSON crew run cleanly when its API key is missing.
+  - Call GPT-6 Astra and GPT-6.1 Sol tools through the Responses API.
+  - Handle the sourcedAnswer output shape correctly.
+  - Drop None metadata values before writing to ChromaDB.
+  - Add the chosen provider's crewai extra to new projects.
+  - Pin crewai-files in the file-processing extra like its siblings.
+
+  ### Documentation
+  - Update snapshot and changelog for v1.15.35.
+
+  ## Contributors
+
+  @Kiko0301, @StoyanD, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="Nov 03, 2026">
+  ## v1.15.35
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.35)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update litellm model catalog for v1.15.35
+  - Add snapshot and changelog for v1.15.34
+
+  ## Contributors
+
+  @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="Nov 01, 2026">
   ## v1.15.34
 

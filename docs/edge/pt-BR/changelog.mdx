@@ -4,6 +4,106 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="08 nov 2026">
+  ## v1.15.38
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.38)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Tornar o gpt-6-luna o modelo padrão do crewAI em todos os lugares
+  - Ler URLs de planilhas na entrada de um agente com ferramentas sobre cada linha
+  - Marcar os períodos de uso da avaliação com alvo e um id por avaliação
+  - Adicionar --no-open à avaliação do crewAI para uso sem interface gráfica
+
+  ### Correções de Bugs
+  - Contar uma execução de avaliação do crewAI que sai com um erro como run_failed
+  - Criar o .env do projeto somente para o proprietário quando a avaliação do crewAI ativa o rastreamento
+  - Fazer upload de uma execução anônima falha que a avaliação do crewAI iniciou
+  - Verificar a chave da API dos provedores compatíveis com OpenAI na primeira chamada
+  - Escopar os métodos de equipe memorizados à sua instância
+  - Sair com código diferente de zero quando o script do projeto da execução do crewAI falha
+  - A avaliação solicita compartilhar o rastreamento com Enter significando sim e explica o porquê
+
+  ### Documentação
+  - Documentar required_inputs em GET /inputs e quais campos de fluxo são entradas
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="06 nov 2026">
+  ## v1.15.37
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.37)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar funcionalidade para ler planilhas para agentes em crewai-files.
+  - Estruturar e carregar projetos de agentes independentes.
+
+  ### Documentação
+  - Atualizar a descrição do RagTool para melhor análise pelo Mintlify.
+
+  ## Contribuidores
+
+  @Vidit-Ostwal, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="05 nov 2026">
+  ## v1.15.36
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.36)
+
+  # O Que Mudou
+
+  ### Recursos
+  - Adicionar sessões experimentais de Agente Conversacional.
+  - Solicitar uma chave de API ausente quando a execução do crewai iniciar.
+  - Registrar a classe de erro quando a execução do crewai não consegue carregar um projeto.
+  - Nomear os aplicativos que o CrewAI AMP não consegue resolver para um agente.
+
+  ### Correções de Bugs
+  - Corrigir a execução de chamadas assíncronas no contexto do chamador para ferramentas síncronas.
+  - Resolver problema com a precedência de valores vazios na verificação de chave da execução.
+  - Parar uma execução de crew JSON de forma limpa quando sua chave de API estiver ausente.
+  - Chamar as ferramentas GPT-6 Astra e GPT-6.1 Sol através da API de Respostas.
+  - Lidar corretamente com a forma de saída sourcedAnswer.
+  - Remover valores de metadados None antes de escrever no ChromaDB.
+  - Adicionar o extra crewai do provedor escolhido a novos projetos.
+  - Fixar crewai-files no extra de processamento de arquivos como seus irmãos.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.35.
+
+  ## Contribuidores
+
+  @Kiko0301, @StoyanD, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="03 nov 2026">
+  ## v1.15.35
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.35)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar o catálogo de modelos litellm para v1.15.35
+  - Adicionar snapshot e changelog para v1.15.34
+
+  ## Contributors
+
+  @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="01 nov 2026">
   ## v1.15.34
 
