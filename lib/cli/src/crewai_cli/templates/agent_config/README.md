@@ -6,7 +6,7 @@ Standalone agent project formats and CLI support may change. Use matching previe
 
 YAML is the default for `crewai create agent {{package_name}}`.
 Choose JSON with `--format json`, or a Python Agent with `--format python`.
-The default model is `openai/gpt-6.1-sol` through the Responses API.
+The default model is `openai/gpt-6-luna` through the Responses API.
 
 ```text
 {{package_name}}/
