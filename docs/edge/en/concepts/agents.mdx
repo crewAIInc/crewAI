@@ -650,6 +650,41 @@ asyncio.run(main())
   configuration (role, goal, backstory, tools, etc.).
 </Note>
 
+## Spreadsheets
+
+With the `spreadsheets` extra installed, an agent that receives the URL of a CSV, TSV or Excel (`.xlsx`) file in its input works on it with tools, instead of reading the whole file into its context:
+
+```bash
+uv add 'crewai[spreadsheets]'
+```
+
+When the agent's input (a `kickoff()` message, or the description of a task it runs) holds a spreadsheet URL, the agent:
+
+- downloads the file once and adds an overview of each sheet (columns, types and sample values) to its prompt
+- gets `inspect_spreadsheet`, to list every sheet and its columns, or see one sheet's columns in full
+- gets `query_spreadsheet`, to page through rows, describe columns, count values, group and aggregate, or correlate numeric columns, after up to five filters
+
+Answers are computed over every row, so totals and counts are exact however large the file is. A URL is recognized by its file name, including presigned URLs that name the file only in their query string, like the ones CrewAI AMP gives uploaded files.
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Sales Analyst",
+    goal="Answer questions from sales data",
+    backstory="You work from the numbers, not impressions.",
+)
+
+result = analyst.kickoff(
+    "Which region sold the most? The data is at https://example.com/exports/sales.csv"
+)
+print(result.raw)
+```
+
+<Note>
+The agent opens only URLs that appear in its own input, never one a model or a tool produces. Its input is whatever your code passes it, so model output you put there, such as an earlier flow step's result, counts as input and its spreadsheet URLs are read. Downloads refuse private and internal network addresses, and a file can be up to 50 MB and 10 million cells. The agent reads up to 10 spreadsheets per run, and their downloads share a 60-second limit that isn't part of `max_execution_time`. Legacy `.xls`, OpenDocument `.ods` and password-protected workbooks can't be read, and the agent is told so. Without the extra, a spreadsheet URL is just text in the input.
+</Note>
+
 ## Conversational Agents (Experimental)
 
 Enable `conversational=True` to give a directly used Agent a conversational Flow session. `handle_turn()` passes the session's user/assistant history to the configured Agent and tools on each turn and returns the usual Agent output.
