@@ -835,6 +835,27 @@ def test_a_checkpoint_from_before_the_field_never_reads_its_plan(
     assert llm.tool_names() == []
 
 
+def test_inputs_on_resume_never_make_an_old_checkpoints_plan_trusted(
+    downloads, monkeypatch, tmp_path
+):
+    plan_naming(SALES_URL, monkeypatch)
+    crew = planned_crew(ScriptedLLM("done"), f"Count the tickets in {TICKETS_URL}")
+    crew.kickoff()
+    restored = restore(crew, tmp_path, before_the_field=True)
+    task = restored.tasks[0]
+    llm = ScriptedLLM("done")
+
+    task.interpolate_inputs_and_add_conversation_history({"week": "45"})
+    reader(llm).execute_task(task)
+    resaved = restore(restored, tmp_path / "again")
+    resaved.tasks[0].interpolate_inputs_and_add_conversation_history({"week": "46"})
+    reader(llm).execute_task(resaved.tasks[0])
+
+    assert SALES_URL in llm.prompt()
+    assert downloads.fetched == [TICKETS_URL]
+    assert llm.tool_names() == [] and llm.tool_names(-1) == []
+
+
 def test_a_restored_task_nothing_was_added_to_reads_its_url(downloads, tmp_path):
     agent = reader(ScriptedLLM("done"))
     crew = Crew(

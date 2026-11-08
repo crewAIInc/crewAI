@@ -1139,7 +1139,11 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
         self.description = process_content(self.description, {"task": self})
-        self._input_description = self.description
+        # "" marks a task restored from a checkpoint that didn't record its
+        # caller's text (before 1.15.38), so its description may hold a plan: it
+        # stays unknown, and no spreadsheet URL is read from it.
+        if self._input_description != "":
+            self._input_description = self.description
         self._original_expected_output = process_content(
             self._original_expected_output, {"task": self}
         )
