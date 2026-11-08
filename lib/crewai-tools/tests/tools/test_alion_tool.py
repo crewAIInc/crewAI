@@ -107,3 +107,41 @@ def test_none_arguments_are_dropped(http: Recorder) -> None:
     AlionJobSearchTool()._run(role="Backend", country=None, limit=3)
 
     assert http.calls[0]["body"]["params"]["arguments"] == {"role": "Backend", "limit": 3, "detail": "compact"}
+
+
+def test_error_text_without_structured_content_reaches_the_agent(http: Recorder) -> None:
+    http.queue.append(
+        FakeResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": {
+                    "content": [{"type": "text", "text": "Rate limit: 30 calls a minute"}],
+                    "isError": True,
+                },
+            }
+        )
+    )
+
+    assert AlionJobSearchTool()._run(role="Backend") == {
+        "success": False,
+        "error": "Rate limit: 30 calls a minute",
+    }
+
+
+def test_json_error_text_without_structured_content_is_parsed(http: Recorder) -> None:
+    text = '{"error": "invalid_params", "message": "limit must be 1-50"}'
+    http.queue.append(
+        FakeResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": {"content": [{"type": "text", "text": text}], "isError": True},
+            }
+        )
+    )
+
+    assert AlionCompanySearchTool()._run(limit=5) == {
+        "success": False,
+        "error": "limit must be 1-50",
+    }

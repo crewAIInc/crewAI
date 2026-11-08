@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Literal
 
@@ -77,19 +78,29 @@ class AlionBaseTool(BaseTool):
                 "error": data["error"].get("message", str(data["error"])),
             }
         result = data.get("result", {})
+        text = "".join(
+            c.get("text", "") for c in result.get("content", []) if isinstance(c, dict)
+        )
         payload = result.get("structuredContent")
         if payload is None:
-            payload = {
-                "text": "".join(c.get("text", "") for c in result.get("content", []))
-            }
+            payload = _parse_text(text)
         if result.get("isError"):
-            message = (
-                payload.get("message")
-                or payload.get("error")
-                or "Alion refused the call"
-            )
-            return {"success": False, "error": message}
+            message = None
+            if isinstance(payload, dict):
+                message = payload.get("message") or payload.get("error")
+            return {
+                "success": False,
+                "error": str(message or text or "Alion refused the call"),
+            }
         return {"success": True, "result": payload}
+
+
+def _parse_text(text: str) -> Any:
+    """The text content of an MCP result: Alion's JSON when it parses, else the text itself."""
+    try:
+        return json.loads(text)
+    except ValueError:
+        return {"text": text}
 
 
 class AlionCompanySearchSchema(BaseModel):
