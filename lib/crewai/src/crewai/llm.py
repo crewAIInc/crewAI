@@ -18,7 +18,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -41,7 +41,9 @@ from crewai.llms.base_llm import (
     EmptyLLMResponseError,
     JsonResponseFormat,
     LLMCallBlockedError,
-    MissingAPIKeyError,
+    # Unused here since the key check moved to the first call; kept because
+    # `from crewai.llm import MissingAPIKeyError` works in released 1.15.34+.
+    MissingAPIKeyError,  # noqa: F401
     get_current_call_id,
     llm_call_context,
 )
@@ -345,14 +347,6 @@ class LLM(BaseLLM):
             except NotImplementedError:
                 raise
             except Exception as e:
-                # The OpenAI-compatible providers check the key in a validator,
-                # so pydantic wraps it; raise it as itself so callers and
-                # telemetry see a missing key rather than an import failure.
-                if isinstance(e, ValidationError):
-                    for error in e.errors():
-                        cause = error.get("ctx", {}).get("error")
-                        if isinstance(cause, MissingAPIKeyError):
-                            raise cause from None
                 raise ImportError(f"Error importing native provider: {e}") from e
 
         # FALLBACK to LiteLLM — lazy-load on first use

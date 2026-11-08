@@ -1,11 +1,13 @@
 """Tests for OpenAI-compatible providers."""
 
+import json
 import os
 from unittest.mock import patch
 
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.base_llm import MissingAPIKeyError
 from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
@@ -171,28 +173,24 @@ class TestOpenAICompatibleCompletion:
         with pytest.raises(ValueError, match="Unknown OpenAI-compatible provider"):
             OpenAICompatibleCompletion(model="test", provider="unknown_provider")
 
-    def test_missing_required_api_key_raises_error(self):
-        """Test that missing required API key raises ValueError."""
-        env_key = "DEEPSEEK_API_KEY"
-        original = os.environ.pop(env_key, None)
-        try:
+    def test_missing_required_api_key_raises_on_first_call(self):
+        """A required key is checked on the first call, not at construction."""
+        with patch.dict(os.environ, {}, clear=True):
+            llm = OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
             with pytest.raises(
-                ValueError,
+                MissingAPIKeyError,
                 match="DEEPSEEK_API_KEY is required for model 'deepseek-chat'",
             ):
-                OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
-        finally:
-            if original is not None:
-                os.environ[env_key] = original
+                llm.call("Say hi")
 
     def test_deepinfra_missing_api_key_names_env_var(self):
         """DeepInfra requires a key; the error tells the user which env var to set."""
-        with patch.dict(os.environ, {}, clear=True), pytest.raises(
-            ValueError, match="DEEPINFRA_API_KEY"
-        ):
-            OpenAICompatibleCompletion(
+        with patch.dict(os.environ, {}, clear=True):
+            llm = OpenAICompatibleCompletion(
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
             )
+            with pytest.raises(MissingAPIKeyError, match="DEEPINFRA_API_KEY"):
+                llm.call("Say hi")
 
     def test_api_key_from_env(self):
         """Test API key is read from environment variable."""
@@ -471,3 +469,221 @@ class TestCallMocking:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert hasattr(completion, "acall")
         assert callable(completion.acall)
+
+
+KEYED_PROVIDERS = {
+    "openrouter": "anthropic/claude-3-opus",
+    "deepseek": "deepseek-chat",
+    "cerebras": "llama3.1-8b",
+    "dashscope": "qwen-turbo",
+    "deepinfra": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+}
+
+WEATHER_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get the weather for a city",
+        "parameters": {
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"],
+        },
+    },
+}
+
+
+def _completion(message: dict) -> dict:
+    return {
+        "id": "c-1",
+        "object": "chat.completion",
+        "created": 1,
+        "model": "m",
+        "choices": [
+            {
+                "index": 0,
+                "finish_reason": "tool_calls" if message.get("tool_calls") else "stop",
+                "message": {"role": "assistant", "refusal": None, **message},
+            }
+        ],
+        "usage": {"prompt_tokens": 3, "completion_tokens": 4, "total_tokens": 7},
+    }
+
+
+def _stream(text: str) -> bytes:
+    chunks = [
+        {
+            "id": "c-1",
+            "object": "chat.completion.chunk",
+            "created": 1,
+            "model": "m",
+            "choices": [{"index": 0, "delta": {"content": part}, "finish_reason": None}],
+        }
+        for part in (text[:3], text[3:])
+    ]
+    chunks.append(
+        {
+            "id": "c-1",
+            "object": "chat.completion.chunk",
+            "created": 1,
+            "model": "m",
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        }
+    )
+    body = "".join(f"data: {json.dumps(chunk)}\n\n" for chunk in chunks)
+    return (body + "data: [DONE]\n\n").encode()
+
+
+class TestCallMatrixWithAKey:
+    """With the key set, every call path builds its client from the provider's
+    own key and URL, as before the key check moved to the first call."""
+
+    @pytest.fixture
+    def server(self, monkeypatch):
+        """The real OpenAI SDK over a mock transport; records each request."""
+        import httpx
+        import openai
+
+        from crewai.llms.providers.openai import completion as openai_completion
+
+        requests: list[httpx.Request] = []
+        replies: list[httpx.Response] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return replies.pop(0)
+
+        transport = httpx.MockTransport(respond)
+
+        def sync_client(**kwargs):
+            return openai.OpenAI(**kwargs, http_client=httpx.Client(transport=transport))
+
+        def async_client(**kwargs):
+            return openai.AsyncOpenAI(
+                **kwargs, http_client=httpx.AsyncClient(transport=transport)
+            )
+
+        monkeypatch.setattr(openai_completion, "OpenAI", sync_client)
+        monkeypatch.setattr(openai_completion, "AsyncOpenAI", async_client)
+        return requests, replies
+
+    @staticmethod
+    def build(provider: str, **kwargs) -> OpenAICompatibleCompletion:
+        config = OPENAI_COMPATIBLE_PROVIDERS[provider]
+        env = {config.api_key_env: f"sk-{provider}", "OPENAI_API_KEY": "sk-openai"}
+        with patch.dict(os.environ, env, clear=True):
+            llm = LLM(model=f"{provider}/{KEYED_PROVIDERS[provider]}", **kwargs)
+        assert isinstance(llm, OpenAICompatibleCompletion)
+        return llm
+
+    @staticmethod
+    def assert_sent_to(provider: str, request) -> None:
+        config = OPENAI_COMPATIBLE_PROVIDERS[provider]
+        assert request.headers["authorization"] == f"Bearer sk-{provider}"
+        assert str(request.url).startswith(config.base_url)
+
+    @pytest.mark.parametrize("provider", sorted(KEYED_PROVIDERS))
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("stream", [False, True], ids=["no-stream", "stream"])
+    def test_a_call(self, server, provider, mode, stream):
+        import asyncio
+
+        import httpx
+
+        requests, replies = server
+        replies.append(
+            httpx.Response(
+                200,
+                content=_stream("Hello there"),
+                headers={"content-type": "text/event-stream"},
+            )
+            if stream
+            else httpx.Response(200, json=_completion({"content": "Hello there"}))
+        )
+        llm = self.build(provider, stream=stream)
+
+        with patch.dict(os.environ, {}, clear=True):
+            result = (
+                llm.call("Say hi")
+                if mode == "sync"
+                else asyncio.run(llm.acall("Say hi"))
+            )
+
+        assert result == "Hello there"
+        assert len(requests) == 1
+        self.assert_sent_to(provider, requests[0])
+        assert json.loads(requests[0].content).get("stream", False) is stream
+
+    @pytest.mark.parametrize("provider", sorted(KEYED_PROVIDERS))
+    def test_a_tool_call_then_the_follow_up_turn(self, server, provider):
+        import httpx
+
+        requests, replies = server
+        replies.append(
+            httpx.Response(
+                200,
+                json=_completion(
+                    {
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"city": "Lisbon"}',
+                                },
+                            }
+                        ],
+                    }
+                ),
+            )
+        )
+        replies.append(httpx.Response(200, json=_completion({"content": "Sunny."})))
+        llm = self.build(provider)
+        ran: list[str] = []
+
+        def get_weather(city: str) -> str:
+            ran.append(city)
+            return "sunny, 21C"
+
+        with patch.dict(os.environ, {}, clear=True):
+            tool_result = llm.call(
+                "Weather in Lisbon?",
+                tools=[WEATHER_TOOL],
+                available_functions={"get_weather": get_weather},
+            )
+            follow_up = llm.call(
+                [
+                    {"role": "user", "content": "Weather in Lisbon?"},
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"city": "Lisbon"}',
+                                },
+                            }
+                        ],
+                    },
+                    {"role": "tool", "tool_call_id": "call_1", "content": tool_result},
+                ],
+                tools=[WEATHER_TOOL],
+            )
+
+        assert ran == ["Lisbon"]
+        assert tool_result == "sunny, 21C"
+        assert follow_up == "Sunny."
+        assert len(requests) == 2
+        for request in requests:
+            self.assert_sent_to(provider, request)
+        sent = json.loads(requests[1].content)["messages"]
+        assert sent[-1] == {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": "sunny, 21C",
+        }

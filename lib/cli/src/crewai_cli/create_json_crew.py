@@ -29,7 +29,7 @@ from rich.text import Text
 
 from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.authentication.token import AuthError, get_auth_token
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.constants import ENV_VARS, crewai_extras_for_model, provider_for_model
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
 from crewai_cli.plus_api import PlusAPI
@@ -1044,8 +1044,7 @@ def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
 
     missing: list[str] = []
     for provider in dict.fromkeys(
-        _ENV_PROVIDERS.get(prefix, prefix)
-        for prefix in (model.split("/")[0] for model in llm_models)
+        provider_for_model(model) or model.split("/")[0] for model in llm_models
     ):
         for details in ENV_VARS.get(provider, []):
             if details.get("default", False):
@@ -1357,8 +1356,12 @@ def create_json_crew(
     name: str,
     provider: str | None = None,
     skip_provider: bool = False,
-) -> None:
-    """Scaffold a new JSON-first crew project."""
+) -> Path:
+    """Scaffold a new JSON-first crew project.
+
+    Returns:
+        The crew's folder.
+    """
     import keyword
     import shutil
 
@@ -1433,13 +1436,16 @@ def create_json_crew(
     )
 
     # Write pyproject.toml
+    extras = {
+        extra for agent in agents for extra in crewai_extras_for_model(agent["llm"])
+    }
     (folder_path / "pyproject.toml").write_text(
         _render_json_crew_template(
             "pyproject.toml",
             {
                 "folder_name": folder_name,
                 "name": name,
-                "crewai_tools_dependency": get_crewai_tools_dependency(),
+                "crewai_tools_dependency": get_crewai_tools_dependency(extras=extras),
             },
         ),
         encoding="utf-8",
@@ -1472,8 +1478,7 @@ def create_json_crew(
         _setup_env(folder_path, [a["llm"] for a in agents])
     else:
         for provider in dict.fromkeys(
-            _ENV_PROVIDERS.get(prefix, prefix)
-            for prefix in (a["llm"].split("/")[0] for a in agents)
+            provider_for_model(a["llm"]) or a["llm"].split("/")[0] for a in agents
         ):
             keys_to_set += missing_provider_keys(provider, {})
 
@@ -1503,3 +1508,4 @@ def create_json_crew(
     click.echo("    crew.jsonc        Configure tasks and optional input defaults")
     click.echo("    tools/            Add custom tools (Python)")
     click.echo()
+    return folder_path

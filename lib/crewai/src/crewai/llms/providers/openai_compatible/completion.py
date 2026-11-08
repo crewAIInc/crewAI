@@ -203,9 +203,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
                 f"Supported providers: {supported}"
             )
 
-        data["api_key"] = cls._resolve_api_key(
-            data.get("api_key"), config, data.get("model", "")
-        )
+        data["api_key"] = cls._configured_api_key(data.get("api_key"), config)
         data["base_url"] = cls._resolve_base_url(data.get("base_url"), config, provider)
         data["default_headers"] = cls._resolve_headers(
             data.get("default_headers"), config
@@ -213,36 +211,37 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         return data
 
     @staticmethod
-    def _resolve_api_key(
-        api_key: str | None,
-        config: ProviderConfig,
-        model: str,
-    ) -> str | None:
-        """Resolve the API key from explicit value, env var, or default.
+    def _configured_api_key(api_key: str | None, config: ProviderConfig) -> str | None:
+        """The key from an explicit value, the provider's env var, or its default.
+
+        None when a required key is not set: like the native providers, it is
+        checked on the first call (``_get_client_params``), so the model can be
+        built before the key is, at import or in an ``Agent``'s own validation.
 
         Args:
             api_key: Explicitly provided API key.
             config: Provider configuration.
-            model: Model name for error messages.
 
         Returns:
-            The resolved API key.
+            The key, or None when a required one is not set.
+        """
+        return (
+            _without_placeholder(api_key)
+            or _without_placeholder(os.getenv(config.api_key_env))
+            or (None if config.api_key_required else config.default_api_key)
+        )
+
+    def _get_client_params(self) -> dict[str, Any]:
+        """The OpenAI client's parameters, with this provider's key.
 
         Raises:
-            MissingAPIKeyError: If API key is required but not found.
+            MissingAPIKeyError: If the provider needs a key and none is set.
         """
-        api_key = _without_placeholder(api_key)
-        if api_key:
-            return api_key
-
-        env_key = _without_placeholder(os.getenv(config.api_key_env))
-        if env_key:
-            return env_key
-
-        if config.api_key_required:
-            raise MissingAPIKeyError(config.api_key_env, model)
-
-        return config.default_api_key
+        config = OPENAI_COMPATIBLE_PROVIDERS[self.provider]
+        self.api_key = self._configured_api_key(self.api_key, config)
+        if self.api_key is None:
+            raise MissingAPIKeyError(config.api_key_env, self.model)
+        return super()._get_client_params()
 
     @staticmethod
     def _resolve_base_url(
