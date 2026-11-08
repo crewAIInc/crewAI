@@ -218,11 +218,26 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "422":
-          description: Validation error - ensure all required inputs are provided
+          description: >-
+            Validation error: a required input is missing, or an agent's apps are not connected in CrewAI AMP. Apps are checked before the run starts when the request uses a User Bearer Token. Apps this check does not catch make the run fail, and `GET /status/{kickoff_id}` names them.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationError"
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - type: object
+                    properties:
+                      detail:
+                        $ref: "#/components/schemas/AppsNotConnected"
+              examples:
+                apps_not_connected:
+                  summary: An agent's apps are not connected in CrewAI AMP
+                  value:
+                    detail:
+                      code: "apps_not_connected"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      agent: "Asana Workspace Scout"
+                      missing_apps: ["asana"]
         "500":
           $ref: "#/components/responses/ServerError"
 
@@ -286,9 +301,19 @@ paths:
                 error:
                   summary: Execution failed
                   value:
-                    status: "error"
-                    error: "Task execution failed: Invalid API key for external service"
-                    execution_time: 23.1
+                    state: "FAILED"
+                    status: "Task execution failed: Invalid API key for external service"
+                    error: null
+                apps_not_connected:
+                  summary: Execution failed on apps not connected in CrewAI AMP
+                  value:
+                    state: "FAILED"
+                    status: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                    error:
+                      code: "apps_not_connected"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      agent: "Asana Workspace Scout"
+                      missing_apps: ["asana"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -494,18 +519,19 @@ components:
     ExecutionError:
       type: object
       properties:
-        status:
+        state:
           type: string
-          enum: ["error"]
-          example: "error"
-        error:
+          enum: ["FAILED"]
+          description: Execution state
+        status:
           type: string
           description: Error message describing what went wrong
           example: "Task execution failed: Invalid API key"
-        execution_time:
-          type: number
-          description: Time until error occurred in seconds
-          example: 23.1
+        error:
+          allOf:
+            - $ref: "#/components/schemas/AppsNotConnected"
+          nullable: true
+          description: Set when the run failed because an agent's apps are not connected in CrewAI AMP; null for any other failure.
 
     TaskResult:
       type: object
@@ -556,6 +582,29 @@ components:
               items:
                 type: string
               example: ["budget", "interests"]
+
+    AppsNotConnected:
+      type: object
+      description: An agent's apps are not connected in CrewAI AMP, or CrewAI AMP does not know them.
+      properties:
+        code:
+          type: string
+          enum: ["apps_not_connected"]
+          description: Always `apps_not_connected`
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+        agent:
+          type: string
+          description: Role of the agent that declares the apps
+          example: "Asana Workspace Scout"
+        missing_apps:
+          type: array
+          items:
+            type: string
+          description: Apps to connect in CrewAI AMP, as CrewAI AMP names them
+          example: ["asana"]
 
   responses:
     UnauthorizedError:
