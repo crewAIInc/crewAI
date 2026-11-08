@@ -15,6 +15,11 @@ from crewai_tools.tools.azure_documentdb_vector_search_tool import (
     AzureDocumentDBVectorSearchConfig,
     AzureDocumentDBVectorSearchTool,
 )
+from crewai_tools.tools.baizhi_tools.baizhi_tools import (
+    BaizhiExtractTool,
+    BaizhiScrapeTool,
+    BaizhiSearchTool,
+)
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
 from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
     BraveLLMContextTool,
@@ -242,6 +247,9 @@ __all__ = [
     "AzureDocumentDBToolSchema",
     "AzureDocumentDBVectorSearchConfig",
     "AzureDocumentDBVectorSearchTool",
+    "BaizhiExtractTool",
+    "BaizhiScrapeTool",
+    "BaizhiSearchTool",
     "BedrockInvokeAgentTool",
     "BedrockKBRetrieverTool",
     "BraveImageSearchTool",
