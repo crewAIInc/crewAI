@@ -14,9 +14,9 @@ ComplexityLevel = Literal["easy", "medium", "hard"]
 
 # Maps a complexity level to the OpenAI model used to answer the request.
 COMPLEXITY_MODEL_MAP: dict[ComplexityLevel, str] = {
-    "easy": "gpt-5.6-luna",
-    "medium": "gpt-5.6-terra",
-    "hard": "gpt-5.6-sol",
+    "easy": "gpt-6-luna",
+    "medium": "gpt-6-luna",
+    "hard": "gpt-6.1-sol",
 }
 
 # Model used when no complexity level or explicit model/LLM is provided.

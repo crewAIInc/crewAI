@@ -89,6 +89,12 @@ _LEARNED_RESPONSES_ONLY_MODELS: set[tuple[str, str]] = set()
 # itself are different models, and one must not silence the other.
 _LEARNED_NO_REASONING_EFFORT_MODELS: set[tuple[str, str]] = set()
 
+# (endpoint, model) pairs whose function tools /v1/chat/completions served only
+# with `reasoning_effort="none"` (GPT-5.6, GPT-6 Luna), after rejecting the
+# server-default effort. Later tool calls send "none" up front, so each one does
+# not pay the rejected round trip again.
+_LEARNED_TOOLS_WITHOUT_REASONING_MODELS: set[tuple[str, str]] = set()
+
 # Upstream status codes carried inside a 200 body, mapped to the exception the SDK
 # raises when the same code arrives as a real HTTP status. Keeping the classes
 # identical means a gateway-masked failure is catchable by whatever already handles
@@ -749,12 +755,17 @@ class OpenAICompletion(BaseLLM):
                         self.model,
                     )
                     try:
-                        return dispatch(retry_params)
+                        result = dispatch(retry_params)
                     except Exception as retry_error:
                         if not self._rejects_reasoning_effort_none(
                             retry_error.__cause__ or retry_error
                         ):
                             raise
+                    else:
+                        _LEARNED_TOOLS_WITHOUT_REASONING_MODELS.add(
+                            self._reasoning_effort_key()
+                        )
+                        return result
                 self._remember_tools_need_responses()
                 return self._call_responses(
                     messages=messages,
@@ -904,12 +915,17 @@ class OpenAICompletion(BaseLLM):
                     cause
                 ):
                     try:
-                        return await dispatch(retry_params)
+                        result = await dispatch(retry_params)
                     except Exception as retry_error:
                         if not self._rejects_reasoning_effort_none(
                             retry_error.__cause__ or retry_error
                         ):
                             raise
+                    else:
+                        _LEARNED_TOOLS_WITHOUT_REASONING_MODELS.add(
+                            self._reasoning_effort_key()
+                        )
+                        return result
                 self._remember_tools_need_responses()
                 return await self._acall_responses(
                     messages=messages,
@@ -2291,6 +2307,8 @@ class OpenAICompletion(BaseLLM):
         if tools:
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
+            if self._reasoning_effort_key() in _LEARNED_TOOLS_WITHOUT_REASONING_MODELS:
+                params["reasoning_effort"] = "none"
 
         crewai_specific_params = {
             "callbacks",
@@ -3225,7 +3243,8 @@ class OpenAICompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        OpenAI vision-enabled models include GPT-4o, GPT-4.1, GPT-5, and o-series.
+        OpenAI vision-enabled models include GPT-4o, GPT-4.1, GPT-5, GPT-6, and
+        o-series.
 
         Returns:
             True if the model supports images.
@@ -3236,6 +3255,7 @@ class OpenAICompletion(BaseLLM):
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-5",
+            "gpt-6",
             "o1",
             "o3",
             "o4",

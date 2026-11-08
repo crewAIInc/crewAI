@@ -43,7 +43,8 @@ class OCRTool(BaseTool):
 
     name: str = "Optical Character Recognition Tool"
     description: str = "This tool uses an LLM's API to extract text from an image file."
-    llm: LLM = Field(default_factory=lambda: LLM(model="gpt-4o", temperature=0.7))
+    # No temperature: GPT-6 Luna accepts only the default.
+    llm: LLM = Field(default_factory=lambda: LLM(model="gpt-6-luna"))
     args_schema: type[BaseModel] = OCRToolSchema
 
     def _run(self, **kwargs: Any) -> str:
