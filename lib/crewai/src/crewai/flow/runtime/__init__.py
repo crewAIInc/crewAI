@@ -1587,14 +1587,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._method_outputs.append(method_output_entry)
 
         try:
+            await self._execute_listeners(
+                FlowMethodName(context.method_name),
+                collapsed_outcome if emit else result,
+            )
             if emit and collapsed_outcome:
                 await self._execute_listeners(
                     FlowMethodName(collapsed_outcome),
-                    result,
-                )
-            else:
-                await self._execute_listeners(
-                    FlowMethodName(context.method_name),
                     result,
                 )
         except Exception as e:
