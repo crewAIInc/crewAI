@@ -3312,14 +3312,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         )
                         if once_per_cycle:
                             self._fired_or_listeners.add(method_name)
-                        if method_name in self._completed_methods:
-                            # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
-                            was_resuming = self._is_execution_resuming
-                            self._is_execution_resuming = False
-                            await self._execute_start_method(method_name)
-                            self._is_execution_resuming = was_resuming
-                        else:
-                            await self._execute_start_method(method_name)
+                        await self._execute_start_method(method_name)
 
     def _condition_met(
         self,
