@@ -86,6 +86,44 @@ def test_execute_command_omits_env_var_when_filename_absent(
     assert "CREWAI_TRAINED_AGENTS_FILE" not in kwargs["env"]
 
 
+@mock.patch("crewai_cli.run_crew.record_run_stopped")
+@mock.patch("crewai_cli.run_crew.read_toml", return_value={})
+@mock.patch(
+    "crewai_cli.run_crew.subprocess.run",
+    side_effect=subprocess.CalledProcessError(5, ["uv", "run", "run_crew"]),
+)
+def test_execute_command_exits_with_a_failed_scripts_code(
+    _subprocess_run: mock.Mock,
+    _read_toml: mock.Mock,
+    record_run_stopped: mock.Mock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        _execute_uv_script("run_crew", entity_type="crew")
+
+    assert exited.value.code == 5
+    assert "An error occurred while running the crew" in capsys.readouterr().err
+    record_run_stopped.assert_called_once_with("script_failed")
+
+
+@mock.patch("crewai_cli.run_crew.record_run_stopped")
+@mock.patch(
+    "crewai_cli.run_crew.subprocess.run",
+    side_effect=FileNotFoundError("uv not found"),
+)
+def test_execute_command_exits_1_when_uv_cannot_start(
+    _subprocess_run: mock.Mock,
+    record_run_stopped: mock.Mock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        _execute_uv_script("kickoff", entity_type="flow")
+
+    assert exited.value.code == 1
+    assert "An unexpected error occurred: uv not found" in capsys.readouterr().err
+    record_run_stopped.assert_called_once_with("launch_failed")
+
+
 def test_missing_input_names_scans_agent_and_task_placeholders() -> None:
     crew = SimpleNamespace(
         agents=[

@@ -36,13 +36,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Create a new crew, flow, tool, skill, or template project.
+Create a new crew, flow, standalone Agent (experimental), tool, skill, or template project.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: `crew`, `flow`, `tool`, `skill`, or `template`
+- `TYPE`: `crew`, `flow`, `agent` (experimental), `tool`, `skill`, or `template`
 - `NAME`: Name of the project, tool handle, skill, or template
 
 #### Crew
@@ -60,6 +60,32 @@ By default, `crewai create crew` creates a JSON-first crew project with `crew.js
 crewai create flow my_new_flow
 crewai create flow my_new_flow --declarative
 ```
+
+#### Run it now
+
+When you create a crew or a flow in a terminal, `crewai create` offers to run the new project:
+
+```text
+  Run it now? [Y/n]:
+```
+
+Press Enter to start `crewai run` in the project folder. `crewai create` then exits with the run's exit code. The first run also installs the project's dependencies. Answer `n` to skip the run, and the CLI prints the command for later:
+
+```text
+  Run it later: cd my_new_crew && crewai run
+```
+
+`crewai create` does not ask with `CREWAI_DMN=true`, or when stdin or stdout is not a terminal, as when a coding agent or a CI job runs it. Creating a tool, a skill or a template never asks.
+
+#### Agent (Experimental)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+Standalone Agent projects default to `agent.yaml`. Use `--format json` for configuration in JSON, or `--format python` for an exported Python Agent. This experimental project/loading contract may change and requires matching preview CLI/SDK builds. See [Standalone Agent Projects](/edge/en/guides/agents/standalone-agent-projects) for setup, tools, runtime inputs, and deployment limits.
 
 #### Tool
 
@@ -203,7 +229,7 @@ crewai test [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: Number of iterations to test the crew (default: 3)
-- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
+- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-6-luna")
 
 Example:
 
@@ -225,6 +251,18 @@ crewai run
   from pyproject.toml and runs the appropriate command. This is now the
   recommended way to run both crews and flows.
 </Note>
+
+Before a crew or a Python flow starts, `crewai run` checks that the API key each of its models needs is set, either in your environment or in the `.env` crewAI loads: the project's own, or else the nearest one in a parent folder. For a JSON crew, it reads the `llm`, `manager_llm` and `function_calling_llm` fields of `crew.jsonc` and of the agent files it lists; an agent without an `llm` runs on `MODEL`, or else on crewAI's default model, `gpt-4.1-mini`, so that model is checked too. For a Python crew or flow, it reads `MODEL` and any `llm:` in `config/agents.yaml`, and checks `gpt-4.1-mini` when neither names a model. An empty value or the `YOUR_API_KEY` placeholder counts as missing.
+
+At a terminal, the CLI asks for each missing key. What you paste is hidden, saved to the project's `.env`, and used by the run that starts next. Press Enter to skip a key. Without a terminal, for example under a coding agent or in CI, the CLI prints the line to add and starts the run anyway. It also prints the line, rather than saving, when the `.env` is in a parent folder or is a symbolic link:
+
+```text
+OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.env, then run `crewai run` again.
+```
+
+The check covers providers that take a single API key, such as OpenAI, Anthropic, Gemini and Groq. It skips Azure, Bedrock and watsonx, local models such as Ollama, and declarative flows. It does not read an `llm` set in Python code, and when a project's code sets one, it does not check the default model either. A `.env` that is not a regular file, such as a named pipe a secrets manager serves, is left for the run to read and is not checked. Before the CLI saves a key, it makes `.env` readable by you only; when it cannot, it uses the key for this run only and says so instead of saving it. When the project's `.env` sends requests to another host through a setting your own environment does not have, such as `OPENAI_BASE_URL`, `OPENAI_API_BASE` or `HTTPS_PROXY`, or a JSON crew's files set a `base_url`, `api_base` or `endpoint` anywhere, such as in an `llm`, its `client_params`, a `planning_llm` or an embedder's `config`, the prompt names each host before it asks. Paste a key only if you trust that host.
+
+If a JSON crew still fails because an API key is not set, for example the key of a model this check skips, the run stops with the same line instead of a traceback. At a terminal, the CLI first asks for that key as above, then builds the crew again and runs it once more from its first task, so tasks that already finished run again; press Enter to stop instead.
 
 <Note>
   Make sure to run these commands from the directory where your CrewAI project
@@ -415,7 +453,28 @@ Notes:
 
 When running the `crewai create crew` command, the CLI shows a list of available LLM providers, followed by model selection for your chosen provider. The selected model is saved in the generated `.env` file and each generated agent JSONC file can set its own `llm`.
 
-Once you've selected an LLM provider and model, you will be prompted for API keys.
+`crewai create flow` asks the same questions in a terminal and saves the model as `MODEL` in the flow's `.env`, which the starter crew's agents use. With `--provider`, it skips the provider and model questions. Pass a provider the picker lists, such as `anthropic` or `bedrock`, to use its first listed model, or a full `provider/model` string for any other model. A declarative flow (`--declarative`) asks nothing and names no key in its next steps, because its starter calls no model.
+
+Once you've selected an LLM provider and model, you will be prompted for API keys. At a terminal, what you type for a key or secret is hidden; other values, such as an endpoint URL, a region, or an Azure deployment name, stay visible. Press Enter to skip a prompt.
+
+A skipped key is not saved. Unless the key is already set in your environment, the CLI prints the exact line to add to `.env` before `crewai run`:
+
+```text
+  API key not saved. Add this line to my_new_crew/.env before `crewai run`:
+    OPENAI_API_KEY=<your key>
+```
+
+Values that have a default, such as the AWS region and the Azure API version, are not listed.
+
+If your agents use models from more than one provider, the CLI asks once for each provider's keys, and the first agent's model is saved as `MODEL`.
+
+The generated `pyproject.toml` also depends on the crewai extras that the models you pick need, for example `crewai[tools,anthropic]` for Anthropic, `crewai[tools,google-genai]` for Gemini, or `crewai[tools,litellm]` for providers that crewAI reaches through LiteLLM, such as Groq. crewAI also runs some model names through LiteLLM instead of the provider's SDK, such as `bedrock/claude-sonnet-4-5-20250929-v1:0`, so those add `litellm` too. `crewai install`, or the first `crewai run`, installs them. An OpenAI-only project depends on `crewai[tools]` alone. If you later switch an agent to another model, add the extra it needs yourself, for example `uv add "crewai[anthropic]"`.
+
+With `--skip-provider`, or with `CREWAI_DMN=true`, the CLI asks for no keys and writes none. `crewai create flow` also asks nothing when it is not running in a terminal, as when a coding agent or a CI job runs it. In the default JSON crew, agents use `openai/gpt-6-luna` unless you pass `--provider`. A flow saves the `--provider` model as `MODEL` and otherwise runs on crewAI's default OpenAI model. The next steps name each variable that is not already set in your environment:
+
+```text
+  Set OPENAI_API_KEY in .env before `crewai run`
+```
 
 #### Available LLM Providers
 

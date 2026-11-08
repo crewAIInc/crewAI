@@ -727,7 +727,7 @@ Memory uses an LLM for save analysis (scope, categories, importance inference), 
 ```python
 from crewai import Memory, LLM
 
-# Default: gpt-4o-mini
+# Default: gpt-6-luna
 memory = Memory()
 
 # Use a different OpenAI model
@@ -867,7 +867,7 @@ All configuration is passed as keyword arguments to `Memory(...)`. Every paramet
 
 | Parameter | Default | Description |
 | :--- | :--- | :--- |
-| `llm` | `"gpt-4o-mini"` | LLM for analysis (model name or `BaseLLM` instance). |
+| `llm` | `"gpt-6-luna"` | LLM for analysis (model name or `BaseLLM` instance). |
 | `storage` | `"lancedb"` | Storage backend (`"lancedb"`, a path string, or a `StorageBackend` instance). |
 | `embedder` | `None` (OpenAI `text-embedding-3-large`) | Embedder (config dict, callable, or `None` for default OpenAI). |
 | `recency_weight` | `0.3` | Weight for recency in composite score. |

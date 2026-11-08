@@ -85,8 +85,9 @@ class LLMCallBlockedError(ValueError):
     """
 
 
-# Written to .env by `crewai create flow`; it passes a presence check and only
-# fails later at the provider as an authentication error.
+# Projects created by older versions of `crewai create flow` may still have it in
+# .env; it passes a presence check and only fails later at the provider as an
+# authentication error.
 _API_KEY_PLACEHOLDER: Final[str] = "YOUR_API_KEY"
 
 
@@ -97,9 +98,10 @@ def _without_placeholder(api_key: str | None) -> str | None:
 class MissingAPIKeyError(ValueError):
     """An LLM provider needs an API key and none is configured.
 
-    Raised when the key is unset or still holds the ``YOUR_API_KEY`` placeholder
-    that ``crewai create flow`` writes to ``.env``. A ``ValueError`` so existing
-    ``except ValueError`` handlers keep catching it.
+    Raised when the key is unset or still holds the ``YOUR_API_KEY`` placeholder,
+    which projects created by older versions of ``crewai create flow`` may contain
+    in ``.env``. A ``ValueError`` so existing ``except ValueError`` handlers keep
+    catching it.
 
     Attributes:
         env_var: The environment variable the provider reads the key from.
