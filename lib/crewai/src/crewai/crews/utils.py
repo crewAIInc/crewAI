@@ -510,5 +510,4 @@ async def run_for_each_async(
             total_usage_metrics.add_usage_metrics(crew_copy.usage_metrics)
     crew.usage_metrics = total_usage_metrics
 
-    crew._task_output_handler.reset()
     return list(results)
