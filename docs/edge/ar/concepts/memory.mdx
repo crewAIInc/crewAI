@@ -723,7 +723,7 @@ memory = Memory(embedder=my_embedder)
 ```python
 from crewai import Memory, LLM
 
-# Default: gpt-4o-mini
+# Default: gpt-6.1-sol
 memory = Memory()
 
 # Use a different OpenAI model
@@ -860,7 +860,7 @@ memory.reset(scope="/project/old")  # Only that subtree
 
 | المعامل | الافتراضي | الوصف |
 | :--- | :--- | :--- |
-| `llm` | `"gpt-4o-mini"` | LLM للتحليل (اسم نموذج أو مثيل `BaseLLM`). |
+| `llm` | `"gpt-6.1-sol"` | LLM للتحليل (اسم نموذج أو مثيل `BaseLLM`). |
 | `storage` | `"lancedb"` | واجهة التخزين (`"lancedb"`، سلسلة مسار، أو مثيل `StorageBackend`). |
 | `embedder` | `None` (افتراضي OpenAI) | المُضمِّن (قاموس إعداد، دالة قابلة للاستدعاء، أو `None` لافتراضي OpenAI). |
 | `recency_weight` | `0.3` | وزن الحداثة في الدرجة المركبة. |
