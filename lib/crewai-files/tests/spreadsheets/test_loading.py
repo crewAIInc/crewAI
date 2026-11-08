@@ -348,7 +348,7 @@ class TestPresignedUrls:
         "url",
         [
             "https://h/k?response-content-disposition=inline%3B%20filename%3D%22"
-            "report.pdf%22&response-content-type=application%2Fpdf",
+            + "report.pdf%22&response-content-type=application%2Fpdf",
             "https://h/k?X-Amz-Signature=abc",
         ],
         ids=["a-pdf", "names-nothing"],

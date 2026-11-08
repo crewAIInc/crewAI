@@ -1122,7 +1122,9 @@ Follow these guidelines:
             self._original_output_file = self.output_file
 
         if not inputs:
-            self._input_description = self._original_description
+            # The description stays as the last inputs filled it in, and so
+            # does the text of it a caller wrote.
+            self._record_input_description()
             return
 
         try:

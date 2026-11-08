@@ -628,6 +628,22 @@ def test_a_coworker_reads_a_spreadsheet_the_crews_input_gave(downloads):
     assert downloads.fetched == [TICKETS_URL]
 
 
+def test_a_coworker_reads_a_url_from_the_crews_input_past_the_cap(downloads):
+    parts = [f"https://files.example.com/exports/part{i}.csv" for i in range(10)]
+    for url in parts:
+        downloads.served[url] = SALES_CSV
+    worker = ScriptedLLM("Thought: done\nFinal Answer: done", native_tools=False)
+
+    hierarchical(
+        delegate_to_analyst(f"Count tickets in {TICKETS_URL}"),
+        f"Combine {' '.join(parts)} and count the tickets in {TICKETS_URL}",
+        worker,
+    ).kickoff()
+
+    assert "Tool Name: query_spreadsheet" in worker.prompt()
+    assert downloads.fetched == [*parts, TICKETS_URL]
+
+
 def test_a_coworker_never_fetches_a_url_the_manager_model_wrote(downloads):
     worker = ScriptedLLM("Thought: done\nFinal Answer: done", native_tools=False)
 
@@ -726,6 +742,26 @@ def test_a_second_kickoff_never_reads_the_last_runs_plan(
 
     assert SALES_URL in llm.prompt(-1)
     assert downloads.fetched == []
+
+
+@pytest.mark.parametrize("entry", ["kickoff", "kickoff_async"])
+def test_a_run_with_no_new_inputs_reads_the_url_the_last_inputs_gave(downloads, entry):
+    llm = ScriptedLLM("done")
+    agent = reader(llm)
+    crew = Crew(
+        agents=[agent],
+        tasks=[Task(description="Count the tickets in {file}", expected_output="Counts", agent=agent)],
+    )
+    crew.kickoff(inputs={"file": TICKETS_URL})
+
+    if entry == "kickoff":
+        crew.kickoff(inputs={})
+    else:
+        asyncio.run(crew.kickoff_async())
+
+    assert TICKETS_URL in llm.prompt(-1)
+    assert '"tickets.xlsx"' in llm.prompt(-1)
+    assert llm.tool_names(-1) == ["inspect_spreadsheet", "query_spreadsheet"]
 
 
 def test_a_task_restored_from_a_checkpoint_never_reads_its_plan(

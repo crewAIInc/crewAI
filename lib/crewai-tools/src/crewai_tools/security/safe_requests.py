@@ -17,7 +17,10 @@ from crewai_tools.security.safe_path import (
     _is_escape_hatch_enabled,
     validate_url,
 )
-from crewai_tools.security.ssrf_adapter import SSRFProtectedAdapter
+from crewai_tools.security.ssrf_adapter import (
+    SSRFProtectedAdapter,
+    cut_connections_at,
+)
 
 
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
@@ -197,9 +200,9 @@ def safe_get_bounded(
         timeout: Request timeout, passed through to requests.
         headers: Request headers.
         max_redirects: Hops to follow before giving up.
-        deadline: A :func:`time.monotonic` value after which the body is
-            abandoned. *timeout* bounds each wait for data, so a server that
-            trickles bytes is only cut off by this.
+        deadline: A :func:`time.monotonic` value at which the download is
+            abandoned, wherever it is. *timeout* bounds each wait for data, not
+            the total, so a server that trickles bytes is only cut off by this.
 
     Returns:
         A ``(body, content_type, final_url)`` tuple, where *final_url* is the
@@ -207,14 +210,44 @@ def safe_get_bounded(
 
     Raises:
         ValueError: If *max_bytes* is not positive, URL validation fails, the
-            redirect chain is too long, the body exceeds *max_bytes*, or it is
-            still arriving at *deadline*.
+            redirect chain is too long, the body exceeds *max_bytes*, or the
+            download is not done by *deadline*.
         requests.RequestException: If the request fails or returns an error
             status.
     """
     if max_bytes <= 0:
         raise ValueError(f"max_bytes must be positive, got {max_bytes}.")
+    past_deadline = f"Downloading '{url}' did not finish by the deadline."
+    if deadline is not None and time.monotonic() >= deadline:
+        raise ValueError(past_deadline)
 
+    with cut_connections_at(deadline) as cut:
+        try:
+            fetched = _get_bounded(
+                url,
+                max_bytes=max_bytes,
+                timeout=timeout,
+                headers=headers,
+                max_redirects=max_redirects,
+            )
+        except requests.RequestException as e:
+            if not cut.is_set():
+                raise
+            raise ValueError(past_deadline) from e
+    # A body without a length ends at the cut as if it were complete.
+    if cut.is_set():
+        raise ValueError(past_deadline)
+    return fetched
+
+
+def _get_bounded(
+    url: str,
+    *,
+    max_bytes: int,
+    timeout: float | tuple[float, float],
+    headers: dict[str, str] | None,
+    max_redirects: int,
+) -> tuple[bytes, str, str]:
     response = safe_get(
         url,
         max_redirects=max_redirects,
@@ -239,11 +272,6 @@ def safe_get_bounded(
                     f"{max_bytes} byte limit."
                 )
             chunks.append(chunk)
-            if deadline is not None and time.monotonic() > deadline:
-                raise ValueError(
-                    f"Response body from '{response.url}' was still arriving "
-                    "at the deadline."
-                )
 
         return (
             b"".join(chunks),

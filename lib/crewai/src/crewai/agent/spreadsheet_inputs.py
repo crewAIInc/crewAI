@@ -81,7 +81,8 @@ _downloads_lock = threading.Lock()
 @dataclass(frozen=True)
 class SpreadsheetInputs:
     """The overview block for an agent's prompt, the tools that answer about
-    its spreadsheets, and the URLs it read; empty when its input names none."""
+    the spreadsheets it read, and every spreadsheet URL its input gave it, read
+    or not; empty when its input names none."""
 
     overview: str = ""
     tools: list[BaseTool] = field(default_factory=list)
@@ -186,7 +187,7 @@ def read_spreadsheet_inputs(text: str) -> SpreadsheetInputs:
     return SpreadsheetInputs(
         overview,
         spreadsheet_tools(files, read) if files else [],
-        frozenset(read),
+        frozenset(urls.values()),
     )
 
 

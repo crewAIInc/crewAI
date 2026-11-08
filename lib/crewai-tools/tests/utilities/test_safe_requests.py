@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import socket
+import threading
+import time
 from io import BytesIO
 from typing import Any
 
@@ -14,6 +17,7 @@ from crewai_tools.security.safe_requests import (
     SSRFProtectedAdapter,
     create_safe_session,
     safe_get,
+    safe_get_bounded,
 )
 from crewai_tools.security.ssrf_adapter import (
     _assert_safe_peer,
@@ -591,3 +595,76 @@ def test_non_streamed_raw_get_closes_session_before_return(
 
     assert session.closed is True
     assert response.content == b"hello"
+
+
+# A server that keeps a download alive by trickling bytes, each well inside the
+# read timeout, so only a deadline on the whole download can end it.
+
+TRICKLES = {
+    "headers": (b"HTTP/1.1 200 OK\r\n", b"X-Slow: " + b"a" * 10_000),
+    "body": (b"HTTP/1.1 200 OK\r\nContent-Type: text/csv\r\n\r\n", b"a," * 10_000),
+    "body-with-length": (
+        b"HTTP/1.1 200 OK\r\nContent-Length: 20000\r\n\r\n",
+        b"a," * 10_000,
+    ),
+}
+
+
+@pytest.fixture
+def loopback(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
+    """Serves one response on 127.0.0.1: a head sent at once, then a tail one
+    byte every 50 ms, or at once when ``trickle`` is off."""
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+    monkeypatch.delenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", raising=False)
+    server = socket.create_server(("127.0.0.1", 0))
+    stop = threading.Event()
+
+    def serve(head: bytes, tail: bytes, trickle: bool) -> str:
+        def run() -> None:
+            conn, _ = server.accept()
+            with conn:
+                conn.recv(65536)
+                conn.sendall(head)
+                if not trickle:
+                    conn.sendall(tail)
+                    return
+                for byte in tail:
+                    if stop.wait(0.05):
+                        return
+                    try:
+                        conn.sendall(bytes([byte]))
+                    except OSError:
+                        return
+
+        threading.Thread(target=run, daemon=True).start()
+        return f"http://127.0.0.1:{server.getsockname()[1]}/data.csv"
+
+    yield serve
+    stop.set()
+    server.close()
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+@pytest.mark.parametrize("stall", list(TRICKLES))
+def test_a_download_a_server_trickles_ends_at_the_deadline(
+    loopback: Any, stall: str
+) -> None:
+    url = loopback(*TRICKLES[stall], trickle=True)
+    started = time.monotonic()
+
+    with pytest.raises(ValueError, match="did not finish by the deadline"):
+        safe_get_bounded(url, max_bytes=1_000_000, timeout=5, deadline=started + 0.5)
+
+    assert time.monotonic() - started < 2
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_a_download_done_before_the_deadline_is_returned_whole(loopback: Any) -> None:
+    head, tail = TRICKLES["body-with-length"]
+    url = loopback(head, tail, trickle=False)
+
+    body, _, _ = safe_get_bounded(
+        url, max_bytes=1_000_000, timeout=5, deadline=time.monotonic() + 5
+    )
+
+    assert body == tail

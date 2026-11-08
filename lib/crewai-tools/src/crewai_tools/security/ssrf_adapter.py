@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 import socket
 import sys
+import threading
+import time
 from typing import Any
 
 import requests
@@ -133,6 +138,54 @@ def create_validated_connection(
     raise OSError("getaddrinfo returns an empty list")
 
 
+# The sockets connected inside cut_connections_at(); None outside one. The
+# socket, not the connection: http.client lets go of a connection's socket once
+# a response without a length owns it.
+_watched_sockets: ContextVar[list[socket.socket] | None] = ContextVar(
+    "crewai_tools_watched_sockets", default=None
+)
+
+
+@contextmanager
+def cut_connections_at(deadline: float | None) -> Iterator[threading.Event]:
+    """Shut down every connection opened inside the block once *deadline* (a
+    :func:`time.monotonic` value) passes; the event yielded is set if it did.
+
+    A socket timeout bounds each wait for data, not the total, so a server that
+    trickles bytes keeps a read going for as long as it likes. Shutting the
+    socket down from another thread ends that read wherever it is blocked: the
+    headers, the body, or any redirect hop.
+    """
+    cut = threading.Event()
+    if deadline is None:
+        yield cut
+        return
+    sockets: list[socket.socket] = []
+
+    def cut_all() -> None:
+        cut.set()
+        for sock in sockets:
+            # OSError: closed already, as the socket of a finished redirect hop is.
+            with suppress(OSError):
+                sock.shutdown(socket.SHUT_RDWR)
+
+    timer = threading.Timer(max(0.0, deadline - time.monotonic()), cut_all)
+    timer.daemon = True
+    token = _watched_sockets.set(sockets)
+    timer.start()
+    try:
+        yield cut
+    finally:
+        timer.cancel()
+        _watched_sockets.reset(token)
+
+
+def _watch(sock: socket.socket | None) -> None:
+    watched = _watched_sockets.get()
+    if watched is not None and sock is not None:
+        watched.append(sock)
+
+
 def _open_validated_socket(conn: HTTPConnection) -> socket.socket:
     port = conn.port
     if port is None:
@@ -165,10 +218,19 @@ class _SafeHTTPConnection(HTTPConnection):
     def _new_conn(self) -> socket.socket:
         return _open_validated_socket(self)
 
+    def connect(self) -> None:
+        super().connect()
+        _watch(self.sock)
+
 
 class _SafeHTTPSConnection(HTTPSConnection):
     def _new_conn(self) -> socket.socket:
         return _open_validated_socket(self)
+
+    def connect(self) -> None:
+        super().connect()
+        # The TLS socket: the plain one it wraps is detached by now.
+        _watch(self.sock)
 
 
 class _SafeHTTPConnectionPool(HTTPConnectionPool):
