@@ -138,11 +138,11 @@ def create_validated_connection(
     raise OSError("getaddrinfo returns an empty list")
 
 
-# The sockets connected inside cut_connections_at(); None outside one. The
-# socket, not the connection: http.client lets go of a connection's socket once
-# a response without a length owns it.
-_watched_sockets: ContextVar[list[socket.socket] | None] = ContextVar(
-    "crewai_tools_watched_sockets", default=None
+# The sockets connected inside cut_connections_at(), and whether its deadline
+# has passed; None outside one. The socket, not the connection: http.client lets
+# go of a connection's socket once a response without a length owns it.
+_watched_sockets: ContextVar[tuple[list[socket.socket], threading.Event] | None] = (
+    ContextVar("crewai_tools_watched_sockets", default=None)
 )
 
 
@@ -165,13 +165,11 @@ def cut_connections_at(deadline: float | None) -> Iterator[threading.Event]:
     def cut_all() -> None:
         cut.set()
         for sock in sockets:
-            # OSError: closed already, as the socket of a finished redirect hop is.
-            with suppress(OSError):
-                sock.shutdown(socket.SHUT_RDWR)
+            _shut(sock)
 
     timer = threading.Timer(max(0.0, deadline - time.monotonic()), cut_all)
     timer.daemon = True
-    token = _watched_sockets.set(sockets)
+    token = _watched_sockets.set((sockets, cut))
     timer.start()
     try:
         yield cut
@@ -182,8 +180,21 @@ def cut_connections_at(deadline: float | None) -> Iterator[threading.Event]:
 
 def _watch(sock: socket.socket | None) -> None:
     watched = _watched_sockets.get()
-    if watched is not None and sock is not None:
-        watched.append(sock)
+    if watched is None or sock is None:
+        return
+    sockets, cut = watched
+    sockets.append(sock)
+    # Connected after the deadline passed, as the next redirect hop can be: the
+    # timer has gone through the list already. Appending first means the timer
+    # or this check sees the socket, whichever runs last.
+    if cut.is_set():
+        _shut(sock)
+
+
+def _shut(sock: socket.socket) -> None:
+    # OSError: closed already, as the socket of a finished redirect hop is.
+    with suppress(OSError):
+        sock.shutdown(socket.SHUT_RDWR)
 
 
 def _open_validated_socket(conn: HTTPConnection) -> socket.socket:

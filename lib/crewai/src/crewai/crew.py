@@ -532,8 +532,15 @@ class Crew(FlowTrackable, BaseModel):
                 task._original_expected_output = (
                     task.checkpoint_original_expected_output
                 )
-            if task.checkpoint_input_description is not None:
-                task._input_description = task.checkpoint_input_description
+            # None only in a checkpoint from before 1.15.38, whose description
+            # can hold a plan or chat history: read spreadsheet URLs from the
+            # template the caller wrote alone. Remove once checkpoints from
+            # 1.15.37 and older are no longer resumed.
+            task._input_description = (
+                task.checkpoint_original_description or ""
+                if task.checkpoint_input_description is None
+                else task.checkpoint_input_description
+            )
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:

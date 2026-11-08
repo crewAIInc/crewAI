@@ -793,6 +793,62 @@ def test_a_task_restored_from_a_checkpoint_never_reads_its_plan(
     assert downloads.fetched == [TICKETS_URL]
 
 
+def restore(crew: Crew, tmp_path: Any, *, before_the_field: bool = False) -> Crew:
+    """Write ``crew`` to a checkpoint and restore it, optionally as a checkpoint
+    written before ``checkpoint_input_description`` existed."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.state.checkpoint_config import CheckpointConfig
+    from crewai.state.provider.json_provider import JsonProvider
+    from crewai.state.runtime import RuntimeState
+
+    state = RuntimeState(root=[crew])
+    state._provider = JsonProvider()
+    location = state.checkpoint(str(tmp_path))
+    if before_the_field:
+        with open(location) as f:
+            text = f.read()
+        assert '"checkpoint_input_description":' in text
+        with open(location, "w") as f:
+            f.write(
+                text.replace('"checkpoint_input_description":', '"_unused_old_field":')
+            )
+    try:
+        return Crew.from_checkpoint(CheckpointConfig(restore_from=location))
+    finally:
+        # from_checkpoint attaches the restored state to the bus for good.
+        crewai_event_bus.reset_runtime_state()
+
+
+def test_a_checkpoint_from_before_the_field_never_reads_its_plan(
+    downloads, monkeypatch, tmp_path
+):
+    plan_naming(SALES_URL, monkeypatch)
+    crew = planned_crew(ScriptedLLM("done"), f"Count the tickets in {TICKETS_URL}")
+    crew.kickoff()
+    restored = restore(crew, tmp_path, before_the_field=True)
+    llm = ScriptedLLM("done")
+
+    reader(llm).execute_task(restored.tasks[0])
+
+    assert SALES_URL in llm.prompt()
+    assert downloads.fetched == [TICKETS_URL]
+    assert llm.tool_names() == []
+
+
+def test_a_restored_task_nothing_was_added_to_reads_its_url(downloads, tmp_path):
+    agent = reader(ScriptedLLM("done"))
+    crew = Crew(
+        agents=[agent],
+        tasks=[Task(description=f"Count the tickets in {TICKETS_URL}", expected_output="x", agent=agent)],
+    )
+    restored = restore(crew, tmp_path)
+    llm = ScriptedLLM("done")
+
+    reader(llm).execute_task(restored.tasks[0])
+
+    assert llm.tool_names() == ["inspect_spreadsheet", "query_spreadsheet"]
+
+
 def test_a_copied_task_never_reads_its_plan(downloads, monkeypatch):
     plan_naming(SALES_URL, monkeypatch)
     crew = planned_crew(ScriptedLLM("done"), f"Count the tickets in {TICKETS_URL}")

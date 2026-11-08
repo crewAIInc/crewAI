@@ -22,6 +22,7 @@ from crewai_tools.security.safe_requests import (
 from crewai_tools.security.ssrf_adapter import (
     _assert_safe_peer,
     create_validated_connection,
+    cut_connections_at,
 )
 
 
@@ -668,3 +669,18 @@ def test_a_download_done_before_the_deadline_is_returned_whole(loopback: Any) ->
     )
 
     assert body == tail
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_a_connection_made_after_the_deadline_passed_is_cut(loopback: Any) -> None:
+    """As the next redirect hop can be: the timer has already run when it connects."""
+    url = loopback(*TRICKLES["body"], trickle=True)
+    started = time.monotonic()
+
+    with cut_connections_at(started) as cut:
+        assert cut.wait(1)
+        with pytest.raises(requests.RequestException):
+            response = safe_get(url, timeout=5, stream=True)
+            b"".join(response.iter_content(65536))
+
+    assert time.monotonic() - started < 2

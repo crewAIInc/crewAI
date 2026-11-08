@@ -113,7 +113,9 @@ def kickoff_input_text(messages: str | list[LLMMessage]) -> str:
 def task_input_text(task: Task) -> str:
     """A task's description as its inputs filled it in, before crew planning or
     a crew chat's history is added to it, which are model text."""
-    return task._input_description or task.description
+    if task._input_description is None:
+        return task.description
+    return task._input_description
 
 
 def spreadsheet_urls(text: str) -> dict[str, str]:
