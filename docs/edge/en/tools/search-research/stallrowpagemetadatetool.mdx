@@ -1,0 +1,58 @@
+---
+title: StallRow Page Metadata
+description: The `StallRowPageMetadataTool` fetches a web page's declared metadata — title, description, canonical, OpenGraph/Twitter fields, heading outline, and word count — for $0.005 per call, paid over the x402 protocol.
+icon: globe
+mode: "wide"
+---
+
+# `StallRowPageMetadataTool`
+
+## Description
+
+This tool fetches one web page's declared metadata from the [StallRow](https://stall-row-production.up.railway.app) `POST /v1/page-metadata` endpoint: title, description, canonical URL, OpenGraph and Twitter card fields, document language, favicon, the h1/h2 heading outline, and word count. Use it when an agent needs a page's identity and shape before deciding whether the full content is worth fetching.
+
+It is the first pay-per-call tool in CrewAI: there is no API key, account, or subscription. Each call costs **$0.005 USDC**, paid automatically over the [x402 protocol](https://www.x402.org) on Base (EIP-3009 `TransferWithAuthorization`) from a wallet you configure — payment is the auth. A hard per-call price cap refuses any higher price before anything is signed, and with no wallet configured the tool fails closed and pays nothing.
+
+## Installation
+
+To effectively use the `StallRowPageMetadataTool`, follow these steps:
+
+1. **Package Installation**: Confirm that the `crewai[tools]` package is installed in your Python environment, plus the `stallrow` extra, which adds the `eth-account` payment signer.
+2. **Wallet Configuration**: Set the environment variable `STALLROW_WALLET_PRIVATE_KEY` to the private key of a Base wallet holding a small amount of USDC. The key is used only to sign payments locally; it is never sent anywhere.
+3. **Price Cap (optional)**: Leave `STALLROW_MAX_PRICE_USDC` unset to cap spending at the endpoint's price ($0.005), or set it to adjust the cap.
+
+To incorporate this tool into your project, follow the installation instructions below:
+
+```shell
+pip install 'crewai[tools]'
+pip install 'crewai-tools[stallrow]'
+```
+
+## Example
+
+The following example demonstrates how to initialize the tool and fetch a page's metadata:
+
+```python Code
+from crewai_tools import StallRowPageMetadataTool
+
+# Initialize the tool; the payer wallet is read from the environment
+tool = StallRowPageMetadataTool()
+
+print(tool.run(url="https://www.x402.org/"))
+
+# {"url": "https://www.x402.org/", "final_url": "https://www.x402.org/",
+#  "title": "x402 — internet-native payments", "description": "An open standard
+#  for internet-native payments.", "canonical": "https://www.x402.org/",
+#  "lang": "en", "favicon": "https://www.x402.org/favicon.ico",
+#  "og": {"title": "x402", "type": "website"}, "twitter": {"card": "summary"},
+#  "headings": {"h1": ["x402"], "h2": ["How it works"]}, "word_count": 120}
+```
+
+## Parameters
+
+The `StallRowPageMetadataTool` accepts the following parameters:
+
+- **base_url**: The StallRow service base URL. (Default is `https://stall-row-production.up.railway.app`)
+- **max_price_usdc**: Optional per-call price cap in USDC. Defaults to the `STALLROW_MAX_PRICE_USDC` environment variable, then to `0.005` — exactly the endpoint's price. Any price above the cap is refused before payment.
+
+The tool's input is a single `url`: the web page to fetch metadata for.
