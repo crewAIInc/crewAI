@@ -44,8 +44,11 @@ logger = logging.getLogger(__name__)
 # punctuation) ends it, and urlparse never sees text it rejects.
 _URL: Final = re.compile(r"https?://[A-Za-z0-9\-._~:/?#@!$&*+,;=%()]+")
 # Markup escapes a URL's "&" as "&amp;". Only references ending in ";" are
-# decoded: html.unescape alone also reads "&para=2" in a query as "¶=2".
-_CHARACTER_REFERENCE: Final = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z]+);")
+# decoded: html.unescape alone also reads "&para=2" in a query as "¶=2". Digits
+# are capped at what a code point needs: html.unescape raises on more than 4300.
+_CHARACTER_REFERENCE: Final = re.compile(
+    r"&(?:#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z]{1,32});"
+)
 _TRAILING: Final = ".,;:!?"
 _MAX_URLS: Final = 10
 _UNREADABLE: Final = (

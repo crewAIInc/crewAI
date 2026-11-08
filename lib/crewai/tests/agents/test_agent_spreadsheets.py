@@ -1111,6 +1111,12 @@ def test_a_prompt_placeholder_in_a_file_is_not_filled_in(downloads):
     assert "{ tools }" in llm.prompt()
 
 
+def test_a_character_reference_too_long_to_decode_is_left_alone(downloads):
+    text = "&#" + "9" * 5_000 + "; and " + SALES_URL
+
+    assert spreadsheet_inputs.spreadsheet_urls(text) == {"sales.csv": SALES_URL}
+
+
 def test_a_long_run_of_closing_parentheses_is_read_quickly(downloads):
     started = time.monotonic()
 

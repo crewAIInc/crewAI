@@ -138,9 +138,8 @@ def create_validated_connection(
     raise OSError("getaddrinfo returns an empty list")
 
 
-# The sockets connected inside cut_connections_at(), and whether its deadline
-# has passed; None outside one. The socket, not the connection: http.client lets
-# go of a connection's socket once a response without a length owns it.
+# Duplicates of the sockets connected inside cut_connections_at(), and whether
+# its deadline has passed; None outside one.
 _watched_sockets: ContextVar[tuple[list[socket.socket], threading.Event] | None] = (
     ContextVar("crewai_tools_watched_sockets", default=None)
 )
@@ -154,7 +153,7 @@ def cut_connections_at(deadline: float | None) -> Iterator[threading.Event]:
     A socket timeout bounds each wait for data, not the total, so a server that
     trickles bytes keeps a read going for as long as it likes. Shutting the
     socket down from another thread ends that read wherever it is blocked: the
-    headers, the body, or any redirect hop.
+    TLS handshake, the headers, the body, or any redirect hop.
     """
     cut = threading.Event()
     if deadline is None:
@@ -175,14 +174,23 @@ def cut_connections_at(deadline: float | None) -> Iterator[threading.Event]:
         yield cut
     finally:
         timer.cancel()
+        timer.join()
         _watched_sockets.reset(token)
+        for sock in sockets:
+            sock.close()
 
 
-def _watch(sock: socket.socket | None) -> None:
+def _watch(sock: socket.socket) -> None:
     watched = _watched_sockets.get()
-    if watched is None or sock is None:
+    if watched is None:
         return
     sockets, cut = watched
+    # A duplicate of its descriptor, held until the block ends: the socket is
+    # detached into a TLS socket for the handshake, and http.client lets go of
+    # it once a response without a length owns it, but shutting the duplicate
+    # down ends a read on any of them. Holding it also keeps the descriptor
+    # number from going to another socket before the timer runs.
+    sock = sock.dup()
     sockets.append(sock)
     # Connected after the deadline passed, as the next redirect hop can be: the
     # timer has gone through the list already. Appending first means the timer
@@ -222,6 +230,7 @@ def _open_validated_socket(conn: HTTPConnection) -> socket.socket:
         ) from exc
 
     sys.audit("http.client.connect", conn, conn.host, conn.port)
+    _watch(sock)
     return sock
 
 
@@ -229,19 +238,10 @@ class _SafeHTTPConnection(HTTPConnection):
     def _new_conn(self) -> socket.socket:
         return _open_validated_socket(self)
 
-    def connect(self) -> None:
-        super().connect()
-        _watch(self.sock)
-
 
 class _SafeHTTPSConnection(HTTPSConnection):
     def _new_conn(self) -> socket.socket:
         return _open_validated_socket(self)
-
-    def connect(self) -> None:
-        super().connect()
-        # The TLS socket: the plain one it wraps is detached by now.
-        _watch(self.sock)
 
 
 class _SafeHTTPConnectionPool(HTTPConnectionPool):

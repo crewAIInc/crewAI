@@ -608,6 +608,9 @@ TRICKLES = {
         b"HTTP/1.1 200 OK\r\nContent-Length: 20000\r\n\r\n",
         b"a," * 10_000,
     ),
+    # The client's hello is answered with a TLS record header announcing 16 KB,
+    # whose bytes then trickle in.
+    "tls-handshake": (b"\x16\x03\x03\x40\x00", b"\x02" * 10_000),
 }
 
 
@@ -620,7 +623,7 @@ def loopback(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     server = socket.create_server(("127.0.0.1", 0))
     stop = threading.Event()
 
-    def serve(head: bytes, tail: bytes, trickle: bool) -> str:
+    def serve(head: bytes, tail: bytes, trickle: bool, scheme: str = "http") -> str:
         def run() -> None:
             conn, _ = server.accept()
             with conn:
@@ -638,7 +641,7 @@ def loopback(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
                         return
 
         threading.Thread(target=run, daemon=True).start()
-        return f"http://127.0.0.1:{server.getsockname()[1]}/data.csv"
+        return f"{scheme}://127.0.0.1:{server.getsockname()[1]}/data.csv"
 
     yield serve
     stop.set()
@@ -650,7 +653,8 @@ def loopback(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
 def test_a_download_a_server_trickles_ends_at_the_deadline(
     loopback: Any, stall: str
 ) -> None:
-    url = loopback(*TRICKLES[stall], trickle=True)
+    scheme = "https" if stall == "tls-handshake" else "http"
+    url = loopback(*TRICKLES[stall], trickle=True, scheme=scheme)
     started = time.monotonic()
 
     with pytest.raises(ValueError, match="did not finish by the deadline"):
