@@ -207,14 +207,27 @@ class RecallFlow(Flow[RecallState]):
             )
             self.state.query_analysis = analysis
         else:
-            available = self._storage.list_scopes(self.state.scope or "/")
+            try:
+                available = self._storage.list_scopes(self.state.scope or "/")
+            except Exception:
+                logger.warning(
+                    "Storage list_scopes failed in analyze_query_step, "
+                    "falling back to root scope",
+                    exc_info=True,
+                )
+                available = []
             if not available:
                 available = ["/"]
-            scope_info = (
-                self._storage.get_scope_info(self.state.scope or "/")
-                if self.state.scope
-                else None
-            )
+            scope_info = None
+            if self.state.scope:
+                try:
+                    scope_info = self._storage.get_scope_info(self.state.scope)
+                except Exception:
+                    logger.warning(
+                        "Storage get_scope_info failed in analyze_query_step, "
+                        "continuing without scope info",
+                        exc_info=True,
+                    )
             analysis = analyze_query(
                 self.state.query,
                 available,
