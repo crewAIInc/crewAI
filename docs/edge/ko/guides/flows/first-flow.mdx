@@ -56,6 +56,8 @@ crewai create flow guide_creator_flow
 cd guide_creator_flow
 ```
 
+`crewai create`가 `Run it now?`라고 물으면 `n`으로 답하세요. 이 가이드에서는 flow를 실행하기 전에 먼저 수정합니다.
+
 이렇게 하면 flow에 필요한 기본 구조를 가진 프로젝트가 생성됩니다.
 
 <Frame caption="CrewAI Framework 개요">
@@ -370,7 +372,7 @@ if __name__ == "__main__":
 
 ## 6단계: 환경 변수 설정하기
 
-프로젝트 루트에 `.env` 파일을 생성하고 API 키를 입력하세요. 공급자 구성에 대한 자세한 내용은 [LLM 설정 가이드](/ko/concepts/llms#llm-설정하기)를 참고하세요.
+터미널에서 `crewai create flow`를 실행했다면, CLI가 제공업체, 모델, API 키를 묻고 프로젝트 루트의 `.env` 파일에 저장했습니다. 키를 건너뛰었다면 지금 `.env`에 추가하세요. 이 가이드의 개요 단계는 `openai/gpt-4o-mini`를 호출하므로, 어떤 모델을 골랐든 `.env`에 `OPENAI_API_KEY`도 필요합니다. 공급자 구성에 대한 자세한 내용은 [LLM 설정 가이드](/ko/concepts/llms#llm-설정하기)를 참고하세요.
 
 ```sh .env
 OPENAI_API_KEY=your_openai_api_key
