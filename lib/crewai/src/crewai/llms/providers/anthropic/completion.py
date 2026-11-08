@@ -2137,6 +2137,7 @@ class AnthropicCompletion(BaseLLM):
         return (
             "claude-3" in model_lower
             or "claude-4" in model_lower
+            or "claude-5" in model_lower
             or "claude-sonnet-4" in model_lower
             or "claude-opus-4" in model_lower
             or "claude-haiku-4" in model_lower
