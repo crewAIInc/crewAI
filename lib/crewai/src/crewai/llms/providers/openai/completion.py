@@ -432,7 +432,10 @@ class OpenAICompletion(BaseLLM):
                 data["base_url"] = custom_base_url
         if not data.get("provider"):
             data["provider"] = "openai"
-        data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
+        # OpenAI's own key. An OpenAI-compatible provider resolves its own, and
+        # this one must never be sent to it.
+        if data["provider"] == "openai":
+            data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
         if "api_base" not in data:
             data["api_base"] = None
         model = data.get("model", "gpt-4o")
