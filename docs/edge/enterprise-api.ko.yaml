@@ -22,11 +22,18 @@ security:
 paths:
   /inputs:
     get:
-      summary: 필요 입력값 조회
+      summary: 입력값 조회
       description: |
         **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
 
-        실행에 필요한 입력 파라미터 목록을 반환합니다.
+        크루 또는 Flow가 받는 입력을 반환합니다. `inputs`는 호출자가 전달할 수 있는 모든 입력이고,
+        `required_inputs`는 `POST /kickoff`가 없으면 실행을 거부하는 입력입니다. `required_inputs`에 없는
+        입력은 선택 사항이며 기본값을 사용합니다.
+
+        Flow의 입력은 state의 필수 필드와 Flow가 선언한 선택 입력입니다. 코드 Flow의 Pydantic state에서는
+        `description`이 있는 필드, 선언형 Flow에서는 기본값이 있는 필드가 선택 입력입니다. Flow가 직접 쓰는
+        작업 필드와 출력 필드는 나열되지 않습니다. 어떤 필드에도 `description`이 없는 코드 Flow는 모든 필드를
+        나열합니다.
       operationId: getRequiredInputs
       responses:
         '200':
@@ -40,6 +47,12 @@ paths:
                     type: array
                     items:
                       type: string
+                    description: 호출자가 전달할 수 있는 모든 입력 (필수 및 선택)
+                  required_inputs:
+                    type: array
+                    items:
+                      type: string
+                    description: '`POST /kickoff`에 반드시 필요한 입력 (`inputs`의 부분집합)'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
