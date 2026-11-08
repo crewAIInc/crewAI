@@ -170,6 +170,7 @@ class SeleniumScrapingTool(BaseTool):
     def _get_content(
         self, css_element: str | None, return_html: bool | None
     ) -> list[str]:
+        self._validate_landed_url()
         content: list[str] = []
 
         if self._is_css_element_empty(css_element):
@@ -230,6 +231,7 @@ class SeleniumScrapingTool(BaseTool):
             self.driver.get(url)
             self._validate_landed_url()
             time.sleep(sleep_time)
+        self._validate_landed_url()
 
     def _validate_landed_url(self) -> None:
         """Re-validate the URL the browser actually landed on.
@@ -238,6 +240,11 @@ class SeleniumScrapingTool(BaseTool):
         browser follows redirects on its own: a public URL can 3xx-redirect
         to a private or cloud-metadata address, and the tool would return
         that page. If the final URL is blocked, raise so no content is read.
+
+        Called after each navigation, again after the wait, and at the
+        start of content extraction: a page can also navigate during
+        ``wait_time`` (meta refresh, script), so the only check that
+        matters is the one immediately before content is read.
 
         This is mitigation, not prevention, and two limits are deliberate:
         the browser has already made the redirected request by the time

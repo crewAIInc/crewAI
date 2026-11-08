@@ -402,3 +402,81 @@ def test_run_allows_redirect_to_public_url(_mocked_chrome_driver):
 
     assert "landed content" in result
     assert driver.get_calls == ["https://example.com"]
+
+
+class WaitRefreshDriver:
+    """Driver double that lands on the requested (public) URL and then
+    navigates elsewhere while the tool waits, as a meta refresh or a
+    script on the initially landed page would."""
+
+    def __init__(self, refresh_url: str, page_text: str) -> None:
+        self._refresh_url = refresh_url
+        self._page_text = page_text
+        self.current_url = "about:blank"
+        self.get_calls: list[str] = []
+
+    def get(self, url: str) -> None:
+        self.get_calls.append(url)
+        self.current_url = url
+
+    def navigate_during_wait(self) -> None:
+        self.current_url = self._refresh_url
+
+    def find_element(self, by: str, selector: str):
+        page_text = self._page_text
+
+        class Element:
+            def __init__(self, text: str) -> None:
+                self.text = text
+
+            def get_attribute(self, name: str) -> str:
+                return f"<html><body>{page_text}</body></html>"
+
+        return Element(page_text)
+
+    def find_elements(self, by: str, selector: str):
+        return [self.find_element(by, selector)]
+
+
+def run_with_wait_refresh(driver: WaitRefreshDriver) -> str:
+    """Run the tool while the page navigates away during the wait."""
+    tool = SeleniumScrapingTool(driver=driver, wait_time=3)
+    module = "crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool"
+    with patch(f"{module}.time") as mock_time:
+        mock_time.sleep.side_effect = lambda *_args: driver.navigate_during_wait()
+        return tool._run(website_url="https://example.com")
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_wait_refresh_to_loopback_url(_mocked_chrome_driver):
+    """A page that refreshes to loopback during wait_time must not leak."""
+    driver = WaitRefreshDriver("http://127.0.0.1/admin", "internal secret")
+
+    result = run_with_wait_refresh(driver)
+
+    assert "Error scraping website" in result
+    assert "private/reserved IP" in result
+    assert "internal secret" not in result
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_rejects_wait_refresh_to_cloud_metadata_url(_mocked_chrome_driver):
+    driver = WaitRefreshDriver(
+        "http://169.254.169.254/latest/meta-data/", "metadata secret"
+    )
+
+    result = run_with_wait_refresh(driver)
+
+    assert "Error scraping website" in result
+    assert "private/reserved IP" in result
+    assert "metadata secret" not in result
+
+
+@patch("selenium.webdriver.Chrome")
+def test_run_allows_wait_refresh_to_public_url(_mocked_chrome_driver):
+    """A page that refreshes to another public URL during the wait works."""
+    driver = WaitRefreshDriver("https://example.com/landing", "landed content")
+
+    result = run_with_wait_refresh(driver)
+
+    assert "landed content" in result
