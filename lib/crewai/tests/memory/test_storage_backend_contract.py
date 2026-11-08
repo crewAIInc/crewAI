@@ -32,14 +32,6 @@ QDRANT_EDGE = pytest.param(
         reason="qdrant-edge-py not installed",
     ),
 )
-LANCEDB_LIST_ORDER_BUG = pytest.param(
-    "lancedb",
-    id="lancedb",
-    marks=pytest.mark.xfail(
-        strict=True,
-        reason="LanceDB truncates the scan before sorting (#7394); fixed by #7418",
-    ),
-)
 
 
 @pytest.fixture(params=[LANCEDB, QDRANT_EDGE])
@@ -190,9 +182,6 @@ class TestListRecords:
 
         assert [r.id for r in listed] == [r.id for r in newest_first]
 
-    @pytest.mark.parametrize(
-        "storage", [LANCEDB_LIST_ORDER_BUG, QDRANT_EDGE], indirect=True
-    )
     @pytest.mark.parametrize(
         ("limit", "offset", "expected_indexes"),
         [
