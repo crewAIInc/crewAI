@@ -10,7 +10,7 @@ import sys
 import tempfile
 from typing import Final, Literal, cast
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 
 _FERNET_KEY_LENGTH: Final[Literal[44]] = 44
@@ -68,8 +68,16 @@ class TokenManager:
         if encrypted_data is None:
             return None
 
-        decrypted_data = self.fernet.decrypt(encrypted_data)
-        data = json.loads(decrypted_data)
+        try:
+            decrypted_data = self.fernet.decrypt(encrypted_data)
+            data = json.loads(decrypted_data)
+        except (InvalidToken, json.JSONDecodeError):
+            # The token file cannot be read with the current key — e.g. the
+            # stored secret.key was removed while tokens.enc survived, so the
+            # next TokenManager() generated a fresh key. That is the logged-
+            # out state, not a crash: get_auth_token() turns None into the
+            # login prompt.
+            return None
 
         expiration = datetime.fromisoformat(data["expiration"])
         if expiration <= datetime.now():
