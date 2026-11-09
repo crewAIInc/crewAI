@@ -75,10 +75,13 @@ class _FakeResponse:
         return self._json_body
 
 
-def _challenge_response(amount="5000", *, via_header=True, asset=USDC_BASE):
+def _challenge_response(
+    amount="5000", *, via_header=True, asset=USDC_BASE, max_timeout_seconds=300
+):
     challenge = copy.deepcopy(CHALLENGE)
     challenge["accepts"][0]["amount"] = amount
     challenge["accepts"][0]["asset"] = asset
+    challenge["accepts"][0]["maxTimeoutSeconds"] = max_timeout_seconds
     headers = {}
     if via_header:
         headers["payment-required"] = base64.b64encode(
@@ -193,6 +196,22 @@ def test_non_usdc_asset_is_refused_before_signing(mock_post, _wallet_env):
     assert result.startswith("Error fetching page metadata:")
     assert "USDC" in result
     assert "0x4200000000000000000000000000000000000006" in result
+    # Refused after the unpaid probe — the paid retry never happened.
+    assert mock_post.call_count == 1
+
+
+@patch(POST_PATH)
+def test_excessive_timeout_is_refused_before_signing(mock_post, _wallet_env):
+    # A multi-year validity window priced under the cap in the right
+    # asset: the amount and asset are fine, but a signed authorization
+    # must never stay settleable that long at the endpoint's say-so.
+    mock_post.return_value = _challenge_response(max_timeout_seconds=63_072_000)
+    tool = StallRowPageMetadataTool()
+
+    result = tool._run("https://example.com/")
+
+    assert result.startswith("Error fetching page metadata:")
+    assert "validity window" in result
     # Refused after the unpaid probe — the paid retry never happened.
     assert mock_post.call_count == 1
 

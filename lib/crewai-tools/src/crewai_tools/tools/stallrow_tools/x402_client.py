@@ -7,8 +7,8 @@ own production clients run against StallRow:
 1. POST the endpoint unpaid -> HTTP 402 with a base64 JSON challenge in
    the `payment-required` response header (also mirrored in the body).
 2. Pick the `exact` / `eip155:8453` entry from `accepts`.
-3. Enforce the asset (USDC on Base) and the per-call price cap
-   *before* anything is signed.
+3. Enforce the asset (USDC on Base), the per-call price cap, and the
+   authorization validity-window ceiling *before* anything is signed.
 4. Build the EIP-3009 authorization and sign it as EIP-712 typed data
    with the domain the challenge advertises in `accepts.extra`
    (for USDC on Base: name "USD Coin", version "2").
@@ -41,6 +41,12 @@ BASE_NETWORK = "eip155:8453"
 BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 USDC_DECIMALS = 6
 DEFAULT_MAX_PRICE_USDC = "0.005"
+DEFAULT_TIMEOUT_SECONDS = 300
+# Client-side ceiling on the EIP-3009 validity window: the endpoint
+# chooses maxTimeoutSeconds, but this client never signs an
+# authorization that stays settleable for longer than this, however
+# long the challenge asks for.
+MAX_TIMEOUT_SECONDS = 300
 PRIVATE_KEY_ENV_VAR = "STALLROW_WALLET_PRIVATE_KEY"
 MAX_PRICE_ENV_VAR = "STALLROW_MAX_PRICE_USDC"
 
@@ -122,14 +128,33 @@ def build_authorization(
     nonce: str | None = None,
 ) -> dict[str, str]:
     """EIP-3009 authorization, string fields exactly as the reference
-    x402 EVM clients build them."""
+    x402 EVM clients build them.
+
+    The challenge's `maxTimeoutSeconds` is refused, before anything is
+    signed, when it is unusable or exceeds `MAX_TIMEOUT_SECONDS`: the
+    endpoint alone must not be able to make a signed authorization
+    settleable for months or years after the call that produced it.
+    """
     now = int(time.time()) if now is None else now
+    try:
+        timeout = int(requirement.get("maxTimeoutSeconds", DEFAULT_TIMEOUT_SECONDS))
+    except (TypeError, ValueError) as e:
+        raise X402PaymentError(
+            "payment requirement carries no usable maxTimeoutSeconds: "
+            f"{requirement.get('maxTimeoutSeconds')!r}"
+        ) from e
+    if timeout <= 0 or timeout > MAX_TIMEOUT_SECONDS:
+        raise X402PaymentError(
+            f"endpoint requires a payment validity window of {timeout} "
+            f"seconds, outside the 1-{MAX_TIMEOUT_SECONDS} second window "
+            "this client will sign"
+        )
     return {
         "from": from_address,
         "to": requirement["payTo"],
         "value": str(requirement["amount"]),
         "validAfter": "0",
-        "validBefore": str(now + int(requirement.get("maxTimeoutSeconds", 300))),
+        "validBefore": str(now + timeout),
         "nonce": nonce or ("0x" + secrets.token_hex(32)),
     }
 
