@@ -108,7 +108,10 @@ class TavilyExtractorTool(BaseTool):
                 "You are missing the 'tavily-python' package, which is required for TavilyExtractorTool. Would you like to install it?"
             ):
                 try:
-                    subprocess.run(["uv pip", "install", "tavily-python"], check=True)  # noqa: S607
+                    subprocess.run(
+                        ["uv", "pip", "install", "tavily-python"],  # noqa: S607
+                        check=True,
+                    )
                     raise ImportError(
                         "'tavily-python' has been installed. Please restart your Python application to use the TavilyExtractorTool."
                     )
