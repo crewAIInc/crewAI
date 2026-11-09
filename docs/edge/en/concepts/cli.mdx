@@ -36,13 +36,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Create a new crew, flow, tool, skill, or template project.
+Create a new crew, flow, standalone Agent (experimental), tool, skill, or template project.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: `crew`, `flow`, `tool`, `skill`, or `template`
+- `TYPE`: `crew`, `flow`, `agent` (experimental), `tool`, `skill`, or `template`
 - `NAME`: Name of the project, tool handle, skill, or template
 
 #### Crew
@@ -76,6 +76,16 @@ Press Enter to start `crewai run` in the project folder. `crewai create` then ex
 ```
 
 `crewai create` does not ask with `CREWAI_DMN=true`, or when stdin or stdout is not a terminal, as when a coding agent or a CI job runs it. Creating a tool, a skill or a template never asks.
+
+#### Agent (Experimental)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+Standalone Agent projects default to `agent.yaml`. Use `--format json` for configuration in JSON, or `--format python` for an exported Python Agent. This experimental project/loading contract may change and requires matching preview CLI/SDK builds. See [Standalone Agent Projects](/edge/en/guides/agents/standalone-agent-projects) for setup, tools, runtime inputs, and deployment limits.
 
 #### Tool
 
@@ -219,7 +229,7 @@ crewai test [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: Number of iterations to test the crew (default: 3)
-- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
+- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-6-luna")
 
 Example:
 
@@ -251,6 +261,8 @@ OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to /path/to/my_crew/.en
 ```
 
 The check covers providers that take a single API key, such as OpenAI, Anthropic, Gemini and Groq. It skips Azure, Bedrock and watsonx, local models such as Ollama, and declarative flows. It does not read an `llm` set in Python code, and when a project's code sets one, it does not check the default model either. A `.env` that is not a regular file, such as a named pipe a secrets manager serves, is left for the run to read and is not checked. Before the CLI saves a key, it makes `.env` readable by you only; when it cannot, it uses the key for this run only and says so instead of saving it. When the project's `.env` sends requests to another host through a setting your own environment does not have, such as `OPENAI_BASE_URL`, `OPENAI_API_BASE` or `HTTPS_PROXY`, or a JSON crew's files set a `base_url`, `api_base` or `endpoint` anywhere, such as in an `llm`, its `client_params`, a `planning_llm` or an embedder's `config`, the prompt names each host before it asks. Paste a key only if you trust that host.
+
+If a JSON crew still fails because an API key is not set, for example the key of a model this check skips, the run stops with the same line instead of a traceback. At a terminal, the CLI first asks for that key as above, then builds the crew again and runs it once more from its first task, so tasks that already finished run again; press Enter to stop instead.
 
 <Note>
   Make sure to run these commands from the directory where your CrewAI project

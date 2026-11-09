@@ -75,6 +75,7 @@ def test_default_uses_medium_complexity_model(mock_llm_cls: MagicMock) -> None:
     tool._run(image_path_url=IMAGE_URL)
 
     mock_llm_cls.assert_called_once_with(model=DEFAULT_MODEL, stop=["STOP", "END"])
+    assert DEFAULT_MODEL == "gpt-6-luna"
 
 
 @patch("crewai_tools.tools.vision_tool.vision_tool.LLM")

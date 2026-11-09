@@ -49,15 +49,22 @@ security:
 paths:
   /inputs:
     get:
-      summary: Obter Inputs Requeridos
+      summary: Obter Inputs
       description: |
         **📋 Exemplo de Referência** - *Mostra o formato da requisição. Para testar com sua crew real, copie o cURL e substitua URL + token.*
 
-        Retorna a lista de parâmetros de entrada que sua crew espera.
+        Retorna os inputs que sua crew ou flow aceita. `inputs` lista todos os inputs que quem chama pode
+        enviar, e `required_inputs` lista aqueles sem os quais o `POST /kickoff` não executa. Inputs que não
+        estão em `required_inputs` são opcionais e usam seus valores padrão.
+
+        Em um flow, os inputs são os campos obrigatórios do estado mais os inputs opcionais que ele declara:
+        campos com `description` no estado Pydantic de um flow de código, e campos com valor padrão em um flow
+        declarativo. Campos de trabalho e de saída que o próprio flow escreve não aparecem. Um flow de código
+        cujo estado não descreve nenhum campo lista todos eles.
       operationId: getRequiredInputs
       responses:
         "200":
-          description: Inputs requeridos obtidos com sucesso
+          description: Inputs obtidos com sucesso
           content:
             application/json:
               schema:
@@ -67,8 +74,14 @@ paths:
                     type: array
                     items:
                       type: string
-                    description: Nomes dos parâmetros de entrada
+                    description: Todos os inputs que quem chama pode enviar, obrigatórios e opcionais
                     example: ["budget", "interests", "duration", "age"]
+                  required_inputs:
+                    type: array
+                    items:
+                      type: string
+                    description: Inputs sem os quais o `POST /kickoff` não executa; um subconjunto de `inputs`
+                    example: ["budget", "interests", "duration"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -115,6 +128,27 @@ paths:
                     type: string
                     format: uuid
                     example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+        "422":
+          description: >-
+            Erro de validação: falta um input obrigatório, ou os apps de um agente não estão conectados no CrewAI AMP. Os apps são verificados antes de a execução começar quando a requisição usa um User Bearer Token. Apps que essa verificação não detecta fazem a execução falhar, e `GET /status/{kickoff_id}` os informa.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - type: object
+                    properties:
+                      detail:
+                        $ref: "#/components/schemas/AppsNotConnected"
+              examples:
+                apps_not_connected:
+                  summary: Os apps de um agente não estão conectados no CrewAI AMP
+                  value:
+                    detail:
+                      code: "apps_not_connected"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      agent: "Asana Workspace Scout"
+                      missing_apps: ["asana"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "500":
@@ -331,13 +365,19 @@ components:
     ExecutionError:
       type: object
       properties:
+        state:
+          type: string
+          enum: ["FAILED"]
+          description: Estado da execução
         status:
           type: string
-          enum: ["error"]
+          description: Mensagem de erro descrevendo o que deu errado
+          example: "Task execution failed: Invalid API key"
         error:
-          type: string
-        execution_time:
-          type: number
+          allOf:
+            - $ref: "#/components/schemas/AppsNotConnected"
+          nullable: true
+          description: Definido quando a execução falhou porque os apps de um agente não estão conectados no CrewAI AMP; null para qualquer outra falha.
 
     TaskResult:
       type: object
@@ -373,6 +413,29 @@ components:
               type: array
               items:
                 type: string
+
+    AppsNotConnected:
+      type: object
+      description: Os apps de um agente não estão conectados no CrewAI AMP, ou o CrewAI AMP não os conhece.
+      properties:
+        code:
+          type: string
+          enum: ["apps_not_connected"]
+          description: Sempre `apps_not_connected`
+        message:
+          type: string
+          description: Mensagem de erro legível
+          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+        agent:
+          type: string
+          description: Role do agente que declara os apps
+          example: "Asana Workspace Scout"
+        missing_apps:
+          type: array
+          items:
+            type: string
+          description: Apps a conectar no CrewAI AMP, como o CrewAI AMP os nomeia
+          example: ["asana"]
 
   responses:
     UnauthorizedError:
