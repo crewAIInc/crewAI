@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 import threading
 from typing import Any, ClassVar
@@ -2938,6 +2939,35 @@ def test_expression_action_round_trips():
     assert action.call == "expression"
     assert action.expr == "state.score >= 80 ? 'qualified' : 'nurture'"
     assert Flow.from_declaration(contents=definition).kickoff(inputs={"score": 90}) == "qualified"
+
+
+class _ExpressionCustomer(BaseModel):
+    name: str
+
+
+@pytest.mark.parametrize(
+    "extra_inputs",
+    [
+        {"due": date(2026, 1, 1)},
+        {"customer": _ExpressionCustomer(name="Ann")},
+        {"tags": {"x"}},
+    ],
+)
+def test_expression_action_dict_state_with_non_json_values(extra_inputs):
+    flow = Flow.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "DictStateExpressionFlow",
+            "methods": {
+                "greet": {
+                    "start": True,
+                    "do": {"call": "expression", "expr": "'hello ' + state.topic"},
+                }
+            },
+        }
+    )
+
+    assert flow.kickoff(inputs={"topic": "ai", **extra_inputs}) == "hello ai"
 
 
 def test_explicit_cel_fields_accept_expression_markers():

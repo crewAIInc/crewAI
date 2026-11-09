@@ -357,7 +357,8 @@ class Expression:
             serialize=True,
         )
         context: dict[str, Any] = {
-            "state": flow._copy_and_serialize_state(),
+            # Dict state is a plain copy that may hold dates, models or sets
+            "state": to_serializable(flow._copy_and_serialize_state(), max_depth=0),
             "outputs": outputs,
         }
         if local_context:
