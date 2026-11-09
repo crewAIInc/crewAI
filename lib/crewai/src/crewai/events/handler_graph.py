@@ -66,7 +66,10 @@ class HandlerGraph:
             in_degree[handler] = 0
 
         for handler, deps in self.handlers.items():
-            in_degree[handler] = len(deps)
+            # ``dependents`` is a set, so each provider decrements the
+            # in-degree once; counting duplicate Depends entries here would
+            # leave the handler unqueued and report a false cycle.
+            in_degree[handler] = len({dep.handler for dep in deps})
             for dep in deps:
                 dependents[dep.handler].add(handler)
 
