@@ -1550,6 +1550,10 @@ qdrant = [
 qdrant-edge = [
     { name = "qdrant-edge-py" },
 ]
+spreadsheets = [
+    { name = "crewai-files", extra = ["spreadsheets"] },
+    { name = "crewai-tools" },
+]
 tools = [
     { name = "crewai-tools" },
 ]
@@ -1580,6 +1584,8 @@ requires-dist = [
     { name = "crewai-cli", editable = "lib/cli" },
     { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
+    { name = "crewai-files", extras = ["spreadsheets"], marker = "extra == 'spreadsheets'", editable = "lib/crewai-files" },
+    { name = "crewai-tools", marker = "extra == 'spreadsheets'", editable = "lib/crewai-tools" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.132.0" },
     { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling'", specifier = ">=2.98.0,<3" },
@@ -1620,7 +1626,7 @@ requires-dist = [
     { name = "tomli-w", specifier = "~=1.1.0" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "spreadsheets", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"
