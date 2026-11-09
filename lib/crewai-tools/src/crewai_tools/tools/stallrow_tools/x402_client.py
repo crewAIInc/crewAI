@@ -7,7 +7,8 @@ own production clients run against StallRow:
 1. POST the endpoint unpaid -> HTTP 402 with a base64 JSON challenge in
    the `payment-required` response header (also mirrored in the body).
 2. Pick the `exact` / `eip155:8453` entry from `accepts`.
-3. Enforce the per-call price cap *before* anything is signed.
+3. Enforce the asset (USDC on Base) and the per-call price cap
+   *before* anything is signed.
 4. Build the EIP-3009 authorization and sign it as EIP-712 typed data
    with the domain the challenge advertises in `accepts.extra`
    (for USDC on Base: name "USD Coin", version "2").
@@ -37,6 +38,7 @@ import requests
 
 
 BASE_NETWORK = "eip155:8453"
+BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 USDC_DECIMALS = 6
 DEFAULT_MAX_PRICE_USDC = "0.005"
 PRIVATE_KEY_ENV_VAR = "STALLROW_WALLET_PRIVATE_KEY"
@@ -64,6 +66,10 @@ class X402NotConfiguredError(X402Error):
 
 class X402PriceCapExceededError(X402Error):
     """The challenged price exceeds the configured per-call cap."""
+
+
+class X402UnsupportedAssetError(X402Error):
+    """The challenged asset is not USDC on Base."""
 
 
 class X402PaymentError(X402Error):
@@ -262,8 +268,15 @@ class X402Client:
                 f"payment requirement carries no usable amount: {requirement!r}"
             ) from e
 
-        # The cap is enforced before the key is even looked at: an
-        # over-cap price is refused without signing anything.
+        # The asset and the cap are enforced before the key is even
+        # looked at: a non-USDC asset or an over-cap price is refused
+        # without signing anything.
+        asset = str(requirement.get("asset") or "")
+        if asset.lower() != BASE_USDC_ADDRESS.lower():
+            raise X402UnsupportedAssetError(
+                f"endpoint requires payment in asset {asset or '<missing>'}, "
+                f"but this client only settles USDC on Base ({BASE_USDC_ADDRESS})"
+            )
         if amount_units > self.max_price_units:
             raise X402PriceCapExceededError(
                 f"endpoint requires ${Decimal(amount_units) / (10**USDC_DECIMALS)} "

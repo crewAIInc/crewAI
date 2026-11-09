@@ -75,9 +75,10 @@ class _FakeResponse:
         return self._json_body
 
 
-def _challenge_response(amount="5000", *, via_header=True):
+def _challenge_response(amount="5000", *, via_header=True, asset=USDC_BASE):
     challenge = copy.deepcopy(CHALLENGE)
     challenge["accepts"][0]["amount"] = amount
+    challenge["accepts"][0]["asset"] = asset
     headers = {}
     if via_header:
         headers["payment-required"] = base64.b64encode(
@@ -173,6 +174,25 @@ def test_price_above_cap_is_refused_before_signing(mock_post, _wallet_env):
 
     assert result.startswith("Error fetching page metadata:")
     assert "cap" in result
+    # Refused after the unpaid probe — the paid retry never happened.
+    assert mock_post.call_count == 1
+
+
+@patch(POST_PATH)
+def test_non_usdc_asset_is_refused_before_signing(mock_post, _wallet_env):
+    # WETH on Base, priced under the cap: the amount is fine, but this
+    # client settles USDC only, so the challenge must be refused
+    # before anything is signed.
+    mock_post.return_value = _challenge_response(
+        amount="4000", asset="0x4200000000000000000000000000000000000006"
+    )
+    tool = StallRowPageMetadataTool()
+
+    result = tool._run("https://example.com/")
+
+    assert result.startswith("Error fetching page metadata:")
+    assert "USDC" in result
+    assert "0x4200000000000000000000000000000000000006" in result
     # Refused after the unpaid probe — the paid retry never happened.
     assert mock_post.call_count == 1
 
