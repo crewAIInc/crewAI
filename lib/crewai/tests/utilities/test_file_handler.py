@@ -1,12 +1,14 @@
 import json
 import os
 from pathlib import Path
+from threading import Lock
 from typing import Any
 import unittest
 import uuid
 
 import pytest
 from crewai.utilities.file_handler import FileHandler, PickleHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class TestPickleHandler(unittest.TestCase):
@@ -50,6 +52,28 @@ class TestPickleHandler(unittest.TestCase):
 
         assert str(exc.value) == "pickle data was truncated"
         assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_pickle_save_serialization_failure_preserves_file(
+    tmp_path: Path, existing: bool
+) -> None:
+    path = tmp_path / "training.pkl"
+    handler = CrewTrainingHandler(str(path))
+    original = None
+    if existing:
+        handler.save_trained_data("saved-agent", {"score": 10})
+        original = path.read_bytes()
+
+    with pytest.raises(TypeError):
+        handler.save_trained_data("new-agent", {"lock": Lock()})
+
+    if existing:
+        assert path.read_bytes() == original
+        assert handler.load() == {"saved-agent": {"score": 10}}
+    else:
+        assert not path.exists()
+        assert handler.load() == {}
 
 
 @pytest.mark.parametrize("kind", ["unsupported", "circular"])
