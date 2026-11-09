@@ -1123,11 +1123,13 @@ class LLM(BaseLLM):
                         # not text: a schema error's text quotes model output,
                         # so output saying "maximum context length" would
                         # otherwise be treated as a context-limit error.
+                        from litellm.exceptions import ContextWindowExceededError
+
                         if isinstance(
                             e,
                             (
                                 LLMContextLengthExceededError,
-                                litellm.ContextWindowExceededError,
+                                ContextWindowExceededError,
                             ),
                         ):
                             raise
