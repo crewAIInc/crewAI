@@ -666,7 +666,7 @@ def memory(
     "-m",
     "--model",
     type=str,
-    default="gpt-5.4-mini",
+    default="gpt-6-luna",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
 @click.option(
@@ -803,12 +803,18 @@ def run(
         "project id."
     ),
 )
+@click.option(
+    "--no-open",
+    is_flag=True,
+    help="Print the report link without opening a browser (SSH, CI, headless).",
+)
 @click.pass_context
 def eval_command(
     ctx: click.Context,
     run_id: str | None,
     models: str | None,
     deployment_id: str | None,
+    no_open: bool,
 ) -> None:
     """Evaluate this crew through CrewAI AMP, or compare models on the project's
     deployment (--models).
@@ -838,10 +844,15 @@ def eval_command(
     if ctx.invoked_subcommand is not None:
         # The subcommand does the work; an option meant for this body would
         # otherwise be dropped without a word.
-        if run_id is not None or models is not None or deployment_id is not None:
+        if (
+            run_id is not None
+            or models is not None
+            or deployment_id is not None
+            or no_open
+        ):
             raise click.UsageError(
-                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models "
-                "or --deployment; give those to `crewai eval` alone."
+                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models, "
+                "--deployment or --no-open; give those to `crewai eval` alone."
             )
         return
     if models is not None:
@@ -850,13 +861,13 @@ def eval_command(
                 "--run grades a run that already happened; --models runs the "
                 "deployment again. Give one of them."
             )
-        eval_models(models, deployment_id=deployment_id)
+        eval_models(models, deployment_id=deployment_id, open_report=not no_open)
         return
     if deployment_id is not None:
         raise click.UsageError(
             "--deployment names the deployment --models runs; add --models LIST."
         )
-    eval_crew(run_id=run_id)
+    eval_crew(run_id=run_id, open_report=not no_open)
 
 
 @eval_command.command(name="export")

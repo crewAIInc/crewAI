@@ -124,6 +124,33 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    # OpenAI-compatible providers crewAI runs natively; not offered by the
+    # classic `crewai create` picker (PROVIDERS), but their keys are asked for
+    # and checked like any other when a project's model uses them.
+    "deepseek": [
+        {
+            "prompt": "Enter your DEEPSEEK API key (press Enter to skip)",
+            "key_name": "DEEPSEEK_API_KEY",
+        }
+    ],
+    "openrouter": [
+        {
+            "prompt": "Enter your OPENROUTER API key (press Enter to skip)",
+            "key_name": "OPENROUTER_API_KEY",
+        }
+    ],
+    "dashscope": [
+        {
+            "prompt": "Enter your DASHSCOPE API key (press Enter to skip)",
+            "key_name": "DASHSCOPE_API_KEY",
+        }
+    ],
+    "deepinfra": [
+        {
+            "prompt": "Enter your DEEPINFRA API key (press Enter to skip)",
+            "key_name": "DEEPINFRA_API_KEY",
+        }
+    ],
 }
 
 
@@ -320,7 +347,7 @@ MODELS: dict[str, list[str]] = {
     ],
 }
 
-DEFAULT_LLM_MODEL = "gpt-4.1-mini"
+DEFAULT_LLM_MODEL = "gpt-6-luna"
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 

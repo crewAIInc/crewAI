@@ -989,9 +989,11 @@ class DeployValidator:
             return
 
         # crewai.llm.LLM.__new__ wraps provider init errors as
-        # ImportError("Error importing native provider: ..."), except a missing
-        # key, which newer crewai raises as MissingAPIKeyError, and which
-        # Agent(llm="<model>") wraps again in a pydantic ValidationError.
+        # ImportError("Error importing native provider: ..."). The project's own
+        # crewai runs this import: 1.15.34 to 1.15.37 raise an OpenAI-compatible
+        # provider's missing key as MissingAPIKeyError at construction, which
+        # Agent(llm="<model>") wraps again in a pydantic ValidationError; later
+        # versions check it on the first call, as the native providers do.
         if (
             err_type == "MissingAPIKeyError"
             or (
