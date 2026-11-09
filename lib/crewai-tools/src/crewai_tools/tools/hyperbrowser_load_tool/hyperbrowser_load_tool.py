@@ -47,7 +47,7 @@ class HyperbrowserLoadTool(BaseTool):
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("HYPERBROWSER_API_KEY")
-        if not api_key:
+        if not self.api_key:
             raise ValueError(
                 "`api_key` is required, please set the `HYPERBROWSER_API_KEY` environment variable or pass it directly"
             )
