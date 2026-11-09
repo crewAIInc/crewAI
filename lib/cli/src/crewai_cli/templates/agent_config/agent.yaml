@@ -8,7 +8,7 @@ backstory: |-
   # Customization
   Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
 llm:
-  model: openai/gpt-6.1-sol
+  model: openai/gpt-6-luna
   api: responses
 tools:
   - custom:support_hours
