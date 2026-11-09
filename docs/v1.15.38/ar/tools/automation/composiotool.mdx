@@ -1,0 +1,88 @@
+---
+title: أداة Composio
+description: يوفر Composio أكثر من 250 أداة جاهزة للإنتاج لوكلاء الذكاء الاصطناعي مع إدارة مصادقة مرنة.
+icon: gear-code
+mode: "wide"
+---
+
+# `ComposioToolSet`
+
+## الوصف
+Composio هو منصة تكامل تتيح لك ربط وكلاء الذكاء الاصطناعي بأكثر من 250 أداة. تشمل الميزات الرئيسية:
+
+- **مصادقة على مستوى المؤسسة**: دعم مدمج لـ OAuth ومفاتيح API وJWT مع تحديث الرموز تلقائياً
+- **مراقبة كاملة**: سجلات استخدام أدوات تفصيلية وطوابع تنفيذ زمنية والمزيد
+
+## التثبيت
+
+لدمج أدوات Composio في مشروعك، اتبع التعليمات أدناه:
+
+```shell
+pip install composio composio-crewai
+pip install crewai
+```
+
+بعد اكتمال التثبيت، عيّن مفتاح API الخاص بك لـ Composio كـ `COMPOSIO_API_KEY`. احصل على مفتاح API من [هنا](https://platform.composio.dev)
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة وتنفيذ إجراء على GitHub:
+
+1. تهيئة Composio مع مزود CrewAI
+
+```python Code
+from composio_crewai import ComposioProvider
+from composio import Composio
+from crewai import Agent, Task, Crew
+
+composio = Composio(provider=ComposioProvider())
+```
+
+2. إنشاء جلسة Composio جديدة واسترجاع الأدوات
+<CodeGroup>
+```python
+session = composio.create(
+    user_id="your-user-id",
+    toolkits=["gmail", "github"] # optional, default is all toolkits
+)
+tools = session.tools()
+```
+اقرأ المزيد حول الجلسات وإدارة المستخدمين [هنا](https://docs.composio.dev/docs/configuring-sessions)
+</CodeGroup>
+
+3. مصادقة المستخدمين يدوياً
+
+يقوم Composio بمصادقة المستخدمين تلقائياً أثناء جلسة دردشة الوكيل. ومع ذلك، يمكنك أيضاً مصادقة المستخدم يدوياً عبر استدعاء طريقة `authorize`.
+```python Code
+connection_request = session.authorize("github")
+print(f"Open this URL to authenticate: {connection_request.redirect_url}")
+```
+
+4. تعريف الوكيل
+
+```python Code
+crewai_agent = Agent(
+    role="GitHub Agent",
+    goal="You take action on GitHub using GitHub APIs",
+    backstory="You are AI agent that is responsible for taking actions on GitHub on behalf of users using GitHub APIs",
+    verbose=True,
+    tools=tools,
+    llm= # pass an llm
+)
+```
+
+5. تنفيذ المهمة
+
+```python Code
+task = Task(
+    description="Star a repo composiohq/composio on GitHub",
+    agent=crewai_agent,
+    expected_output="Status of the operation",
+)
+
+crew = Crew(agents=[crewai_agent], tasks=[task])
+
+crew.kickoff()
+```
+
+* يمكن العثور على قائمة أكثر تفصيلاً من الأدوات [هنا](https://docs.composio.dev/toolkits)

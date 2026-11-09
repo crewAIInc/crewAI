@@ -22,7 +22,7 @@ agent = Agent(
         "Be clear about the capabilities available in this project and do not claim "
         "external actions without a tool result."
     ),
-    llm=LLM(model=os.getenv("MODEL", "openai/gpt-6.1-sol"), api="responses"),
+    llm=LLM(model=os.getenv("MODEL", "openai/gpt-6-luna"), api="responses"),
     tools=[SupportHoursTool(), LookupPlanTool(), SupportChecklistTool()],
     skills=[Path(__file__).parent / "skills"],
     max_iter=8,
