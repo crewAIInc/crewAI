@@ -1060,6 +1060,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_index = 0
         accumulated_tool_input = ""
         usage_data: dict[str, Any] | None = None
+        structured_result: BaseModel | None = None
 
         try:
             response = self._get_sync_client().converse_stream(
@@ -1147,7 +1148,7 @@ class BedrockCompletion(BaseLLM):
                                 )
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
-                        if current_tool_use:
+                        if current_tool_use and structured_result is None:
                             function_name = current_tool_use["name"]
                             # Streamed tool input arrives as JSON string deltas in
                             # accumulated_tool_input; fold it back into the tool-use
@@ -1178,21 +1179,11 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
-                                    # contentBlockStop fires before messageStop sets
-                                    # stream_finish_reason; structured output always
-                                    # completes via the tool-call path.
-                                    self._emit_call_completed_event(
-                                        response=result.model_dump_json(),
-                                        call_type=LLMCallType.LLM_CALL,
-                                        from_task=from_task,
-                                        from_agent=from_agent,
-                                        messages=messages,
-                                        usage=usage_data,
-                                        finish_reason=stream_finish_reason
-                                        or "tool_use",
-                                        response_id=response_id,
-                                    )
-                                    return result  # type: ignore[return-value]
+                                    # Usage arrives in the metadata event after
+                                    # messageStop, so finish the stream first.
+                                    structured_result = result
+                                    current_tool_use = None
+                                    continue
                                 except Exception as e:
                                     error_msg = (
                                         f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
@@ -1274,6 +1265,19 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock streaming connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+
+        if structured_result is not None:
+            self._emit_call_completed_event(
+                response=structured_result.model_dump_json(),
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages,
+                usage=usage_data,
+                finish_reason=stream_finish_reason or "tool_use",
+                response_id=response_id,
+            )
+            return structured_result  # type: ignore[return-value]
 
         full_response = self._apply_stop_words(full_response)
 
@@ -1669,6 +1673,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_index = 0
         accumulated_tool_input = ""
         usage_data: dict[str, Any] | None = None
+        structured_result: BaseModel | None = None
 
         try:
             async_client = await self._ensure_async_client()
@@ -1758,7 +1763,7 @@ class BedrockCompletion(BaseLLM):
 
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
-                        if current_tool_use:
+                        if current_tool_use and structured_result is None:
                             function_name = current_tool_use["name"]
                             # Streamed tool input arrives as JSON string deltas in
                             # accumulated_tool_input; fold it back into the tool-use
@@ -1789,21 +1794,11 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
-                                    # contentBlockStop fires before messageStop sets
-                                    # stream_finish_reason; structured output always
-                                    # completes via the tool-call path.
-                                    self._emit_call_completed_event(
-                                        response=result.model_dump_json(),
-                                        call_type=LLMCallType.LLM_CALL,
-                                        from_task=from_task,
-                                        from_agent=from_agent,
-                                        messages=messages,
-                                        usage=usage_data,
-                                        finish_reason=stream_finish_reason
-                                        or "tool_use",
-                                        response_id=response_id,
-                                    )
-                                    return result  # type: ignore[return-value]
+                                    # Usage arrives in the metadata event after
+                                    # messageStop, so finish the stream first.
+                                    structured_result = result
+                                    current_tool_use = None
+                                    continue
                                 except Exception as e:
                                     error_msg = (
                                         f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
@@ -1869,7 +1864,7 @@ class BedrockCompletion(BaseLLM):
                             logging.warning(
                                 "Streaming response filtered due to content policy"
                             )
-                        break
+                            break
 
                     elif "metadata" in event:
                         metadata = event["metadata"]
@@ -1890,6 +1885,19 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock streaming connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+
+        if structured_result is not None:
+            self._emit_call_completed_event(
+                response=structured_result.model_dump_json(),
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages,
+                usage=usage_data,
+                finish_reason=stream_finish_reason or "tool_use",
+                response_id=response_id,
+            )
+            return structured_result  # type: ignore[return-value]
 
         full_response = self._apply_stop_words(full_response)
 
