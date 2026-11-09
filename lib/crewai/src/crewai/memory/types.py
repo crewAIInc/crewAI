@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -361,7 +361,15 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
+    # Normalize created_at to a timezone-aware UTC datetime. Records loaded from
+    # storage may carry tz-aware timestamps (ISO 8601 with offset, "Z" suffix,
+    # datetime.now(timezone.utc) defaults); legacy in-memory records produced
+    # by `default_factory=datetime.utcnow` are naive. Treating naive as UTC
+    # preserves the pre-fix math while allowing the two to interoperate.
+    created_at = record.created_at
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    age_seconds = (datetime.now(timezone.utc) - created_at).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
