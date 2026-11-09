@@ -133,18 +133,19 @@ def interpolate_only(
         )
 
     variables = _VARIABLE_PATTERN.findall(input_string)
-    result = input_string
-
     missing_vars = [var for var in variables if var not in inputs]
     if missing_vars:
         raise KeyError(
             f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
         )
 
-    for var in variables:
-        if var in inputs:
-            placeholder = "{" + var + "}"
-            value = str(inputs[var])
-            result = result.replace(placeholder, value)
+    # Single-pass substitution: re.sub does not rescan its own replacement
+    # text. Replacing each placeholder with str.replace (the previous
+    # behaviour) re-interpolated inserted values, so a value containing
+    # another template's placeholder was substituted again
+    # (interpolate_only('{a} {b}', {'a': '{b}', 'b': 'x'}) returned 'x x'
+    # instead of '{b} x').
+    def _substitute(match: re.Match[str]) -> str:
+        return str(inputs[match.group(1)])
 
-    return result
+    return _VARIABLE_PATTERN.sub(_substitute, input_string)

@@ -184,3 +184,23 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    def test_no_re_interpolation_of_inserted_values(self):
+        """A value containing another placeholder must not be substituted again.
+
+        Replacing each placeholder with str.replace rescaned the already
+        substituted text, so an inserted value holding a template-like
+        placeholder was interpolated a second time.
+        """
+        result = interpolate_only('{a} {b}', {'a': '{b}', 'b': 'injected'})
+        assert result == '{b} injected'
+
+    def test_no_re_interpolation_for_self_reference(self):
+        """A value that is its own placeholder stays literal."""
+        result = interpolate_only('{x}', {'x': '{x}'})
+        assert result == '{x}'
+
+    def test_control_simple_interpolation_still_works(self):
+        """Ordinary interpolation is unaffected by the single-pass fix."""
+        assert interpolate_only('Hello {name}', {'name': 'World'}) == 'Hello World'
+
