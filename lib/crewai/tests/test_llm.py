@@ -21,6 +21,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
+from litellm.exceptions import ContextWindowExceededError
 import pytest
 
 
@@ -1457,11 +1458,51 @@ def test_streaming_response_model_context_limit_keeps_its_error_type():
         patch("litellm.completion", return_value=iter(chunks)),
         patch(
             "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
-            side_effect=ValueError("maximum context length exceeded"),
+            side_effect=ContextWindowExceededError(
+                "maximum context length exceeded",
+                model="gpt-4o-mini",
+                llm_provider="openai",
+            ),
         ),
         pytest.raises(LLMContextLengthExceededError),
     ):
         llm.call("What is the capital of France?", response_model=Answer)
+
+
+def test_streaming_conversion_failure_text_is_not_read_as_context_limit():
+    """A schema error that quotes model output saying "maximum context length"
+    must stay a conversion error, not trigger context-window handling."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "maximum context length exceeded"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", return_value=iter(chunks)),
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError(
+                "input_value='maximum context length exceeded'"
+            ),
+        ),
+        pytest.raises(Exception, match="Failed to convert streaming response") as exc,
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+    assert not isinstance(exc.value, LLMContextLengthExceededError)
 
 
 @pytest.mark.asyncio

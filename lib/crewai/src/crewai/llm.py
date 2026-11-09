@@ -1118,10 +1118,17 @@ class LLM(BaseLLM):
                             result = instructor_instance.to_pydantic()
                         structured_response = result.model_dump_json()
                     except Exception as e:
-                        # to_pydantic() calls the LLM, so a context-limit error
-                        # here must keep its normal handling below.
-                        if LLMContextLengthExceededError._is_context_length_exceeded_error(
-                            e
+                        # to_pydantic() calls the LLM, so a real context-limit
+                        # error keeps its normal handling below. Match on type,
+                        # not text: a schema error's text quotes model output,
+                        # so output saying "maximum context length" would
+                        # otherwise be treated as a context-limit error.
+                        if isinstance(
+                            e,
+                            (
+                                LLMContextLengthExceededError,
+                                litellm.ContextWindowExceededError,
+                            ),
                         ):
                             raise
                         # Leave out {e}: it quotes model output, which call()'s
