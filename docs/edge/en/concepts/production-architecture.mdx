@@ -141,7 +141,7 @@ For long-running tasks, use `kickoff_async` to avoid blocking your API.
 Use the `@persist` decorator to save the state of your Flow to a database. This allows you to resume execution if the process crashes or if you need to wait for human input.
 
 ```python
-@persist
+@persist()
 class ProductionFlow(Flow[AppState]):
     # ...
 ```
