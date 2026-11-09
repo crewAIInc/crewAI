@@ -260,6 +260,27 @@ class TestQdrantClient:
         point = call_args.kwargs["points"][0]
         assert point.id == "custom-id-123"
 
+    def test_add_documents_metadata_content_does_not_override_text(
+        self, client, mock_qdrant_client
+    ):
+        """A metadata key named ``content`` must not replace the document text."""
+        mock_qdrant_client.collection_exists.return_value = True
+        client.embedding_function.return_value = [0.1, 0.2, 0.3]
+
+        documents: list[BaseRecord] = [
+            {
+                "content": "Test document",
+                "metadata": {"source": "test", "content": "metadata value"},
+            }
+        ]
+
+        client.add_documents(collection_name="test_collection", documents=documents)
+
+        call_args = mock_qdrant_client.upsert.call_args
+        point = call_args.kwargs["points"][0]
+        assert point.payload["content"] == "Test document"
+        assert point.payload["source"] == "test"
+
     def test_add_documents_empty_list(self, client, mock_qdrant_client):
         """Test that add_documents raises error for empty documents list."""
         documents: list[BaseRecord] = []
