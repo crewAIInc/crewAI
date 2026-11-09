@@ -94,7 +94,7 @@ paths:
                     format: uuid
         '422':
           description: >-
-            검증 오류: 필수 입력이 누락되었거나, 에이전트의 앱이 CrewAI AMP에 연결되어 있지 않습니다. User Bearer Token으로 요청하면 실행이 시작되기 전에 앱을 확인합니다. 이 확인에서 걸러지지 않은 앱은 실행을 실패시키며, `GET /status/{kickoff_id}`가 해당 앱을 알려줍니다.
+            검증 오류: 필수 입력이 누락되었거나, 에이전트의 앱이 CrewAI AMP에 연결되어 있지 않습니다. 요청에 어떤 토큰을 사용하든 실행이 시작되기 전에 앱을 확인하며, `agents`가 연결할 앱이 있는 모든 에이전트를 알려줍니다. 계층형 crew의 앱처럼 이 확인에서 걸러지지 않은 앱은 실행을 실패시키며, `GET /status/{kickoff_id}`가 해당 앱을 알려줍니다.
           content:
             application/json:
               schema:
@@ -110,9 +110,12 @@ paths:
                   value:
                     detail:
                       code: "apps_not_connected"
-                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
                       agent: "Asana Workspace Scout"
-                      missing_apps: ["asana"]
+                      missing_apps: ["asana/get_projects"]
+                      agents:
+                        - agent: "Asana Workspace Scout"
+                          missing_apps: ["asana/get_projects"]
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '500':
@@ -388,17 +391,29 @@ components:
         message:
           type: string
           description: 사람이 읽을 수 있는 오류 메시지
-          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
         agent:
           type: string
-          description: 앱을 선언한 에이전트의 역할
+          description: "`agents`의 첫 번째 에이전트의 역할"
           example: "Asana Workspace Scout"
         missing_apps:
           type: array
           items:
             type: string
-          description: CrewAI AMP에서 연결해야 할 앱 (CrewAI AMP가 표시하는 이름)
-          example: ["asana"]
+          description: 첫 번째 에이전트가 CrewAI AMP에서 연결해야 할 앱 (에이전트가 선언한 그대로, `app` 또는 `app/action`)
+          example: ["asana/get_projects"]
+        agents:
+          type: array
+          description: 연결할 앱이 있는 모든 에이전트와 각각의 `agent`, `missing_apps`. `GET /status/{kickoff_id}`에서는 실행이 멈춘 에이전트
+          items:
+            type: object
+            properties:
+              agent:
+                type: string
+              missing_apps:
+                type: array
+                items:
+                  type: string
 
   responses:
     UnauthorizedError:

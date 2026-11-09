@@ -2763,32 +2763,96 @@ def test_get_platform_tools_warns_when_apps_resolve_to_zero_tools(monkeypatch):
     assert result == []
 
 
-def test_get_platform_tools_names_the_apps_amp_cannot_resolve(monkeypatch):
-    from crewai_core.platform_apps import (
-        PlatformAppsUnavailableError,
-        UnresolvedPlatformAppsWarning,
-    )
+def _amp_cannot_resolve(monkeypatch, *missing):
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
 
     def unavailable(apps):
-        raise PlatformAppsUnavailableError(["slack"])
+        raise PlatformAppsUnavailableError(list(missing))
 
     monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", unavailable)
+
+
+def test_get_platform_tools_raises_for_the_apps_amp_cannot_resolve(monkeypatch):
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    _amp_cannot_resolve(monkeypatch, "slack")
     agent = Agent(role="Mailer", goal="g", backstory="b", apps=["slack"])
 
-    with pytest.warns(
-        UnresolvedPlatformAppsWarning,
-        match=r"^Agent 'Mailer' declares apps \[slack\] but none resolved to any "
-        r"tools; .* CrewAI AMP could not resolve slack: connect them in AMP, or "
-        r"check their names\.$",
-    ) as caught:
-        result = agent.get_platform_tools(agent.apps)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(
+            PlatformAppsUnavailableError,
+            match=r"^CrewAI AMP could not resolve these apps: slack$",
+        ) as raised:
+            agent.get_platform_tools(agent.apps)
 
-    assert result == []
+    assert raised.value.missing_apps == ["slack"]
+
+
+def test_agent_kickoff_stops_on_apps_amp_cannot_resolve(monkeypatch):
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    _amp_cannot_resolve(monkeypatch, "asana/get_projects")
+    agent = Agent(
+        role="Scout", goal="g", backstory="b", apps=["asana/get_projects"]
+    )
+
+    with pytest.raises(PlatformAppsUnavailableError, match="asana/get_projects"):
+        agent.kickoff("List the projects")
+
+
+@pytest.mark.asyncio
+async def test_agent_kickoff_async_stops_on_apps_amp_cannot_resolve(monkeypatch):
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    _amp_cannot_resolve(monkeypatch, "asana/get_projects")
+    agent = Agent(
+        role="Scout", goal="g", backstory="b", apps=["asana/get_projects"]
+    )
+
+    with pytest.raises(PlatformAppsUnavailableError, match="asana/get_projects"):
+        await agent.kickoff_async("List the projects")
+
+
+def _asana_crew() -> Crew:
+    creator = Agent(
+        role="Asana Task Creator\n", goal="g", backstory="b", apps=["asana/create_task"]
+    )
+    task = Task(description="Create a task", expected_output="A task", agent=creator)
+    return Crew(agents=[creator], tasks=[task])
+
+
+def test_crew_kickoff_stops_on_apps_amp_cannot_resolve(monkeypatch):
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    _amp_cannot_resolve(monkeypatch, "asana/create_task")
+
+    with pytest.raises(PlatformAppsUnavailableError, match="asana/create_task"):
+        _asana_crew().kickoff()
+
+
+@pytest.mark.asyncio
+async def test_crew_kickoff_async_stops_on_apps_amp_cannot_resolve(monkeypatch):
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    _amp_cannot_resolve(monkeypatch, "asana/create_task")
+
+    with pytest.raises(PlatformAppsUnavailableError, match="asana/create_task"):
+        await _asana_crew().kickoff_async()
+
+
+def test_the_unresolved_apps_warning_names_a_yaml_folded_role_without_the_newline(
+    monkeypatch,
+):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Mailer\n", goal="g", backstory="b", apps=["gmail"])
+
+    with pytest.warns(UserWarning) as caught:
+        agent.get_platform_tools(agent.apps)
+
     [warning] = caught.list
-    assert isinstance(warning.message, UnresolvedPlatformAppsWarning)
     assert warning.message.agent_role == "Mailer"
-    assert warning.message.apps == ["slack"]
-    assert warning.message.missing_apps == ["slack"]
+    assert str(warning.message).startswith("Agent 'Mailer' declares apps [gmail]")
 
 
 def test_get_platform_tools_names_no_app_for_another_failure(monkeypatch):
