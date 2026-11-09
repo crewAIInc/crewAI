@@ -179,7 +179,9 @@ class FileReadTool(BaseTool):
     ) -> str:
         """Read a file, or a window of its lines, as text."""
         start_line = start_line or 1
-        line_count = line_count or None
+        # ``0`` is a real count (read nothing), not a request for the whole
+        # file; only ``None`` means "read to the end".
+        line_count = max(line_count, 0) if line_count is not None else None
 
         if file_path is None:
             if self._declared_realpath is None:
@@ -208,7 +210,7 @@ class FileReadTool(BaseTool):
                 # window near the top of a huge file does not scan the whole file.
                 selected_lines = list(islice(file, start_idx, stop_idx))
 
-                if not selected_lines and start_idx > 0:
+                if not selected_lines and start_idx > 0 and line_count != 0:
                     return f"Error: Start line {start_line} exceeds the number of lines in the file."
 
                 return "".join(selected_lines)
