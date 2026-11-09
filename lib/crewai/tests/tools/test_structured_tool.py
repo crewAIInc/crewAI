@@ -1,4 +1,5 @@
 import json
+from typing import Annotated
 
 from crewai.tools.structured_tool import CrewStructuredTool
 from pydantic import BaseModel, Field, RootModel
@@ -198,6 +199,41 @@ def test_invalid_typed_output_warns_and_uses_string_agent_text():
     warning_message = str(warnings[0].message)
     assert "ValidationError" in warning_message
     assert "wrong" not in warning_message
+
+
+def test_from_function_keeps_annotated_parameter_constraints():
+    """Annotated parameter metadata survives schema inference."""
+
+    def positive_count(
+        count: Annotated[int, Field(gt=0, description="Positive count")],
+    ) -> int:
+        """Return a positive count."""
+        return count
+
+    tool = CrewStructuredTool.from_function(positive_count)
+
+    properties = tool.args_schema.model_json_schema()["properties"]["count"]
+    assert properties["exclusiveMinimum"] == 0
+    assert properties["description"] == "Positive count"
+
+    with pytest.raises(ValueError, match="Arguments validation failed"):
+        tool.invoke({"count": 0})
+
+
+@pytest.mark.asyncio
+async def test_from_function_keeps_annotated_parameter_constraints_on_ainvoke():
+    """Annotated parameter metadata also constrains the async call path."""
+
+    def positive_count(
+        count: Annotated[int, Field(gt=0, description="Positive count")],
+    ) -> int:
+        """Return a positive count."""
+        return count
+
+    tool = CrewStructuredTool.from_function(positive_count)
+
+    with pytest.raises(ValueError, match="Arguments validation failed"):
+        await tool.ainvoke({"count": 0})
 
 
 def test_validate_function_signature(basic_function, schema_class):

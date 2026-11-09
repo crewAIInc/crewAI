@@ -313,7 +313,11 @@ class CrewStructuredTool(BaseModel):
         """
         sig = inspect.signature(func)
 
-        type_hints = get_type_hints(func)
+        # `include_extras=True` keeps `Annotated[...]` metadata (for example a
+        # `Field(...)` carrying constraints or a description) attached to the
+        # resolved type, so Pydantic sees the authored constraints instead of
+        # the bare inner type.
+        type_hints = get_type_hints(func, include_extras=True)
 
         fields = {}
         for param_name, param in sig.parameters.items():
