@@ -1,6 +1,8 @@
 """Unit tests for file transformers."""
 
 import io
+from itertools import islice
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from crewai_files import ImageFile, PDFFile, TextFile
@@ -216,6 +218,41 @@ class TestChunkPdf:
 
         page_counts = [get_pdf_page_count(chunk) for chunk in result]
         assert page_counts == [3, 3, 1]
+
+    def test_overlap_not_smaller_than_chunk_terminates(self) -> None:
+        """An overlap at least as large as the chunk must still make progress.
+
+        ``step`` used to be ``max_pages - overlap_pages``, so a zero or
+        negative step yielded the same first chunk forever. The generator is
+        consumed through ``islice`` so the assertion fails instead of hanging
+        on a regression.
+        """
+
+        def fake_file_bytes(data: bytes, filename: str | None = None) -> object:
+            return SimpleNamespace(data=data, filename=filename)
+
+        class FakePdfFile:
+            def __init__(self, source: SimpleNamespace) -> None:
+                self.source = source
+
+        pdf = SimpleNamespace(
+            read=lambda: create_test_pdf(num_pages=6), filename="doc.pdf"
+        )
+
+        with (
+            patch("crewai_files.processing.transformers.FileBytes", fake_file_bytes),
+            patch("crewai_files.processing.transformers.PDFFile", FakePdfFile),
+        ):
+            chunks = list(islice(chunk_pdf(pdf, max_pages=2, overlap_pages=2), 10))
+
+        assert [chunk.source.filename for chunk in chunks] == [
+            "doc_chunk_0.pdf",
+            "doc_chunk_1.pdf",
+            "doc_chunk_2.pdf",
+            "doc_chunk_3.pdf",
+            "doc_chunk_4.pdf",
+            "doc_chunk_5.pdf",
+        ]
 
 
 class TestChunkText:

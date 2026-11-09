@@ -170,6 +170,8 @@ def chunk_pdf(
         file: The PDF file to chunk.
         max_pages: Maximum pages per chunk.
         overlap_pages: Number of overlapping pages between chunks (for context).
+            Values greater than or equal to ``max_pages`` still advance one page
+            at a time instead of repeating the same chunk.
 
     Yields:
         PDFFile objects, one per chunk.
@@ -196,7 +198,9 @@ def chunk_pdf(
 
     filename = file.filename or "document.pdf"
     base_filename = filename.rsplit(".", 1)[0]
-    step = max_pages - overlap_pages
+    # An overlap as large as the chunk would leave the window in place and the
+    # generator would yield the same chunk forever, so always advance.
+    step = max(1, max_pages - overlap_pages)
 
     chunk_num = 0
     start_page = 0
