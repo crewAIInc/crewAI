@@ -530,7 +530,7 @@ rag_tool = RagTool(config=config, summarize=True)
     **خيارات الإعداد:**
     - `model_name` (str): بنية نموذج OpenCLIP. القيمة الافتراضية: `ViT-B-32`. الخيارات: `ViT-B-32`، `ViT-B-16`، `ViT-L-14`
     - `checkpoint` (str): اسم نقطة التحقق المُدرّبة مسبقاً. القيمة الافتراضية: `laion2b_s34b_b79k`. الخيارات: `laion2b_s34b_b79k`، `laion400m_e32`، `openai`
-    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`، `xpu`
 
     **متغيرات البيئة:**
     - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`

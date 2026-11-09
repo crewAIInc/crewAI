@@ -1,0 +1,211 @@
+---
+title: Db2 Vector Search Tool
+description: Semantic vector search for CrewAI agents using IBM Db2 native VECTOR_DISTANCE capabilities.
+icon: database
+mode: "wide"
+---
+
+# `DB2VectorSearchTool`
+
+## Description
+
+Perform semantic vector similarity searches against IBM Db2 tables using the native `VECTOR_DISTANCE` function.
+Supports configurable distance metrics, OpenAI or custom embeddings, metadata filtering, and result shaping.
+
+## Installation
+
+```bash
+pip install ibm_db openai
+```
+
+Or with uv:
+
+```bash
+uv add ibm_db openai
+```
+
+## Environment Variables
+
+```bash
+OPENAI_API_KEY=your_openai_key          # Required when using default OpenAI embeddings
+DB2_CONNECTION_STRING=DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;
+```
+
+## Basic Usage
+
+```python
+from crewai import Agent
+from crewai_tools import DB2VectorSearchTool
+
+tool = DB2VectorSearchTool(
+    connection_string="DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;",
+    table_name="documents",
+    vector_column="embedding",
+)
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in documents",
+    tools=[tool],
+)
+```
+
+## Full Semantic Search Workflow
+
+```python
+import os
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import DB2VectorSearchTool
+
+load_dotenv()
+
+db2_tool = DB2VectorSearchTool(
+    connection_string=os.getenv("DB2_CONNECTION_STRING"),
+    table_name="documents",
+    vector_column="embedding",
+    return_columns=["content", "category"],
+    limit=3,
+    distance_metric="COSINE",
+    max_distance=0.35,
+)
+
+search_agent = Agent(
+    role="Senior Semantic Search Agent",
+    goal="Find and analyse documents based on semantic search",
+    backstory="You are an expert research assistant who can find relevant information using semantic search in a Db2 database.",
+    tools=[db2_tool],
+    verbose=True,
+)
+
+answer_agent = Agent(
+    role="Senior Answer Assistant",
+    goal="Generate answers based on retrieved context",
+    backstory="You are an expert assistant who generates answers from provided context.",
+    tools=[db2_tool],
+    verbose=True,
+)
+
+search_task = Task(
+    description="""Search for relevant documents about {query}.
+    Include the relevant information found, vector distances, and returned fields.""",
+    agent=search_agent,
+)
+
+answer_task = Task(
+    description="Given the retrieved Db2 context, generate a final answer.",
+    agent=answer_agent,
+)
+
+crew = Crew(
+    agents=[search_agent, answer_agent],
+    tasks=[search_task, answer_task],
+    process=Process.sequential,
+    verbose=True,
+)
+
+result = crew.kickoff(inputs={"query": "What is the role of X in the document?"})
+print(result)
+```
+
+## Tool Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `connection_string` | `str` | required | Db2 connection string. Format: `DATABASE=x;HOSTNAME=x;PORT=50000;PROTOCOL=TCPIP;UID=x;PWD=x;` |
+| `table_name` | `str` | `"documents"` | Table to search. Supports `schema.table` notation. |
+| `vector_column` | `str` | `"embedding"` | Column storing the vector embeddings. |
+| `embedding_model` | `str` | `"text-embedding-3-large"` | OpenAI model used when no custom embedding function is provided. |
+| `return_columns` | `list[str]` | `["content"]` | Columns to include in each result. Must contain at least one entry. |
+| `limit` | `int` | `3` | Maximum number of results (1–100). |
+| `distance_metric` | `str` | `"COSINE"` | Db2 distance metric. See supported values below. |
+| `max_distance` | `float \| None` | `None` | Drop results whose distance exceeds this value. |
+| `custom_embedding_fn` | `Callable[[str], list[float]] \| None` | `None` | Custom embedding function. Overrides OpenAI when provided. |
+
+## Supported Distance Metrics
+
+The following values map directly to the Db2 `VECTOR_DISTANCE` function:
+
+- `COSINE`
+- `EUCLIDEAN`
+- `EUCLIDEAN_SQUARED`
+- `DOT`
+- `HAMMING`
+- `MANHATTAN`
+
+Reference: [IBM Db2 VECTOR_DISTANCE documentation](https://www.ibm.com/docs/en/db2/12.1.x?topic=functions-vector-distance)
+
+## Schema Parameters (per query)
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `query` | `str` | ✅ | The search query. |
+| `filter_by` | `str \| None` | ❌ | Column name for metadata filtering. Must be paired with `filter_value`. |
+| `filter_value` | `Any \| None` | ❌ | Value to filter on. Must be paired with `filter_by`. |
+
+## Return Format
+
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "distance": 0.1401,
+      "data": {
+        "content": "Document content here",
+        "category": "research"
+      }
+    }
+  ]
+}
+```
+
+On error:
+
+```json
+{
+  "success": false,
+  "error": "Description of what went wrong",
+  "error_type": "ExceptionClassName"
+}
+```
+
+## Metadata Filtering
+
+```python
+result = db2_tool.run(
+    query="machine learning",
+    filter_by="category",
+    filter_value="research",
+)
+```
+
+`filter_by` and `filter_value` must always be provided together. Providing only one raises a validation error.
+
+## Custom Embeddings
+
+Use any embedding model by supplying a `custom_embedding_fn`:
+
+```python
+from sentence_transformers import SentenceTransformer
+from crewai_tools import DB2VectorSearchTool
+
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+def custom_embeddings(text: str) -> list[float]:
+    return model.encode(text).tolist()
+
+tool = DB2VectorSearchTool(
+    connection_string="DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;",
+    table_name="documents",
+    custom_embedding_fn=custom_embeddings,
+)
+```
+
+When `custom_embedding_fn` is provided, `OPENAI_API_KEY` is not required.
+
+## Security Features
+
+- SQL identifier validation (table, column names must match `^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)?$`)
+- Parameterised SQL queries — values never interpolated into SQL strings
+- Distance metric whitelist — only valid Db2 metric names accepted

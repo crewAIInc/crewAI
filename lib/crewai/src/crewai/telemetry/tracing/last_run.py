@@ -72,6 +72,7 @@ def record_last_run(
     started_at_ns: int | None,
     finished_at_ns: int | None,
     amp_base_url: str | None,
+    trace_url: str | None = None,
 ) -> Path | None:
     """Write the record atomically; the path, or None when recording is off
     or the write failed. Never raises — a run is never failed by this.
@@ -90,6 +91,11 @@ def record_last_run(
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
         "amp_base_url": amp_base_url,
     }
+    # AMP's viewer link for this run, when it granted one. The run app shows no
+    # console line — crewAI's own link is silenced under a TUI — so the record
+    # is the only way its View Traces button can know where to go.
+    if trace_url:
+        record["trace_url"] = trace_url
     path: Path | None = None
     try:
         path = last_run_path()

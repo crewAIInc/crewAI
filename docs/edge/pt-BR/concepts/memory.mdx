@@ -723,7 +723,7 @@ A memória usa um LLM para análise de save (inferência de escopo, categorias e
 ```python
 from crewai import Memory, LLM
 
-# Padrão: gpt-4o-mini
+# Padrão: gpt-6-luna
 memory = Memory()
 
 # Usar um modelo OpenAI diferente
@@ -758,7 +758,7 @@ memory = Memory(
 ## Backend de Armazenamento
 
 - **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
-- **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`.
+- **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`. Para implantações em produção, você pode usar o `MongoDBStorageBackend` do pacote `crewai-mongodb-memory`. Para saber mais, veja o [tutorial de implementação do MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/).
 
 
 ## Descoberta
@@ -860,7 +860,7 @@ Toda a configuração é passada como argumentos nomeados para `Memory(...)`. Ca
 
 | Parâmetro | Padrão | Descrição |
 | :--- | :--- | :--- |
-| `llm` | `"gpt-4o-mini"` | LLM para análise (nome do modelo ou instância `BaseLLM`). |
+| `llm` | `"gpt-6-luna"` | LLM para análise (nome do modelo ou instância `BaseLLM`). |
 | `storage` | `"lancedb"` | Backend de armazenamento (`"lancedb"`, string de caminho ou instância `StorageBackend`). |
 | `embedder` | `None` (OpenAI padrão) | Embedder (dict de config, callable ou `None` para OpenAI padrão). |
 | `recency_weight` | `0.3` | Peso da recência na pontuação composta. |

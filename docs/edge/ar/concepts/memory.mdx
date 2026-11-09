@@ -723,7 +723,7 @@ memory = Memory(embedder=my_embedder)
 ```python
 from crewai import Memory, LLM
 
-# Default: gpt-4o-mini
+# Default: gpt-6-luna
 memory = Memory()
 
 # Use a different OpenAI model
@@ -758,7 +758,7 @@ memory = Memory(
 ## واجهة التخزين
 
 - **الافتراضي**: LanceDB، مخزّن تحت `./.crewai/memory` (أو `$CREWAI_STORAGE_DIR/memory` إذا تم تعيين متغير البيئة، أو المسار الذي تمرره كـ `storage="path/to/dir"`).
-- **واجهة مخصصة**: نفّذ بروتوكول `StorageBackend` (انظر `crewai.memory.storage.backend`) ومرّر مثيلًا إلى `Memory(storage=your_backend)`.
+- **واجهة مخصصة**: نفّذ بروتوكول `StorageBackend` (انظر `crewai.memory.storage.backend`) ومرّر مثيلًا إلى `Memory(storage=your_backend)`. لعمليات النشر الإنتاجية، يمكنك استخدام `MongoDBStorageBackend` من حزمة `crewai-mongodb-memory`. لمعرفة المزيد، راجع [دليل تطبيق MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/).
 
 
 ## الاستكشاف
@@ -860,7 +860,7 @@ memory.reset(scope="/project/old")  # Only that subtree
 
 | المعامل | الافتراضي | الوصف |
 | :--- | :--- | :--- |
-| `llm` | `"gpt-4o-mini"` | LLM للتحليل (اسم نموذج أو مثيل `BaseLLM`). |
+| `llm` | `"gpt-6-luna"` | LLM للتحليل (اسم نموذج أو مثيل `BaseLLM`). |
 | `storage` | `"lancedb"` | واجهة التخزين (`"lancedb"`، سلسلة مسار، أو مثيل `StorageBackend`). |
 | `embedder` | `None` (افتراضي OpenAI) | المُضمِّن (قاموس إعداد، دالة قابلة للاستدعاء، أو `None` لافتراضي OpenAI). |
 | `recency_weight` | `0.3` | وزن الحداثة في الدرجة المركبة. |

@@ -1464,3 +1464,359 @@ class TestResumeLLMFromSerializedContext:
             from crewai.llms.base_llm import BaseLLM as BaseLLMClass
             assert isinstance(captured_llm[0], BaseLLMClass)
             assert captured_llm[0].model == "gpt-4o-mini"
+
+
+# learn=True on resumed feedback
+
+
+def _pause(tmpdir: str, flow_cls: type[Flow], flow_id: str, **context: Any) -> Flow:
+    """Persist a pending review for ``flow_cls.draft`` and restore it, as AMP does."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+    persistence.save_pending_feedback(
+        flow_uuid=flow_id,
+        context=PendingFeedbackContext(
+            flow_id=flow_id,
+            flow_class=f"test.{flow_cls.__name__}",
+            method_name="draft",
+            method_output="reviewed draft",
+            message="Review:",
+            llm="gpt-4o-mini",
+            **context,
+        ),
+        state_data={"id": flow_id},
+    )
+    flow = flow_cls.from_pending(flow_id, persistence)
+    flow.memory = MagicMock()
+    flow.memory.recall.return_value = []
+    return flow
+
+
+def _distill_llm(*responses: Any) -> MagicMock:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = True
+    llm.call.side_effect = list(responses)
+    return llm
+
+
+class TestLearnOnResume:
+    """A reply that resumes a paused flow teaches lessons like an in-run reply."""
+
+    def test_resume_stores_lessons_distilled_from_the_reply(self) -> None:
+        from crewai.flow.human_feedback import DistilledLessons
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def draft(self):
+                return "draft"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, LearnFlow, "learn-resume-1")
+            llm = _distill_llm(DistilledLessons(lessons=["Cite a source for every claim"]))
+            with patch("crewai.llm.LLM", return_value=llm):
+                flow.resume("Always cite your sources")
+
+        flow.memory.remember_many.assert_called_once_with(
+            ["Cite a source for every claim"], source="hitl"
+        )
+        distill_prompt = llm.call.call_args.args[0][1]["content"]
+        assert "reviewed draft" in distill_prompt
+        assert "Always cite your sources" in distill_prompt
+        assert flow.last_human_feedback.feedback == "Always cite your sources"
+
+    def test_resume_async_stores_lessons(self) -> None:
+        import asyncio
+
+        from crewai.flow.human_feedback import DistilledLessons
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def draft(self):
+                return "draft"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, LearnFlow, "learn-resume-async")
+            llm = _distill_llm(DistilledLessons(lessons=["Keep intros under 50 words"]))
+            with patch("crewai.llm.LLM", return_value=llm):
+                asyncio.run(flow.resume_async("The intro is too long"))
+
+        flow.memory.remember_many.assert_called_once_with(
+            ["Keep intros under 50 words"], source="hitl"
+        )
+
+    def test_resume_routes_on_the_reply_and_stores_lessons(self) -> None:
+        from crewai.flow.human_feedback import DistilledLessons
+
+        class RoutedFlow(Flow):
+            published: str = ""
+
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "needs_revision"],
+                llm="gpt-4o-mini",
+                learn=True,
+            )
+            def draft(self):
+                return "draft"
+
+            @listen("approved")
+            def publish(self):
+                self.published = self.last_human_feedback.output
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(
+                tmpdir, RoutedFlow, "learn-resume-emit", emit=["approved", "needs_revision"]
+            )
+            llm = _distill_llm(DistilledLessons(lessons=["Prefer active voice"]))
+            with (
+                patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+                patch("crewai.llm.LLM", return_value=llm),
+            ):
+                flow.resume("Approved, but prefer active voice next time")
+
+        assert flow.published == "reviewed draft"
+        flow.memory.remember_many.assert_called_once_with(
+            ["Prefer active voice"], source="hitl"
+        )
+
+    def test_resume_stores_lessons_under_the_configured_source(self) -> None:
+        from crewai.flow.human_feedback import DistilledLessons
+
+        class SourcedFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                llm="gpt-4o-mini",
+                learn=True,
+                learn_source="editorial",
+            )
+            def draft(self):
+                return "draft"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, SourcedFlow, "learn-resume-source")
+            llm = _distill_llm(DistilledLessons(lessons=["Use the house style guide"]))
+            with patch("crewai.llm.LLM", return_value=llm):
+                flow.resume("Follow the house style")
+
+        assert flow.memory.remember_many.call_args.kwargs == {"source": "editorial"}
+
+    def test_resume_with_empty_reply_stores_nothing(self) -> None:
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def draft(self):
+                return "draft"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, LearnFlow, "learn-resume-empty")
+            llm = _distill_llm()
+            with patch("crewai.llm.LLM", return_value=llm):
+                flow.resume("")
+
+        llm.call.assert_not_called()
+        flow.memory.remember_many.assert_not_called()
+
+    def test_resume_without_learn_leaves_memory_untouched(self) -> None:
+        class PlainFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini")
+            def draft(self):
+                return "draft"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, PlainFlow, "learn-resume-off")
+            llm = _distill_llm()
+            with patch("crewai.llm.LLM", return_value=llm):
+                flow.resume("Always cite your sources")
+
+        llm.call.assert_not_called()
+        flow.memory.remember_many.assert_not_called()
+
+    def test_failed_distillation_still_completes_the_resume(self) -> None:
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def draft(self):
+                return "draft"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, LearnFlow, "learn-resume-lenient")
+            llm = _distill_llm(RuntimeError("distillation model unavailable"))
+            with patch("crewai.llm.LLM", return_value=llm):
+                flow.resume("Always cite your sources")
+
+        assert flow.last_human_feedback.feedback == "Always cite your sources"
+        flow.memory.remember_many.assert_not_called()
+
+    def test_strict_distillation_failure_can_be_retried_cleanly(self) -> None:
+        class StrictFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:", llm="gpt-4o-mini", learn=True, learn_strict=True
+            )
+            def draft(self):
+                return "draft"
+
+        from crewai.flow.human_feedback import DistilledLessons
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, StrictFlow, "learn-resume-strict")
+            llm = _distill_llm(
+                RuntimeError("distillation model unavailable"),
+                DistilledLessons(lessons=["Cite a source for every claim"]),
+            )
+            with patch("crewai.llm.LLM", return_value=llm):
+                with pytest.raises(
+                    RuntimeError, match="distillation model unavailable"
+                ):
+                    flow.resume("Always cite your sources")
+
+                assert (
+                    flow.persistence.load_pending_feedback("learn-resume-strict")
+                    is not None
+                )
+                assert flow.human_feedback_history == []
+                assert flow.last_human_feedback is None
+                flow.memory.remember_many.assert_not_called()
+
+                flow.resume("Always cite your sources")
+
+        assert [r.feedback for r in flow.human_feedback_history] == [
+            "Always cite your sources"
+        ]
+        flow.memory.remember_many.assert_called_once_with(
+            ["Cite a source for every claim"], source="hitl"
+        )
+
+    def test_retry_after_a_failed_completion_offers_the_lessons_again(self) -> None:
+        # Lessons are stored before the review is durably completed, which strict
+        # mode needs, so a retry after a later persistence failure stores them again
+        # and memory consolidation absorbs the repeat.
+        from crewai.flow.human_feedback import DistilledLessons
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def draft(self):
+                return "draft"
+
+        lesson = ["Cite a source for every claim"]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, LearnFlow, "learn-resume-retry")
+            persistence = flow.persistence
+            with (
+                patch(
+                    "crewai.llm.LLM",
+                    return_value=_distill_llm(DistilledLessons(lessons=lesson)),
+                ),
+                patch.object(
+                    SQLiteFlowPersistence,
+                    "clear_pending_feedback",
+                    side_effect=RuntimeError("database is locked"),
+                ),
+                pytest.raises(RuntimeError, match="database is locked"),
+            ):
+                flow.resume("Always cite your sources")
+
+            flow.memory.remember_many.assert_called_once_with(lesson, source="hitl")
+            assert persistence.load_pending_feedback("learn-resume-retry") is not None
+
+            retried = LearnFlow.from_pending("learn-resume-retry", persistence)
+            retried.memory = MagicMock()
+            with patch(
+                "crewai.llm.LLM",
+                return_value=_distill_llm(DistilledLessons(lessons=lesson)),
+            ):
+                retried.resume("Always cite your sources")
+
+            retried.memory.remember_many.assert_called_once_with(lesson, source="hitl")
+            assert persistence.load_pending_feedback("learn-resume-retry") is None
+
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resumed_pydantic_output_arrives_as_a_dict(self, mock_emit: MagicMock) -> None:
+        # The pending review is persisted as JSON, so the docs and the
+        # HumanFeedbackResult.output docstring say a model comes back as a dict.
+        class Draft(BaseModel):
+            title: str
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class PauseProvider:
+                def request_feedback(
+                    self, context: PendingFeedbackContext, flow: Flow
+                ) -> str:
+                    persistence.save_pending_feedback(
+                        flow_uuid=context.flow_id,
+                        context=context,
+                        state_data=flow.state
+                        if isinstance(flow.state, dict)
+                        else flow.state.model_dump(),
+                    )
+                    raise HumanFeedbackPending(context=context)
+
+            class DraftFlow(Flow):
+                @start()
+                @human_feedback(message="Review:", provider=PauseProvider())
+                def draft(self):
+                    return Draft(title="Launch day")
+
+            pending = DraftFlow(persistence=persistence).kickoff()
+            assert isinstance(pending.context.method_output, Draft)
+
+            resumed = DraftFlow.from_pending(pending.context.flow_id, persistence)
+            resumed.resume("looks good")
+
+        assert resumed.last_human_feedback.output == {"title": "Launch day"}
+
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_reply_after_a_paused_kickoff_is_learned(self, mock_emit: MagicMock) -> None:
+        from crewai.flow.human_feedback import DistilledLessons
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class EmailProvider:
+                def request_feedback(
+                    self, context: PendingFeedbackContext, flow: Flow
+                ) -> str:
+                    persistence.save_pending_feedback(
+                        flow_uuid=context.flow_id,
+                        context=context,
+                        state_data=flow.state
+                        if isinstance(flow.state, dict)
+                        else flow.state.model_dump(),
+                    )
+                    raise HumanFeedbackPending(context=context)
+
+            class ReviewFlow(Flow):
+                @start()
+                @human_feedback(
+                    message="Review:",
+                    llm="gpt-4o-mini",
+                    learn=True,
+                    provider=EmailProvider(),
+                )
+                def draft(self):
+                    return "first draft"
+
+            paused = ReviewFlow(persistence=persistence)
+            paused.memory = MagicMock()
+            paused.memory.recall.return_value = []
+            pending = paused.kickoff()
+            assert isinstance(pending, HumanFeedbackPending)
+            paused.memory.remember_many.assert_not_called()
+
+            resumed = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+            resumed.memory = MagicMock()
+            llm = _distill_llm(DistilledLessons(lessons=["Lead with the customer outcome"]))
+            with patch("crewai.llm.LLM", return_value=llm):
+                resumed.resume("Lead with what the customer gets")
+
+        resumed.memory.remember_many.assert_called_once_with(
+            ["Lead with the customer outcome"], source="hitl"
+        )
+        assert "first draft" in llm.call.call_args.args[0][1]["content"]

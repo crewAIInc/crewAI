@@ -22,7 +22,7 @@ https://docs.firecrawl.dev/mcp-server
 Each run prints its execution UUID and trace ID, followed by a separate result.
 Agent/tool console output can interleave. A failed run does not cancel its peers.
 
-Saved CLI login and CREWAI_PLATFORM_INTEGRATION_TOKEN are also supported.
+Saved CLI login and CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN are also supported.
 Without credentials, the SDK buffers spans locally and asks permission to upload
 after the Flow completes. Declining or timing out sends nothing.
 The collector URL comes from AMP's grant, not a separate Wharf URL override.

@@ -4,7 +4,7 @@ import ast
 import os
 from typing import Any, Literal
 
-from pydantic import model_validator
+from pydantic import BaseModel, model_validator
 
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.utilities.types import LLMMessage
@@ -131,8 +131,24 @@ class SnowflakeCompletion(OpenAICompletion):
             "SNOWFLAKE_ACCOUNT, or pass account_url/base_url/account_identifier."
         )
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
-        formatted_messages = super()._format_messages(messages)
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate input tokens until Snowflake Cortex support is implemented.
+
+        Snowflake's OpenAI-compatible Cortex endpoint supports only Chat
+        Completions, while the inherited OpenAI implementation requires the
+        Responses input-token-count endpoint.
+        """
+        return super().get_input_tokens_count(messages, tools, response_model)
+
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
+        formatted_messages = super()._format_messages(messages, file_api=file_api)
         if self._is_claude_model():
             formatted_messages = self._normalize_stringified_tool_calls(
                 formatted_messages

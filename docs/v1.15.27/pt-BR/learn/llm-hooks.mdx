@@ -1,0 +1,388 @@
+---
+title: Hooks de Chamada LLM
+description: Aprenda a usar hooks de chamada LLM para interceptar, modificar e controlar interações com modelos de linguagem no CrewAI
+mode: "wide"
+---
+
+Os Hooks de Chamada LLM fornecem controle fino sobre interações com modelos de linguagem durante a execução do agente. Esses hooks permitem interceptar chamadas LLM, modificar prompts, transformar respostas, implementar gates de aprovação e adicionar logging ou monitoramento personalizado.
+
+## Visão Geral
+
+Os hooks LLM são executados em dois pontos críticos:
+- **Antes da Chamada LLM**: Modificar mensagens, validar entradas ou bloquear execução
+- **Depois da Chamada LLM**: Transformar respostas, sanitizar saídas ou modificar histórico de conversação
+
+## Tipos de Hook
+
+### Hooks Antes da Chamada LLM
+
+Executados antes de cada chamada LLM, esses hooks podem:
+- Inspecionar e modificar mensagens enviadas ao LLM
+- Bloquear execução LLM com base em condições
+- Implementar limitação de taxa ou gates de aprovação
+- Adicionar contexto ou mensagens do sistema
+- Registrar detalhes da requisição
+
+**Assinatura:**
+```python
+def before_hook(context: LLMCallHookContext) -> bool | None:
+    # Retorne False para bloquear execução
+    # Retorne True ou None para permitir execução
+    ...
+```
+
+### Hooks Depois da Chamada LLM
+
+Executados depois de cada chamada LLM, esses hooks podem:
+- Modificar ou sanitizar respostas do LLM
+- Adicionar metadados ou formatação
+- Registrar detalhes da resposta
+- Atualizar histórico de conversação
+- Implementar filtragem de conteúdo
+
+**Assinatura:**
+```python
+def after_hook(context: LLMCallHookContext) -> str | None:
+    # Retorne string de resposta modificada
+    # Retorne None para manter resposta original
+    ...
+```
+
+## Contexto do Hook LLM
+
+O objeto `LLMCallHookContext` fornece acesso abrangente ao estado de execução:
+
+```python
+class LLMCallHookContext:
+    executor: CrewAgentExecutor  # Referência completa ao executor
+    messages: list               # Lista de mensagens mutável
+    agent: Agent                 # Agente atual
+    task: Task                   # Tarefa atual
+    crew: Crew                   # Instância da crew
+    llm: BaseLLM                 # Instância do LLM
+    iterations: int              # Contagem de iteração atual
+    response: str | None         # Resposta do LLM (apenas hooks posteriores)
+```
+
+### Modificando Mensagens
+
+**Importante:** Sempre modifique mensagens in-place:
+
+```python
+# ✅ Correto - modificar in-place
+def add_context(context: LLMCallHookContext) -> None:
+    context.messages.append({"role": "system", "content": "Seja conciso"})
+
+# ❌ Errado - substitui referência da lista
+def wrong_approach(context: LLMCallHookContext) -> None:
+    context.messages = [{"role": "system", "content": "Seja conciso"}]
+```
+
+## Métodos de Registro
+
+### 1. Registro Baseado em Decoradores (Recomendado)
+
+Use decoradores para sintaxe mais limpa:
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call
+
+@before_llm_call
+def validate_iteration_count(context):
+    """Valida a contagem de iterações."""
+    if context.iterations > 10:
+        print("⚠️ Máximo de iterações excedido")
+        return False  # Bloquear execução
+    return None
+
+@after_llm_call
+def sanitize_response(context):
+    """Remove dados sensíveis."""
+    if context.response and "API_KEY" in context.response:
+        return context.response.replace("API_KEY", "[CENSURADO]")
+    return None
+```
+
+### 2. Hooks com Escopo de Crew
+
+Registre hooks para uma instância específica de crew:
+
+```python
+from crewai import CrewBase
+from crewai.project import crew
+from crewai.hooks import before_llm_call_crew, after_llm_call_crew
+
+@CrewBase
+class MyProjCrew:
+    @before_llm_call_crew
+    def validate_inputs(self, context):
+        # Aplica-se apenas a esta crew
+        if context.iterations == 0:
+            print(f"Iniciando tarefa: {context.task.description}")
+        return None
+    
+    @after_llm_call_crew
+    def log_responses(self, context):
+        # Logging específico da crew
+        print(f"Comprimento da resposta: {len(context.response)}")
+        return None
+    
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+## Casos de Uso Comuns
+
+### 1. Limitação de Iterações
+
+```python
+@before_llm_call
+def limit_iterations(context: LLMCallHookContext) -> bool | None:
+    """Previne loops infinitos limitando iterações."""
+    max_iterations = 15
+    if context.iterations > max_iterations:
+        print(f"⛔ Bloqueado: Excedeu {max_iterations} iterações")
+        return False  # Bloquear execução
+    return None
+```
+
+### 2. Gate de Aprovação Humana
+
+```python
+@before_llm_call
+def require_approval(context: LLMCallHookContext) -> bool | None:
+    """Requer aprovação após certas iterações."""
+    if context.iterations > 5:
+        response = context.request_human_input(
+            prompt=f"Iteração {context.iterations}: Aprovar chamada LLM?",
+            default_message="Pressione Enter para aprovar, ou digite 'não' para bloquear:"
+        )
+        if response.lower() == "não":
+            print("🚫 Chamada LLM bloqueada pelo usuário")
+            return False
+    return None
+```
+
+### 3. Adicionando Contexto do Sistema
+
+```python
+@before_llm_call
+def add_guardrails(context: LLMCallHookContext) -> None:
+    """Adiciona diretrizes de segurança a cada chamada LLM."""
+    context.messages.append({
+        "role": "system",
+        "content": "Garanta que as respostas sejam factuais e cite fontes quando possível."
+    })
+    return None
+```
+
+### 4. Sanitização de Resposta
+
+```python
+@after_llm_call
+def sanitize_sensitive_data(context: LLMCallHookContext) -> str | None:
+    """Remove padrões sensíveis."""
+    if not context.response:
+        return None
+    
+    import re
+    sanitized = context.response
+    sanitized = re.sub(r'\b\d{3}\.\d{3}\.\d{3}-\d{2}\b', '[CPF-CENSURADO]', sanitized)
+    sanitized = re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[CARTÃO-CENSURADO]', sanitized)
+    
+    return sanitized
+```
+
+### 5. Rastreamento de Custos
+
+```python
+import tiktoken
+
+@before_llm_call
+def track_token_usage(context: LLMCallHookContext) -> None:
+    """Rastreia tokens de entrada."""
+    encoding = tiktoken.get_encoding("cl100k_base")
+    total_tokens = sum(
+        len(encoding.encode(msg.get("content", ""))) 
+        for msg in context.messages
+    )
+    print(f"📊 Tokens de entrada: ~{total_tokens}")
+    return None
+
+@after_llm_call
+def track_response_tokens(context: LLMCallHookContext) -> None:
+    """Rastreia tokens de resposta."""
+    if context.response:
+        encoding = tiktoken.get_encoding("cl100k_base")
+        tokens = len(encoding.encode(context.response))
+        print(f"📊 Tokens de resposta: ~{tokens}")
+    return None
+```
+
+### 6. Logging de Debug
+
+```python
+@before_llm_call
+def debug_request(context: LLMCallHookContext) -> None:
+    """Debug de requisição LLM."""
+    print(f"""
+    🔍 Debug de Chamada LLM:
+    - Agente: {context.agent.role}
+    - Tarefa: {context.task.description[:50]}...
+    - Iteração: {context.iterations}
+    - Contagem de Mensagens: {len(context.messages)}
+    - Última Mensagem: {context.messages[-1] if context.messages else 'Nenhuma'}
+    """)
+    return None
+
+@after_llm_call
+def debug_response(context: LLMCallHookContext) -> None:
+    """Debug de resposta LLM."""
+    if context.response:
+        print(f"✅ Preview da Resposta: {context.response[:100]}...")
+    return None
+```
+
+## Gerenciamento de Hooks
+
+### Desregistrando Hooks
+
+```python
+from crewai.hooks import (
+    unregister_before_llm_call_hook,
+    unregister_after_llm_call_hook
+)
+
+# Desregistrar hook específico
+def my_hook(context):
+    ...
+
+register_before_llm_call_hook(my_hook)
+# Mais tarde...
+unregister_before_llm_call_hook(my_hook)  # Retorna True se encontrado
+```
+
+### Limpando Hooks
+
+```python
+from crewai.hooks import (
+    clear_before_llm_call_hooks,
+    clear_after_llm_call_hooks,
+    clear_all_llm_call_hooks
+)
+
+# Limpar tipo específico de hook
+count = clear_before_llm_call_hooks()
+print(f"Limpou {count} hooks antes")
+
+# Limpar todos os hooks LLM
+before_count, after_count = clear_all_llm_call_hooks()
+print(f"Limpou {before_count} hooks antes e {after_count} hooks depois")
+```
+
+## Padrões Avançados
+
+### Execução Condicional de Hook
+
+```python
+@before_llm_call
+def conditional_blocking(context: LLMCallHookContext) -> bool | None:
+    """Bloqueia apenas em condições específicas."""
+    # Bloquear apenas para agentes específicos
+    if context.agent.role == "researcher" and context.iterations > 10:
+        return False
+    
+    # Bloquear apenas para tarefas específicas
+    if "sensível" in context.task.description.lower() and context.iterations > 5:
+        return False
+    
+    return None
+```
+
+### Modificações com Consciência de Contexto
+
+```python
+@before_llm_call
+def adaptive_prompting(context: LLMCallHookContext) -> None:
+    """Adiciona contexto diferente baseado na iteração."""
+    if context.iterations == 0:
+        context.messages.append({
+            "role": "system",
+            "content": "Comece com uma visão geral de alto nível."
+        })
+    elif context.iterations > 3:
+        context.messages.append({
+            "role": "system",
+            "content": "Foque em detalhes específicos e forneça exemplos."
+        })
+    return None
+```
+
+## Melhores Práticas
+
+1. **Mantenha Hooks Focados**: Cada hook deve ter uma responsabilidade única
+2. **Evite Computação Pesada**: Hooks executam em cada chamada LLM
+3. **Trate Erros Graciosamente**: Use try-except para prevenir falhas de hooks
+4. **Use Type Hints**: Aproveite `LLMCallHookContext` para melhor suporte IDE
+5. **Documente Comportamento do Hook**: Especialmente para condições de bloqueio
+6. **Teste Hooks Independentemente**: Teste unitário de hooks antes de usar em produção
+7. **Limpe Hooks em Testes**: Use `clear_all_llm_call_hooks()` entre execuções de teste
+8. **Modifique In-Place**: Sempre modifique `context.messages` in-place, nunca substitua
+
+## Tratamento de Erros
+
+```python
+@before_llm_call
+def safe_hook(context: LLMCallHookContext) -> bool | None:
+    try:
+        # Sua lógica de hook
+        if some_condition:
+            return False
+    except Exception as e:
+        print(f"⚠️ Erro no hook: {e}")
+        # Decida: permitir ou bloquear em erro
+        return None  # Permitir execução apesar do erro
+```
+
+## Segurança de Tipos
+
+```python
+from crewai.hooks import LLMCallHookContext, BeforeLLMCallHookType, AfterLLMCallHookType
+
+# Anotações de tipo explícitas
+def my_before_hook(context: LLMCallHookContext) -> bool | None:
+    return None
+
+def my_after_hook(context: LLMCallHookContext) -> str | None:
+    return None
+
+# Registro type-safe
+register_before_llm_call_hook(my_before_hook)
+register_after_llm_call_hook(my_after_hook)
+```
+
+## Solução de Problemas
+
+### Hook Não Está Executando
+- Verifique se o hook está registrado antes da execução da crew
+- Verifique se hook anterior retornou `False` (bloqueia hooks subsequentes)
+- Garanta que assinatura do hook corresponda ao tipo esperado
+
+### Modificações de Mensagem Não Persistem
+- Use modificações in-place: `context.messages.append()`
+- Não substitua a lista: `context.messages = []`
+
+### Modificações de Resposta Não Funcionam
+- Retorne a string modificada dos hooks posteriores
+- Retornar `None` mantém a resposta original
+
+## Conclusão
+
+Os Hooks de Chamada LLM fornecem capacidades poderosas para controlar e monitorar interações com modelos de linguagem no CrewAI. Use-os para implementar guardrails de segurança, gates de aprovação, logging, rastreamento de custos e sanitização de respostas. Combinados com tratamento adequado de erros e segurança de tipos, os hooks permitem sistemas de agentes robustos e prontos para produção.
+

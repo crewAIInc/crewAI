@@ -113,15 +113,50 @@ def test_exact_body_limit_and_oversized_span_preserve_fitting_neighbors(
     assert encode_spans([large]).ByteSize() == BODY_LIMIT + extra_bytes
     spans = [make_span(0), large, make_span(2)]
 
-    expected = SpanExportResult.FAILURE if extra_bytes else SpanExportResult.SUCCESS
-    assert exporter.export(spans) == expected
+    # One byte over is no longer a dropped span: its largest attribute is cut,
+    # marked, and the span is sent with its neighbours.
+    assert exporter.export(spans) == SpanExportResult.SUCCESS
 
     exported = [span for batch in exported_batches(delegate) for span in batch]
-    assert exported == ([spans[0], spans[2]] if extra_bytes else spans)
+    assert [span.context.span_id for span in exported] == [1, 2, 3]
     if extra_bytes:
+        fitted = exported[1]
+        assert fitted.attributes["gen_ai.input.messages.truncated"] is True
+        assert fitted.attributes[
+            "gen_ai.input.messages.original_size_bytes"
+        ] == BODY_LIMIT - overhead + extra_bytes
+        assert encode_spans([fitted]).ByteSize() <= BODY_LIMIT
         assert "3072001" in caplog.text and "3072000" in caplog.text
         assert "synthetic-grant" not in caplog.text
+    else:
+        assert exported == spans
     client.create.assert_not_called()
+
+
+def test_a_span_with_many_large_attributes_is_shrunk_not_dropped(
+    destination, caplog
+):
+    """Each attribute fits its own bound, the span does not fit a request: the
+    largest are cut, each marked, until it fits; nothing else changes."""
+    exporter, _, delegate = destination
+    attributes = {f"crewai.part.{i}": f"{i}" * 390_000 for i in range(9)}
+    attributes["crewai.task.name"] = "summary"
+    span = make_span(0, attributes=attributes)
+    assert encode_spans([span]).ByteSize() > BODY_LIMIT
+
+    assert exporter.export([span]) == SpanExportResult.SUCCESS
+
+    (fitted,) = [s for batch in exported_batches(delegate) for s in batch]
+    assert fitted.context == span.context and fitted.name == span.name
+    assert fitted.attributes["crewai.task.name"] == "summary"
+    cut = [k for k in attributes if fitted.attributes.get(f"{k}.truncated")]
+    assert cut
+    for key in cut:
+        assert fitted.attributes[f"{key}.original_size_bytes"] == 390_000
+        assert attributes[key].startswith(fitted.attributes[key])
+    for key in set(attributes) - set(cut):
+        assert fitted.attributes[key] == attributes[key]
+    assert "were cut" in caplog.text
 
 
 def test_oversized_metadata_returns_failure_without_sending(destination, caplog):

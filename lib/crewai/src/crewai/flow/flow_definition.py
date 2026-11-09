@@ -320,7 +320,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     )
     learn: bool = Field(
         default=False,
-        description="Whether feedback should be recorded for later learning workflows.",
+        description="Whether to distill lessons from feedback into memory and apply past lessons to the output before it is reviewed.",
         examples=[True],
     )
     learn_source: str = Field(
@@ -330,7 +330,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     )
     learn_strict: bool = Field(
         default=False,
-        description="Whether learning should enforce strict validation of feedback data.",
+        description="Whether a failed pre-review or lesson distillation raises instead of falling back to the unreviewed output and storing nothing. Lessons are written to memory in the background, so a storage failure after that is not raised.",
         examples=[False],
     )
 
@@ -377,7 +377,7 @@ class FlowCodeActionDefinition(BaseModel):
 
 
 class FlowToolActionDefinition(BaseModel):
-    """A Flow method action that invokes a CrewAI tool."""
+    """A Flow method action that runs a CrewAI tool or one integration app action."""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -385,12 +385,18 @@ class FlowToolActionDefinition(BaseModel):
     )
 
     call: Literal["tool"] = Field(
-        description="Action discriminator. Use tool to instantiate and run a CrewAI tool.",
+        description=(
+            "Action discriminator. Use tool to run a CrewAI tool or one "
+            "integration app action."
+        ),
         examples=["tool"],
     )
     ref: str = Field(
-        description="Reference to the CrewAI tool to run.",
-        examples=["my_project.tools:SearchTool"],
+        description=(
+            "What to run: module:ToolClass for a CrewAI tool, or "
+            "<app>/<action>[@<connection>] for one integration app action."
+        ),
+        examples=["my_project.tools:SearchTool", "google_gmail/send_email"],
     )
     with_: dict[str, ExpressionData] | None = Field(
         default=None,

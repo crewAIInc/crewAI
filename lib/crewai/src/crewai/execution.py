@@ -18,6 +18,7 @@ from __future__ import annotations
 from contextlib import ExitStack
 import contextvars
 from dataclasses import dataclass
+import logging
 import os
 import sys
 from types import TracebackType
@@ -27,6 +28,9 @@ from uuid import uuid4
 
 if TYPE_CHECKING:
     from crewai.telemetry.tracing.session import TraceSession
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -117,14 +121,33 @@ def begin_execution(
     return token
 
 
+def _evaluation_trusts_this_amp() -> bool:
+    """For a run `crewai eval` started: may the saved login go to the AMP this
+    run would trace to? Any other run is not this rule's to decide (True)."""
+    from crewai_core.eval_handshake import (
+        evaluation_trusts_amp,
+        run_awaited_by_evaluation,
+    )
+    from crewai_core.plus_api import PlusAPI
+
+    if not run_awaited_by_evaluation():
+        return True
+    try:
+        base_url = PlusAPI(api_key=None).base_url
+    except Exception:
+        return False
+    return evaluation_trusts_amp(base_url)
+
+
 def _tracing_disabled(tracing: bool | None) -> bool:
-    return (
-        os.getenv("OTEL_SDK_DISABLED", "").lower() == "true"
-        or tracing is False
-        or (
-            tracing is None
-            and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
-        )
+    """Tracing turned off for this run: `tracing=False`, or
+    `CREWAI_TRACING_ENABLED` false when the run says nothing.
+
+    `OTEL_SDK_DISABLED` is not one of them: it is the telemetry opt-out, a
+    separate setting, and tracing has its own."""
+    return tracing is False or (
+        tracing is None
+        and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
     )
 
 
@@ -143,22 +166,46 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     from crewai.telemetry.tracing.grants import (
         GrantSpanExporter,
         TraceGrantClient,
-        tracing_credential,
+        resolve_tracing_credential,
     )
     from crewai.telemetry.tracing.session import TraceSession
 
     stack = ExitStack()
     # First-run discovery is local even if CLI credentials happen to exist.
-    amp_credential = tracing_credential() if enabled else None
-    if amp_credential is None:
+    # The credential and its source are resolved ONCE: the pair that is sent is
+    # the pair a refusal names, whatever the environment says afterwards.
+    resolved = resolve_tracing_credential() if enabled else None
+    if resolved is not None and not _evaluation_trusts_this_amp():
+        # `crewai eval` started this run and decided, before the project's
+        # `.env` was loaded, which AMP may receive the saved login. One that
+        # `.env` chose instead gets an anonymous grant — never the login.
+        logger.info(
+            "Tracing this run anonymously: its AMP is not one crewai eval trusted"
+        )
+        resolved = None
+    if resolved is None:
         from crewai.telemetry.tracing.ephemeral import ephemeral_tracing
 
         session = stack.enter_context(
             ephemeral_tracing(execution_uuid, first_time=not enabled)
         )
     else:
-        client = TraceGrantClient(amp_credential)
-        grant = client.create(execution_uuid)
+        from crewai.telemetry.tracing.grants import TraceGrantError
+
+        credential_source, amp_credential = resolved
+        try:
+            # The constructor refuses a blank credential with the same error, so
+            # it sits inside the same boundary as the grant request.
+            client = TraceGrantClient(amp_credential)
+            grant = client.create(execution_uuid)
+        except TraceGrantError as error:
+            # A trace is a record of the run, not a condition of it: a login
+            # that expired or a token that was revoked must not take the run
+            # down with it. The run goes on untraced and says so — never falls
+            # back to an anonymous upload of a run whose owner is logged in.
+            logger.warning(_untraced_because(error, credential_source))
+            stack.close()
+            return
         exporter = GrantSpanExporter(client, grant)
         session = TraceSession(grant.execution_uuid, [exporter])
 
@@ -168,6 +215,38 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
 
         stack.callback(finish_authenticated_trace)
     _activate_tracing(ExecutionTrace(session, stack))
+
+
+# What each credential is called, and what fixes it when AMP refuses it: the one
+# that was sent, never a different one — refreshing a login does nothing for a
+# rejected CREWAI_USER_PAT.
+_CREDENTIAL_FIX = {
+    "pat": (
+        "the CREWAI_USER_PAT token",
+        "Replace it with a valid personal access token",
+    ),
+    "integration": (
+        "the platform integration token",
+        "Check the integration token this environment is given",
+    ),
+    "login": ("the saved login", "Run `crewai login` again"),
+}
+
+
+def _untraced_because(error: Exception, source: str | None) -> str:
+    """The warning for a run AMP would not grant a trace to, naming the
+    credential it refused and the fix for that one."""
+    status = getattr(error, "status_code", None)
+    if status in (401, 403):
+        name, fix = _CREDENTIAL_FIX.get(source or "", ("the credential", "Check it"))
+        return (
+            f"This run is not traced: CrewAI AMP refused {name} (HTTP {status}). "
+            f"{fix} to trace your runs."
+        )
+    return (
+        f"This run is not traced: CrewAI AMP could not grant a trace "
+        f"({f'HTTP {status}' if status else error}). The run itself is unaffected."
+    )
 
 
 def _activate_tracing(tracing: ExecutionTrace) -> None:

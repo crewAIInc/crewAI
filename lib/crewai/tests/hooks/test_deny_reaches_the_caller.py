@@ -15,7 +15,7 @@ from typing import Any
 from crewai.agent import Agent
 from crewai.agents.step_executor import StepExecutor
 from crewai.crew import Crew
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.lite_agent import LiteAgent
 from crewai.llms.base_llm import BaseLLM
