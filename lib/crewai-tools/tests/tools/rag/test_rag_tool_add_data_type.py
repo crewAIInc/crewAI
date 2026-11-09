@@ -45,6 +45,26 @@ def rag_tool(mock_rag_client: MagicMock) -> RagTool:
         return RagTool()
 
 
+def test_text_document_dicts_keep_body_and_source(
+    rag_tool: RagTool, mock_rag_client: MagicMock
+) -> None:
+    body = "解一元一次方程：2x + 3 = 11"
+    rag_tool.add(
+        {"source": "题库批次A", "content": body, "metadata": {"subject": "数学"}},
+        {"source": "题库批次B", "content": body},
+        data_type="text",
+    )
+
+    records = mock_rag_client.add_documents.call_args.kwargs["documents"]
+    assert [record["content"] for record in records] == [body, body]
+    assert [record["metadata"]["source"] for record in records] == [
+        "题库批次A",
+        "题库批次B",
+    ]
+    assert records[0]["metadata"]["subject"] == "数学"
+    assert records[0]["doc_id"] != records[1]["doc_id"]
+
+
 class TestDataTypeFileAlias:
     """Tests for data_type='file' alias."""
 
