@@ -176,6 +176,23 @@ def test_legitimate_scope_characters_still_match(tmp_path: Path) -> None:
     assert _all_ids(storage) == {"lookalike"}
 
 
+def test_scope_prefix_matches_only_exact_scope_and_descendants(tmp_path: Path) -> None:
+    """Scoped reads and deletes preserve the root and similar sibling scopes."""
+    storage = _new_storage(
+        tmp_path / "mem",
+        [
+            _record("root", "/"),
+            _record("exact", "/crew/research"),
+            _record("child", "/crew/research/notes"),
+            _record("sibling", "/crew/research-2"),
+        ],
+    )
+    assert _search_ids(storage, "/crew/research") == {"exact", "child"}
+    assert {r.id for r in storage.list_records("/crew/research")} == {"exact", "child"}
+    assert storage.delete(scope_prefix="/crew/research") == 2
+    assert _all_ids(storage) == {"root", "sibling"}
+
+
 def test_percent_underscore_and_backslash_in_scope_names_match_literally(
     tmp_path: Path,
 ) -> None:
@@ -188,14 +205,25 @@ def test_percent_underscore_and_backslash_in_scope_names_match_literally(
             _record("underscore", "/a_b"),
             _record("lookalike", "/axb"),
             _record("backslash", "/share\\docs"),
+            _record("backslash-child", "/share\\docs/daily"),
+            _record("backslash-lookalike", "/share\\docs-other"),
         ],
     )
     assert _search_ids(storage, "/metrics/100%") == {"pct", "pct-child"}
     assert {r.id for r in storage.list_records("/metrics/100%")} == {"pct", "pct-child"}
     assert _search_ids(storage, "/a_b") == {"underscore"}
     assert storage.count("/a_b") == 1
-    assert _search_ids(storage, "/share\\") == {"backslash"}
+    assert _search_ids(storage, "/share\\docs") == {"backslash", "backslash-child"}
+    assert _search_ids(storage, "/share\\") == set()
 
     deleted = storage.delete(scope_prefix="/a_b")
     assert deleted == 1
-    assert _all_ids(storage) == {"pct", "pct-child", "digits", "lookalike", "backslash"}
+    assert _all_ids(storage) == {
+        "pct",
+        "pct-child",
+        "digits",
+        "lookalike",
+        "backslash",
+        "backslash-child",
+        "backslash-lookalike",
+    }
