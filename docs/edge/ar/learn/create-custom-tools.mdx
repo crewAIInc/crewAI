@@ -46,6 +46,52 @@ def my_simple_tool(question: str) -> str:
     return "Tool output"
 ```
 
+### الاحتفاظ بنتيجة أداة قابلة للتحقق
+
+يمكن أن تحمل النتيجة ذات النوع المحدد الأدلة إلى جانب الإجابة. يوضح [جسر CAEL](https://github.com/Vovala14/CAEL/tree/d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f/examples/agent_provenance) الاختياري أداة `BaseTool` تعيد استجابة المحرك المحلي الفعلية، واقتباسات المصادر ومعرّفاتها، وبصمات المدخلات والمحرك، وبرهان قواعد منتهيًا تم فحصه. تعمل هذه الأداة المحدودة للمقدمات المنطقية دون LLM أو مفتاح API. وهي ليست نموذج محادثة عامًا.
+
+ثبّت المحوّل ووفّر بيئة التشغيل الخارجية المثبتة على إصدار محدد. المحوّل مرخّص بموجب MIT؛ أما محرك CAEL ونموذجه فلهما ترخيص منفصل غير تجاري للاستخدام الشخصي والبحثي، ولا تتضمنهما حزمة المحوّل.
+
+```bash Code
+uv pip install 'cael-provenance-bridge[crewai] @ git+https://github.com/Vovala14/CAEL.git@d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f#subdirectory=examples/agent_provenance'
+git clone https://github.com/Vovala14/CAEL.git cael-runtime
+git -C cael-runtime checkout 49359eae9aa197d5b92631c16efb74085180a27c
+export CAEL040_ROOT="$PWD/cael-runtime"
+export OTEL_SDK_DISABLED=true
+export CREWAI_TELEMETRY_ENABLED=false
+export CREWAI_DISABLE_VERSION_CHECK=true
+```
+
+تحتفظ الاستدعاءات المباشرة لـ `BaseTool.run` بكامل كائن Pydantic. احتفظ بالطلب الأصلي كمرجع موثوق وتحقق من النتيجة الكاملة قبل استخدام استشهاداتها:
+
+```python Code
+import os
+
+from cael_provenance import CAELRuntime, verify
+from cael_provenance.crewai import CAELProofTool
+
+runtime = CAELRuntime(os.environ["CAEL040_ROOT"])
+request = {
+    "episode_id": "bird-claim",
+    "sources": [
+        {"id": "s1", "text": "Aria is a wren"},
+        {"id": "s2", "text": "Every wren is a bird"},
+        {"id": "s3", "text": "Every bird is visible"},
+    ],
+    "entity": "Aria",
+    "predicate": "visible",
+    "negated": False,
+}
+tool = CAELProofTool(runtime)
+result = tool.run(**request)
+certificate = result.model_dump(mode="json")
+assert verify(certificate, request, runtime)
+assert certificate["reported"]["answer"] == "true"
+assert [item["source_id"] for item in certificate["evidence"]] == ["s1", "s2", "s3"]
+```
+
+يثبت التحقق اشتقاقًا بالنسبة إلى المقدمات التي حلّلها CAEL، ولا يثبت الحقيقة الخارجية أو هوية مؤلف المصدر أو صحة فهم الإنجليزية غير المقيدة. يصرّح المستدعي بالأصول، والبصمات ليست توقيعات. تبقى النتائج المجهولة والمتعارضة منفصلة؛ ولا تملك المدخلات غير المدعومة إجابة موثّقة. إذا أعاد Agent صياغة النتيجة، فلا تشمل الشهادة الأصلية النص الجديد. تتضمن الشيفرة المرتبطة اختبارات قابلة للتكرار للأطر ونقاط الحفظ والعزل والتلاعب، بما فيها حالتا إخفاق محفوظتان للمحلّل.
+
 ### تعريف دالة تخزين مؤقت للأداة
 
 ```python Code
