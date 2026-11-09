@@ -31,6 +31,7 @@ from crewai.tools.tool_failure import (
     failure_from_exception,
     reportable_failure,
 )
+from crewai.tools.tool_results import active_tool_results
 from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
@@ -416,7 +417,10 @@ class ToolUsage:
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
 
-                    if self.agent and hasattr(self.agent, "tools_results"):
+                    active = active_tool_results()
+                    if active is not None:
+                        active.append(data)
+                    elif self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
 
                     if available_tool and hasattr(
@@ -673,7 +677,10 @@ class ToolUsage:
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
 
-                    if self.agent and hasattr(self.agent, "tools_results"):
+                    active = active_tool_results()
+                    if active is not None:
+                        active.append(data)
+                    elif self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
 
                     if available_tool and hasattr(
