@@ -1,0 +1,142 @@
+---
+title: Predictive State Updates
+description: Stream an in-progress tool call's arguments into agent state so the UI updates optimistically while the agent is still generating.
+icon: gauge-high
+mode: "wide"
+---
+
+## Show the work as it happens
+
+Normally a tool call is atomic from the UI's point of view: the agent decides what to write, and your interface only sees the result once the call finishes. For a tool that produces a large document that means a long pause followed by everything snapping into place at once.
+
+Predictive state updates remove the wait. You project a streaming tool argument onto a field of the agent's state, so as the model generates the argument token by token, that state field fills in live. A document the agent is writing appears in the editor as it is typed, not after.
+
+<Note>
+Predictive state relies on a Flow with custom state (`Flow[AgentState]`). It projects a streaming tool argument onto a state field, so there is no equivalent for a bare Crew.
+</Note>
+
+## How it compares to Shared State
+
+Both patterns read the agent's state from the frontend, but they solve different problems:
+
+| Pattern | What it does |
+| --- | --- |
+| **Predictive state** | One-way. Streams an in-progress tool argument into a state field so the UI updates *during* generation, before the call completes. |
+| **[Shared State](/edge/en/guides/frontend/shared-state)** | Two-way. The UI reads *and writes* the agent's committed state, keeping app and agent in sync across turns. |
+
+Reach for predictive state when you want an optimistic, in-flight preview of what the agent is producing. Reach for [Shared State](/edge/en/guides/frontend/shared-state) when the user needs to edit that state back.
+
+## Walkthrough
+
+This assumes you already have a Crew or Flow served over AG-UI and a CopilotKit frontend wired up. If not, start with the [Frontend Overview](/edge/en/guides/frontend/overview).
+
+<Steps>
+
+<Step title="Define a Flow with custom state">
+
+Predictive state projects a tool argument onto a state field, so your Flow needs a typed state field to receive it. Add the field you want to stream into to your `CopilotKitState` subclass.
+
+```python
+from typing import Optional
+from crewai.flow.flow import Flow, start, router, listen
+from litellm import acompletion
+from ag_ui_crewai.sdk import copilotkit_stream, copilotkit_predict_state, CopilotKitState
+
+WRITE_DOCUMENT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "write_document",
+        "description": "Write the full document in markdown.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "document": {"type": "string", "description": "The document to write"},
+            },
+        },
+    },
+}
+
+class AgentState(CopilotKitState):
+    document: Optional[str] = None
+
+class DocumentFlow(Flow[AgentState]):
+    @start()
+    @listen("route_follow_up")
+    async def start_flow(self):
+        pass
+```
+
+</Step>
+
+<Step title="Map a state field to a tool argument">
+
+Call `copilotkit_predict_state` **before** you start streaming the completion. It tells the runtime to project the named tool argument onto the named state field: as the `write_document` call streams its `document` argument, the `document` state field updates live.
+
+```python
+    @router(start_flow)
+    async def chat(self):
+        # Map the `document` state field to the `document` argument of write_document.
+        # As the tool call streams, the state field updates live.
+        await copilotkit_predict_state({
+            "document": {"tool_name": "write_document", "tool_argument": "document"},
+        })
+
+        response = await copilotkit_stream(
+            await acompletion(
+                model="openai/gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Write and edit the document with write_document."},
+                    *self.state.messages,
+                ],
+                tools=[*self.state.copilotkit.actions, WRITE_DOCUMENT_TOOL],
+                parallel_tool_calls=False,
+                stream=True,
+            )
+        )
+        message = response.choices[0].message
+        self.state.messages.append(message)
+```
+
+The key is `copilotkit_predict_state({ "<state_field>": {"tool_name": ..., "tool_argument": ...} })`. Without it, the frontend would only see `document` once the tool call completed. With it, the partial argument streams onto the field while the agent is still generating.
+
+Serve the Flow with `add_crewai_flow_fastapi_endpoint(...)` as shown in the [Frontend Overview](/edge/en/guides/frontend/overview).
+
+</Step>
+
+<Step title="Read the predicted state on the frontend">
+
+On the frontend, read the field with `useAgent` and subscribe to state changes. Because the backend is projecting the streaming argument onto `document`, this component re-renders as the agent types.
+
+```tsx
+"use client";
+import { useAgent, UseAgentUpdate } from "@copilotkit/react-core/v2";
+
+function DocumentView() {
+  const { agent } = useAgent({
+    agentId: "document",
+    updates: [UseAgentUpdate.OnStateChanged],
+  });
+  const document = (agent?.state as { document?: string })?.document ?? "";
+  return <article>{document}</article>; // updates as the agent types
+}
+```
+
+The `document` field fills in progressively as the agent generates the `write_document` call, so the editor updates in real time rather than snapping in at the end.
+
+</Step>
+
+</Steps>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
+    Read and write the agent's state two-way.
+  </Card>
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
+    Render live agent state as it changes.
+  </Card>
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
+    Map agent tool calls to components.
+  </Card>
+</CardGroup>

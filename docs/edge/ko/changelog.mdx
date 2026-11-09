@@ -4,6 +4,53 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 11월 8일">
+  ## v1.15.39
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.39)
+
+  ## 변경 사항
+
+  ### 문서
+  - `/kickoff` 및 `/status`에서 `apps_not_connected` 오류 문서화
+
+  ## 기여자
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="2026년 11월 8일">
+  ## v1.15.38
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.38)
+
+  ## 변경 사항
+
+  ### 기능
+  - gpt-6-luna를 crewAI의 기본 모델로 설정
+  - 에이전트의 입력에서 스프레드시트 URL을 읽고 각 행에 대해 도구 사용
+  - 평가 사용 범위를 대상 및 평가별 ID로 태그 지정
+  - 헤드리스 사용을 위해 crewai eval에 --no-open 추가
+
+  ### 버그 수정
+  - 오류로 종료된 crewai eval 실행을 run_failed로 계산
+  - crewai eval이 추적을 켤 때만 프로젝트 .env를 소유자 전용으로 생성
+  - crewai eval이 시작한 실패한 익명 실행 업로드
+  - 첫 호출 시 openai 호환 제공자의 API 키 확인
+  - 메모이즈된 crew 메서드를 해당 인스턴스로 범위 지정
+  - crewai run의 프로젝트 스크립트가 실패할 경우 비제로로 종료
+  - Eval이 Enter를 통해 추적 공유를 요청하며 그 이유를 설명
+
+  ### 문서
+  - GET /inputs에서 required_inputs 및 어떤 흐름 필드가 입력인지 문서화
+
+  ## 기여자
+
+  @joaomdmoura
+
+</Update>
+
 <Update label="2026년 11월 6일">
   ## v1.15.37
 
