@@ -6,6 +6,7 @@ from pydantic import Field
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
+from crewai.types.usage_metrics import reset_usage_agent, set_usage_agent
 from crewai.utilities.i18n import I18N_DEFAULT
 
 
@@ -117,7 +118,13 @@ class BaseAgentTool(BaseTool):
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
             )
-            return selected_agent.execute_task(task_with_assigned_agent, context)
+            # The coworker runs inside the delegating agent's context; credit
+            # its LLM calls to the coworker, not to the agent that delegated.
+            usage_token = set_usage_agent(selected_agent)
+            try:
+                return selected_agent.execute_task(task_with_assigned_agent, context)
+            finally:
+                reset_usage_agent(usage_token)
         except Exception as e:
             return I18N_DEFAULT.errors("agent_tool_execution_error").format(
                 agent_role=self.sanitize_agent_name(selected_agent.role), error=str(e)
