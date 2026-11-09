@@ -638,3 +638,136 @@ def test_persist_from_flow_flow_path_saves_state(tmp_path):
     saved_state = persistence.load_state(flow.state.id)
     assert saved_state is not None
     assert saved_state["counter"] == 1
+
+
+def test_method_level_persist_restores_state_on_resume(tmp_path):
+    """A flow persisted only by method-level @persist resumes from its saved state."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    class MethodPersistedFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def count_up(self):
+            self.state.counter += 1
+
+    flow1 = MethodPersistedFlow()
+    flow1.kickoff()
+
+    flow2 = MethodPersistedFlow()
+    flow2.kickoff(inputs={"id": flow1.state.id})
+
+    assert flow2.state.id == flow1.state.id
+    assert flow2.state.counter == 2
+    assert persistence.load_state(flow1.state.id)["counter"] == 2
+
+
+def test_method_level_persist_restores_dict_state_on_resume(tmp_path):
+    """Method-level @persist on an unstructured flow resumes from its saved state."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    class DictMethodPersistedFlow(Flow[dict]):
+        @start()
+        @persist(persistence)
+        def count_up(self):
+            self.state["runs"] = self.state.get("runs", 0) + 1
+
+    flow1 = DictMethodPersistedFlow()
+    flow1.kickoff()
+
+    flow2 = DictMethodPersistedFlow()
+    flow2.kickoff(inputs={"id": flow1.state["id"]})
+
+    assert flow2.state["runs"] == 2
+
+
+def test_method_level_persist_forks_with_restore_from_state_id(tmp_path):
+    """restore_from_state_id hydrates a flow persisted only by method-level @persist."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    class MethodPersistedFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def count_up(self):
+            self.state.counter += 1
+
+    flow1 = MethodPersistedFlow()
+    flow1.kickoff()
+
+    flow2 = MethodPersistedFlow()
+    flow2.kickoff(restore_from_state_id=flow1.state.id)
+
+    assert flow2.state.id != flow1.state.id
+    assert flow2.state.counter == 2
+    assert persistence.load_state(flow1.state.id)["counter"] == 1
+    assert persistence.load_state(flow2.state.id)["counter"] == 2
+
+
+@pytest.mark.asyncio
+async def test_method_level_persist_restores_state_on_kickoff_async(tmp_path):
+    """kickoff_async resumes a flow persisted only by method-level @persist."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    class MethodPersistedFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def count_up(self):
+            self.state.counter += 1
+
+    flow1 = MethodPersistedFlow()
+    await flow1.kickoff_async()
+
+    flow2 = MethodPersistedFlow()
+    await flow2.kickoff_async(inputs={"id": flow1.state.id})
+
+    assert flow2.state.counter == 2
+
+
+def test_method_level_persist_with_equal_backends_restores_state(tmp_path):
+    """Separate backends for the same database count as one restore source."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+
+    class TwoStepFlow(Flow[TestState]):
+        @start()
+        @persist(SQLiteFlowPersistence(db_path))
+        def step_1(self):
+            self.state.counter += 1
+
+        @listen(step_1)
+        @persist(SQLiteFlowPersistence(db_path))
+        def step_2(self):
+            self.state.message = f"Count is {self.state.counter}"
+
+    flow1 = TwoStepFlow()
+    flow1.kickoff()
+
+    flow2 = TwoStepFlow()
+    flow2.kickoff(inputs={"id": flow1.state.id})
+
+    assert flow2.state.counter == 2
+    assert flow2.state.message == "Count is 2"
+
+
+def test_method_level_persist_with_different_backends_does_not_restore(tmp_path):
+    """Methods persisting to different backends leave no single source to restore from."""
+    first = SQLiteFlowPersistence(os.path.join(tmp_path, "first.db"))
+    second = SQLiteFlowPersistence(os.path.join(tmp_path, "second.db"))
+
+    class SplitFlow(Flow[TestState]):
+        @start()
+        @persist(first)
+        def step_1(self):
+            self.state.counter += 1
+
+        @listen(step_1)
+        @persist(second)
+        def step_2(self):
+            self.state.message = "done"
+
+    flow1 = SplitFlow()
+    flow1.kickoff()
+
+    flow2 = SplitFlow()
+    flow2.kickoff(inputs={"id": flow1.state.id})
+
+    assert flow2.persistence is None
+    assert flow2.state.counter == 1
