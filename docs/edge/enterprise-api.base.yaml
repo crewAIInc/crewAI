@@ -219,7 +219,7 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "422":
           description: >-
-            Validation error: a required input is missing, or an agent's apps are not connected in CrewAI AMP. Apps are checked before the run starts when the request uses a User Bearer Token. Apps this check does not catch make the run fail, and `GET /status/{kickoff_id}` names them.
+            Validation error: a required input is missing, or an agent's apps are not connected in CrewAI AMP. Apps are checked before the run starts, whichever token the request uses, and `agents` names every agent with apps to connect. Apps this check does not catch, such as a hierarchical crew's, make the run fail, and `GET /status/{kickoff_id}` names them.
           content:
             application/json:
               schema:
@@ -235,9 +235,12 @@ paths:
                   value:
                     detail:
                       code: "apps_not_connected"
-                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
                       agent: "Asana Workspace Scout"
-                      missing_apps: ["asana"]
+                      missing_apps: ["asana/get_projects"]
+                      agents:
+                        - agent: "Asana Workspace Scout"
+                          missing_apps: ["asana/get_projects"]
         "500":
           $ref: "#/components/responses/ServerError"
 
@@ -308,12 +311,15 @@ paths:
                   summary: Execution failed on apps not connected in CrewAI AMP
                   value:
                     state: "FAILED"
-                    status: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                    status: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
                     error:
                       code: "apps_not_connected"
-                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
                       agent: "Asana Workspace Scout"
-                      missing_apps: ["asana"]
+                      missing_apps: ["asana/get_projects"]
+                      agents:
+                        - agent: "Asana Workspace Scout"
+                          missing_apps: ["asana/get_projects"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -594,17 +600,29 @@ components:
         message:
           type: string
           description: Human-readable error message
-          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
         agent:
           type: string
-          description: Role of the agent that declares the apps
+          description: Role of the first agent in `agents`
           example: "Asana Workspace Scout"
         missing_apps:
           type: array
           items:
             type: string
-          description: Apps to connect in CrewAI AMP, as CrewAI AMP names them
-          example: ["asana"]
+          description: The first agent's apps to connect in CrewAI AMP, as the agent declares them (`app` or `app/action`)
+          example: ["asana/get_projects"]
+        agents:
+          type: array
+          description: Every agent with apps to connect, each with its `agent` and `missing_apps`. In `GET /status/{kickoff_id}`, the agent the run stopped on
+          items:
+            type: object
+            properties:
+              agent:
+                type: string
+              missing_apps:
+                type: array
+                items:
+                  type: string
 
   responses:
     UnauthorizedError:
