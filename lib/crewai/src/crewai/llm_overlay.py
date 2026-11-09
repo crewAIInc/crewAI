@@ -102,6 +102,14 @@ _T = TypeVar("_T")
 ANY_MODEL: Final[str] = "*"
 """The model part of the key that maps every LLM built from a model string."""
 
+AGGREGATOR_PROVIDERS: Final[set[str]] = {
+    "openrouter",
+    "token_kiosk",
+    "tokenkiosk",
+    "token-kiosk",
+}
+"""Providers whose models are hosted upstream rather than native, so their prefix is never stripped."""
+
 
 active: ContextVar[dict[str, str] | None] = ContextVar(
     "llm_overlay_active", default=None
@@ -222,11 +230,19 @@ def _model_forms(model: str, provider: str | None) -> list[str]:
         # A bare name is the native one with its prefix stripped; a name that
         # still has a slash is the provider's own route id and only means
         # something beside the provider.
-        forms = [routed] if "/" in model else [model, routed]
+        if provider.lower() in AGGREGATOR_PROVIDERS:
+            forms = [routed]
+        else:
+            forms = [routed] if "/" in model else [model, routed]
     else:
         forms = [model]
     prefix, separator, rest = forms[-1].partition("/")
-    if separator and "/" not in rest and prefix.lower() in _aliases():
+    if (
+        separator
+        and "/" not in rest
+        and prefix.lower() in _aliases()
+        and prefix.lower() not in AGGREGATOR_PROVIDERS
+    ):
         if rest not in forms:
             forms.append(rest)
     return forms

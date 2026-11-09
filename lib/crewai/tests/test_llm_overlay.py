@@ -791,22 +791,26 @@ def test_a_litellm_routed_llm_keeps_its_key_on_the_same_provider_only() -> None:
 
 
 @pytest.mark.parametrize(
-    ("built", "key"),
+    ("built", "key", "expected_model"),
     [
-        ("openrouter/openai/gpt-4o", "model:openai/gpt-4o"),
-        ("openrouter/openai/gpt-4o", "model:gpt-4o"),
+        ("openrouter/openai/gpt-4o", "model:openai/gpt-4o", "openai/gpt-4o"),
+        ("openrouter/openai/gpt-4o", "model:gpt-4o", "openai/gpt-4o"),
+        ("token_kiosk/claude-3-5-sonnet", "model:anthropic/claude-3-5-sonnet", "claude-3-5-sonnet"),
+        ("token_kiosk/claude-3-5-sonnet", "model:claude-3-5-sonnet", "claude-3-5-sonnet"),
+        ("token_kiosk/gpt-4o", "model:openai/gpt-4o", "gpt-4o"),
+        ("token_kiosk/gpt-4o", "model:gpt-4o", "gpt-4o"),
     ],
 )
 def test_an_aggregators_route_is_never_the_native_model_it_names(
-    built: str, key: str
+    built: str, key: str, expected_model: str
 ) -> None:
-    """`openrouter/openai/gpt-4o` is OpenRouter's model, not OpenAI's: a key
-    written for the native model leaves it alone."""
+    """`openrouter/openai/gpt-4o` and `token_kiosk/...` are aggregators' models, not native:
+    a key written for the native model leaves it alone."""
     with llm_overlay({key: "openai/gpt-4.1"}):
         llm = LLM(model=built)
 
     assert type(llm).__name__ == "OpenAICompatibleCompletion"
-    assert llm.model == "openai/gpt-4o"
+    assert llm.model == expected_model
 
 
 def test_an_aggregators_route_is_matched_by_its_own_full_name() -> None:
