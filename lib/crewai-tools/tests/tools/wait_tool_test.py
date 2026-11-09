@@ -1,3 +1,4 @@
+import json
 from unittest.mock import AsyncMock, patch
 
 from crewai_tools.tools.wait_tool import WaitTool
@@ -162,6 +163,26 @@ def test_waits_are_never_cached():
 
     assert tool.cache_function("{}", "Waited 1 second.") is False
     assert WaitTool.model_validate(tool.model_dump()).cache_function() is False
+
+
+def test_unsaveable_cache_function_restores_as_never_cached():
+    from crewai.tools.base_tool import BaseTool
+    from pydantic import BaseModel
+
+    # Checkpointed agents hold tools in a BaseTool-typed field, which rebuilds
+    # the concrete class from the saved tool_type.
+    class _Holder(BaseModel):
+        tool: BaseTool
+
+    with pytest.warns(UserWarning, match="dropped and will not run after a restore"):
+        tool = WaitTool(cache_function=lambda _args=None, _result=None: True)
+    saved = json.loads(tool.model_dump_json())
+    assert saved["cache_function"] is None
+
+    restored = _Holder.model_validate({"tool": saved}).tool
+
+    assert isinstance(restored, WaitTool)
+    assert restored.cache_function("{}", "Waited 1 second.") is False
 
 
 def test_description_explains_when_to_use_it(tool):

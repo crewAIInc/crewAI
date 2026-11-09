@@ -10,6 +10,7 @@ from collections.abc import Callable
 import contextvars
 from typing import Any
 
+from crewai.mcp.content import content_blocks_to_text
 from crewai.tools import BaseTool
 from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
 
@@ -153,11 +154,6 @@ class MCPNativeTool(BaseTool):
             return result
 
         if hasattr(result, "content") and result.content:
-            if isinstance(result.content, list) and len(result.content) > 0:
-                content_item = result.content[0]
-                if hasattr(content_item, "text"):
-                    return str(content_item.text)
-                return str(content_item)
-            return str(result.content)
+            return content_blocks_to_text(result.content)
 
         return str(result)

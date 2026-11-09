@@ -133,9 +133,9 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
     def _import_dependencies(self) -> ModuleType:
         """Dynamically import dependencies."""
         try:
-            import pandas as pd  # type: ignore[import-untyped]
+            import pandas as pd
 
-            return pd  # type: ignore[no-any-return]
+            return pd
         except ImportError as e:
             missing_package = str(e).split()[-1]
             raise ImportError(

@@ -46,6 +46,7 @@ class ConversationalConfig:
     interactive_timeout: float | None = None
     exit_commands: Sequence[str] = field(default_factory=lambda: _EXIT_COMMANDS_DEFAULT)
     defer_trace_finalization: bool = True
+    trace_scope: Literal["turn", "session"] | None = None
 
 
 class ChatState(BaseModel):

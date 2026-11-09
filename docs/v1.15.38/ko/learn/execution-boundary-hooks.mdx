@@ -1,0 +1,204 @@
+---
+title: 실행 경계 훅
+description: "@on 데코레이터로 crew와 flow 실행의 시작, 입력, 출력, 종료를 가로채기"
+mode: "wide"
+---
+
+실행 경계 훅은 실행의 가장 바깥쪽 경계를 가로챕니다 — 작업이 시작되기 전,
+입력이 확정될 때, 최종 결과가 준비될 때, 그리고 실행이 끝날 때입니다. 크루와
+플로우 모두에서 발생하며, 실행 수준의 정책 검사, 입력 재작성, 출력 정제에
+적합한 위치입니다.
+
+## 개요
+
+네 가지 인터셉션 포인트가 경계를 담당합니다:
+
+| 포인트 | 시점 | `ctx.payload` |
+|--------|------|---------------|
+| `EXECUTION_START` | 크루 또는 플로우가 막 시작되려는 시점 | 입력 `dict` |
+| `INPUT` | 실행을 위한 입력이 확정된 시점 | 입력 `dict` |
+| `OUTPUT` | 최종 결과가 준비된 시점 | 출력 객체 |
+| `EXECUTION_END` | 실행이 끝난 시점(성공 또는 실패) | 출력 객체, 실패 시 `None` |
+
+크루의 경우 출력 payload는 `CrewOutput`입니다. 플로우의 경우 최종 플로우
+메서드의 결과입니다.
+
+## 훅 시그니처
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.EXECUTION_START)
+def boundary_hook(ctx) -> Any | None:
+    # Mutate ctx.payload in place, or
+    # return a non-None value to replace it, or
+    # raise HookAborted(reason, source) to stop the run
+    return None
+```
+
+경계 훅은 표준 계약을 따릅니다: 진행(`return None`), 제자리(in-place) 수정,
+값을 반환하여 교체, 또는 `HookAborted`를 발생시켜 중단합니다. 어떤
+경계에서든 중단(abort)은 그 사유와 함께 `kickoff()` 밖으로 전파됩니다.
+
+## 컨텍스트 스키마
+
+각 포인트는 타입이 지정된 컨텍스트를 받습니다. 모든 컨텍스트는 공통 기본
+필드를 공유합니다:
+
+```python
+class InterceptionContext:
+    payload: Any            # The interceptable value (see table above)
+    agent: Any = None       # Not populated at execution boundaries
+    agent_role: str | None  # Not populated at execution boundaries
+    task: Any = None        # Not populated at execution boundaries
+    crew: Any = None        # The Crew instance (crew runs only)
+    flow: Any = None        # The Flow instance (flow runs only)
+```
+
+포인트별 컨텍스트는 payload에 대한 이름 있는 별칭을 추가합니다:
+
+```python
+class ExecutionStartContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class InputContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class OutputContext(InterceptionContext):
+    output: Any             # The output object
+
+class ExecutionEndContext(InterceptionContext):
+    output: Any                    # The output object (None when status == "failed")
+    status: str                    # "completed" or "failed"
+    error: BaseException | None    # The exception when status == "failed"
+```
+
+<Note>
+`ctx.inputs`는 **원본** 입력 dict의 별칭이므로, 어느 이름으로든 제자리
+수정은 동일하게 동작합니다. 이전 훅이 새 dict를 반환하여 payload를
+*교체*했다면 `ctx.payload`만 다시 바인딩됩니다 — 훅이 연쇄될 수 있는 경우
+항상 `ctx.payload`를 읽고 쓰세요.
+</Note>
+
+## 크루 실행 vs. 플로우 실행
+
+경계 훅은 두 런타임 모두에서 발생하며, 크루 실행은 내부적으로 플로우 런타임
+위에서 동작합니다. 따라서 `crew.kickoff()` 중에는 전역 경계 훅이 크루
+경계(`ctx.crew` 설정, `ctx.flow`는 `None`)**와** 내부 플로우(`ctx.flow`
+설정, `ctx.crew`는 `None`) 모두에서 발생합니다. 런타임으로 구분하세요:
+
+```python
+@on(InterceptionPoint.OUTPUT)
+def crew_output_only(ctx):
+    if ctx.crew is None:
+        return None  # Skip the internal flow (or a bare flow)
+    ctx.payload.raw = ctx.payload.raw.strip()
+```
+
+## 일반적인 사용 사례
+
+### 시작 시 정책 검사
+
+```python
+@on(InterceptionPoint.EXECUTION_START)
+def enforce_policy(ctx):
+    if ctx.crew is not None and not ctx.payload.get("authorized"):
+        raise HookAborted(reason="unauthorized execution", source="access-control")
+```
+
+### 입력 재작성
+
+```python
+@on(InterceptionPoint.INPUT)
+def add_defaults(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.setdefault("locale", "en-US")
+    ctx.payload["topic"] = ctx.payload["topic"].strip().lower()
+```
+
+재작성된 입력은 태스크 보간(interpolation)으로 흘러가므로, 실행은 수정된
+dict로 시작된 것처럼 동작합니다.
+
+재작성에는 `INPUT`을 사용하고, `EXECUTION_START`는 허용/거부 게이트로
+취급하세요. `EXECUTION_START`에서의 재작성도 여전히 반영됩니다 — 크루에서는
+`before_kickoff` 콜백에도 전달되고, 플로우에서는 `INPUT` 재작성과 동일하게
+적용됩니다.
+
+### 출력 정제
+
+```python
+import re
+
+@on(InterceptionPoint.OUTPUT)
+def redact_emails(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.raw = re.sub(
+        r"\b[\w.+-]+@[\w-]+\.[\w.]+\b", "[EMAIL-REDACTED]", ctx.payload.raw
+    )
+```
+
+`OUTPUT`은 `EXECUTION_END`보다 먼저 실행되며, 둘 다 이전 훅에서 (교체되었을
+수 있는) payload를 봅니다. 최종적으로 재작성된 값이 `kickoff()`가 반환하는
+값입니다.
+
+### 실패 관찰
+
+`EXECUTION_END`는 성공이든 실패든 실행마다 정확히 한 번 발생합니다. 실행이
+예외를 던지면 — 태스크 오류, 플로우 메서드 예외, 또는 이전 포인트의
+`HookAborted` — 훅은 `ctx.error`에 예외가 담긴 `status="failed"`를 받으며,
+원래 예외는 변경 없이 `kickoff()` 밖으로 전파됩니다:
+
+```python
+@on(InterceptionPoint.EXECUTION_END)
+def report_outcome(ctx):
+    if ctx.status == "failed":
+        notify_policy_engine(status="failed", error=repr(ctx.error))
+    else:
+        notify_policy_engine(status="completed")
+```
+
+두 가지 주의 사항: `EXECUTION_START`가 디스패치되지 않았다면
+`EXECUTION_END`는 발생하지 않습니다(시작 시점의 중단은 경계가 열리지
+않았다는 뜻이므로 짝을 이룰 종료가 없습니다). 또한 실패 경로의
+`EXECUTION_END` 디스패치에서 `HookAborted`를 발생시키는 것은 무시됩니다 —
+더 이상 중단할 것이 없고, 원래 오류가 우선합니다.
+
+## 순서
+
+크루 실행의 경계 순서는 다음과 같습니다:
+
+```
+EXECUTION_START → before_kickoff callbacks → INPUT → tasks execute → OUTPUT → EXECUTION_END
+```
+
+플로우 실행에서는 라이프사이클 이벤트가 시작되기 전에 경계 훅이 입력을
+확정합니다:
+
+```
+EXECUTION_START → INPUT → FlowStartedEvent → flow methods execute → OUTPUT → EXECUTION_END → FlowFinishedEvent
+```
+
+`FlowStartedEvent`는 훅이 확정한 입력을 담으며, 경계 훅에서 `inputs["id"]`를
+재작성하면 상태 복원 대상이 바뀝니다. `EXECUTION_START`에서의 중단은 여전히
+`FlowStartedEvent` 다음에 `FlowFailedEvent`가 오는 형태로 나타나며, 중단
+시점에 그때까지 실행된 훅이 확정한 페이로드와 함께 발생합니다.
+
+같은 포인트의 훅은 등록 순서대로 실행되며, 전역 훅이 먼저, 그다음 크루 범위
+훅이 실행됩니다. 텔레메트리(`HookDispatchedEvent`)는 디스패치마다
+발생합니다.
+
+## 테스트에서 훅 관리
+
+```python
+from crewai.hooks import clear_all_hooks
+
+clear_all_hooks()  # Clears every point, including boundaries
+```
+
+## 관련 문서
+
+- [실행 훅 개요 →](/edge/ko/learn/execution-hooks)
+- [LLM 호출 훅 →](/edge/ko/learn/llm-hooks)
+- [도구 호출 훅 →](/edge/ko/learn/tool-hooks)

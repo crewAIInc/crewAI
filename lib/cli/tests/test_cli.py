@@ -1,10 +1,19 @@
+import io
 from pathlib import Path
+import subprocess
+import sys
 from unittest import mock
 
+import click
 import pytest
+import os
+
 from click.testing import CliRunner
+from crewai_core import plus_api
+from crewai_cli.authentication.token import AuthError
 from crewai_cli.cli import (
     create,
+    crewai,
     deploy_create,
     deploy_list,
     deploy_logs,
@@ -20,9 +29,11 @@ from crewai_cli.cli import (
     reset_memories,
     run,
     test,
+    traces_status,
     train,
     version,
 )
+from crewai_core.user_data import update_user_data
 
 
 @pytest.fixture
@@ -112,9 +123,9 @@ def test_version_command_with_tools(runner):
 def test_test_default_iterations(evaluate_crew, runner):
     result = runner.invoke(test)
 
-    evaluate_crew.assert_called_once_with(3, "gpt-5.4-mini", trained_agents_file=None)
+    evaluate_crew.assert_called_once_with(3, "gpt-6-luna", trained_agents_file=None)
     assert result.exit_code == 0
-    assert "Testing the crew for 3 iterations with model gpt-5.4-mini" in result.output
+    assert "Testing the crew for 3 iterations with model gpt-6-luna" in result.output
 
 
 @mock.patch("crewai_cli.cli.evaluate_crew")
@@ -323,7 +334,21 @@ def test_create_flow_declarative_uses_declarative_scaffold(create_flow, runner):
     result = runner.invoke(create, ["flow", "My Flow", "--declarative"])
 
     assert result.exit_code == 0
-    create_flow.assert_called_once_with("My Flow", declarative=True)
+    create_flow.assert_called_once_with(
+        "My Flow", declarative=True, provider=None, skip_provider=False
+    )
+
+
+@mock.patch("crewai_cli.create_flow.create_flow")
+def test_create_flow_passes_provider_and_skip_provider_through(create_flow, runner):
+    result = runner.invoke(
+        create, ["flow", "My Flow", "--provider", "anthropic", "--skip-provider"]
+    )
+
+    assert result.exit_code == 0, result.output
+    create_flow.assert_called_once_with(
+        "My Flow", declarative=False, provider="anthropic", skip_provider=True
+    )
 
 
 @mock.patch("crewai_cli.create_json_crew.create_json_crew")
@@ -340,7 +365,7 @@ def test_create_requires_type_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "TYPE is required when CREWAI_DMN is set" in result.output
-    assert "crew, flow, tool, skill, template" in result.output
+    assert "crew, flow, agent, tool, skill, template" in result.output
 
 
 def test_create_requires_name_in_dmn_mode(runner):
@@ -348,6 +373,297 @@ def test_create_requires_name_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "NAME is required when CREWAI_DMN is set" in result.output
+
+
+RUN_ARGV = [sys.executable, "-m", "crewai_cli.cli", "run"]
+
+PROJECT_CREATES = [
+    pytest.param(
+        ["crew", "My Crew"], "crewai_cli.create_json_crew.create_json_crew", id="crew"
+    ),
+    pytest.param(
+        ["crew", "My Crew", "--classic"],
+        "crewai_cli.create_crew.create_crew",
+        id="classic-crew",
+    ),
+    pytest.param(["flow", "My Flow"], "crewai_cli.create_flow.create_flow", id="flow"),
+    pytest.param(
+        ["flow", "My Flow", "--declarative"],
+        "crewai_cli.create_flow.create_flow",
+        id="declarative-flow",
+    ),
+]
+
+
+class _Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def _at_a_terminal(
+    monkeypatch, typed: str, *, stdin: bool = True, stdout: bool = True
+) -> None:
+    """Run `crewai create` as a person who types ``typed``, with stdin and stdout
+    terminals unless a test says otherwise. Call it in the test body: pytest gives
+    the test a different captured stdout than its fixtures see."""
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr("sys.stdin", _Terminal(typed) if stdin else io.StringIO(typed))
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: stdout)
+
+
+class _StartedRun:
+    """A `crewai run` that create started. Ctrl-C interrupts create's wait for it
+    ``interrupts`` times, then the run ends with ``returncode``."""
+
+    def __init__(self, args, kwargs, returncode: int, interrupts: int) -> None:
+        self.args = args
+        self.cwd = kwargs.get("cwd")
+        self.env = kwargs.get("env")
+        self.killed = False
+        self._returncode = returncode
+        self._interrupts = interrupts
+
+    def wait(self) -> int:
+        if self._interrupts:
+            self._interrupts -= 1
+            raise KeyboardInterrupt
+        return self._returncode
+
+    def kill(self) -> None:
+        self.killed = True
+
+    terminate = kill
+
+
+def _record_runs(
+    monkeypatch, returncode: int = 0, interrupts: int = 0
+) -> list[_StartedRun]:
+    """Record each `crewai run` that create starts. Other commands, such as git,
+    run for real."""
+    real_popen = subprocess.Popen
+    runs: list[_StartedRun] = []
+
+    def fake_popen(args, **kwargs):
+        if args != RUN_ARGV:
+            return real_popen(args, **kwargs)
+        runs.append(_StartedRun(args, kwargs, returncode, interrupts))
+        return runs[-1]
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    return runs
+
+
+def _create(args: list[str]) -> None:
+    """Run `crewai create` outside CliRunner, which would swap in its own
+    non-terminal stdin and stdout."""
+    create.main(args, prog_name="crewai create", standalone_mode=False)
+
+
+def _output(capsys) -> str:
+    return click.unstyle(capsys.readouterr().out)
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_at_a_terminal_runs_the_new_project_when_enter_is_pressed(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: Path("my_project"))
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(args)
+
+    assert exit_info.value.code == 0
+    assert [(run.args, run.cwd) for run in runs] == [(RUN_ARGV, Path("my_project"))]
+    assert "Run it now? [Y/n]" in _output(capsys)
+
+
+@pytest.mark.parametrize("returncode", [1, 130])
+def test_create_exits_with_the_exit_code_of_the_run_it_started(
+    monkeypatch, returncode
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_json_crew.create_json_crew",
+        lambda *_args: Path("my_crew"),
+    )
+    runs = _record_runs(monkeypatch, returncode)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(["crew", "My Crew"])
+
+    assert exit_info.value.code == returncode
+    assert len(runs) == 1
+
+
+@pytest.mark.parametrize(("returncode", "exit_code"), [(-2, 130), (-15, 143)])
+def test_create_exits_as_a_shell_would_when_a_signal_kills_the_run(
+    monkeypatch, returncode, exit_code
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_json_crew.create_json_crew",
+        lambda *_args: Path("my_crew"),
+    )
+    _record_runs(monkeypatch, returncode)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(["crew", "My Crew"])
+
+    assert exit_info.value.code == exit_code
+
+
+def test_create_waits_for_the_run_to_handle_ctrl_c_and_exits_with_its_code(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_json_crew.create_json_crew",
+        lambda *_args: Path("my_crew"),
+    )
+    # The terminal sends Ctrl-C to create and the run alike; the run stops with 130.
+    runs = _record_runs(monkeypatch, returncode=130, interrupts=2)
+    _at_a_terminal(monkeypatch, "\n")
+
+    with pytest.raises(SystemExit) as exit_info:
+        _create(["crew", "My Crew"])
+
+    assert exit_info.value.code == 130
+    [run] = runs
+    assert not run.killed
+
+
+@pytest.mark.parametrize(
+    "ca_bundle", ["/etc/corp/ca.pem", None], ids=["shell-ca-bundle", "no-ca-bundle"]
+)
+def test_create_runs_the_project_with_the_ca_bundle_crewai_started_with(
+    monkeypatch, ca_bundle
+):
+    # The proxy and CA variables crewAI started with, as crewai_core pinned them.
+    monkeypatch.setattr(
+        plus_api,
+        "_MACHINE_TRANSPORT_ENV",
+        {"SSL_CERT_FILE": ca_bundle} if ca_bundle else {},
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+
+    def classic_create(*_args):
+        # As fetching the provider list does in crewai_cli.provider.
+        monkeypatch.setenv("SSL_CERT_FILE", "/venv/certifi/cacert.pem")
+        return Path("my_crew")
+
+    monkeypatch.setattr("crewai_cli.create_crew.create_crew", classic_create)
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "\n")
+
+    with pytest.raises(SystemExit):
+        _create(["crew", "My Crew", "--classic"])
+
+    [run] = runs
+    assert run.env.get("SSL_CERT_FILE") == ca_bundle
+    assert run.env["OPENAI_API_KEY"] == "sk-from-the-shell"
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_at_a_terminal_prints_how_to_run_later_when_declined(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: Path("my_project"))
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "n\n")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it later: cd my_project && crewai run\n" in _output(capsys)
+
+
+@pytest.mark.parametrize(
+    ("stdin", "stdout"),
+    [(False, True), (True, False), (False, False)],
+    ids=["piped-stdin", "piped-stdout", "no-terminal"],
+)
+def test_create_without_a_terminal_does_not_offer_a_run(
+    monkeypatch, capsys, stdin, stdout
+):
+    monkeypatch.setattr(
+        "crewai_cli.create_flow.create_flow",
+        lambda *_args, **_kwargs: Path("my_flow"),
+    )
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n", stdin=stdin, stdout=stdout)
+
+    _create(["flow", "My Flow"])
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_in_dmn_mode_does_not_offer_a_run_at_a_terminal(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: Path("my_project"))
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+    monkeypatch.setenv("CREWAI_DMN", "true")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+@pytest.mark.parametrize(("args", "creator"), PROJECT_CREATES)
+def test_create_does_not_offer_a_run_when_nothing_runnable_was_created(
+    monkeypatch, capsys, args, creator
+):
+    monkeypatch.setattr(creator, lambda *_args, **_kwargs: None)
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+@pytest.mark.parametrize(
+    ("args", "command"),
+    [
+        (["tool", "my_tool"], "crewai_cli.tools.main.ToolCommand"),
+        (["skill", "my-skill"], "crewai_cli.skills.main.SkillCommand"),
+        (["template", "my-template"], "crewai_cli.cli.TemplateCommand"),
+    ],
+    ids=["tool", "skill", "template"],
+)
+def test_create_tool_skill_or_template_does_not_offer_a_run(
+    monkeypatch, capsys, args, command
+):
+    monkeypatch.setattr(command, mock.MagicMock())
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    _create(args)
+
+    assert runs == []
+    assert "Run it" not in _output(capsys)
+
+
+def test_create_runs_the_flow_it_just_created_from_its_folder(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    runs = _record_runs(monkeypatch)
+    _at_a_terminal(monkeypatch, "y\n")
+
+    with pytest.raises(SystemExit):
+        _create(["flow", "News v2.0", "--declarative"])
+
+    [run_started] = runs
+    # A flow folder keeps the ".", which a crew folder would drop.
+    assert run_started.cwd == Path("news_v2.0")
+    assert (tmp_path / "news_v2.0" / "pyproject.toml").is_file()
 
 
 @mock.patch("crewai_cli.cli.AuthenticationCommand")
@@ -359,6 +675,24 @@ def test_login(command, runner):
     mock_auth.login.assert_called_once()
 
 
+@mock.patch("crewai_core.auth.oauth2.webbrowser.open")
+@mock.patch("crewai_core.auth.oauth2.httpx.post")
+def test_login_exits_non_zero_when_the_login_times_out(mock_post, _open, runner):
+    mock_post.return_value.json.return_value = {
+        "device_code": "test_device_code",
+        "user_code": "ABCD-EFGH",
+        "verification_uri": "https://example.com/activate",
+        "interval": 5,
+        "expires_in": 0,
+    }
+
+    result = runner.invoke(login)
+
+    assert result.exit_code == 1
+    assert "the login code expired before sign-in finished" in result.output
+    mock_post.assert_called_once()
+
+
 @mock.patch("crewai_cli.cli.DeployCommand")
 def test_deploy_create(command, runner):
     mock_deploy = command.return_value
@@ -366,6 +700,37 @@ def test_deploy_create(command, runner):
 
     assert result.exit_code == 0
     mock_deploy.create_crew.assert_called_once()
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_without_zip_keeps_the_default_source(command, runner):
+    result = runner.invoke(deploy_create, ["-y"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=False, force_zip=False
+    )
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_create_zip_forces_a_zip_upload(command, runner):
+    result = runner.invoke(deploy_create, ["--zip", "-y", "--skip-validate"])
+
+    assert result.exit_code == 0
+    command.return_value.create_crew.assert_called_once_with(
+        True, skip_validate=True, force_zip=True
+    )
+
+
+def test_deploy_create_help_lists_zip(runner):
+    result = runner.invoke(deploy_create, ["--help"])
+
+    assert result.exit_code == 0
+    help_text = " ".join(result.output.split())
+    assert (
+        "--zip Upload the project as a ZIP even when it has a git origin remote."
+        in help_text
+    )
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
@@ -623,6 +988,31 @@ def test_log_tasks_outputs_shows_result_not_blob(mock_load, runner):
     assert "messages" not in result.output
 
 
+def test_traces_status_shows_disabled_when_env_false_overrides_consent(
+    runner, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_traces_status")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    update_user_data({"trace_consent": True, "first_execution_done": True})
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+
+    result = runner.invoke(traces_status)
+
+    assert result.exit_code == 0
+    assert "Enabled (user consented)" in result.output
+    assert "DISABLED" in result.output
+
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED")
+    unset = runner.invoke(traces_status)
+
+    assert "not set" in unset.output
+    assert "ENABLED" in unset.output
+    assert "DISABLED" not in unset.output
+
+
 @mock.patch("crewai_cli.task_outputs.load_task_outputs")
 def test_log_tasks_outputs_plain_output(mock_load, runner):
     mock_load.return_value = [
@@ -640,3 +1030,42 @@ def test_log_tasks_outputs_plain_output(mock_load, runner):
 
     assert result.exit_code == 0
     assert "Output: REAL" in result.output
+
+
+def _no_saved_login() -> str:
+    raise AuthError("No token")
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["deploy", "list"],
+        ["deploy", "status"],
+        ["triggers", "list"],
+        ["tool", "install", "my-tool"],
+        ["skill", "list"],
+        ["create", "tool", "my_tool"],
+        ["create", "skill", "my-skill"],
+        ["tool", "create", "my_tool"],
+    ],
+)
+def test_commands_that_need_a_login_exit_1_when_logged_out(runner, args):
+    with (
+        runner.isolated_filesystem(),
+        mock.patch("crewai_cli.command.get_auth_token", _no_saved_login),
+    ):
+        result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 1, result.output
+    assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
+    assert "Run 'crewai login' to sign up/login." in result.output
+
+
+def test_crewai_drops_a_paste_marker_it_inherited(monkeypatch):
+    """Only a key pasted at this process's prompt may outlast a `.env` that
+    holds no key; a launcher must not be able to claim one was."""
+    monkeypatch.setenv("CREWAI_PASTED_API_KEYS", "OPENAI_API_KEY")
+
+    CliRunner().invoke(crewai, ["version"])
+
+    assert "CREWAI_PASTED_API_KEYS" not in os.environ

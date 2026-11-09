@@ -13,6 +13,8 @@ from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
     LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
     llm_call_context,
 )
 from crewai.llms.hooks.base import BaseInterceptor
@@ -223,6 +225,16 @@ def _tool_use_input(block: _AnthropicToolUseBlock) -> dict[str, Any]:
     return (
         block["input"] if isinstance(block, dict) else cast(dict[str, Any], block.input)
     )
+
+
+def _tools_named_in_history(messages: list[LLMMessage]) -> list[dict[str, Any]]:
+    """Return an open-schema definition for each tool the history's tool_use blocks name."""
+    names: dict[str, None] = {}
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            names.update(dict.fromkeys(map(_tool_use_name, _tool_use_blocks(content))))
+    return [{"name": name, "input_schema": {"type": "object"}} for name in names]
 
 
 class AnthropicThinkingConfig(BaseModel):
@@ -440,10 +452,11 @@ class AnthropicCompletion(BaseLLM):
                 without leaking a sync one.
         """
 
+        self.api_key = _without_placeholder(self.api_key)
         if self.api_key is None:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("ANTHROPIC_API_KEY"))
             if self.api_key is None:
-                raise ValueError("ANTHROPIC_API_KEY is required")
+                raise MissingAPIKeyError("ANTHROPIC_API_KEY", self.model)
 
         client_params = {
             "api_key": self.api_key,
@@ -625,7 +638,8 @@ class AnthropicCompletion(BaseLLM):
             system_message: Extracted system message
             tools: Tool definitions
             available_functions: Available functions for tool calling. When provided
-                with a single tool, tool_choice is automatically set to force tool use.
+                with a single tool, tool_choice is "auto" so the model may call
+                that tool or answer in text.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -652,8 +666,7 @@ class AnthropicCompletion(BaseLLM):
 
             # When tool_search is enabled and there are 2+ regular tools,
             # inject the search tool and mark regular tools with defer_loading.
-            # With only 1 tool there's nothing to search — skip tool search
-            # entirely so the normal forced tool_choice optimisation still works.
+            # With only 1 tool there's nothing to search, so skip tool search.
             regular_tools = [
                 t
                 for t in converted_tools
@@ -664,10 +677,17 @@ class AnthropicCompletion(BaseLLM):
 
             params["tools"] = converted_tools
 
+            # available_functions means the tool can be executed, not that the
+            # model must call it. Named tool_choice is also rejected by newer
+            # Claude models (Sonnet 5.5, Opus 5.5, Fable 5.1, Mythos 5.1).
             if available_functions and len(regular_tools) == 1:
-                tool_name = regular_tools[0].get("name")
-                if tool_name and tool_name in available_functions:
-                    params["tool_choice"] = {"type": "tool", "name": tool_name}
+                params["tool_choice"] = {"type": "auto"}
+        elif history_tools := _tools_named_in_history(messages):
+            # Anthropic rejects tool_use/tool_result blocks in a request that
+            # defines no tools (a final-answer or schema request after tool
+            # calls). Declare the tools the history used and forbid calling them.
+            params["tools"] = history_tools
+            params["tool_choice"] = {"type": "none"}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
@@ -2081,7 +2101,10 @@ class AnthropicCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, ANTHROPIC_CONTEXT_WINDOWS, default=200_000
+            self.model,
+            ANTHROPIC_CONTEXT_WINDOWS,
+            default=200_000,
+            configured=self.context_window_size,
         )
 
     @staticmethod
