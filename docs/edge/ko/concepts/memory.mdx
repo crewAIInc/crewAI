@@ -758,7 +758,19 @@ memory = Memory(
 ## 스토리지 백엔드
 
 - **기본값**: LanceDB, `./.crewai/memory` 아래에 저장 (또는 환경 변수가 설정된 경우 `$CREWAI_STORAGE_DIR/memory`, 또는 `storage="path/to/dir"`로 전달한 경로).
+- **Chroma**: `ChromaStorage`는 레코드를 Chroma 서버의 컬렉션 또는 `chromadb` 패키지의 인프로세스 클라이언트에 저장합니다. 범위는 경로 단위로 일치시키며, 카테고리 검색은 서버에서 필터링됩니다.
 - **사용자 정의 백엔드**: `StorageBackend` 프로토콜을 구현하고(`crewai.memory.storage.backend` 참조) `Memory(storage=your_backend)`에 인스턴스를 전달합니다. 프로덕션 배포의 경우 `crewai-mongodb-memory` 패키지의 `MongoDBStorageBackend`를 사용할 수 있습니다. 자세한 내용은 [MongoDB 구현 튜토리얼](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/)을 참고하세요.
+
+Chroma를 사용하려면 `chromadb` 패키지의 클라이언트를 전달하세요:
+
+```python
+import chromadb
+from crewai import Memory
+from crewai.memory.storage.chroma_storage import ChromaStorage
+
+client = chromadb.HttpClient(host="localhost", port=8000)
+memory = Memory(storage=ChromaStorage(client=client))
+```
 
 
 ## 탐색(Discovery)
