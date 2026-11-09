@@ -36,13 +36,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Create a new crew, flow, tool, skill, or template project.
+Create a new crew, flow, standalone Agent (experimental), tool, skill, or template project.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: `crew`, `flow`, `tool`, `skill`, or `template`
+- `TYPE`: `crew`, `flow`, `agent` (experimental), `tool`, `skill`, or `template`
 - `NAME`: Name of the project, tool handle, skill, or template
 
 #### Crew
@@ -76,6 +76,16 @@ Press Enter to start `crewai run` in the project folder. `crewai create` then ex
 ```
 
 `crewai create` does not ask with `CREWAI_DMN=true`, or when stdin or stdout is not a terminal, as when a coding agent or a CI job runs it. Creating a tool, a skill or a template never asks.
+
+#### Agent (Experimental)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+Standalone Agent projects default to `agent.yaml`. Use `--format json` for configuration in JSON, or `--format python` for an exported Python Agent. This experimental project/loading contract may change and requires matching preview CLI/SDK builds. See [Standalone Agent Projects](/edge/en/guides/agents/standalone-agent-projects) for setup, tools, runtime inputs, and deployment limits.
 
 #### Tool
 
@@ -219,7 +229,7 @@ crewai test [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: Number of iterations to test the crew (default: 3)
-- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
+- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-6-luna")
 
 Example:
 

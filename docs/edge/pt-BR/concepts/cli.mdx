@@ -37,13 +37,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Crie um novo crew ou flow.
+Crie um novo projeto crew, flow, Agent independente (experimental), tool, skill ou template.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: Escolha entre "crew" ou "flow"
+- `TYPE`: `crew`, `flow`, `agent` (experimental), `tool`, `skill` ou `template`
 - `NAME`: Nome do crew ou flow
 
 Exemplo:
@@ -70,6 +70,16 @@ Pressione Enter para iniciar o `crewai run` na pasta do projeto. Em seguida, o `
 ```
 
 O `crewai create` não pergunta com `CREWAI_DMN=true`, nem quando stdin ou stdout não é um terminal, como quando um agente de programação ou um job de CI o executa. Criar uma ferramenta, uma skill ou um template nunca pergunta.
+
+#### Agent (Experimental)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+Projetos de Agent independente usam `agent.yaml` por padrão. Use `--format json` para configuração em JSON ou `--format python` para exportar um Agent em Python. Este contrato experimental de projeto e carregamento pode mudar e exige builds de prévia compatíveis da CLI e do SDK. Consulte [Projetos de Agent Independente](/edge/pt-BR/guides/agents/standalone-agent-projects) para configuração, ferramentas, entradas de execução e limites de implantação.
 
 #### Aliases de flags obsoletas
 
@@ -187,7 +197,7 @@ crewai test [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: Número de iterações para testar o crew (padrão: 3)
-- `-m, --model TEXT`: Modelo LLM para executar os testes no Crew (padrão: "gpt-4o-mini")
+- `-m, --model TEXT`: Modelo LLM para executar os testes no Crew (padrão: "gpt-6-luna")
 
 Exemplo:
 

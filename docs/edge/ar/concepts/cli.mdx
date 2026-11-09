@@ -36,13 +36,13 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. إنشاء
 
-إنشاء طاقم أو تدفق جديد.
+إنشاء مشروع crew أو flow أو Agent مستقل (تجريبي) أو tool أو skill أو template.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: اختر بين "crew" أو "flow"
+- `TYPE`: `crew` أو `flow` أو `agent` (تجريبي) أو `tool` أو `skill` أو `template`
 - `NAME`: اسم الطاقم أو التدفق
 
 مثال:
@@ -92,6 +92,16 @@ crewai create flow my_new_flow
 ```
 
 لا يطرح `crewai create` هذا السؤال مع `CREWAI_DMN=true`، أو عندما لا يكون stdin أو stdout طرفية، كما يحدث عندما يشغّله وكيل برمجة أو مهمة CI. ولا يطرحه أبدًا عند إنشاء أداة أو مهارة أو قالب.
+
+#### Agent مستقل (تجريبي)
+
+```shell Terminal
+crewai create agent support_agent
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+تستخدم مشاريع Agent المستقلة الملف `agent.yaml` افتراضيًا. استخدم `--format json` لتهيئة JSON أو `--format python` لتصدير Agent بلغة Python. قد يتغير عقد المشروع والتحميل التجريبي هذا، ويتطلب إصدارات معاينة متوافقة من CLI وSDK. راجع [مشاريع Agent المستقلة](/edge/ar/guides/agents/standalone-agent-projects) للإعداد والأدوات ومدخلات التشغيل وحدود النشر.
 
 #### أسماء مستعار قديمة للأعلام (مهملة)
 
@@ -167,7 +177,7 @@ crewai test [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: عدد تكرارات الاختبار (افتراضي: 3)
-- `-m, --model TEXT`: نموذج LLM لتشغيل الاختبارات (افتراضي: "gpt-4o-mini")
+- `-m, --model TEXT`: نموذج LLM لتشغيل الاختبارات (افتراضي: "gpt-6-luna")
 
 ### 8. التشغيل
 
