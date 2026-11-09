@@ -17,10 +17,6 @@ from typing import (
     cast,
 )
 
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Self
-
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
@@ -70,6 +66,9 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 
 try:
@@ -1805,23 +1804,6 @@ class LLM(BaseLLM):
                         )
                         return tool_calls_list
 
-            usage_dict = self._usage_to_dict(usage_info)
-            finish_reason, response_id_last = (
-                stream_finish_reason,
-                stream_response_id,
-            )
-            self._handle_emit_call_events(
-                response=full_response,
-                call_type=LLMCallType.LLM_CALL,
-                from_task=from_task,
-                from_agent=from_agent,
-                messages=params.get("messages"),
-                usage=usage_dict,
-                finish_reason=finish_reason,
-                response_id=response_id_last,
-            )
-            return full_response
-
         except LLMContextLengthExceededError:
             raise
         except Exception as e:
@@ -1831,7 +1813,7 @@ class LLM(BaseLLM):
 
             if chunk_count == 0:
                 raise
-            if full_response:
+            if full_response and not (response_model and self.is_litellm):
                 finish_reason, response_id_last = (
                     stream_finish_reason,
                     stream_response_id,
@@ -1848,6 +1830,47 @@ class LLM(BaseLLM):
                 )
                 return full_response
             raise
+
+        usage_dict = self._usage_to_dict(usage_info)
+        finish_reason, response_id_last = (
+            stream_finish_reason,
+            stream_response_id,
+        )
+
+        if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+            instructor_instance = InternalInstructor(
+                content=full_response,
+                model=response_model,
+                llm=self,
+            )
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
+            structured_response = result.model_dump_json()
+            self._handle_emit_call_events(
+                response=structured_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("messages"),
+                usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
+            )
+            return structured_response
+
+        self._handle_emit_call_events(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params.get("messages"),
+            usage=usage_dict,
+            finish_reason=finish_reason,
+            response_id=response_id_last,
+        )
+        return full_response
 
     def _handle_tool_call(
         self,
