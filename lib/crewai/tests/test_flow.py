@@ -2391,3 +2391,74 @@ def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
         assert finished.wait(timeout=5)
 
     assert order.index("save-done") < order.index("flow-finished")
+
+
+def test_conditional_start_triggered_by_method_name_and_reference():
+    """Conditional @start('method') and @start(method_ref) must run when that
+    method completes, not only when a router emits a matching label (#9194)."""
+    ran: list[str] = []
+
+    class ByMethodNameFlow(Flow):
+        @start()
+        def init(self):
+            ran.append("init")
+
+        @start("init")
+        def maybe_begin(self):
+            ran.append("maybe_begin")
+
+        @listen(and_(init, maybe_begin))
+        def proceed(self):
+            ran.append("proceed")
+
+    class ByMethodReferenceFlow(Flow):
+        @start()
+        def init(self):
+            ran.append("init")
+
+        @start(init)
+        def maybe_begin(self):
+            ran.append("maybe_begin")
+
+    class ByCompositeMethodConditionFlow(Flow):
+        @start()
+        def step_a(self):
+            ran.append("step_a")
+
+        @listen(step_a)
+        def step_b(self):
+            ran.append("step_b")
+
+        @start(and_(step_a, step_b))
+        def after_both(self):
+            ran.append("after_both")
+
+    ByMethodNameFlow().kickoff()
+    assert ran == ["init", "maybe_begin", "proceed"]
+
+    ran.clear()
+    ByMethodReferenceFlow().kickoff()
+    assert ran == ["init", "maybe_begin"]
+
+    ran.clear()
+    ByCompositeMethodConditionFlow().kickoff()
+    assert ran == ["step_a", "step_b", "after_both"]
+
+    class ByMultiEventOrStartFlow(Flow):
+        @start()
+        def step_a(self):
+            ran.append("step_a")
+
+        @listen(step_a)
+        def step_b(self):
+            ran.append("step_b")
+
+        @start(or_(step_a, step_b))
+        def after_either(self):
+            ran.append("after_either")
+
+    ran.clear()
+    ByMultiEventOrStartFlow().kickoff()
+    assert ran.count("after_either") == 1
+
+
