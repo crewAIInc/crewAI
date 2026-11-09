@@ -13,6 +13,7 @@ pip install 'crewai[tools]'
 ## Supported LLMs
 
 Any LLM that supports the `vision` feature should work. It must accept image_url as a user message.
+Without an `llm`, the tool uses OpenAI's `gpt-6-luna`.
 The tool has been tested with:
 - OpenAI's `gpt-4o`
 - Gemini's `gemini/gemini-1.5-pro`
