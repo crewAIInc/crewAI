@@ -1,6 +1,7 @@
 """The terminal UI resolves local-session consent without the legacy uploader."""
 
 import asyncio
+from contextlib import contextmanager
 import threading
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -29,10 +30,14 @@ def _say_a_person_is_here(monkeypatch):
 async def wait_for_consent(app, pilot):
     for _ in range(50):
         await pilot.pause(0.01)
-        # A pushed screen is not a laid-out one, and a click lands on the
-        # region the buttons have — zero-sized until the first layout pass.
-        if isinstance(app.screen, TraceConsentScreen) and all(
-            button.region for button in app.screen.query(Button)
+        # A pushed screen is not a composed one: until compose runs it has no
+        # buttons, and `all()` of none is True. A click lands on the region
+        # the buttons have — zero-sized until the first layout pass.
+        buttons = app.screen.query(Button)
+        if (
+            isinstance(app.screen, TraceConsentScreen)
+            and buttons
+            and all(button.region for button in buttons)
         ):
             return app.screen
     raise AssertionError("The execution worker did not open the consent prompt")
@@ -215,16 +220,23 @@ async def test_quit_during_turn_discards_trace_after_worker_finishes(
     app = ConsentApp(conversational=True)
     completions = []
 
+    class CompletedTurn:
+        result = "done"
+
+        def __iter__(self):
+            return iter(())
+
     class RunningFlow:
         defer_trace_finalization = True
         trace = "prior turn" if prior_turn else None
 
-        def handle_turn(self, message):
+        @contextmanager
+        def stream_turn(self, message, **kwargs):
             entered.set()
             release.wait(timeout=5)
             # A first kickoff stores its deferred lifetime just before returning.
             self.trace = "completed turn"
-            return "done"
+            yield CompletedTurn()
 
         def finalize_session_traces(self, *, discard=False):
             completions.append(discard)
@@ -238,7 +250,8 @@ async def test_quit_during_turn_discards_trace_after_worker_finishes(
     prompt = Mock(side_effect=AssertionError("Cancelled execution asked for consent"))
     monkeypatch.setattr(app, "push_screen", prompt)
     async with app.run_test(size=(100, 40)):
-        app._run_conversation_turn_worker("hello")
+        run_worker = app._run_conversation_turn_worker.__wrapped__
+        worker = asyncio.create_task(asyncio.to_thread(run_worker, app, "hello"))
         assert await asyncio.to_thread(entered.wait, 5)
         try:
             await app.action_quit()
@@ -246,7 +259,8 @@ async def test_quit_during_turn_discards_trace_after_worker_finishes(
             assert app._request_trace_consent() is False
         finally:
             release.set()
-        assert await asyncio.to_thread(finalized.wait, 5)
+        await asyncio.wait_for(worker, timeout=5)
+        assert finalized.is_set()
     assert completions == [True]
     assert app._flow.trace is None
     assert app._flow.defer_trace_finalization is False

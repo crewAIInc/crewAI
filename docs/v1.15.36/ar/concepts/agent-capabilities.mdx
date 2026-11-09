@@ -1,0 +1,147 @@
+---
+title: "قدرات الوكيل"
+description: "فهم الطرق الخمس لتوسيع وكلاء CrewAI: الأدوات، MCP، التطبيقات، المهارات، والمعرفة."
+icon: puzzle-piece
+mode: "wide"
+---
+
+## نظرة عامة
+
+يمكن توسيع وكلاء CrewAI بـ **خمسة أنواع مميزة من القدرات**، كل منها يخدم غرضًا مختلفًا. فهم متى تستخدم كل نوع — وكيف يعملون معًا — هو المفتاح لبناء وكلاء فعّالين.
+
+<CardGroup cols={2}>
+  <Card title="الأدوات" icon="wrench" href="/ar/concepts/tools" color="#3B82F6">
+    **دوال قابلة للاستدعاء** — تمنح الوكلاء القدرة على اتخاذ إجراءات. البحث على الويب، عمليات الملفات، استدعاءات API، تنفيذ الكود.
+  </Card>
+  <Card title="خوادم MCP" icon="plug" href="/ar/mcp/overview" color="#8B5CF6">
+    **خوادم أدوات عن بُعد** — تربط الوكلاء بخوادم أدوات خارجية عبر Model Context Protocol. نفس تأثير الأدوات، لكن مستضافة خارجيًا.
+  </Card>
+  <Card title="التطبيقات" icon="grid-2" color="#EC4899">
+    **تكاملات المنصة** — تربط الوكلاء بتطبيقات SaaS (Gmail، Slack، Jira، Salesforce) عبر منصة CrewAI. تعمل محليًا مع رمز تكامل المنصة.
+  </Card>
+  <Card title="المهارات" icon="bolt" href="/ar/concepts/skills" color="#F59E0B">
+    **خبرة المجال** — تحقن التعليمات والإرشادات والمواد المرجعية في إرشادات الوكلاء. المهارات تخبر الوكلاء *كيف يفكرون*.
+  </Card>
+  <Card title="المعرفة" icon="book" href="/ar/concepts/knowledge" color="#10B981">
+    **حقائق مُسترجعة** — توفر للوكلاء بيانات من المستندات والملفات وعناوين URL عبر البحث الدلالي (RAG). المعرفة تعطي الوكلاء *ما يحتاجون معرفته*.
+  </Card>
+</CardGroup>
+
+---
+
+## التمييز الأساسي
+
+أهم شيء يجب فهمه: **هذه القدرات تنقسم إلى فئتين**.
+
+### قدرات الإجراء (الأدوات، MCP، التطبيقات)
+
+تمنح الوكلاء القدرة على **فعل أشياء** — استدعاء APIs، قراءة الملفات، البحث على الويب، إرسال رسائل البريد الإلكتروني. عند التنفيذ، تتحول الأنواع الثلاثة إلى نفس التنسيق الداخلي (مثيلات `BaseTool`) وتظهر في قائمة أدوات موحدة يمكن للوكيل استدعاؤها.
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool
+
+agent = Agent(
+    role="Researcher",
+    goal="Find and compile market data",
+    backstory="Expert market analyst",
+    tools=[SerperDevTool(), FileReadTool()],  # أدوات محلية
+    mcps=["https://mcp.example.com/sse"],     # أدوات خادم MCP عن بُعد
+    apps=["gmail", "google_sheets"],           # تكاملات المنصة
+)
+```
+
+### قدرات السياق (المهارات، المعرفة)
+
+تُعدّل **إرشادات** الوكيل — بحقن الخبرة أو التعليمات أو البيانات المُسترجعة قبل أن يبدأ الوكيل في التفكير. لا تمنح الوكلاء إجراءات جديدة؛ بل تُشكّل كيف يفكر الوكلاء وما هي المعلومات التي يمكنهم الوصول إليها.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Security Auditor",
+    goal="Audit cloud infrastructure for vulnerabilities",
+    backstory="Expert in cloud security with 10 years of experience",
+    skills=["./skills/security-audit"],        # تعليمات المجال
+    knowledge_sources=[pdf_source, url_source], # حقائق مُسترجعة
+)
+```
+
+---
+
+## متى تستخدم ماذا
+
+| تحتاج إلى...                                            | استخدم            | مثال                                     |
+| :------------------------------------------------------- | :---------------- | :--------------------------------------- |
+| الوكيل يبحث على الويب                                    | **الأدوات**       | `tools=[SerperDevTool()]`                |
+| الوكيل يستدعي API عن بُعد عبر MCP                        | **MCP**           | `mcps=["https://api.example.com/sse"]`   |
+| الوكيل يرسل بريد إلكتروني عبر Gmail                      | **التطبيقات**     | `apps=["gmail"]`                         |
+| الوكيل يتبع إجراءات محددة                                | **المهارات**      | `skills=["./skills/code-review"]`        |
+| الوكيل يرجع لمستندات الشركة                              | **المعرفة**       | `knowledge_sources=[pdf_source]`         |
+| الوكيل يبحث على الويب ويتبع إرشادات المراجعة              | **الأدوات + المهارات** | استخدم كليهما معًا                  |
+
+---
+
+## دمج القدرات
+
+في الممارسة العملية، غالبًا ما يستخدم الوكلاء **أنواعًا متعددة من القدرات معًا**. إليك مثال واقعي:
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+# وكيل بحث مجهز بالكامل
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Produce comprehensive market analysis reports",
+    backstory="Expert analyst with deep industry knowledge",
+
+    # الإجراء: ما يمكن للوكيل فعله
+    tools=[
+        SerperDevTool(),         # البحث على الويب
+        FileReadTool(),          # قراءة الملفات المحلية
+        CodeInterpreterTool(),   # تشغيل كود Python للتحليل
+    ],
+    mcps=["https://data-api.example.com/sse"],  # الوصول لـ API بيانات عن بُعد
+    apps=["google_sheets"],                      # الكتابة في Google Sheets
+
+    # السياق: ما يعرفه الوكيل
+    skills=["./skills/research-methodology"],    # كيفية إجراء البحث
+    knowledge_sources=[company_docs],            # بيانات خاصة بالشركة
+)
+```
+
+---
+
+## جدول المقارنة
+
+| الميزة | الأدوات | MCP | التطبيقات | المهارات | المعرفة |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **يمنح الوكيل إجراءات** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **يُعدّل الإرشادات** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **يتطلب كود** | نعم | إعداد فقط | إعداد فقط | Markdown فقط | إعداد فقط |
+| **يعمل محليًا** | نعم | يعتمد | نعم (مع متغير بيئة) | غير متاح | نعم |
+| **يحتاج مفاتيح API** | لكل أداة | لكل خادم | رمز التكامل | لا | المُضمّن فقط |
+| **يُعيَّن على Agent** | `tools=[]` | `mcps=[]` | `apps=[]` | `skills=[]` | `knowledge_sources=[]` |
+| **يُعيَّن على Crew** | ❌ | ❌ | ❌ | `skills=[]` | `knowledge_sources=[]` |
+
+---
+
+## تعمّق أكثر
+
+هل أنت مستعد لمعرفة المزيد عن كل نوع من أنواع القدرات؟
+
+<CardGroup cols={2}>
+  <Card title="الأدوات" icon="wrench" href="/ar/concepts/tools">
+    إنشاء أدوات مخصصة، استخدام كتالوج OSS مع أكثر من 75 خيارًا، تكوين التخزين المؤقت والتنفيذ غير المتزامن.
+  </Card>
+  <Card title="تكامل MCP" icon="plug" href="/ar/mcp/overview">
+    الاتصال بخوادم MCP عبر stdio أو SSE أو HTTP. تصفية الأدوات، تكوين المصادقة.
+  </Card>
+  <Card title="المهارات" icon="bolt" href="/ar/concepts/skills">
+    بناء حزم المهارات مع SKILL.md، حقن خبرة المجال، استخدام الكشف التدريجي.
+  </Card>
+  <Card title="المعرفة" icon="book" href="/ar/concepts/knowledge">
+    إضافة المعرفة من ملفات PDF وCSV وعناوين URL والمزيد. تكوين المُضمّنات والاسترجاع.
+  </Card>
+</CardGroup>

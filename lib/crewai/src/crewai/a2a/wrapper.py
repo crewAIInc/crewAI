@@ -325,6 +325,8 @@ def _execute_task_with_a2a(
         Task execution result (either from LLM or A2A agent)
     """
     original_description: str = task.description
+    # Agent cards, fetch errors and replies are a remote server's text.
+    task._record_input_description()
     original_output_pydantic = task.output_pydantic
     original_response_model = task.response_model
 
@@ -1472,6 +1474,8 @@ async def _aexecute_task_with_a2a(
 ) -> str:
     """Async version of _execute_task_with_a2a."""
     original_description: str = task.description
+    # Agent cards, fetch errors and replies are a remote server's text.
+    task._record_input_description()
     original_output_pydantic = task.output_pydantic
     original_response_model = task.response_model
 

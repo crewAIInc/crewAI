@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import (
+    JSONProjectError,
     JSONProjectValidationError,
     _looks_like_windows_absolute_path,
     find_json_project_file,
@@ -276,6 +277,25 @@ class TestLoadAgent:
         assert len(agent.tools or []) == 1
         assert agent.tools[0].name == "echo"
 
+    def test_load_agent_rejects_tool_dict_that_is_not_a_tool(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        agent_def = {
+            "role": "Tool User",
+            "goal": "Use tools",
+            "backstory": "Tool expert.",
+            "tools": [{"tool_type": "os.system", "name": "x", "description": "x"}],
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        with pytest.raises(
+            JSONProjectError,
+            match=r"invalid tool ref 'os:system'; expected a BaseTool class",
+        ):
+            load_agent(agent_file)
+
     def test_load_agent_accepts_static_mcp_tool_filter(self, tmp_path: Path):
         agent_def = {
             "role": "MCP User",
@@ -538,8 +558,16 @@ class TestResolveTools:
     def test_serialized_tool_dicts_pass_through(self):
         from crewai.project.json_loader import _resolve_tools
 
-        spec = {"tool_type": "some.module.Tool"}
+        spec = {"tool_type": "crewai.tools.agent_tools.add_image_tool.AddImageTool"}
         assert _resolve_tools([spec]) == [spec]
+
+    def test_serialized_tool_dict_with_unknown_module_fails_at_load(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(
+            JSONProjectError, match=r"unresolvable tool ref 'some\.module:Tool'"
+        ):
+            _resolve_tools([{"tool_type": "some.module.Tool"}])
 
 
 class TestValidationDoesNotExecuteTools:

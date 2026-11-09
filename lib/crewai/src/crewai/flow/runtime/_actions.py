@@ -98,17 +98,59 @@ class ToolAction:
         self.definition = definition
         self.tool = self._build_tool()
         self.kwargs = definition.with_ or {}
+        # Tool instances are built once per flow object and reused across
+        # kickoffs; register the tool so each kickoff can reset its usage
+        # budget (Flow._reset_tool_action_usage_budgets). Without the reset,
+        # current_usage_count survives runs and a budget exhausted in an
+        # earlier kickoff makes every later kickoff fail.
+        tools = getattr(flow, "_tool_action_tools", None)
+        if tools is None:
+            tools = []
+            object.__setattr__(flow, "_tool_action_tools", tools)
+        tools.append(self.tool)
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
-        local_context = _pop_local_context(kwargs)
-        return self.tool.run(
-            **Expression.from_flow(
-                self.kwargs, self.flow, local_context=local_context
-            ).render_template()
+        from crewai.tools.tool_failure import (
+            ToolExecutionFailedError,
+            ToolFailureRecord,
+            detect_tool_failure,
+            handle_tool_failure,
         )
+
+        local_context = _pop_local_context(kwargs)
+        rendered = Expression.from_flow(
+            self.kwargs, self.flow, local_context=local_context
+        ).render_template()
+        result = self.tool.run(**rendered)
+        if failure := detect_tool_failure(result):
+            if getattr(self.tool, "tool_failure_policy", None) is not None:
+                # The tool declares an explicit policy, which per BaseTool's
+                # contract overrides everything for this tool: WARN records
+                # the failure, emits ToolFailureDetectedEvent and the flow
+                # continues; IGNORE stays silent; RAISE aborts. Only a tool
+                # that sets no policy keeps flow actions' fail-hard default.
+                handle_tool_failure(
+                    failure,
+                    tool_name=self.tool.name,
+                    tool_args=rendered,
+                    tool=self.tool,
+                )
+            else:
+                raise ToolExecutionFailedError(
+                    ToolFailureRecord(
+                        tool_name=self.tool.name,
+                        failure=failure,
+                        tool_args=rendered,
+                    )
+                )
+        return result
 
     def _build_tool(self) -> Any:
         from crewai.tools import BaseTool
+
+        # A class ref always has a colon; an app selector never does.
+        if ":" not in self.definition.ref:
+            return _build_platform_tool(self.definition.ref)
 
         tool_cls = cast(
             Callable[[], BaseTool],
@@ -125,6 +167,24 @@ class ToolAction:
                 f"cannot instantiate tool ref {self.definition.ref!r} "
                 f"without arguments: {e}"
             ) from e
+
+
+def _build_platform_tool(ref: str) -> Any:
+    """Build the one integration app action named by ``<app>/<action>[@<connection>]``."""
+    from crewai.project.json_loader import _resolve_platform_tools
+
+    if "/" not in ref.partition("@")[0]:
+        raise InvalidRefError(
+            f"invalid tool ref {ref!r}; expected 'module:qualname' for a tool "
+            "class or '<app>/<action>[@<connection>]' for one integration app action"
+        )
+    tools = _resolve_platform_tools(ref)
+    if len(tools) != 1:
+        raise InvalidRefError(
+            f"tool ref {ref!r} resolved to {len(tools)} tools; the action "
+            "does not exist or the app is not connected"
+        )
+    return tools[0]
 
 
 class CrewAction:

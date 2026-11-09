@@ -23,6 +23,7 @@ from rich.prompt import Confirm
 import tomlkit
 import yaml
 
+from crewai_devtools.agents_md_eval import agents_md_eval
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.docs_versioning import (
     InvalidVersionError,
@@ -364,31 +365,17 @@ def update_pyproject_dependencies(
 
     workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
-    current_extra: str | None = None
-    extra_header = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*\[")
-
-    for i, line in enumerate(lines):
-        match = extra_header.match(line)
-        if match:
-            current_extra = match.group(1)
-        elif line.strip().startswith("]"):
-            current_extra = None
-
+    for i in range(len(lines)):
         for pkg in workspace_packages:
-            if pkg == "crewai-files" and current_extra == "file-processing":
-                continue
-            if f"{pkg}==" in line:
-                stripped = line.lstrip()
-                indent = line[: len(line) - len(stripped)]
-
-                if '"' in line:
-                    lines[i] = f'{indent}"{pkg}=={new_version}",'
-                elif "'" in line:
-                    lines[i] = f"{indent}'{pkg}=={new_version}',"
-                else:
-                    lines[i] = f"{indent}{pkg}=={new_version},"
-
-                updated = True
+            # `pkg==` or `pkg[extra,...] == `, not the tail of a longer name; only
+            # the version changes, and every pin on the line does.
+            pin = re.compile(
+                rf"(?<![\w.-])({re.escape(pkg)}(?:\[[^\]]*\])?\s*==\s*)[^\s\"',;]+"
+            )
+            lines[i], count = pin.subn(
+                lambda match: f"{match.group(1)}{new_version}", lines[i]
+            )
+            updated = updated or count > 0
 
     if updated:
         file_path.write_text("\n".join(lines) + "\n")
@@ -1087,6 +1074,59 @@ def _generate_release_notes(
     return release_notes, openai_client, is_prerelease
 
 
+def _update_catalog_and_create_pr(cwd: Path, version: str, dry_run: bool) -> str | None:
+    """Refresh the LiteLLM catalog and open a standalone PR for it.
+
+    Runs before the version bump so the catalog lands on main ahead of the
+    release commits. The catalog is downloaded before any branch is created, so
+    when it matches the checked-in file no branch or PR is created.
+
+    Returns:
+        The catalog branch name if a PR was created, None otherwise.
+    """
+    if dry_run:
+        console.print(
+            f"[dim][DRY RUN][/dim] Would download the LiteLLM catalog into {CATALOG_RELATIVE}"
+        )
+        console.print(
+            f"[dim][DRY RUN][/dim] Would open PR titled "
+            f"'chore: update litellm model catalog for v{version}' if it changed, "
+            "and wait for merge"
+        )
+        return None
+
+    run_command(["git", "checkout", "main"])
+    run_command(["git", "pull"])
+
+    catalog_path = update_catalog(cwd)
+    if not run_command(["git", "status", "--porcelain", "--", str(catalog_path)]):
+        console.print("[green]✓[/green] LiteLLM catalog is already up to date")
+        return None
+    console.print(
+        f"[green]✓[/green] Updated LiteLLM catalog {catalog_path.relative_to(cwd)}"
+    )
+
+    catalog_branch = f"chore/update-litellm-catalog-v{version}"
+    try:
+        create_or_reset_branch(catalog_branch)
+    except BaseException:
+        run_command(["git", "checkout", "--", str(catalog_path)])
+        raise
+
+    pr_title = f"chore: update litellm model catalog for v{version}"
+    run_command(["git", "add", str(catalog_path)])
+    run_command(["git", "commit", "-m", pr_title])
+    run_command(["git", "push", "-u", "origin", catalog_branch])
+    console.print(f"[green]✓[/green] Pushed branch {catalog_branch}")
+
+    pr_url = run_command(
+        ["gh", "pr", "create", "--base", "main", "--title", pr_title, "--body", ""]
+    )
+    console.print("[green]✓[/green] Created catalog PR")
+    console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
+    return catalog_branch
+
+
 def _update_docs_and_create_pr(
     cwd: Path,
     version: str,
@@ -1097,18 +1137,17 @@ def _update_docs_and_create_pr(
 ) -> str | None:
     """Update Edge changelogs, freeze a snapshot, and open the docs PR.
 
-    Runs after the version-bump PR has merged. Refreshes the checked-in
-    LiteLLM catalog, then for a stable release freezes ``docs/edge/`` into
-    ``docs/v<version>/`` (after the Edge changelogs have been updated so the
-    snapshot contains the new entry), updates ``docs/docs.json`` to register
-    the new version and canonical-URL redirects, and opens a ``[docs-freeze]``
-    PR. The ``docs-snapshots`` CI guard recognises that title prefix and
-    allows the snapshot directory to land. The catalog file is included in
-    that same PR.
+    Runs after the version-bump PR has merged. For a stable release, freezes
+    ``docs/edge/`` into ``docs/v<version>/`` (after the Edge changelogs have
+    been updated so the snapshot contains the new entry), updates
+    ``docs/docs.json`` to register the new version and canonical-URL
+    redirects, and opens a ``[docs-freeze]`` PR. The ``docs-snapshots`` CI
+    guard recognises that title prefix and allows the snapshot directory to
+    land.
 
-    For a pre-release, the catalog is still refreshed and the Edge changelogs
-    are updated. Pre-releases don't get a frozen snapshot — they ride Edge —
-    and the PR title omits the ``[docs-freeze]`` prefix.
+    For a pre-release, only the Edge changelogs are updated. Pre-releases
+    don't get a frozen snapshot — they ride Edge — and the PR title omits the
+    ``[docs-freeze]`` prefix.
 
     Returns:
         The docs branch name if a PR was created, None otherwise.
@@ -1119,9 +1158,6 @@ def _update_docs_and_create_pr(
     changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko", "ar"]
 
     if dry_run:
-        console.print(
-            f"[dim][DRY RUN][/dim] Would download the LiteLLM catalog into {CATALOG_RELATIVE}"
-        )
         for lang in changelog_langs:
             cl_path = edge_root / lang / "changelog.mdx"
             translated = " (translated)" if lang != "en" else ""
@@ -1147,14 +1183,6 @@ def _update_docs_and_create_pr(
         return None
 
     docs_paths_staged: list[str] = []
-
-    # The bump PR has already merged. Refresh the catalog before the docs
-    # snapshot so this PR carries the model data that ships with the release.
-    catalog_path = update_catalog(cwd)
-    console.print(
-        f"[green]✓[/green] Updated LiteLLM catalog {catalog_path.relative_to(cwd)}"
-    )
-    docs_paths_staged.append(str(catalog_path))
 
     # Step 1: update Edge changelogs first so the snapshot we freeze afterwards
     # contains the new release's entry.
@@ -2312,16 +2340,23 @@ def tag(dry_run: bool, no_edit: bool) -> None:
     is_flag=True,
     help="Skip phases 1 & 2, run only the enterprise release phase",
 )
+@click.option(
+    "--skip-litellm-catalog-update",
+    is_flag=True,
+    help="Skip the LiteLLM catalog update phase",
+)
 def release(
     version: str,
     dry_run: bool,
     no_edit: bool,
     skip_enterprise: bool,
     skip_to_enterprise: bool,
+    skip_litellm_catalog_update: bool,
 ) -> None:
     """Full release: bump versions, tag, and publish a GitHub release.
 
-    Combines bump and tag into a single workflow. Creates a version bump PR,
+    Combines bump and tag into a single workflow. Opens a PR refreshing the
+    LiteLLM model catalog (skipped when unchanged), then creates a version bump PR,
     waits for it to be merged, then generates release notes, updates docs,
     creates the tag, and publishes a GitHub release. Then bumps versions and
     releases the enterprise repo.
@@ -2332,12 +2367,15 @@ def release(
         no_edit: Skip editing release notes.
         skip_enterprise: Skip the enterprise release phase.
         skip_to_enterprise: Skip phases 1 & 2, run only the enterprise release phase.
+        skip_litellm_catalog_update: Skip the LiteLLM catalog update phase.
     """
     flags: list[str] = []
     if no_edit:
         flags.append("--no-edit")
     if skip_enterprise:
         flags.append("--skip-enterprise")
+    if skip_litellm_catalog_update:
+        flags.append("--skip-litellm-catalog-update")
     flag_suffix = (" " + " ".join(flags)) if flags else ""
     enterprise_hint = (
         ""
@@ -2403,6 +2441,29 @@ def release(
     console.print(f"\nFound {len(packages)} package(s) to update:")
     for pkg in packages:
         console.print(f"  - {pkg.name}")
+
+    if skip_litellm_catalog_update:
+        console.print(
+            "\n[dim]Skipping Phase 0: LiteLLM catalog update "
+            "(--skip-litellm-catalog-update)[/dim]"
+        )
+    else:
+        console.print("\n[bold cyan]Phase 0: Updating the LiteLLM catalog[/bold cyan]")
+
+        try:
+            catalog_branch = _update_catalog_and_create_pr(cwd, version, dry_run)
+            if catalog_branch:
+                _poll_pr_until_merged(catalog_branch, "catalog PR")
+                run_command(["git", "checkout", "main"])
+                run_command(["git", "pull"])
+                console.print("[green]✓[/green] main branch updated with the catalog")
+        except BaseException as e:
+            _print_release_error(e)
+            _resume_hint(
+                f"Phase 0 failed. Fix the issue, then re-run:\n\n"
+                f"  devtools release {version}{flag_suffix}"
+            )
+            sys.exit(1)
 
     console.print(f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]")
 
@@ -2551,6 +2612,7 @@ cli.add_command(bump)
 cli.add_command(tag)
 cli.add_command(release)
 cli.add_command(docs_check)
+cli.add_command(agents_md_eval)
 
 
 def main() -> None:

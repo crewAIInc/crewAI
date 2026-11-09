@@ -1,0 +1,238 @@
+---
+title: النظرة العامة على الواجهة الأمامية
+description: ابنِ واجهات مستخدم تفاعلية لوكلاء CrewAI الخاصين بك باستخدام CopilotKit وبروتوكول AG-UI.
+icon: browser
+mode: "wide"
+---
+
+## امنح وكلاءك واجهة مستخدم
+
+يشغّل CrewAI وكلاءك. ويمنحهم [CopilotKit](https://copilotkit.ai) واجهة أمامية. معًا يتيحان لك بناء تطبيقات يحادث فيها المستخدمون Crew أو Flow، ويشاهدونه يعمل في الوقت الفعلي، ويوافقون على قراراته، ويرون مخرجاته معروضة كواجهة حيّة بدلًا من جدران من النص.
+
+يتصل الاثنان عبر [بروتوكول AG-UI](https://docs.ag-ui.com). تكشف حزمة `ag-ui-crewai` أي Crew أو Flow كنقطة نهاية AG-UI. وتستهلك خطافات (hooks) ومكوّنات React من CopilotKit تلك النقطة. يفتح ذلك تجارب تتجاوز بكثير صندوق المحادثة:
+
+<CardGroup cols={2}>
+  <Card title="واجهة المستخدم التوليدية (Generative UI)" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    اعرض استدعاءات أدوات الوكيل وحالته كمكوّنات React خاصة بك.
+  </Card>
+  <Card title="التدخل البشري (Human-in-the-Loop)" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    أوقف الوكيل مؤقتًا لجمع موافقة المستخدم أو مدخلاته في منتصف التشغيل.
+  </Card>
+  <Card title="الحالة المشتركة (Shared State)" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
+    أبقِ حالة الوكيل وواجهة تطبيقك متزامنتين في الاتجاهين.
+  </Card>
+  <Card title="القنوات (Channels)" icon="messages" href="/edge/ar/guides/frontend/channels">
+    شغّل نفس الوكيل كروبوت على Slack أو Discord أو Teams.
+  </Card>
+</CardGroup>
+
+يجعل هذا الدليل Crew أو Flow يتحدث مع واجهة أمامية بـ Next.js من البداية إلى النهاية. تبني بقية القسم على التطبيق الذي تعدّه هنا.
+
+## البنية
+
+هناك ثلاثة أجزاء:
+
+1. **خادم وكيل CrewAI** — عملية Python تقدّم الـ Crew أو الـ Flow الخاص بك عبر AG-UI (FastAPI + `ag-ui-crewai`).
+2. **وقت تشغيل CopilotKit** — مسار Next.js يسجّل وكيلك ويوكّل الطلبات إليه.
+3. **الواجهة الأمامية بـ React** — مزوّد `<CopilotKit>` إلى جانب مكوّنات المحادثة والواجهة التوليدية.
+
+```
+React app  ──►  CopilotKit runtime (/api/copilotkit)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+<Note>
+يغطي هذا الدليل المسار **الذاتي الاستضافة**: تشغّل خادم وكيل CrewAI بنفسك باستخدام `ag-ui-crewai`، ويعمل محليًا دون أي خدمة مُدارة. يقدّم CopilotKit أيضًا مسارًا **مُدارًا** (CopilotKit Cloud / Enterprise Intelligence) بخيوط مستضافة وأداة فحص — راجع [دليل البدء السريع لـ CopilotKit مع CrewAI](https://docs.copilotkit.ai/crewai-crews/quickstart) إن أردت ذلك بدلًا منه. كود الواجهة الأمامية في هذا القسم هو نفسه في الحالتين؛ الاختلاف فقط في كيفية استضافة الوكيل وتسجيله.
+</Note>
+
+<Note>
+يعمل CrewAI خلف AG-UI بثلاثة أشكال: الـ **Flows** العادية (المستخدمة في هذه الأدلة)، و**[الـ Flows المحادثية (Conversational Flows)](/edge/en/guides/frontend/conversational-flows)** (أصلية، مدركة للجلسة، قائمة على الأدوار، بتكافؤ كامل في الميزات)، والـ **Crews** (محادثة أساسية). الواجهة الأمامية في هذا القسم متطابقة عبرها جميعًا — الاختلاف فقط في تأليف الخلفية وتسجيلها.
+</Note>
+
+## دليل التكامل
+
+<Steps>
+
+<Step title="قدّم وكيلك عبر AG-UI">
+
+ثبّت حزمة التكامل في مشروع CrewAI الخاص بك:
+
+```bash
+pip install ag-ui-crewai
+```
+
+اكشف وكيلك من تطبيق FastAPI. تستخدم الـ Flows دالة `add_crewai_flow_fastapi_endpoint`؛ وتستخدم الـ Crews دالة `add_crewai_crew_fastapi_endpoint`. يمكنك تسجيل ما تشاء منها، كلٌّ على مساره الخاص.
+
+<CodeGroup>
+
+```python Flow
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_flow_fastapi_endpoint
+from my_agents.recipe_flow import RecipeFlow
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_flow_fastapi_endpoint(
+    app=app,
+    flow=RecipeFlow(),
+    path="/recipe",
+)
+```
+
+```python Crew
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_crew_fastapi_endpoint
+from my_agents.research_crew import ResearchCrew
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_crew_fastapi_endpoint(
+    app=app,
+    crew=ResearchCrew().crew(),
+    path="/research",
+)
+```
+
+</CodeGroup>
+
+شغّله:
+
+```bash
+uvicorn server:app --port 8000
+```
+
+<Note>
+اضبط متغيّرات البيئة الخاصة بمزوّد الـ LLM الخاص بك (على سبيل المثال `OPENAI_API_KEY`) قبل بدء الخادم.
+</Note>
+
+</Step>
+
+<Step title="أنشئ تطبيق Next.js">
+
+إن لم تكن لديك واجهة أمامية بعد، أنشئ هيكلًا:
+
+```bash
+npx create-next-app@latest my-app
+cd my-app
+```
+
+ثبّت CopilotKit وعميل CrewAI AG-UI:
+
+```bash
+npm install @copilotkit/react-core @copilotkit/react-ui @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="أضف وقت تشغيل CopilotKit">
+
+أنشئ مسارًا يسجّل وكيل (أو وكلاء) CrewAI مع وقت تشغيل CopilotKit. يشير كل وكيل إلى مسار على خادم Python الخاص بك عبر `CrewAIAgent`.
+
+```ts
+// app/api/copilotkit/route.ts
+import {
+  CopilotRuntime,
+  InMemoryAgentRunner,
+  createCopilotEndpoint,
+} from "@copilotkit/runtime/v2";
+import { CrewAIAgent } from "@ag-ui/crewai";
+import { handle } from "hono/vercel";
+
+const runtime = new CopilotRuntime({
+  agents: {
+    recipe: new CrewAIAgent({ url: "http://localhost:8000/recipe" }),
+  },
+  runner: new InMemoryAgentRunner(),
+});
+
+const app = createCopilotEndpoint({
+  runtime,
+  basePath: "/api/copilotkit",
+});
+
+const handler = handle(app);
+export const GET = handler;
+export const POST = handler;
+```
+
+</Step>
+
+<Step title="غلّف تطبيقك بالمزوّد">
+
+وجّه `<CopilotKit>` إلى مسار وقت التشغيل واذكر اسم الوكيل الذي سجّلته.
+
+```tsx
+// app/page.tsx
+"use client";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+export default function Page() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="recipe">
+      <YourApp />
+      <CopilotSidebar agentId="recipe" labels={{ modalHeaderTitle: "Assistant" }} />
+    </CopilotKit>
+  );
+}
+```
+
+</Step>
+
+<Step title="شغّله">
+
+ابدأ العمليتين وافتح التطبيق. تشغّل المحادثة في الشريط الجانبي الآن الـ Crew أو الـ Flow الخاص بك.
+
+```bash
+uvicorn server:app --port 8000   # terminal 1
+npm run dev                       # terminal 2
+```
+
+</Step>
+
+</Steps>
+
+## خيارات واجهة المحادثة
+
+يشحن CopilotKit ثلاثة أسطح محادثة قابلة للتبديل. بدّل المكوّن؛ يبقى التوصيل متطابقًا.
+
+<CodeGroup>
+
+```tsx Sidebar
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+<CopilotSidebar agentId="recipe" />
+```
+
+```tsx Popup
+import { CopilotPopup } from "@copilotkit/react-core/v2";
+
+<CopilotPopup agentId="recipe" />
+```
+
+```tsx Inline
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+<CopilotChat agentId="recipe" />
+```
+
+</CodeGroup>
+
+## إلى أين تذهب بعد ذلك
+
+<CardGroup cols={2}>
+  <Card title="واجهة المستخدم التوليدية (Generative UI)" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    اعرض استدعاءات الأدوات وحالة الوكيل كمكوّنات مخصّصة.
+  </Card>
+  <Card title="إجراءات الواجهة الأمامية (Frontend Actions)" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
+    دع الوكيل يستدعي دوالًا تعمل في المتصفح.
+  </Card>
+  <Card title="التدخل البشري (Human-in-the-Loop)" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    قيّد إجراءات الوكيل خلف موافقة المستخدم.
+  </Card>
+  <Card title="الحالة التنبؤية (Predictive State)" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
+    ابثّ الحالة قيد التنفيذ إلى الواجهة أثناء عمل الوكيل.
+  </Card>
+</CardGroup>

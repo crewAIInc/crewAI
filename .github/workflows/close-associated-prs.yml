@@ -1,0 +1,93 @@
+name: Close PRs associated with closed issues
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: write
+
+jobs:
+  close-associated-prs:
+    if: github.event.issue.state_reason == 'completed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close open associated pull requests
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const { data: collaborator } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.payload.sender.login,
+            });
+            const permittedRoles = new Set(["triage", "write", "maintain", "admin"]);
+
+            if (!permittedRoles.has(collaborator.role_name)) {
+              core.info(`Skipping issue closure by ${context.payload.sender.login}: insufficient repository permission.`);
+              return;
+            }
+
+            const query = `
+              query($owner: String!, $repo: String!, $issueNumber: Int!, $cursor: String) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $issueNumber) {
+                    closedByPullRequestsReferences(
+                      first: 100
+                      after: $cursor
+                    ) {
+                      nodes {
+                        number
+                        repository {
+                          nameWithOwner
+                        }
+                        state
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const pullRequests = new Set();
+            const repositoryName = `${context.repo.owner}/${context.repo.repo}`;
+            let cursor = null;
+
+            do {
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issueNumber: context.payload.issue.number,
+                cursor,
+              });
+              const pullRequestReferences = result.repository.issue.closedByPullRequestsReferences;
+
+              for (const pullRequest of pullRequestReferences.nodes) {
+                if (
+                  pullRequest.repository.nameWithOwner === repositoryName &&
+                  pullRequest.state === "OPEN"
+                ) {
+                  pullRequests.add(pullRequest.number);
+                }
+              }
+
+              cursor = pullRequestReferences.pageInfo.hasNextPage
+                ? pullRequestReferences.pageInfo.endCursor
+                : null;
+            } while (cursor);
+
+            for (const pullNumber of pullRequests) {
+              core.info(`Closing pull request #${pullNumber} associated with issue #${context.payload.issue.number}.`);
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullNumber,
+                state: "closed",
+              });
+            }

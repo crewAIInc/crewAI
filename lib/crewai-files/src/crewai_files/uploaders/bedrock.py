@@ -123,7 +123,8 @@ class BedrockFileUploader(FileUploader):
             prefix: S3 key prefix for uploaded files (default: "crewai-files").
             region: AWS region. Uses AWS_REGION or AWS_DEFAULT_REGION if not provided.
             client: Optional pre-instantiated boto3 S3 client.
-            async_client: Optional pre-instantiated aioboto3 S3 client.
+            async_client: Optional pre-instantiated aioboto3 Session for async
+                uploads; one is created on first use when omitted.
         """
         self._bucket_name = bucket_name or os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
         self._bucket_owner = bucket_owner or os.environ.get(
@@ -171,18 +172,18 @@ class BedrockFileUploader(FileUploader):
         return self._client
 
     def _get_async_client(self) -> Any:
-        """Get or create the async S3 client."""
+        """Get or create the aioboto3 session."""
         if self._async_client is None:
             try:
                 import aioboto3  # type: ignore[import-not-found]
 
-                self._session = aioboto3.Session()
+                self._async_client = aioboto3.Session()
             except ImportError as e:
                 raise ImportError(
                     "aioboto3 is required for async Bedrock S3 file uploads. "
                     "Install with: pip install aioboto3"
                 ) from e
-        return self._session
+        return self._async_client
 
     def _generate_s3_key(self, file: FileInput, content: bytes | None = None) -> str:
         """Generate a unique S3 key for the file.

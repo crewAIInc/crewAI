@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
-import os
 from typing import Any
 from unittest.mock import patch
 
@@ -36,7 +35,7 @@ import pytest
 
 
 @pytest.fixture
-def listener() -> Iterator[TraceCollectionListener]:
+def listener(monkeypatch: pytest.MonkeyPatch) -> Iterator[TraceCollectionListener]:
     """A listener with tracing enabled and every handler registered.
 
     Enabled through the environment like the other tracing tests. Only the
@@ -46,11 +45,13 @@ def listener() -> Iterator[TraceCollectionListener]:
 
     `scoped_handlers` is required: the bus is a process-wide singleton, so
     handlers registered here would otherwise fire in whatever runs next.
+
+    The env var goes through `monkeypatch`, as in `session_recorders`, so both
+    undo in reverse order. With `patch.dict` here, `monkeypatch` undid last and
+    put back the "true" it had seen, leaving tracing on for the rest of the worker.
     """
-    with (
-        crewai_event_bus.scoped_handlers(),
-        patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
-    ):
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    with crewai_event_bus.scoped_handlers():
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
         yield trace_listener

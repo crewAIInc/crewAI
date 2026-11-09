@@ -118,7 +118,10 @@ def test_a_structured_litellm_call_is_seen_once(seen_agents, monkeypatch):
 
     client = SimpleNamespace(
         chat=SimpleNamespace(
-            completions=SimpleNamespace(create=lambda **_: Answer(text="ok"))
+            completions=SimpleNamespace(
+                create=lambda **_: Answer(text="ok"),
+                create_with_completion=lambda **_: (Answer(text="ok"), None),
+            )
         )
     )
     monkeypatch.setattr(instructor, "from_litellm", lambda *_, **__: client)
