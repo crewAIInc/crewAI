@@ -1099,6 +1099,88 @@ class TestConversationalFlow:
         mock_finalize.assert_called_once_with()
         assert flow.defer_trace_finalization is False
 
+    def test_chat_restores_defer_setting_when_finalization_raises(self) -> None:
+        """Regression: ``chat()`` must restore ``defer_trace_finalization``
+        even when ``finalize_session_traces()`` raises.
+
+        Previously the restoration line sat after the bare
+        ``finalize_session_traces()`` call in the ``finally`` block, so an
+        exception from finalization skipped it and left the Flow with the
+        temporary ``True`` value.
+        """
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("ok")
+                return "ok"
+
+        flow = MyChat()
+        assert flow.defer_trace_finalization is False
+
+        with patch.object(
+            flow,
+            "finalize_session_traces",
+            side_effect=RuntimeError("finalization failed"),
+        ):
+            with pytest.raises(RuntimeError, match="finalization failed"):
+                flow.chat(input_fn=lambda _: "quit", output_fn=lambda _: None)
+
+        assert flow.defer_trace_finalization is False, (
+            "defer_trace_finalization must be restored even when "
+            "finalize_session_traces raises"
+        )
+
+    def test_chat_restores_defer_setting_on_eof_exit(self) -> None:
+        """``chat()`` must restore ``defer_trace_finalization`` on EOF exit."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                return "ok"
+
+        flow = MyChat()
+
+        def raise_eof(_prompt: str) -> str:
+            raise EOFError()
+
+        with patch.object(flow, "finalize_session_traces") as mock_fin:
+            flow.chat(input_fn=raise_eof, output_fn=lambda _: None)
+
+        mock_fin.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_restores_defer_setting_on_keyboard_interrupt(self) -> None:
+        """``chat()`` must restore ``defer_trace_finalization`` on Ctrl-C."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                return "ok"
+
+        flow = MyChat()
+
+        def raise_kbi(_prompt: str) -> str:
+            raise KeyboardInterrupt()
+
+        with patch.object(flow, "finalize_session_traces") as mock_fin:
+            flow.chat(input_fn=raise_kbi, output_fn=lambda _: None)
+
+        mock_fin.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
     def test_chat_stringifies_repl_output_like_conversation_helpers(self) -> None:
         class RawResult:
             raw = "raw assistant output"
