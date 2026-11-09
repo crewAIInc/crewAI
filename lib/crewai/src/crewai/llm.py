@@ -1811,6 +1811,33 @@ class LLM(BaseLLM):
                         )
                         return tool_calls_list
 
+            if response_model and self.is_litellm:
+                # Mirrors the sync path: an instruct-backed response model has
+                # to be applied to the accumulated stream, otherwise the async
+                # caller silently receives plain text where it asked for a
+                # validated model.
+                from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+                instructor_instance = InternalInstructor(
+                    content=full_response,
+                    model=response_model,
+                    llm=self,
+                )
+                with model_call_hooks_dispatched():
+                    result = instructor_instance.to_pydantic()
+                structured_response = result.model_dump_json()
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params.get("messages"),
+                    usage=self._usage_to_dict(usage_info),
+                    finish_reason=stream_finish_reason,
+                    response_id=stream_response_id,
+                )
+                return structured_response
+
             usage_dict = self._usage_to_dict(usage_info)
             finish_reason, response_id_last = (
                 stream_finish_reason,
