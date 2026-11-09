@@ -1125,14 +1125,12 @@ class LLM(BaseLLM):
                         # otherwise be treated as a context-limit error.
                         from litellm.exceptions import ContextWindowExceededError
 
-                        if isinstance(
-                            e,
-                            (
-                                LLMContextLengthExceededError,
-                                ContextWindowExceededError,
-                            ),
-                        ):
+                        if isinstance(e, LLMContextLengthExceededError):
                             raise
+                        # Convert here: the outer handler only spots context
+                        # errors by text and would salvage raw text otherwise.
+                        if isinstance(e, ContextWindowExceededError):
+                            raise LLMContextLengthExceededError(str(e)) from e
                         # Leave out {e}: it quotes model output, which call()'s
                         # 'stop' retry check reads. The cause stays on __cause__.
                         raise _ResponseModelConversionError(

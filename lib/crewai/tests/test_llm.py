@@ -1458,8 +1458,9 @@ def test_streaming_response_model_context_limit_keeps_its_error_type():
         patch("litellm.completion", return_value=iter(chunks)),
         patch(
             "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            # Wording the text check would miss: only the type says so.
             side_effect=ContextWindowExceededError(
-                "maximum context length exceeded",
+                "prompt is too large for this model",
                 model="gpt-4o-mini",
                 llm_provider="openai",
             ),
