@@ -1,10 +1,14 @@
 import json
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 
 from crewai.llm import LLM
+from crewai.utilities.exceptions.structured_response_exception import (
+    StructuredResponseConversionError,
+)
 
 
 @pytest.mark.asyncio
@@ -62,3 +66,98 @@ async def test_async_streaming_applies_response_model():
     mock_instructor.assert_called_once()
     assert mock_instructor.call_args.kwargs["content"] == '{"answer": "42"}'
     assert json.loads(result) == {"answer": "42"}
+
+
+async def _fake_stream(**kwargs):
+    async def gen():
+        yield {"id": "chunk-1", "choices": [{"delta": {"content": '{"answer": "42"}'}}]}
+        yield {"id": "chunk-2", "choices": [{"delta": {}, "finish_reason": "stop"}]}
+
+    return gen()
+
+
+@pytest.mark.asyncio
+async def test_conversion_failure_is_reported_instead_of_returning_raw_text():
+    """A response_model that cannot be applied must not fall back to the raw stream.
+
+    The streaming handler fails open on mid-stream errors by returning the text
+    collected so far. A failed conversion used to take that same path, so the
+    caller received unvalidated text as a successful structured answer.
+    """
+
+    class Answer(BaseModel):
+        answer: str
+
+    stub_litellm = MagicMock()
+    stub_litellm.acompletion = _fake_stream
+
+    llm = MagicMock()
+    llm.is_litellm = True
+    llm._extract_finish_reason_and_response_id.return_value = (None, None)
+    llm._usage_to_dict.return_value = None
+
+    instructor = MagicMock()
+    instructor.return_value.to_pydantic.side_effect = ValueError("schema mismatch")
+
+    with (
+        patch.multiple(
+            "crewai.llm",
+            litellm=stub_litellm,
+            ModelResponseBase=type("ModelResponseBase", (), {}),
+            ModelResponseStream=type("ModelResponseStream", (), {}),
+            LiteLLMStreamingChoices=type("LiteLLMStreamingChoices", (), {}),
+            LiteLLMDelta=type("LiteLLMDelta", (), {}),
+            InternalInstructor=instructor,
+        ),
+        pytest.raises(StructuredResponseConversionError) as error,
+    ):
+        await LLM._ahandle_streaming_response(
+            llm,
+            params={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+            response_model=Answer,
+        )
+
+    assert isinstance(error.value.__cause__, ValueError)
+    assert "Answer" in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_conversion_runs_off_the_event_loop():
+    """`to_pydantic()` is a blocking provider call, so it must not run inline."""
+
+    class Answer(BaseModel):
+        answer: str
+
+    seen_threads = []
+    main_thread = threading.get_ident()
+
+    stub_litellm = MagicMock()
+    stub_litellm.acompletion = _fake_stream
+
+    llm = MagicMock()
+    llm.is_litellm = True
+    llm._extract_finish_reason_and_response_id.return_value = (None, None)
+    llm._usage_to_dict.return_value = None
+
+    instructor = MagicMock()
+    instructor.return_value.to_pydantic.side_effect = lambda: (
+        seen_threads.append(threading.get_ident()) or Answer(answer="42")
+    )
+
+    with patch.multiple(
+        "crewai.llm",
+        litellm=stub_litellm,
+        ModelResponseBase=type("ModelResponseBase", (), {}),
+        ModelResponseStream=type("ModelResponseStream", (), {}),
+        LiteLLMStreamingChoices=type("LiteLLMStreamingChoices", (), {}),
+        LiteLLMDelta=type("LiteLLMDelta", (), {}),
+        InternalInstructor=instructor,
+    ):
+        await LLM._ahandle_streaming_response(
+            llm,
+            params={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+            response_model=Answer,
+        )
+
+    assert seen_threads
+    assert seen_threads[0] != main_thread

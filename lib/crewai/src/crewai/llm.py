@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
@@ -64,6 +65,9 @@ from crewai.llms.context_window import (
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
+)
+from crewai.utilities.exceptions.structured_response_exception import (
+    StructuredResponseConversionError,
 )
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -130,6 +134,17 @@ else:
     Function = None
     ModelResponse = None
     supports_response_schema = None
+
+
+def _response_model_conversion_message(
+    response_model: Any, conversion_error: Exception
+) -> str:
+    """Describe a failed ``response_model`` conversion for the caller."""
+    model_name = getattr(response_model, "__name__", None) or str(response_model)
+    return (
+        f"The response could not be converted to response_model '{model_name}': "
+        f"{conversion_error!s}"
+    )
 
 
 def _ensure_litellm() -> bool:
@@ -1110,7 +1125,17 @@ class LLM(BaseLLM):
                         llm=self,
                     )
                     with model_call_hooks_dispatched():
-                        result = instructor_instance.to_pydantic()
+                        try:
+                            result = instructor_instance.to_pydantic()
+                        except Exception as conversion_error:
+                            # A conversion failure must not be mistaken for a
+                            # mid-stream error: the fail-open handler below would
+                            # return the unvalidated text as a success.
+                            raise StructuredResponseConversionError(
+                                _response_model_conversion_message(
+                                    response_model, conversion_error
+                                )
+                            ) from conversion_error
                     structured_response = result.model_dump_json()
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
@@ -1155,7 +1180,11 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except (LLMContextLengthExceededError, EmptyLLMResponseError):
+        except (
+            LLMContextLengthExceededError,
+            EmptyLLMResponseError,
+            StructuredResponseConversionError,
+        ):
             raise
         except Exception as e:
             error_msg = str(e)
@@ -1824,7 +1853,22 @@ class LLM(BaseLLM):
                     llm=self,
                 )
                 with model_call_hooks_dispatched():
-                    result = instructor_instance.to_pydantic()
+                    try:
+                        # `to_pydantic()` drives the instructor client with a
+                        # synchronous completion call, so it runs off the event
+                        # loop: converting inline would freeze every other
+                        # coroutine until that round trip returns.
+                        result = await asyncio.to_thread(
+                            instructor_instance.to_pydantic
+                        )
+                    except Exception as conversion_error:
+                        # Deliberately not the fail-open path below, which would
+                        # return the unvalidated text as a successful result.
+                        raise StructuredResponseConversionError(
+                            _response_model_conversion_message(
+                                response_model, conversion_error
+                            )
+                        ) from conversion_error
                 structured_response = result.model_dump_json()
                 self._handle_emit_call_events(
                     response=structured_response,
@@ -1855,7 +1899,7 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except LLMContextLengthExceededError:
+        except (LLMContextLengthExceededError, StructuredResponseConversionError):
             raise
         except Exception as e:
             error_msg = str(e)
