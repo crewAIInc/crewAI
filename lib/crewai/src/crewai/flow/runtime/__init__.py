@@ -277,7 +277,7 @@ def _usage_dict_to_metrics(usage: dict[str, Any] | None) -> UsageMetrics | None:
 
     Thin wrapper around ``UsageMetrics.from_provider_dict`` so the flow
     aggregator and ``BaseLLM._track_token_usage_internal`` agree on the
-    set of provider key aliases (LiteLLM, Anthropic, Gemini).
+    set of provider key aliases (LiteLLM, Anthropic, Gemini, Bedrock).
     """
     return UsageMetrics.from_provider_dict(usage)
 
