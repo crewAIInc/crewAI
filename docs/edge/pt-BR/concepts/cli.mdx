@@ -75,11 +75,11 @@ O `crewai create` não pergunta com `CREWAI_DMN=true`, nem quando stdin ou stdou
 
 ```shell Terminal
 crewai create agent support_agent
-crewai create agent json_support --format json
+crewai create agent yaml_support --format yaml
 crewai create agent python_support --format python
 ```
 
-Projetos de Agent independente usam `agent.yaml` por padrão. Use `--format json` para configuração em JSON ou `--format python` para exportar um Agent em Python. Este contrato experimental de projeto e carregamento pode mudar e exige builds de prévia compatíveis da CLI e do SDK. Consulte [Projetos de Agent Independente](/edge/pt-BR/guides/agents/standalone-agent-projects) para configuração, ferramentas, entradas de execução e limites de implantação.
+Projetos de Agent independente usam `agent.json` por padrão. Use `--format yaml` para configuração em YAML ou `--format python` para exportar um Agent em Python. Este contrato experimental de projeto e carregamento pode mudar e exige builds de prévia compatíveis da CLI e do SDK. Consulte [Projetos de Agent Independente](/edge/pt-BR/guides/agents/standalone-agent-projects) para configuração, ferramentas, entradas de execução e limites de implantação.
 
 #### Aliases de flags obsoletas
 

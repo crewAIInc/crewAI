@@ -1,13 +1,13 @@
 ---
 title: "독립형 Agent 프로젝트 (실험적)"
-description: "YAML, JSON 또는 Python으로 독립형 Agent 프로젝트를 만들고 실행합니다."
+description: "JSON, YAML 또는 Python으로 독립형 Agent 프로젝트를 만들고 실행합니다."
 ---
 
 <Warning>
 독립형 Agent 프로젝트는 실험적 기능입니다. 프로젝트 스키마와 로딩 API는 변경될 수 있습니다. 이 미리 보기를 사용하려면 해당 기능이 포함된 서로 호환되는 CLI 및 SDK 빌드가 필요하며, 관리형 배포에는 호환되는 Enterprise 런타임도 필요합니다. 이 예제가 이전에 설치한 릴리스에서도 지원된다는 의미는 아닙니다.
 </Warning>
 
-독립형 Agent 프로젝트는 하나의 Agent를 정의하고 kickoff 시점에 메시지를 받습니다. 기본 프로젝트 형식은 YAML이며, JSON과 Python은 명시적으로 선택할 수 있는 대안입니다. `main.py`, Crew, Flow 또는 팩터리 함수가 필요하지 않습니다.
+독립형 Agent 프로젝트는 하나의 Agent를 정의하고 kickoff 시점에 메시지를 받습니다. 기본 프로젝트 형식은 JSON이며, YAML과 Python은 명시적으로 선택할 수 있는 대안입니다. `main.py`, Crew, Flow 또는 팩터리 함수가 필요하지 않습니다.
 
 ## 프로젝트 만들기
 
@@ -52,7 +52,7 @@ print(reply.raw)
 
 ```text
 support_agent/
-├── agent.yaml
+├── agent.json
 ├── pyproject.toml
 ├── uv.lock
 ├── .env.example
@@ -74,50 +74,17 @@ support_agent/
 ```toml
 [tool.crewai]
 type = "agent"
-definition = "agent.yaml"
+definition = "agent.json"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["agent.yaml", "tools", "skills"]
+only-include = ["agent.json", "tools", "skills"]
 ```
 
 ## Agent 정의하기
 
 기본 정체성은 범용 CrewAI Agent입니다. `role`, `goal`, `backstory`를 편집해 특화할 수 있습니다. 포함된 지원 도구는 관련이 있을 때만 사용하는 예시이므로 다른 용도에서는 교체하거나 제거하세요. 기본으로 설치된 스킬은 없습니다.
 
-`agent.yaml`을 편집합니다:
-
-```yaml
-conversational: true
-role: General-purpose AI agent
-goal: Help users accomplish tasks accurately using the available tools and skills.
-backstory: |-
-  # Identity
-  You are a general-purpose AI agent powered by CrewAI.
-
-  # Customization
-  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
-llm:
-  model: openai/gpt-6-luna
-  api: responses
-tools:
-  - custom:support_hours
-  - custom:lookup_plan
-  - custom:support_checklist
-skills:
-  - ./skills
-max_iter: 8
-```
-
-이 항목들은 Agent 생성자 필드입니다. 요청은 실행 시 `messages`로 전달하세요. 정의에 고정된 `input` 필드를 추가하지 마세요.
-
-### JSON 또는 Python 선택하기
-
-```shell Terminal
-crewai create agent json_support --format json
-crewai create agent python_support --format python
-```
-
-JSON 프로젝트 템플릿은 동일한 필드를 가진 `agent.json`을 생성합니다:
+`agent.json`을 편집합니다:
 
 ```json
 {
@@ -139,6 +106,39 @@ JSON 프로젝트 템플릿은 동일한 필드를 가진 `agent.json`을 생성
   ],
   "max_iter": 8
 }
+```
+
+이 항목들은 Agent 생성자 필드입니다. 요청은 실행 시 `messages`로 전달하세요. 정의에 고정된 `input` 필드를 추가하지 마세요.
+
+### YAML 또는 Python 선택하기
+
+```shell Terminal
+crewai create agent yaml_support --format yaml
+crewai create agent python_support --format python
+```
+
+YAML 프로젝트 템플릿은 동일한 필드를 가진 `agent.yaml`을 생성합니다:
+
+```yaml
+conversational: true
+role: General-purpose AI agent
+goal: Help users accomplish tasks accurately using the available tools and skills.
+backstory: |-
+  # Identity
+  You are a general-purpose AI agent powered by CrewAI.
+
+  # Customization
+  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
+llm:
+  model: openai/gpt-6-luna
+  api: responses
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+max_iter: 8
 ```
 
 Python 프로젝트 템플릿은 `src/python_support/agent.py`에서 `agent = Agent(...)`를 내보냅니다. Agent를 정의하는 데 Python 로직이 필요한 경우 사용하세요.
@@ -163,15 +163,19 @@ class SupportHoursTool(BaseTool):
         return "Support is available Monday to Friday, 09:00-17:00 UTC."
 ```
 
-생성된 정의는 도구와 스킬 디렉터리를 명시적으로 등록합니다. JSON도 동일한 문자열 목록을 사용합니다:
+생성된 정의는 도구와 스킬 디렉터리를 명시적으로 등록합니다. YAML도 동일한 문자열 목록을 사용합니다:
 
-```yaml
-tools:
-  - custom:support_hours
-  - custom:lookup_plan
-  - custom:support_checklist
-skills:
-  - ./skills
+```json
+{
+  "tools": [
+    "custom:support_hours",
+    "custom:lookup_plan",
+    "custom:support_checklist"
+  ],
+  "skills": [
+    "./skills"
+  ]
+}
 ```
 
 `custom:support_hours`는 `tools/support_hours.py`에서 `BaseTool` 하위 클래스를 로드합니다. 도구에 필요한 의존성을 `pyproject.toml`에 추가하고 `crewai install`로 잠금 파일을 갱신하세요. 신뢰할 수 있는 프로젝트 코드만 로드하세요. 사용자 지정 도구와 Python 참조는 로딩 중 Python 코드를 실행합니다.
