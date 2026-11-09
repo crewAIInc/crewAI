@@ -12,7 +12,7 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import Message, Task as A2ATask, TaskState, TaskStatus
 
-from crewai.a2a.utils.task import cancel, cancellable, execute
+from crewai.a2a.utils.task import _parse_redis_url, cancel, cancellable, execute
 
 
 @pytest.fixture
@@ -373,3 +373,13 @@ class TestExecuteAndCancelIntegration:
 
             with pytest.raises(asyncio.CancelledError):
                 await execute_task
+
+
+def test_parse_redis_url_unquotes_password() -> None:
+    """_parse_redis_url decodes percent-encoded passwords."""
+    url = "redis://:p%40ss%2Fw%3Ard+1@cache.internal:6380/2"
+    config = _parse_redis_url(url)
+    assert config["password"] == "p@ss/w:rd+1"
+    assert config["endpoint"] == "cache.internal"
+    assert config["port"] == 6380
+    assert config["db"] == 2
