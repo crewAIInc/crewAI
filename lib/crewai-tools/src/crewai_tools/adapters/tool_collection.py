@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Generic, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Generic, SupportsIndex, TypeVar
 
 from crewai.tools import BaseTool
 
@@ -36,6 +36,18 @@ class ToolCollection(list[T], Generic[T]):
             return self._name_cache[key.lower()]
         result: T = super().__getitem__(key)
         return result
+
+    def __setitem__(self, index: SupportsIndex | slice, value: T | Iterable[T]) -> None:
+        super().__setitem__(index, value)  # type: ignore[index, assignment]
+        self._build_name_cache()
+
+    def __delitem__(self, index: SupportsIndex | slice) -> None:
+        super().__delitem__(index)
+        self._build_name_cache()
+
+    def __iadd__(self, tools: Iterable[T]) -> ToolCollection[T]:  # type: ignore[override, misc]
+        self.extend(list(tools))
+        return self
 
     def append(self, tool: T) -> None:
         super().append(tool)
