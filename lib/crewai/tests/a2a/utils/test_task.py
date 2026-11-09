@@ -12,7 +12,7 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import Message, Task as A2ATask, TaskState, TaskStatus
 
-from crewai.a2a.utils.task import cancel, cancellable, execute
+from crewai.a2a.utils.task import _parse_redis_url, cancel, cancellable, execute
 
 
 @pytest.fixture
@@ -63,6 +63,22 @@ async def clear_cache(mock_context: MagicMock) -> None:
 
     cache = caches.get("default")
     await cache.delete(f"cancel:{mock_context.task_id}")
+
+
+class TestParseRedisUrl:
+    """Tests for _parse_redis_url."""
+
+    def test_decodes_percent_encoded_password(self) -> None:
+        """Percent-encoded password characters are decoded, as redis-py from_url does."""
+        config = _parse_redis_url("redis://:p%40ss%2Fw%3Ard+1@cache.internal:6380/2")
+
+        assert config == {
+            "cache": "aiocache.RedisCache",
+            "endpoint": "cache.internal",
+            "port": 6380,
+            "db": 2,
+            "password": "p@ss/w:rd+1",
+        }
 
 
 class TestCancellableDecorator:
