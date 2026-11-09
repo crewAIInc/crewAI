@@ -511,6 +511,38 @@ class TestChromaDBClient:
 
         assert len(results) == 2
 
+    def test_search_without_distances_in_include_still_returns_results(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """Search must not drop every result when the caller omits distances."""
+        mock_collection = Mock()
+        mock_collection.metadata = {"hnsw:space": "cosine"}
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+
+        def query(**kwargs):
+            result = {
+                "ids": [["doc1"]],
+                "documents": [["Document 1"]],
+                "metadatas": [[{"source": "test"}]],
+            }
+            if "distances" in kwargs["include"]:
+                result["distances"] = [[0.1]]
+            return result
+
+        mock_collection.query.side_effect = query
+
+        results = client.search(
+            collection_name="test_collection",
+            query="test query",
+            include=["documents"],
+        )
+
+        assert len(results) == 1
+        assert results[0]["id"] == "doc1"
+        assert results[0]["content"] == "Document 1"
+        assert results[0]["score"] == 0.95
+        assert "distances" in mock_collection.query.call_args.kwargs["include"]
+
     @pytest.mark.asyncio
     async def test_asearch(self, async_client, mock_async_chromadb_client) -> None:
         """Test that asearch queries the collection correctly."""
@@ -590,6 +622,40 @@ class TestChromaDBClient:
         )
 
         assert len(results) == 2
+
+    @pytest.mark.asyncio
+    async def test_asearch_without_distances_in_include_still_returns_results(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """asearch must not drop every result when the caller omits distances."""
+        mock_collection = AsyncMock()
+        mock_collection.metadata = {"hnsw:space": "cosine"}
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+            return_value=mock_collection
+        )
+
+        async def query(**kwargs):
+            result = {
+                "ids": [["doc1"]],
+                "documents": [["Document 1"]],
+                "metadatas": [[{"source": "test"}]],
+            }
+            if "distances" in kwargs["include"]:
+                result["distances"] = [[0.1]]
+            return result
+
+        mock_collection.query = AsyncMock(side_effect=query)
+
+        results = await async_client.asearch(
+            collection_name="test_collection",
+            query="test query",
+            include=["documents"],
+        )
+
+        assert len(results) == 1
+        assert results[0]["id"] == "doc1"
+        assert results[0]["score"] == 0.95
+        assert "distances" in mock_collection.query.call_args.kwargs["include"]
 
     def test_delete_collection(self, client, mock_chromadb_client):
         """Test that delete_collection calls the underlying client correctly."""
