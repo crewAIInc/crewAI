@@ -9,9 +9,113 @@ mode: "wide"
 
 يدعم CrewAI تنفيذات LLM المخصصة من خلال فئة `BaseLLM` المجردة. يتيح لك ذلك دمج أي مزود LLM لا يحظى بدعم مدمج في LiteLLM، أو تنفيذ آليات مصادقة مخصصة.
 
-## بداية سريعة
+## بداية سريعة دون اتصال (بدون مفتاح API)
 
-راجع الملف الإنجليزي الأصلي للحصول على تنفيذ LLM مخصص كامل يوضح طريقة `call()` المطلوبة والطرق الاختيارية مثل `supports_function_calling()` و`get_context_window_size()`.
+استخدم هذا الـ stub الحتمي لتعلم واجهة `BaseLLM` والتحقق من ربط `Agent` / `Task` / `Crew` **دون** بيانات اعتماد مزود أو طلبات HTTP للنموذج. الهدف هو التعلم والاختبارات فقط — استبدل جسم `call()` بطلب API لمزودك عند الانتقال إلى الإنتاج.
+
+```python
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Process, Task
+
+
+class OfflineStubLLM(BaseLLM):
+    """Offline stub for learning and tests — not for production use."""
+
+    def __init__(
+        self,
+        response: str = "Hello from OfflineStubLLM!",
+        model: str = "offline-stub",
+    ) -> None:
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages: str | list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any = None,
+        from_agent: Any = None,
+        response_model: Any = None,
+    ) -> str:
+        # Replace this block with your provider's HTTP/API call.
+        if "Thought:" in str(messages):
+            return (
+                "Thought: Using the offline stub.\n"
+                f"Final Answer: {self.response}"
+            )
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, *args: Any, **kwargs: Any) -> str:
+        raise NotImplementedError
+
+
+def main() -> None:
+    llm = OfflineStubLLM()
+
+    direct = llm.call("Say hi without an API key.")
+    print(f"Direct call: {direct}")
+
+    agent = Agent(
+        role="Greeter",
+        goal="Return a friendly greeting",
+        backstory="You respond with the stub greeting.",
+        llm=llm,
+    )
+    task = Task(
+        description="Say hello to the user",
+        expected_output="A short greeting",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=False,
+    )
+    result = crew.kickoff()
+    print(f"Crew result: {result.raw}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### تشغيل المثال
+
+احفظ السكربت أعلاه باسم `offline_custom_llm.py` في جذر المستودع (بعد `uv sync`)، ثم:
+
+```bash
+uv run python offline_custom_llm.py
+```
+
+يمكنك أيضًا تشغيل فحص الدخان المطابق في مجموعة الاختبارات (بدون مفتاح API أو شريط VCR):
+
+```bash
+uv run pytest lib/crewai/tests/test_custom_llm.py::test_offline_custom_llm_quick_start_smoke -q
+```
+
+**المخرجات المتوقعة** (قد ترى أيضًا سطر سجل لمرة واحدة حول تقدير عدد الرموز للنماذج المخصصة):
+
+```text
+Direct call: Hello from OfflineStubLLM!
+Crew result: Hello from OfflineStubLLM!
+```
+
+## الاتصال بمزود حقيقي
+
+بعد نجاح الـ stub دون اتصال، ادمج مزودك. راجع الملف الإنجليزي الأصلي لتنفيذ LLM مخصص كامل يوضح طريقة `call()` المطلوبة والطرق الاختيارية مثل `supports_function_calling()` و`get_context_window_size()`.
 
 ## استخدام LLM المخصص
 

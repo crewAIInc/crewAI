@@ -9,9 +9,113 @@ mode: "wide"
 
 CrewAI supports custom LLM implementations through the `BaseLLM` abstract base class. This allows you to integrate any LLM provider that doesn't have built-in support in LiteLLM, or implement custom authentication mechanisms.
 
-## Quick Start
+## Offline quick start (no API key)
 
-Here's a minimal custom LLM implementation:
+Use this deterministic stub to learn the `BaseLLM` interface and verify `Agent` / `Task` / `Crew` wiring **without** provider credentials or HTTP model calls. It is for learning and smoke tests only — replace the body of `call()` with your provider's API request when you move to production.
+
+```python
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Process, Task
+
+
+class OfflineStubLLM(BaseLLM):
+    """Offline stub for learning and tests — not for production use."""
+
+    def __init__(
+        self,
+        response: str = "Hello from OfflineStubLLM!",
+        model: str = "offline-stub",
+    ) -> None:
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages: str | list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any = None,
+        from_agent: Any = None,
+        response_model: Any = None,
+    ) -> str:
+        # Replace this block with your provider's HTTP/API call.
+        if "Thought:" in str(messages):
+            return (
+                "Thought: Using the offline stub.\n"
+                f"Final Answer: {self.response}"
+            )
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, *args: Any, **kwargs: Any) -> str:
+        raise NotImplementedError
+
+
+def main() -> None:
+    llm = OfflineStubLLM()
+
+    direct = llm.call("Say hi without an API key.")
+    print(f"Direct call: {direct}")
+
+    agent = Agent(
+        role="Greeter",
+        goal="Return a friendly greeting",
+        backstory="You respond with the stub greeting.",
+        llm=llm,
+    )
+    task = Task(
+        description="Say hello to the user",
+        expected_output="A short greeting",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=False,
+    )
+    result = crew.kickoff()
+    print(f"Crew result: {result.raw}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Run the example
+
+Save the script above as `offline_custom_llm.py` at the repo root (after `uv sync`), then:
+
+```bash
+uv run python offline_custom_llm.py
+```
+
+You can also run the matching smoke check in the test suite (no API key or VCR cassette required):
+
+```bash
+uv run pytest lib/crewai/tests/test_custom_llm.py::test_offline_custom_llm_quick_start_smoke -q
+```
+
+**Expected output** (you may also see a one-time log line about approximate token counting for custom models):
+
+```text
+Direct call: Hello from OfflineStubLLM!
+Crew result: Hello from OfflineStubLLM!
+```
+
+## Connect a real provider
+
+Once the offline stub works, integrate your provider. Here is a minimal custom LLM implementation:
 
 ```python
 from crewai import BaseLLM
@@ -314,38 +418,6 @@ def __init__(self, model: str, api_key: str, temperature: Optional[float] = None
 
 ## Testing Your Custom LLM
 
-```python
-from crewai import Agent, Task, Crew
-
-def test_custom_llm():
-    llm = CustomLLM(
-        model="test-model",
-        api_key="test-key",
-        endpoint="https://api.test.com"
-    )
-    
-    # Test basic call
-    result = llm.call("Hello, world!")
-    assert isinstance(result, str)
-    assert len(result) > 0
-    
-    # Test with CrewAI agent
-    agent = Agent(
-        role="Test Agent",
-        goal="Test custom LLM",
-        backstory="A test agent.",
-        llm=llm
-    )
-    
-    task = Task(
-        description="Say hello",
-        expected_output="A greeting",
-        agent=agent
-    )
-    
-    crew = Crew(agents=[agent], tasks=[task])
-    result = crew.kickoff()
-    assert "hello" in result.raw.lower()
-```
+Start with the [offline quick start](#offline-quick-start-no-api-key) and `test_offline_custom_llm_quick_start_smoke` in `lib/crewai/tests/test_custom_llm.py` to validate the integration without network access. When you connect a real endpoint, add integration tests with your provider's sandbox credentials.
 
 This guide covers the essentials of implementing custom LLMs in CrewAI.

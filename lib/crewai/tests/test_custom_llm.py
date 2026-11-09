@@ -80,6 +80,77 @@ class CustomLLM(BaseLLM):
         raise NotImplementedError
 
 
+class OfflineStubLLM(BaseLLM):
+    """Offline stub mirrored from docs/edge/en/learn/custom-llm.mdx."""
+
+    def __init__(
+        self,
+        response: str = "Hello from OfflineStubLLM!",
+        model: str = "offline-stub",
+    ) -> None:
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        if "Thought:" in str(messages):
+            return (
+                "Thought: Using the offline stub.\n"
+                f"Final Answer: {self.response}"
+            )
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
+
+
+def test_offline_custom_llm_quick_start_smoke():
+    """Smoke check for the offline custom LLM quick-start (docs + no API key)."""
+    llm = OfflineStubLLM()
+
+    assert llm.supports_function_calling() is False
+    assert llm.supports_stop_words() is False
+    assert llm.call("ping") == "Hello from OfflineStubLLM!"
+
+    agent = Agent(
+        role="Greeter",
+        goal="Return a friendly greeting",
+        backstory="You respond with the stub greeting.",
+        llm=llm,
+    )
+    task = Task(
+        description="Say hello to the user",
+        expected_output="A short greeting",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=False,
+    )
+    result = crew.kickoff()
+
+    assert "Hello from OfflineStubLLM!" in result.raw
+
+
 @pytest.mark.vcr()
 def test_custom_llm_implementation():
     """Test that a custom LLM implementation works with create_llm."""

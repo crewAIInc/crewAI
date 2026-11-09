@@ -9,9 +9,113 @@ mode: "wide"
 
 O CrewAI oferece suporte a implementações personalizadas de LLM por meio da classe abstrata `BaseLLM`. Isso permite integrar qualquer provedor de LLM que não tenha suporte nativo no LiteLLM ou implementar mecanismos de autenticação personalizados.
 
-## Início Rápido
+## Início rápido offline (sem chave de API)
 
-Aqui está uma implementação mínima de LLM personalizada:
+Use este stub determinístico para aprender a interface `BaseLLM` e validar a integração `Agent` / `Task` / `Crew` **sem** credenciais de provedor ou chamadas HTTP ao modelo. É apenas para aprendizado e testes — substitua o corpo de `call()` pela requisição à API do seu provedor quando for para produção.
+
+```python
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Process, Task
+
+
+class OfflineStubLLM(BaseLLM):
+    """Offline stub for learning and tests — not for production use."""
+
+    def __init__(
+        self,
+        response: str = "Hello from OfflineStubLLM!",
+        model: str = "offline-stub",
+    ) -> None:
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages: str | list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any = None,
+        from_agent: Any = None,
+        response_model: Any = None,
+    ) -> str:
+        # Replace this block with your provider's HTTP/API call.
+        if "Thought:" in str(messages):
+            return (
+                "Thought: Using the offline stub.\n"
+                f"Final Answer: {self.response}"
+            )
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, *args: Any, **kwargs: Any) -> str:
+        raise NotImplementedError
+
+
+def main() -> None:
+    llm = OfflineStubLLM()
+
+    direct = llm.call("Say hi without an API key.")
+    print(f"Direct call: {direct}")
+
+    agent = Agent(
+        role="Greeter",
+        goal="Return a friendly greeting",
+        backstory="You respond with the stub greeting.",
+        llm=llm,
+    )
+    task = Task(
+        description="Say hello to the user",
+        expected_output="A short greeting",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=False,
+    )
+    result = crew.kickoff()
+    print(f"Crew result: {result.raw}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Executar o exemplo
+
+Salve o script acima como `offline_custom_llm.py` na raiz do repositório (após `uv sync`) e execute:
+
+```bash
+uv run python offline_custom_llm.py
+```
+
+Você também pode rodar o smoke check correspondente na suíte de testes (sem chave de API ou cassette VCR):
+
+```bash
+uv run pytest lib/crewai/tests/test_custom_llm.py::test_offline_custom_llm_quick_start_smoke -q
+```
+
+**Saída esperada** (pode aparecer também uma linha de log sobre contagem aproximada de tokens para modelos customizados):
+
+```text
+Direct call: Hello from OfflineStubLLM!
+Crew result: Hello from OfflineStubLLM!
+```
+
+## Conectar um provedor real
+
+Depois que o stub offline funcionar, integre seu provedor. Aqui está uma implementação mínima de LLM personalizada:
 
 ```python
 # (não traduzir blocos de código)
@@ -116,8 +220,6 @@ def __init__(self, model: str, api_key: str, temperature: Optional[float] = None
 
 ## Testando Seu LLM Personalizado
 
-```python
-# (não traduzir blocos de código)
-```
+Comece pelo [início rápido offline](#início-rápido-offline-sem-chave-de-api) e por `test_offline_custom_llm_quick_start_smoke` em `lib/crewai/tests/test_custom_llm.py` para validar a integração sem acesso à rede. Ao conectar um endpoint real, adicione testes de integração com credenciais de sandbox do provedor.
 
 Este guia cobre o essencial para implementar LLMs personalizados no CrewAI.
