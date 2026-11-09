@@ -54,6 +54,25 @@ def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
     assert mem._llm.stream is False
 
 
+def test_memory_without_an_llm_analyses_with_gpt_6_luna(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The default analysis model runs on OpenAI's chat completions, which the
+    memory flows' structured calls use."""
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+    from crewai.memory.unified_memory import Memory
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    assert isinstance(mem._llm, OpenAICompletion)
+    assert mem._llm.model == "gpt-6-luna"
+    assert mem._llm.api == "completions"
+
+
 def test_memory_record_defaults() -> None:
     r = MemoryRecord(content="hello")
     assert r.content == "hello"
