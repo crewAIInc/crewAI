@@ -1,4 +1,4 @@
-"""Tests for ``KickoffTaskOutputsSQLiteStorage`` connection lifecycle."""
+"""Tests for ``KickoffTaskOutputsSQLiteStorage``."""
 
 from __future__ import annotations
 
@@ -116,3 +116,44 @@ def test_failed_write_rolls_back_and_closes_connection(
     with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
         opened[0].execute("SELECT 1")
     assert storage.load() == []
+
+
+@pytest.mark.parametrize(
+    "output",
+    [["result_1", "result_2"], "plain text", 42, {"raw": "updated"}],
+)
+def test_update_round_trips_json_values(tmp_path: Path, output: object) -> None:
+    """``update`` stores any JSON value in ``output``, not just dicts."""
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0)
+
+    storage.update(0, output=output, inputs=["a", "b"])
+
+    row = storage.load()[0]
+    assert row["output"] == output
+    assert row["inputs"] == ["a", "b"]
+
+
+def test_load_returns_none_for_null_json_columns(tmp_path: Path) -> None:
+    """A NULL ``output`` or ``inputs`` loads as ``None`` instead of crashing."""
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0)
+
+    storage.update(0, output=None, inputs=None)
+
+    row = storage.load()[0]
+    assert row["output"] is None
+    assert row["inputs"] is None
+
+
+def test_load_wraps_malformed_json_in_database_error(tmp_path: Path) -> None:
+    """Undecodable stored JSON raises ``DatabaseOperationError``."""
+    db_path = tmp_path / "outputs.db"
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(db_path))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0)
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("UPDATE latest_kickoff_task_outputs SET output = 'not json'")
+    conn.close()
+
+    with pytest.raises(DatabaseOperationError):
+        storage.load()
