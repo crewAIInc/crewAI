@@ -167,6 +167,87 @@ def test_core_catalog_tools_and_full_inputs(name, inputs, method, path):
         assert kwargs["params"]["waitForEnrichment"] == "false"
 
 
+PAGINATED_TOOLS = [
+    ("CompanyEnrichSearchTool", {"query": "software"}),
+    ("CompanyEnrichSimilarTool", {"domains": ["example.com"]}),
+    ("CompanyEnrichPeopleSearchTool", {}),
+]
+
+
+@pytest.mark.parametrize("name,required", PAGINATED_TOOLS)
+@pytest.mark.parametrize("entrypoint", ["run", "structured", "direct"])
+@pytest.mark.parametrize(
+    "pagination,dedicated,expected",
+    [
+        ({"page": 3, "pageSize": 12}, {}, (3, 12)),
+        ({"page": 3, "pageSize": 12}, {"page": 1, "page_size": 5}, (1, 5)),
+        ({"page": 3, "pageSize": 12}, {"page": 2}, (2, 12)),
+        ({"page": 3, "pageSize": 12}, {"page_size": 9}, (3, 9)),
+        ({"page": 3}, {}, (3, 5)),
+        ({"pageSize": 12}, {}, (1, 12)),
+        ({}, {}, (1, 5)),
+    ],
+)
+def test_pagination_preserves_filters_until_explicitly_overridden(
+    name, required, entrypoint, pagination, dedicated, expected
+):
+    tool = getattr(tools, name)(api_key="test-key")
+    filters = {"countries": ["US"], **pagination}
+    inputs = {**required, "filters": filters, **dedicated}
+    with patch(
+        "crewai_tools.tools.companyenrich_tool.companyenrich_tool.requests.request"
+    ) as send:
+        send.return_value = Mock(status_code=200)
+        send.return_value.json.return_value = {"items": []}
+        if entrypoint == "structured":
+            tool.to_structured_tool().invoke(inputs)
+        elif entrypoint == "direct":
+            tool._run(**inputs)
+        else:
+            tool.run(**inputs)
+    send.assert_called_once()
+    body = send.call_args.kwargs["json"]
+    assert (body["page"], body["pageSize"]) == expected
+    assert body["countries"] == ["US"]
+    assert filters == {"countries": ["US"], **pagination}
+
+
+@pytest.mark.parametrize("name,required", PAGINATED_TOOLS)
+@pytest.mark.parametrize("field", ["page", "pageSize"])
+@pytest.mark.parametrize("value", [True, "2", 2.5, 0, None])
+def test_pagination_in_filters_is_strictly_validated_before_request(
+    name, required, field, value
+):
+    with (
+        patch(
+            "crewai_tools.tools.companyenrich_tool.companyenrich_tool.requests.request"
+        ) as send,
+        pytest.raises(ValueError),
+    ):
+        getattr(tools, name)(api_key="test-key").run(
+            **required, filters={field: value}
+        )
+    send.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "name,inputs",
+    [
+        ("CompanyEnrichSearchCountTool", {"filters": {"countries": ["US"]}}),
+        ("CompanyEnrichSimilarCountTool", {"domains": ["example.com"]}),
+    ],
+)
+def test_count_tools_do_not_inject_pagination(name, inputs):
+    with patch(
+        "crewai_tools.tools.companyenrich_tool.companyenrich_tool.requests.request"
+    ) as send:
+        send.return_value = Mock(status_code=200)
+        send.return_value.json.return_value = 12
+        assert getattr(tools, name)(api_key="test-key").run(**inputs) == 12
+    assert "page" not in send.call_args.kwargs["json"]
+    assert "pageSize" not in send.call_args.kwargs["json"]
+
+
 def test_all_core_and_advanced_tools_registered_with_schemas():
     specs = {x["name"]: x for x in ToolSpecExtractor().extract_all_tools()}
     for name in [x[0] for x in CORE] + ["CompanyEnrichAdvancedRequestTool"]:

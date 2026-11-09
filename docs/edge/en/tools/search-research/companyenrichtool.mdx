@@ -44,7 +44,7 @@ industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
 
 Search tools accept a full `filters` object. Company search also accepts `semantic_query` (up to 500 characters) and `query` (up to 250). Dedicated non-null inputs override matching filter fields; every other filter field is retained. Use supported `expand` arrays (`workforce` for companies, `education` for people) and `wait_for_enrichment` on routes that document it. Workforce requires exactly one `company_id` or `domain`. Batch enrichment accepts 1–50 domains; lookalikes accept 1–10. Company IDs are UUIDs; person IDs accept positive int64 integers or decimal strings.
 
-Core search defaults remain `page=1`, `page_size=5`; page size accepts 1–100 and page multiplied by page size must not exceed 10,000. Each result preserves all API fields and pagination metadata. Counts return numbers, including zero; batch and taxonomy results retain arrays.
+Company search, people search, and lookalikes use `filters.page` and `filters.pageSize` unless a non-null dedicated `page` or `page_size` overrides that field. If neither source supplies a field, its default remains `page=1` or `page_size=5`. Page size accepts 1–100 and page multiplied by page size must not exceed 10,000. Each result preserves all API fields and pagination metadata. Counts return numbers, including zero; batch and taxonomy results retain arrays.
 
 ## Advanced operations
 

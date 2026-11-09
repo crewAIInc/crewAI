@@ -44,7 +44,7 @@ industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
 
 검색 도구는 전체 `filters` 객체를 받습니다. 회사 검색은 최대 500자의 `semantic_query`와 최대 250자의 `query`도 받습니다. null이 아닌 전용 입력이 동일한 필터 필드보다 우선하며 나머지 필드는 유지됩니다. 지원되는 `expand` 배열(회사는 `workforce`, 사람은 `education`)과 해당 경로에서 지원하는 `wait_for_enrichment`를 사용하세요. 인력 조회는 `company_id` 또는 `domain` 중 정확히 하나가 필요합니다. 일괄 보강은 도메인 1–50개, 유사 회사는 1–10개를 받습니다. 회사 ID는 UUID이며 사람 ID는 양의 int64 정수 또는 십진 문자열입니다.
 
-기본 검색은 `page=1`, `page_size=5`를 유지합니다. 페이지 크기는 1–100이고 페이지와 크기의 곱은 10,000 이하여야 합니다. 모든 API 필드와 페이지 메타데이터를 유지합니다. 개수는 0을 포함한 숫자로 반환하고 일괄 및 분류 결과는 배열을 유지합니다.
+회사 검색, 인물 검색, 유사 회사 검색은 null이 아닌 전용 `page` 또는 `page_size` 값으로 해당 필드를 재정의하지 않는 한 `filters.page`와 `filters.pageSize`를 사용합니다. 두 입력에서 모두 필드를 제공하지 않으면 기본값 `page=1` 또는 `page_size=5`를 사용합니다. 페이지 크기는 1–100이고 페이지와 크기의 곱은 10,000 이하여야 합니다. 모든 API 필드와 페이지 메타데이터를 유지합니다. 개수는 0을 포함한 숫자로 반환하고 일괄 및 분류 결과는 배열을 유지합니다.
 
 ## 고급 작업
 

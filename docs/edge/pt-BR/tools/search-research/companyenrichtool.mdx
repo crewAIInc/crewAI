@@ -44,7 +44,7 @@ industries = CompanyEnrichAdvancedRequestTool().run(operation="get_industries")
 
 As ferramentas de busca aceitam um objeto `filters` completo. A busca de empresas também aceita `semantic_query` (até 500 caracteres) e `query` (até 250). Entradas dedicadas não nulas têm precedência sobre campos correspondentes dos filtros; os demais campos são preservados. Use os arrays `expand` suportados (`workforce` para empresas e `education` para pessoas) e `wait_for_enrichment` nas rotas que o documentam. A consulta de funcionários exige exatamente um `company_id` ou `domain`. O enriquecimento em lote aceita 1–50 domínios; empresas semelhantes aceitam 1–10. IDs de empresas são UUIDs; IDs de pessoas aceitam inteiros int64 positivos ou strings decimais.
 
-As buscas principais mantêm `page=1` e `page_size=5`. O tamanho aceita 1–100 e o produto da página pelo tamanho deve ser no máximo 10.000. Todos os campos da API e os metadados de paginação são preservados. Contagens retornam números, incluindo zero; resultados em lote e taxonomias mantêm arrays.
+As buscas de empresas, pessoas e empresas semelhantes usam `filters.page` e `filters.pageSize`, a menos que um valor dedicado não nulo em `page` ou `page_size` substitua o respectivo campo. Quando nenhuma das fontes fornece um campo, seu padrão continua sendo `page=1` ou `page_size=5`. O tamanho aceita 1–100 e o produto da página pelo tamanho deve ser no máximo 10.000. Todos os campos da API e os metadados de paginação são preservados. Contagens retornam números, incluindo zero; resultados em lote e taxonomias mantêm arrays.
 
 ## Operações avançadas
 

@@ -44,7 +44,9 @@ def core_arguments(
     if operation == "post_people_search":
         dedicated = {}
     if not operation.endswith("_count"):
-        dedicated.update(
-            page=values.get("page", 1), pageSize=values.get("page_size", 5)
-        )
-    return merge_filters(values.get("filters"), **dedicated), query
+        dedicated.update(page=values.get("page"), pageSize=values.get("page_size"))
+    body = merge_filters(values.get("filters"), **dedicated)
+    if not operation.endswith("_count"):
+        body.setdefault("page", 1)
+        body.setdefault("pageSize", 5)
+    return body, query

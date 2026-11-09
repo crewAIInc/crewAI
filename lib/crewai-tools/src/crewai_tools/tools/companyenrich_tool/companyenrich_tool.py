@@ -83,7 +83,23 @@ class CompanyEnrichCompanyInput(_ExpansionInput):
     wait_for_enrichment: bool | None = None
 
 
-class CompanyEnrichSearchInput(_ExpansionInput):
+class _PaginatedInput(_ExpansionInput):
+    # BaseTool and CrewStructuredTool materialize schema defaults before _run.
+    # Keep omission distinguishable until pagination is merged with filters.
+    page: StrictInt | None = Field(
+        default=None,
+        ge=1,
+        description="Overrides filters.page when set; otherwise uses it or defaults to 1.",
+    )
+    page_size: StrictInt | None = Field(
+        default=None,
+        ge=1,
+        le=100,
+        description="Overrides filters.pageSize when set; otherwise uses it or defaults to 5.",
+    )
+
+
+class CompanyEnrichSearchInput(_PaginatedInput):
     semantic_query: NonEmptyString | None = Field(default=None, max_length=500)
     query: str | None = Field(
         default=None, max_length=250, description="Literal company name/domain query."
@@ -92,24 +108,18 @@ class CompanyEnrichSearchInput(_ExpansionInput):
         default=None,
         description="Documented API filter fields. Dedicated inputs take precedence.",
     )
-    page: StrictInt = Field(default=1, ge=1)
-    page_size: StrictInt = Field(default=5, ge=1, le=100)
 
 
-class CompanyEnrichSimilarInput(_ExpansionInput):
+class CompanyEnrichSimilarInput(_PaginatedInput):
     domains: list[NonEmptyString] = Field(min_length=1, max_length=10)
     filters: dict[str, Any] | None = None
-    page: StrictInt = Field(default=1, ge=1)
-    page_size: StrictInt = Field(default=5, ge=1, le=100)
     wait_for_enrichment: bool | None = None
 
 
-class CompanyEnrichPeopleSearchInput(_ExpansionInput):
+class CompanyEnrichPeopleSearchInput(_PaginatedInput):
     filters: dict[str, Any] = Field(
         description="People Search API body filters, including nested companyFilter."
     )
-    page: StrictInt = Field(default=1, ge=1)
-    page_size: StrictInt = Field(default=5, ge=1, le=100)
 
 
 class CompanyEnrichLookupInput(_ExpansionInput):
@@ -258,8 +268,8 @@ class CompanyEnrichSearchTool(_CompanyEnrichTool):
     def _run(
         self,
         semantic_query: NonEmptyString | None = None,
-        page: int = 1,
-        page_size: int = 5,
+        page: int | None = None,
+        page_size: int | None = None,
         **kwargs: Any,
     ) -> Any:
         return self._invoke(
@@ -281,7 +291,11 @@ class CompanyEnrichSimilarTool(_CompanyEnrichTool):
     args_schema: type[BaseModel] = CompanyEnrichSimilarInput
 
     def _run(
-        self, domains: list[str], page: int = 1, page_size: int = 5, **kwargs: Any
+        self,
+        domains: list[str],
+        page: int | None = None,
+        page_size: int | None = None,
+        **kwargs: Any,
     ) -> Any:
         return self._invoke(
             {"domains": domains, "page": page, "page_size": page_size, **kwargs}
