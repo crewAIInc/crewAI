@@ -216,17 +216,46 @@ def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
-    # Manually truncate at stop words
+    # Truncate at the EARLIEST stop word found in the text, regardless of the
+    # order of self.stop. Scanning for the smallest index keeps the result stable
+    # when the stop list is reordered, matching CrewAI's built-in
+    # BaseLLM._apply_stop_words.
     if self.stop:
+        earliest = len(content)
+        found = False
         for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
+            index = content.find(stop_word)
+            if index != -1 and index < earliest:
+                earliest = index
+                found = True
+        if found:
+            # .strip() mirrors the built-in helper, which trims surrounding whitespace.
+            content = content[:earliest].strip()
     
     return content
 
 def supports_stop_words(self) -> bool:
     return False  # Tell CrewAI we handle stop words manually
+```
+
+The scan stops at the earliest match, so the result does not depend on the order of `self.stop`. You can verify both orderings and the no-match case:
+
+```python
+def _truncate_at_stop_words(content: str, stop: list[str]) -> str:
+    earliest = len(content)
+    found = False
+    for stop_word in stop:
+        index = content.find(stop_word)
+        if index != -1 and index < earliest:
+            earliest = index
+            found = True
+    return content[:earliest].strip() if found else content
+
+
+response = "hello EARLY middle LATE tail"
+assert _truncate_at_stop_words(response, ["LATE", "EARLY"]) == "hello"  # order-independent
+assert _truncate_at_stop_words(response, ["EARLY", "LATE"]) == "hello"
+assert _truncate_at_stop_words(response, ["MISSING"]) == response       # unchanged when no match
 ```
 
 ## Function Calling
