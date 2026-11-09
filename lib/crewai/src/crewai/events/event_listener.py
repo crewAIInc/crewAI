@@ -277,8 +277,11 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskStartedEvent)
         def on_task_started(source: Any, event: TaskStartedEvent) -> None:
-            span = self._telemetry.task_started(crew=source.agent.crew, task=source)
-            self.execution_spans[source] = span
+            # An agentless task (direct Task.execute_sync() call) has no crew
+            # to attribute the span to; mirror the tracing listener's guard.
+            if source.agent and source.agent.crew:
+                span = self._telemetry.task_started(crew=source.agent.crew, task=source)
+                self.execution_spans[source] = span
 
             task_name = get_task_name(source)
             self.formatter.handle_task_started(source.id, task_name)
@@ -307,7 +310,10 @@ class EventListener(BaseEventListener):
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
-                source.id, source.agent.role, "failed", task_name
+                source.id,
+                source.agent.role if source.agent else "None",
+                "failed",
+                task_name,
             )
 
         @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
