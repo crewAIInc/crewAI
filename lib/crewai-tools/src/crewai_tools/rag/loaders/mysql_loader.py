@@ -1,7 +1,7 @@
 """MySQL database loader."""
 
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from pymysql import Error, connect
 from pymysql.cursors import DictCursor
@@ -35,11 +35,13 @@ class MySQLLoader(BaseLoader):
         if parsed.scheme not in ["mysql", "mysql+pymysql"]:
             raise ValueError(f"Invalid MySQL URI scheme: {parsed.scheme}")
 
-        connection_params = {
+        connection_params: dict[str, Any] = {
             "host": parsed.hostname or "localhost",
             "port": parsed.port or 3306,
-            "user": parsed.username,
-            "password": parsed.password,
+            "user": unquote(parsed.username) if parsed.username is not None else None,
+            "password": unquote(parsed.password)
+            if parsed.password is not None
+            else None,
             "database": parsed.path.lstrip("/") if parsed.path else None,
             "charset": "utf8mb4",
             "cursorclass": DictCursor,
