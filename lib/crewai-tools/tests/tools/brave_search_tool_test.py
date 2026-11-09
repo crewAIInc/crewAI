@@ -769,3 +769,26 @@ def test_retry_uses_exponential_backoff_when_no_retry_after(
     retry_sleeps = [c[0][0] for c in mock_time.sleep.call_args_list]
     assert 1.0 in retry_sleeps
     assert 2.0 in retry_sleeps
+
+
+def test_local_pois_tolerates_null_nested_objects():
+    """Brave may return ``postal_address`` or ``contact`` as null."""
+    tool = BraveLocalPOIsTool()
+
+    results = tool._refine_response(
+        {
+            "results": [
+                {"title": "Cafe", "postal_address": None, "contact": None},
+                {
+                    "title": "Shop",
+                    "postal_address": {"displayAddress": "1 Main St"},
+                    "contact": {"email": "shop@example.com"},
+                },
+            ]
+        }
+    )
+
+    assert results[0]["address"] is None
+    assert results[0]["contact"] is None
+    assert results[1]["address"] == "1 Main St"
+    assert results[1]["contact"] == "shop@example.com"
