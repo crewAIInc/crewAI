@@ -130,7 +130,7 @@ paths:
                     example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
         "422":
           description: >-
-            Erro de validação: falta um input obrigatório, ou os apps de um agente não estão conectados no CrewAI AMP. Os apps são verificados antes de a execução começar quando a requisição usa um User Bearer Token. Apps que essa verificação não detecta fazem a execução falhar, e `GET /status/{kickoff_id}` os informa.
+            Erro de validação: falta um input obrigatório, ou os apps de um agente não estão conectados no CrewAI AMP. Os apps são verificados antes de a execução começar, qualquer que seja o token da requisição, e `agents` informa cada agente com apps a conectar. Apps que essa verificação não detecta, como os de uma crew hierárquica, fazem a execução falhar, e `GET /status/{kickoff_id}` os informa.
           content:
             application/json:
               schema:
@@ -146,9 +146,12 @@ paths:
                   value:
                     detail:
                       code: "apps_not_connected"
-                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
                       agent: "Asana Workspace Scout"
-                      missing_apps: ["asana"]
+                      missing_apps: ["asana/get_projects"]
+                      agents:
+                        - agent: "Asana Workspace Scout"
+                          missing_apps: ["asana/get_projects"]
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "500":
@@ -425,17 +428,29 @@ components:
         message:
           type: string
           description: Mensagem de erro legível
-          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana"
+          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
         agent:
           type: string
-          description: Role do agente que declara os apps
+          description: Role do primeiro agente em `agents`
           example: "Asana Workspace Scout"
         missing_apps:
           type: array
           items:
             type: string
-          description: Apps a conectar no CrewAI AMP, como o CrewAI AMP os nomeia
-          example: ["asana"]
+          description: Apps do primeiro agente a conectar no CrewAI AMP, como o agente os declara (`app` ou `app/action`)
+          example: ["asana/get_projects"]
+        agents:
+          type: array
+          description: Cada agente com apps a conectar, com seu `agent` e `missing_apps`. Em `GET /status/{kickoff_id}`, o agente em que a execução parou
+          items:
+            type: object
+            properties:
+              agent:
+                type: string
+              missing_apps:
+                type: array
+                items:
+                  type: string
 
   responses:
     UnauthorizedError:
