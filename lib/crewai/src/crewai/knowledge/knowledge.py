@@ -117,6 +117,11 @@ class Knowledge(BaseModel):
         **data: object,
     ) -> None:
         super().__init__(**data)
+        # ``collection_name`` and ``embedder`` are declared pydantic fields but
+        # the explicit parameters above shadow them, so they must be assigned
+        # explicitly or every instance reports None and checkpoints lose them.
+        self.collection_name = collection_name
+        self.embedder = embedder
         if storage is not None:
             self.storage = storage
         else:
