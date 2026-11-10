@@ -89,6 +89,7 @@ from crewai.flow.async_feedback.types import (
     HumanFeedbackProvider,
     PendingFeedbackContext,
 )
+from crewai.flow.dsl._router import _return_annotation
 from crewai.flow.dsl._utils import build_flow_definition
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
@@ -750,8 +751,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
+            declared = [
+                HumanFeedbackResult,
+                *(_return_annotation(method) for method in self._methods.values()),
+            ]
             self._method_outputs = [
-                rebuild_output_types(entry)
+                rebuild_output_types(entry, declared)
                 if isinstance(entry, dict) and "method" in entry and "output" in entry
                 else {"method": "", "output": entry}
                 for entry in self.checkpoint_method_outputs

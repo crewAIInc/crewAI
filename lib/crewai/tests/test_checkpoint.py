@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 from contextlib import closing
+import dataclasses
 import json
 import os
 import sqlite3
@@ -14,7 +15,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -1099,22 +1100,32 @@ class _Quote(BaseModel):
     amount: int
 
 
-class _Order:
-    class Line(BaseModel):
-        sku: str
-
-
 class _ApproveProvider:
     def request_feedback(self, context: Any, flow: Flow) -> str:
         return "looks good"
 
 
 _PENDING_FAILURES: list[str] = []
-_FACTORY_CALLS: list[Any] = []
+_PROBE_CALLS: list[Any] = []
 
 
-def _factory(*args: Any, **kwargs: Any) -> None:
-    _FACTORY_CALLS.append((args, kwargs))
+class _Probe(BaseModel):
+    amount: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def _record(cls, data: Any) -> Any:
+        _PROBE_CALLS.append(data)
+        return data
+
+
+class _NoSchema:
+    pass
+
+
+@dataclasses.dataclass
+class _Unbuildable:
+    thing: _NoSchema
 
 
 class _OrderFlow(Flow):
@@ -1191,45 +1202,33 @@ class TestRestoredMethodOutputTypes:
 
         assert restored.state["feedback"] == "looks good"
 
-    def test_restore_rebuilds_a_nested_model(self) -> None:
-        entry = {
-            "method": "line",
-            "output": {"sku": "A1"},
-            "output_type": f"{_Order.__module__}:_Order.Line",
-        }
-
-        rebuilt = rebuild_output_types(entry)
-
-        assert rebuilt["output"] == _Order.Line(sku="A1")
-
-    def test_restore_never_imports_a_module_named_by_the_checkpoint(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    def test_restore_never_builds_a_type_the_flow_does_not_declare(
+        self, tmp_path: Path
     ) -> None:
-        marker = tmp_path / "imported"
-        (tmp_path / "crewai_untrusted_module.py").write_text(
-            f"open({str(marker)!r}, 'w').close()\n"
-        )
-        monkeypatch.syspath_prepend(str(tmp_path))
+        latest = _checkpoint_after_listener_failure(_OrderFlow, tmp_path)
+        raw = Path(latest).read_text()
+        assert "_Quote" in raw
+        Path(latest).write_text(raw.replace("_Quote", "_Probe"))
+        _PROBE_CALLS.clear()
+
+        restored = _OrderFlow.from_checkpoint(CheckpointConfig(restore_from=latest))
+
+        assert _PROBE_CALLS == []
+        assert restored.method_outputs == [{"amount": 42}]
+
+    @pytest.mark.parametrize(
+        ("output", "cls"),
+        [({"amount": "not a number"}, _Quote), ({"thing": None}, _Unbuildable)],
+    )
+    def test_restore_keeps_json_that_cannot_be_rebuilt(
+        self, output: dict[str, Any], cls: type
+    ) -> None:
         entry = {
             "method": "price",
-            "output": {"amount": 42},
-            "output_type": "crewai_untrusted_module:Quote",
+            "output": output,
+            "output_type": f"{cls.__module__}:{cls.__qualname__}",
         }
 
-        rebuilt = rebuild_output_types(entry)
+        rebuilt = rebuild_output_types(entry, [cls])
 
-        assert not marker.exists()
-        assert rebuilt == {"method": "price", "output": {"amount": 42}}
-
-    def test_restore_never_calls_a_non_model_named_by_the_checkpoint(self) -> None:
-        entry = {
-            "method": "price",
-            "output": {"amount": 42},
-            "output_type": f"{_factory.__module__}:_factory",
-        }
-        _FACTORY_CALLS.clear()
-
-        rebuilt = rebuild_output_types(entry)
-
-        assert _FACTORY_CALLS == []
-        assert rebuilt == {"method": "price", "output": {"amount": 42}}
+        assert rebuilt == {"method": "price", "output": output}
