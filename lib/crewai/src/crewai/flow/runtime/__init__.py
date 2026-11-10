@@ -1097,9 +1097,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         condition = self._start_condition(method_name)
         if condition is None:
             return False
-        return self._condition_met(
+        should_check_fired = _is_multi_event_or(condition)
+        if should_check_fired and method_name in self._fired_or_listeners:
+            return False
+        if self._condition_met(
             condition, trigger, PendingListenerKey(f"start:{method_name}")
-        )
+        ):
+            if should_check_fired:
+                with self._or_listeners_lock:
+                    self._fired_or_listeners.add(method_name)
+            return True
+        return False
 
     def _rearm_or_listeners_for_trigger(
         self,
@@ -1122,7 +1130,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             trigger_str = str(trigger)
             to_discard: list[FlowMethodName] = []
             for listener_name in candidates:
-                condition = self._listen_condition(listener_name)
+                condition = self._listen_condition(
+                    listener_name
+                ) or self._start_condition(listener_name)
                 if condition is None:
                     continue
                 if trigger_str in _iter_condition_events(condition):
@@ -2852,12 +2862,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # During resumption, skip execution but continue listeners
                 method_outputs = self.method_outputs
                 last_output = method_outputs[-1] if method_outputs else None
-                await self._execute_listeners(start_method_name, last_output)
+                await self._execute_listeners(
+                    start_method_name, last_output, _resuming_skip=True
+                )
                 return
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(start_method_name)
             # Also clear fired OR listeners to allow them to fire again in new cycle
             self._clear_or_listeners()
+            start_cond = self._start_condition(start_method_name)
+            if start_cond is not None and _is_multi_event_or(start_cond):
+                with self._or_listeners_lock:
+                    self._fired_or_listeners.add(start_method_name)
 
         method = self._methods[start_method_name]
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
@@ -3170,6 +3186,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         trigger_method: FlowMethodName,
         result: Any,
         triggering_event_id: str | None = None,
+        *,
+        _resuming_skip: bool = False,
     ) -> None:
         """Executes all listeners and routers triggered by a method completion.
 
@@ -3251,11 +3269,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         with self._or_listeners_lock:
             rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
+        fired_starts_in_pass: set[FlowMethodName] = set()
 
         for idx, current_trigger in enumerate(all_triggers):
             if current_trigger:
                 if idx > 0 and rearmable:
-                    self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
+                    self._rearm_or_listeners_for_trigger(
+                        current_trigger, rearmable - fired_starts_in_pass
+                    )
                 listeners_triggered = self._find_triggered_methods(
                     current_trigger, router_only=False
                 )
@@ -3293,21 +3314,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         ]
                         await asyncio.gather(*tasks)
 
-                if current_trigger in router_results:
-                    for method_name in self._start_method_names():
-                        if self._start_condition_triggered_by(
-                            method_name, current_trigger
-                        ) and method_name not in ran_for_trigger.get(
+                for method_name in self._start_method_names():
+                    if (
+                        method_name in fired_starts_in_pass
+                        or method_name
+                        in ran_for_trigger.get(str(current_trigger), set())
+                    ):
+                        continue
+                    if self._start_condition_triggered_by(
+                        method_name, current_trigger
+                    ):
+                        fired_starts_in_pass.add(method_name)
+                        ran_for_trigger.setdefault(
                             str(current_trigger), set()
+                        ).add(method_name)
+                        if method_name in self._completed_methods and (
+                            current_trigger in router_results or not _resuming_skip
                         ):
-                            if method_name in self._completed_methods:
-                                # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
-                                was_resuming = self._is_execution_resuming
-                                self._is_execution_resuming = False
-                                await self._execute_start_method(method_name)
-                                self._is_execution_resuming = was_resuming
-                            else:
-                                await self._execute_start_method(method_name)
+                            # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
+                            was_resuming = self._is_execution_resuming
+                            self._is_execution_resuming = False
+                            await self._execute_start_method(method_name)
+                            self._is_execution_resuming = was_resuming
+                        else:
+                            await self._execute_start_method(method_name)
 
     def _condition_met(
         self,
@@ -3389,7 +3419,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                await self._execute_listeners(listener_name, None)
+                await self._execute_listeners(
+                    listener_name, None, _resuming_skip=True
+                )
 
                 # For routers, also check if any conditional starts they triggered are completed
                 # If so, continue their chains
