@@ -40,6 +40,12 @@ This command initializes the {{name}} Flow as defined in your configuration.
 
 This example, unmodified, will run a content creation flow on AI Agents and save the output to `output/post.md`.
 
+To pick another topic, pass the flow's inputs as a JSON object:
+
+```bash
+crewai run --inputs '{"topic": "Quantum Computing"}'
+```
+
 ## Understanding Your Crew
 
 The {{name}} Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.

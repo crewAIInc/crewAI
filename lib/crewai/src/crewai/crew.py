@@ -532,6 +532,15 @@ class Crew(FlowTrackable, BaseModel):
                 task._original_expected_output = (
                     task.checkpoint_original_expected_output
                 )
+            # None only in a checkpoint from before 1.15.38, whose description
+            # can hold a plan or chat history: read spreadsheet URLs from the
+            # template the caller wrote alone. Remove once checkpoints from
+            # 1.15.37 and older are no longer resumed.
+            task._input_description = (
+                task.checkpoint_original_description or ""
+                if task.checkpoint_input_description is None
+                else task.checkpoint_input_description
+            )
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:
@@ -1484,7 +1493,7 @@ class Crew(FlowTrackable, BaseModel):
         for idx, task in enumerate(self.tasks):
             task_number = idx + 1
             if task_number in plan_map:
-                task.description += plan_map[task_number]
+                task._append_model_text(plan_map[task_number])
             else:
                 self._logger.log(
                     "warning",
@@ -2140,7 +2149,7 @@ class Crew(FlowTrackable, BaseModel):
         if future is not None:
             try:
                 future.result()
-            except Exception:  # noqa: BLE001,S110
+            except Exception:  # noqa: S110
                 pass
 
         if self.process == Process.hierarchical:
@@ -2243,6 +2252,13 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            # Checkpoint resume pointers describe the run the copy came
+            # from; carried over they would make the copy resume that run
+            # instead of executing (every task skipped, checkpointed
+            # inputs shadowing the new ones).
+            "checkpoint_kickoff_event_id",
+            "checkpoint_inputs",
+            "checkpoint_train",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]

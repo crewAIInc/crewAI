@@ -187,7 +187,7 @@ class TestEffectiveApi:
         llm = build(
             "gpt-5-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
         )
-        completion_module._LEARNED_RESPONSES_ONLY_MODELS.add("gpt-5-pro")
+        completion_module._LEARNED_RESPONSES_ONLY_MODELS.add(llm._reasoning_effort_key())
 
         assert llm._effective_api() == "completions"
 

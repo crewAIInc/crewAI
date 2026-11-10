@@ -75,6 +75,22 @@ _CTE_WRITE_INDICATORS = {
 }
 
 
+def _has_sql_comment(sql: str, db_uri: str) -> bool:
+    """Return True if *sql* contains a comment marker anywhere.
+
+    Read-only validation refuses commented statements rather than stripping
+    or skipping around comments: that has to agree with every database's
+    quoting rules (identifiers, backticks, dollar quotes, MySQL ``/*! */``),
+    and any disagreement lets a write hide from the validator.  Markers inside
+    string literals are refused too.  ``#`` only starts a comment on
+    MySQL/MariaDB, and is a JSON operator on PostgreSQL, so it counts only there.
+    """
+    markers = ["--", "/*"]
+    if db_uri.split(":", 1)[0].split("+", 1)[0] in ("mysql", "mariadb"):
+        markers.append("#")
+    return any(marker in sql for marker in markers)
+
+
 _AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
 
 
@@ -315,6 +331,11 @@ class NL2SQLTool(BaseTool):
 
     def _validate_statement(self, stmt: str) -> None:
         """Validate a single SQL statement (no semicolons)."""
+        if not self.allow_dml and _has_sql_comment(stmt, self.db_uri):
+            raise ValueError(
+                "NL2SQLTool blocked a query containing SQL comments in read-only "
+                "mode. Remove the comments and retry."
+            )
         command = self._extract_command(stmt)
 
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
@@ -461,6 +482,10 @@ class NL2SQLTool(BaseTool):
         _stmts = [s.strip() for s in sql_query.split(";") if s.strip()]
 
         def _is_write_stmt(s: str) -> bool:
+            # A comment can hide the command from the checks below; committing
+            # a read is harmless, so treat commented statements as writes.
+            if _has_sql_comment(s, self.db_uri):
+                return True
             cmd = self._extract_command(s)
             if cmd in _WRITE_COMMANDS:
                 return True

@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 
+import click
 import pytest
 
 from crewai_cli.input_prompt import (
@@ -130,8 +131,11 @@ def test_prompt_for_inputs_keeps_prompt_chrome_on_stderr(
 
     assert result.returncode == 0, result.stderr
     assert result.stdout == json.dumps(expected, ensure_ascii=False) + "\n"
-    assert "Runtime inputs" in result.stderr
-    assert "Required values" in result.stderr
+    # Click passes styled prompt text to input() unstripped, so escape codes reach a
+    # piped stderr. Unstyle until the prompts stop emitting them off a terminal.
+    stderr = click.unstyle(result.stderr)
+    assert "Runtime inputs" in stderr
+    assert "Required values" in stderr
     for name in names:
-        assert f"Value for {name}" in result.stderr
-        assert f"{name} > " in result.stderr
+        assert f"Value for {name}" in stderr
+        assert f"{name} > " in stderr

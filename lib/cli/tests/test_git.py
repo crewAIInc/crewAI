@@ -1,3 +1,5 @@
+import subprocess
+
 import pytest
 from crewai_cli.git import Repository
 
@@ -153,3 +155,30 @@ def test_deployable_files_uses_git_excludes(fp, repository):
     )
 
     assert repository.deployable_files() == ["pyproject.toml", "src/main.py"]
+
+
+def _git(cwd, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+
+def test_head_commit_is_none_before_the_first_commit(tmp_path):
+    _git(tmp_path, "init", "-q")
+
+    assert Repository(path=str(tmp_path), fetch=False).head_commit() is None
+
+
+def test_head_commit_is_the_short_hash_of_head(tmp_path):
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "first")
+    _git(tmp_path, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "second")
+
+    head = Repository(path=str(tmp_path), fetch=False).head_commit()
+
+    assert head == _git(tmp_path, "rev-parse", "--short", "HEAD")
+    assert head != _git(tmp_path, "rev-parse", "--short", "HEAD~1")

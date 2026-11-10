@@ -66,12 +66,27 @@ class LinkupSearchTool(BaseTool):
         :param query: The query to search for.
         :param depth: Search depth (default is "standard").
         :param output_type: Desired result type (default is "searchResults").
-        :return: A dictionary containing the results or an error message.
+        :return: ``{"success": True, "results": [...]}`` for ``searchResults``,
+            ``{"success": True, "answer": ..., "sources": [...]}`` for
+            ``sourcedAnswer``, or ``{"success": False, "error": ...}``.
         """
         try:
             response = self._client.search(
                 query=query, depth=depth, output_type=output_type
             )
+            if output_type == "sourcedAnswer":
+                return {
+                    "success": True,
+                    "answer": response.answer,
+                    "sources": [
+                        {
+                            "name": source.name,
+                            "url": source.url,
+                            "snippet": source.snippet,
+                        }
+                        for source in response.sources
+                    ],
+                }
             results = [
                 {"name": result.name, "url": result.url, "content": result.content}
                 for result in response.results
