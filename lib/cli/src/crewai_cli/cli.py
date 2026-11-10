@@ -1033,7 +1033,33 @@ def deploy_remove(uuid: str | None) -> None:
 
 @crewai.group()
 def tool() -> None:
-    """Tool Repository related commands."""
+    """Add tools to an agent project and manage Tool Repository tools."""
+
+
+@tool.command(name="add")
+@click.argument("tools", nargs=-1)
+def tool_add(tools: tuple[str, ...]) -> None:
+    """Add tools to the standalone agent project in the current directory.
+
+    Pass references such as SerperDevTool, platform:gmail, or custom:my_tool,
+    or omit them to pick from the same list as `crewai create`. CrewAI
+    Platform applications are validated on AMP before they are added.
+    """
+    from crewai_cli.agent_tools import add_tools
+
+    add_tools(Path.cwd(), list(tools))
+
+
+@tool.command(name="setup")
+def tool_setup() -> None:
+    """Connect the agent definition's CrewAI Platform applications.
+
+    Reads the platform tools listed in the agent definition, validates them on
+    AMP, and saves the Enterprise Action Auth Token to .env.
+    """
+    from crewai_cli.agent_tools import setup_tools
+
+    setup_tools(Path.cwd())
 
 
 @tool.command(name="create")
