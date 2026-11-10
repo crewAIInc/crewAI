@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from typing import TYPE_CHECKING, Any, cast
 import uuid
 
@@ -41,6 +42,54 @@ def _is_qdrant_config(config: Any) -> TypeIs[QdrantConfig]:
         return cast(bool, config.provider == "qdrant")  # type: ignore[attr-defined]
     except (AttributeError, ImportError):
         return False
+
+
+def _is_loadable_reference(reference: str) -> bool:
+    """Check whether a reference points at something the loaders can read.
+
+    Args:
+        reference: The candidate reference.
+
+    Returns:
+        True for URLs and for paths that exist on disk.
+    """
+    if reference.startswith(("http://", "https://", "file://")):
+        return True
+    return os.path.exists(reference)
+
+
+def _resolve_content_item(arg: ContentItem) -> tuple[str, str | None]:
+    """Resolve the source reference and the inline body of a content item.
+
+    A document dictionary may carry the document body in ``content`` while
+    ``source`` only names where that body came from. When the name is not
+    itself readable by the loaders (a URL or an existing file), the body is
+    what gets indexed and the name is kept as the source metadata.
+
+    Args:
+        arg: A content item, either a plain reference or a document dict.
+
+    Returns:
+        The source reference and the inline body, when the item carries one.
+    """
+    if not isinstance(arg, dict):
+        return str(arg), None
+
+    source = arg.get("source")
+    content = arg.get("content")
+    source_ref = str(source) if source is not None else ""
+    body = content if isinstance(content, str) and content.strip() else None
+
+    if body is None:
+        if source_ref:
+            return source_ref, None
+        return ("" if content is None else str(content)), None
+
+    if source_ref and _is_loadable_reference(source_ref):
+        # `source` points at a URL or a file: keep loading it as before.
+        return source_ref, None
+
+    return (source_ref or body), body
 
 
 class CrewAIRagAdapter(Adapter):
@@ -136,8 +185,6 @@ class CrewAIRagAdapter(Adapter):
 
             rag_tool.add("path/to/document.pdf")  # auto-detects PDF
         """
-        import os
-
         from crewai_tools.rag.base_loader import LoaderResult
         from crewai_tools.rag.data_types import DataType, DataTypes
         from crewai_tools.rag.source_content import SourceContent
@@ -191,26 +238,23 @@ class CrewAIRagAdapter(Adapter):
         }
 
         for arg in content_items:
-            source_ref: str
-            if isinstance(arg, dict):
-                source_ref = str(arg.get("source", arg.get("content", "")))
-            else:
-                source_ref = str(arg)
+            source_ref, inline_content = _resolve_content_item(arg)
+            detection_ref = inline_content if inline_content is not None else source_ref
 
             if not data_type:
-                ext = os.path.splitext(source_ref)[1].lower()
-                is_url = source_ref.startswith(("http://", "https://", "file://"))
+                ext = os.path.splitext(detection_ref)[1].lower()
+                is_url = detection_ref.startswith(("http://", "https://", "file://"))
                 if (
                     ext in file_extensions
                     and not is_url
-                    and not os.path.isfile(source_ref)
+                    and not os.path.isfile(detection_ref)
                 ):
-                    raise FileNotFoundError(f"File does not exist: {source_ref}")
-                data_type = DataTypes.from_content(source_ref)
+                    raise FileNotFoundError(f"File does not exist: {detection_ref}")
+                data_type = DataTypes.from_content(detection_ref)
 
             if data_type == DataType.DIRECTORY:
-                if not os.path.isdir(source_ref):
-                    raise ValueError(f"Directory does not exist: {source_ref}")
+                if not os.path.isdir(detection_ref):
+                    raise ValueError(f"Directory does not exist: {detection_ref}")
 
                 # Define binary and non-text file extensions to skip
                 binary_extensions = {
@@ -245,7 +289,7 @@ class CrewAIRagAdapter(Adapter):
                     ".ear",
                 }
 
-                for root, dirs, files in os.walk(source_ref):
+                for root, dirs, files in os.walk(detection_ref):
                     dirs[:] = [d for d in dirs if not d.startswith(".")]
 
                     for filename in files:
@@ -302,7 +346,11 @@ class CrewAIRagAdapter(Adapter):
                             continue
             else:
                 metadata: dict[str, Any] = base_metadata.copy()
-                source_content = SourceContent(source_ref)
+                # An inline document body is what gets loaded; the `source`
+                # label only travels along as metadata.
+                source_content = SourceContent(
+                    inline_content if inline_content is not None else source_ref
+                )
 
                 if data_type in [
                     DataType.PDF_FILE,
@@ -314,7 +362,9 @@ class CrewAIRagAdapter(Adapter):
                     DataType.MDX,
                 ]:
                     if not source_content.is_url() and not source_content.path_exists():
-                        raise FileNotFoundError(f"File does not exist: {source_ref}")
+                        raise FileNotFoundError(
+                            f"File does not exist: {source_content.source}"
+                        )
 
                 loader = data_type.get_loader()
                 chunker = data_type.get_chunker()
@@ -334,9 +384,15 @@ class CrewAIRagAdapter(Adapter):
                     if isinstance(arg, dict):
                         chunk_metadata.update(arg.get("metadata", {}))
 
-                    chunk_hash = hashlib.sha256(
-                        f"{loader_result.doc_id}_{i}_{chunk}".encode()
-                    ).hexdigest()
+                    # Documents that carry an explicit source label get the
+                    # label mixed into their identity, so identical bodies from
+                    # different sources stay separate records.
+                    identity = (
+                        f"{loader_result.doc_id}_{source_ref}_{i}_{chunk}"
+                        if inline_content is not None
+                        else f"{loader_result.doc_id}_{i}_{chunk}"
+                    )
+                    chunk_hash = hashlib.sha256(identity.encode()).hexdigest()
                     chunk_id = str(uuid.UUID(chunk_hash[:32]))
 
                     documents.append(
