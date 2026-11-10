@@ -1103,7 +1103,8 @@ class Agent(BaseAgent):
             RuntimeError: If execution fails for other reasons.
         """
         ctx = contextvars.copy_context()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor = concurrent.futures.ThreadPoolExecutor()
+        try:
             future = executor.submit(
                 ctx.run,
                 self._execute_without_timeout,
@@ -1126,6 +1127,11 @@ class Agent(BaseAgent):
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
+        finally:
+            # Do not wait for the timed-out worker: shutdown(wait=True) (the
+            # context manager's default) blocked the caller until the task
+            # finished, so TimeoutError arrived only after the full run.
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
