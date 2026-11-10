@@ -1,0 +1,39 @@
+---
+title: "Suno by Ace Data Cloud"
+description: "독립 CrewAI 도구 패키지로 Suno 음악을 생성하고 같은 작업을 조회합니다."
+icon: music
+mode: "wide"
+---
+
+이 독립 통합은 Ace Data Cloud가 제공하며 Suno 또는 CrewAI 공식 제품이 아닙니다. 소스는 병합되었고 Ace 저장소의 안정 GitHub 0.1.0 wheel/sdist 릴리스가 있습니다. PyPI 출시나 AMP 등록은 주장하지 않습니다. 아래 병합 소스 SHA 또는 릴리스 노트의 SHA256 고정 wheel을 설치하세요. 이 제안 문서는 공식 등록의 증거가 아닙니다.
+
+검토된 정확한 소스 커밋에서 독립 패키지를 설치하세요. CrewAI BaseTool을 직접 사용하므로 MCP 설정이나 별도 래퍼가 필요하지 않습니다.
+
+```bash
+uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'
+```
+
+```bash
+uv add 'crewai-suno @ https://github.com/AceDataCloud/SunoCrewAI/releases/download/v0.1.0/crewai_suno-0.1.0-py3-none-any.whl#sha256=c00d2d011c72f0b1d294ce020b06c20668ef8d4572aaffbc53874341bc707ecf'
+```
+
+[Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key)에 가입하거나 로그인하세요. General application에서 API 소비자 Token을 복사하거나 Manage Keys → Create로 전용 키를 만드세요. API 제한 시 `/suno/audios`와 `/suno/tasks`를 허용합니다. 환경 변수 `ACEDATACLOUD_API_KEY`에 설정하고 prompt나 커밋된 설정에 키를 넣지 마세요.
+
+먼저 Suno 권한, 잔액 및 [모델 가격](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_pricing)을 확인하세요. 도구를 추가하는 것만으로 호출되지 않습니다. `SunoGenerateMusicTool`은 유료 비동기 요청을 한 번 제출하고 `SunoRetrieveTaskTool`은 원래 작업 ID만 조회합니다. pending은 성공이 아닙니다.
+
+처음에는 이미 소유한 작업을 조회하세요. 음악을 새로 생성하지 않습니다.
+
+```python
+from suno_crewai import SunoRetrieveTaskTool
+
+result = SunoRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+생성 예산 승인 후 Agent에 `SunoGenerateMusicTool()`과 `SunoRetrieveTaskTool()`을 전달하세요. 생성에는 현재 공개 모델 ID가 필요하며 task_id를 반환합니다. 그 ID를 보관하고 조회나 결과가 불명확한 타임아웃 복구를 위해 재생성하지 마세요. 생성 도구 인스턴스는 기본 1회 사용이며 자금 한도가 아닙니다.
+
+성공 조회는 status=succeeded, success=true, media_urls 및 제공된 원래 Credits cost를 반환합니다. 실패 작업은 ToolFailure입니다. HTTP 401/403/429/5xx 의미를 유지하며 유료 HTTP 자동 재시도나 모델 대체가 없습니다. 패키지는 tracing을 켜거나 GUI를 추가하지 않습니다.
+
+[영문/중문 단계별 안내](https://github.com/AceDataCloud/SunoCrewAI/tree/5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb)에서 가려진 Key 스크린샷, 환경 설정, 비동기 결과 및 문제 해결을 확인하세요. 이미지에는 출처와 날짜가 있으며 Ace 실행이나 출시 증거가 아닙니다.
+
+Ace 안정 릴리스와 SHA256 고정 설치: [Suno0.1.0](https://github.com/AceDataCloud/SunoCrewAI/releases/tag/v0.1.0).

@@ -1,0 +1,39 @@
+---
+title: "Suno بواسطة Ace Data Cloud"
+description: "أنشئ موسيقى Suno واسترجع المهمة نفسها بحزمة أدوات مستقلة لـ CrewAI."
+icon: music
+mode: "wide"
+---
+
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Suno أو CrewAI. دُمج المصدر ويوجد إصدار GitHub ثابت 0.1.0 مع wheel/sdist في مستودع Ace. لا ندّعي نشر PyPI أو الإدراج في AMP. ثبّت المصدر المدمج الثابت أدناه أو استخدم أمر wheel المرتبط بـSHA256 في ملاحظات الإصدار. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
+
+ثبّت الحزمة المستقلة المراجعة من نسخة المصدر المحددة. تستخدم CrewAI BaseTool مباشرة، دون إعداد MCP أو كتابة غلاف مخصص.
+
+```bash
+uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'
+```
+
+```bash
+uv add 'crewai-suno @ https://github.com/AceDataCloud/SunoCrewAI/releases/download/v0.1.0/crewai_suno-0.1.0-py3-none-any.whl#sha256=c00d2d011c72f0b1d294ce020b06c20668ef8d4572aaffbc53874341bc707ecf'
+```
+
+سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key). افتح General application وانسخ Token لاستهلاك API، أو استخدم Manage Keys → Create. عند تقييد APIs اسمح بـ `/suno/audios` و`/suno/tasks`. اضبط `ACEDATACLOUD_API_KEY` في البيئة ولا تضع المفتاح في prompt أو إعدادات مودعة.
+
+تحقّق أولًا من صلاحيات Suno والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_pricing). إضافة أداة لا تستدعيها. ترسل `SunoGenerateMusicTool` طلبًا غير متزامن مدفوعًا مرة واحدة؛ تستعلم `SunoRetrieveTaskTool` عن معرّف المهمة الأصلي فقط. pending ليس نجاحًا.
+
+لأول اختبار آمن، استعلم عن مهمة تملكها بالفعل؛ لا ينشئ ذلك موسيقى.
+
+```python
+from suno_crewai import SunoRetrieveTaskTool
+
+result = SunoRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+بعد الموافقة على الميزانية، مرّر `SunoGenerateMusicTool()` و`SunoRetrieveTaskTool()` إلى Agent. يتطلب الإنشاء معرّف نموذج عام حديثًا ويُرجع task_id؛ احتفظ به. لا تُعد الإنشاء للاستعلام أو بعد مهلة مجهولة النتيجة. يُسمح باستخدام واحد لكل مثيل إنشاء افتراضيًا؛ ليس ذلك حدًا ماليًا.
+
+يعرض الاسترجاع الناجح status=succeeded وsuccess=true وmedia_urls وcost الأصلي بوحدة Credits إن توفّر. تستخدم المهام الفاشلة ToolFailure. تُحفظ معاني HTTP 401/403/429/5xx، دون إعادة محاولة HTTP مدفوعة تلقائيًا أو نموذج بديل. لا تفعّل الحزمة tracing ولا تضيف GUI.
+
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SunoCrewAI/tree/5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb) لصور المفتاح المحجوب وضبط البيئة والنتائج غير المتزامنة واستكشاف الأخطاء. للصور مصدر وتاريخ وليست دليلًا على تشغيل Ace أو نشره.
+
+إصدار Ace الثابت وتثبيت مرتبط بـSHA256: [Suno0.1.0](https://github.com/AceDataCloud/SunoCrewAI/releases/tag/v0.1.0).
