@@ -175,12 +175,18 @@ class TestBaselineEncoding:
             """
         )
 
+        # The script is a file, not `-c`: argv under a C locale is decoded as
+        # ASCII, so an inline script would arrive with the non-ASCII identifier
+        # below mangled and the comparison would fail for the wrong reason.
+        probe = tmp_path / "compare_probe.py"
+        probe.write_text(script, encoding="utf-8")
+
         env = {key: value for key, value in os.environ.items() if key not in {"PYTHONUTF8", "PYTHONIOENCODING"}}
         env["LC_ALL"] = "C"
         env["LANG"] = "C"
 
         completed = subprocess.run(
-            [sys.executable, "-X", "utf8=0", "-c", script],
+            [sys.executable, "-X", "utf8=0", str(probe)],
             capture_output=True,
             text=True,
             encoding="utf-8",
