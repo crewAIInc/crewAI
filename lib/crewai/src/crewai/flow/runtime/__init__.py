@@ -135,6 +135,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.state.method_outputs import rebuild_output_types
 from crewai.telemetry.tracing.context import get_trace_session
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
@@ -750,7 +751,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
             self._method_outputs = [
-                entry
+                rebuild_output_types(entry)
                 if isinstance(entry, dict) and "method" in entry and "output" in entry
                 else {"method": "", "output": entry}
                 for entry in self.checkpoint_method_outputs

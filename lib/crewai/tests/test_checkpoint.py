@@ -20,13 +20,15 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
+from crewai.flow.human_feedback import human_feedback
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
     _resolve,
     _SENTINEL,
 )
+from crewai.state.method_outputs import rebuild_output_types
 from crewai.state.provider.json_provider import JsonProvider
 from crewai.state.provider.sqlite_provider import SqliteProvider
 from crewai.state.runtime import RuntimeState
@@ -1092,3 +1094,142 @@ class TestCallbacksAcrossRestore:
         )
         assert len(restored.kickoff().tasks_output) == 2
 
+
+class _Quote(BaseModel):
+    amount: int
+
+
+class _Order:
+    class Line(BaseModel):
+        sku: str
+
+
+class _ApproveProvider:
+    def request_feedback(self, context: Any, flow: Flow) -> str:
+        return "looks good"
+
+
+_PENDING_FAILURES: list[str] = []
+_FACTORY_CALLS: list[Any] = []
+
+
+def _factory(*args: Any, **kwargs: Any) -> None:
+    _FACTORY_CALLS.append((args, kwargs))
+
+
+class _OrderFlow(Flow):
+    @start()
+    def price(self) -> _Quote:
+        return _Quote(amount=42)
+
+    @listen(price)
+    def charge(self, quote: Any) -> None:
+        if _PENDING_FAILURES:
+            raise RuntimeError(_PENDING_FAILURES.pop())
+        self.state["charged"] = quote.amount
+
+
+class _ReviewFlow(Flow):
+    @start()
+    @human_feedback(message="Approve?", provider=_ApproveProvider())
+    def ask(self) -> str:
+        return "draft"
+
+    @listen(ask)
+    def record(self, result: Any) -> None:
+        if _PENDING_FAILURES:
+            raise RuntimeError(_PENDING_FAILURES.pop())
+        self.state["feedback"] = result.feedback
+
+
+def _checkpoint_after_listener_failure(flow_cls: type[Flow], directory: Path) -> str:
+    """Run ``flow_cls`` once with its listener failing; return the last checkpoint."""
+    _PENDING_FAILURES[:] = ["listener failed once"]
+    flow = flow_cls(
+        checkpoint=CheckpointConfig(
+            location=str(directory), on_events=["method_execution_finished"]
+        )
+    )
+    with pytest.raises(RuntimeError, match="listener failed once"):
+        flow.kickoff()
+    return str(max(directory.rglob("*.json"), key=lambda p: p.stat().st_mtime))
+
+
+class TestRestoredMethodOutputTypes:
+    """A resumed flow hands listeners the same output types as the first run."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_checkpoint_handlers(self, monkeypatch: pytest.MonkeyPatch) -> Any:
+        from crewai.events.event_bus import crewai_event_bus
+
+        # The root conftest clears the event bus after every test; re-register
+        # the checkpoint handlers and drop any restored state from a prior test.
+        monkeypatch.setattr(
+            "crewai.state.checkpoint_listener._handlers_registered", False
+        )
+        crewai_event_bus.reset_runtime_state()
+        yield
+        crewai_event_bus.reset_runtime_state()
+
+    def test_listener_receives_pydantic_output_after_restore(
+        self, tmp_path: Path
+    ) -> None:
+        latest = _checkpoint_after_listener_failure(_OrderFlow, tmp_path)
+
+        restored = _OrderFlow.from_checkpoint(CheckpointConfig(restore_from=latest))
+        restored.kickoff()
+
+        assert restored.state["charged"] == 42
+
+    def test_human_feedback_listener_keeps_feedback_after_restore(
+        self, tmp_path: Path
+    ) -> None:
+        latest = _checkpoint_after_listener_failure(_ReviewFlow, tmp_path)
+
+        restored = _ReviewFlow.from_checkpoint(CheckpointConfig(restore_from=latest))
+        restored.kickoff()
+
+        assert restored.state["feedback"] == "looks good"
+
+    def test_restore_rebuilds_a_nested_model(self) -> None:
+        entry = {
+            "method": "line",
+            "output": {"sku": "A1"},
+            "output_type": f"{_Order.__module__}:_Order.Line",
+        }
+
+        rebuilt = rebuild_output_types(entry)
+
+        assert rebuilt["output"] == _Order.Line(sku="A1")
+
+    def test_restore_never_imports_a_module_named_by_the_checkpoint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        marker = tmp_path / "imported"
+        (tmp_path / "crewai_untrusted_module.py").write_text(
+            f"open({str(marker)!r}, 'w').close()\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        entry = {
+            "method": "price",
+            "output": {"amount": 42},
+            "output_type": "crewai_untrusted_module:Quote",
+        }
+
+        rebuilt = rebuild_output_types(entry)
+
+        assert not marker.exists()
+        assert rebuilt == {"method": "price", "output": {"amount": 42}}
+
+    def test_restore_never_calls_a_non_model_named_by_the_checkpoint(self) -> None:
+        entry = {
+            "method": "price",
+            "output": {"amount": 42},
+            "output_type": f"{_factory.__module__}:_factory",
+        }
+        _FACTORY_CALLS.clear()
+
+        rebuilt = rebuild_output_types(entry)
+
+        assert _FACTORY_CALLS == []
+        assert rebuilt == {"method": "price", "output": {"amount": 42}}
