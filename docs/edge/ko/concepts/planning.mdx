@@ -368,7 +368,7 @@ AI LLM에 대한 가장 관련성 높은 정보 10가지를 담은 불릿 포인
 
 ### 계획 LLM
 
-Crew 계획은 기본적으로 `gpt-5.4-mini`를 사용합니다. 다른 모델을 사용하려면 `planning_llm`을 모델 이름 또는 `LLM` 인스턴스로 설정하세요. 예: `Crew(..., planning=True, planning_llm="gpt-5")`.
+Crew 계획은 기본적으로 `gpt-6-luna`를 사용합니다. 다른 모델을 사용하려면 `planning_llm`을 모델 이름 또는 `LLM` 인스턴스로 설정하세요. 예: `Crew(..., planning=True, planning_llm="gpt-5")`.
 
 <Warning>
 기본 계획 LLM을 사용하면, 에이전트가 다른 제공자를 사용하더라도 crew 계획에는 유효한 OpenAI API 키가 필요합니다. OpenAI API 키가 설정되어 있지 않다면 `planning_llm`을 사용할 수 있는 모델로 설정하세요.

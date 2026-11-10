@@ -54,7 +54,7 @@ def test_create_agent_exports_installable_agent(
     agent = load_agent_project(agent_project)
     assert isinstance(agent, Agent)
     assert agent.conversational is True
-    assert agent.llm.model == ("gpt-6.1-sol" if model is None else "gpt-4o-mini")
+    assert agent.llm.model == ("gpt-6-luna" if model is None else "gpt-4o-mini")
     assert agent.llm.api == "responses"
     assert (
         agent.tools[0].run()
@@ -225,7 +225,7 @@ def test_create_config_agent_loads_and_archives_without_source_package(
     agent = load_agent_project(root)
     assert agent.role == "General-purpose AI agent"
     assert agent.conversational is True
-    assert agent.llm.model == "gpt-6.1-sol"
+    assert agent.llm.model == "gpt-6-luna"
     assert agent.llm.api == "responses"
     archive = create_project_zip("config_agent", project_dir=root)
     try:

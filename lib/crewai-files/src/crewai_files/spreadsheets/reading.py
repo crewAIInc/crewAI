@@ -36,6 +36,7 @@ _MAX_UNPACKED: Final = 300_000_000
 # fills a sheet's whole rectangle before any of it reaches Python, so one value at
 # XFD1048576 would make a 5 KB file 17 billion cells.
 _MAX_CELLS: Final = 10_000_000
+_MAX_SHEET_NAME: Final = 31
 _MAX_SHEETS: Final = 50
 _MAX_COLUMNS: Final = 2_000
 _HEADER_SCAN: Final = 20
@@ -209,11 +210,11 @@ def _read_xlsx(data: bytes) -> Workbook:
     cells_left = _MAX_CELLS
     for sheet_name, extent in list(extents.items())[:_MAX_SHEETS]:
         if extent is None or extent[0] * extent[1] > cells_left:
-            too_far[" ".join(sheet_name.split())] = extent
+            too_far[_sheet_name(sheet_name)] = extent
             continue
         cells_left -= extent[0] * extent[1]
         readable.add(sheet_name)
-    unread = [" ".join(n.split()) for n in list(extents)[_MAX_SHEETS:]]
+    unread = [_sheet_name(n) for n in list(extents)[_MAX_SHEETS:]]
     if not readable:
         if too_far:
             raise SpreadsheetError("too_far", _TOO_FAR)
@@ -235,7 +236,7 @@ def _read_xlsx(data: bytes) -> Workbook:
             grid, more = _trim(cells)
             sheets.append(
                 Sheet(
-                    name=" ".join(meta.name.split()),
+                    name=_sheet_name(meta.name),
                     hidden=meta.visible != SheetVisibleEnum.Visible,
                     grid=grid,
                     more_columns=more,
@@ -629,6 +630,13 @@ def number_text(value: float) -> str:
     if abs(value) >= 1:
         return f"{value:.2f}".rstrip("0").rstrip(".")
     return f"{value:.4g}"
+
+
+def _sheet_name(raw: str) -> str:
+    """A sheet's name as it is shown and asked for: one line, no double quote to
+    break out of the quotes it is shown in, and at most Excel's own 31 characters
+    (a longer one is not a name Excel wrote)."""
+    return " ".join(raw.split()).replace('"', "'")[:_MAX_SHEET_NAME]
 
 
 def text_of(value: object, limit: int | None = None) -> str:

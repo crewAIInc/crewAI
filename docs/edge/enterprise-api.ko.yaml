@@ -22,11 +22,18 @@ security:
 paths:
   /inputs:
     get:
-      summary: 필요 입력값 조회
+      summary: 입력값 조회
       description: |
         **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
 
-        실행에 필요한 입력 파라미터 목록을 반환합니다.
+        크루 또는 Flow가 받는 입력을 반환합니다. `inputs`는 호출자가 전달할 수 있는 모든 입력이고,
+        `required_inputs`는 `POST /kickoff`가 없으면 실행을 거부하는 입력입니다. `required_inputs`에 없는
+        입력은 선택 사항이며 기본값을 사용합니다.
+
+        Flow의 입력은 state의 필수 필드와 Flow가 선언한 선택 입력입니다. 코드 Flow의 Pydantic state에서는
+        `description`이 있는 필드, 선언형 Flow에서는 기본값이 있는 필드가 선택 입력입니다. Flow가 직접 쓰는
+        작업 필드와 출력 필드는 나열되지 않습니다. 어떤 필드에도 `description`이 없는 코드 Flow는 모든 필드를
+        나열합니다.
       operationId: getRequiredInputs
       responses:
         '200':
@@ -40,6 +47,12 @@ paths:
                     type: array
                     items:
                       type: string
+                    description: 호출자가 전달할 수 있는 모든 입력 (필수 및 선택)
+                  required_inputs:
+                    type: array
+                    items:
+                      type: string
+                    description: '`POST /kickoff`에 반드시 필요한 입력 (`inputs`의 부분집합)'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
@@ -79,6 +92,30 @@ paths:
                   kickoff_id:
                     type: string
                     format: uuid
+        '422':
+          description: >-
+            검증 오류: 필수 입력이 누락되었거나, 에이전트의 앱이 CrewAI AMP에 연결되어 있지 않습니다. 요청에 어떤 토큰을 사용하든 실행이 시작되기 전에 앱을 확인하며, `agents`가 연결할 앱이 있는 모든 에이전트를 알려줍니다. 계층형 crew의 앱처럼 이 확인에서 걸러지지 않은 앱은 실행을 실패시키며, `GET /status/{kickoff_id}`가 해당 앱을 알려줍니다.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - type: object
+                    properties:
+                      detail:
+                        $ref: '#/components/schemas/AppsNotConnected'
+              examples:
+                apps_not_connected:
+                  summary: 에이전트의 앱이 CrewAI AMP에 연결되어 있지 않음
+                  value:
+                    detail:
+                      code: "apps_not_connected"
+                      message: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
+                      agent: "Asana Workspace Scout"
+                      missing_apps: ["asana/get_projects"]
+                      agents:
+                        - agent: "Asana Workspace Scout"
+                          missing_apps: ["asana/get_projects"]
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '500':
@@ -294,13 +331,19 @@ components:
     ExecutionError:
       type: object
       properties:
+        state:
+          type: string
+          enum: ["FAILED"]
+          description: 실행 상태
         status:
           type: string
-          enum: ["error"]
+          description: 무엇이 잘못되었는지 설명하는 오류 메시지
+          example: "Task execution failed: Invalid API key"
         error:
-          type: string
-        execution_time:
-          type: number
+          allOf:
+            - $ref: '#/components/schemas/AppsNotConnected'
+          nullable: true
+          description: 에이전트의 앱이 CrewAI AMP에 연결되어 있지 않아 실행이 실패한 경우에 설정되며, 그 외의 실패에서는 null입니다.
 
     TaskResult:
       type: object
@@ -336,6 +379,41 @@ components:
               type: array
               items:
                 type: string
+
+    AppsNotConnected:
+      type: object
+      description: 에이전트의 앱이 CrewAI AMP에 연결되어 있지 않거나, CrewAI AMP가 알지 못하는 앱입니다.
+      properties:
+        code:
+          type: string
+          enum: ["apps_not_connected"]
+          description: 항상 `apps_not_connected`
+        message:
+          type: string
+          description: 사람이 읽을 수 있는 오류 메시지
+          example: "Agent 'Asana Workspace Scout' needs apps that are not connected in AMP: asana/get_projects"
+        agent:
+          type: string
+          description: "`agents`의 첫 번째 에이전트의 역할"
+          example: "Asana Workspace Scout"
+        missing_apps:
+          type: array
+          items:
+            type: string
+          description: 첫 번째 에이전트가 CrewAI AMP에서 연결해야 할 앱 (에이전트가 선언한 그대로, `app` 또는 `app/action`)
+          example: ["asana/get_projects"]
+        agents:
+          type: array
+          description: 연결할 앱이 있는 모든 에이전트와 각각의 `agent`, `missing_apps`. `GET /status/{kickoff_id}`에서는 실행이 멈춘 에이전트
+          items:
+            type: object
+            properties:
+              agent:
+                type: string
+              missing_apps:
+                type: array
+                items:
+                  type: string
 
   responses:
     UnauthorizedError:
