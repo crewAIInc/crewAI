@@ -5,8 +5,10 @@ from __future__ import annotations
 import inspect
 from contextlib import closing
 import json
+import logging
 import os
 import sqlite3
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -20,7 +22,8 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
+from crewai.flow.human_feedback import HumanFeedbackResult, human_feedback
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -700,6 +703,260 @@ class TestLegacyMethodOutputsRestore:
         flow._method_outputs = ["legacy"]
 
         assert flow.method_outputs == ["legacy"]
+
+
+class Quote(BaseModel):
+    amount: int
+
+
+def _write_remote_type_module(tmp_path: Path) -> None:
+    """Create an importable module defining ``Remote`` outside the repo tree."""
+    source = (
+        "from pydantic import BaseModel\n\n\n"
+        "class Remote(BaseModel):\n    amount: int\n"
+    )
+    (tmp_path / "remote_checkpoint_types.py").write_text(source)
+
+
+class TestRestoredMethodOutputTypes:
+    """Structured outputs recorded with type paths rebuild on restore."""
+
+    def _checkpoint_flow_with_outputs(self, d: str, outputs: list[Any]) -> str:
+        flow = Flow()
+        flow._method_outputs = outputs
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        return state.checkpoint(d)
+
+    def test_pydantic_output_round_trips_as_model(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d, [{"method": "price", "output": Quote(amount=42)}]
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == [Quote(amount=42)]
+
+    def test_human_feedback_dataclass_round_trips(self) -> None:
+        result = HumanFeedbackResult(
+            output="draft", feedback="ship it", method_name="ask"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d, [{"method": "ask", "output": "draft", "human_feedback": result}]
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        rebuilt = restored._method_outputs[0]
+        assert rebuilt["output"] == "draft"
+        assert isinstance(rebuilt["human_feedback"], HumanFeedbackResult)
+        assert rebuilt["human_feedback"].feedback == "ship it"
+
+    def test_legacy_entries_without_type_paths_pass_through(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d,
+                [
+                    {"method": "m", "output": {"a": 1}},
+                    "raw",
+                ],
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == [{"a": 1}, "raw"]
+
+    def test_unresolvable_type_degrades_to_json_value(self, caplog: Any) -> None:
+        entry = {
+            "method": "m",
+            "output": {"amount": 42},
+            "output_type": "no.such.Module.Quote",
+        }
+        flow = Flow()
+        flow._method_outputs = [entry]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            with caplog.at_level(logging.WARNING):
+                restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == [{"amount": 42}]
+        assert "Could not import" in caplog.text
+
+    def test_unloaded_type_path_not_imported_without_opt_in(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        _write_remote_type_module(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d,
+                [
+                    {
+                        "method": "price",
+                        "output": {"amount": 42},
+                        "output_type": "remote_checkpoint_types.Remote",
+                    }
+                ],
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            with caplog.at_level(logging.WARNING):
+                restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == [{"amount": 42}]
+        assert "Could not import" in caplog.text
+        # Restore must not execute a checkpoint-named module's code unless
+        # the deserialization opt-in is set.
+        assert "remote_checkpoint_types" not in sys.modules
+
+    def test_opt_in_imports_unloaded_type_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _write_remote_type_module(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        with tempfile.TemporaryDirectory() as d:
+            loc = self._checkpoint_flow_with_outputs(
+                d,
+                [
+                    {
+                        "method": "price",
+                        "output": {"amount": 42},
+                        "output_type": "remote_checkpoint_types.Remote",
+                    }
+                ],
+            )
+            cfg = CheckpointConfig(restore_from=loc)
+            try:
+                restored = Flow.from_checkpoint(cfg)
+            finally:
+                # Drop the gated import so later tests see a clean sys.modules.
+                sys.modules.pop("remote_checkpoint_types", None)
+
+        (rebuilt,) = restored.method_outputs
+        assert type(rebuilt).__name__ == "Remote"
+        assert rebuilt.amount == 42
+
+
+class TestRestoredFlowListenerInputs:
+    """A resumed kickoff hands listeners the inputs of the first run.
+
+    Regression tests for #8974 (Pydantic outputs restored as plain dicts).
+    """
+
+    @pytest.fixture(autouse=True)
+    def _checkpoint_handlers(self, monkeypatch: pytest.MonkeyPatch) -> Any:
+        from crewai.events.event_bus import crewai_event_bus
+
+        # The root conftest clears the event bus after every test, but the
+        # listener's register-once flag stays set; reset it so this test's
+        # checkpoint handlers are registered again.
+        monkeypatch.setattr(
+            "crewai.state.checkpoint_listener._handlers_registered", False
+        )
+        crewai_event_bus.reset_runtime_state()
+        yield
+        crewai_event_bus.reset_runtime_state()
+
+    @staticmethod
+    def _wait_for_checkpoints(location: str, minimum: int = 1) -> list[Path]:
+        """Checkpoint writes are async; wait until the expected files exist."""
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            paths = list(Path(location).glob("**/*.json"))
+            if len(paths) >= minimum:
+                return paths
+            time.sleep(0.05)
+        raise AssertionError(f"Expected {minimum} checkpoint(s) under {location}")
+
+    def test_resumed_flow_preserves_pydantic_listener_input(
+        self, tmp_path: Path
+    ) -> None:
+        """#8974: a skipped start method's model output is not a plain dict."""
+        location = str(tmp_path / "cp")
+        received: list[Any] = []
+        failures = [1]
+
+        class OrderFlow(Flow):
+            @start()
+            def price(self):
+                return Quote(amount=42)
+
+            @listen(price)
+            def charge(self, quote):
+                received.append(quote)
+                if failures[0]:
+                    failures[0] -= 1
+                    raise RuntimeError("charge failed")
+                self.state["charged"] = quote.amount
+
+        with pytest.raises(RuntimeError):
+            OrderFlow(
+                checkpoint=CheckpointConfig(
+                    location=location, on_events=["method_execution_finished"]
+                )
+            ).kickoff()
+
+        (latest,) = self._wait_for_checkpoints(location)
+
+        restored = OrderFlow.from_checkpoint(
+            CheckpointConfig(restore_from=str(latest))
+        )
+        restored.kickoff()
+
+        assert [type(quote).__name__ for quote in received] == ["Quote", "Quote"]
+        assert restored.state.get("charged") == 42
+
+    def test_resumed_flow_preserves_human_feedback_result(
+        self, tmp_path: Path
+    ) -> None:
+        """#8974: the listener of a skipped reviewed method gets its result."""
+        location = str(tmp_path / "cp")
+        received: list[Any] = []
+        failures = [1]
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(message="Approve?")
+            def ask(self):
+                return "draft"
+
+            @listen(ask)
+            def record(self, result):
+                received.append(type(result).__name__)
+                if failures[0]:
+                    failures[0] -= 1
+                    raise RuntimeError("record failed")
+                self.state["feedback"] = result.feedback
+
+        first = ReviewFlow(
+            checkpoint=CheckpointConfig(
+                location=location, on_events=["method_execution_finished"]
+            )
+        )
+        with (
+            pytest.raises(RuntimeError),
+            patch.object(first, "_request_human_feedback", return_value="ship it"),
+        ):
+            first.kickoff()
+
+        (latest,) = self._wait_for_checkpoints(location)
+
+        restored = ReviewFlow.from_checkpoint(
+            CheckpointConfig(restore_from=str(latest))
+        )
+        with patch.object(
+            restored, "_request_human_feedback", return_value="ship it"
+        ):
+            restored.kickoff()
+
+        assert received == ["HumanFeedbackResult", "HumanFeedbackResult"]
+        assert restored.state.get("feedback") == "ship it"
 
 
 class TestAgentCheckpoint:
