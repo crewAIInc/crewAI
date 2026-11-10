@@ -142,10 +142,15 @@ class ConversationSnapshot:
         Returns:
             The snapshot as JSON with sorted keys and unescaped Unicode.
         """
+        state = dict(self.state)
+        if state.get("messages") is not None:
+            # Use the same structured normalization as reads without mutating
+            # the snapshot or the custom backend's Pydantic message objects.
+            state["messages"] = list(self.messages)
         document: dict[str, Any] = {
             "format_version": SNAPSHOT_FORMAT_VERSION,
             "session_id": self.session_id,
-            "state": self.state,
+            "state": state,
         }
         return json.dumps(
             document,

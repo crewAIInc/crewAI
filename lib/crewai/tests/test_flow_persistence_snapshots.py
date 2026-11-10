@@ -204,6 +204,43 @@ class TestConversationSnapshot:
         assert restored.state == state
         assert restored.transcript == [("user", "你好，世界"), ("assistant", "reply")]
 
+    def test_json_round_trip_preserves_pydantic_messages(self) -> None:
+        class Message(BaseModel):
+            role: str
+            content: list[dict[str, Any]]
+            tool_calls: list[dict[str, Any]]
+
+        message = Message(
+            role="assistant",
+            content=[{"type": "text", "text": "你好"}],
+            tool_calls=[{"id": "call-1", "function": {"name": "lookup"}}],
+        )
+        state = {
+            "id": SESSION_ID,
+            "messages": [{"role": "user", "content": "hi"}, message],
+            "metadata": {"count": 2},
+        }
+        backend = MemoryPersistence(states={SESSION_ID: state})
+        snapshot = read_snapshot(SESSION_ID, backend)
+        assert snapshot is not None
+        original_message = snapshot.state["messages"][1]
+
+        payload = snapshot.to_json()
+        restored = ConversationSnapshot.from_json(payload)
+        target = MemoryPersistence()
+        write_snapshot(restored, target)
+
+        assert restored.messages == snapshot.messages
+        assert restored.transcript == snapshot.transcript
+        assert restored.state["metadata"] == state["metadata"]
+        assert restored.state["messages"][1] == message.model_dump(mode="json")
+        assert target.states[SESSION_ID] == restored.state
+        assert snapshot.to_json() == payload
+        assert snapshot.state["messages"][1] is original_message
+        assert isinstance(original_message, Message)
+        assert backend.states[SESSION_ID]["messages"][1] is message
+        assert backend.saved == []
+
     def test_json_is_deterministic(self) -> None:
         first = ConversationSnapshot(session_id=SESSION_ID, state={"b": 1, "a": 2})
         second = ConversationSnapshot(session_id=SESSION_ID, state={"a": 2, "b": 1})
