@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 from typing import Any
 
+from pydantic import TypeAdapter, ValidationError
 from rich.console import Console
 from rich.table import Table
 
@@ -11,6 +12,20 @@ from crewai_cli.user_data import _load_user_data
 
 
 console = Console()
+
+
+def _parse_setting_value(annotation: Any, value: str) -> Any:
+    """Coerce a CLI string into the type declared by a settings field.
+
+    JSON values such as ``{"scope": "admin"}`` are parsed for container fields;
+    plain strings that are not valid JSON fall back to Python-mode validation.
+    Raises ``ValidationError`` when the value cannot represent the field type.
+    """
+    adapter = TypeAdapter(annotation)
+    try:
+        return adapter.validate_json(value)
+    except ValidationError:
+        return adapter.validate_python(value)
 
 
 class SettingsCommand(BaseCommand):
@@ -79,7 +94,7 @@ class SettingsCommand(BaseCommand):
 
         readonly_settings = READONLY_SETTINGS_KEYS + HIDDEN_SETTINGS_KEYS
 
-        if not hasattr(self.settings, key) or key in readonly_settings:
+        if key not in Settings.model_fields or key in readonly_settings:
             console.print(
                 f"Error: Unknown or readonly configuration key '{key}'",
                 style="bold red",
@@ -90,7 +105,18 @@ class SettingsCommand(BaseCommand):
                     console.print(f"  - {field_name}", style="yellow")
             raise SystemExit(1)
 
-        setattr(self.settings, key, value)
+        try:
+            parsed_value = _parse_setting_value(
+                Settings.model_fields[key].annotation, value
+            )
+        except ValidationError:
+            console.print(
+                f"Error: Invalid value for '{key}': '{value}'",
+                style="bold red",
+            )
+            raise SystemExit(1) from None
+
+        setattr(self.settings, key, parsed_value)
         self.settings.dump()
 
         console.print(f"Successfully set '{key}' to '{value}'", style="bold green")
