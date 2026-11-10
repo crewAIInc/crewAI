@@ -1102,6 +1102,15 @@ class Agent(BaseAgent):
             TimeoutError: If execution exceeds the timeout.
             RuntimeError: If execution fails for other reasons.
         """
+        if getattr(self, "_timed_out_worker_running", False):
+            # A previous attempt timed out and its worker still holds the agent
+            # executor. Retrying now would surface as "Executor is already
+            # running" - a RuntimeError the retry loop treats as retryable -
+            # instead of the timeout that actually happened.
+            raise TimeoutError(
+                f"Task '{task.description}' timed out and the previous attempt is still running."
+            )
+
         ctx = contextvars.copy_context()
         executor = concurrent.futures.ThreadPoolExecutor()
         try:
@@ -1116,6 +1125,12 @@ class Agent(BaseAgent):
                 return future.result(timeout=timeout)
             except concurrent.futures.TimeoutError as e:
                 future.cancel()
+                self._timed_out_worker_running = True
+
+                def _clear_timeout_flag(_future):
+                    self._timed_out_worker_running = False
+
+                future.add_done_callback(_clear_timeout_flag)
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
