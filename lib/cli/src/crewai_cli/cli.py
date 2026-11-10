@@ -199,7 +199,7 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "agent_format",
     type=click.Choice(["python", "json", "yaml"]),
     default=None,
-    show_default="yaml",
+    show_default="json",
     help="Experimental agent projects only: definition format.",
 )
 @click.option(
@@ -236,7 +236,7 @@ def create(
 ) -> None:
     """Create a new crew, flow, agent, tool, skill, or template.
 
-    Standalone agent support is experimental. Agents use YAML by default.
+    Standalone agent support is experimental. Agents use JSON by default.
     """
     if deprecated_skip_provider:
         warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
@@ -324,7 +324,7 @@ def create(
             )
         from crewai_cli.create_agent import create_agent
 
-        create_agent(name, format=agent_format or "yaml")
+        create_agent(name, format=agent_format or "json")
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
