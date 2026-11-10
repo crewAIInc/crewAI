@@ -11,6 +11,7 @@ from crewai.events.event_types import (
 from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.hooks.dispatch import InterceptionPoint, clear_all, on
 from crewai.tasks.task_output import TaskOutput
 
 
@@ -779,3 +780,209 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_retry_preserves_original_task_context():
+    """Upstream task context must survive a guardrail retry (#8219)."""
+
+    def guardrail(result: TaskOutput):
+        if "GOOD" in result.raw:
+            return (True, result)
+        return (False, "must include GOOD")
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.crew = None
+    agent.verbose = False
+    agent.last_messages = []
+
+    captured_contexts: list[str | None] = []
+
+    def execute_task(task, context, tools):
+        captured_contexts.append(context)
+        if len(captured_contexts) == 1:
+            return "bad draft"
+        return "GOOD note citing ACCT-8841"
+
+    agent.execute_task.side_effect = execute_task
+
+    upstream = "Account service code: ACCT-8841\nShipment: SHP-2207"
+    task = create_smart_task(
+        description="Write the case note citing the account service code",
+        expected_output="internal case note",
+        guardrail=guardrail,
+        guardrail_max_retries=1,
+    )
+
+    result = task.execute_sync(agent=agent, context=upstream)
+
+    assert result.raw == "GOOD note citing ACCT-8841"
+    assert len(captured_contexts) == 2
+    assert captured_contexts[0] == upstream
+    retry_context = captured_contexts[1]
+    assert retry_context is not None
+    assert "ACCT-8841" in retry_context
+    assert "must include GOOD" in retry_context
+    assert "bad draft" in retry_context
+
+
+@pytest.mark.asyncio
+async def test_aguardrail_retry_preserves_original_task_context():
+    """Async guardrail retries must also keep declared upstream context (#8219)."""
+
+    def guardrail(result: TaskOutput):
+        if "GOOD" in result.raw:
+            return (True, result)
+        return (False, "must include GOOD")
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.crew = None
+    agent.verbose = False
+    agent.last_messages = []
+
+    captured_contexts: list[str | None] = []
+
+    async def aexecute_task(task, context, tools):
+        captured_contexts.append(context)
+        if len(captured_contexts) == 1:
+            return "bad draft"
+        return "GOOD note citing ACCT-8841"
+
+    agent.aexecute_task.side_effect = aexecute_task
+
+    upstream = "Account service code: ACCT-8841\nShipment: SHP-2207"
+    task = create_smart_task(
+        description="Write the case note citing the account service code",
+        expected_output="internal case note",
+        guardrail=guardrail,
+        guardrail_max_retries=1,
+    )
+
+    result = await task.aexecute_sync(agent=agent, context=upstream)
+
+    assert result.raw == "GOOD note citing ACCT-8841"
+    assert len(captured_contexts) == 2
+    retry_context = captured_contexts[1]
+    assert retry_context is not None
+    assert "ACCT-8841" in retry_context
+    assert "must include GOOD" in retry_context
+    assert "bad draft" in retry_context
+
+def test_guardrail_retry_preserves_pre_step_rewritten_context():
+    """PRE_STEP context rewrites must survive a guardrail retry (#8220)."""
+    clear_all()
+
+    @on(InterceptionPoint.PRE_STEP)
+    def redact_secret(ctx):
+        if getattr(ctx, "kind", None) != "task":
+            return None
+        payload = ctx.payload
+        if isinstance(payload, str):
+            return payload.replace("SECRET-TOKEN", "[REDACTED]")
+        return None
+
+    try:
+
+        def guardrail(result: TaskOutput):
+            if "GOOD" in result.raw:
+                return (True, result)
+            return (False, "must include GOOD")
+
+        agent = Mock()
+        agent.role = "test_agent"
+        agent.crew = None
+        agent.verbose = False
+        agent.last_messages = []
+
+        captured_contexts: list[str | None] = []
+
+        def execute_task(task, context, tools):
+            captured_contexts.append(context)
+            if len(captured_contexts) == 1:
+                return "bad draft"
+            return "GOOD note"
+
+        agent.execute_task.side_effect = execute_task
+
+        upstream = "Customer token SECRET-TOKEN must stay redacted"
+        task = create_smart_task(
+            description="Write the case note",
+            expected_output="internal case note",
+            guardrail=guardrail,
+            guardrail_max_retries=1,
+        )
+
+        result = task.execute_sync(agent=agent, context=upstream)
+
+        assert result.raw == "GOOD note"
+        assert len(captured_contexts) == 2
+        assert captured_contexts[0] == "Customer token [REDACTED] must stay redacted"
+        retry_context = captured_contexts[1]
+        assert retry_context is not None
+        assert "[REDACTED]" in retry_context
+        assert "SECRET-TOKEN" not in retry_context
+        assert "must include GOOD" in retry_context
+        assert "bad draft" in retry_context
+    finally:
+        clear_all()
+
+
+@pytest.mark.asyncio
+async def test_aguardrail_retry_preserves_pre_step_rewritten_context():
+    """Async PRE_STEP context rewrites must survive a guardrail retry (#8220)."""
+    clear_all()
+
+    @on(InterceptionPoint.PRE_STEP)
+    def redact_secret(ctx):
+        if getattr(ctx, "kind", None) != "task":
+            return None
+        payload = ctx.payload
+        if isinstance(payload, str):
+            return payload.replace("SECRET-TOKEN", "[REDACTED]")
+        return None
+
+    try:
+
+        def guardrail(result: TaskOutput):
+            if "GOOD" in result.raw:
+                return (True, result)
+            return (False, "must include GOOD")
+
+        agent = Mock()
+        agent.role = "test_agent"
+        agent.crew = None
+        agent.verbose = False
+        agent.last_messages = []
+
+        captured_contexts: list[str | None] = []
+
+        async def aexecute_task(task, context, tools):
+            captured_contexts.append(context)
+            if len(captured_contexts) == 1:
+                return "bad draft"
+            return "GOOD note"
+
+        agent.aexecute_task.side_effect = aexecute_task
+
+        upstream = "Customer token SECRET-TOKEN must stay redacted"
+        task = create_smart_task(
+            description="Write the case note",
+            expected_output="internal case note",
+            guardrail=guardrail,
+            guardrail_max_retries=1,
+        )
+
+        result = await task.aexecute_sync(agent=agent, context=upstream)
+
+        assert result.raw == "GOOD note"
+        assert len(captured_contexts) == 2
+        assert captured_contexts[0] == "Customer token [REDACTED] must stay redacted"
+        retry_context = captured_contexts[1]
+        assert retry_context is not None
+        assert "[REDACTED]" in retry_context
+        assert "SECRET-TOKEN" not in retry_context
+        assert "must include GOOD" in retry_context
+        assert "bad draft" in retry_context
+    finally:
+        clear_all()
