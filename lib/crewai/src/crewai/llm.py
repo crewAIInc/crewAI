@@ -1125,17 +1125,7 @@ class LLM(BaseLLM):
                         llm=self,
                     )
                     with model_call_hooks_dispatched():
-                        try:
-                            result = instructor_instance.to_pydantic()
-                        except Exception as conversion_error:
-                            # A conversion failure must not be mistaken for a
-                            # mid-stream error: the fail-open handler below would
-                            # return the unvalidated text as a success.
-                            raise StructuredResponseConversionError(
-                                _response_model_conversion_message(
-                                    response_model, conversion_error
-                                )
-                            ) from conversion_error
+                        result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
@@ -1180,11 +1170,7 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except (
-            LLMContextLengthExceededError,
-            EmptyLLMResponseError,
-            StructuredResponseConversionError,
-        ):
+        except (LLMContextLengthExceededError, EmptyLLMResponseError):
             raise
         except Exception as e:
             error_msg = str(e)
@@ -1862,6 +1848,21 @@ class LLM(BaseLLM):
                             instructor_instance.to_pydantic
                         )
                     except Exception as conversion_error:
+                        # `to_pydantic()` runs a completion of its own, so a
+                        # context-length failure keeps its own type: callers
+                        # retry on that, they do not fall back to raw text.
+                        from litellm.exceptions import ContextWindowExceededError
+
+                        if isinstance(
+                            conversion_error,
+                            (
+                                LLMContextLengthExceededError,
+                                ContextWindowExceededError,
+                            ),
+                        ):
+                            raise LLMContextLengthExceededError(
+                                str(conversion_error)
+                            ) from conversion_error
                         # Deliberately not the fail-open path below, which would
                         # return the unvalidated text as a successful result.
                         raise StructuredResponseConversionError(

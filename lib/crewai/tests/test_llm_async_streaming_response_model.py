@@ -6,6 +6,9 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.llm import LLM
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
 from crewai.utilities.exceptions.structured_response_exception import (
     StructuredResponseConversionError,
 )
@@ -119,6 +122,54 @@ async def test_conversion_failure_is_reported_instead_of_returning_raw_text():
 
     assert isinstance(error.value.__cause__, ValueError)
     assert "Answer" in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_context_length_failure_keeps_its_own_error_type():
+    """`to_pydantic()` runs a completion, so an overflow is not a schema error.
+
+    Callers retry on a context-length failure; reporting it as a conversion
+    error would make a too-long stream look like a bad schema.
+    """
+    from litellm.exceptions import ContextWindowExceededError
+
+    class Answer(BaseModel):
+        answer: str
+
+    stub_litellm = MagicMock()
+    stub_litellm.acompletion = _fake_stream
+
+    llm = MagicMock()
+    llm.is_litellm = True
+    llm._extract_finish_reason_and_response_id.return_value = (None, None)
+    llm._usage_to_dict.return_value = None
+
+    instructor = MagicMock()
+    instructor.return_value.to_pydantic.side_effect = ContextWindowExceededError(
+        message="maximum context length is 128000 tokens",
+        model="gpt-4o-mini",
+        llm_provider="openai",
+    )
+
+    with (
+        patch.multiple(
+            "crewai.llm",
+            litellm=stub_litellm,
+            ModelResponseBase=type("ModelResponseBase", (), {}),
+            ModelResponseStream=type("ModelResponseStream", (), {}),
+            LiteLLMStreamingChoices=type("LiteLLMStreamingChoices", (), {}),
+            LiteLLMDelta=type("LiteLLMDelta", (), {}),
+            InternalInstructor=instructor,
+        ),
+        pytest.raises(LLMContextLengthExceededError) as error,
+    ):
+        await LLM._ahandle_streaming_response(
+            llm,
+            params={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+            response_model=Answer,
+        )
+
+    assert isinstance(error.value.__cause__, ContextWindowExceededError)
 
 
 @pytest.mark.asyncio
