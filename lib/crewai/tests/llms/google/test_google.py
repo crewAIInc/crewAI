@@ -691,6 +691,27 @@ def test_gemini_message_formatting_preserves_file_data_without_text():
     assert parts[0].file_data.mime_type == "image/jpeg"
 
 
+@pytest.mark.parametrize("bad_text", [None, {"nested": "hi"}])
+def test_gemini_message_formatting_skips_non_string_text_parts(bad_text):
+    """Test that a text part whose text is not a string is skipped, not str()'d."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Before"},
+                    {"type": "text", "text": bad_text},
+                    {"type": "text", "text": "After"},
+                ],
+            }
+        ]
+    )
+
+    assert [part.text for part in formatted_contents[0].parts] == ["Before", "After"]
+
+
 def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
     """
     Gemini's generateContent API rejects a request whose history ends on a
