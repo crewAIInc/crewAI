@@ -1854,6 +1854,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return outputs
 
     @property
+    def input_history(self) -> list[InputHistoryEntry]:
+        """Return input prompts and responses recorded by ``ask()``.
+
+        Each entry includes the message, response (``None`` when input was
+        unavailable), the method that called ``ask()``, a timestamp, metadata
+        passed to ``ask()``, and ``response_metadata`` from ``InputResponse``.
+
+        Returns:
+            list[InputHistoryEntry]: A shallow copy so callers cannot mutate
+                the flow's internal history.
+        """
+        return list(self._input_history)
+
+    @property
     def flow_id(self) -> str:
         """Returns the unique identifier of this flow instance.
 

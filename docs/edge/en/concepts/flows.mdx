@@ -729,6 +729,106 @@ Access all feedback collected during a flow via `self.last_human_feedback` (most
 
 For a complete guide on human feedback in flows, including **async/non-blocking feedback** with custom providers (Slack, webhooks, etc.), see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
 
+### Custom input provider for `Flow.ask()`
+
+`Flow.ask()` blocks the current step until your `input_provider` returns an answer, the timeout expires, or the provider returns `None`. The default `ConsoleProvider` reads from stdin. Implement the `InputProvider` protocol to drive prompts from a script, queue, WebSocket, or custom UI — without blocking on the console.
+
+This is **different from conversational chat turns**:
+
+| API | Use for |
+|-----|---------|
+| `self.ask(message, metadata=...)` | Mid-step wizard or clarification **inside** a running flow method |
+| `flow.handle_turn(message, session_id=...)` | **Starting** a new chat turn from REST, WebSocket, or a test harness |
+
+See [Conversational Flows](/edge/en/guides/flows/conversational-flows) for `handle_turn()`.
+
+`ask()` always returns `str | None` to your flow code. Providers may return a plain string, `None` when input is unavailable, or an `InputResponse` that adds response metadata (who answered, thread id, etc.). Request metadata from `ask()` is forwarded to `request_input(message, flow, metadata=None)`.
+
+The example below uses a **scripted provider** (no stdin, no LLM calls, no API keys). It answers the first prompt with `InputResponse` metadata, then returns `None` on the second prompt so the flow can branch explicitly instead of treating unavailable input as an answer.
+
+```python Code
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Returns pre-scripted replies; records each (message, metadata) pair."""
+
+    def __init__(self, replies: list[str | InputResponse | None]) -> None:
+        self.replies = list(replies)
+        self.seen: list[tuple[str, dict[str, Any] | None]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow[Any],
+        metadata: dict[str, Any] | None = None,
+    ) -> str | InputResponse | None:
+        self.seen.append((message, metadata))
+        if not self.replies:
+            return None
+        return self.replies.pop(0)
+
+
+class ResearchWizardFlow(Flow):
+    input_provider = ScriptedProvider(
+        [
+            InputResponse(
+                text="vector databases",
+                metadata={"answered_by": "script", "thread_id": "t1"},
+            )
+        ]
+    )
+
+    @start()
+    def gather(self) -> dict[str, str | None]:
+        topic = self.ask(
+            "What should we research?",
+            metadata={"channel": "#research"},
+        )
+        if topic is None:
+            return {"status": "cancelled", "topic": None, "depth": None}
+
+        depth = self.ask(
+            "How deep should we go?",
+            metadata={"channel": "#research"},
+        )
+        if depth is None:
+            return {"status": "partial", "topic": topic, "depth": None}
+
+        return {"status": "ok", "topic": topic, "depth": depth}
+```
+
+After `kickoff()`, inspect response metadata via `flow.input_history` (not only the string returned from `ask()`):
+
+```python Code
+flow = ResearchWizardFlow()
+result = flow.kickoff()
+
+print("result:", result)
+print("provider saw:", flow.input_provider.seen)
+first = flow.input_history[0]
+print("response_metadata:", first["response_metadata"])
+```
+
+<CodeGroup>
+
+```bash Run
+cd lib/crewai && uv run python examples/flow_custom_input_provider.py
+```
+
+```text Output
+result: {'status': 'partial', 'topic': 'vector databases', 'depth': None}
+provider saw: [('What should we research?', {'channel': '#research'}), ('How deep should we go?', {'channel': '#research'})]
+response_metadata: {'answered_by': 'script', 'thread_id': 't1'}
+```
+
+</CodeGroup>
+
+The runnable script lives at `lib/crewai/examples/flow_custom_input_provider.py`. For chat-style multi-turn apps, use `handle_turn()` instead — see [Conversational Flows](/edge/en/guides/flows/conversational-flows).
+
 ## Adding Agents to Flows
 
 Agents can be seamlessly integrated into your flows, providing a lightweight alternative to full Crews when you need simpler, focused task execution. Here's an example of how to use an Agent within a flow to perform market research:
