@@ -73,16 +73,25 @@ class SerplyJobSearchTool(RagTool):
         string = []
         for job in jobs:
             try:
+                details = job.get("description")
+                details = {**job, **details} if isinstance(details, dict) else job
+                highlights = job["highlights"]
+                if not isinstance(highlights, str):
+                    highlights = ", ".join(highlights)
                 string.append(
                     "\n".join(
                         [
                             f"Position: {job['position']}",
-                            f"Employer: {job['employer']}",
-                            f"Location: {job['location']}",
+                            f"Employer: {details['employer']}",
+                            *(
+                                [f"Location: {job['location']}"]
+                                if job.get("location") is not None
+                                else []
+                            ),
                             f"Link: {job['link']}",
-                            f"""Highest: {", ".join([h for h in job["highlights"]])}""",
-                            f"Is Remote: {job['is_remote']}",
-                            f"Is Hybrid: {job['is_remote']}",
+                            f"Highlights: {highlights}",
+                            f"Is Remote: {details.get('is_remote', 'Not specified')}",
+                            f"Is Hybrid: {details.get('is_hybrid', 'Not specified')}",
                             "---",
                         ]
                     )
