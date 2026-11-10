@@ -2338,7 +2338,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             and output_tool is not None
         ):
             cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
+                tool=func_name, tool_input=input_str
             )
             if cached_result is not None:
                 raw_tool_result = cached_result
@@ -2366,7 +2366,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                             )
                         if should_cache:
                             self.tools_handler.cache.add(
-                                tool=func_name, input=input_str, output=raw_result
+                                tool=func_name, tool_input=input_str, output=raw_result
                             )
 
                     result = format_native_tool_output_for_agent(
