@@ -19,6 +19,7 @@ class DataType(str, Enum):
     XML = "xml"
     DOCX = "docx"
     MDX = "mdx"
+    NOTEBOOK = "notebook"
     MYSQL = "mysql"
     POSTGRES = "postgres"
     GITHUB = "github"
@@ -38,6 +39,7 @@ class DataType(str, Enum):
             DataType.TEXT: ("text_chunker", "TextChunker"),
             DataType.DOCX: ("text_chunker", "DocxChunker"),
             DataType.MDX: ("text_chunker", "MdxChunker"),
+            DataType.NOTEBOOK: ("text_chunker", "TextChunker"),
             DataType.CSV: ("structured_chunker", "CsvChunker"),
             DataType.JSON: ("structured_chunker", "JsonChunker"),
             DataType.JSONL: ("structured_chunker", "JsonChunker"),
@@ -71,6 +73,7 @@ class DataType(str, Enum):
             DataType.XML: ("xml_loader", "XMLLoader"),
             DataType.WEBSITE: ("webpage_loader", "WebPageLoader"),
             DataType.MDX: ("mdx_loader", "MDXLoader"),
+            DataType.NOTEBOOK: ("notebook_loader", "NotebookLoader"),
             DataType.JSON: ("json_loader", "JSONLoader"),
             DataType.JSONL: ("jsonl_loader", "JSONLLoader"),
             DataType.DOCX: ("docx_loader", "DOCXLoader"),
@@ -121,6 +124,7 @@ class DataTypes:
                 ".csv": DataType.CSV,
                 ".mdx": DataType.MDX,
                 ".md": DataType.MDX,
+                ".ipynb": DataType.NOTEBOOK,
                 ".docx": DataType.DOCX,
                 ".json": DataType.JSON,
                 ".jsonl": DataType.JSONL,
@@ -135,7 +139,8 @@ class DataTypes:
 
         if is_url:
             dtype = get_file_type(url.path)
-            if dtype:
+            # NotebookLoader reads local files or inline JSON, not remote URLs.
+            if dtype and dtype != DataType.NOTEBOOK:
                 return dtype
 
             if "docs" in url.netloc or ("docs" in url.path and url.scheme != "file"):
