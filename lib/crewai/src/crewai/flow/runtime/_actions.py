@@ -472,6 +472,9 @@ def _as_flow_method(action: _BuiltAction) -> Callable[..., Any]:
     signature = getattr(action, "signature", None)
     if signature is not None:
         object.__setattr__(run, "__signature__", signature)
+    if isinstance(action, CodeAction):
+        # Lets the flow read the handler's return type to restore its output.
+        object.__setattr__(run, "__wrapped__", action.handler)
     return run
 
 

@@ -751,12 +751,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
-            declared = [
-                HumanFeedbackResult,
-                *(_return_annotation(method) for method in self._methods.values()),
-            ]
+            return_types = {
+                name: _return_annotation(method)
+                for name, method in self._methods.items()
+            }
             self._method_outputs = [
-                rebuild_output_types(entry, declared)
+                rebuild_output_types(
+                    entry, [HumanFeedbackResult, return_types.get(entry["method"])]
+                )
                 if isinstance(entry, dict) and "method" in entry and "output" in entry
                 else {"method": "", "output": entry}
                 for entry in self.checkpoint_method_outputs
