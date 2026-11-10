@@ -81,13 +81,13 @@ You can run other Actors from [Apify Store](https://apify.com/store) simply by c
 
 ### Actors with typed inputs
 
-`apify/rag-web-browser` takes a single query. Many Actors have several typed input fields, and the tool turns each one into an argument the agent can set from the task. This example uses the [LinkedIn Jobs API Actor](https://apify.com/johnvc/linkedin-jobs-api), which takes a keyword, a location, a `timeRange` of `past-day`, `past-week` or `past-month`, and a `maxJobs` cap:
+`apify/rag-web-browser` takes a single query. Many Actors have several typed input fields. The tool puts the Actor's input schema in the description of its `run_input` argument, so an agent can fill in those fields from the task. This example uses the [LinkedIn Jobs API Actor](https://apify.com/johnvc/linkedin-jobs-api), which takes a keyword, a location, a `timeRange` of `past-day`, `past-week` or `past-month`, and a `maxJobs` cap:
 
 ```python
 from crewai import Agent, Task, Crew
 from crewai_tools import ApifyActorsTool
 
-# Each field in the Actor's input schema becomes an argument the agent can set.
+# The Actor's input schema goes into the description of the tool's run_input argument.
 jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
 
 # Run it manually to see the output shape

@@ -81,13 +81,13 @@ agent = Agent(
 
 ### 타입이 지정된 입력을 받는 Actor
 
-`apify/rag-web-browser`는 검색어 하나만 받습니다. 많은 Actor는 타입이 지정된 입력 필드를 여러 개 가지고 있으며, 이 도구는 각 필드를 에이전트가 작업에 맞춰 설정할 수 있는 인수로 변환합니다. 다음 예시는 키워드, 위치, `timeRange`(`past-day`, `past-week`, `past-month`), `maxJobs` 상한을 받는 [LinkedIn Jobs API Actor](https://apify.com/johnvc/linkedin-jobs-api)를 사용합니다:
+`apify/rag-web-browser`는 검색어 하나만 받습니다. 많은 Actor는 타입이 지정된 입력 필드를 여러 개 가지고 있습니다. 이 도구는 Actor의 입력 스키마를 `run_input` 인수의 설명에 포함하므로, 에이전트가 작업에 맞춰 해당 필드를 채울 수 있습니다. 다음 예시는 키워드, 위치, `timeRange`(`past-day`, `past-week`, `past-month`), `maxJobs` 상한을 받는 [LinkedIn Jobs API Actor](https://apify.com/johnvc/linkedin-jobs-api)를 사용합니다:
 
 ```python
 from crewai import Agent, Task, Crew
 from crewai_tools import ApifyActorsTool
 
-# Each field in the Actor's input schema becomes an argument the agent can set.
+# The Actor's input schema goes into the description of the tool's run_input argument.
 jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
 
 # Run it manually to see the output shape

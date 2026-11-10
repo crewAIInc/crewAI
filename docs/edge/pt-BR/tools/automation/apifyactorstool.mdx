@@ -81,13 +81,13 @@ Você pode executar outros Actors da [Apify Store](https://apify.com/store) apen
 
 ### Actors com entradas tipadas
 
-O `apify/rag-web-browser` recebe uma única consulta. Muitos Actors têm vários campos de entrada tipados, e a ferramenta transforma cada um deles em um argumento que o agente pode definir a partir da tarefa. Este exemplo usa o [Actor LinkedIn Jobs API](https://apify.com/johnvc/linkedin-jobs-api), que recebe uma palavra-chave, uma localização, um `timeRange` (`past-day`, `past-week` ou `past-month`) e um limite `maxJobs`:
+O `apify/rag-web-browser` recebe uma única consulta. Muitos Actors têm vários campos de entrada tipados. A ferramenta inclui o esquema de entrada do Actor na descrição do seu argumento `run_input`, para que o agente possa preencher esses campos a partir da tarefa. Este exemplo usa o [Actor LinkedIn Jobs API](https://apify.com/johnvc/linkedin-jobs-api), que recebe uma palavra-chave, uma localização, um `timeRange` (`past-day`, `past-week` ou `past-month`) e um limite `maxJobs`:
 
 ```python
 from crewai import Agent, Task, Crew
 from crewai_tools import ApifyActorsTool
 
-# Each field in the Actor's input schema becomes an argument the agent can set.
+# The Actor's input schema goes into the description of the tool's run_input argument.
 jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
 
 # Run it manually to see the output shape

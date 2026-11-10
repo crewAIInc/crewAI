@@ -80,13 +80,13 @@ agent = Agent(
 
 ### Actors ذات المدخلات محددة الأنواع
 
-يأخذ `apify/rag-web-browser` استعلامًا واحدًا فقط. تحتوي كثير من Actors على عدة حقول إدخال محددة الأنواع، وتحوّل الأداة كل حقل منها إلى وسيط يمكن للوكيل تعيينه بناءً على المهمة. يستخدم هذا المثال [Actor LinkedIn Jobs API](https://apify.com/johnvc/linkedin-jobs-api)، الذي يأخذ كلمة مفتاحية وموقعًا و`timeRange` (`past-day` أو `past-week` أو `past-month`) وحدًا أقصى `maxJobs`:
+يأخذ `apify/rag-web-browser` استعلامًا واحدًا فقط. تحتوي كثير من Actors على عدة حقول إدخال محددة الأنواع. تضع الأداة مخطط إدخال Actor في وصف الوسيط `run_input`، حتى يتمكن الوكيل من ملء هذه الحقول بناءً على المهمة. يستخدم هذا المثال [Actor LinkedIn Jobs API](https://apify.com/johnvc/linkedin-jobs-api)، الذي يأخذ كلمة مفتاحية وموقعًا و`timeRange` (`past-day` أو `past-week` أو `past-month`) وحدًا أقصى `maxJobs`:
 
 ```python
 from crewai import Agent, Task, Crew
 from crewai_tools import ApifyActorsTool
 
-# Each field in the Actor's input schema becomes an argument the agent can set.
+# The Actor's input schema goes into the description of the tool's run_input argument.
 jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
 
 # Run it manually to see the output shape
