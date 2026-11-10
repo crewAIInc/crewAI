@@ -50,7 +50,10 @@ class ScrapeWebsiteTool(BaseTool):
         cookies: dict[str, str] | None = None,
         **kwargs: Any,
     ):
+        """Initialize the scraper, binding configured cookies to a fixed URL."""
         super().__init__(**kwargs)
+        if cookies is not None and not website_url:
+            raise ValueError("cookies require a fixed website_url.")
         if not BEAUTIFULSOUP_AVAILABLE:
             raise ImportError(
                 "beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`"
@@ -70,7 +73,11 @@ class ScrapeWebsiteTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-        website_url: str | None = kwargs.get("website_url", self.website_url)
+        website_url: str | None = (
+            self.website_url
+            if self.website_url is not None
+            else kwargs.get("website_url")
+        )
         if website_url is None:
             raise ValueError("Website URL must be provided.")
 
