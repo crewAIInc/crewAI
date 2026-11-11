@@ -1,0 +1,14 @@
+[project]
+name = "{{package_name}}"
+version = "0.1.0"
+description = "A standalone CrewAI agent"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+dependencies = ["{{crewai_dependency}}"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "agent"

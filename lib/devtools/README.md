@@ -26,26 +26,28 @@ devtools release 1.10.3a1                # pre-release
 devtools release 1.10.3 --no-edit        # skip editing release notes
 devtools release 1.10.3 --dry-run        # preview without changes
 devtools release 1.10.3 --skip-enterprise  # skip enterprise release phase
+devtools release 1.10.3 --skip-litellm-catalog-update  # skip the catalog PR
 ```
 
 **Flow:**
 
-1. Bumps `__version__` and dependency pins across all `lib/` packages
-2. Runs `uv sync`
-3. Creates version bump PR against main, polls until merged
-4. Generates release notes (OpenAI) from commits since last release
-5. Updates Edge changelogs (`docs/edge/{en,pt-BR,ko,ar}/changelog.mdx`)
-6. Downloads the LiteLLM model catalog into `lib/crewai/src/crewai/llms/litellm_catalog/model_prices_and_context_window.json`, freezes `docs/edge/` into `docs/v<version>/`, registers the version in `docs.json`, and points the canonical `/<lang>/:slug*` redirects at the new default
-7. Opens a `[docs-freeze]` PR against main, polls until merged
-8. Tags main and creates GitHub release
-9. Triggers PyPI publish workflow
-10. Updates `crewAIInc/crew_deployment_test` to the exact CrewAI version,
+1. Downloads the LiteLLM model catalog into `lib/crewai/src/crewai/llms/litellm_catalog/model_prices_and_context_window.json` and opens a `chore: update litellm model catalog` PR against main, polling until merged (skipped when the catalog is unchanged)
+2. Bumps `__version__` and dependency pins across all `lib/` packages
+3. Runs `uv sync`
+4. Creates version bump PR against main, polls until merged
+5. Generates release notes (OpenAI) from commits since last release
+6. Updates Edge changelogs (`docs/edge/{en,pt-BR,ko,ar}/changelog.mdx`)
+7. Freezes `docs/edge/` into `docs/v<version>/`, registers the version in `docs.json`, and points the canonical `/<lang>/:slug*` redirects at the new default
+8. Opens a `[docs-freeze]` PR against main, polls until merged
+9. Tags main and creates GitHub release
+10. Triggers PyPI publish workflow
+11. Updates `crewAIInc/crew_deployment_test` to the exact CrewAI version,
     creates a bump PR, and waits for it to merge
-11. Updates `crewAIInc/flow_deployment_test` to the exact CrewAI version,
+12. Updates `crewAIInc/flow_deployment_test` to the exact CrewAI version,
     creates a bump PR, and waits for it to merge
-12. Clones enterprise repo, bumps versions and `crewai[tools]` dep, runs `uv sync`
-13. Creates enterprise bump PR, polls until merged
-14. Tags and creates GitHub release on enterprise repo
+13. Clones enterprise repo, bumps versions and `crewai[tools]` dep, runs `uv sync`
+14. Creates enterprise bump PR, polls until merged
+15. Tags and creates GitHub release on enterprise repo
 
 > The `docs-snapshots` CI guard rejects writes under `docs/v*/` and deletions/renames in `docs/images/` unless the PR title starts with `[docs-freeze]`. The release CLI sets that prefix automatically; manual edits to a frozen snapshot need the same prefix to land.
 >

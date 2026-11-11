@@ -51,6 +51,10 @@ agent = Agent(
 )
 ```
 
+<Note>
+If CrewAI AMP can't resolve an agent's `apps` because they aren't connected or it doesn't know them, the agent stops with `PlatformAppsUnavailableError` naming them, instead of running without them. Connect them on the Integrations page in CrewAI AMP.
+</Note>
+
 ### Context Capabilities (Skills, Knowledge)
 
 These modify the agent's **prompt** — injecting expertise, instructions, or retrieved data before the agent starts reasoning. They don't give agents new actions; they shape how agents think and what information they have access to.

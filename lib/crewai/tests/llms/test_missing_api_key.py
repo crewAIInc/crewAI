@@ -14,12 +14,14 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import traceback
 from typing import Any
 from unittest.mock import patch
 
 from crewai import Agent, Crew, Task
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import TaskFailedEvent
+from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM, MissingAPIKeyError
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
@@ -27,10 +29,11 @@ from crewai.llms.providers.azure.completion import AzureCompletion
 from crewai.llms.providers.gemini.completion import GeminiCompletion
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.llms.providers.openai_compatible.completion import (
+    OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
 )
 from crewai_cli.deploy.validate import DeployValidator
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError, model_validator
 import pytest
 
 from ..utils import wait_for_event_handlers
@@ -49,7 +52,29 @@ class Provider:
     """Non-key settings the provider needs before it gets as far as the key."""
     hide_keyless_auth: bool = False
     """Hide ``azure.identity`` so Azure has no keyless fallback and needs the key."""
+    compatible: str | None = None
+    """The OpenAI-compatible provider the native class is built for."""
 
+
+# Every OpenAI-compatible provider that needs a key, with a model id it routes natively.
+COMPATIBLE_MODELS = {
+    "openrouter": "openrouter/anthropic/claude-3-opus",
+    "deepseek": "deepseek/deepseek-chat",
+    "cerebras": "cerebras/llama3.1-8b",
+    "dashscope": "dashscope/qwen-turbo",
+    "deepinfra": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct",
+}
+
+COMPATIBLE_PROVIDERS = [
+    Provider(
+        OPENAI_COMPATIBLE_PROVIDERS[name].api_key_env,
+        model.split("/", 1)[1],
+        model,
+        OpenAICompatibleCompletion,
+        compatible=name,
+    )
+    for name, model in COMPATIBLE_MODELS.items()
+]
 
 LAZY_PROVIDERS = [
     Provider("OPENAI_API_KEY", "gpt-4o-mini", "openai/gpt-4o-mini", OpenAICompletion),
@@ -70,6 +95,7 @@ LAZY_PROVIDERS = [
         base_env=(("AZURE_ENDPOINT", "https://test.openai.azure.com"),),
         hide_keyless_auth=True,
     ),
+    *COMPATIBLE_PROVIDERS,
 ]
 
 
@@ -87,6 +113,8 @@ def provider_env(provider: Provider, **env: str) -> Iterator[None]:
 def build(provider: Provider, via_llm: bool, **kwargs: Any) -> BaseLLM:
     if via_llm:
         return LLM(model=provider.llm_model, **kwargs)
+    if provider.compatible:
+        kwargs["provider"] = provider.compatible
     return provider.native(model=provider.model, **kwargs)
 
 
@@ -350,12 +378,22 @@ def test_task_failure_reports_missing_key_as_its_type() -> None:
     assert [event.error_type for event in failed] == [MissingAPIKeyError]
 
 
-class TestOpenAICompatible:
-    """These providers check the key while the model is validated, not on first call.
+def test_every_keyed_compatible_provider_is_covered() -> None:
+    required = {
+        name
+        for name, config in OPENAI_COMPATIBLE_PROVIDERS.items()
+        if config.api_key_required
+    }
+    assert required == set(COMPATIBLE_MODELS)
 
-    Pydantic wraps any ``ValueError`` from a validator in a ``ValidationError``, and
-    ``LLM(...)`` wraps construction errors in an ``ImportError``, so the
-    ``MissingAPIKeyError`` arrives inside those, with its message intact.
+
+class TestOpenAICompatible:
+    """These providers check the key on the first call, like the native ones.
+
+    They used to check it while the model was validated, so ``LLM(...)`` raised at
+    construction and an ``Agent`` built from a model string raised its own
+    ``ValidationError`` around it. Decided otherwise: the model builds without a
+    key, wherever it is built, and the first call raises ``MissingAPIKeyError``.
     """
 
     MESSAGE = (
@@ -363,34 +401,33 @@ class TestOpenAICompatible:
         "still the placeholder 'YOUR_API_KEY'."
     )
 
-    @pytest.mark.parametrize("env", [{}, {"DEEPSEEK_API_KEY": PLACEHOLDER}])
-    def test_direct_construction(self, env: dict[str, str]) -> None:
-        with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ValidationError, match=self.MESSAGE) as exc_info:
-                OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
+    @pytest.mark.parametrize("provider", COMPATIBLE_PROVIDERS, ids=lambda p: p.compatible)
+    @pytest.mark.parametrize("key", [None, PLACEHOLDER], ids=["unset", "placeholder"])
+    def test_construction_needs_no_key(self, provider: Provider, key: str | None) -> None:
+        env = {} if key is None else {provider.env_var: key}
+        with provider_env(provider, **env):
+            llm = build(provider, via_llm=True)
+            native = build(provider, via_llm=False)
 
-        cause = exc_info.value.errors()[0]["ctx"]["error"]
-        assert isinstance(cause, MissingAPIKeyError)
-        assert cause.env_var == "DEEPSEEK_API_KEY"
+        assert isinstance(llm, OpenAICompatibleCompletion)
+        assert llm.api_key is None and native.api_key is None
 
-    @pytest.mark.parametrize("env", [{}, {"DEEPSEEK_API_KEY": PLACEHOLDER}])
-    def test_llm_construction(self, env: dict[str, str]) -> None:
-        with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ImportError, match=self.MESSAGE):
-                LLM(model="deepseek/deepseek-chat")
+    def test_openai_key_is_never_used_for_a_compatible_provider(self) -> None:
+        provider = COMPATIBLE_PROVIDERS[1]
+        with provider_env(provider, OPENAI_API_KEY="sk-openai"):
+            llm = build(provider, via_llm=True)
+            assert llm.api_key is None
+            with pytest.raises(MissingAPIKeyError, match=self.MESSAGE):
+                llm.call("Say hi")
 
-    def test_explicit_placeholder(self) -> None:
+        assert llm.api_key is None
+        assert llm._client is None and llm._async_client is None
+
+    def test_explicit_key_is_used_unchanged(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValidationError, match=self.MESSAGE):
-                OpenAICompatibleCompletion(
-                    model="deepseek-chat", provider="deepseek", api_key=PLACEHOLDER
-                )
+            llm = LLM(model="deepseek/deepseek-chat", api_key="sk-explicit")
 
-    def test_valid_key_is_used_unchanged(self) -> None:
-        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "sk-real-key"}, clear=True):
-            llm = LLM(model="deepseek/deepseek-chat")
-
-        assert llm.api_key == "sk-real-key"
+            assert llm._get_sync_client().api_key == "sk-explicit"
 
     def test_keyless_provider_ignores_placeholder(self) -> None:
         """Ollama needs no key, so the placeholder falls back to its default."""
@@ -399,14 +436,118 @@ class TestOpenAICompatible:
 
         assert llm.api_key == "ollama"
 
-    def test_deploy_validator_reads_the_missing_variable(self, tmp_path: Path) -> None:
-        """``crewai deploy`` turns this import-time failure into a targeted warning."""
+    def test_other_construction_errors_are_still_import_errors(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ImportError) as exc_info:
-                LLM(model="deepseek/deepseek-chat")
+            with pytest.raises(
+                ImportError, match="Error importing native provider: (?s:.*)temperature"
+            ) as exc_info:
+                LLM(model="deepseek/deepseek-chat", api_key="sk-key", temperature="hot")
 
+        assert isinstance(exc_info.value.__cause__, ValidationError)
+
+    def test_agent_built_from_a_model_string(self) -> None:
+        """Pinned as a decision: it builds, and its first call raises the key error.
+
+        It used to raise ``ValidationError`` here, wrapping ``MissingAPIKeyError``.
+        """
+        with patch.dict(os.environ, {}, clear=True):
+            agent = Agent(role="r", goal="g", backstory="b", llm="deepseek/deepseek-chat")
+            with pytest.raises(MissingAPIKeyError, match=self.MESSAGE):
+                agent.kickoff("Say hi")
+
+    @pytest.mark.parametrize(
+        "first_use",
+        [
+            pytest.param(
+                lambda: Agent.model_validate(
+                    {"role": "r", "goal": "g", "backstory": "b", "llm": "deepseek/deepseek-chat"}
+                ).llm.call("Say hi"),
+                id="Agent.model_validate",
+            ),
+            pytest.param(
+                lambda: Agent(
+                    role="r",
+                    goal="g",
+                    backstory="b",
+                    llm=LLM(model="openai/gpt-4o-mini", api_key="sk-openai"),
+                    function_calling_llm="deepseek/deepseek-chat",
+                ).function_calling_llm.call("Say hi"),
+                id="Agent(function_calling_llm)",
+            ),
+            pytest.param(
+                lambda: LiteAgent(
+                    role="r", goal="g", backstory="b", llm="deepseek/deepseek-chat"
+                ).kickoff("Say hi"),
+                id="LiteAgent",
+            ),
+            pytest.param(
+                lambda: _crew_with_function_calling_llm().function_calling_llm.call(
+                    "Say hi"
+                ),
+                id="Crew(function_calling_llm)",
+            ),
+        ],
+    )
+    def test_every_model_holder_builds_and_raises_on_first_use(
+        self, first_use: Any
+    ) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(MissingAPIKeyError, match=self.MESSAGE):
+                first_use()
+
+
+def _crew_with_function_calling_llm() -> Crew:
+    agent = Agent(
+        role="r",
+        goal="g",
+        backstory="b",
+        llm=LLM(model="openai/gpt-4o-mini", api_key="sk-openai"),
+    )
+    task = Task(description="d", expected_output="o", agent=agent)
+    return Crew(agents=[agent], tasks=[task], function_calling_llm="deepseek/deepseek-chat")
+
+
+class TestDeployValidatorReadsOlderCrewai:
+    """``crewai deploy`` imports the project with the project's own crewai.
+
+    crewai 1.15.34 to 1.15.37 still check these providers' keys at construction:
+    ``LLM(...)`` raises ``MissingAPIKeyError`` and an ``Agent`` built from a model
+    string raises a ``ValidationError`` around it. Both are still warnings that
+    name the variable.
+    """
+
+    ERROR = MissingAPIKeyError("DEEPSEEK_API_KEY", "deepseek-chat")
+
+    @staticmethod
+    def classify(error: BaseException, tmp_path: Path) -> DeployValidator:
         validator = DeployValidator(project_root=tmp_path)
-        validator._classify_import_error("ImportError", str(exc_info.value), tb="")
+        validator._classify_import_error(
+            type(error).__name__,
+            str(error),
+            tb="".join(traceback.format_exception(error)),
+        )
+        return validator
+
+    def test_a_missing_key_raised_as_itself(self, tmp_path: Path) -> None:
+        validator = self.classify(self.ERROR, tmp_path)
+
+        assert [r.code for r in validator.results] == ["llm_init_missing_key"]
+        assert "DEEPSEEK_API_KEY" in validator.results[0].title
+
+    def test_a_missing_key_inside_an_agents_validation_error(
+        self, tmp_path: Path
+    ) -> None:
+        class OlderAgent(BaseModel):
+            llm: str
+
+            @model_validator(mode="after")
+            def build_llm(self) -> OlderAgent:
+                raise TestDeployValidatorReadsOlderCrewai.ERROR
+
+        with pytest.raises(ValidationError) as exc_info:
+            OlderAgent(llm="deepseek/deepseek-chat")
+
+        validator = self.classify(exc_info.value, tmp_path)
 
         assert [r.code for r in validator.results] == ["llm_init_missing_key"]
         assert "DEEPSEEK_API_KEY" in validator.results[0].title
