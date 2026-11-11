@@ -864,6 +864,22 @@ def test_flow_add_crew_finds_package_from_project_name(
     assert (crew_dir / "config" / "tasks.yaml").is_file()
 
 
+def test_flow_add_crew_cancel_does_not_report_success(
+    tmp_path, monkeypatch, runner
+):
+    root = _flow_project(tmp_path / "proj", "demo", ["demo"])
+    existing = root / "src" / "demo" / "crews" / "existing"
+    existing.mkdir()
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(flow_add_crew, ["existing"], input="n\n")
+
+    assert result.exit_code == 0, result.output
+    assert "Operation cancelled." in result.output
+    assert "successfully" not in result.output
+    assert list(existing.iterdir()) == []
+
+
 def test_flow_add_crew_prefers_project_name_over_other_crews_folders(
     tmp_path, monkeypatch, runner
 ):
