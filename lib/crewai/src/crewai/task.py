@@ -315,10 +315,15 @@ class Task(BaseModel):
         default_factory=dict,
     )
     _original_description: str | None = PrivateAttr(default=None)
+    # The description as a caller wrote it (filled in by the inputs), without the
+    # model text crewAI appends: a crew chat's history and crew or agent planning.
+    # None while nothing has been appended and no inputs filled it in.
+    _input_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
+    checkpoint_input_description: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
@@ -1109,13 +1114,17 @@ Follow these guidelines:
             ValueError: If a required template variable is missing from inputs.
         """
         if self._original_description is None:
-            self._original_description = self.description
+            # Without the plan a run before this one appended.
+            self._original_description = self._input_description or self.description
         if self._original_expected_output is None:
             self._original_expected_output = self.expected_output
         if self.output_file is not None and self._original_output_file is None:
             self._original_output_file = self.output_file
 
         if not inputs:
+            # The description stays as the last inputs filled it in, and so
+            # does the text of it a caller wrote.
+            self._record_input_description()
             return
 
         try:
@@ -1130,6 +1139,11 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
         self.description = process_content(self.description, {"task": self})
+        # "" marks a task restored from a checkpoint that didn't record its
+        # caller's text (before 1.15.38), so its description may hold a plan: it
+        # stays unknown, and no spreadsheet URL is read from it.
+        if self._input_description != "":
+            self._input_description = self.description
         self._original_expected_output = process_content(
             self._original_expected_output, {"task": self}
         )
@@ -1197,6 +1211,17 @@ Follow these guidelines:
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
 
+    def _record_input_description(self) -> None:
+        """Keep the description as the caller wrote it, before crewAI adds text a
+        caller didn't write: the agent reads spreadsheet URLs from this text only."""
+        if self._input_description is None:
+            self._input_description = self.description
+
+    def _append_model_text(self, text: str) -> None:
+        """Add a plan, which is model text, to the description."""
+        self._record_input_description()
+        self.description += text
+
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
@@ -1230,6 +1255,7 @@ Follow these guidelines:
             "output",
             "checkpoint_original_description",
             "checkpoint_original_expected_output",
+            "checkpoint_input_description",
         }
 
         copied_data = self.model_dump(exclude=exclude)
@@ -1249,12 +1275,14 @@ Follow these guidelines:
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
 
-        return self.__class__(
+        copied = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        copied._input_description = self._input_description
+        return copied
 
     def _export_output(
         self, result: str | BaseModel

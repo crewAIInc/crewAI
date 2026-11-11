@@ -860,6 +860,30 @@ class TestSafeGetBounded:
 
         safe_get.assert_not_called()
 
+    def test_a_deadline_already_past_fails_before_requesting(self):
+        with patch("crewai_tools.security.safe_requests.safe_get") as safe_get:
+            with pytest.raises(ValueError, match="did not finish by the deadline"):
+                safe_get_bounded(
+                    "https://example.com/f",
+                    max_bytes=1024,
+                    deadline=time.monotonic() - 1,
+                )
+
+        safe_get.assert_not_called()
+
+    def test_a_body_that_arrives_before_the_deadline_is_returned(self):
+        response = FakeResponse(b"payload", chunk_size=2)
+        with patch(
+            "crewai_tools.security.safe_requests.safe_get", return_value=response
+        ):
+            body, _, _ = safe_get_bounded(
+                "https://example.com/f",
+                max_bytes=1024,
+                deadline=time.monotonic() + 60,
+            )
+
+        assert body == b"payload"
+
     def test_stops_reading_once_the_limit_is_crossed(self):
         """The cap must abandon the stream, not buffer the whole body first."""
         chunks_yielded = 0

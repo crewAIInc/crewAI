@@ -9,6 +9,54 @@ from crewai_core.platform_catalog import PLATFORM_CATALOG
 PlatformApp: TypeAlias = str
 
 
+class PlatformAppsUnavailableError(Exception):
+    """CrewAI AMP could not resolve these apps for the caller.
+
+    AMP does not say whether an app is not connected or unknown to it, so
+    ``missing_apps`` names both, as AMP names them.
+    """
+
+    def __init__(self, missing_apps: list[str]) -> None:
+        self.missing_apps = missing_apps
+        super().__init__(
+            f"CrewAI AMP could not resolve these apps: {', '.join(missing_apps)}"
+        )
+
+
+class UnresolvedPlatformAppsWarning(UserWarning):
+    """An agent's apps resolved to no tools, so it runs without them.
+
+    Attributes:
+        agent_role: The role of the agent that declared the apps.
+        apps: The apps the agent declared.
+        missing_apps: The apps CrewAI AMP said it could not resolve; empty when
+            resolution failed for another reason, such as a missing token.
+    """
+
+    def __init__(
+        self,
+        agent_role: str,
+        apps: list[str],
+        missing_apps: list[str],
+        cause: str = "",
+    ) -> None:
+        self.agent_role = agent_role
+        self.apps = apps
+        self.missing_apps = missing_apps
+        advice = (
+            f"CrewAI AMP could not resolve {', '.join(missing_apps)}: connect "
+            "them in AMP, or check their names."
+            if missing_apps
+            else "Check that these apps exist and are connected, and that "
+            f"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.{cause}"
+        )
+        super().__init__(
+            f"Agent '{agent_role}' declares apps [{', '.join(apps)}] but none "
+            "resolved to any tools; the agent will run without them and may be "
+            f"unable to complete its goal. {advice}"
+        )
+
+
 @dataclass(frozen=True)
 class PlatformToolDefinition:
     """Describe one selectable CrewAI Platform action."""
