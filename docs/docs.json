@@ -349,6 +349,7 @@
                     "pages": [
                       "edge/en/observability/tracing",
                       "edge/en/observability/overview",
+                      "edge/en/observability/traceroot",
                       "edge/en/observability/arize-phoenix",
                       "edge/en/observability/braintrust",
                       "edge/en/observability/datadog",
@@ -22538,6 +22539,7 @@
                     "pages": [
                       "edge/pt-BR/observability/tracing",
                       "edge/pt-BR/observability/overview",
+                      "edge/pt-BR/observability/traceroot",
                       "edge/pt-BR/observability/arize-phoenix",
                       "edge/pt-BR/observability/braintrust",
                       "edge/pt-BR/observability/datadog",
@@ -42934,6 +42936,7 @@
                     "pages": [
                       "edge/ko/observability/tracing",
                       "edge/ko/observability/overview",
+                      "edge/ko/observability/traceroot",
                       "edge/ko/observability/arize-phoenix",
                       "edge/ko/observability/braintrust",
                       "edge/ko/observability/datadog",
@@ -64002,6 +64005,7 @@
                     "pages": [
                       "edge/ar/observability/tracing",
                       "edge/ar/observability/overview",
+                      "edge/ar/observability/traceroot",
                       "edge/ar/observability/arize-phoenix",
                       "edge/ar/observability/braintrust",
                       "edge/ar/observability/datadog",
