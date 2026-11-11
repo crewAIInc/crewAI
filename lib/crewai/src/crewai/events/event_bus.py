@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
 
 from typing_extensions import Self
 
+from crewai.utilities.network_guard import unpatched_socket_connect
+
 
 if TYPE_CHECKING:
     from crewai.state.runtime import RuntimeState
@@ -181,7 +183,8 @@ class CrewAIEventsBus:
                 thread_name_prefix="CrewAISyncHandler",
             )
 
-            self._loop = asyncio.new_event_loop()
+            with unpatched_socket_connect():
+                self._loop = asyncio.new_event_loop()
             self._loop_thread = threading.Thread(
                 target=self._run_loop,
                 name="CrewAIEventsLoop",
