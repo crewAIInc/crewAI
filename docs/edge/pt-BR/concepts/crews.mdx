@@ -189,9 +189,11 @@ Esses decorators ajudam na organização da estrutura da sua crew e coletam auto
 
 Como alternativa, você pode definir a crew diretamente em código sem utilizar arquivos de configuração YAML.
 
+Este exemplo usa `FileReadTool` para ler arquivos locais com dados de mercado. Inclua o caminho do arquivo na descrição da tarefa ao executá-lo. Para usar sua própria ferramenta, siga [Criar ferramentas personalizadas](/pt-BR/learn/create-custom-tools) e importe a classe do seu próprio módulo; `YourCustomTool` é um nome ilustrativo, não uma classe exportada por `crewai_tools`.
+
 ```python code
 from crewai import Agent, Crew, Task, Process
-from crewai_tools import YourCustomTool
+from crewai_tools import FileReadTool
 
 class YourCrewName:
     def agent_one(self) -> Agent:
@@ -200,7 +202,7 @@ class YourCrewName:
             goal="Analisar tendências de dados no mercado brasileiro",
             backstory="Analista experiente com formação em economia",
             verbose=True,
-            tools=[YourCustomTool()]
+            tools=[FileReadTool()]
         )
 
     def agent_two(self) -> Agent:

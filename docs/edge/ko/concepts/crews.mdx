@@ -190,9 +190,11 @@ CrewAI는 `annotations.py` 파일에서 크루 클래스 내의 메서드를 특
 
 또는 YAML 구성 파일을 사용하지 않고 코드에서 직접 crew를 정의할 수 있습니다.
 
+이 예제는 `FileReadTool`을 사용하여 로컬 시장 데이터 파일을 읽습니다. 실행할 때 태스크 설명에 파일 경로를 포함하세요. 자체 도구를 사용하려면 [커스텀 도구 만들기](/ko/learn/create-custom-tools)를 따라 구현하고 자신의 모듈에서 클래스를 가져오세요. `YourCustomTool`은 자리 표시자이며 `crewai_tools`에서 내보내는 클래스가 아닙니다.
+
 ```python code
 from crewai import Agent, Crew, Task, Process
-from crewai_tools import YourCustomTool
+from crewai_tools import FileReadTool
 
 class YourCrewName:
     def agent_one(self) -> Agent:
@@ -201,7 +203,7 @@ class YourCrewName:
             goal="Analyze data trends in the market",
             backstory="An experienced data analyst with a background in economics",
             verbose=True,
-            tools=[YourCustomTool()]
+            tools=[FileReadTool()]
         )
 
     def agent_two(self) -> Agent:
