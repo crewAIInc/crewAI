@@ -425,6 +425,7 @@ agent = Agent(
 <Tip>
   `results_limit`: é o número de documentos relevantes a retornar. Padrão é 3.
   `score_threshold`: é a pontuação mínima para um documento ser considerado relevante. Padrão é 0.35.
+  As pontuações vão de 0 a 1 tanto no Qdrant quanto no ChromaDB (similaridade de cosseno reescalada como `(cosine + 1) / 2`), então o mesmo limite significa o mesmo em ambos.
 </Tip>
 
 ## Parâmetros de Knowledge Suportados

@@ -427,6 +427,7 @@ agent = Agent(
 <Tip>
   `results_limit`: 반환할 관련 문서의 개수입니다. 기본값은 3입니다.
   `score_threshold`: 문서가 관련성이 있다고 간주되기 위한 최소 점수입니다. 기본값은 0.35입니다.
+  점수는 Qdrant와 ChromaDB 모두 0에서 1 사이이며(코사인 유사도를 `(cosine + 1) / 2`로 변환), 따라서 동일한 임계값이 어느 쪽에서든 같은 의미를 가집니다.
 </Tip>
 
 ## 지원되는 Knowledge 매개변수
