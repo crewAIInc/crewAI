@@ -1,0 +1,147 @@
+---
+title: "Capacidades do Agente"
+description: "Entenda as cinco formas de estender agentes CrewAI: Ferramentas, MCPs, Apps, Skills e Knowledge."
+icon: puzzle-piece
+mode: "wide"
+---
+
+## Visão Geral
+
+Agentes CrewAI podem ser estendidos com **cinco tipos distintos de capacidades**, cada um servindo a um propósito diferente. Entender quando usar cada um — e como eles funcionam juntos — é fundamental para construir agentes eficazes.
+
+<CardGroup cols={2}>
+  <Card title="Ferramentas" icon="wrench" href="/pt-BR/concepts/tools" color="#3B82F6">
+    **Funções chamáveis** — permitem que agentes tomem ações. Buscas na web, operações com arquivos, chamadas de API, execução de código.
+  </Card>
+  <Card title="Servidores MCP" icon="plug" href="/pt-BR/mcp/overview" color="#8B5CF6">
+    **Servidores de ferramentas remotos** — conectam agentes a servidores de ferramentas externos via Model Context Protocol. Mesmo efeito de ferramentas, mas hospedados externamente.
+  </Card>
+  <Card title="Apps" icon="grid-2" color="#EC4899">
+    **Integrações com plataformas** — conectam agentes a aplicativos SaaS (Gmail, Slack, Jira, Salesforce) via plataforma CrewAI. Executa localmente com um token de integração.
+  </Card>
+  <Card title="Skills" icon="bolt" href="/pt-BR/concepts/skills" color="#F59E0B">
+    **Expertise de domínio** — injetam instruções, diretrizes e material de referência nos prompts dos agentes. Skills dizem aos agentes *como pensar*.
+  </Card>
+  <Card title="Knowledge" icon="book" href="/pt-BR/concepts/knowledge" color="#10B981">
+    **Fatos recuperados** — fornecem aos agentes dados de documentos, arquivos e URLs via busca semântica (RAG). Knowledge dá aos agentes *o que saber*.
+  </Card>
+</CardGroup>
+
+---
+
+## A Distinção Fundamental
+
+O mais importante a entender: **essas capacidades se dividem em duas categorias**.
+
+### Capacidades de Ação (Ferramentas, MCPs, Apps)
+
+Estas dão aos agentes a capacidade de **fazer coisas** — chamar APIs, ler arquivos, buscar na web, enviar emails. No momento da execução, os três tipos se resolvem no mesmo formato interno (instâncias de `BaseTool`) e aparecem em uma lista unificada de ferramentas que o agente pode chamar.
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool
+
+agent = Agent(
+    role="Researcher",
+    goal="Find and compile market data",
+    backstory="Expert market analyst",
+    tools=[SerperDevTool(), FileReadTool()],  # Ferramentas locais
+    mcps=["https://mcp.example.com/sse"],     # Ferramentas de servidor MCP remoto
+    apps=["gmail", "google_sheets"],           # Integrações com plataformas
+)
+```
+
+### Capacidades de Contexto (Skills, Knowledge)
+
+Estas modificam o **prompt** do agente — injetando expertise, instruções ou dados recuperados antes do agente começar a raciocinar. Não dão aos agentes novas ações; elas moldam como os agentes pensam e a quais informações têm acesso.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Security Auditor",
+    goal="Audit cloud infrastructure for vulnerabilities",
+    backstory="Expert in cloud security with 10 years of experience",
+    skills=["./skills/security-audit"],        # Instruções de domínio
+    knowledge_sources=[pdf_source, url_source], # Fatos recuperados
+)
+```
+
+---
+
+## Quando Usar o Quê
+
+| Você precisa...                                          | Use               | Exemplo                                  |
+| :------------------------------------------------------- | :---------------- | :--------------------------------------- |
+| Agente buscar na web                                     | **Ferramentas**   | `tools=[SerperDevTool()]`                |
+| Agente chamar uma API remota via MCP                     | **MCPs**          | `mcps=["https://api.example.com/sse"]`   |
+| Agente enviar emails pelo Gmail                          | **Apps**          | `apps=["gmail"]`                         |
+| Agente seguir procedimentos específicos                  | **Skills**        | `skills=["./skills/code-review"]`        |
+| Agente consultar documentos da empresa                   | **Knowledge**     | `knowledge_sources=[pdf_source]`         |
+| Agente buscar na web E seguir diretrizes de revisão      | **Ferramentas + Skills** | Use ambos juntos                  |
+
+---
+
+## Combinando Capacidades
+
+Na prática, agentes frequentemente usam **múltiplos tipos de capacidades juntos**. Aqui está um exemplo realista:
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+# Um agente de pesquisa totalmente equipado
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Produce comprehensive market analysis reports",
+    backstory="Expert analyst with deep industry knowledge",
+
+    # AÇÃO: O que o agente pode FAZER
+    tools=[
+        SerperDevTool(),         # Buscar na web
+        FileReadTool(),          # Ler arquivos locais
+        CodeInterpreterTool(),   # Executar código Python para análise
+    ],
+    mcps=["https://data-api.example.com/sse"],  # Acessar API de dados remota
+    apps=["google_sheets"],                      # Escrever no Google Sheets
+
+    # CONTEXTO: O que o agente SABE
+    skills=["./skills/research-methodology"],    # Como conduzir pesquisas
+    knowledge_sources=[company_docs],            # Dados específicos da empresa
+)
+```
+
+---
+
+## Tabela Comparativa
+
+| Característica | Ferramentas | MCPs | Apps | Skills | Knowledge |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Dá ações ao agente** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Modifica o prompt** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Requer código** | Sim | Apenas config | Apenas config | Apenas Markdown | Apenas config |
+| **Executa localmente** | Sim | Depende | Sim (com variável de ambiente) | N/A | Sim |
+| **Precisa de chaves API** | Por ferramenta | Por servidor | Token de integração | Não | Apenas embedder |
+| **Definido no Agent** | `tools=[]` | `mcps=[]` | `apps=[]` | `skills=[]` | `knowledge_sources=[]` |
+| **Definido no Crew** | ❌ | ❌ | ❌ | `skills=[]` | `knowledge_sources=[]` |
+
+---
+
+## Aprofundamentos
+
+Pronto para aprender mais sobre cada tipo de capacidade?
+
+<CardGroup cols={2}>
+  <Card title="Ferramentas" icon="wrench" href="/pt-BR/concepts/tools">
+    Crie ferramentas personalizadas, use o catálogo OSS com 75+ opções, configure cache e execução assíncrona.
+  </Card>
+  <Card title="Integração MCP" icon="plug" href="/pt-BR/mcp/overview">
+    Conecte-se a servidores MCP via stdio, SSE ou HTTP. Filtre ferramentas, configure autenticação.
+  </Card>
+  <Card title="Skills" icon="bolt" href="/pt-BR/concepts/skills">
+    Construa pacotes de skills com SKILL.md, injete expertise de domínio, use divulgação progressiva.
+  </Card>
+  <Card title="Knowledge" icon="book" href="/pt-BR/concepts/knowledge">
+    Adicione conhecimento de PDFs, CSVs, URLs e mais. Configure embedders e recuperação.
+  </Card>
+</CardGroup>
