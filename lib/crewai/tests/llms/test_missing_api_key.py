@@ -63,6 +63,7 @@ COMPATIBLE_MODELS = {
     "cerebras": "cerebras/llama3.1-8b",
     "dashscope": "dashscope/qwen-turbo",
     "deepinfra": "deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "together": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
 }
 
 COMPATIBLE_PROVIDERS = [
