@@ -476,3 +476,80 @@ class TestMetadataHandling:
                 doc.get("metadata", {}).get("custom_key") == "custom_value"
                 for doc in documents
             )
+
+
+class TestJSONLIngestion:
+    """JSONL registration works through the public RagTool API."""
+
+    @pytest.mark.parametrize(
+        ("extension", "data_type"),
+        [
+            (".jsonl", None),
+            (".ndjson", None),
+            (".txt", "jsonl"),
+            (".txt", DataType.JSONL),
+            (".jsonl", "file"),
+        ],
+    )
+    def test_add_records(
+        self,
+        rag_tool: RagTool,
+        mock_rag_client: MagicMock,
+        tmp_path: Path,
+        extension: str,
+        data_type: str | DataType | None,
+    ) -> None:
+        """Store the real loader's records and metadata, not just a mock result."""
+        lines = ['{"name": "first", "active": true}', '{"items": [1, null]}', '"last"']
+        path = tmp_path / f"records{extension}"
+        path.write_text("\n".join(lines), encoding="utf-8")
+
+        rag_tool.add(path, data_type=data_type, metadata={"dataset": "example"})
+
+        mock_rag_client.add_documents.assert_called_once()
+        documents = mock_rag_client.add_documents.call_args.kwargs["documents"]
+        assert [
+            line
+            for document in documents
+            for line in document["content"].splitlines()
+            if line.strip()
+        ] == lines
+        for document in documents:
+            metadata = document["metadata"]
+            assert metadata["data_type"] == str(DataType.JSONL)
+            assert metadata["format"] == "jsonl"
+            assert metadata["record_count"] == 3
+            assert metadata["dataset"] == "example"
+            assert metadata["source"] == str(path)
+
+    @pytest.mark.parametrize("extension", [".jsonl", ".ndjson"])
+    @pytest.mark.parametrize("data_type", [None, "jsonl", DataType.JSONL])
+    def test_missing_file(
+        self,
+        rag_tool: RagTool,
+        tmp_path: Path,
+        extension: str,
+        data_type: str | DataType | None,
+    ) -> None:
+        """Missing JSONL paths fail consistently for explicit and inferred types."""
+        with pytest.raises(FileNotFoundError, match="File does not exist"):
+            rag_tool.add(path=tmp_path / f"missing{extension}", data_type=data_type)
+
+    def test_directory_discovers_jsonl(
+        self, rag_tool: RagTool, mock_rag_client: MagicMock, tmp_path: Path
+    ) -> None:
+        """Directory ingestion uses the same JSONL loader registry."""
+        path = tmp_path / "records.ndjson"
+        path.write_text('{"first": 1}\n{"second": 2}', encoding="utf-8")
+
+        rag_tool.add(tmp_path)
+
+        mock_rag_client.add_documents.assert_called_once()
+        documents = mock_rag_client.add_documents.call_args.kwargs["documents"]
+        assert [
+            line
+            for document in documents
+            for line in document["content"].splitlines()
+            if line.strip()
+        ] == ['{"first": 1}', '{"second": 2}']
+        assert all(doc["metadata"]["record_count"] == 2 for doc in documents)
