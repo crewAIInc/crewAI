@@ -1,0 +1,45 @@
+---
+title: فرض مخرجات الأداة كنتيجة
+description: تعلم كيفية فرض مخرجات الأداة كنتيجة لمهمة Agent في CrewAI.
+icon: wrench-simple
+mode: "wide"
+---
+
+## مقدمة
+
+في CrewAI، يمكنك فرض مخرجات أداة كنتيجة لمهمة Agent. هذه الميزة مفيدة عندما تريد التأكد من التقاط مخرجات الأداة وإعادتها كنتيجة للمهمة، متجنبًا أي تعديل من قبل الـ Agent أثناء تنفيذ المهمة.
+
+## فرض مخرجات الأداة كنتيجة
+
+لفرض مخرجات الأداة كنتيجة لمهمة Agent، تحتاج لتعيين معامل `result_as_answer` إلى `True` عند إضافة أداة إلى الـ Agent.
+
+```python Code
+from crewai.agent import Agent
+from my_tool import MyCustomTool
+
+coding_agent = Agent(
+        role="Data Scientist",
+        goal="Produce amazing reports on AI",
+        backstory="You work with data and AI",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+task_result = coding_agent.execute_task(task)
+```
+
+## سير العمل أثناء التنفيذ
+
+<Steps>
+   <Step title="تنفيذ المهمة">
+      ينفذ الـ Agent المهمة باستخدام الأداة المقدمة.
+   </Step>
+   <Step title="مخرجات الأداة">
+      تولّد الأداة المخرجات التي تُلتقط كنتيجة للمهمة.
+   </Step>
+   <Step title="تفاعل الـ Agent">
+      قد يتأمل الـ Agent ويستخلص دروسًا من الأداة لكن لا يعدّل المخرجات.
+   </Step>
+   <Step title="إعادة النتيجة">
+      تُعاد مخرجات الأداة كنتيجة للمهمة دون أي تعديلات.
+   </Step>
+</Steps>

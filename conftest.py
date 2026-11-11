@@ -249,6 +249,9 @@ def reset_event_state() -> None:
     _event_context_config.set(EventContextConfig())
 
 
+_ENV_RESTORED_AFTER_EACH_TEST = ("CREWAI_DISABLE_TELEMETRY", "OTEL_SDK_DISABLED")
+
+
 @pytest.fixture(autouse=True, scope="function")
 def setup_test_environment() -> Generator[None, Any, None]:
     """Setup test environment for crewAI workspace."""
@@ -272,14 +275,21 @@ def setup_test_environment() -> Generator[None, Any, None]:
 
         os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
         os.environ["CREWAI_TESTING"] = "true"
+        # Restore rather than pop: `.env.test` sets these once at import, so popping
+        # them after the first test switched telemetry on for the rest of the run
+        # and the suite sent real spans, from laptops and from CI.
+        restored = {key: os.environ.get(key) for key in _ENV_RESTORED_AFTER_EACH_TEST}
 
         try:
             yield
         finally:
             os.environ.pop("CREWAI_TESTING", "true")
             os.environ.pop("CREWAI_STORAGE_DIR", None)
-            os.environ.pop("CREWAI_DISABLE_TELEMETRY", "true")
-            os.environ.pop("OTEL_SDK_DISABLED", "true")
+            for key, value in restored.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
             os.environ.pop("OPENAI_BASE_URL", "https://api.openai.com/v1")
             os.environ.pop("OPENAI_API_BASE", "https://api.openai.com/v1")
 

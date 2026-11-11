@@ -12,6 +12,7 @@ import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
+import warnings
 
 from crewai_core.printer import ColoredText, Printer
 from crewai_core.settings import Settings
@@ -39,6 +40,7 @@ from crewai.llms.base_llm import (
     LLMCallBlockedError,
     call_stop_override,
 )
+from crewai.telemetry.telemetry import Telemetry
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -2046,6 +2048,9 @@ def check_repeated_tool_call(
             "change it: use what you have and give your final answer."
         )
     if streak == MAX_REPEATED_TOOL_CALLS:
+        # Counted here, not from ToolFailureDetectedEvent: the stop happens under
+        # every policy, including `ignore`, which emits no event.
+        Telemetry().feature_usage_span("tool_failure:repeated_call")
         # Not tool scope: the loop is the agent's, not a fault of the tool.
         handle_tool_failure(
             ToolFailure(
@@ -2064,6 +2069,29 @@ def check_repeated_tool_call(
             crew=crew,
         )
     return ""
+
+
+def summarize_messages(
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+    callbacks: list[TokenCalcHandler],
+    verbose: bool = True,
+) -> None:
+    """Deprecated: use ``crewai.llms.context_window.summarize_messages``.
+
+    Kept with its pre-1.15.29 argument order (``messages`` before ``llm``);
+    the replacement takes ``llm`` first.
+    """
+    warnings.warn(
+        "crewai.utilities.agent_utils.summarize_messages is deprecated. "
+        "Use crewai.llms.context_window.summarize_messages(llm, messages, "
+        "callbacks, verbose), which takes llm first.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    from crewai.llms.context_window import summarize_messages as _summarize_messages
+
+    _summarize_messages(llm, messages, callbacks, verbose)
 
 
 def repeated_tool_call_limit_reached(counts: dict[int, int]) -> bool:
