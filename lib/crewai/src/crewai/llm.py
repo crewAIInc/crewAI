@@ -778,12 +778,12 @@ class LLM(BaseLLM):
         # The cache-breakpoint flag is crewAI-internal; LiteLLM would forward
         # it to the provider, and strict APIs (e.g. Groq) reject the request.
         # Copy rather than mutate: the executor reuses its message buffer.
-        cleaned: list[Any] = []
+        cleaned: list[LLMMessage] = []
         for m in messages:
             if isinstance(m, dict) and CACHE_BREAKPOINT_KEY in m:
                 copy: dict[str, Any] = dict(m)
                 copy.pop(CACHE_BREAKPOINT_KEY)
-                cleaned.append(copy)
+                cleaned.append(cast("LLMMessage", copy))
             else:
                 cleaned.append(m)
         messages = cleaned
