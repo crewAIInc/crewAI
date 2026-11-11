@@ -82,7 +82,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     except (Exception, SystemExit) as exc:
         # It exits 1 for both; only the missing crewai package is an ImportError.
         missing_crewai = isinstance(exc.__cause__, ImportError)
-        record_run_stopped("crewai_missing" if missing_crewai else "load_failed")
+        record_run_stopped("crewai_missing" if missing_crewai else "load_failed", exc)
         raise
 
     if _flow_is_conversational(flow):

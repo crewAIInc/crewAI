@@ -2,12 +2,11 @@
 
 from typing import Any
 
-from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-    AmazonBedrockEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
 def create_aws_session() -> Any:
@@ -36,11 +35,13 @@ def create_aws_session() -> Any:
         ) from e
 
 
-class BedrockProvider(BaseEmbeddingsProvider[AmazonBedrockEmbeddingFunction]):
+class BedrockProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Amazon Bedrock embeddings provider."""
 
-    embedding_callable: type[AmazonBedrockEmbeddingFunction] = Field(
-        default=AmazonBedrockEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "amazon_bedrock_embedding_function", "AmazonBedrockEmbeddingFunction"
+        ),
         description="Amazon Bedrock embedding function class",
     )
     model_name: str = Field(

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypeIs
 
 from crewai.agent import Agent
+from crewai.agent.spreadsheet_inputs import no_spreadsheet_urls
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
@@ -90,10 +91,13 @@ class LLMGuardrail:
         - If the Task result complies with the guardrail, saying that is valid
         """
 
-        kickoff_result = agent.kickoff(query, response_format=LLMGuardrailResult)
-        if _is_coroutine(kickoff_result):
-            return _run_coroutine_sync(kickoff_result)
-        return kickoff_result
+        # The query holds the task's output, which is model text, so a URL in it
+        # is never fetched.
+        with no_spreadsheet_urls():
+            kickoff_result = agent.kickoff(query, response_format=LLMGuardrailResult)
+            if _is_coroutine(kickoff_result):
+                return _run_coroutine_sync(kickoff_result)
+            return kickoff_result
 
     def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Validates the output of a task based on specified criteria.
