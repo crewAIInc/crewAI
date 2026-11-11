@@ -27,7 +27,6 @@ from pydantic import (
     field_validator,
 )
 from pydantic_core import CoreSchema, core_schema
-from typing_extensions import TypeIs
 
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
@@ -113,11 +112,6 @@ _BUILTIN_CACHE_FUNCTIONS: dict[str, Callable[..., bool]] = {
 def _is_async_callable(func: Callable[..., Any]) -> bool:
     """Check if a callable is async."""
     return asyncio.iscoroutinefunction(func)
-
-
-def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
-    """Type narrowing check for awaitable values."""
-    return asyncio.iscoroutine(value) or asyncio.isfuture(value)
 
 
 class EnvVar(BaseModel):
@@ -605,6 +599,14 @@ class Tool(BaseTool, Generic[P, R]):
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
+        if not _is_async_callable(self.func) and not _is_async_callable(
+            getattr(self.func, "__call__", None)
+        ):
+            raise NotImplementedError(
+                f"{sanitize_tool_name(self.name)} does not have an async function. "
+                "Use run() for sync execution or provide an async function."
+            )
+
         limit_error = self._claim_usage()
         if limit_error:
             return limit_error  # type: ignore[return-value]
@@ -624,13 +626,14 @@ class Tool(BaseTool, Generic[P, R]):
         Raises:
             NotImplementedError: If the wrapped function is not async.
         """
-        result = self.func(*args, **kwargs)
-        if _is_awaitable(result):
-            return await result
-        raise NotImplementedError(
-            f"{sanitize_tool_name(self.name)} does not have an async function. "
-            "Use run() for sync execution or provide an async function."
-        )
+        if not _is_async_callable(self.func) and not _is_async_callable(
+            getattr(self.func, "__call__", None)
+        ):
+            raise NotImplementedError(
+                f"{sanitize_tool_name(self.name)} does not have an async function. "
+                "Use run() for sync execution or provide an async function."
+            )
+        return await self.func(*args, **kwargs)
 
     @classmethod
     def from_langchain(cls, tool: Any) -> Tool[..., Any]:
