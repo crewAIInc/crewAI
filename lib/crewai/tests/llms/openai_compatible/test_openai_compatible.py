@@ -600,7 +600,9 @@ class TestHostedProviders:
         with patch.dict(os.environ, openai_env, clear=True), pytest.raises(
             ValueError, match=key_env
         ):
-            OpenAICompatibleCompletion(model=model_id, provider=provider)
+            OpenAICompatibleCompletion(
+                model=model_id, provider=provider
+            )._get_client_params()
 
     def test_base_url_env_overrides_default(
         self, provider, model, model_id, base_url, key_env, url_env
