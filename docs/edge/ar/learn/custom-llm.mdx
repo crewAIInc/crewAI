@@ -13,6 +13,76 @@ mode: "wide"
 
 راجع الملف الإنجليزي الأصلي للحصول على تنفيذ LLM مخصص كامل يوضح طريقة `call()` المطلوبة والطرق الاختيارية مثل `supports_function_calling()` و`get_context_window_size()`.
 
+## مثال غير متصل قابل للتشغيل
+
+تستدعي الأمثلة أعلاه نقطة نهاية HTTP حقيقية. لتجربة واجهة `BaseLLM` دون أي مفتاح API أو اتصال بالشبكة، استخدم بديلًا (stub) يُرجع استجابة ثابتة. وهو مفيد لتعلّم نقاط التوسعة وللاختبارات؛ استبدل جسم `call` بطلب إلى مزوّد حقيقي (كما هو موضح أعلاه) عندما تكون جاهزًا.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.llms.base_llm import BaseLLM
+
+
+class OfflineLLM(BaseLLM):
+    """A deterministic, offline LLM — no API key, no network. For learning and tests."""
+
+    def __init__(self, response: str = "Hello from your custom LLM!", model: str = "offline-stub"):
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        # CrewAI drives agents with a ReAct loop. When it asks the model to think, reply with a
+        # Final Answer so the agent can finish. A real provider would send `messages` to its API here.
+        if "Thought:" in str(messages):
+            return f"Thought: I now know the final answer\nFinal Answer: {self.response}"
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False  # this stub has no native tool calling
+
+    def supports_stop_words(self) -> bool:
+        return False  # this stub handles no stop words
+
+
+# 1) Call the model directly.
+llm = OfflineLLM(response="42")
+print(llm.call("What is the answer to everything?"))  # -> 42
+
+# 2) Power an Agent / Task / Crew with it — no API key, no network.
+agent = Agent(
+    role="Greeter",
+    goal="Greet the user",
+    backstory="You greet people warmly.",
+    llm=OfflineLLM(response="Hello! Nice to meet you!"),
+)
+task = Task(description="Say hi to the user", expected_output="A greeting", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+print(crew.kickoff().raw)  # -> Hello! Nice to meet you!
+```
+
+احفظ هذا في ملف `offline_llm.py` وشغّله:
+
+```bash
+python offline_llm.py
+```
+
+المخرجات المتوقعة:
+
+```text
+42
+Hello! Nice to meet you!
+```
+
+هذا البديل مخصص للتعلّم والاختبار فقط. لاستخدام نموذج حقيقي، استبدل جسم `call` بطلب إلى واجهة برمجة تطبيقات المزوّد، وصرّح عن `supports_function_calling` و`supports_stop_words` بصدق لذلك المزوّد.
+
 ## استخدام LLM المخصص
 
 ```python
