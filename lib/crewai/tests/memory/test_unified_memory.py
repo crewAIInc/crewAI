@@ -470,16 +470,16 @@ def test_memory_slice_rejects_writes_outside_its_roots(scope: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("roots", "scope", "expected"),
+    ("roots", "scope"),
     [
-        (["/team/alpha"], "/team/alpha", "/team/alpha"),
-        (["team/alpha/"], "team//alpha/notes/", "/team/alpha/notes"),
-        (["/team/alpha", "/team/beta"], "/team/beta/notes", "/team/beta/notes"),
-        (["/"], "/team/beta", "/team/beta"),
+        (["/team/alpha"], "/team/alpha"),
+        (["team/alpha/"], "team//alpha/notes/"),
+        (["/team/alpha", "/team/beta"], "/team/beta/notes"),
+        (["/"], "/team/beta"),
     ],
 )
-def test_memory_slice_accepts_writes_within_its_roots(
-    roots: list[str], scope: str, expected: str
+def test_memory_slice_preserves_the_scope_of_allowed_writes(
+    roots: list[str], scope: str
 ) -> None:
     from crewai.memory.memory_scope import MemorySlice
 
@@ -487,7 +487,7 @@ def test_memory_slice_accepts_writes_within_its_roots(
     view = MemorySlice(memory=memory, scopes=roots, read_only=False)
 
     assert view.remember("a fact", scope=scope) is memory.remember.return_value
-    assert memory.remember.call_args.kwargs["scope"] == expected
+    assert memory.remember.call_args.kwargs["scope"] == scope
 
 
 def test_update_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:

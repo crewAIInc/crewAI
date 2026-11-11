@@ -291,7 +291,7 @@ class MemorySlice(BaseModel):
             raise ValueError(f"Scope {path!r} is outside the memory slice")
         return self._require_memory().remember(
             content,
-            scope=path,
+            scope=scope,
             categories=categories,
             metadata=metadata,
             importance=importance,
