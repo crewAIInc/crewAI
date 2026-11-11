@@ -147,7 +147,11 @@ class TraceSession:
             self.tracer_provider.add_span_processor(processor)
         for exporter in exporters:
             self.add_exporter(exporter)
+        conversation_id = (attributes or {}).get("gen_ai.conversation.id")
         self.context = TelemetryExecutionContext(
+            conversation_id=conversation_id
+            if isinstance(conversation_id, str)
+            else None,
             kickoff_id=execution_uuid,
             automation_name=automation_name,
             tracer=self.get_tracer(),
@@ -335,6 +339,8 @@ def telemetry_session(
     )
     session.execution_attributes.attributes.update(attrs)
     ctx = session.context
+    if isinstance(conversation_id := attrs.get("gen_ai.conversation.id"), str):
+        ctx.conversation_id = conversation_id
     ctx.execution_id = execution_id
     ctx.principal = principal
     ctx.origin = origin

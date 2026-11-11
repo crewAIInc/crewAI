@@ -377,7 +377,7 @@ class FlowCodeActionDefinition(BaseModel):
 
 
 class FlowToolActionDefinition(BaseModel):
-    """A Flow method action that invokes a CrewAI tool."""
+    """A Flow method action that runs a CrewAI tool or one integration app action."""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -385,12 +385,18 @@ class FlowToolActionDefinition(BaseModel):
     )
 
     call: Literal["tool"] = Field(
-        description="Action discriminator. Use tool to instantiate and run a CrewAI tool.",
+        description=(
+            "Action discriminator. Use tool to run a CrewAI tool or one "
+            "integration app action."
+        ),
         examples=["tool"],
     )
     ref: str = Field(
-        description="Reference to the CrewAI tool to run.",
-        examples=["my_project.tools:SearchTool"],
+        description=(
+            "What to run: module:ToolClass for a CrewAI tool, or "
+            "<app>/<action>[@<connection>] for one integration app action."
+        ),
+        examples=["my_project.tools:SearchTool", "google_gmail/send_email"],
     )
     with_: dict[str, ExpressionData] | None = Field(
         default=None,

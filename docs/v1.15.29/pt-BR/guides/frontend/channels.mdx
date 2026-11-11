@@ -1,0 +1,156 @@
+---
+title: Channels
+description: Execute o mesmo agente CrewAI como um bot do Slack ou Teams com o Channels SDK do CopilotKit e a plataforma gerenciada Intelligence.
+icon: messages
+mode: "wide"
+---
+
+## Encontre seus usuários onde eles já estão
+
+O agente CrewAI que você construiu na [Visão geral](/edge/pt-BR/guides/frontend/overview) não precisa viver por trás de um web app. O mesmo Crew ou Flow pode rodar como um bot dentro de uma plataforma de mensagens. Sem reconstruir, sem uma segunda cópia da lógica do seu agente: o agente permanece exposto pelo [protocolo AG-UI](https://docs.ag-ui.com), e um **channel** o aciona a partir do Slack ou do Microsoft Teams.
+
+O [Channels SDK](https://docs.copilotkit.ai/slack) do CopilotKit fornece esse channel. Você declara um `createChannel` em um pequeno runtime, aponta-o para o seu agente CrewAI, e a plataforma gerenciada **Intelligence** do CopilotKit intermedia a conexão com o provedor de mensagens.
+
+<Note>
+Diferentemente do restante desta seção, Channels **não é self-hosted**. Ele roda através do **CopilotKit Intelligence** — uma superfície obrigatória para Channels, por design (há um plano gratuito disponível). O Intelligence detém a conexão com a plataforma e as credenciais, recebe cada evento da plataforma e entrega o turno ao processo do seu channel; seu processo executa o agente e transmite a resposta de volta. Você configura o Slack uma vez no painel do Intelligence, e as credenciais da plataforma nunca entram no seu processo. Seu agente, suas tools e seu estado continuam sendo seus.
+</Note>
+
+## Como tudo se encaixa
+
+Nada muda no servidor do seu agente CrewAI. Ele continua servindo o seu Crew ou Flow por AG-UI exatamente como na Visão geral. O que você adiciona é um processo Node separado, de longa duração, construído com `@copilotkit/channels`: ele registra um channel no `CopilotRuntime`, conecta-se ao Intelligence e executa o seu agente sempre que chega uma mensagem.
+
+```
+Slack / Teams  ──►  CopilotKit Intelligence  ──►  channel process (Node)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+O processo do channel mantém uma conexão persistente com o gateway do Intelligence, então ele precisa de um host de longa duração — um handler de requisições serverless não consegue ser dono dessa conexão. Seu servidor CrewAI pode continuar servindo o frontend web da Visão geral ao mesmo tempo: o web app e o channel são apenas dois clientes de um único endpoint AG-UI.
+
+## Guia de integração
+
+<Steps>
+
+<Step title="Instale os pacotes do Channels">
+
+O Channels SDK vem com tudo incluído — cada plataforma é entregue no mesmo pacote, sem nenhum adaptador por plataforma para instalar. Adicione-o junto ao runtime que hospeda o channel e ao cliente AG-UI do CrewAI:
+
+```bash
+npm install @copilotkit/channels @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="Crie um Channel no Intelligence">
+
+No [painel do CopilotKit](https://docs.copilotkit.ai/slack), crie um Channel e conecte o Slack — o Intelligence guia você na criação do app do Slack e detém suas credenciais. Isso deixa duas variáveis de ambiente para o seu processo, ambas vindas do painel:
+
+```bash
+export INTELLIGENCE_API_KEY=...      # authenticates the runtime with Intelligence (free tier available)
+export INTELLIGENCE_CHANNEL_ID=...   # the Channel ID, matched by createChannel({ name })
+```
+
+</Step>
+
+<Step title="Defina o channel">
+
+`createChannel` declara o channel e anexa o seu agente. Construa o agente como uma factory por thread, para que cada conversa ganhe sua própria sessão, usando o mesmo `CrewAIAgent` que a Visão geral usa no runtime web, apontado para o seu endpoint AG-UI. `identifyUser: "platform"` permite que o Intelligence mapeie cada usuário da plataforma para uma identidade estável.
+
+```ts
+// channel.ts
+import { createChannel } from "@copilotkit/channels";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+const channel = createChannel({
+  name: process.env.INTELLIGENCE_CHANNEL_ID!, // must match the Channel ID in Intelligence
+  identifyUser: "platform",
+  // A fresh agent per conversation, pointed at your CrewAI AG-UI endpoint.
+  agent: (threadId) => {
+    const agent = new CrewAIAgent({ url: "http://localhost:8000/recipe" });
+    agent.threadId = threadId;
+    return agent;
+  },
+});
+
+// A mention subscribes the thread and runs the agent; afterwards every message
+// in a subscribed thread runs it without needing another mention.
+channel.onMention(async ({ thread }) => {
+  await thread.subscribe();
+  await thread.runAgent();
+});
+
+channel.onMessage(async ({ thread }) => {
+  if (await thread.isSubscribed()) await thread.runAgent();
+});
+
+export { channel };
+```
+
+</Step>
+
+<Step title="Registre o channel no runtime">
+
+Crie um `CopilotRuntime` com o gateway do Intelligence e o seu channel, e então sirva-o com `createCopilotNodeListener`. O mapa `agents` permanece vazio — o channel fornece seu próprio agente. Aguarde o channel ficar pronto, para que uma configuração quebrada faça a inicialização falhar de forma visível.
+
+```ts
+// server.ts
+import { createServer } from "node:http";
+import { CopilotRuntime, CopilotKitIntelligence } from "@copilotkit/runtime/v2";
+import { createCopilotNodeListener } from "@copilotkit/runtime/v2/node";
+import { channel } from "./channel";
+
+const runtime = new CopilotRuntime({
+  agents: {}, // the channel supplies its own agent; no web-facing agents needed
+  intelligence: new CopilotKitIntelligence({
+    apiKey: process.env.INTELLIGENCE_API_KEY!, // free tier available
+  }),
+  channels: [channel],
+});
+
+const listener = createCopilotNodeListener({ runtime });
+await listener.channels?.ready({ timeoutMs: 15_000 });
+
+createServer(listener).listen(3123, () => {
+  console.log("Channels runtime listening on port 3123");
+});
+```
+
+</Step>
+
+<Step title="Execute o runtime do channel">
+
+Inicie-o junto ao servidor do seu agente CrewAI:
+
+```bash
+uvicorn server:app --port 8000   # terminal 1 — CrewAI agent server
+npx tsx server.ts                 # terminal 2 — Channels runtime
+```
+
+Mencione o bot no Slack ou no Teams e ele executa o seu Crew ou Flow, transmitindo a resposta de volta para a thread. A thread permanece inscrita, então mensagens de acompanhamento rodam sem outra menção.
+
+</Step>
+
+</Steps>
+
+## O modelo de eventos
+
+Um channel reage a eventos da plataforma com handlers, e cada handler recebe uma `thread` que você aciona com alguns métodos:
+
+- **`channel.onMention`** dispara quando um usuário @-menciona o bot. Chame `thread.subscribe()` para entrar na thread, e então `thread.runAgent()` para executar o seu agente CrewAI na menção.
+- **`channel.onMessage`** dispara em cada mensagem de uma thread que o bot consegue ver. Restrinja com `thread.isSubscribed()` para que o agente só responda onde tiver entrado, e então `thread.runAgent()`.
+- **`thread.runAgent()`** executa o agente CrewAI anexado para o turno atual e transmite a saída dele de volta para o channel. Passe `{ prompt }` para sobrescrever o texto sobre o qual o agente roda.
+
+Seu agente recebe um `RunAgentInput` comum do AG-UI e emite eventos comuns do AG-UI; as mecânicas da plataforma ficam por trás do channel, então o mesmo Crew ou Flow roda sem alterações em todas as plataformas. O channel também expõe handlers para boas-vindas, interrupções, comandos, reações e modais — consulte a [referência de `Channel`](https://docs.copilotkit.ai/reference/channels/classes/Channel) para conhecer toda a superfície.
+
+## Suporte a plataformas
+
+O caminho gerenciado do Intelligence cobre **Slack** e **Microsoft Teams** hoje — o mesmo código de channel roda em qualquer um dos dois, e `message.platform` / `thread.platform` reportam a origem nativa. Outras plataformas (Discord, Telegram, WhatsApp) são alcançadas através de **adaptadores diretos** operados pelo desenvolvedor, em vez do caminho gerenciado — o seu próprio processo detém as credenciais da plataforma e o transporte. Consulte a [documentação de Channels do CopilotKit](https://docs.copilotkit.ai/slack) para a lista atual de plataformas e a configuração por plataforma.
+
+## Relacionados
+
+<CardGroup cols={2}>
+  <Card title="Visão geral do Frontend" icon="browser" href="/edge/pt-BR/guides/frontend/overview">
+    Sirva o seu Crew ou Flow por AG-UI — a base sobre a qual todo channel é construído.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    Pause o agente para coletar aprovação ou input do usuário no meio da execução.
+  </Card>
+</CardGroup>

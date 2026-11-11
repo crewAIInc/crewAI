@@ -197,7 +197,7 @@ The `CrewOutput` includes the results from the final task output, token usage, a
 
 | Method/Property | Description                                                                                       |
 | :-------------- | :------------------------------------------------------------------------------------------------ |
-| **json**        | Returns the JSON string representation of the crew output if the output format is JSON.           |
+| **json**        | Returns the JSON string representation of the crew output if the output format is JSON, or `None` if the output could not be converted. |
 | **to_dict**     | Converts the JSON and Pydantic outputs to a dictionary.                                           |
 | \***\*str\*\*** | Returns the string representation of the crew output, prioritizing Pydantic, then JSON, then raw. |
 

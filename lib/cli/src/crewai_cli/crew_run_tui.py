@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import signal
 import sys
 import threading
 import time
@@ -22,7 +23,7 @@ from typing import Any, ClassVar
 from crewai_core.telemetry import Telemetry
 from rich.text import Text
 from textual import work
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, SuspendNotSupported
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
@@ -73,9 +74,18 @@ def _unescape_text(s: str) -> str:
 def _try_parse_structured(text: str) -> Any | None:
     """Try JSON first, then Python repr (single-quoted dicts/lists)."""
     try:
-        return _json.loads(text)
+        obj = _json.loads(text)
     except (ValueError, TypeError, RecursionError):
         pass
+    else:
+        # Python 3.12's C decoder accepts nesting its pure-Python indent encoder
+        # cannot walk (3.13 encodes indent in C). Reject it here, as below,
+        # instead of raising inside _tick.
+        try:
+            _json.dumps(obj, indent=2, ensure_ascii=False)
+        except RecursionError:
+            return None
+        return obj
     try:
         import ast
 
@@ -328,6 +338,23 @@ class TurnTracingOnScreen(TraceConsentScreen):
         return t
 
 
+class EvaluateConsentScreen(TraceConsentScreen):
+    """Evaluate, pressed on a run of a project that never turned tracing on:
+    the run has to happen again, traced, so its trace is shared to be graded.
+    Enter shares (the share button has the focus), since the person asked for
+    the evaluation; Cancel or Esc runs nothing. Nothing times out."""
+
+    YES_LABEL = "Share & Evaluate"
+
+    def _build_content(self) -> Text:
+        t = Text()
+        t.append("  Evaluating this run needs its trace.\n\n", style=f"bold {_C_TEXT}")
+        t.append("  The crew runs again, traced, and its trace\n", style=_C_DIM)
+        t.append("  goes to CrewAI AMP, which grades it.\n\n", style=_C_DIM)
+        t.append("  Enter shares it; Cancel runs nothing.\n", style=_C_MUTED)
+        return t
+
+
 _AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
     "crewai_tui_auto_eval", default=None
 )
@@ -378,7 +405,10 @@ def _awaiting_dir() -> Path:
 
 @contextmanager
 def evaluating_after_run(
-    *, trusted_amp_origins: Iterable[str] = (), tracing_turned_on: bool = False
+    *,
+    trusted_amp_origins: Iterable[str] = (),
+    tracing_turned_on: bool = False,
+    open_report: bool = True,
 ) -> Iterator[dict[str, str | None]]:
     """Run the crew for an evaluation that is already under way.
 
@@ -393,11 +423,13 @@ def evaluating_after_run(
     before the project's `.env` was loaded: which AMP origins may receive the
     saved login (TRUSTED_AMP_ORIGINS), and whether it just turned tracing on for
     the project (TRACING_TURNED_ON) — the one case its app says where the trace
-    goes.
+    goes — and whether the app may open the report in a browser (OPEN_REPORT,
+    False for `crewai eval --no-open`).
     """
     holder: dict[str, str | None] = {
         "execution_id": None,
         "tracing_turned_on": "true" if tracing_turned_on else None,
+        "no_open": None if open_report else "true",
     }
     token = _AUTO_EVAL.set(holder)
     before = os.environ.get(_AWAITING_EVAL_ENV)
@@ -413,6 +445,7 @@ def evaluating_after_run(
                 {
                     "trusted_amp_origins": sorted(set(trusted_amp_origins)),
                     "tracing_turned_on": tracing_turned_on,
+                    "open_report": open_report,
                 },
                 out,
             )
@@ -453,8 +486,13 @@ def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
     said: Any = {}
     with contextlib.suppress(ValueError):
         said = _json.loads(text)
-    turned_on = isinstance(said, dict) and said.get("tracing_turned_on") is True
-    return {"execution_id": None, "tracing_turned_on": "true" if turned_on else None}
+    if not isinstance(said, dict):
+        said = {}
+    return {
+        "execution_id": None,
+        "tracing_turned_on": "true" if said.get("tracing_turned_on") is True else None,
+        "no_open": "true" if said.get("open_report") is False else None,
+    }
 
 
 def _recorded_run(execution_uuid: str) -> dict[str, Any] | None:
@@ -695,6 +733,9 @@ FooterKey .footer-key--key {
         self._task_start_time = time.time()
         self._final_output: str | None = None
         self._error: str | None = None
+        # What a crew's kickoff raised: `crewai run` asks for an API key it
+        # names once the app has closed.
+        self._failure: Exception | None = None
         self._frame = 0
 
         self._task_logs: list[dict[str, Any]] = []
@@ -717,6 +758,9 @@ FooterKey .footer-key--key {
         self._conversation_turns = 0
         self._conversation_turn_in_progress = False
         self._conversation_previous_defer_trace_finalization: bool | None = None
+        self._conversation_defer_trace_finalization = True
+        self._conversation_stream: bool | None = None
+        self._conversation_turn_kwargs: dict[str, Any] = {}
         self._conversation_exit_commands = {"exit", "quit"}
         self._default_inputs: dict[str, Any] | None = None
         self._crew_result: Any = None
@@ -894,6 +938,7 @@ FooterKey .footer-key--key {
                 self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
             if not self._discard_trace_on_exit:
+                self._failure = e
                 self.call_from_thread(self._on_crew_failed, str(e))
 
     @work(thread=True, exclusive=True, group="flow")
@@ -1063,7 +1108,8 @@ FooterKey .footer-key--key {
             self._conversation_previous_defer_trace_finalization = getattr(
                 self._flow, "defer_trace_finalization", False
             )
-            self._flow.defer_trace_finalization = True
+            if self._conversation_defer_trace_finalization:
+                self._flow.defer_trace_finalization = True
 
         try:
             input_widget = self.query_one("#conversation-input", Input)
@@ -1135,7 +1181,14 @@ FooterKey .footer-key--key {
             from crewai.telemetry.tracing.ephemeral import trace_consent
 
             with trace_consent(self._request_trace_consent):
-                result = self._flow.handle_turn(message)
+                with self._flow.stream_turn(
+                    message,
+                    stream=self._conversation_stream,
+                    **self._conversation_turn_kwargs,
+                ) as turn:
+                    for _frame in turn:
+                        pass
+                    result = turn.result
             if hasattr(result, "get_full_text") and hasattr(result, "result"):
                 for _chunk in result:
                     pass
@@ -1486,9 +1539,8 @@ FooterKey .footer-key--key {
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
                 return
             if not tracing_already_on():
-                # Never turned on: asked first, on the same consent screen a
-                # run's trace is shared from.
-                self.push_screen(TraceConsentScreen(), self._tracing_on_answered)
+                # Never turned on: asked first, saying the evaluation needs it.
+                self.push_screen(EvaluateConsentScreen(), self._tracing_on_answered)
                 return
             self._run_again_traced()
             return
@@ -1546,6 +1598,7 @@ FooterKey .footer-key--key {
                 on_started=lambda started: back(self._evaluation_started, started),
                 on_status=lambda payload: back(self._evaluation_progress, payload),
                 note=lambda text: back(self._evaluation_note, text),
+                log_in=lambda: self.call_from_thread(self._log_in_for_the_evaluation),
             )
         except EvaluationStoppedError as stopped:
             reason, message = stopped.reason, str(stopped)
@@ -1567,6 +1620,37 @@ FooterKey .footer-key--key {
         record_stop(reason)
         back(self._evaluation_failed, message)
 
+    def _log_in_for_the_evaluation(self) -> bool:
+        """AMP refused the saved login: the app steps aside for `crewai login`
+        (a code to confirm in the browser, polled until it is), as `crewai eval`
+        does in a terminal, and comes back for the one retry. False when this
+        terminal cannot be handed over, and the refusal is shown as it was."""
+        from crewai_cli.experimental.eval_crew import (
+            EvaluationStoppedError,
+            log_in_again,
+        )
+
+        stopped: EvaluationStoppedError | None = None
+        try:
+            with self.suspend():
+                # The app's event loop owns SIGINT: left alone, Ctrl-C here does
+                # not reach the login, which polls on until its code expires.
+                # While the login has the terminal, Ctrl-C interrupts it.
+                previous = signal.signal(signal.SIGINT, signal.default_int_handler)
+                try:
+                    log_in_again()
+                except EvaluationStoppedError as error:
+                    # Raised after the block: Textual resumes the app only when
+                    # the block ends without an exception.
+                    stopped = error
+                finally:
+                    signal.signal(signal.SIGINT, previous)
+        except SuspendNotSupported:
+            return False
+        if stopped is not None:
+            raise stopped
+        return True
+
     def _evaluation_started(self, started: dict[str, Any]) -> None:
         if self._evaluation is None:
             return
@@ -1575,7 +1659,7 @@ FooterKey .footer-key--key {
             {"state": "running", "id": started.get("id"), "url": url, "note": None}
         )
         self._refresh_eval_button()
-        if isinstance(url, str) and url:
+        if isinstance(url, str) and url and not (self._auto_eval or {}).get("no_open"):
             self._open_report(url)
 
     def _evaluation_progress(self, payload: dict[str, Any]) -> None:

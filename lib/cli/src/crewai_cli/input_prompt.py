@@ -11,6 +11,7 @@ stdout carries only the run's result.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from contextlib import redirect_stdout
 import difflib
 import json
 import sys
@@ -76,9 +77,12 @@ def prompt_for_inputs(
     for name in names:
         if describe is not None and (hint := describe(name)):
             click.secho(f"  {hint}", dim=True, err=True)
-        raw = click.prompt(
-            click.style(f"  {name}", fg="cyan"),
-            prompt_suffix=click.style(" > ", fg="bright_white"),
-        )
+        # Click's Windows readline path writes the last prompt character to stdout.
+        with redirect_stdout(sys.stderr):
+            raw = click.prompt(
+                click.style(f"  {name}", fg="cyan"),
+                prompt_suffix=click.style(" > ", fg="bright_white"),
+                err=True,
+            )
         collected[name] = coerce(name, raw) if coerce is not None else raw
     return collected
