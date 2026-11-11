@@ -9,7 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
@@ -808,6 +808,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _cel_now: datetime | None = PrivateAttr(default=None)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
+    _parallel_feedback_requests: contextvars.ContextVar[
+        list[PendingFeedbackContext] | None
+    ] = PrivateAttr(
+        default_factory=lambda: contextvars.ContextVar(
+            "parallel_feedback_requests", default=None
+        )
+    )
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
@@ -1224,37 +1231,53 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             result: The result from the triggering method.
             triggering_event_id: The event_id of the event that triggered these listeners.
         """
-        racing_tasks = [
-            asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
-                name=str(name),
-            )
-            for name in racing_listeners
-        ]
+        self._validate_parallel_feedback([*racing_listeners, *other_listeners])
 
-        other_tasks = [
-            asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
-                name=str(name),
-            )
-            for name in other_listeners
-        ]
+        async def run_race() -> None:
+            tasks = [
+                asyncio.create_task(
+                    self._execute_single_listener(name, result, triggering_event_id),
+                    name=str(name),
+                )
+                for name in racing_listeners
+            ]
+            try:
+                for coro in asyncio.as_completed(tasks):
+                    try:
+                        await coro
+                    except HumanFeedbackPending:
+                        break
+                    except Exception as e:
+                        logger.debug(f"Racing listener failed: {e}")
+                        continue
+                    break
+            finally:
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+            if any(not isinstance(item, BaseException) for item in results):
+                return
+            pending = [
+                item for item in results if isinstance(item, HumanFeedbackPending)
+            ]
+            if len(pending) > 1:
+                raise ValueError(
+                    "Multiple parallel human feedback requests cannot be resumed. "
+                    "Chain feedback methods sequentially."
+                )
+            if pending:
+                raise pending[0]
 
-        if racing_tasks:
-            for coro in asyncio.as_completed(racing_tasks):
-                try:
-                    await coro
-                except Exception as e:
-                    logger.debug(f"Racing listener failed: {e}")
-                    continue
-                break
-
-            for task in racing_tasks:
-                if not task.done():
-                    task.cancel()
-
-        if other_tasks:
-            await asyncio.gather(*other_tasks, return_exceptions=True)
+        await self._execute_parallel(
+            [
+                run_race(),
+                *(
+                    self._execute_single_listener(name, result, triggering_event_id)
+                    for name in other_listeners
+                ),
+            ]
+        )
 
     @classmethod
     def from_pending(
@@ -1317,6 +1340,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
+        instance._pending_events = {
+            PendingListenerKey(key): set(events)
+            for key, events in pending_context.pending_events.items()
+        }
+        instance._fired_or_listeners = {
+            FlowMethodName(name) for name in pending_context.fired_or_listeners
+        }
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1628,6 +1658,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
+                self._capture_pending_listener_state(e.context)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -2442,11 +2473,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     for start_method in starts_to_execute:
                         await self._execute_start_method(start_method)
                 else:
+                    self._validate_parallel_feedback(starts_to_execute)
                     tasks = [
                         self._execute_start_method(start_method)
                         for start_method in starts_to_execute
                     ]
-                    await asyncio.gather(*tasks)
+                    await self._execute_parallel(tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
                 if isinstance(e, HumanFeedbackPending):
@@ -2492,6 +2524,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
+                    self._capture_pending_listener_state(e.context)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
@@ -3165,6 +3198,75 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         else:
             return state_copy
 
+    def _capture_pending_listener_state(self, context: PendingFeedbackContext) -> None:
+        context.pending_events = {
+            str(key): sorted(events) for key, events in self._pending_events.items()
+        }
+        context.fired_or_listeners = sorted(self._fired_or_listeners)
+
+    def _validate_parallel_feedback(
+        self, method_names: Sequence[FlowMethodName]
+    ) -> None:
+        feedback_methods = [
+            name
+            for name in method_names
+            if self._definition.methods[str(name)].human_feedback is not None
+        ]
+        if len(feedback_methods) > 1:
+            raise ValueError(
+                "Parallel human feedback methods are not supported. "
+                "Chain feedback methods sequentially so each reply has one recipient."
+            )
+
+    async def _execute_parallel(
+        self, coroutines: Sequence[Coroutine[Any, Any, Any]]
+    ) -> None:
+        if self._parallel_feedback_requests.get() is not None:
+            await self._gather_parallel(coroutines)
+            return
+
+        requests: list[PendingFeedbackContext] = []
+        token = self._parallel_feedback_requests.set(requests)
+        try:
+            await self._gather_parallel(coroutines)
+        except HumanFeedbackPending:
+            if len(requests) > 1:
+                raise ValueError(
+                    "Multiple parallel human feedback requests cannot be resumed. "
+                    "Chain feedback methods sequentially."
+                ) from None
+            raise
+        finally:
+            self._parallel_feedback_requests.reset(token)
+
+    async def _gather_parallel(
+        self, coroutines: Sequence[Coroutine[Any, Any, Any]]
+    ) -> None:
+        tasks = [asyncio.create_task(coroutine) for coroutine in coroutines]
+        try:
+            await asyncio.gather(*tasks)
+        except HumanFeedbackPending:
+            # HumanFeedbackPending 暂停前需要等待其他已启动分支结束
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException) and not isinstance(
+                    result, HumanFeedbackPending
+                ):
+                    raise result from None
+            if sum(isinstance(result, HumanFeedbackPending) for result in results) > 1:
+                raise ValueError(
+                    "Multiple parallel human feedback requests cannot be resumed. "
+                    "Chain feedback methods sequentially."
+                ) from None
+            raise
+
+        except BaseException:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
+
     async def _execute_listeners(
         self,
         trigger_method: FlowMethodName,
@@ -3283,6 +3385,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             current_triggering_event_id,
                         )
                     else:
+                        self._validate_parallel_feedback(listeners_triggered)
                         tasks = [
                             self._execute_single_listener(
                                 listener_name,
@@ -3291,7 +3394,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             )
                             for listener_name in listeners_triggered
                         ]
-                        await asyncio.gather(*tasks)
+                        await self._execute_parallel(tasks)
 
                 if current_trigger in router_results:
                     for method_name in self._start_method_names():
@@ -3686,11 +3789,28 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else _serialize_llm_for_context(llm),
                 execution_uuid=get_execution_uuid(),
             )
-            feedback_value = await asyncio.to_thread(
-                provider.request_feedback, context, self
-            )
-            if asyncio.iscoroutine(feedback_value):
-                feedback_value = await feedback_value
+
+            async def request_feedback() -> Any:
+                try:
+                    value = await asyncio.to_thread(
+                        provider.request_feedback, context, self
+                    )
+                    if asyncio.iscoroutine(value):
+                        return await value
+                    return value
+                except HumanFeedbackPending as pending:
+                    # 记录已发出的审批及竞速取消后才返回的请求。
+                    requests = self._parallel_feedback_requests.get()
+                    if requests is not None:
+                        requests.append(pending.context)
+                    raise
+
+            request = asyncio.create_task(request_feedback())
+            try:
+                feedback_value = await asyncio.shield(request)
+            except asyncio.CancelledError:
+                await asyncio.gather(request, return_exceptions=True)
+                raise
             raw_feedback = str(feedback_value)
         else:
             raw_feedback = await asyncio.to_thread(
