@@ -7,13 +7,13 @@ incrementally during the stream loop instead.
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.llm import LLM
+from pydantic import BaseModel
+import pytest
 
 
 @pytest.fixture
@@ -94,3 +94,78 @@ async def test_async_stream_emits_finish_reason_and_response_id_from_loop(mock_e
     event = _completed_event(mock_emit)
     assert event.finish_reason == "stop"
     assert event.response_id == "chatcmpl-stream-1"
+
+
+def test_sync_stream_with_response_model(mock_emit):
+    class Answer(BaseModel):
+        value: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_instance = MagicMock()
+    mock_instance.to_pydantic.return_value = Answer(value="42")
+
+    with (
+        patch(
+            "crewai.llm.litellm.completion",
+            return_value=iter(_chunks_with_usage_tail()),
+        ),
+        patch("crewai.llm.InternalInstructor", return_value=mock_instance),
+    ):
+        result = llm.call("anything", response_model=Answer)
+
+    assert result == Answer(value="42").model_dump_json()
+    event = _completed_event(mock_emit)
+    assert event.response == result
+
+
+@pytest.mark.asyncio
+async def test_async_stream_with_response_model(mock_emit):
+    class Answer(BaseModel):
+        value: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_instance = MagicMock()
+    mock_instance.to_pydantic.return_value = Answer(value="42")
+
+    async def _aiter():
+        for chunk in _chunks_with_usage_tail():
+            yield chunk
+
+    async def _acompletion(*_args, **_kwargs):
+        return _aiter()
+
+    with (
+        patch("crewai.llm.litellm.acompletion", side_effect=_acompletion),
+        patch("crewai.llm.InternalInstructor", return_value=mock_instance),
+    ):
+        result = await llm.acall("anything", response_model=Answer)
+
+    assert result == Answer(value="42").model_dump_json()
+    event = _completed_event(mock_emit)
+    assert event.response == result
+
+
+@pytest.mark.asyncio
+async def test_async_stream_with_response_model_propagates_instructor_error(
+    mock_emit,
+):
+    class Answer(BaseModel):
+        value: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    mock_instance = MagicMock()
+    mock_instance.to_pydantic.side_effect = ValueError("schema validation failed")
+
+    async def _aiter():
+        for chunk in _chunks_with_usage_tail():
+            yield chunk
+
+    async def _acompletion(*_args, **_kwargs):
+        return _aiter()
+
+    with (
+        patch("crewai.llm.litellm.acompletion", side_effect=_acompletion),
+        patch("crewai.llm.InternalInstructor", return_value=mock_instance),
+        pytest.raises(ValueError, match="schema validation failed"),
+    ):
+        await llm.acall("anything", response_model=Answer)
