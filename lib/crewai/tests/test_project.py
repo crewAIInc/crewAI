@@ -1,5 +1,7 @@
+import gc
 from typing import Any, ClassVar, cast
 from unittest.mock import Mock, create_autospec, patch
+import weakref
 
 import pytest
 from crewai.agent import Agent
@@ -135,6 +137,68 @@ def test_crew_memoization():
     assert first_call_result is second_call_result, (
         "Crew references should point to the same object"
     )
+
+
+class _FirstRoleCrew:
+    @agent
+    def researcher(self):
+        return Agent(role="first role", goal="goal", backstory="backstory")
+
+
+class _SecondRoleCrew:
+    @agent
+    def researcher(self):
+        return Agent(role="second role", goal="goal", backstory="backstory")
+
+    @agent
+    async def async_researcher(self):
+        return Agent(role="second async role", goal="goal", backstory="backstory")
+
+
+class _FirstAsyncRoleCrew:
+    @agent
+    async def async_researcher(self):
+        return Agent(role="first async role", goal="goal", backstory="backstory")
+
+
+def test_memoized_agent_is_not_returned_to_a_later_instance():
+    # A freed instance's id is usually handed to the next one; the loop makes
+    # that reuse near-certain rather than relying on a single allocation.
+    for _ in range(20):
+        first = _FirstRoleCrew()
+        first.researcher()
+        del first
+        gc.collect()
+
+        assert _SecondRoleCrew().researcher().role == "second role"
+
+
+def test_memoized_async_agent_is_not_returned_to_a_later_instance():
+    for _ in range(20):
+        first = _FirstAsyncRoleCrew()
+        first.async_researcher()
+        del first
+        gc.collect()
+
+        assert _SecondRoleCrew().async_researcher().role == "second async role"
+
+
+def test_memoization_is_per_instance():
+    first, second = SimpleCrew(), SimpleCrew()
+
+    assert first.simple_agent() is not second.simple_agent()
+    assert first.simple_task() is not second.simple_task()
+
+
+def test_crew_instance_is_freed_after_building_its_crew():
+    instance = InternalCrew()
+    instance.crew()
+    instance_ref = weakref.ref(instance)
+
+    del instance
+    gc.collect()
+
+    assert instance_ref() is None
 
 
 def test_task_name():

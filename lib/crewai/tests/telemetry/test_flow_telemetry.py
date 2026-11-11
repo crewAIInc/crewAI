@@ -223,14 +223,15 @@ def test_a_missing_api_key_is_reported_as_its_type(
     durations: list[tuple[str, float, str, str | None]],
     method_failures: list[tuple[str, str, str | None]],
 ) -> None:
-    """An OpenAI-compatible provider used to report it as an ``ImportError``."""
+    """An OpenAI-compatible provider used to report it as an ``ImportError``;
+    it now raises it on the first call, as the native providers do."""
     from crewai.llm import LLM
     from crewai.llms.base_llm import MissingAPIKeyError
 
     class NoKeyFlow(Flow):
         @start()
         def go(self) -> str:
-            LLM(model="deepseek/deepseek-chat")
+            LLM(model="deepseek/deepseek-chat").call("Say hi")
             return "unreachable"
 
     with (

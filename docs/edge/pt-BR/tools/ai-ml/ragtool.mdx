@@ -49,6 +49,7 @@ O `RagTool` pode ser utilizado com uma grande variedade de fontes de dados, incl
 - 📰 Arquivos PDF
 - 📊 Arquivos CSV
 - 📃 Arquivos JSON
+- Arquivos JSONL (`.jsonl` e `.ndjson`)
 - 📝 Texto
 - 📁 Diretórios/Pastas
 - 🌐 Páginas web em HTML
@@ -95,7 +96,16 @@ rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VID
 
 # Add a directory of files
 rag_tool.add(data_type="directory", path="path/to/your/directory")
+
+# Add a local JSONL file with an explicit type
+rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
+
+# Auto-detect a local JSONL file by its extension
+rag_tool.add(path="path/to/your/records.ndjson")
 ```
+
+Arquivos JSONL contêm um valor JSON por linha. O carregador JSONL suporta arquivos locais;
+reconhecer uma URL JSONL não busca seu conteúdo.
 
 ## Exemplo de Integração com Agente
 

@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.agent.spreadsheet_inputs import no_spreadsheet_urls
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import CrewTestResultEvent
 from crewai.llms.base_llm import BaseLLM
@@ -199,7 +200,9 @@ class CrewEvaluator:
             evaluator_agent, current_task, task_output.raw
         )
 
-        evaluation_result = evaluation_task.execute_sync()
+        # The evaluation task holds the crew's outputs, which are model text.
+        with no_spreadsheet_urls():
+            evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
             quality_score = evaluation_result.pydantic.quality
