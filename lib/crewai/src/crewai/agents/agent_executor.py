@@ -2030,6 +2030,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "native_tool_completed" normally, or "tool_result_is_final" if
             a tool with result_as_answer=True was executed.
         """
+        if AgentExecutor._caller_cancelled(self):
+            raise _ExecutionCancelledError()
+
         if not self.state.pending_tool_calls:
             return "native_tool_completed"
 
