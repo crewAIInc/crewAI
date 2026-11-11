@@ -43,7 +43,7 @@ O Construtor Visual de Agentes permite:
 | **Role (Função)**                       | `role`                   | `str`                                 | Define a função e a área de especialização do agente dentro da equipe.                                    |
 | **Goal (Objetivo)**                     | `goal`                   | `str`                                 | O objetivo individual que guia a tomada de decisão do agente.                                             |
 | **Backstory (História de fundo)**       | `backstory`              | `str`                                 | Fornece contexto e personalidade ao agente, enriquecendo as interações.                                   |
-| **LLM** _(opcional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Modelo de linguagem que alimenta o agente. Padrão: modelo especificado em `OPENAI_MODEL_NAME` ou "gpt-4". |
+| **LLM** _(opcional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Modelo de linguagem que alimenta o agente. Padrão: modelo especificado em `OPENAI_MODEL_NAME` ou "gpt-6-luna". |
 | **Tools (Ferramentas)** _(opcional)_    | `tools`                  | `List[BaseTool]`                      | Capacidades ou funções disponíveis para o agente. Padrão: lista vazia.                                    |
 | **Function Calling LLM** _(opcional)_   | `function_calling_llm`   | `Optional[Any]`                       | Modelo de linguagem usado para chamada de ferramentas, sobrescreve LLM principal se especificado.         |
 | **Max Iterations** _(opcional)_         | `max_iter`               | `int`                                 | Número máximo de iterações antes do agente fornecer sua melhor resposta. Padrão: 20.                      |
@@ -186,7 +186,7 @@ agent = Agent(
     role="Cientista de Dados Sênior",
     goal="Analisar e interpretar conjuntos de dados complexos para fornecer insights acionáveis",
     backstory="Com mais de 10 anos de experiência em ciência de dados e aprendizado de máquina, você é especialista em encontrar padrões em grandes volumes de dados.",
-    llm="gpt-4",  # Padrão: OPENAI_MODEL_NAME ou "gpt-4"
+    llm="gpt-6-luna",  # Padrão: OPENAI_MODEL_NAME ou "gpt-6-luna"
     function_calling_llm=None,  # Opcional: LLM separado para chamadas de ferramentas
     verbose=False,  # Padrão: False
     allow_delegation=False,  # Padrão: False
@@ -314,7 +314,7 @@ multimodal_agent = Agent(
 #### Parâmetros Críticos
 
 - `role`, `goal` e `backstory` são obrigatórios e definem o comportamento do agente
-- `llm` determina o modelo de linguagem utilizado (padrão: GPT-4 da OpenAI)
+- `llm` determina o modelo de linguagem utilizado (padrão: `gpt-6-luna` da OpenAI)
 
 #### Memória e Contexto
 
@@ -582,6 +582,80 @@ agent = Agent(
   segundo plano. Você não precisa chamar funções especiais – basta definir
   `respect_context_window` conforme deseja e o CrewAI cuida do resto!
 </Note>
+
+## Planilhas
+
+Com o extra `spreadsheets` instalado, um agente que recebe na entrada a URL de um arquivo CSV, TSV ou Excel (`.xlsx`) trabalha nele com ferramentas, em vez de ler o arquivo inteiro para o seu contexto:
+
+```bash
+uv add 'crewai[spreadsheets]'
+```
+
+Quando a entrada do agente (uma mensagem de `kickoff()`, ou a descrição de uma tarefa que ele executa) contém a URL de uma planilha, o agente:
+
+- baixa o arquivo uma vez e adiciona ao prompt uma visão geral de cada aba (colunas, tipos e valores de exemplo)
+- recebe `inspect_spreadsheet`, para listar todas as abas e suas colunas, ou ver as colunas de uma aba em detalhe
+- recebe `query_spreadsheet`, para paginar linhas, descrever colunas, contar valores, agrupar e agregar, ou correlacionar colunas numéricas, depois de até cinco filtros
+
+As respostas são calculadas sobre todas as linhas, então totais e contagens são exatos qualquer que seja o tamanho do arquivo. Uma URL é reconhecida pelo nome do arquivo, incluindo URLs pré-assinadas que só nomeiam o arquivo na query string, como as que o CrewAI AMP dá aos arquivos enviados.
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Sales Analyst",
+    goal="Answer questions from sales data",
+    backstory="You work from the numbers, not impressions.",
+)
+
+result = analyst.kickoff(
+    "Which region sold the most? The data is at https://example.com/exports/sales.csv"
+)
+print(result.raw)
+```
+
+<Note>
+O agente só abre URLs que aparecem na sua própria entrada, nunca uma que um modelo ou uma ferramenta produza. A entrada é o que o seu código passa ao agente, então a saída de um modelo que você coloca nela, como o resultado de uma etapa anterior do flow, conta como entrada e as URLs de planilhas nela são lidas. Os downloads recusam endereços de redes privadas e internas, e um arquivo pode ter até 50 MB e 10 milhões de células. O agente lê até 10 planilhas por execução, e os downloads delas compartilham um limite de 60 segundos que não faz parte de `max_execution_time`. Arquivos `.xls` legados, OpenDocument `.ods` e pastas de trabalho protegidas por senha não podem ser lidos, e o agente é avisado disso. Sem o extra, a URL de uma planilha é só texto na entrada.
+</Note>
+
+## Agents conversacionais (experimental)
+
+Ative `conversational=True` para dar a um Agent usado diretamente uma sessão conversacional de Flow. `handle_turn()` passa o histórico de usuário/assistente da sessão para o Agent configurado e suas ferramentas a cada turno e retorna a saída usual do Agent.
+
+<Warning>
+Esta API é experimental e requer um build compatível do SDK. Seu contrato pode mudar antes do lançamento.
+</Warning>
+
+```python
+from crewai import Agent, LLM
+
+agent = Agent(
+    role="Assistant",
+    goal="Help the user accurately.",
+    backstory="A general-purpose assistant.",
+    llm=LLM(model="openai/gpt-6-luna", api="responses"),
+    conversational=True,
+)
+
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+Para conversas interativas, use a mesma convenção `chat()` dos Flows conversacionais:
+
+```python
+agent.chat()          # Plain terminal REPL
+agent.chat(tui=True)  # Full terminal UI
+```
+
+`tui=True` requer um terminal interativo e um build compatível da CLI. Os dois modos aceitam `session_id`, `exit_commands` e opções encaminhadas a `handle_turn()`. Prompts personalizados, funções de entrada/saída e `skip_empty` são opções exclusivas do REPL. Não é necessário criar nem passar um Flow para começar a conversar.
+
+Tanto o REPL simples quanto a TUI transmitem respostas automaticamente; você não precisa de `LLM(stream=True)`. Desative o streaming de tokens com `agent.chat(stream=False)` (também aceito com `tui=True`) ou com `LLM(stream=False)` explícito. Um `stream=True` explícito no chat tem precedência sobre a configuração do LLM. O streaming se aplica a cada turno e não altera a configuração do LLM nem o comportamento independente de `kickoff()`. Um `output_fn` personalizado recebe uma resposta completa por turno; use `stream_turn()` para transportes personalizados com streaming.
+
+Reutilize um Agent para uma conversa. O primeiro turno vincula o ID da sessão; mudar para outro ID gera `ValueError` antes que o histórico chegue ao modelo. Turnos sobrepostos no mesmo Agent geram `RuntimeError`, incluindo os turnos com streaming usados pelo REPL, TUI e pela ponte Flow gerenciada. Crie um Agent separado para cada conversa independente. Cópias de Agent em Python e Pydantic começam com histórico e proteções de sessão novos, mesmo quando feitas durante um turno ativo. Para configurar persistência avançada, `agent.as_flow()` expõe a sessão subjacente. O histórico fica na memória por padrão; recuperar após reiniciar o processo exige persistência explícita de Flow. Um ID de sessão identifica o estado; as aplicações ainda devem autorizar o acesso às sessões persistidas.
+
+Agents comuns usam `conversational=False` por padrão. Chamadas diretas a `kickoff()` e `kickoff_async()` continuam sendo execuções independentes mesmo com a conversa ativada; use `handle_turn()` para manter o histórico da sessão. A execução existente de Crew/Task mantém seu comportamento atual.
 
 ## Atualizando Agentes de Versões Anteriores
 

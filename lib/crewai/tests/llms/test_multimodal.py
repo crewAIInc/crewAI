@@ -67,6 +67,10 @@ class TestLiteLLMMultimodal:
         llm = LLM(model="gpt-4o", is_litellm=True)
         assert llm.supports_multimodal() is True
 
+    def test_supports_multimodal_gpt6(self) -> None:
+        llm = LLM(model="gpt-6-luna", is_litellm=True)
+        assert llm.supports_multimodal() is True
+
     def test_supports_multimodal_gpt4_turbo(self) -> None:
         """Test GPT-4 Turbo model supports multimodal."""
         llm = LLM(model="gpt-4-turbo", is_litellm=True)
@@ -176,6 +180,18 @@ class TestOpenAIMultimodal:
         """Test O1 model supports multimodal."""
         llm = LLM(model="openai/o1-preview")
         assert llm.supports_multimodal() is True
+
+    @pytest.mark.parametrize("model", ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra"])
+    def test_supports_multimodal_gpt6(self, model: str) -> None:
+        assert LLM(model=f"openai/{model}").supports_multimodal() is True
+
+    def test_the_default_agent_model_takes_input_files(self) -> None:
+        """An Agent without an llm can be given images through input_files."""
+        from crewai import Agent
+
+        agent = Agent(role="r", goal="g", backstory="b")
+
+        assert agent.llm.supports_multimodal() is True
 
     def test_does_not_support_gpt35(self) -> None:
         """Test GPT-3.5 does not support multimodal."""

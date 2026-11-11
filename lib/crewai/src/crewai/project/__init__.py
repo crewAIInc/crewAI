@@ -1,5 +1,6 @@
 """Project package for CrewAI."""
 
+from crewai.project.agent_project import load_agent_project
 from crewai.project.annotations import (
     after_kickoff,
     agent,
@@ -45,6 +46,7 @@ __all__ = [
     "llm",
     "load_agent",
     "load_agent_from_definition",
+    "load_agent_project",
     "load_crew",
     "load_crew_and_kickoff",
     "output_json",
