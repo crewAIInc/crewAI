@@ -2846,6 +2846,7 @@ class LLM(BaseLLM):
             "gpt-4-vision",
             "gpt-4.1",
             "gpt-5",
+            "gpt-6",
             # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
             "o1",
             "o3",

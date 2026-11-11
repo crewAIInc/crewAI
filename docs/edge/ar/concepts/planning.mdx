@@ -368,7 +368,7 @@ A fully fledged report with the main topics, each with a full section of informa
 
 ### LLM التخطيط
 
-يستخدم تخطيط الطاقم `gpt-5.4-mini` افتراضيًا. عيّن `planning_llm` إلى اسم نموذج أو مثيل `LLM` لاستخدام نموذج آخر، مثل `Crew(..., planning=True, planning_llm="gpt-5")`.
+يستخدم تخطيط الطاقم `gpt-6-luna` افتراضيًا. عيّن `planning_llm` إلى اسم نموذج أو مثيل `LLM` لاستخدام نموذج آخر، مثل `Crew(..., planning=True, planning_llm="gpt-5")`.
 
 <Warning>
 مع LLM التخطيط الافتراضي، يحتاج تخطيط الطاقم إلى مفتاح OpenAI API صالح، حتى لو كان وكلاؤك يستخدمون مزوّدين آخرين. إذا لم يكن لديك مفتاح OpenAI API مُعدّ، فعيّن `planning_llm` إلى نموذج يمكنك الوصول إليه.
