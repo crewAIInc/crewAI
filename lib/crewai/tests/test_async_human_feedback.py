@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback, router
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -563,6 +563,121 @@ class TestFlowResumeWithFeedback:
                 f"an unpaired event breaks started/finished pairing and every "
                 f"duration built on it"
             )
+
+    def test_router_outcome_listeners_run_when_sibling_listener_pauses(self) -> None:
+        """A pending human-feedback listener must not swallow router outcomes.
+
+        ``_execute_listeners`` dispatches the triggering method's listeners first
+        and then the router outcomes. When the human-feedback listener raised
+        ``HumanFeedbackPending``, that loop stopped there, so the listeners of the
+        router outcome never ran -- not during the run and not after ``resume()``,
+        because the router had already completed. The remaining outcomes are now
+        dispatched before the pause propagates, matching what happens when the
+        same listener subscribes to the start method directly.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class PausingProvider(HumanFeedbackProvider):
+                def request_feedback(self, context, flow):
+                    raise HumanFeedbackPending(context=context)
+
+            class ReviewFlow(Flow):
+                @start()
+                def begin(self):
+                    pass
+
+                @listen(begin)
+                @human_feedback(message="Approve?", provider=PausingProvider())
+                def review(self):
+                    return "draft"
+
+                @listen(review)
+                def record_review(self, result):
+                    self.state["review"] = result.feedback
+
+                @router(begin)
+                def route(self):
+                    return "ready"
+
+                @listen("ready")
+                def ship(self):
+                    self.state["shipped"] = True
+
+            pending = ReviewFlow(persistence=persistence).kickoff()
+            assert isinstance(pending, HumanFeedbackPending)
+
+            flow = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+            flow.resume("approved")
+
+            state = {key: value for key, value in flow.state.items() if key != "id"}
+            assert state == {"shipped": True, "review": "approved"}
+
+    @pytest.mark.parametrize("failure_kind", ["listener", "start"])
+    @pytest.mark.parametrize("pause", [True, False])
+    def test_router_outcome_error_is_deferred_until_feedback_resumes(
+        self, failure_kind: str, pause: bool
+    ) -> None:
+        """Do not execute later work until the outstanding reply has arrived."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            failure = RuntimeError("router outcome failed")
+
+            class ReviewProvider(HumanFeedbackProvider):
+                def request_feedback(self, context, flow):
+                    if pause:
+                        raise HumanFeedbackPending(context=context)
+                    return "approved"
+
+            outcome_decorator = listen if failure_kind == "listener" else start
+
+            class ReviewFlow(Flow):
+                @start()
+                def begin(self):
+                    pass
+
+                @listen(begin)
+                @human_feedback(message="Approve?", provider=ReviewProvider())
+                def review(self):
+                    return "draft"
+
+                @listen(review)
+                def record_review(self, result):
+                    self.state["review"] = result.feedback
+
+                @router(begin)
+                def route(self):
+                    return "ready"
+
+                @outcome_decorator("ready")
+                def fail(self):
+                    self.state["attempted"] = True
+                    raise failure
+
+            flow = ReviewFlow(persistence=persistence)
+            if not pause:
+                with pytest.raises(RuntimeError) as exc_info:
+                    flow.kickoff()
+                assert exc_info.value is failure
+                assert persistence.load_pending_feedback(flow.state["id"]) is None
+                return
+
+            pending = flow.kickoff()
+            assert isinstance(pending, HumanFeedbackPending)
+            # Only the first request is active; later listeners and starts
+            # are persisted, so their failures cannot happen before the reply.
+            assert pending.__cause__ is None
+            assert pending.context.method_name == "review"
+            assert pending.context.method_output == "draft"
+
+            restored = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+            assert "attempted" not in restored.state
+            with pytest.raises(RuntimeError) as exc_info:
+                restored.resume("approved")
+            assert exc_info.value is failure
+            assert restored.state["attempted"] is True
+            assert restored.state["review"] == "approved"
+            assert persistence.load_pending_feedback(pending.context.flow_id) is None
 
     def test_resume_without_pending_raises_error(self) -> None:
         """Test that resume raises error without pending context."""
