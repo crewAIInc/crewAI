@@ -1,0 +1,55 @@
+---
+title: تنفيذ LLM مخصص
+description: تعلم كيفية إنشاء تنفيذات LLM مخصصة في CrewAI.
+icon: code
+mode: "wide"
+---
+
+## نظرة عامة
+
+يدعم CrewAI تنفيذات LLM المخصصة من خلال فئة `BaseLLM` المجردة. يتيح لك ذلك دمج أي مزود LLM لا يحظى بدعم مدمج في LiteLLM، أو تنفيذ آليات مصادقة مخصصة.
+
+## بداية سريعة
+
+راجع الملف الإنجليزي الأصلي للحصول على تنفيذ LLM مخصص كامل يوضح طريقة `call()` المطلوبة والطرق الاختيارية مثل `supports_function_calling()` و`get_context_window_size()`.
+
+## استخدام LLM المخصص
+
+```python
+from crewai import Agent, Task, Crew
+
+custom_llm = CustomLLM(
+    model="my-custom-model",
+    api_key="your-api-key",
+    endpoint="https://api.example.com/v1/chat/completions",
+    temperature=0.7
+)
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Find and analyze information",
+    backstory="You are a research assistant.",
+    llm=custom_llm
+)
+
+task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A comprehensive summary",
+    agent=agent
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## الطرق المطلوبة
+
+### البنّاء: `__init__()`
+
+**مهم**: يجب استدعاء `super().__init__(model, temperature)` مع المعاملات المطلوبة.
+
+### الطريقة المجردة: `call()`
+
+طريقة `call()` هي قلب تنفيذ LLM. يجب أن تقبل الرسائل وتعيد استجابة نصية وتعالج الأدوات واستدعاء الدوال إذا كانت مدعومة.
+
+يغطي هذا الدليل أساسيات تنفيذ LLM مخصصة في CrewAI.

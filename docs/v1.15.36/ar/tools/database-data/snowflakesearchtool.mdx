@@ -1,0 +1,203 @@
+---
+title: أداة بحث Snowflake
+description: تتيح `SnowflakeSearchTool` لوكلاء CrewAI تنفيذ استعلامات SQL وإجراء بحث دلالي على مستودعات بيانات Snowflake.
+icon: snowflake
+mode: "wide"
+---
+
+# `SnowflakeSearchTool`
+
+## الوصف
+
+صُممت `SnowflakeSearchTool` للاتصال بمستودعات بيانات Snowflake وتنفيذ استعلامات SQL مع ميزات متقدمة مثل تجميع الاتصالات ومنطق إعادة المحاولة والتنفيذ غير المتزامن. تتيح هذه الأداة لوكلاء CrewAI التفاعل مع قواعد بيانات Snowflake، مما يجعلها مثالية لمهام تحليل البيانات وإعداد التقارير وذكاء الأعمال التي تتطلب الوصول إلى بيانات المؤسسة المخزنة في Snowflake.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت التبعيات المطلوبة:
+
+```shell
+uv add cryptography snowflake-connector-python snowflake-sqlalchemy
+```
+
+أو بدلاً من ذلك:
+
+```shell
+uv sync --extra snowflake
+```
+
+## خطوات البدء
+
+لاستخدام `SnowflakeSearchTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت التبعيات**: قم بتثبيت الحزم المطلوبة باستخدام أحد الأوامر أعلاه.
+2. **تكوين اتصال Snowflake**: أنشئ كائن `SnowflakeConfig` ببيانات اعتماد Snowflake الخاصة بك.
+3. **تهيئة الأداة**: أنشئ نسخة من الأداة بالتكوين اللازم.
+4. **تنفيذ الاستعلامات**: استخدم الأداة لتشغيل استعلامات SQL على قاعدة بيانات Snowflake الخاصة بك.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `SnowflakeSearchTool` للاستعلام عن البيانات من قاعدة بيانات Snowflake:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SnowflakeSearchTool, SnowflakeConfig
+
+# Create Snowflake configuration
+config = SnowflakeConfig(
+    account="your_account",
+    user="your_username",
+    password="your_password",
+    warehouse="COMPUTE_WH",
+    database="your_database",
+    snowflake_schema="your_schema"
+)
+
+# Initialize the tool
+snowflake_tool = SnowflakeSearchTool(config=config)
+
+# Define an agent that uses the tool
+data_analyst_agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data from Snowflake database",
+    backstory="An expert data analyst who can extract insights from enterprise data.",
+    tools=[snowflake_tool],
+    verbose=True,
+)
+
+# Example task to query sales data
+query_task = Task(
+    description="Query the sales data for the last quarter and summarize the top 5 products by revenue.",
+    expected_output="A summary of the top 5 products by revenue for the last quarter.",
+    agent=data_analyst_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[data_analyst_agent],
+            tasks=[query_task])
+result = crew.kickoff()
+```
+
+يمكنك أيضاً تخصيص الأداة بمعاملات إضافية:
+
+```python Code
+# Initialize the tool with custom parameters
+snowflake_tool = SnowflakeSearchTool(
+    config=config,
+    pool_size=10,
+    max_retries=5,
+    retry_delay=2.0,
+    enable_caching=True
+)
+```
+
+## المعاملات
+
+### معاملات SnowflakeConfig
+
+يقبل صنف `SnowflakeConfig` المعاملات التالية:
+
+- **account**: مطلوب. معرّف حساب Snowflake.
+- **user**: مطلوب. اسم مستخدم Snowflake.
+- **password**: اختياري*. كلمة مرور Snowflake.
+- **private_key_path**: اختياري*. مسار ملف المفتاح الخاص (بديل لكلمة المرور).
+- **warehouse**: مطلوب. اسم مستودع Snowflake.
+- **database**: مطلوب. قاعدة البيانات الافتراضية.
+- **snowflake_schema**: مطلوب. المخطط الافتراضي.
+- **role**: اختياري. دور Snowflake.
+- **session_parameters**: اختياري. معاملات جلسة مخصصة كقاموس.
+
+*يجب توفير إما `password` أو `private_key_path`.
+
+### معاملات SnowflakeSearchTool
+
+تقبل `SnowflakeSearchTool` المعاملات التالية أثناء التهيئة:
+
+- **config**: مطلوب. كائن `SnowflakeConfig` يحتوي على تفاصيل الاتصال.
+- **pool_size**: اختياري. عدد الاتصالات في المجمع. الافتراضي هو 5.
+- **max_retries**: اختياري. الحد الأقصى لمحاولات إعادة المحاولة للاستعلامات الفاشلة. الافتراضي هو 3.
+- **retry_delay**: اختياري. التأخير بين المحاولات بالثواني. الافتراضي هو 1.0.
+- **enable_caching**: اختياري. ما إذا كان سيتم تفعيل التخزين المؤقت لنتائج الاستعلامات. الافتراضي هو True.
+
+## الاستخدام
+
+عند استخدام `SnowflakeSearchTool`، تحتاج إلى توفير المعاملات التالية:
+
+- **query**: مطلوب. استعلام SQL المراد تنفيذه.
+- **database**: اختياري. تجاوز قاعدة البيانات الافتراضية المحددة في التكوين.
+- **snowflake_schema**: اختياري. تجاوز المخطط الافتراضي المحدد في التكوين.
+- **timeout**: اختياري. مهلة الاستعلام بالثواني. الافتراضي هو 300.
+
+ستُرجع الأداة نتائج الاستعلام كقائمة من القواميس، حيث يمثل كل قاموس صفاً بأسماء الأعمدة كمفاتيح.
+
+```python Code
+# Example of using the tool with an agent
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze sales data from Snowflake",
+    backstory="An expert data analyst with experience in SQL and data visualization.",
+    tools=[snowflake_tool],
+    verbose=True
+)
+
+# The agent will use the tool with parameters like:
+# query="SELECT product_name, SUM(revenue) as total_revenue FROM sales GROUP BY product_name ORDER BY total_revenue DESC LIMIT 5"
+# timeout=600
+
+# Create a task for the agent
+analysis_task = Task(
+    description="Query the sales database and identify the top 5 products by revenue for the last quarter.",
+    expected_output="A detailed analysis of the top 5 products by revenue.",
+    agent=data_analyst
+)
+
+# Run the task
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task]
+)
+result = crew.kickoff()
+```
+
+## الميزات المتقدمة
+
+### تجميع الاتصالات
+
+تُطبّق `SnowflakeSearchTool` تجميع الاتصالات لتحسين الأداء من خلال إعادة استخدام اتصالات قاعدة البيانات. يمكنك التحكم في حجم المجمع بمعامل `pool_size`.
+
+### إعادة المحاولة التلقائية
+
+تُعيد الأداة تلقائياً محاولة الاستعلامات الفاشلة مع تراجع أسي. يمكنك تكوين سلوك إعادة المحاولة بمعاملات `max_retries` و `retry_delay`.
+
+### التخزين المؤقت لنتائج الاستعلامات
+
+لتحسين أداء الاستعلامات المتكررة، يمكن للأداة تخزين نتائج الاستعلامات مؤقتاً. هذه الميزة مفعّلة افتراضياً ولكن يمكن تعطيلها بتعيين `enable_caching=False`.
+
+### مصادقة زوج المفاتيح
+
+بالإضافة إلى مصادقة كلمة المرور، تدعم الأداة مصادقة زوج المفاتيح لتعزيز الأمان:
+
+```python Code
+config = SnowflakeConfig(
+    account="your_account",
+    user="your_username",
+    private_key_path="/path/to/your/private/key.p8",
+    warehouse="COMPUTE_WH",
+    database="your_database",
+    snowflake_schema="your_schema"
+)
+```
+
+## معالجة الأخطاء
+
+تتضمن `SnowflakeSearchTool` معالجة شاملة للأخطاء لمشكلات Snowflake الشائعة:
+
+- فشل الاتصال
+- انتهاء مهلة الاستعلام
+- أخطاء المصادقة
+- أخطاء قاعدة البيانات والمخطط
+
+عند حدوث خطأ، ستحاول الأداة إعادة العملية (إذا تم تكوينها) وتوفير معلومات تفصيلية عن الخطأ.
+
+## الخلاصة
+
+توفر `SnowflakeSearchTool` طريقة قوية لدمج مستودعات بيانات Snowflake مع وكلاء CrewAI. مع ميزات مثل تجميع الاتصالات وإعادة المحاولة التلقائية والتخزين المؤقت للاستعلامات، تتيح وصولاً فعالاً وموثوقاً لبيانات المؤسسة. هذه الأداة مفيدة بشكل خاص لمهام تحليل البيانات وإعداد التقارير وذكاء الأعمال التي تتطلب الوصول إلى بيانات منظمة مخزنة في Snowflake.

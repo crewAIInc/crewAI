@@ -1,0 +1,722 @@
+interactions:
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''vega''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '714'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 135\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:51 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '119'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Records clerk. You never
+      guess a code.\nYour personal goal is: Report access codes exactly as the lookup
+      tool returns them"},{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''vega''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"model":"gpt-6.1-sol","stream":true,"stream_options":{"include_usage":true},"tool_choice":"auto","tools":[{"type":"function","function":{"name":"lookup_code","description":"Look
+      up the access code for a project by name.","strict":true,"parameters":{"properties":{"name":{"type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '817'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Function tools with reasoning_effort
+        are not supported for gpt-6.1-sol in /v1/chat/completions. To use function
+        tools, use /v1/responses or set reasoning_effort to 'none'.\",\n    \"type\":
+        \"invalid_request_error\",\n    \"param\": \"reasoning_effort\",\n    \"code\":
+        null\n  }\n}"
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Records clerk. You never
+      guess a code.\nYour personal goal is: Report access codes exactly as the lookup
+      tool returns them"},{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''vega''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"model":"gpt-6.1-sol","reasoning_effort":"none","stream":true,"stream_options":{"include_usage":true},"tool_choice":"auto","tools":[{"type":"function","function":{"name":"lookup_code","description":"Look
+      up the access code for a project by name.","strict":true,"parameters":{"properties":{"name":{"type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '843'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Unsupported value: 'reasoning_effort'
+        does not support 'none' with this model. Supported values are: 'low', 'medium',
+        'high', and 'xhigh'.\",\n    \"type\": \"invalid_request_error\",\n    \"param\":
+        \"reasoning_effort\",\n    \"code\": \"unsupported_value\"\n  }\n}"
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''vega''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","store":false,"stream":true,"tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '742'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: 'event: response.created
+
+        data: {"type":"response.created","response":{"id":"resp_0fd825943436c415016aeadaf3f6a887d0826d9d1451859ce8","object":"response","created_at":1793776371,"status":"in_progress","access_programs":null,"background":false,"completed_at":null,"error":null,"frequency_penalty":0.0,"image":{"context_compression":"disabled"},"incomplete_details":null,"instructions":"You
+        are Records clerk. You never guess a code.\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them","max_output_tokens":null,"max_tool_calls":null,"model":"gpt-6.1-sol","moderation":null,"output":[],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"24h","reasoning":{"context":"all_turns","effort":"medium","mode":"standard","summary":null},"safety_identifier":null,"service_tier":"auto","store":false,"temperature":1.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"function","description":"Look
+        up the access code for a project by name.","name":"lookup_code","output_schema":null,"parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":0.98,"truncation":"disabled","usage":null,"user":null,"metadata":{}},"sequence_number":0}
+
+
+        event: response.in_progress
+
+        data: {"type":"response.in_progress","response":{"id":"resp_0fd825943436c415016aeadaf3f6a887d0826d9d1451859ce8","object":"response","created_at":1793776371,"status":"in_progress","access_programs":null,"background":false,"completed_at":null,"error":null,"frequency_penalty":0.0,"image":{"context_compression":"disabled"},"incomplete_details":null,"instructions":"You
+        are Records clerk. You never guess a code.\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them","max_output_tokens":null,"max_tool_calls":null,"model":"gpt-6.1-sol","moderation":null,"output":[],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"24h","reasoning":{"context":"all_turns","effort":"medium","mode":"standard","summary":null},"safety_identifier":null,"service_tier":"auto","store":false,"temperature":1.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"function","description":"Look
+        up the access code for a project by name.","name":"lookup_code","output_schema":null,"parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":0.98,"truncation":"disabled","usage":null,"user":null,"metadata":{}},"sequence_number":1}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","item":{"id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","type":"function_call","status":"in_progress","arguments":"","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","name":"lookup_code"},"output_index":0,"sequence_number":2}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","delta":"{\"","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","obfuscation":"9FvKEpj6nylm9G","output_index":0,"sequence_number":3}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","delta":"name","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","obfuscation":"O6rQPBAc4WEP","output_index":0,"sequence_number":4}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","delta":"\":\"","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","obfuscation":"HgHiwYkflfYSG","output_index":0,"sequence_number":5}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","delta":"ve","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","obfuscation":"C3hs88QFR4urSY","output_index":0,"sequence_number":6}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","delta":"ga","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","obfuscation":"bWC1UFZc64eiFK","output_index":0,"sequence_number":7}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","delta":"\"}","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","obfuscation":"nvacijPw3trXBR","output_index":0,"sequence_number":8}
+
+
+        event: response.function_call_arguments.done
+
+        data: {"type":"response.function_call_arguments.done","arguments":"{\"name\":\"vega\"}","item_id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","output_index":0,"sequence_number":9}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","item":{"id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","type":"function_call","status":"completed","arguments":"{\"name\":\"vega\"}","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","name":"lookup_code"},"output_index":0,"sequence_number":10}
+
+
+        event: response.completed
+
+        data: {"type":"response.completed","response":{"id":"resp_0fd825943436c415016aeadaf3f6a887d0826d9d1451859ce8","object":"response","created_at":1793776371,"status":"completed","access_programs":null,"background":false,"completed_at":1793776373,"error":null,"frequency_penalty":0.0,"image":{"context_compression":"disabled"},"incomplete_details":null,"instructions":"You
+        are Records clerk. You never guess a code.\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them","max_output_tokens":null,"max_tool_calls":null,"model":"gpt-6.1-sol","moderation":null,"output":[{"id":"fc_0fd825943436c415016aeadaf4e44c87d0ad5da7cdf5e122ff","type":"function_call","status":"completed","arguments":"{\"name\":\"vega\"}","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","name":"lookup_code"}],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"24h","reasoning":{"context":"all_turns","effort":"medium","mode":"standard","summary":null},"safety_identifier":null,"service_tier":"default","store":false,"temperature":1.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"function","description":"Look
+        up the access code for a project by name.","name":"lookup_code","output_schema":null,"parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":0.98,"truncation":"disabled","usage":{"input_tokens":135,"input_tokens_details":{"cache_write_tokens":0,"cached_tokens":0},"output_tokens":19,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":154},"user":null,"metadata":{}},"sequence_number":11}
+
+
+        '
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Wed, 04 Nov 2026 07:12:52 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '251'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":[{"role":"user","content":"VEGA-ZETA-7741"}],"model":"gpt-6.1-sol"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '76'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 13\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:53 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '84'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''vega''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","name":"lookup_code","arguments":"{\"name\":\"vega\"}"},{"type":"function_call_output","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","output":"VEGA-ZETA-7741"}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '936'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 172\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 04 Nov 2026 07:12:53 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '107'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: What is the access
+      code for the project named ''vega''?\n\nThis is the expected criteria for your
+      final answer: The access code, exactly as the tool returned it\nyou MUST return
+      the actual complete content as the final answer, not a summary."},{"type":"function_call","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","name":"lookup_code","arguments":"{\"name\":\"vega\"}"},{"type":"function_call_output","call_id":"call_KELgZTMl9FDGkfx36tZcX7II","output":"VEGA-ZETA-7741"}],"instructions":"You
+      are Records clerk. You never guess a code.\nYour personal goal is: Report access
+      codes exactly as the lookup tool returns them","model":"gpt-6.1-sol","store":false,"stream":true,"tools":[{"type":"function","name":"lookup_code","description":"Look
+      up the access code for a project by name.","parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '964'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: 'event: response.created
+
+        data: {"type":"response.created","response":{"id":"resp_01f089916ba916d7016aeadaf5ad0887d08bafea4b405d36dc","object":"response","created_at":1793776373,"status":"in_progress","access_programs":null,"background":false,"completed_at":null,"error":null,"frequency_penalty":0.0,"image":{"context_compression":"disabled"},"incomplete_details":null,"instructions":"You
+        are Records clerk. You never guess a code.\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them","max_output_tokens":null,"max_tool_calls":null,"model":"gpt-6.1-sol","moderation":null,"output":[],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"24h","reasoning":{"context":"all_turns","effort":"medium","mode":"standard","summary":null},"safety_identifier":null,"service_tier":"auto","store":false,"temperature":1.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"function","description":"Look
+        up the access code for a project by name.","name":"lookup_code","output_schema":null,"parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":0.98,"truncation":"disabled","usage":null,"user":null,"metadata":{}},"sequence_number":0}
+
+
+        event: response.in_progress
+
+        data: {"type":"response.in_progress","response":{"id":"resp_01f089916ba916d7016aeadaf5ad0887d08bafea4b405d36dc","object":"response","created_at":1793776373,"status":"in_progress","access_programs":null,"background":false,"completed_at":null,"error":null,"frequency_penalty":0.0,"image":{"context_compression":"disabled"},"incomplete_details":null,"instructions":"You
+        are Records clerk. You never guess a code.\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them","max_output_tokens":null,"max_tool_calls":null,"model":"gpt-6.1-sol","moderation":null,"output":[],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"24h","reasoning":{"context":"all_turns","effort":"medium","mode":"standard","summary":null},"safety_identifier":null,"service_tier":"auto","store":false,"temperature":1.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"function","description":"Look
+        up the access code for a project by name.","name":"lookup_code","output_schema":null,"parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":0.98,"truncation":"disabled","usage":null,"user":null,"metadata":{}},"sequence_number":1}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","item":{"id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","type":"message","status":"in_progress","content":[],"phase":"final_answer","role":"assistant"},"output_index":0,"sequence_number":2}
+
+
+        event: response.content_part.added
+
+        data: {"type":"response.content_part.added","content_index":0,"item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","output_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""},"sequence_number":3}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"VE","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"EmY7aA0B9mt7y6","output_index":0,"sequence_number":4}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"GA","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"pfCBopg7y75kYl","output_index":0,"sequence_number":5}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"-Z","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"qmLlMq6whWJcHw","output_index":0,"sequence_number":6}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"ETA","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"v7A2C3KtxxvUA","output_index":0,"sequence_number":7}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"-","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"p8RhRoCJzfN2AqV","output_index":0,"sequence_number":8}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"774","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"3BG8zr2T3LYEn","output_index":0,"sequence_number":9}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","content_index":0,"delta":"1","item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"obfuscation":"hkJGX15A6I8LQYg","output_index":0,"sequence_number":10}
+
+
+        event: response.output_text.done
+
+        data: {"type":"response.output_text.done","content_index":0,"item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","logprobs":[],"output_index":0,"sequence_number":11,"text":"VEGA-ZETA-7741"}
+
+
+        event: response.content_part.done
+
+        data: {"type":"response.content_part.done","content_index":0,"item_id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","output_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":"VEGA-ZETA-7741"},"sequence_number":12}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","item":{"id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":"VEGA-ZETA-7741"}],"phase":"final_answer","role":"assistant"},"output_index":0,"sequence_number":13}
+
+
+        event: response.completed
+
+        data: {"type":"response.completed","response":{"id":"resp_01f089916ba916d7016aeadaf5ad0887d08bafea4b405d36dc","object":"response","created_at":1793776373,"status":"completed","access_programs":null,"background":false,"completed_at":1793776374,"error":null,"frequency_penalty":0.0,"image":{"context_compression":"disabled"},"incomplete_details":null,"instructions":"You
+        are Records clerk. You never guess a code.\nYour personal goal is: Report
+        access codes exactly as the lookup tool returns them","max_output_tokens":null,"max_tool_calls":null,"model":"gpt-6.1-sol","moderation":null,"output":[{"id":"msg_01f089916ba916d7016aeadaf6b46887d09c2ac0062265abd9","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":"VEGA-ZETA-7741"}],"phase":"final_answer","role":"assistant"}],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"24h","reasoning":{"context":"all_turns","effort":"medium","mode":"standard","summary":null},"safety_identifier":null,"service_tier":"default","store":false,"temperature":1.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"function","description":"Look
+        up the access code for a project by name.","name":"lookup_code","output_schema":null,"parameters":{"properties":{"name":{"title":"Name","type":"string"}},"required":["name"],"type":"object","additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":0.98,"truncation":"disabled","usage":{"input_tokens":172,"input_tokens_details":{"cache_write_tokens":0,"cached_tokens":0},"output_tokens":11,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":183},"user":null,"metadata":{}},"sequence_number":14}
+
+
+        '
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Wed, 04 Nov 2026 07:12:53 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '237'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

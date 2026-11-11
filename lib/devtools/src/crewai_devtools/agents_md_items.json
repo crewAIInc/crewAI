@@ -321,7 +321,7 @@
  },
  {
   "id": "A-032",
-  "item": "`crewai test` and `crewai train` are legacy; measure quality with `crewai eval`. (`crewai test` now defaults to 3 iterations on gpt-5.4-mini, not V0's 2 on gpt-4o-mini; `crewai train -n` defaults to 5.)",
+  "item": "`crewai test` and `crewai train` are legacy; measure quality with `crewai eval`. (`crewai test` now defaults to 3 iterations on gpt-6-luna, not V0's 2 on gpt-4o-mini; `crewai train -n` defaults to 5.)",
   "q": "Is `crewai test` still the right way to measure this crew's quality?",
   "key": [
    "crewai eval"
@@ -516,10 +516,10 @@
  },
  {
   "id": "A-052",
-  "item": "With no `llm` set, an agent uses `MODEL`/`OPENAI_MODEL_NAME` from the environment, else the default `gpt-4.1-mini`.",
+  "item": "With no `llm` set, an agent uses `MODEL`/`OPENAI_MODEL_NAME` from the environment, else the default `gpt-6-luna`.",
   "q": "If I don't set llm on an agent, which model does it use?",
   "key": [
-   "MODEL|gpt-4\\.1-mini|default"
+   "MODEL|gpt-6-luna|default"
   ],
   "trap": [
    "\\bGPT-4\\b(?![.o\\d-])"
@@ -654,11 +654,11 @@
  },
  {
   "id": "B-006",
-  "item": "Default model comes from MODEL, then MODEL_NAME, then OPENAI_MODEL_NAME in the environment, else gpt-4.1-mini.",
+  "item": "Default model comes from MODEL, then MODEL_NAME, then OPENAI_MODEL_NAME in the environment, else gpt-6-luna.",
   "q": "Which env var sets the model when an agent doesn't specify one, and what is the fallback?",
   "key": [
    "\\bMODEL\\b",
-   "gpt-4\\.1-mini"
+   "gpt-6-luna"
   ],
   "partial": [
    "\\bMODEL\\b|OPENAI_MODEL_NAME"

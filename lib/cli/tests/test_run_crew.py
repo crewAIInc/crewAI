@@ -78,7 +78,7 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
 
     monkeypatch.setattr(
         run_crew_module,
-        "_install_json_crew_dependencies_if_needed",
+        "_install_project_dependencies_if_needed",
         lambda: install_calls.append(True),
     )
     monkeypatch.setattr(
@@ -140,7 +140,7 @@ def test_json_run_uses_poetry_run_for_poetry_lock_without_uv_lock(
     (tmp_path / "poetry.lock").write_text("# lock\n")
     monkeypatch.setattr(
         run_crew_module,
-        "_install_json_crew_dependencies_if_needed",
+        "_install_project_dependencies_if_needed",
         lambda: None,
     )
     monkeypatch.setattr(
@@ -428,6 +428,114 @@ def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path):
     assert marker.read_text() == "ran"
 
 
+def _run_the_json_runner_on_crewai(
+    tmp_path: Path, crewai_files: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    """Run the JSON crew runner, headless, in a project whose environment's
+    crewai is CREWAI_FILES, each a path under `crewai/` and its source."""
+    environment = tmp_path / "environment"
+    for name, source in {
+        "__init__.py": "",
+        "project/__init__.py": "",
+        **crewai_files,
+    }.items():
+        path = environment / "crewai" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source)
+    project = tmp_path / "project"
+    project.mkdir()
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(environment)
+    env["CREWAI_DMN"] = "true"
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
+        Path(run_crew_module.__file__).resolve().parent
+    )
+    env[run_crew_module._CREWAI_JSON_CREW_DEFINITION_ENV] = "crew.jsonc"
+    return subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        env=env,
+        cwd=project,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _crew_loader_whose_kickoff_raises(error: str, *, imports: str = "") -> str:
+    return (
+        f"{imports}\n"
+        "class Crew:\n"
+        "    agents = []\n"
+        "    tasks = []\n"
+        "    def kickoff(self, inputs):\n"
+        f"        raise {error}\n"
+        "def load_crew(path):\n"
+        "    return Crew(), {}\n"
+    )
+
+
+def test_json_runner_stops_a_crew_without_its_key_with_one_line(tmp_path: Path):
+    """The class is the project's crewai's own, and the stop is a message, not
+    a traceback."""
+    result = _run_the_json_runner_on_crewai(
+        tmp_path,
+        {
+            "llms/__init__.py": "",
+            "llms/base_llm.py": (
+                "class MissingAPIKeyError(ValueError):\n"
+                "    def __init__(self, env_var, model):\n"
+                "        self.env_var = env_var\n"
+                "        super().__init__(f'{env_var} is required for {model}')\n"
+            ),
+            "project/crew_loader.py": _crew_loader_whose_kickoff_raises(
+                "MissingAPIKeyError('OPENAI_API_KEY', 'gpt-4.1-mini')",
+                imports="from crewai.llms.base_llm import MissingAPIKeyError",
+            ),
+        },
+    )
+
+    assert result.returncode == 1
+    assert result.stderr.splitlines()[-1] == (
+        "Error: OPENAI_API_KEY is not set. Add OPENAI_API_KEY=<your key> to "
+        f"{tmp_path / 'project' / '.env'}, then run `crewai run` again."
+    )
+    assert "Traceback" not in result.stderr
+
+
+def test_json_runner_ends_a_quit_prompt_as_click_ends_its_commands(tmp_path: Path):
+    """Ctrl-C or Ctrl-D at a prompt in the runner, the API key's included."""
+    result = _run_the_json_runner_on_crewai(
+        tmp_path,
+        {
+            "project/crew_loader.py": _crew_loader_whose_kickoff_raises(
+                "click.Abort()", imports="import click"
+            )
+        },
+    )
+
+    assert result.returncode == 1
+    assert result.stderr.splitlines()[-1] == "Aborted!"
+    assert "Traceback" not in result.stderr
+
+
+def test_json_runner_on_a_crewai_without_missing_api_key_error_fails_as_before(
+    tmp_path: Path,
+):
+    """Before 1.15.34 crewai raised a plain ValueError for a missing key."""
+    result = _run_the_json_runner_on_crewai(
+        tmp_path,
+        {
+            "project/crew_loader.py": _crew_loader_whose_kickoff_raises(
+                "ValueError('OPENAI_API_KEY is required')"
+            )
+        },
+    )
+
+    assert result.returncode == 1
+    assert "Traceback" in result.stderr
+    assert result.stderr.splitlines()[-1] == "ValueError: OPENAI_API_KEY is required"
+
+
 def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path):
     monkeypatch.chdir(tmp_path)
     called: dict = {}
@@ -458,7 +566,7 @@ def test_json_project_env_run_failure_exits_nonzero(monkeypatch, tmp_path: Path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
 
     monkeypatch.setattr(
-        run_crew_module, "_install_json_crew_dependencies_if_needed", lambda: None
+        run_crew_module, "_install_project_dependencies_if_needed", lambda: None
     )
     monkeypatch.setattr(
         run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
@@ -490,7 +598,7 @@ def test_json_run_installs_dependencies_when_pyproject_has_no_lockfile(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == [([], True, None)]
 
@@ -510,7 +618,7 @@ def test_json_run_syncs_frozen_when_uv_lock_exists_without_venv(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == [(["--frozen"], True, None)]
 
@@ -530,7 +638,7 @@ def test_json_run_skips_uv_sync_when_only_poetry_lock_exists_without_venv(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == []
 
@@ -552,7 +660,7 @@ def test_json_run_skips_dependency_install_when_lockfile_and_venv_exist(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == []
 
@@ -570,7 +678,7 @@ def test_json_run_skips_dependency_install_without_pyproject(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == []
 
@@ -587,7 +695,7 @@ def test_json_run_install_failure_exits_nonzero(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
     with pytest.raises(SystemExit) as exc_info:
-        run_crew_module._install_json_crew_dependencies_if_needed()
+        run_crew_module._install_project_dependencies_if_needed()
 
     assert exc_info.value.code == 42
 
@@ -929,6 +1037,21 @@ def test_resolve_crew_inputs_warns_and_keeps_unknown_input(capsys):
     assert "Did you mean 'topic'?" in captured.err
 
 
+def test_resolve_crew_inputs_does_not_flag_an_input_the_crew_declares(capsys):
+    """The retry after a pasted key passes back the crew's own defaults."""
+    crew = _crew_with_placeholders("topic")
+
+    resolved = run_crew_module._resolve_crew_inputs(
+        crew,
+        {"topic": "AI", "audience": "devs"},
+        {"topic": "ML", "audience": "devs"},
+        interactive=False,
+    )
+
+    assert resolved == {"topic": "ML", "audience": "devs"}
+    assert "isn't referenced" not in capsys.readouterr().err
+
+
 def test_resolve_crew_inputs_prompts_when_interactive(monkeypatch):
     crew = _crew_with_placeholders("topic")
     prompted: list[str] = []
@@ -988,7 +1111,7 @@ def test_run_json_crew_in_project_env_forwards_inputs(monkeypatch, tmp_path: Pat
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(
-        run_crew_module, "_install_json_crew_dependencies_if_needed", lambda: None
+        run_crew_module, "_install_project_dependencies_if_needed", lambda: None
     )
     monkeypatch.setattr(
         run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
@@ -1216,6 +1339,79 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
 
     assert capsys.readouterr().out == ""
     assert calls == [("kickoff", {"entity_type": "flow"})]
+
+
+def _uv_script_exits(monkeypatch, returncode: int) -> None:
+    def uv_run(command, **kwargs):
+        raise subprocess.CalledProcessError(returncode, command, output="boom")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", uv_run)
+    monkeypatch.setattr(run_crew_module, "record_run_stopped", lambda reason: None)
+
+
+@pytest.mark.parametrize("returncode", [1, 2, 137])
+def test_a_failed_uv_script_exits_with_its_own_code(monkeypatch, capsys, returncode):
+    _uv_script_exits(monkeypatch, returncode)
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exited.value.code == returncode
+    err = capsys.readouterr().err
+    assert "An error occurred while running the crew: Command '['uv', 'run', 'run_crew']'" in err
+    assert f"returned non-zero exit status {returncode}" in err
+    assert "boom" in err
+
+
+def test_a_uv_that_cannot_start_exits_1(monkeypatch, capsys):
+    def no_uv(command, **kwargs):
+        raise PermissionError("launch denied")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", no_uv)
+    monkeypatch.setattr(run_crew_module, "record_run_stopped", lambda reason: None)
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._execute_uv_script("kickoff", entity_type="flow")
+
+    assert exited.value.code == 1
+    assert "An unexpected error occurred: launch denied" in capsys.readouterr().err
+
+
+def test_a_succeeding_uv_script_returns(monkeypatch):
+    monkeypatch.setattr(
+        run_crew_module.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0),
+    )
+
+    assert run_crew_module._execute_uv_script("run_crew", entity_type="crew") is None
+
+
+def test_deprecated_flow_kickoff_exits_with_the_failed_scripts_code(
+    tmp_path, monkeypatch
+):
+    from click.testing import CliRunner
+
+    from crewai_cli.cli import crewai
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\n\n[tool.crewai]\ntype = "flow"\n'
+    )
+    monkeypatch.setattr(run_crew_module, "get_or_create_project_id", lambda: None)
+    monkeypatch.setattr(run_crew_module, "ask_for_missing_api_keys", lambda *args: None)
+    monkeypatch.setattr(run_crew_module, "record_run_started", lambda kind: None)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+    _uv_script_exits(monkeypatch, 4)
+
+    result = CliRunner().invoke(crewai, ["flow", "kickoff"])
+
+    assert result.exit_code == 4
+    assert "An error occurred while running the flow" in result.output
 
 
 @pytest.fixture
@@ -1642,6 +1838,71 @@ def test_a_projects_env_never_sets_or_replaces_crewai_evals_token(
 
     assert os.environ.get("CREWAI_EVAL_AWAITING_RUN") == token_before
     assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+@pytest.mark.parametrize("line", ["OPENAI_API_KEY=YOUR_API_KEY", "OPENAI_API_KEY="])
+def test_a_projects_env_line_with_no_key_never_replaces_a_key_pasted_this_run(
+    monkeypatch, tmp_path: Path, line: str
+):
+    """A key pasted when `crewai run` asked, but not saved, must reach the crew
+    even when `.env` still holds the placeholder or a blank line."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(f"{line}\nFROM_THE_PROJECT=yes\n")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-pasted")
+    monkeypatch.setenv("CREWAI_PASTED_API_KEYS", "OPENAI_API_KEY")
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "sk-pasted"
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+@pytest.mark.parametrize("marker", [None, "OPENAI_API_KEY"], ids=["unmarked", "env_marks_it"])
+def test_a_key_the_process_only_inherited_is_replaced_by_the_placeholder(
+    monkeypatch, tmp_path: Path, marker: str | None
+):
+    """The `.env` can also point the provider at its own host: the shell's key
+    must not go there, so the placeholder applies, and a `.env` cannot claim
+    the key was pasted."""
+    env_file = tmp_path / ".env"
+    lines = "OPENAI_API_KEY=YOUR_API_KEY\nOPENAI_BASE_URL=https://attacker.example/v1\n"
+    if marker:
+        lines += f"CREWAI_PASTED_API_KEYS={marker}\n"
+    env_file.write_text(lines)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+    monkeypatch.delenv("CREWAI_PASTED_API_KEYS", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "YOUR_API_KEY"
+    assert "CREWAI_PASTED_API_KEYS" not in os.environ
+
+
+def test_a_projects_env_key_still_replaces_the_one_the_process_has(
+    monkeypatch, tmp_path: Path
+):
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=sk-from-the-project\n")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-the-shell")
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "sk-from-the-project"
+
+
+def test_a_projects_placeholder_is_loaded_when_the_process_has_no_key(
+    monkeypatch, tmp_path: Path
+):
+    """crewAI then names the missing key, as it always has."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=YOUR_API_KEY\n")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ["OPENAI_API_KEY"] == "YOUR_API_KEY"
 
 
 def test_the_three_names_for_the_eval_token_are_one() -> None:

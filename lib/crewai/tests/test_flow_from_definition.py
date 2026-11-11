@@ -3295,6 +3295,24 @@ def test_tool_action_platform_ref_with_no_tools_names_ref():
             Flow.from_declaration(contents=definition)
 
 
+def test_a_platform_ref_amp_cannot_resolve_names_the_app():
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    from crewai.project.json_loader import JSONProjectError, _resolve_platform_tools
+
+    def unavailable(apps):
+        raise PlatformAppsUnavailableError(["google_gmail"])
+
+    with patch("crewai_tools.CrewaiPlatformTools", unavailable):
+        with pytest.raises(
+            JSONProjectError,
+            match=r"^Failed to initialize platform tool "
+            r"'platform:google_gmail/send_email': CrewAI AMP could not resolve "
+            r"these apps: google_gmail$",
+        ):
+            _resolve_platform_tools("google_gmail/send_email")
+
+
 def test_tool_action_raises_when_tool_reports_failure():
     definition = _tool_flow_definition(
         f"{__name__}:FailingTool", {"to": "${state.email}"}
