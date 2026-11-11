@@ -54,7 +54,7 @@ def after_hook(context: LLMCallHookContext) -> str | None:
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor  # Full executor reference
+    executor: AgentExecutor  # Full executor reference
     messages: list               # Mutable message list
     agent: Agent                 # Current agent
     task: Task                   # Current task
@@ -63,6 +63,8 @@ class LLMCallHookContext:
     iterations: int              # Current iteration count
     response: str | None         # LLM response (after hooks only)
 ```
+
+يُستورَد `AgentExecutor` من `crewai.agents`. تمت إزالة `CrewAgentExecutor` ومسار الاستيراد `crewai.experimental.agent_executor`.
 
 ### تعديل الرسائل
 

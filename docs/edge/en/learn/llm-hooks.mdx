@@ -56,7 +56,7 @@ The `LLMCallHookContext` object provides comprehensive access to execution state
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
+    executor: AgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
     messages: list               # Mutable message list
     agent: Agent | None          # Current agent (None for direct LLM calls)
     task: Task | None            # Current task (None for direct calls or LiteAgent)
@@ -65,6 +65,8 @@ class LLMCallHookContext:
     iterations: int              # Current iteration count (0 for direct calls)
     response: str | None         # LLM response (POST_MODEL_CALL only)
 ```
+
+`AgentExecutor` is imported from `crewai.agents`. `CrewAgentExecutor` and the `crewai.experimental.agent_executor` import path have been removed.
 
 The context also exposes `request_human_input(prompt, default_message)`, which
 pauses live console updates and collects input from the terminal — useful for

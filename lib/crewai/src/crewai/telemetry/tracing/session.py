@@ -89,6 +89,31 @@ def otlp_exporter(
     )
 
 
+def _trace_provider(resource: Resource) -> TracerProvider:
+    """crewAI's own provider for a run's trace.
+
+    The OpenTelemetry SDK turns every provider into one that records nothing
+    when `OTEL_SDK_DISABLED` is set. That variable is the telemetry opt-out,
+    which tracing does not answer to — tracing has its own setting,
+    `CREWAI_TRACING_ENABLED` — so this provider records whatever it says.
+    """
+    provider = TracerProvider(resource=resource)
+    if getattr(provider, "_disabled", False):
+        # The SDK reads the variable once, in __init__, and offers no public way
+        # to say otherwise; this private attribute is its only switch. A test
+        # pins it, and a provider that still records nothing is said out loud.
+        provider._disabled = False
+        probe = provider.get_tracer(__name__).start_span("crewai.trace.probe")
+        if not probe.is_recording():
+            logger.warning(
+                "OTEL_SDK_DISABLED is set and this OpenTelemetry SDK version "
+                "ignores crewAI's override, so this run's trace records nothing. "
+                "Unset OTEL_SDK_DISABLED to trace it."
+            )
+        probe.end()
+    return provider
+
+
 class TraceSession:
     """Own an event-driven trace and only its own event-bus subscriptions.
 
@@ -114,9 +139,7 @@ class TraceSession:
         self.tracer_provider = (
             providers.tracer_provider
             if providers is not None
-            else TracerProvider(
-                resource=resource or Resource({"service.name": "crewai"})
-            )
+            else _trace_provider(resource or Resource({"service.name": "crewai"}))
         )
         self.execution_attributes = ExecutionAttributes(execution_uuid, attributes)
         self.tracer_provider.add_span_processor(self.execution_attributes)
@@ -124,7 +147,11 @@ class TraceSession:
             self.tracer_provider.add_span_processor(processor)
         for exporter in exporters:
             self.add_exporter(exporter)
+        conversation_id = (attributes or {}).get("gen_ai.conversation.id")
         self.context = TelemetryExecutionContext(
+            conversation_id=conversation_id
+            if isinstance(conversation_id, str)
+            else None,
             kickoff_id=execution_uuid,
             automation_name=automation_name,
             tracer=self.get_tracer(),
@@ -312,6 +339,8 @@ def telemetry_session(
     )
     session.execution_attributes.attributes.update(attrs)
     ctx = session.context
+    if isinstance(conversation_id := attrs.get("gen_ai.conversation.id"), str):
+        ctx.conversation_id = conversation_id
     ctx.execution_id = execution_id
     ctx.principal = principal
     ctx.origin = origin

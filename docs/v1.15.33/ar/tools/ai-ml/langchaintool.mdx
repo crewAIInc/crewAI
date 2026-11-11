@@ -1,0 +1,59 @@
+---
+title: أداة LangChain
+description: أداة `LangChainTool` هي غلاف لأدوات ومحركات استعلام LangChain.
+icon: link
+mode: "wide"
+---
+
+## `LangChainTool`
+
+<Info>
+    يتكامل CrewAI بسلاسة مع [قائمة أدوات](https://python.langchain.com/docs/integrations/tools/) LangChain الشاملة، والتي يمكن استخدامها جميعها مع CrewAI.
+</Info>
+
+```python Code
+import os
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew
+from crewai.tools import BaseTool
+from pydantic import Field
+from langchain_community.utilities import GoogleSerperAPIWrapper
+
+# Set up your SERPER_API_KEY key in an .env file, eg:
+# SERPER_API_KEY=<your api key>
+load_dotenv()
+
+search = GoogleSerperAPIWrapper()
+
+class SearchTool(BaseTool):
+    name: str = "Search"
+    description: str = "Useful for search-based queries. Use this to find current information about markets, companies, and trends."
+    search: GoogleSerperAPIWrapper = Field(default_factory=GoogleSerperAPIWrapper)
+
+    def _run(self, query: str) -> str:
+        """Execute the search query and return results"""
+        try:
+            return self.search.run(query)
+        except Exception as e:
+            return f"Error performing search: {str(e)}"
+
+# Create Agents
+researcher = Agent(
+    role='Research Analyst',
+    goal='Gather current market data and trends',
+    backstory="""You are an expert research analyst with years of experience in
+    gathering market intelligence. You're known for your ability to find
+    relevant and up-to-date market information and present it in a clear,
+    actionable format.""",
+    tools=[SearchTool()],
+    verbose=True
+)
+
+# rest of the code ...
+```
+
+## الخلاصة
+
+تعد الأدوات محورية في توسيع قدرات وكلاء CrewAI، مما يمكّنهم من القيام بمجموعة واسعة من المهام والتعاون بفعالية.
+عند بناء حلول مع CrewAI، استفد من الأدوات المخصصة والموجودة لتمكين وكلائك وتعزيز منظومة الذكاء الاصطناعي. فكّر في الاستفادة من معالجة الأخطاء وآليات التخزين المؤقت
+ومرونة معاملات الأدوات لتحسين أداء وقدرات وكلائك.

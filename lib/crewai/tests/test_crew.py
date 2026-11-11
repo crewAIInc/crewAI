@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import asyncio
 from io import StringIO
 import json
 import threading
@@ -18,8 +19,10 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import (
+    CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
+    CrewTestFailedEvent,
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
     CrewTrainStartedEvent,
@@ -38,6 +41,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
@@ -2911,6 +2915,61 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         crew.kickoff()
 
 
+class _ScriptedReActLLM(BaseLLM):
+    def __init__(self, *replies: str) -> None:
+        super().__init__(model="offline")
+        self.replies = replies
+        self.calls = 0
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def call(self, messages: Any, **kwargs: Any) -> str:
+        reply = self.replies[self.calls % len(self.replies)]
+        self.calls += 1
+        return reply
+
+    async def acall(self, messages: Any, **kwargs: Any) -> str:
+        return self.call(messages, **kwargs)
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("manager", ["manager_llm", "manager_agent"])
+def test_hierarchical_crew_delegates_to_workers_on_every_kickoff(
+    manager, async_entry
+):
+    delegate = json.dumps(
+        {"task": "Write a word", "context": "None", "coworker": "Writer"}
+    )
+    manager_llm = _ScriptedReActLLM(
+        f"Thought: Delegate\nAction: Delegate work to coworker\nAction Input: {delegate}",
+        "Thought: Done\nFinal Answer: hello",
+    )
+    worker_llm = _ScriptedReActLLM("Thought: Done\nFinal Answer: hello")
+    writer = Agent(role="Writer", goal="Write", backstory="Writes", llm=worker_llm)
+    task = Task(description="Get a word", expected_output="A word")
+    if manager == "manager_llm":
+        crew = Crew(
+            agents=[writer],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_llm=manager_llm,
+        )
+    else:
+        boss = Agent(role="Boss", goal="Manage", backstory="Manages", llm=manager_llm)
+        crew = Crew(
+            agents=[writer],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_agent=boss,
+        )
+
+    for run in (1, 2):
+        result = asyncio.run(crew.akickoff()) if async_entry else crew.kickoff()
+        assert result.raw == "hello"
+        assert worker_llm.calls == run
+
+
 @pytest.mark.vcr()
 def test_crew_train_success(researcher, writer, monkeypatch):
     task = Task(
@@ -3082,6 +3141,219 @@ def test_replay_feature(researcher, writer):
         crew.replay(str(write.id))
         # Ensure context was passed correctly
         assert mock_execute_task.call_count == 3
+
+
+def test_replay_emits_paired_kickoff_events(researcher, writer):
+    """replay() must emit its own CrewKickoffStartedEvent before completing.
+
+    The execution tail of replay() emits CrewKickoffCompletedEvent(started_event_id
+    = self._kickoff_event_id). Without a start event scoping the replay, the bus
+    warns about an unpaired ending event and the completion points at the
+    original kickoff's start id, corrupting event pairing for listeners.
+    """
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    started_events: list[CrewKickoffStartedEvent] = []
+
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started_events.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = [
+                TaskOutput(
+                    description=task.description,
+                    raw="Mocked output",
+                    agent="Researcher",
+                    json_dict=None,
+                    output_format=OutputFormat.RAW,
+                    pydantic=None,
+                    summary="Mocked output",
+                    messages=[],
+                )
+                for task in [list_ideas, write, write]
+            ]
+
+            crew.kickoff()
+            kickoff_start_ids = {event.event_id for event in started_events}
+            assert kickoff_start_ids, "kickoff() must emit CrewKickoffStartedEvent"
+
+            crew.replay(str(write.id))
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+
+    replay_starts = [
+        event for event in started_events if event.event_id not in kickoff_start_ids
+    ]
+    assert replay_starts, "replay() must emit its own CrewKickoffStartedEvent"
+    # The completion event is constructed with started_event_id=self._kickoff_event_id
+    # (see _create_crew_output), so the pairing is correct exactly when the id
+    # left behind points at the replay's own start event.
+    assert crew._kickoff_event_id == replay_starts[-1].event_id
+
+
+def test_replay_failure_emits_kickoff_failed_event(researcher, writer):
+    """A failed replay must terminate its own start event like kickoff() does.
+
+    replay() emits CrewKickoffStartedEvent (scoping the completion), but its
+    execution tail had no except: a failure raised out of _execute_tasks left
+    the start event dangling — no CrewKickoffFailedEvent for listeners, and a
+    leaked crew_kickoff_started frame on the event-scope stack that parents
+    every later event in the context.
+    """
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas.",
+        expected_output="Bullet point list of 5 ideas.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    started_events: list[CrewKickoffStartedEvent] = []
+    failed_events: list[CrewKickoffFailedEvent] = []
+
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started_events.append(event)
+
+    def on_failed(source, event: CrewKickoffFailedEvent):
+        failed_events.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewKickoffFailedEvent, on_failed)
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = [
+                TaskOutput(
+                    description=task.description,
+                    raw="Mocked output",
+                    agent="Researcher",
+                    json_dict=None,
+                    output_format=OutputFormat.RAW,
+                    pydantic=None,
+                    summary="Mocked output",
+                    messages=[],
+                )
+                for task in [list_ideas, write]
+            ]
+            crew.kickoff()
+        kickoff_start_ids = {event.event_id for event in started_events}
+
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = RuntimeError("boom during replay")
+            with pytest.raises(RuntimeError, match="boom during replay"):
+                crew.replay(str(write.id))
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        crewai_event_bus.off(CrewKickoffFailedEvent, on_failed)
+
+    replay_starts = [
+        event for event in started_events if event.event_id not in kickoff_start_ids
+    ]
+    assert replay_starts, "replay() must emit its own CrewKickoffStartedEvent"
+    assert failed_events, (
+        "replay() failure emitted no CrewKickoffFailedEvent; the "
+        "CrewKickoffStartedEvent from replay is left dangling"
+    )
+    assert failed_events[-1].started_event_id == replay_starts[-1].event_id
+    assert "boom during replay" in failed_events[-1].error
+
+
+def test_replay_failure_does_not_leak_kickoff_scope_into_next_kickoff(
+    researcher, writer,
+):
+    """The leaked replay start scope must not parent the next kickoff's events."""
+    from crewai.events.event_context import _event_id_stack
+
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas.",
+        expected_output="Bullet point list of 5 ideas.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    def _mocked_outputs():
+        return [
+            TaskOutput(
+                description=task.description,
+                raw="Mocked output",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output",
+                messages=[],
+            )
+            for task in [list_ideas, write]
+        ]
+
+    started_events: list[CrewKickoffStartedEvent] = []
+
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started_events.append(event)
+
+    _event_id_stack.set(())
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = _mocked_outputs()
+            crew.kickoff()
+
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = RuntimeError("boom during replay")
+            with pytest.raises(RuntimeError):
+                crew.replay(str(write.id))
+
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = _mocked_outputs()
+            crew.kickoff()
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+        _event_id_stack.set(())
+
+    assert started_events[-1].parent_event_id is None, (
+        "previous failed replay's crew_kickoff_started scope leaked onto the "
+        "event-id stack; the next kickoff's start event is parented to it"
+    )
 
 
 def test_replay_rejects_changed_task_order(researcher):
@@ -4005,6 +4277,50 @@ def test_crew_testing_function(researcher):
     assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
+def test_crew_test_setup_failure_pairs_events(researcher):
+    """A failure during test() setup must still pair Started with Failed.
+
+    crew_test_failed is scope-ending: the start event used to be emitted
+    only after create_llm succeeded, so a create_llm failure emitted an
+    unpaired Failed that popped the caller's enclosing event scope.
+    """
+    task = Task(
+        description="Summarize the topic.",
+        expected_output="A summary.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    started: list[CrewTestStartedEvent] = []
+    failed: list[CrewTestFailedEvent] = []
+
+    @crewai_event_bus.on(CrewTestStartedEvent)
+    def on_started(source, event: CrewTestStartedEvent):
+        started.append(event)
+
+    @crewai_event_bus.on(CrewTestFailedEvent)
+    def on_failed(source, event: CrewTestFailedEvent):
+        failed.append(event)
+
+    crewai_event_bus.register_handler(CrewTestStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewTestFailedEvent, on_failed)
+    try:
+        with patch("crewai.crew.create_llm", side_effect=RuntimeError("no key")):
+            with pytest.raises(RuntimeError, match="no key"):
+                crew.test(2, "gpt-4o-mini")
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewTestStartedEvent, on_started)
+        crewai_event_bus.off(CrewTestFailedEvent, on_failed)
+
+    assert started, "test() must emit CrewTestStartedEvent before setup runs"
+    assert failed, "test() setup failure must emit CrewTestFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the Failed event must pair with the test's own start event, not pop "
+        "the caller's enclosing scope"
+    )
+
+
 def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -4200,7 +4516,7 @@ def test_multimodal_flag_adds_multimodal_tools():
 @pytest.mark.vcr()
 def test_multimodal_agent_image_tool_handling():
     """
-    Test that multimodal agents properly handle image tools in the CrewAgentExecutor
+    Test that multimodal agents properly handle image tools in the AgentExecutor
     """
     multimodal_agent = Agent(
         role="Image Analyst",
@@ -5098,7 +5414,7 @@ def test_prepare_kickoff_binds_task_only_agent_to_crew():
     Regression for crewAIInc/crewAI#5534: when Crew is built without
     agents=[...], multimodal input_files were silently dropped because the
     agent's .crew attribute was never assigned, gating file lookup off in
-    Task and CrewAgentExecutor.
+    Task and AgentExecutor.
     """
     from crewai.crews.utils import prepare_kickoff
 

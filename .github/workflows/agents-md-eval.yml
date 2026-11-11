@@ -1,0 +1,91 @@
+name: AGENTS.md eval
+
+# Asks coding agents what the scaffolded AGENTS.md teaches, with the base branch's file and
+# with the pull request's, one job per model, and fails on a drop of more than 10%.
+# pull_request_target runs this file and the code it checks out from the base branch, so
+# the API keys only ever reach reviewed code: the pull request's AGENTS.md and CLAUDE.md
+# are read with `git show` as data and never run. A change to this workflow or to the eval
+# takes effect on the pull requests after it merges.
+on:
+  pull_request_target:
+    branches: [main]
+    paths:
+      - "lib/cli/src/crewai_cli/templates/AGENTS.md"
+      - "lib/cli/src/crewai_cli/templates/CLAUDE.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agents-md-eval-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    name: AGENTS.md eval (${{ matrix.model }})
+    # pull_request_target passes the keys to pull requests from forks too, and every run
+    # spends them, so only this repository's branches are evaluated.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # The keys belong to this environment, where a maintainer can also require approval.
+    environment:
+      name: agents-md-eval
+    strategy:
+      fail-fast: false
+      matrix:
+        # Claude Code runs the latest Haiku and Sonnet, Codex the GPT models users pick.
+        model:
+          - claude:claude-haiku-5-5
+          - claude:claude-sonnet-5-5
+          - codex:gpt-5.6-luna
+          - codex:gpt-5.6-sol
+    steps:
+      - name: Checkout the base commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Check the eval and the API keys
+        id: keys
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ ! -f lib/devtools/src/crewai_devtools/agents_md_eval.py ]; then
+            echo "::notice::Skipped: the base branch doesn't have the eval yet."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          elif [ -n "$ANTHROPIC_API_KEY" ] && [ -n "$OPENAI_API_KEY" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Set ANTHROPIC_API_KEY and OPENAI_API_KEY in the agents-md-eval environment."
+            exit 1
+          fi
+
+      - name: Fetch the pull request's commit, for its files only
+        if: steps.keys.outputs.run == 'true'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --depth=1 origin "$HEAD_SHA"
+
+      - name: Install uv
+        if: steps.keys.outputs.run == 'true'
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.13.4"
+          python-version: "3.12"
+
+      - name: Install the coding agents
+        if: steps.keys.outputs.run == 'true'
+        run: npm install -g @anthropic-ai/claude-code@2.1.289 @openai/codex@0.160.0
+
+      - name: Ask the model, base file against the pull request's
+        if: steps.keys.outputs.run == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MODEL: ${{ matrix.model }}
+        run: uv run --package crewai-devtools devtools agents-md-eval --base "$BASE_SHA" --head "$HEAD_SHA" --model "$MODEL"

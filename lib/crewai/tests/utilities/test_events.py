@@ -4,7 +4,6 @@ import os
 from unittest.mock import Mock, patch
 
 from crewai.agent import Agent
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_listener import EventListener
@@ -348,7 +347,7 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
         received_events.append(event)
         event_received.set()
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     error_message = "Error happening while sending prompt to model."
     base_agent.max_retry_limit = 0
@@ -395,7 +394,7 @@ def test_agent_retries_close_the_scope_of_every_attempt():
     def handle_task_failed(source, event):
         task_failed.append(event)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     agent = Agent(
         role="retrying_agent",
@@ -448,7 +447,7 @@ def test_agent_retry_that_succeeds_closes_one_scope_per_attempt():
     def handle_task_completed(source, event):
         task_completed.append(event)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     agent = Agent(
         role="retrying_agent",
@@ -1284,7 +1283,7 @@ def test_infrastructure_flows_suppress_flow_events_by_default():
     ``suppress_flow_events=True``; without this guard, removing the flag from
     AgentExecutor would silently bring back the verbose per-method trace spans.
     """
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.memory.encoding_flow import EncodingFlow
     from crewai.memory.recall_flow import RecallFlow
 
@@ -1296,7 +1295,7 @@ def test_infrastructure_flows_suppress_flow_events_by_default():
 
 
 def test_infrastructure_flows_are_marked_internal():
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.memory.encoding_flow import EncodingFlow
     from crewai.memory.recall_flow import RecallFlow
 

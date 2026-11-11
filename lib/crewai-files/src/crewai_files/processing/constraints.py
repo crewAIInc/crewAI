@@ -280,12 +280,12 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
 BEDROCK_CONSTRAINTS = ProviderConstraints(
     name="bedrock",
     image=ImageConstraints(
-        max_size_bytes=4_608_000,
+        max_size_bytes=3_840_000,  # 3.75 MB per image
         max_width=8000,
         max_height=8000,
     ),
     pdf=PDFConstraints(
-        max_size_bytes=3_840_000,
+        max_size_bytes=4_608_000,  # 4.5 MB per document
         max_pages=100,
     ),
     supports_url_references=True,  # S3 URIs supported

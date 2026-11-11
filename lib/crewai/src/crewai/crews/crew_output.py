@@ -58,11 +58,17 @@ class CrewOutput(BaseModel):
 
     @property
     def json(self) -> str | None:  # type: ignore[override]
+        """JSON string of the final task's output.
+
+        None when that output could not be converted to its ``output_json`` model.
+        """
         if self.tasks_output[-1].output_format != OutputFormat.JSON:
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
             )
 
+        if self.json_dict is None:
+            return None
         return json.dumps(self.json_dict)
 
     def to_dict(self) -> dict[str, Any]:

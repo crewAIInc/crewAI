@@ -18,7 +18,6 @@ import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Crew, Task
-from crewai.agents.parser import AgentFinish
 from crewai.events import crewai_event_bus
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
 from crewai.hooks.tool_hooks import ToolCallHookContext, clear_after_tool_call_hooks
@@ -1117,9 +1116,9 @@ class TestNativeToolCallingJsonParseError:
     """Tests that malformed JSON tool arguments produce clear errors
     instead of silently dropping all arguments."""
 
-    def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
-        """Create a minimal CrewAgentExecutor with mocked dependencies."""
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    def _make_executor(self, tools: list[BaseTool]) -> AgentExecutor:
+        """Create a minimal AgentExecutor with mocked dependencies."""
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.tools.base_tool import to_langchain
 
         structured_tools = to_langchain(tools)
@@ -1135,13 +1134,32 @@ class TestNativeToolCallingJsonParseError:
         mock_task.description = "test"
         mock_task.id = "test-id"
 
-        executor = CrewAgentExecutor(
+        return AgentExecutor.model_construct(
             tools=structured_tools,
             original_tools=tools,
+            agent=mock_agent,
+            task=mock_task,
+            crew=None,
+            tools_handler=None,
         )
-        executor.agent = mock_agent
-        executor.task = mock_task
-        return executor
+
+    def _execute(
+        self,
+        executor: AgentExecutor,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str,
+        available_functions: dict,
+    ) -> dict:
+        executor._available_functions = available_functions
+        return executor._execute_single_native_tool_call(
+            {
+                "id": call_id,
+                "type": "function",
+                "function": {"name": func_name, "arguments": func_args},
+            }
+        )
 
     def test_malformed_json_returns_parse_error(self) -> None:
         """Malformed JSON args must return a descriptive error, not silently become {}."""
@@ -1161,7 +1179,8 @@ class TestNativeToolCallingJsonParseError:
 
         malformed_json = '{"code": "print("hello")"}'
 
-        result = executor._execute_single_native_tool_call(
+        result = self._execute(
+            executor,
             call_id="call_123",
             func_name="execute_code",
             func_args=malformed_json,
@@ -1189,7 +1208,8 @@ class TestNativeToolCallingJsonParseError:
 
         valid_json = '{"code": "print(1)"}'
 
-        result = executor._execute_single_native_tool_call(
+        result = self._execute(
+            executor,
             call_id="call_456",
             func_name="execute_code",
             func_args=valid_json,
@@ -1218,7 +1238,8 @@ class TestNativeToolCallingJsonParseError:
 
         _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
-        result = executor._execute_single_native_tool_call(
+        result = self._execute(
+            executor,
             call_id="call_typed",
             func_name="typed_search",
             func_args='{"query": "crew"}',
@@ -1254,7 +1275,8 @@ class TestNativeToolCallingJsonParseError:
         clear_after_tool_call_hooks()
         register_after_tool_call_hook(after_hook)
         try:
-            result = executor._execute_single_native_tool_call(
+            result = self._execute(
+            executor,
                 call_id="call_typed",
                 func_name="typed_search",
                 func_args='{"query": "crew"}',
@@ -1267,50 +1289,6 @@ class TestNativeToolCallingJsonParseError:
         assert seen_results == [
             ('{"query":"crew","score":0.8}', SearchOutput(query="crew", score=0.8))
         ]
-
-    def test_native_tool_loop_falls_back_when_provider_rejects_tools(self) -> None:
-        """Unsupported native tools errors should continue through ReAct."""
-
-        class SearchTool(BaseTool):
-            name: str = "search"
-            description: str = "Search for information"
-
-            def _run(self, query: str) -> str:
-                return f"result for {query}"
-
-        executor = self._make_executor([SearchTool()])
-        executor.llm = Mock()
-        executor.messages = [{"role": "user", "content": "Search for CrewAI"}]
-        executor.callbacks = []
-        executor.iterations = 0
-        executor.max_iter = 3
-        executor.request_within_rpm_limit = None
-        executor.respect_context_window = False
-
-        fallback_finish = AgentFinish(
-            thought="done",
-            output="final",
-            text="Final Answer: final",
-        )
-        with (
-            patch(
-                "crewai.agents.crew_agent_executor.get_llm_response",
-                side_effect=RuntimeError(
-                    "registry.ollama.ai/library/mariner:latest does not support tools"
-                ),
-            ),
-            patch.object(
-                executor,
-                "_invoke_loop_react",
-                return_value=fallback_finish,
-            ) as react_loop,
-        ):
-            result = executor._invoke_loop_native_tools()
-
-        assert result is fallback_finish
-        react_loop.assert_called_once()
-        assert "Native tool calling is unavailable" in executor.messages[-1]["content"]
-        assert "Action Input" in executor.messages[-1]["content"]
 
     def test_dict_args_bypass_json_parsing(self) -> None:
         """When func_args is already a dict, no JSON parsing occurs."""
@@ -1328,7 +1306,8 @@ class TestNativeToolCallingJsonParseError:
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
         _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
-        result = executor._execute_single_native_tool_call(
+        result = self._execute(
+            executor,
             call_id="call_789",
             func_name="execute_code",
             func_args={"code": "x = 42"},
@@ -1354,7 +1333,8 @@ class TestNativeToolCallingJsonParseError:
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
         _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
-        result = executor._execute_single_native_tool_call(
+        result = self._execute(
+            executor,
             call_id="call_schema",
             func_name="strict_tool",
             func_args={"code": "print(1)"},

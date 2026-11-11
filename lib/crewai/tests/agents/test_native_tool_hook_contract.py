@@ -12,7 +12,7 @@ from crewai import Agent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool

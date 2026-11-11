@@ -83,6 +83,29 @@ def _display_git_remote_help() -> None:
     )
 
 
+def _display_zip_source(repository: git.Repository | None) -> None:
+    """Say which local commit a ZIP is built from.
+
+    AMP keeps no commit for a ZIP deployment, so this line is the only record of it.
+    """
+    if repository is None:
+        return
+    commit = repository.head_commit()
+    if commit is None:
+        return
+    changed = repository.has_changes_under_path()
+    if changed is None:
+        console.print(
+            f"ZIP built from commit {commit} (could not check for uncommitted changes)."
+        )
+    elif changed:
+        console.print(
+            f"ZIP built from commit {commit} (working tree has uncommitted changes)."
+        )
+    else:
+        console.print(f"ZIP built from commit {commit}.")
+
+
 # AMP's `source_type` for a deployment's code, and whether a push updates it by
 # uploading a ZIP. A Studio install is an archive too (AMP sets it as a ZIP crew).
 _ZIP_SOURCE_TYPES = {"zip": True, "studio": True, "github": False, "any_git": False}
@@ -546,6 +569,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         confirm: bool = False,
         skip_validate: bool = False,
         source: DeploySource = "cli",
+        *,
+        force_zip: bool = False,
     ) -> None:
         """
         Create a new crew deployment.
@@ -554,13 +579,15 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
             source (DeploySource): Where the deployment was initiated from.
+            force_zip (bool): Upload the project as a ZIP even when it has a git
+                origin remote, without fetching from that remote.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
         try:
-            response = self._request_crew_creation(confirm)
+            response = self._request_crew_creation(confirm, force_zip=force_zip)
         except BaseException as exc:
             # Report and re-raise unchanged: the CLI and the run TUI already
             # decide how each failure is shown, this only explains the gap
@@ -594,12 +621,18 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         )
         self._display_creation_success(json_response)
 
-    def _request_crew_creation(self, confirm: bool) -> httpx.Response:
+    def _request_crew_creation(
+        self, confirm: bool, *, force_zip: bool = False
+    ) -> httpx.Response:
         """Ask the Enterprise API to create the deployment, from git or from a ZIP."""
         env_vars = fetch_and_json_env_file()
-        repository = self._prepare_git_repository()
-        remote_repo_url = repository.origin_url() if repository else None
+        repository = self._prepare_git_repository(fetch_origin=not force_zip)
 
+        if force_zip:
+            console.print("Deploying from a ZIP upload (--zip).", style="yellow")
+            return self._create_crew_from_zip(env_vars, repository, confirm)
+
+        remote_repo_url = repository.origin_url() if repository else None
         if remote_repo_url:
             self._confirm_input(env_vars, remote_repo_url, confirm)
             payload = self._create_payload(env_vars, remote_repo_url)
@@ -608,8 +641,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         _display_git_remote_help()
         return self._create_crew_from_zip(env_vars, repository, confirm)
 
-    def _prepare_git_repository(self) -> git.Repository | None:
-        """Prepare Git for deploy while preserving remote deploy when possible."""
+    def _prepare_git_repository(
+        self, *, fetch_origin: bool = True
+    ) -> git.Repository | None:
+        """Prepare Git for deploy while preserving remote deploy when possible.
+
+        With ``fetch_origin=False`` an origin remote is ignored: nothing is
+        fetched, so a ZIP deploy never waits on the network or a credentials prompt.
+        """
         try:
             repository = git.Repository(fetch=False)
         except ValueError as exc:
@@ -637,8 +676,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             _display_git_repository_help()
             return repository
 
-        remote_repo_url = repository.origin_url()
-        if remote_repo_url:
+        if fetch_origin and repository.origin_url():
             try:
                 repository.fetch()
             except ValueError as fetch_error:
@@ -694,6 +732,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("Preparing project ZIP...", style="bold blue")
         zip_file_path = create_project_zip(self.project_name, repository=repository)
         try:
+            _display_zip_source(repository)
             self._confirm_zip_input(env_vars, confirm)
             console.print("Uploading project ZIP...", style="bold blue")
             return self.plus_api_client.create_crew_from_zip(
@@ -718,6 +757,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("Preparing project ZIP...", style="bold blue")
         zip_file_path = create_project_zip(self.project_name, repository=repository)
         try:
+            _display_zip_source(repository)
             console.print("Uploading project ZIP...", style="bold blue")
             return self.plus_api_client.update_crew_from_zip(
                 uuid,

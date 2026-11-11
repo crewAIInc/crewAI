@@ -54,7 +54,7 @@ O objeto `LLMCallHookContext` fornece acesso abrangente ao estado de execução:
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor  # Referência completa ao executor
+    executor: AgentExecutor  # Referência completa ao executor
     messages: list               # Lista de mensagens mutável
     agent: Agent                 # Agente atual
     task: Task                   # Tarefa atual
@@ -63,6 +63,8 @@ class LLMCallHookContext:
     iterations: int              # Contagem de iteração atual
     response: str | None         # Resposta do LLM (apenas hooks posteriores)
 ```
+
+`AgentExecutor` é importado de `crewai.agents`. `CrewAgentExecutor` e o caminho de importação `crewai.experimental.agent_executor` foram removidos.
 
 ### Modificando Mensagens
 

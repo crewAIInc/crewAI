@@ -33,8 +33,7 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
     This function checks if planning is enabled for the agent and, if so,
     creates a plan that gets appended to the task description.
 
-    Note: This function is used by CrewAgentExecutor (legacy path).
-    For AgentExecutor, planning is handled in AgentExecutor.generate_plan().
+    AgentExecutor handles planning in AgentExecutor.generate_plan().
 
     Args:
         agent: The agent performing the task.

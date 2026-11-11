@@ -33,12 +33,18 @@ class JSONLoader(BaseLoader):
             data = json.loads(content)
             if isinstance(data, dict):
                 text = "\n".join(
-                    f"{k}: {json.dumps(v, indent=0)}" for k, v in data.items()
+                    f"{k}: {json.dumps(v, indent=0, ensure_ascii=False)}"
+                    for k, v in data.items()
                 )
             elif isinstance(data, list):
-                text = "\n".join(json.dumps(item, indent=0) for item in data)
+                text = "\n".join(
+                    json.dumps(item, indent=0, ensure_ascii=False) for item in data
+                )
             else:
-                text = json.dumps(data, indent=0)
+                text = json.dumps(data, indent=0, ensure_ascii=False)
+
+            # Keep lone surrogates escaped without replacing readable Unicode.
+            text = text.encode("utf-8", errors="backslashreplace").decode("utf-8")
 
             metadata = {
                 "format": "json",

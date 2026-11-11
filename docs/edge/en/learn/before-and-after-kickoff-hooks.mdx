@@ -13,8 +13,7 @@ The before kickoff hook is executed before the crew starts its tasks. It receive
 Here's an example of defining a before kickoff function in your `crew.py`:
 
 ```python
-from crewai import CrewBase
-from crewai.project import before_kickoff
+from crewai.project import CrewBase, before_kickoff
 
 @CrewBase
 class MyCrew:
@@ -36,8 +35,7 @@ The after kickoff hook is executed after the crew has completed its tasks. It re
 Here's how you can define an after kickoff function in your `crew.py`:
 
 ```python
-from crewai import CrewBase
-from crewai.project import after_kickoff
+from crewai.project import CrewBase, after_kickoff
 
 @CrewBase
 class MyCrew:
