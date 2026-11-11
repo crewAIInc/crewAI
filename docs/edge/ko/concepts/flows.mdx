@@ -719,6 +719,67 @@ def next_step(self, result: HumanFeedbackResult):
 
 플로우에서의 인간 피드백에 대한 완전한 가이드는 비동기/논블로킹 피드백과 커스텀 프로바이더(Slack, 웹훅 등)를 포함하여 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows)을 참조하세요.
 
+## `ask()`와 사용자 지정 입력 공급자로 입력 요청하기
+
+실행 중인 단계 안에서 Flow는 `self.ask(...)`로 입력을 요청할 수 있습니다. 기본적으로는 콘솔에서 읽지만, Flow에 `input_provider`를 설정하여 Slack 봇, 웹 UI, 테스트 하네스 같은 사용자 지정 **입력 공급자**를 연결할 수 있습니다. 공급자는 `request_input(message, flow, metadata=None)`을 구현하고 답변을 문자열, `InputResponse`(응답 메타데이터를 첨부할 때), 또는 입력을 사용할 수 없을 때 `None`으로 반환합니다. 전체 대화 턴을 시작하는 `handle_turn()`과 달리, `ask()`는 실행 중인 단계 중간에 단일 값을 요청합니다.
+
+```python
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedInputProvider:
+    """A deterministic input provider: answers come from a script, not the console."""
+
+    def __init__(self, answers):
+        self.answers = answers
+
+    def request_input(self, message, flow, metadata=None):
+        # `metadata` is whatever the Flow passed to ask(); a real provider would use it to route
+        # the question (channel, user id, ...). Returning None means "no input available".
+        return self.answers.get(message)
+
+
+class OnboardingFlow(Flow):
+    input_provider = ScriptedInputProvider(
+        {
+            "What's your name?": InputResponse(text="Ada", metadata={"responded_by": "harness"}),
+            "Favorite language?": None,  # input unavailable (cancelled / dropped)
+        }
+    )
+
+    @start()
+    def collect(self):
+        name = self.ask("What's your name?", metadata={"field": "name"})
+        language = self.ask("Favorite language?", metadata={"field": "language"})
+        if language is None:
+            language = "(not provided)"
+        return f"Hello, {name}! Favourite language: {language}"
+
+
+flow = OnboardingFlow()
+print(flow.kickoff())
+# ask() returns only the text; the provider's response metadata is kept in the input history.
+for entry in flow._input_history:
+    print(f"- {entry['message']!r} -> {entry['response']!r} (response_metadata={entry['response_metadata']})")
+```
+
+이 코드를 `custom_input_provider.py`로 저장하고 실행하세요:
+
+```bash
+python custom_input_provider.py
+```
+
+예상 출력(CrewAI는 플로우 실행 패널도 함께 출력합니다):
+
+```text
+Hello, Ada! Favourite language: (not provided)
+- "What's your name?" -> 'Ada' (response_metadata={'responded_by': 'harness'})
+- 'Favorite language?' -> None (response_metadata=None)
+```
+
+`ask()`는 텍스트만 반환하며, 공급자의 응답 메타데이터는 Flow의 입력 기록(`flow._input_history`)에 보관됩니다. `None` 답변은 명시적으로 처리하세요 — 빈 답변이 아니라 입력을 사용할 수 없음을 뜻합니다. 공급자는 동기식이며 CrewAI가 스레드에서 실행하므로 `ask()`가 이벤트 루프를 차단하지 않습니다.
+
 ## 플로우에 에이전트 추가하기
 
 에이전트는 플로우에 원활하게 통합할 수 있으며, 단순하고 집중된 작업 실행이 필요할 때 전체 Crew의 경량 대안으로 활용됩니다. 아래는 에이전트를 플로우 내에서 사용하여 시장 조사를 수행하는 예시입니다:
