@@ -47,6 +47,7 @@ from crewai.llms.base_llm import (
     get_current_call_id,
     llm_call_context,
 )
+from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -774,6 +775,18 @@ class LLM(BaseLLM):
         """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+        # The cache-breakpoint flag is crewAI-internal; LiteLLM would forward
+        # it to the provider, and strict APIs (e.g. Groq) reject the request.
+        # Copy rather than mutate: the executor reuses its message buffer.
+        cleaned: list[Any] = []
+        for m in messages:
+            if isinstance(m, dict) and CACHE_BREAKPOINT_KEY in m:
+                copy: dict[str, Any] = dict(m)
+                copy.pop(CACHE_BREAKPOINT_KEY)
+                cleaned.append(copy)
+            else:
+                cleaned.append(m)
+        messages = cleaned
         if not skip_file_processing:
             messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
