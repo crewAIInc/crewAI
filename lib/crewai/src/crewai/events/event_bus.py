@@ -769,9 +769,11 @@ class CrewAIEventsBus:
         return len(not_done) == 0
 
     async def aemit(self, source: Any, event: BaseEvent) -> None:
-        """Asynchronously emit an event to registered async handlers.
+        """Asynchronously emit an event to registered handlers.
 
-        Only processes async handlers. Use in async contexts.
+        If handlers have dependencies (registered with depends_on), they
+        execute in dependency order, matching :meth:`emit`. Otherwise, only
+        async handlers run (concurrently), as before. Use in async contexts.
 
         Args:
             source: The object emitting the event
@@ -787,7 +789,13 @@ class CrewAIEventsBus:
                     "[CrewAIEventsBus] Warning: Attempted to emit event during shutdown. Ignoring."
                 )
                 return
+            has_dependencies = event_type in self._handler_dependencies
             async_handlers = self._async_handlers.get(event_type, frozenset())
+
+        if has_dependencies:
+            self._ensure_executor_initialized()
+            await self._emit_with_dependencies(source, event, self._runtime_state)
+            return
 
         if async_handlers:
             await self._acall_handlers(
