@@ -126,8 +126,33 @@ class UsageMetrics(BaseModel):
         )
 
     @staticmethod
+    def _is_raw_bedrock_converse_usage(usage_data: dict[str, Any]) -> bool:
+        """Detect raw Bedrock Converse usage (camelCase ``inputTokens``).
+
+        Converse reports ``inputTokens`` as the uncached input only.
+        Cache reads and writes arrive as ``cacheReadInputTokens`` /
+        ``cacheWriteInputTokens`` (and the older ``*TokenCount``
+        spellings). The Bedrock provider publishes that raw dict on
+        ``LLMCallCompletedEvent``, so flow-level aggregation has to
+        reconcile billed prompt tokens here the same way it does for
+        unreconciled Anthropic usage.
+        """
+        return "inputTokens" in usage_data
+
+    @staticmethod
     def _resolve_billed_prompt_tokens(usage_data: dict[str, Any]) -> int:
         """Return the full billed prompt/input token count for a usage dict."""
+        if UsageMetrics._is_raw_bedrock_converse_usage(usage_data):
+            return (
+                _coerce_int(usage_data.get("inputTokens"))
+                + _first_int(
+                    usage_data, "cacheReadInputTokenCount", "cacheReadInputTokens"
+                )
+                + _first_int(
+                    usage_data, "cacheWriteInputTokenCount", "cacheWriteInputTokens"
+                )
+            )
+
         if UsageMetrics._has_unreconciled_anthropic_cache_keys(usage_data):
             return (
                 _coerce_int(usage_data.get("input_tokens"))
@@ -145,7 +170,10 @@ class UsageMetrics(BaseModel):
 
         Accepts the full set of key aliases CrewAI providers emit:
         ``prompt_tokens`` / ``prompt_token_count`` (Gemini) / ``input_tokens``
-        (Anthropic), and the equivalent completion / cached-prompt aliases.
+        (Anthropic) / ``inputTokens`` (Bedrock), and the equivalent
+        completion / cached-prompt aliases. Raw Bedrock cache reads and
+        writes are included in prompt tokens, as they are for raw Anthropic
+        usage.
         Mirrors ``BaseLLM._track_token_usage_internal`` so per-LLM totals,
         flow-level aggregation, and OTel spans agree on every provider.
 
@@ -162,21 +190,28 @@ class UsageMetrics(BaseModel):
             "completion_tokens",
             "candidates_token_count",
             "output_tokens",
+            "outputTokens",
         )
         cached_prompt_tokens = _first_int(
             usage_data,
             "cached_tokens",
             "cached_prompt_tokens",
             "cache_read_input_tokens",
+            "cacheReadInputTokenCount",
+            "cacheReadInputTokens",
         )
         if not cached_prompt_tokens:
             details = usage_data.get("prompt_tokens_details")
             if isinstance(details, dict):
                 cached_prompt_tokens = _coerce_int(details.get("cached_tokens"))
 
-        cache_creation_tokens = _coerce_int(
-            usage_data.get("cache_creation_tokens")
-        ) or _coerce_int(usage_data.get("cache_creation_input_tokens"))
+        cache_creation_tokens = _first_int(
+            usage_data,
+            "cache_creation_tokens",
+            "cache_creation_input_tokens",
+            "cacheWriteInputTokenCount",
+            "cacheWriteInputTokens",
+        )
 
         return cls(
             total_tokens=prompt_tokens + completion_tokens,

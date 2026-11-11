@@ -1577,3 +1577,54 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
         assert llm._token_usage['prompt_tokens'] == 60
         assert llm._token_usage['cached_prompt_tokens'] == 0
         assert llm._token_usage['cache_creation_tokens'] == 0
+
+
+def test_flow_usage_metrics_include_bedrock_cache_tokens():
+    """Flow totals must follow raw Converse usage, not stay at 0/0.
+
+    The flow aggregator normalizes event.usage through
+    UsageMetrics.from_provider_dict. Bedrock publishes the raw
+    Converse usage dict on LLMCallCompletedEvent, so those camelCase
+    cache fields have to be understood there, not only in the
+    Bedrock-specific LLM tracker.
+    """
+    from crewai.flow.flow import Flow, start
+    from crewai.types.usage_metrics import UsageMetrics
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    class BedrockUsageFlow(Flow):
+        @start()
+        def query(self) -> str:
+            return str(llm.call("Hello"))
+
+    with patch.object(llm._client, "converse") as mock_converse:
+        mock_converse.return_value = {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "OK"}],
+                }
+            },
+            "usage": {
+                "inputTokens": 10,
+                "outputTokens": 5,
+                "totalTokens": 6641,
+                "cacheReadInputTokens": 6626,
+                "cacheWriteInputTokens": 0,
+            },
+            "stopReason": "end_turn",
+        }
+        flow = BedrockUsageFlow()
+        assert flow.kickoff() == "OK"
+
+    expected = UsageMetrics(
+        prompt_tokens=6636,
+        completion_tokens=5,
+        total_tokens=6641,
+        cached_prompt_tokens=6626,
+        cache_creation_tokens=0,
+        successful_requests=1,
+    )
+    assert llm.get_token_usage_summary() == expected
+    assert flow.usage_metrics == expected
