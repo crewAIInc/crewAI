@@ -54,6 +54,16 @@ _local_clients: dict[str, SyncQdrantClientBase] = {}
 _local_clients_lock = threading.Lock()
 
 
+def _remove_folder_if_owner(folder: str, owner_pid: int) -> None:
+    """Delete ``folder`` at exit, but only in the process that created it.
+
+    A forked child inherits this exit handler and must not delete its parent's
+    storage when it exits.
+    """
+    if os.getpid() == owner_pid:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
     """Return the Qdrant client for the config, reusing local clients per path.
 
@@ -74,14 +84,17 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
     is_default = normalized == os.path.realpath(
         os.path.join(db_storage_path(), "qdrant")
     )
+    # Keyed by the folder actually opened. For the default folder that includes
+    # the process ID, so a forked child opens its own folder instead of reusing
+    # (and sharing the SQLite connection of) its parent's client.
+    folder = f"{normalized}-pid{os.getpid()}" if is_default else normalized
     with _local_clients_lock:
-        if normalized not in _local_clients:
-            folder = f"{normalized}-pid{os.getpid()}" if is_default else normalized
+        if folder not in _local_clients:
             try:
                 # Every call runs under the client's lock, so using the SQLite
                 # connection from other threads is safe. Without this flag,
                 # builds where SQLite is not THREADSAFE=1 reject those threads.
-                _local_clients[normalized] = _LockedQdrantClient(
+                _local_clients[folder] = _LockedQdrantClient(
                     **{
                         **config.options,
                         "path": folder,
@@ -111,8 +124,8 @@ def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
                     "ChromaDB with set_rag_config(ChromaDBConfig())."
                 ) from e
             if is_default:
-                atexit.register(shutil.rmtree, folder, ignore_errors=True)
-        return _local_clients[normalized]
+                atexit.register(_remove_folder_if_owner, folder, os.getpid())
+        return _local_clients[folder]
 
 
 def create_client(config: QdrantConfig) -> QdrantClient:
