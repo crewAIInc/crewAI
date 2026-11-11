@@ -1,13 +1,13 @@
 ---
 title: "Projetos de Agent independentes (experimental)"
-description: "Crie e execute um projeto de Agent independente usando YAML, JSON ou Python."
+description: "Crie e execute um projeto de Agent independente usando JSON, YAML ou Python."
 ---
 
 <Warning>
 Os projetos de Agent independentes são experimentais. O esquema do projeto e a API de carregamento podem mudar. Esta prévia exige builds compatíveis da CLI e do SDK que incluam o recurso; implantações gerenciadas também exigem um runtime Enterprise compatível. Os exemplos não indicam que o recurso é compatível com uma versão anterior já instalada.
 </Warning>
 
-Um projeto de Agent independente define um único Agent e recebe suas mensagens no momento do kickoff. YAML é o formato padrão dos projetos criados. JSON e Python são alternativas que podem ser escolhidas explicitamente. Você não precisa de `main.py`, Crew, Flow ou função de fábrica.
+Um projeto de Agent independente define um único Agent e recebe suas mensagens no momento do kickoff. JSON é o formato padrão dos projetos criados. YAML e Python são alternativas que podem ser escolhidas explicitamente. Você não precisa de `main.py`, Crew, Flow ou função de fábrica.
 
 ## Criar um projeto
 
@@ -52,7 +52,7 @@ O SDK experimental expõe a mesma sessão por `agent.handle_turn(...)` e `agent.
 
 ```text
 support_agent/
-├── agent.yaml
+├── agent.json
 ├── pyproject.toml
 ├── uv.lock
 ├── .env.example
@@ -74,50 +74,17 @@ O arquivo `pyproject.toml` gerado seleciona a definição do Agent e inclui a co
 ```toml
 [tool.crewai]
 type = "agent"
-definition = "agent.yaml"
+definition = "agent.json"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["agent.yaml", "tools", "skills"]
+only-include = ["agent.json", "tools", "skills"]
 ```
 
 ## Definir o Agent
 
 A identidade padrão é um Agent CrewAI de uso geral. Edite `role`, `goal` e `backstory` para especializá-lo. As ferramentas de suporte incluídas são exemplos usados apenas quando relevantes; substitua ou remova conforme o caso de uso. Nenhuma skill é instalada por padrão.
 
-Edite `agent.yaml`:
-
-```yaml
-conversational: true
-role: General-purpose AI agent
-goal: Help users accomplish tasks accurately using the available tools and skills.
-backstory: |-
-  # Identity
-  You are a general-purpose AI agent powered by CrewAI.
-
-  # Customization
-  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
-llm:
-  model: openai/gpt-6-luna
-  api: responses
-tools:
-  - custom:support_hours
-  - custom:lookup_plan
-  - custom:support_checklist
-skills:
-  - ./skills
-max_iter: 8
-```
-
-Esses são campos do construtor de Agent. Forneça a solicitação por meio de `messages` em tempo de execução; não adicione um campo `input` fixo à definição.
-
-### Escolher JSON ou Python
-
-```shell Terminal
-crewai create agent json_support --format json
-crewai create agent python_support --format python
-```
-
-O modelo de projeto JSON cria `agent.json` com os mesmos campos:
+Edite `agent.json`:
 
 ```json
 {
@@ -139,6 +106,39 @@ O modelo de projeto JSON cria `agent.json` com os mesmos campos:
   ],
   "max_iter": 8
 }
+```
+
+Esses são campos do construtor de Agent. Forneça a solicitação por meio de `messages` em tempo de execução; não adicione um campo `input` fixo à definição.
+
+### Escolher YAML ou Python
+
+```shell Terminal
+crewai create agent yaml_support --format yaml
+crewai create agent python_support --format python
+```
+
+O modelo de projeto YAML cria `agent.yaml` com os mesmos campos:
+
+```yaml
+conversational: true
+role: General-purpose AI agent
+goal: Help users accomplish tasks accurately using the available tools and skills.
+backstory: |-
+  # Identity
+  You are a general-purpose AI agent powered by CrewAI.
+
+  # Customization
+  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
+llm:
+  model: openai/gpt-6-luna
+  api: responses
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+max_iter: 8
 ```
 
 O modelo de projeto Python exporta `agent = Agent(...)` de `src/python_support/agent.py`. Use-o quando a definição do Agent exigir lógica em Python.
@@ -163,15 +163,19 @@ class SupportHoursTool(BaseTool):
         return "Support is available Monday to Friday, 09:00-17:00 UTC."
 ```
 
-A definição gerada registra explicitamente as ferramentas e o diretório de skills; JSON usa as mesmas listas de strings:
+A definição gerada registra explicitamente as ferramentas e o diretório de skills; YAML usa as mesmas listas de strings:
 
-```yaml
-tools:
-  - custom:support_hours
-  - custom:lookup_plan
-  - custom:support_checklist
-skills:
-  - ./skills
+```json
+{
+  "tools": [
+    "custom:support_hours",
+    "custom:lookup_plan",
+    "custom:support_checklist"
+  ],
+  "skills": [
+    "./skills"
+  ]
+}
 ```
 
 `custom:support_hours` carrega uma subclasse de `BaseTool` a partir de `tools/support_hours.py`. Adicione as dependências da ferramenta ao `pyproject.toml` e atualize o arquivo de lock com `crewai install`. Carregue apenas código de projetos confiáveis: ferramentas personalizadas e referências Python executam código Python durante o carregamento.
