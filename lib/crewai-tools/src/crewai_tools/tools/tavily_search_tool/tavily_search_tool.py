@@ -34,6 +34,8 @@ class TavilySearchTool(BaseTool):
         args_schema: The schema for the tool's arguments.
         api_key: The Tavily API key.
         proxies: Optional proxies for the API requests.
+        api_base_url: Optional base URL for the Tavily API, e.g. a proxy, a gateway or
+            a Tavily-compatible provider.
         search_depth: The depth of the search.
         topic: The topic to focus the search on.
         time_range: The time range for the search.
@@ -64,6 +66,10 @@ class TavilySearchTool(BaseTool):
     proxies: dict[str, str] | None = Field(
         default=None,
         description="Optional proxies to use for the Tavily API requests.",
+    )
+    api_base_url: str | None = Field(
+        default_factory=lambda: os.getenv("TAVILY_API_BASE_URL"),
+        description="Optional base URL for the Tavily API, e.g. a proxy, a gateway or a Tavily-compatible provider. If not provided, it will be loaded from the environment variable TAVILY_API_BASE_URL.",
     )
     search_depth: Literal["basic", "advanced"] = Field(
         default="basic", description="The depth of the search."
@@ -109,6 +115,11 @@ class TavilySearchTool(BaseTool):
                 description="API key for Tavily search service",
                 required=True,
             ),
+            EnvVar(
+                name="TAVILY_API_BASE_URL",
+                description="Optional base URL for the Tavily search service",
+                required=False,
+            ),
         ]
     )
 
@@ -116,10 +127,16 @@ class TavilySearchTool(BaseTool):
         super().__init__(**kwargs)
         if TAVILY_AVAILABLE:
             self.client = TavilyClient(
-                api_key=self.api_key, proxies=self.proxies, client_name="crewai"
+                api_key=self.api_key,
+                proxies=self.proxies,
+                api_base_url=self.api_base_url,
+                client_name="crewai",
             )
             self.async_client = AsyncTavilyClient(
-                api_key=self.api_key, proxies=self.proxies, client_name="crewai"
+                api_key=self.api_key,
+                proxies=self.proxies,
+                api_base_url=self.api_base_url,
+                client_name="crewai",
             )
         else:
             try:
