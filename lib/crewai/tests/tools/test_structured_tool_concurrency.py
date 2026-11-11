@@ -61,7 +61,8 @@ def test_concurrent_invocations_respect_the_usage_budget(
         sys.setswitchinterval(original_interval)
 
 
-def test_usage_claim_does_not_serialize_tool_execution() -> None:
+@pytest.mark.parametrize("shared_tool", [False, True])
+def test_usage_claim_does_not_serialize_tool_execution(shared_tool: bool) -> None:
     executing = Barrier(2)
 
     def echo(value: int) -> int:
@@ -70,11 +71,19 @@ def test_usage_claim_does_not_serialize_tool_execution() -> None:
         return value
 
     tool = CrewStructuredTool.from_function(echo, max_usage_count=2)
+    other = (
+        tool
+        if shared_tool
+        else CrewStructuredTool.from_function(echo, max_usage_count=1)
+    )
     with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(lambda value: tool.invoke({"value": value}), [1, 2]))
+        first = pool.submit(tool.invoke, {"value": 1})
+        second = pool.submit(other.invoke, {"value": 2})
+        results = [first.result(timeout=5), second.result(timeout=5)]
 
     assert results == [1, 2]
-    assert tool.current_usage_count == 2
+    assert tool.current_usage_count == (2 if shared_tool else 1)
+    assert other.current_usage_count == (2 if shared_tool else 1)
 
 
 @pytest.mark.asyncio
@@ -113,6 +122,7 @@ def test_tool_remains_deep_copyable_with_an_independent_budget() -> None:
 
     original = CrewStructuredTool.from_function(echo, max_usage_count=1)
     copied = original.model_copy(deep=True)
+    assert copied == original
 
     assert original.invoke({"value": 1}) == 1
     assert copied.current_usage_count == 0

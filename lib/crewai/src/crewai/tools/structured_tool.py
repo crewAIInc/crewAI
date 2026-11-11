@@ -7,7 +7,7 @@ import json
 import re
 import textwrap
 import threading
-from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast, get_type_hints
 import warnings
 
 from pydantic import (
@@ -219,7 +219,8 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
-    _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    # Only slot claims share this lock; keep it out of Pydantic model state.
+    _usage_lock: ClassVar[threading.Lock] = threading.Lock()
 
     @property
     def formatted_description(self) -> str:
@@ -473,13 +474,3 @@ class CrewStructuredTool(BaseModel):
 
     def __repr__(self) -> str:
         return f"CrewStructuredTool(name='{sanitize_tool_name(self.name)}', description='{self.description}')"
-
-    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
-        # A copied tool has its own counter and must get its own lock. Remove
-        # only the lock from a shallow copy before Pydantic copies the state.
-        copied = self.__copy__()
-        if copied.__pydantic_private__ is not None:
-            copied.__pydantic_private__.pop("_usage_lock", None)
-        copied = BaseModel.__deepcopy__(copied, memo)
-        copied._usage_lock = threading.Lock()
-        return copied
