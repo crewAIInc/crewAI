@@ -1,5 +1,6 @@
 """Tests for QdrantClient implementation."""
 
+from math import sqrt
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -8,6 +9,7 @@ from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.types import BaseRecord
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import QdrantClient as SyncQdrantClient
+from qdrant_client.models import Distance, VectorParams
 
 
 @pytest.fixture
@@ -488,7 +490,9 @@ class TestQdrantClient:
 
         call_args = mock_qdrant_client.query_points.call_args
         assert call_args.kwargs["limit"] == 5
-        assert call_args.kwargs["score_threshold"] == 0.8
+        # The threshold is applied to the normalized score, not sent to Qdrant,
+        # whose own threshold compares raw cosine similarity.
+        assert "score_threshold" not in call_args.kwargs
 
     def test_search_collection_not_exists(self, client, mock_qdrant_client):
         """Test that search raises error if collection doesn't exist."""
@@ -787,3 +791,54 @@ class TestQdrantClient:
             ClientMethodMismatchError, match=r"Method areset\(\) requires"
         ):
             await client.areset()
+
+
+class TestSearchScoreThreshold:
+    """The threshold uses the same 0-1 scale as the scores that search returns."""
+
+    @pytest.fixture
+    def cosine_client(self) -> QdrantClient:
+        # Raw cosine similarity to the query: "near" is 0.4 (normalized 0.7),
+        # "far" is -0.5 (normalized 0.25).
+        vectors = {
+            "query": [1.0, 0.0],
+            "near": [0.4, sqrt(1 - 0.4**2)],
+            "far": [-0.5, sqrt(1 - 0.5**2)],
+        }
+        client = QdrantClient(
+            client=SyncQdrantClient(":memory:"),
+            embedding_function=lambda text: vectors[text],
+        )
+        client.create_collection(
+            collection_name="docs",
+            vectors_config=VectorParams(size=2, distance=Distance.COSINE),
+        )
+        client.add_documents(
+            collection_name="docs",
+            documents=[{"content": "near"}, {"content": "far"}],
+        )
+        return client
+
+    def test_default_threshold_keeps_result_above_it(self, cosine_client):
+        results = cosine_client.search(collection_name="docs", query="query")
+
+        assert [r["content"] for r in results] == ["near"]
+        assert results[0]["score"] == pytest.approx(0.7)
+
+    def test_threshold_is_compared_to_the_reported_score(self, cosine_client):
+        above = cosine_client.search(
+            collection_name="docs", query="query", score_threshold=0.69
+        )
+        below = cosine_client.search(
+            collection_name="docs", query="query", score_threshold=0.71
+        )
+
+        assert [r["content"] for r in above] == ["near"]
+        assert below == []
+
+    def test_zero_threshold_returns_every_result(self, cosine_client):
+        results = cosine_client.search(
+            collection_name="docs", query="query", score_threshold=0.0
+        )
+
+        assert [r["content"] for r in results] == ["near", "far"]
