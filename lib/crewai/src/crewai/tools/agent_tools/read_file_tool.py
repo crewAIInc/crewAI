@@ -76,7 +76,10 @@ class ReadFileTool(BaseTool):
         )
 
         if any(content_type.startswith(t) for t in text_types):
-            return content.decode("utf-8")
+            # A file labelled as text may still use another encoding (Latin-1,
+            # GBK, ...). Replace undecodable bytes instead of raising: partial
+            # text is more useful to an agent than an error.
+            return content.decode("utf-8", errors="replace")
 
         encoded = base64.b64encode(content).decode("ascii")
         return f"[Binary file: {filename} ({content_type})]\nBase64: {encoded}"
