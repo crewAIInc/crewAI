@@ -97,8 +97,9 @@ class FileHandler:
                     except (json.JSONDecodeError, FileNotFoundError):
                         existing_data = [log_entry]
 
+                    serialized = json.dumps(existing_data, indent=4)
                     with open(self._path, "w", encoding="utf-8") as write_file:
-                        json.dump(existing_data, write_file, indent=4)
+                        write_file.write(serialized)
                         write_file.write("\n")
 
                 else:

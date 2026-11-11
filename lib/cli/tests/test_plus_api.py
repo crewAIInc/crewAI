@@ -40,6 +40,19 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(response, mock_response)
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_get_integration_token_works_with_older_core(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"api_key": "integration-token"}
+        mock_make_request.return_value = mock_response
+
+        assert self.api.get_integration_token() == "integration-token"
+
+        mock_make_request.assert_called_once_with(
+            "GET", "/crewai_plus/api/v1/me/integration-token", timeout=30
+        )
+        mock_response.raise_for_status.assert_called_once_with()
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_create_evaluation_files_it_under_the_project(self, mock_make_request):
         self.api.create_evaluation("run-1", eval_config="{}", project_id="proj-1")
 

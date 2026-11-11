@@ -110,7 +110,11 @@ class RecallFlow(Flow[RecallState]):
                 raw = [
                     (r, s)
                     for r, s in raw
-                    if not r.private or r.source == self.state.source
+                    # Match the shallow path: a private record with source=None
+                    # must not leak to default (source=None) callers via
+                    # None == None.
+                    if not r.private
+                    or (self.state.source is not None and r.source == self.state.source)
                 ]
             return scope, raw
 

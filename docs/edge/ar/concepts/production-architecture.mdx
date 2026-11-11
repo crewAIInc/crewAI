@@ -84,7 +84,7 @@ class ProductionFlow(Flow[AppState]):
 استفد من عناصر التحكم الأولية في CrewAI لإضافة المتانة والتحكم إلى أطقمك.
 
 ### 1. حواجز المهام
-استخدم [حواجز المهام](/ar/concepts/tasks#task-guardrails) للتحقق من مخرجات المهام قبل قبولها. يضمن هذا أن وكلاءك ينتجون نتائج عالية الجودة.
+استخدم [حواجز المهام](/ar/concepts/tasks#حراس-المهام) للتحقق من مخرجات المهام قبل قبولها. يضمن هذا أن وكلاءك ينتجون نتائج عالية الجودة.
 
 ```python
 def validate_content(result: TaskOutput) -> Tuple[bool, Any]:

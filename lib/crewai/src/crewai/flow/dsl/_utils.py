@@ -368,6 +368,7 @@ def _build_conversational_definition(
     return FlowConversationalDefinition(
         enabled=True,
         system_prompt=getattr(config, "system_prompt", None),
+        respect_context_window=getattr(config, "respect_context_window", True),
         llm=_serialize_static_value(getattr(config, "llm", None), "conversational.llm"),
         router=_build_conversational_router_definition(
             getattr(config, "router", None),

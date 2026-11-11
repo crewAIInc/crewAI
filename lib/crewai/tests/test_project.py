@@ -1,5 +1,7 @@
+import gc
 from typing import Any, ClassVar, cast
 from unittest.mock import Mock, create_autospec, patch
+import weakref
 
 import pytest
 from crewai.agent import Agent
@@ -135,6 +137,68 @@ def test_crew_memoization():
     assert first_call_result is second_call_result, (
         "Crew references should point to the same object"
     )
+
+
+class _FirstRoleCrew:
+    @agent
+    def researcher(self):
+        return Agent(role="first role", goal="goal", backstory="backstory")
+
+
+class _SecondRoleCrew:
+    @agent
+    def researcher(self):
+        return Agent(role="second role", goal="goal", backstory="backstory")
+
+    @agent
+    async def async_researcher(self):
+        return Agent(role="second async role", goal="goal", backstory="backstory")
+
+
+class _FirstAsyncRoleCrew:
+    @agent
+    async def async_researcher(self):
+        return Agent(role="first async role", goal="goal", backstory="backstory")
+
+
+def test_memoized_agent_is_not_returned_to_a_later_instance():
+    # A freed instance's id is usually handed to the next one; the loop makes
+    # that reuse near-certain rather than relying on a single allocation.
+    for _ in range(20):
+        first = _FirstRoleCrew()
+        first.researcher()
+        del first
+        gc.collect()
+
+        assert _SecondRoleCrew().researcher().role == "second role"
+
+
+def test_memoized_async_agent_is_not_returned_to_a_later_instance():
+    for _ in range(20):
+        first = _FirstAsyncRoleCrew()
+        first.async_researcher()
+        del first
+        gc.collect()
+
+        assert _SecondRoleCrew().async_researcher().role == "second async role"
+
+
+def test_memoization_is_per_instance():
+    first, second = SimpleCrew(), SimpleCrew()
+
+    assert first.simple_agent() is not second.simple_agent()
+    assert first.simple_task() is not second.simple_task()
+
+
+def test_crew_instance_is_freed_after_building_its_crew():
+    instance = InternalCrew()
+    instance.crew()
+    instance_ref = weakref.ref(instance)
+
+    del instance
+    gc.collect()
+
+    assert instance_ref() is None
 
 
 def test_task_name():
@@ -437,3 +501,37 @@ def test_internal_crew_with_mcp():
     adapter_mock.assert_called_once_with(
         {"host": "localhost", "port": 8000}, connect_timeout=120
     )
+
+
+def test_agents_yaml_from_repository_loads_repository_agent(tmp_path):
+    agents_yaml = tmp_path / "agents.yaml"
+    agents_yaml.write_text(
+        "researcher:\n  from_repository: test_agent\n  goal: Yaml Goal\n"
+    )
+
+    @CrewBase
+    class RepositoryCrew:
+        agents_config = str(agents_yaml)
+        tasks_config = None
+
+        @agent
+        def researcher(self):
+            return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
+
+    response = Mock(status_code=200)
+    response.json.return_value = {
+        "role": "repo role",
+        "goal": "repo goal",
+        "backstory": "repo backstory",
+    }
+    with (
+        patch("crewai.auth.token.get_auth_token", return_value="test_token"),
+        patch("crewai.plus_api.PlusAPI.get_agent", return_value=response) as get_agent,
+    ):
+        researcher = cast(Any, RepositoryCrew)().researcher()
+
+    get_agent.assert_called_once_with("test_agent")
+    assert researcher.from_repository == "test_agent"
+    assert researcher.role == "repo role"
+    assert researcher.goal == "Yaml Goal"
+    assert researcher.backstory == "repo backstory"
