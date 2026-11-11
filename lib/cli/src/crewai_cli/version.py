@@ -6,6 +6,8 @@ Kept as a stable import path for the CLI; new code should import from
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from crewai_core.version import (
     check_version as check_version,
     get_crewai_version as get_crewai_version,
@@ -24,9 +26,18 @@ def get_crewai_dependency_range(current_version: str | None = None) -> str:
     return f">={parsed_version},<{parsed_version.major + 1}.0.0"
 
 
-def get_crewai_tools_dependency(current_version: str | None = None) -> str:
-    """Return the generated-project dependency for CrewAI with tools."""
-    return f"crewai[tools]{get_crewai_dependency_range(current_version)}"
+def get_crewai_tools_dependency(
+    current_version: str | None = None, extras: Iterable[str] = ()
+) -> str:
+    """Return the generated-project dependency for CrewAI with tools.
+
+    Args:
+        current_version: The CrewAI version the range starts at; defaults to the CLI's.
+        extras: Further crewai extras, such as a provider's SDK, listed sorted
+            after ``tools``.
+    """
+    names = ",".join(["tools", *sorted(set(extras))])
+    return f"crewai[{names}]{get_crewai_dependency_range(current_version)}"
 
 
 __all__ = [
