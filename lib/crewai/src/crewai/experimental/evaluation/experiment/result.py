@@ -39,7 +39,7 @@ class ExperimentResults:
         }
 
         if filepath:
-            with open(filepath, "w") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
             self.display.console.print(f"[green]Results saved to {filepath}[/green]")
 
@@ -55,7 +55,7 @@ class ExperimentResults:
 
         if os.path.exists(baseline_filepath) and os.path.getsize(baseline_filepath) > 0:
             try:
-                with open(baseline_filepath, "r") as f:
+                with open(baseline_filepath, "r", encoding="utf-8") as f:
                     baseline_data = json.load(f)
 
                 if isinstance(baseline_data, dict) and "timestamp" in baseline_data:
@@ -70,7 +70,7 @@ class ExperimentResults:
         if not baseline_runs:
             if save_current:
                 current_data = self.to_json()
-                with open(baseline_filepath, "w") as f:
+                with open(baseline_filepath, "w", encoding="utf-8") as f:
                     json.dump([current_data], f, indent=2)
                 self.display.console.print(
                     f"[green]Saved current results as new baseline to {baseline_filepath}[/green]"
@@ -88,7 +88,7 @@ class ExperimentResults:
         if save_current:
             current_data = self.to_json()
             baseline_runs.append(current_data)
-            with open(baseline_filepath, "w") as f:
+            with open(baseline_filepath, "w", encoding="utf-8") as f:
                 json.dump(baseline_runs, f, indent=2)
             self.display.console.print(
                 f"[green]Added current results to baseline file {baseline_filepath}[/green]"
