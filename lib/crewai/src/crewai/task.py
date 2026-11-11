@@ -652,7 +652,11 @@ class Task(BaseModel):
         context: str | None = None,
         tools: list[BaseTool] | None = None,
     ) -> Future[TaskOutput]:
-        """Execute the task asynchronously."""
+        """Execute the task in a worker thread.
+
+        The returned future can be cancelled before execution starts. Once the
+        worker starts execution, cancelling the future returns False.
+        """
         future: Future[TaskOutput] = Future()
         ctx = contextvars.copy_context()
         threading.Thread(
@@ -670,6 +674,8 @@ class Task(BaseModel):
         future: Future[TaskOutput],
     ) -> None:
         """Execute the task asynchronously with context handling."""
+        if not future.set_running_or_notify_cancel():
+            return
         try:
             self.start_time = datetime.datetime.now()
             result = self._execute_core(agent, context, tools)
