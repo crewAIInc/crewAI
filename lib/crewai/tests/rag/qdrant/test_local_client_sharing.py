@@ -162,8 +162,8 @@ def test_default_folder_gets_the_process_id_and_is_removed_at_exit(
     assert os.path.isdir(private)
     assert not os.path.exists(default_path)
     cleanup, args = registered[-1]
-    assert cleanup.__name__ == "rmtree"
-    assert args == (private,)
+    assert cleanup.__name__ == "_remove_folder_if_owner"
+    assert args == (private, os.getpid())
 
 
 def test_processes_using_the_default_folder_do_not_collide(tmp_path, monkeypatch):
@@ -238,3 +238,36 @@ def test_get_or_create_collection_names_the_collection_when_creation_fails(tmp_p
 
     assert "disk is full" in str(info.value)
     assert isinstance(info.value.__cause__, ValueError)
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="needs os.fork")
+def test_forked_child_does_not_delete_or_reuse_the_parents_default_folder(
+    tmp_path, monkeypatch
+):
+    registered = []
+    monkeypatch.setattr(
+        "atexit.register", lambda fn, *a, **k: registered.append((fn, a))
+    )
+    config, default_path = _default_config(monkeypatch, tmp_path)
+    parent = create_client(config)
+    parent_folder = f"{default_path}-pid{os.getpid()}"
+    read_end, write_end = os.pipe()
+
+    pid = os.fork()
+    if pid == 0:
+        status = 1
+        try:
+            child = create_client(config)
+            os.write(write_end, b"own" if child.client is not parent.client else b"shared")
+            # What a child that ends with sys.exit does: run the exit handlers
+            # it inherited from the parent, plus its own.
+            for cleanup, args in registered:
+                cleanup(*args)
+            status = 0
+        finally:
+            os._exit(status)
+    os.waitpid(pid, 0)
+
+    assert os.read(read_end, 10) == b"own"
+    assert os.path.isdir(parent_folder)
+    assert parent.client.collection_exists("nothing") is False
