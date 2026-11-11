@@ -582,7 +582,7 @@ def test_persist_complex_types_dict_state(tmp_path):
     assert saved["user_id"] == str(uid)
     assert set(saved["tags"]) == {"x", "y"}
     assert saved["price"] == "19.99"
-    assert saved["file_path"] == "/tmp/data.txt"
+    assert Path(saved["file_path"]) == Path("/tmp/data.txt")
     assert saved["nested"]["l1"]["l2"]["l3"]["l4"]["l5"]["l6"] == "deep_value"
 
 
