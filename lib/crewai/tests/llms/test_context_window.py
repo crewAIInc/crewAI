@@ -131,7 +131,10 @@ def test_affected_model_ids_use_their_specific_context_windows(
     ("model", "sizes", "raw_context_window"),
     [
         ("gpt-6-astra", LLM_CONTEXT_WINDOW_SIZES, 922_000),
-        ("gpt-5.6-cyber", LLM_CONTEXT_WINDOW_SIZES, 400_000),
+        # 272k: LiteLLM's catalog had the 400k total window here until its refresh
+        # for 1.15.36 gave the input window (400k less 128k of output), as for
+        # the rest of the GPT-5 family.
+        ("gpt-5.6-cyber", LLM_CONTEXT_WINDOW_SIZES, 272_000),
         ("gpt-3.5-turbo", LLM_CONTEXT_WINDOW_SIZES, 16_385),
         ("chat-latest", LLM_CONTEXT_WINDOW_SIZES, 400_000),
         ("azure_ai/gpt-oss-120b", LLM_CONTEXT_WINDOW_SIZES, 131_072),
@@ -441,6 +444,11 @@ ONE_MILLION_TOKENS = 1_048_576
 USABLE_ONE_MILLION = int(ONE_MILLION_TOKENS * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+# No catalog lists this, so a configured window is the only one it can have; the
+# catalog refresh for 1.15.36 added google/gemini-4-argon, used here before.
+UNLISTED = "openrouter/crewai-tests/unlisted-model"
+
+
 def _unlisted_model() -> str:
     """A model id the catalog does not know, unique so no earlier test warned for it."""
     return f"gemini-4-argon-{uuid.uuid4().hex}"
@@ -471,7 +479,7 @@ def test_resolver_prefers_a_configured_window_over_the_catalog() -> None:
 @pytest.mark.parametrize(
     "kwargs",
     [
-        pytest.param({"model": "openrouter/google/gemini-4-argon"}, id="openrouter"),
+        pytest.param({"model": UNLISTED}, id="openrouter"),
         pytest.param({"model": "openai/gpt-4o"}, id="openai"),
         pytest.param({"model": "anthropic/claude-haiku-4-5"}, id="anthropic"),
         pytest.param({"model": "gemini/gemini-2.5-flash"}, id="gemini"),
@@ -501,7 +509,7 @@ def test_explicit_context_window_size_is_honored_when_building_a_native_class() 
     )
 
     llm = OpenAICompatibleCompletion(
-        model="google/gemini-4-argon",
+        model="crewai-tests/unlisted-model",
         provider="openrouter",
         context_window_size=ONE_MILLION_TOKENS,
     )
@@ -693,7 +701,7 @@ def test_resolved_catalog_window_is_not_written_back_into_the_field() -> None:
 @pytest.mark.parametrize(
     "kwargs",
     [
-        pytest.param({"model": "openrouter/google/gemini-4-argon"}, id="openrouter"),
+        pytest.param({"model": UNLISTED}, id="openrouter"),
         pytest.param({"model": "anthropic/claude-haiku-4-5"}, id="anthropic"),
         pytest.param({"model": "gpt-4o", "is_litellm": True}, id="litellm"),
     ],
@@ -723,7 +731,7 @@ def test_explicit_context_window_size_survives_an_agent_checkpoint_round_trip(
         pytest.param("gpt-4o", 128_000, id="catalog"),
         pytest.param("anthropic/claude-haiku-4-5", 200_000, id="provider-prefixed"),
         pytest.param(
-            "openrouter/google/gemini-4-argon",
+            UNLISTED,
             DEFAULT_CONTEXT_WINDOW_SIZE,
             id="fallback",
         ),
@@ -766,7 +774,7 @@ def test_explicit_context_window_size_is_honored_from_an_llm_config_dict() -> No
 
     llm = create_llm(
         {
-            "model": "openrouter/google/gemini-4-argon",
+            "model": UNLISTED,
             "context_window_size": ONE_MILLION_TOKENS,
         }
     )
