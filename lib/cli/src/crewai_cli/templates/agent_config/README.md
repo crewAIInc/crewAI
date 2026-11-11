@@ -4,8 +4,8 @@ An experimental general-purpose CrewAI Agent with three local example tools and 
 The example describes a fictional service and does not access real accounts or external systems.
 Standalone agent project formats and CLI support may change. Use matching preview CLI and SDK builds that include this feature.
 
-YAML is the default for `crewai create agent {{package_name}}`.
-Choose JSON with `--format json`, or a Python Agent with `--format python`.
+JSON is the default for `crewai create agent {{package_name}}`.
+Choose YAML with `--format yaml`, or a Python Agent with `--format python`.
 The default model is `openai/gpt-6-luna` through the Responses API.
 
 ```text
