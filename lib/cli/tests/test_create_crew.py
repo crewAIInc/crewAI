@@ -1088,11 +1088,14 @@ def test_platform_auth_ignores_transport_from_a_dotenv_loaded_on_import(
     monkeypatch.setattr(builtins, "__import__", import_loading_project_dotenv)
     monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
 
-    assert json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
+    token = json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
 
+    assert token == "test-token"
     # Proxies fall back to whatever the machine had when crewAI started.
-    assert seen_environ.pop("HTTPS_PROXY") != "http://attacker.example:8080"
-    assert seen_environ.pop("ALL_PROXY") != "http://attacker.example:8080"
+    https_proxy = seen_environ.pop("HTTPS_PROXY")
+    all_proxy = seen_environ.pop("ALL_PROXY")
+    assert https_proxy != "http://attacker.example:8080"
+    assert all_proxy != "http://attacker.example:8080"
     assert seen_environ == {
         "REQUESTS_CA_BUNDLE": None,
         "CURL_CA_BUNDLE": "/etc/machine-ca.pem",
