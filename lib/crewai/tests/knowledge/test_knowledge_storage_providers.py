@@ -73,7 +73,7 @@ def test_save_and_search_roundtrip_on_default_qdrant(topic_embedder):
     storage = _storage()
     storage.save(["python is a language", "cooking pasta tonight"])
 
-    results = storage.search(["python"], limit=2, score_threshold=0.5)
+    results = storage.search(["python"], limit=2, score_threshold=0.75)
 
     assert [r["content"] for r in results] == ["python is a language"]
 
@@ -82,10 +82,10 @@ def test_collections_are_isolated_by_name(topic_embedder):
     _storage("a").save(["python docs"])
     _storage("b").save(["cooking docs"])
 
-    in_a = _storage("a").search(["python"], score_threshold=0.5)
+    in_a = _storage("a").search(["python"], score_threshold=0.75)
 
     assert [r["content"] for r in in_a] == ["python docs"]
-    assert _storage("a").search(["cooking"], score_threshold=0.5) == []
+    assert _storage("a").search(["cooking"], score_threshold=0.75) == []
 
 
 def test_several_storages_can_share_the_local_database(topic_embedder):

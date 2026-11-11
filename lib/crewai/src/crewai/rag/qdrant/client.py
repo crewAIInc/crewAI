@@ -431,12 +431,11 @@ class QdrantClient(BaseClient):
             collection_name=collection_name,
             query_embedding=query_embedding,
             limit=limit,
-            score_threshold=score_threshold,
             metadata_filter=metadata_filter,
         )
 
         response = self.client.query_points(**search_kwargs)
-        return _process_search_results(response)
+        return _process_search_results(response, score_threshold)
 
     async def asearch(
         self, **kwargs: Unpack[BaseCollectionSearchParams]
@@ -484,12 +483,11 @@ class QdrantClient(BaseClient):
             collection_name=collection_name,
             query_embedding=query_embedding,
             limit=limit,
-            score_threshold=score_threshold,
             metadata_filter=metadata_filter,
         )
 
         response = await self.client.query_points(**search_kwargs)
-        return _process_search_results(response)
+        return _process_search_results(response, score_threshold)
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data.

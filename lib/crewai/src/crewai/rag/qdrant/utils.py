@@ -127,7 +127,6 @@ def _prepare_search_params(
     collection_name: str,
     query_embedding: QueryEmbedding,
     limit: int,
-    score_threshold: float | None,
     metadata_filter: MetadataFilter | None,
 ) -> PreparedSearchParams:
     """Prepare search parameters for Qdrant query_points.
@@ -136,7 +135,6 @@ def _prepare_search_params(
         collection_name: Name of the collection to search.
         query_embedding: Embedding vector for the query.
         limit: Maximum number of results.
-        score_threshold: Optional minimum similarity score.
         metadata_filter: Optional metadata filters.
 
     Returns:
@@ -151,9 +149,6 @@ def _prepare_search_params(
         "with_payload": True,
         "with_vectors": False,
     }
-
-    if score_threshold is not None:
-        search_kwargs["score_threshold"] = score_threshold
 
     if metadata_filter:
         filter_conditions: list[FilterCondition] = []
@@ -182,11 +177,18 @@ def _normalize_qdrant_score(score: float) -> float:
     return max(0.0, min(1.0, normalized))
 
 
-def _process_search_results(response: QueryResponse) -> list[SearchResult]:
+def _process_search_results(
+    response: QueryResponse, score_threshold: float | None = None
+) -> list[SearchResult]:
     """Process Qdrant search response into SearchResult format.
+
+    The threshold is applied to the normalized score, the same 0-1 scale the
+    results report and ChromaDB filters on. Qdrant's own ``score_threshold``
+    compares the raw cosine similarity, so it is not sent with the query.
 
     Args:
         response: Response from Qdrant query_points method.
+        score_threshold: Optional minimum normalized score (0-1) for results.
 
     Returns:
         List of SearchResult dictionaries.
@@ -195,6 +197,8 @@ def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     for point in response.points:
         payload = point.payload or {}
         score = _normalize_qdrant_score(score=point.score)
+        if score_threshold is not None and score < score_threshold:
+            continue
         result: SearchResult = {
             "id": str(point.id),
             "content": payload.get("content", ""),
