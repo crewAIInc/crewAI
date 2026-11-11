@@ -94,7 +94,7 @@ def test_equality_boundary(task_output, threshold):
 
 
 @pytest.mark.parametrize(
-    "threshold", [-0.1, 1.1, math.nan, math.inf, True, "0.5", None]
+    "threshold", [-0.1, 1.1, math.nan, math.inf, 10**400, True, "0.5", None]
 )
 def test_rejects_invalid_threshold(threshold):
     with pytest.raises(ValueError, match="threshold"):
@@ -129,6 +129,8 @@ def test_mismatched_answer_name_fails_closed(task_output):
         SimpleNamespace(name="task_output_check", probability=math.nan),
         SimpleNamespace(name="task_output_check", probability=-0.01),
         SimpleNamespace(name="task_output_check", probability=1.01),
+        SimpleNamespace(name="task_output_check", probability=math.inf),
+        SimpleNamespace(name="task_output_check", probability=10**400),
         SimpleNamespace(name="task_output_check", probability="0.9"),
         SimpleNamespace(name="task_output_check", probability=None),
         SimpleNamespace(name="task_output_check", probability=True),

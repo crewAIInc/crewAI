@@ -9,7 +9,6 @@ Task guardrail validator inspects ``__call__``'s return annotation at runtime
 and requires a real ``tuple[bool, Any]``, not a string.
 """
 
-import math
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -68,11 +67,16 @@ class PredicateDecider(Protocol):
         ...
 
 
-def _is_unit_probability(value: Any) -> bool:
-    """Whether value is a real, finite number in [0, 1] (bools excluded)."""
+def _is_unit_probability(value: object) -> bool:
+    """Whether value is a real, finite number in [0, 1] (bools excluded).
+
+    Only the range is compared. That comparison is False for NaN and the
+    infinities, and Python compares an int too large for a float exactly,
+    where ``math.isfinite`` would raise ``OverflowError``.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
-    return math.isfinite(value) and 0.0 <= value <= 1.0
+    return 0.0 <= value <= 1.0
 
 
 class DecisionGuardrail:
