@@ -49,6 +49,7 @@ def knowledge_expert(self) -> Agent:
 - ملفات PDF
 - ملفات CSV
 - ملفات JSON
+- ملفات JSONL (`.jsonl` و`.ndjson`)
 - نصوص
 - مجلدات/أدلة
 - صفحات ويب HTML
@@ -95,7 +96,16 @@ rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VID
 
 # Add a directory of files
 rag_tool.add(data_type="directory", path="path/to/your/directory")
+
+# Add a local JSONL file with an explicit type
+rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
+
+# Auto-detect a local JSONL file by its extension
+rag_tool.add(path="path/to/your/records.ndjson")
 ```
+
+تحتوي ملفات JSONL على قيمة JSON واحدة في كل سطر. يدعم مُحمِّل JSONL الملفات المحلية؛
+التعرّف على عنوان URL لملف JSONL لا يجلب محتواه.
 
 ## مثال على التكامل مع الوكيل
 

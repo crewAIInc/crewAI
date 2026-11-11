@@ -1,13 +1,13 @@
 ---
 title: "مشاريع Agent مستقلة (تجريبية)"
-description: "إنشاء مشروع Agent مستقل وتشغيله باستخدام YAML أو JSON أو Python."
+description: "إنشاء مشروع Agent مستقل وتشغيله باستخدام JSON أو YAML أو Python."
 ---
 
 <Warning>
 مشاريع Agent المستقلة تجريبية. قد يتغير مخطط المشروع وواجهة API الخاصة بالتحميل. تتطلب هذه المعاينة إصدارات متوافقة من CLI وSDK تتضمن هذه الميزة؛ كما تتطلب عمليات النشر المُدارة بيئة تشغيل Enterprise متوافقة. لا تعني الأمثلة أن الميزة مدعومة في إصدار أقدم مثبت لديك.
 </Warning>
 
-يعرّف مشروع Agent المستقل Agent واحدًا ويتلقى رسائله عند استدعاء kickoff. يُنشأ المشروع افتراضيًا بصيغة YAML، ويمكن اختيار JSON أو Python صراحةً كبديل. لا تحتاج إلى `main.py` أو Crew أو Flow أو دالة factory.
+يعرّف مشروع Agent المستقل Agent واحدًا ويتلقى رسائله عند استدعاء kickoff. يُنشأ المشروع افتراضيًا بصيغة JSON، ويمكن اختيار YAML أو Python صراحةً كبديل. لا تحتاج إلى `main.py` أو Crew أو Flow أو دالة factory.
 
 ## إنشاء مشروع
 
@@ -52,7 +52,7 @@ print(reply.raw)
 
 ```text
 support_agent/
-├── agent.yaml
+├── agent.json
 ├── pyproject.toml
 ├── uv.lock
 ├── .env.example
@@ -74,50 +74,17 @@ support_agent/
 ```toml
 [tool.crewai]
 type = "agent"
-definition = "agent.yaml"
+definition = "agent.json"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["agent.yaml", "tools", "skills"]
+only-include = ["agent.json", "tools", "skills"]
 ```
 
 ## تعريف Agent
 
 الهوية الافتراضية هي Agent عام الأغراض مدعوم بـ CrewAI. عدّل `role` و`goal` و`backstory` لتخصيصه. أدوات الدعم المضمّنة أمثلة تُستخدم عند الحاجة فقط؛ استبدلها أو أزلها لحالات استخدام أخرى. لا تُثبّت أي مهارات افتراضيًا.
 
-عدّل `agent.yaml`:
-
-```yaml
-conversational: true
-role: General-purpose AI agent
-goal: Help users accomplish tasks accurately using the available tools and skills.
-backstory: |-
-  # Identity
-  You are a general-purpose AI agent powered by CrewAI.
-
-  # Customization
-  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
-llm:
-  model: openai/gpt-6-luna
-  api: responses
-tools:
-  - custom:support_hours
-  - custom:lookup_plan
-  - custom:support_checklist
-skills:
-  - ./skills
-max_iter: 8
-```
-
-هذه حقول مُنشئ Agent. مرّر الطلب عبر `messages` وقت التشغيل؛ ولا تضف حقل `input` ثابتًا إلى التعريف.
-
-### اختيار JSON أو Python
-
-```shell Terminal
-crewai create agent json_support --format json
-crewai create agent python_support --format python
-```
-
-ينشئ قالب JSON ملف `agent.json` بالحقول نفسها:
+عدّل `agent.json`:
 
 ```json
 {
@@ -139,6 +106,39 @@ crewai create agent python_support --format python
   ],
   "max_iter": 8
 }
+```
+
+هذه حقول مُنشئ Agent. مرّر الطلب عبر `messages` وقت التشغيل؛ ولا تضف حقل `input` ثابتًا إلى التعريف.
+
+### اختيار YAML أو Python
+
+```shell Terminal
+crewai create agent yaml_support --format yaml
+crewai create agent python_support --format python
+```
+
+ينشئ قالب YAML ملف `agent.yaml` بالحقول نفسها:
+
+```yaml
+conversational: true
+role: General-purpose AI agent
+goal: Help users accomplish tasks accurately using the available tools and skills.
+backstory: |-
+  # Identity
+  You are a general-purpose AI agent powered by CrewAI.
+
+  # Customization
+  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
+llm:
+  model: openai/gpt-6-luna
+  api: responses
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+max_iter: 8
 ```
 
 يصدّر قالب Python المتغير `agent = Agent(...)` من `src/python_support/agent.py`. استخدمه عندما يتطلب تعريف Agent منطقًا برمجيًا بلغة Python.
@@ -163,15 +163,19 @@ class SupportHoursTool(BaseTool):
         return "Support is available Monday to Friday, 09:00-17:00 UTC."
 ```
 
-يسجل التعريف المُنشأ الأدوات ومجلد المهارات صراحةً؛ ويستخدم JSON قوائم السلاسل النصية نفسها:
+يسجل التعريف المُنشأ الأدوات ومجلد المهارات صراحةً؛ ويستخدم YAML قوائم السلاسل النصية نفسها:
 
-```yaml
-tools:
-  - custom:support_hours
-  - custom:lookup_plan
-  - custom:support_checklist
-skills:
-  - ./skills
+```json
+{
+  "tools": [
+    "custom:support_hours",
+    "custom:lookup_plan",
+    "custom:support_checklist"
+  ],
+  "skills": [
+    "./skills"
+  ]
+}
 ```
 
 يحمّل `custom:support_hours` صنفًا مشتقًا من `BaseTool` من `tools/support_hours.py`. أضف أي اعتماديات للأداة إلى `pyproject.toml` وحدّث ملف القفل باستخدام `crewai install`. حمّل شيفرة المشاريع الموثوقة فقط: تنفذ الأدوات المخصصة ومراجع Python شيفرة Python أثناء التحميل.
