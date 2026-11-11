@@ -425,6 +425,7 @@ agent = Agent(
 <Tip>
   `results_limit`: is the number of relevant documents to return. Default is 3.
   `score_threshold`: is the minimum score for a document to be considered relevant. Default is 0.35.
+  Scores run from 0 to 1 on both Qdrant and ChromaDB (cosine similarity rescaled as `(cosine + 1) / 2`), so the same threshold means the same on either.
 </Tip>
 
 ## Supported Knowledge Parameters
