@@ -362,14 +362,13 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
-                            )
-                        except Exception:
+                        except (AttributeError, KeyError, TypeError):
+                            # See the sync path: only argument filtering may
+                            # fall back to raw arguments, never a failed call.
                             arguments = calling.arguments
-                            result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                        result = await tool.ainvoke(
+                            input=arguments, config=fingerprint_config
+                        )
                     else:
                         result = await tool.ainvoke(input={}, config=fingerprint_config)
 
@@ -619,14 +618,13 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            result = tool.invoke(
-                                input=arguments, config=fingerprint_config
-                            )
-                        except Exception:
+                        except (AttributeError, KeyError, TypeError):
+                            # Only argument filtering may fall back to the raw
+                            # arguments. Keeping the tool call outside this
+                            # handler matters: retrying a tool that raised would
+                            # execute its side effects a second time.
                             arguments = calling.arguments
-                            result = tool.invoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                        result = tool.invoke(input=arguments, config=fingerprint_config)
                     else:
                         result = tool.invoke(input={}, config=fingerprint_config)
 
