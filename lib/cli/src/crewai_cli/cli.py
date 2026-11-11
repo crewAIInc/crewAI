@@ -712,7 +712,14 @@ def install(context: click.Context) -> None:
     """Install the Crew."""
     from crewai_cli.install_crew import install_crew
 
-    install_crew(context.args)
+    try:
+        install_crew(context.args, raise_on_error=True)
+    except subprocess.CalledProcessError as e:
+        # Reporting the failure is not enough: CI and scripts key off the exit
+        # status, and `uv sync` already printed the underlying error.
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        raise SystemExit(1) from e
 
 
 @crewai.command()
