@@ -1,19 +1,23 @@
 """Utility functions for Qdrant operations."""
 
 import asyncio
+from numbers import Real
 from typing import TypeGuard
 from uuid import uuid4
 
+import numpy as np
 from qdrant_client import (
     AsyncQdrantClient,
     QdrantClient as SyncQdrantClient,
 )
 from qdrant_client.models import (
+    Distance,
     FieldCondition,
     Filter,
     MatchValue,
     PointStruct,
     QueryResponse,
+    VectorParams,
 )
 
 from crewai.rag.qdrant.constants import DEFAULT_VECTOR_PARAMS
@@ -82,6 +86,27 @@ def _is_async_embedding_function(
         True if the function is async, False otherwise.
     """
     return asyncio.iscoroutinefunction(func)
+
+
+def _infer_vector_params(embedding: QueryEmbedding) -> VectorParams | None:
+    """Build cosine vector params sized to a sample embedding.
+
+    Args:
+        embedding: Sample embedding produced by the client's embedding function.
+
+    Returns:
+        VectorParams matching the embedding dimension, or None if the sample
+        is not a non-empty one-dimensional vector of numbers.
+    """
+    if isinstance(embedding, np.ndarray) and embedding.ndim != 1:
+        return None
+    try:
+        vector = _ensure_list_embedding(embedding)
+    except (AttributeError, TypeError):
+        return None
+    if not vector or not all(isinstance(value, Real) for value in vector):
+        return None
+    return VectorParams(size=len(vector), distance=Distance.COSINE)
 
 
 def _get_collection_params(
