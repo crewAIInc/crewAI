@@ -15,6 +15,7 @@ from crewai.memory.types import (
     ScopeInfo,
 )
 from crewai.memory.unified_memory import Memory
+from crewai.memory.utils import normalize_scope_path
 
 
 def _ensure_memory_kind(value: Any) -> Any:
@@ -279,12 +280,18 @@ class MemorySlice(BaseModel):
         source: str | None = None,
         private: bool = False,
     ) -> MemoryRecord | None:
-        """Remember into an explicit scope. No-op when read_only=True."""
+        """Remember within a slice root or its descendants; no-op if read-only."""
         if self.read_only:
             return None
+        path = normalize_scope_path(scope)
+        roots = (normalize_scope_path(root) for root in self.scopes)
+        if not any(
+            path == root or path.startswith(root.rstrip("/") + "/") for root in roots
+        ):
+            raise ValueError(f"Scope {path!r} is outside the memory slice")
         return self._require_memory().remember(
             content,
-            scope=scope,
+            scope=path,
             categories=categories,
             metadata=metadata,
             importance=importance,
