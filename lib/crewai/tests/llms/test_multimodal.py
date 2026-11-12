@@ -312,6 +312,30 @@ class TestBedrockMultimodal:
     @pytest.mark.parametrize(
         "model",
         [
+            "bedrock/anthropic.claude-sonnet-5-5-v1:0",
+            "bedrock/us.anthropic.claude-opus-5-5-v1:0",
+            "bedrock/eu.anthropic.claude-haiku-5-5-v1:0",
+            "bedrock/global.anthropic.claude-sonnet-4-6",
+            "bedrock/apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        ],
+    )
+    def test_supports_multimodal_claude3_and_later(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model",
+        ["bedrock/anthropic.claude-instant-v1", "bedrock/anthropic.claude-v2:1"],
+    )
+    def test_does_not_support_pre_claude3(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
+
+    def test_supports_multimodal_nova(self) -> None:
+        assert LLM(model="bedrock/us.amazon.nova-pro-v1:0").supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model",
+        [
             "bedrock/openai.gpt-6-sol",
             "bedrock/openai.gpt-6-luna",
             "bedrock/openai.gpt-6-astra",
