@@ -1,0 +1,80 @@
+---
+title: بحث RAG في PostgreSQL
+description: أداة `PGSearchTool` مصممة للبحث في قواعد بيانات PostgreSQL وإرجاع النتائج الأكثر صلة.
+icon: elephant
+mode: "wide"
+---
+
+## نظرة عامة
+
+<Note>
+    أداة PGSearchTool قيد التطوير حالياً. يوضح هذا المستند الوظائف والواجهة المقصودة.
+    مع تقدم التطوير، يرجى الانتباه إلى أن بعض الميزات قد لا تكون متاحة أو قد تتغير.
+</Note>
+
+## الوصف
+
+صُممت أداة PGSearchTool كأداة قوية لتسهيل عمليات البحث الدلالي داخل جداول قواعد بيانات PostgreSQL. من خلال الاستفادة من تقنية الاسترجاع والتوليد (RAG) المتقدمة، تهدف إلى توفير وسيلة فعالة للاستعلام عن محتوى جداول قواعد البيانات، مصممة خصيصاً لقواعد بيانات PostgreSQL. هدف الأداة هو تبسيط عملية العثور على البيانات ذات الصلة من خلال استعلامات البحث الدلالي، مما يوفر مورداً قيماً للمستخدمين الذين يحتاجون إلى إجراء استعلامات متقدمة على مجموعات بيانات واسعة في بيئة PostgreSQL.
+
+## التثبيت
+
+يمكن تثبيت حزمة `crewai_tools`، التي ستتضمن أداة PGSearchTool عند إصدارها، باستخدام الأمر التالي:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+<Note>
+    أداة PGSearchTool غير متاحة بعد في الإصدار الحالي من حزمة `crewai_tools`. سيتم تحديث أمر التثبيت هذا بمجرد إصدار الأداة.
+</Note>
+
+## مثال على الاستخدام
+
+فيما يلي مثال مقترح يوضح كيفية استخدام أداة PGSearchTool لإجراء بحث دلالي على جدول داخل قاعدة بيانات PostgreSQL:
+
+```python Code
+from crewai_tools import PGSearchTool
+
+# Initialize the tool with the database URI and the target table name
+tool = PGSearchTool(
+    db_uri='postgresql://user:password@localhost:5432/mydatabase',
+    table_name='employees'
+)
+```
+
+## المعاملات
+
+صُممت أداة PGSearchTool لتتطلب المعاملات التالية لتشغيلها:
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **db_uri**     | `string` | **إلزامي**. سلسلة نصية تمثل عنوان URI لقاعدة بيانات PostgreSQL المراد الاستعلام عنها. هذا المعامل إلزامي ويجب أن يتضمن تفاصيل المصادقة اللازمة وموقع قاعدة البيانات. |
+| **table_name** | `string` | **إلزامي**. سلسلة نصية تحدد اسم الجدول داخل قاعدة البيانات الذي سيتم إجراء البحث الدلالي عليه. هذا المعامل إلزامي أيضاً. |
+
+## النموذج والتضمينات المخصصة
+
+تنوي الأداة استخدام OpenAI لكل من التضمينات والتلخيص بشكل افتراضي. سيكون لدى المستخدمين خيار تخصيص النموذج باستخدام قاموس تكوين كما يلي:
+
+```python Code
+tool = PGSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google-generativeai", # or openai, ollama, ...
+            config=dict(
+                model_name="gemini-embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

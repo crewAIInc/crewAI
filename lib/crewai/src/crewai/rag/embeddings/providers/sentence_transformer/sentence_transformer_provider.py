@@ -1,20 +1,20 @@
 """SentenceTransformer embeddings provider."""
 
-from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
-    SentenceTransformerEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class SentenceTransformerProvider(
-    BaseEmbeddingsProvider[SentenceTransformerEmbeddingFunction]
-):
+class SentenceTransformerProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """SentenceTransformer embeddings provider."""
 
-    embedding_callable: type[SentenceTransformerEmbeddingFunction] = Field(
-        default=SentenceTransformerEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "sentence_transformer_embedding_function",
+            "SentenceTransformerEmbeddingFunction",
+        ),
         description="SentenceTransformer embedding function class",
     )
     model_name: str = Field(

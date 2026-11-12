@@ -39,7 +39,7 @@ from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
 
 if TYPE_CHECKING:
-    from chromadb.utils.embedding_functions.openai_embedding_function import (
+    from crewai.rag.embeddings.providers.openai.embedding_callable import (
         OpenAIEmbeddingFunction,
     )
 
