@@ -142,6 +142,19 @@ def _column_brief(table: Table, name: str) -> str:
     return f"{text_of(name, _VALUE_CHARS * 2)} ({', '.join(parts)})"
 
 
+def _totals_match(column: pd.Series) -> bool:
+    """True when the last value is the sum of the rows above. Exact ints can sum
+    past float64's range, so an OverflowError means "not a total", not a crash."""
+    try:
+        return math.isclose(
+            float(column.iloc[-1]),
+            float(column.iloc[:-1].sum()),
+            rel_tol=0.005,
+        )
+    except OverflowError:
+        return False
+
+
 def total_row(table: Table) -> int | None:
     """The sheet row of the last row when it looks like a total of the rows above:
     a total label, or a numeric column whose last value is the sum of the rest."""
@@ -154,7 +167,7 @@ def total_row(table: Table) -> int | None:
     adds_up = any(
         pd.notna(last[n])
         and int(frame[n].iloc[:-1].notna().sum()) > 1
-        and math.isclose(float(last[n]), float(frame[n].iloc[:-1].sum()), rel_tol=0.005)
+        and _totals_match(frame[n])
         for n in numeric
     )
     if (labels and _TOTAL_LABEL.match(labels[0])) or adds_up:

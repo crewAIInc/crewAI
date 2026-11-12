@@ -642,7 +642,7 @@ def _sheet_name(raw: str) -> str:
 def text_of(value: object, limit: int | None = None) -> str:
     """One line of cell text: whitespace collapsed, so no value starts a new line in
     a prompt or breaks a table row."""
-    if value is None or value is pd.NaT:
+    if value is None or value is pd.NaT or value is pd.NA:
         return ""
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -880,9 +880,15 @@ def _typed(raw: Column, decimal_comma: bool) -> tuple[Column, str, int]:
                 and any(len(t.replace(" ", "")) > 15 for t in texts.loc[digit_texts])
             )
             if exact_int:
+                # Keep exact Python ints for digit text that float64 would round,
+                # but preserve native numeric cells (an Excel file stores floats)
+                # that were already placed into `out`.
                 ints = texts.loc[digit_texts].str.replace(" ", "", regex=False).map(int)
-                out = pd.Series(pd.NA, index=raw.index, dtype=object)
-                out[ints.index] = ints
+                exact_out = pd.Series(pd.NA, index=raw.index, dtype=object)
+                exact_out[ints.index] = ints
+                native_mask = out.notna() & ~exact_out.notna()
+                exact_out[native_mask] = out[native_mask]
+                out = exact_out
             finite = out.dropna()
             if len(finite) and bool(
                 (finite.astype(float) == finite.astype(float).round()).all()
