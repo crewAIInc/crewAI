@@ -106,8 +106,11 @@ class JevDecisionTool(BaseTool):
                 question=question,
                 choices=dict(choices),
             )
+            choice_cls: Any = None
             try:
                 from typesafe_sdk import Choice
+
+                choice_cls = Choice
             except ImportError as e:
                 if self._client is None:
                     raise ImportError(
@@ -115,17 +118,16 @@ class JevDecisionTool(BaseTool):
                         "JevDecisionTool. "
                         "Install it with: uv add --optional typesafe-sdk typesafe-sdk"
                     ) from e
-                Choice = None
 
             choice_question: Any
-            if Choice is None:
+            if choice_cls is None:
                 choice_question = {
                     "type": "choice",
                     "instructions": validated.question,
                     "criteria": validated.choices,
                 }
             else:
-                choice_question = Choice(
+                choice_question = choice_cls(
                     instructions=validated.question,
                     criteria=validated.choices,
                 )
@@ -140,7 +142,7 @@ class JevDecisionTool(BaseTool):
             finally:
                 if created_client and hasattr(client, "close"):
                     client.close()
-            answer = getattr(response, "choices", {}).get("decision")
+            answer = (getattr(response, "choices", None) or {}).get("decision")
             if answer is None:
                 return {
                     "success": False,

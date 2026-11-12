@@ -89,10 +89,13 @@ def test_run_returns_choice_probabilities_and_confidence(
     }
 
 
-def test_run_reports_missing_choice_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("choices", [{}, None])
+def test_run_reports_missing_choice_answer(
+    monkeypatch: pytest.MonkeyPatch, choices: dict[str, object] | None
+) -> None:
     _install_typesafe_stub(monkeypatch)
     client = MagicMock()
-    client.system_one.return_value = SimpleNamespace(choices={})
+    client.system_one.return_value = SimpleNamespace(choices=choices)
 
     result = JevDecisionTool(client=client)._run(
         state="ticket",
