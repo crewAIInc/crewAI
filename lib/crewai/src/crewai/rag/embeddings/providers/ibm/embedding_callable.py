@@ -2,10 +2,11 @@
 
 from typing import Any, cast
 
-from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from crewai_core.printer import PRINTER
 from typing_extensions import Unpack
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.core.types import Documents, Embeddings
 from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderConfig
 
 
@@ -21,7 +22,6 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
             verbose: Whether to print error messages.
             **kwargs: Configuration parameters for WatsonX Embeddings and Credentials.
         """
-        super().__init__(**kwargs)
         self._config = kwargs
         self._verbose = verbose
 
