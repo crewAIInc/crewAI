@@ -6,6 +6,7 @@ import pytest
 from crewai.agent.core import Agent
 from crewai.mcp.client import _MCPToolResult
 from crewai.mcp.config import MCPServerHTTP, MCPServerSSE, MCPServerStdio
+from crewai.mcp.filters import StaticToolFilter, create_static_tool_filter
 from crewai.tools.base_tool import BaseTool
 
 
@@ -303,3 +304,29 @@ def test_parallel_mcp_tool_execution_different_tools(mock_tool_definitions):
     assert len(results) == 2
     assert all("result-" in r for r in results)
     assert len(call_log) == 2
+
+
+def test_static_tool_filter_empty_allowed_tool_names(mock_tool_definitions):
+    """An explicit empty allowed_tool_names list must block all tools rather than allowing all."""
+    empty_allowlist_filter = StaticToolFilter(allowed_tool_names=[])
+    assert empty_allowlist_filter({"name": "test_tool_1"}) is False
+    assert empty_allowlist_filter({"name": "test_tool_2"}) is False
+
+    default_filter = StaticToolFilter(allowed_tool_names=None)
+    assert default_filter({"name": "test_tool_1"}) is True
+
+    http_config = MCPServerHTTP(
+        url="https://api.example.com/mcp",
+        tool_filter=create_static_tool_filter(allowed_tool_names=[]),
+    )
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        mcps=[http_config],
+    )
+
+    with patch("crewai.mcp.tool_resolver.MCPClient") as mock_client_class:
+        mock_client_class.return_value = _make_mock_client(mock_tool_definitions)
+        tools = agent.get_mcp_tools([http_config])
+        assert tools == []
