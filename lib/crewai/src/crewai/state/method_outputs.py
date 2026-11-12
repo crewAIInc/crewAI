@@ -10,15 +10,12 @@ resumed flow receive the same input they got in the first run.
 from __future__ import annotations
 
 import dataclasses
-import importlib
 import logging
 import sys
 from types import ModuleType
 from typing import Any
 
 from pydantic import BaseModel, TypeAdapter
-
-from crewai.types.callback import _trusted_deserialize
 
 
 logger = logging.getLogger(__name__)
@@ -53,7 +50,7 @@ def annotate_method_output_types(entry: Any) -> Any:
 
     Args:
         entry: One ``_method_outputs`` entry, a dict with ``method`` and
-            ``output`` keys and an optional ``human_feedback`` key.
+        output`` keys and an optional ``human_feedback`` key.
 
     Returns:
         A shallow copy with ``output_type`` / ``human_feedback_type`` set
@@ -77,31 +74,25 @@ def _resolve_type_path(type_path: str) -> Any:
     """Resolve a class recorded by :func:`structured_type_path`, or None.
 
     Tolerant by design: a checkpoint may reference a class that is no longer
-    importable, and restore must degrade to the plain JSON value instead of
-    failing the run.
+    importable (a script's or notebook's locals, renamed code), and restore
+    must degrade to the plain JSON value instead of failing the run.
 
-    Resolution never lets a checkpoint force the application to import a new
-    module: only modules already in ``sys.modules`` are consulted; importing
-    an unloaded path stays behind ``CREWAI_DESERIALIZE_CALLBACKS``, like
-    every other dotted path read from a checkpoint. Attribute walks read a
-    module's namespace directly so PEP 562 ``__getattr__`` hooks cannot run
-    during restore, and any exception while walking degrades instead of
+    Resolution never imports a module: only modules already in ``sys.modules``
+    are consulted, so a checkpoint cannot make CrewAI import a module of its
+    choosing. Rebuilding a resumed flow's own models needs no import, because
+    the module that defines the flow already imported them. Attribute walks
+    read a module's namespace directly so PEP 562 ``__getattr__`` hooks cannot
+    run during restore, and any exception while walking degrades instead of
     aborting ``Flow.from_checkpoint``.
     """
     parts = type_path.split(".")
     if not parts:
         return None
-    trusted = _trusted_deserialize()
     for split in range(len(parts), 0, -1):
         name = ".".join(parts[:split])
         obj: Any = sys.modules.get(name)
         if obj is None:
-            if not trusted:
-                continue
-            try:
-                obj = importlib.import_module(name)
-            except ImportError:
-                continue
+            continue
         try:
             for part in parts[split:]:
                 if isinstance(obj, ModuleType):
@@ -110,10 +101,8 @@ def _resolve_type_path(type_path: str) -> Any:
                     obj = getattr(obj, part)
         except (AttributeError, KeyError):
             continue
-        except Exception:
-            logger.warning(
-                "Could not resolve %s from the checkpoint", type_path
-            )
+        except Exception:  # noqa: BLE001 - restore must degrade, never abort
+            logger.warning("Could not resolve %s from the checkpoint", type_path)
             continue
         return obj
     return None

@@ -787,9 +787,12 @@ class TestRestoredMethodOutputTypes:
         assert restored.method_outputs == [{"amount": 42}]
         assert "Could not import" in caplog.text
 
-    def test_unloaded_type_path_not_imported_without_opt_in(
+    def test_unloaded_type_path_never_imported(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
     ) -> None:
+        """An unloaded module referenced by a checkpoint type path is never
+        imported, with or without CREWAI_DESERIALIZE_CALLBACKS, so restore
+        degrades to the plain JSON value instead of executing checkpoint code."""
         _write_remote_type_module(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
@@ -810,13 +813,14 @@ class TestRestoredMethodOutputTypes:
 
         assert restored.method_outputs == [{"amount": 42}]
         assert "Could not import" in caplog.text
-        # Restore must not execute a checkpoint-named module's code unless
-        # the deserialization opt-in is set.
         assert "remote_checkpoint_types" not in sys.modules
 
-    def test_opt_in_imports_unloaded_type_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    def test_unloaded_type_path_never_imported_even_with_opt_in(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
     ) -> None:
+        """The deserialization opt-in no longer gates method-output type
+        resolution: unloaded modules stay unloaded, so restore degrades to
+        the plain JSON value."""
         _write_remote_type_module(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
@@ -832,15 +836,12 @@ class TestRestoredMethodOutputTypes:
                 ],
             )
             cfg = CheckpointConfig(restore_from=loc)
-            try:
+            with caplog.at_level(logging.WARNING):
                 restored = Flow.from_checkpoint(cfg)
-            finally:
-                # Drop the gated import so later tests see a clean sys.modules.
-                sys.modules.pop("remote_checkpoint_types", None)
 
-        (rebuilt,) = restored.method_outputs
-        assert type(rebuilt).__name__ == "Remote"
-        assert rebuilt.amount == 42
+        assert restored.method_outputs == [{"amount": 42}]
+        assert "Could not import" in caplog.text
+        assert "remote_checkpoint_types" not in sys.modules
 class TestHookGuardedRestore:
     """Restore must never run checkpoint-named module code or let a hook abort."""
 
