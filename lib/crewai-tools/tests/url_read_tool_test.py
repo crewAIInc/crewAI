@@ -6,6 +6,7 @@ import zipfile
 import pytest
 import re
 import requests
+from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
 
 from crewai_tools import URLReadTool
 from crewai_tools.security.safe_requests import safe_get_bounded
@@ -326,7 +327,7 @@ def test_octet_stream_with_unknown_extension_is_rejected():
 
 
 def test_validation_failure_is_returned_as_error():
-    """An SSRF rejection reaches the agent as an error string, not an exception."""
+    """An SSRF rejection reaches the agent as a structured tool failure."""
     tool = URLReadTool()
     with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
         fetch.side_effect = ValueError(
@@ -334,8 +335,10 @@ def test_validation_failure_is_returned_as_error():
         )
         result = tool.run(url="http://169.254.169.254/")
 
-    assert result.startswith("Error:")
-    assert "private/reserved IP" in result
+    assert isinstance(result, ToolFailure)
+    assert result.reason is ToolFailureReason.TOOL_REPORTED
+    assert result.message.startswith("Error:")
+    assert "private/reserved IP" in result.message
 
 
 def test_request_failure_is_returned_as_error():
@@ -345,7 +348,9 @@ def test_request_failure_is_returned_as_error():
         fetch.side_effect = requests.ConnectionError("connection refused")
         result = tool.run(url="https://example.com/f.txt")
 
-    assert result.startswith("Error: Failed to fetch")
+    assert isinstance(result, ToolFailure)
+    assert result.reason is ToolFailureReason.TOOL_REPORTED
+    assert result.message.startswith("Error: Failed to fetch")
 
 
 def test_custom_headers_are_merged_over_defaults():
