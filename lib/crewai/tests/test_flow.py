@@ -569,6 +569,48 @@ def test_flow_uuid_unstructured():
     assert len(flow.state["id"]) == 36
 
 
+def test_flows_from_same_dict_initial_state_do_not_share_nested_values():
+    """Independent flows built from one settings dict must not share nested state.
+
+    Regression test for issue #9383.
+    """
+
+    class DepartmentFlow(Flow):
+        @start()
+        def purchase(self):
+            self.state["wallet"]["expenses"].append(40)
+            self.state["tags"][0]["seen"] = True
+
+    settings = {"wallet": {"expenses": []}, "tags": [{"seen": False}]}
+    marketing = DepartmentFlow(initial_state=settings)
+    engineering = DepartmentFlow(initial_state=settings)
+
+    marketing.state["wallet"]["expenses"].append(10)
+    marketing.kickoff()
+
+    assert marketing.state["wallet"]["expenses"] == [10, 40]
+    assert marketing.state["tags"] == [{"seen": True}]
+    assert settings == {"wallet": {"expenses": []}, "tags": [{"seen": False}]}
+    assert engineering.state["wallet"]["expenses"] == []
+    assert engineering.state["tags"] == [{"seen": False}]
+    assert marketing.state["id"] != engineering.state["id"]
+    assert "id" not in settings
+
+
+def test_dict_initial_state_keeps_caller_id_and_values():
+    """A caller-provided id and ordinary values are preserved in dict state."""
+    lock = threading.Lock()
+    settings = {"id": "custom-id", "count": 3, "name": "ops", "lock": lock}
+
+    flow = Flow(initial_state=settings)
+
+    assert flow.state["id"] == "custom-id"
+    assert flow.state["count"] == 3
+    assert flow.state["name"] == "ops"
+    assert flow.state["lock"] is lock
+    assert flow.state is not settings
+
+
 def test_flow_uuid_structured():
     """Test that structured (Pydantic) flow states automatically get a UUID that persists."""
     initial_id = None

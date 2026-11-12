@@ -364,6 +364,38 @@ def _serialize_initial_state(value: Any) -> Any:
     return value
 
 
+def _copy_dict_state(value: dict[str, Any]) -> dict[str, Any]:
+    """Copy a dict state so nested dicts and lists are not shared.
+
+    Only dict and list containers are copied; other values are kept by
+    reference, so objects that cannot be deep-copied (e.g. locks) still work.
+
+    Args:
+        value: The dict state to copy.
+
+    Returns:
+        A copy of ``value`` whose nested dicts and lists are new objects.
+    """
+    memo: dict[int, Any] = {}
+
+    def _copy(item: Any) -> Any:
+        if not isinstance(item, (dict, list)):
+            return item
+        if id(item) in memo:
+            return memo[id(item)]
+        if isinstance(item, dict):
+            copied_dict: dict[Any, Any] = {}
+            memo[id(item)] = copied_dict
+            copied_dict.update((key, _copy(val)) for key, val in item.items())
+            return copied_dict
+        copied_list: list[Any] = []
+        memo[id(item)] = copied_list
+        copied_list.extend(_copy(val) for val in item)
+        return copied_list
+
+    return cast(dict[str, Any], _copy(value))
+
+
 def _deserialize_initial_state(value: Any) -> Any:
     """Rehydrate a class ref serialized by :func:`_serialize_initial_state`."""
     if isinstance(value, dict) and _INITIAL_STATE_CLASS_MARKER in value:
@@ -1763,7 +1795,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return cast(T, {"id": str(uuid4())})
 
         if isinstance(init_state, dict):
-            new_state = dict(init_state)  # Copy to avoid mutations
+            new_state = _copy_dict_state(init_state)
             if "id" not in new_state:
                 new_state["id"] = str(uuid4())
             return cast(T, new_state)
