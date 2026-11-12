@@ -319,6 +319,19 @@ class TestFilters:
             "3 | 1234567890123456790 | 20",
         ]
 
+    def test_a_long_number_still_filters_a_number_column(self):
+        book = parse(b"account,balance\na,2500000000000000.5\nb,10.5\n", "b.csv")
+        result = ask(
+            book,
+            "b.csv",
+            operation="rows",
+            where=[{"column": "balance", "op": "gt", "values": ["1000000000000000"]}],
+        )
+        assert body(result).splitlines()[1:] == [
+            "row | account | balance",
+            "2 | a | 2500000000000000.5",
+        ]
+
     def test_a_date_filter_takes_iso_dates_only(self):
         """The sheet may read 01/03/2026 day-first; the filter can't guess."""
         book = parse(b"day,v\n01/03/2026,1\n02/03/2026,2\n", "eu.csv")
