@@ -53,6 +53,9 @@ patronus = [
 serpapi = [
     "serpapi>=0.1.5",
 ]
+sincor-x402 = [
+    "sincor-x402==0.1.0",
+]
 beautifulsoup4 = [
     "beautifulsoup4>=4.12.3",
 ]

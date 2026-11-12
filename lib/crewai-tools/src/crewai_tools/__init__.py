@@ -200,6 +200,11 @@ from crewai_tools.tools.serply_api_tool.serply_web_search_tool import (
 from crewai_tools.tools.serply_api_tool.serply_webpage_to_markdown_tool import (
     SerplyWebpageToMarkdownTool,
 )
+from crewai_tools.tools.sincor_settlement_tool.sincor_settlement_tool import (
+    SincorAuctionTool,
+    SincorEscrowTool,
+    SincorSettlementTool,
+)
 from crewai_tools.tools.singlestore_search_tool.singlestore_search_tool import (
     SingleStoreSearchTool,
 )
@@ -336,6 +341,9 @@ __all__ = [
     "SerplyScholarSearchTool",
     "SerplyWebSearchTool",
     "SerplyWebpageToMarkdownTool",
+    "SincorAuctionTool",
+    "SincorEscrowTool",
+    "SincorSettlementTool",
     "SingleStoreSearchTool",
     "SnowflakeConfig",
     "SnowflakeSearchTool",
