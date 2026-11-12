@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import Mapping
 import json
+import re
 from typing import TypeGuard
 from uuid import NAMESPACE_URL, uuid5
 
@@ -31,6 +32,34 @@ from crewai.rag.qdrant.types import (
     QueryEmbedding,
 )
 from crewai.rag.types import BaseRecord, SearchResult
+
+
+# Characters Qdrant rejects in collection names (and that would otherwise become
+# path separators in a local store), plus control characters.
+_INVALID_COLLECTION_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_MAX_COLLECTION_NAME_BYTES = 255
+
+
+def _sanitize_collection_name(name: str) -> str:
+    """Make a collection name valid for Qdrant.
+
+    Replaces characters Qdrant rejects with ``_`` and limits the name to 255
+    bytes. Names that are already valid are returned unchanged, so existing
+    collections keep their names.
+
+    Args:
+        name: The requested collection name, e.g. one built from an agent role.
+
+    Returns:
+        A name accepted by both local and server Qdrant.
+    """
+    sanitized = _INVALID_COLLECTION_CHARS.sub("_", name)
+    if sanitized in {".", ".."}:
+        sanitized = sanitized.replace(".", "_")
+    encoded = sanitized.encode("utf-8")
+    if len(encoded) > _MAX_COLLECTION_NAME_BYTES:
+        sanitized = encoded[:_MAX_COLLECTION_NAME_BYTES].decode("utf-8", "ignore")
+    return sanitized
 
 
 def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
