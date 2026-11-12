@@ -1,0 +1,77 @@
+---
+title: بحث RAG في DOCX
+description: أداة `DOCXSearchTool` هي أداة RAG مصممة للبحث الدلالي داخل مستندات DOCX.
+icon: file-word
+mode: "wide"
+---
+
+# `DOCXSearchTool`
+
+<Note>
+    لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+أداة `DOCXSearchTool` هي أداة RAG مصممة للبحث الدلالي داخل مستندات DOCX. تتيح للمستخدمين البحث بفعالية واستخراج المعلومات ذات الصلة من ملفات DOCX باستخدام عمليات بحث قائمة على الاستعلامات. هذه الأداة لا تُقدَّر بثمن لمهام تحليل البيانات وإدارة المعلومات والبحث، حيث تبسط عملية العثور على معلومات محددة داخل مجموعات مستندات كبيرة.
+
+## التثبيت
+
+قم بتثبيت حزمة crewai_tools بتنفيذ الأمر التالي في الطرفية:
+
+```shell
+uv pip install docx2txt 'crewai[tools]'
+```
+
+## مثال
+
+يوضح المثال التالي تهيئة DOCXSearchTool للبحث داخل محتوى أي ملف DOCX أو بمسار ملف DOCX محدد.
+
+```python Code
+from crewai_tools import DOCXSearchTool
+
+# Initialize the tool to search within any DOCX file's content
+tool = DOCXSearchTool()
+
+# OR
+
+# Initialize the tool with a specific DOCX file,
+# so the agent can only search the content of the specified DOCX file
+tool = DOCXSearchTool(docx='path/to/your/document.docx')
+```
+
+## المعاملات
+
+يمكن استخدام المعاملات التالية لتخصيص سلوك `DOCXSearchTool`:
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **docx**        | `string` | _اختياري_. معامل يحدد مسار ملف DOCX المراد البحث فيه. إذا لم يُقدَّم أثناء التهيئة، تسمح الأداة بتحديد مسار محتوى أي ملف DOCX للبحث لاحقاً. |
+
+## النموذج والتضمينات المخصصة
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+```python Code
+from chromadb.config import Settings
+
+tool = DOCXSearchTool(
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
+)
+```
