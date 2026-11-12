@@ -13,6 +13,7 @@ import dataclasses
 import importlib
 import logging
 import sys
+from types import ModuleType
 from typing import Any
 
 from pydantic import BaseModel, TypeAdapter
@@ -76,15 +77,16 @@ def _resolve_type_path(type_path: str) -> Any:
     """Resolve a class recorded by :func:`structured_type_path`, or None.
 
     Tolerant by design: a checkpoint may reference a class that is no longer
-    importable (a script's or notebook's locals, renamed code), and restore
-    must degrade to the plain JSON value instead of failing the run.
+    importable, and restore must degrade to the plain JSON value instead of
+    failing the run.
 
-    Resolution is limited to modules the running application already
-    imported, so a checkpoint cannot make CrewAI import a module of its
-    choosing: rebuilding a resumed flow's own models needs no import, because
-    the module that defines the flow already imported them. Importing an
-    unloaded path stays behind ``CREWAI_DESERIALIZE_CALLBACKS``, like every
-    other dotted path read from a checkpoint.
+    Resolution never lets a checkpoint force the application to import a new
+    module: only modules already in ``sys.modules`` are consulted; importing
+    an unloaded path stays behind ``CREWAI_DESERIALIZE_CALLBACKS``, like
+    every other dotted path read from a checkpoint. Attribute walks read a
+    module's namespace directly so PEP 562 ``__getattr__`` hooks cannot run
+    during restore, and any exception while walking degrades instead of
+    aborting ``Flow.from_checkpoint``.
     """
     parts = type_path.split(".")
     if not parts:
@@ -102,8 +104,16 @@ def _resolve_type_path(type_path: str) -> Any:
                 continue
         try:
             for part in parts[split:]:
-                obj = getattr(obj, part)
-        except AttributeError:
+                if isinstance(obj, ModuleType):
+                    obj = vars(obj)[part]
+                else:
+                    obj = getattr(obj, part)
+        except (AttributeError, KeyError):
+            continue
+        except Exception:
+            logger.warning(
+                "Could not resolve %s from the checkpoint", type_path
+            )
             continue
         return obj
     return None

@@ -841,6 +841,71 @@ class TestRestoredMethodOutputTypes:
         (rebuilt,) = restored.method_outputs
         assert type(rebuilt).__name__ == "Remote"
         assert rebuilt.amount == 42
+class TestHookGuardedRestore:
+    """Restore must never run checkpoint-named module code or let a hook abort."""
+
+    def test_type_path_not_resolved_without_opt_in_stays_unloaded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        """MEDIUM: without CREWAI_DESERIALIZE_CALLBACKS, checkpoint type paths are
+        not resolved at all, so no checkpoint-named module is imported."""
+        source = '''
+import importlib
+def __getattr__(name):
+    importlib.import_module(f"hook_checkpoint_types.{name}")
+    raise AttributeError(name)
+class Quote:
+    def __init__(self, amount: int):
+        self.amount = amount
+'''
+        (tmp_path / "hook_checkpoint_types.py").write_text(source)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        entry = {
+            "method": "m",
+            "output": {"amount": 42},
+            "output_type": "hook_checkpoint_types.Quote",
+        }
+        flow = Flow()
+        flow._method_outputs = [entry]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+        assert restored.method_outputs == [{"amount": 42}]
+        assert "hook_checkpoint_types" not in sys.modules
+
+    def test_getattr_hook_raising_non_attribute_error_degrades(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """LOW: a module __getattr__ hook that raises anything besides
+        AttributeError is caught; restore degrades to plain JSON instead of aborting."""
+        source = '''
+def __getattr__(name):
+    raise ImportError(f"no attribute {name!r}")
+class Quote:
+    def __init__(self, amount: int):
+        self.amount = amount
+'''
+        (tmp_path / "hook_checkpoint_types.py").write_text(source)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        entry = {
+            "method": "m",
+            "output": {"amount": 42},
+            "output_type": "hook_checkpoint_types.Quote",
+        }
+        flow = Flow()
+        flow._method_outputs = [entry]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+        assert restored.method_outputs == [{"amount": 42}]
 
 
 class TestRestoredFlowListenerInputs:
