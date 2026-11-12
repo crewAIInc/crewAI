@@ -6,7 +6,6 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 import uuid
 
-from a2a.client.errors import A2AClientHTTPError
 from a2a.types import (
     AgentCard,
     Message,
@@ -16,8 +15,8 @@ from a2a.types import (
     TaskArtifactUpdateEvent,
     TaskState,
     TaskStatusUpdateEvent,
-    TextPart,
 )
+from crewai.a2a._compat import A2AClientHTTPError, TextPart
 from typing_extensions import NotRequired, TypedDict
 
 from crewai.events.event_bus import crewai_event_bus

@@ -17,8 +17,6 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import (
     Artifact,
-    FileWithBytes,
-    FileWithUri,
     InternalError,
     InvalidParamsError,
     Message,
@@ -28,14 +26,16 @@ from a2a.types import (
     TaskStatus,
     TaskStatusUpdateEvent,
 )
-from a2a.utils import (
+from crewai.a2a._compat import (
+    FileWithBytes,
+    FileWithUri,
+    ServerError,
     get_data_parts,
     get_file_parts,
     new_agent_text_message,
     new_data_artifact,
     new_text_artifact,
 )
-from a2a.utils.errors import ServerError
 from aiocache import SimpleMemoryCache, caches  # type: ignore[import-untyped]
 from pydantic import BaseModel
 from typing_extensions import TypedDict
