@@ -151,8 +151,9 @@ class URLReadTool(BaseTool):
         An administrator can approve internal hosts by setting
         ``CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`` to a comma-separated list of
         hosts (a bare hostname, ``host:port`` or a URL; matched on the exact
-        hostname, with no wildcards and no IP addresses). It applies to every crewai-tools tool that uses the
-        safe request helpers, not just this one.
+        hostname, with no wildcards and no IP addresses). It is ignored while
+        ``CREWAI_TOOLS_FORCE_SAFE_PATHS`` is set, and it applies to every
+        crewai-tools tool that uses the safe request helpers, not just this one.
 
         The returned text is still untrusted remote content flowing into an
         agent's context -- a fetched page can attempt to instruct the agent.

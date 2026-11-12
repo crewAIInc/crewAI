@@ -213,6 +213,38 @@ class TestValidateUrl:
         with pytest.raises(ValueError, match="private/reserved IP"):
             validate_url("https://factory.example/internal")
 
+    def test_allowlist_is_ignored_while_force_safe_paths_is_set(self, monkeypatch):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+        monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        with pytest.raises(ValueError, match="ignored while") as exc:
+            validate_url("https://factory.example/internal")
+        assert "CREWAI_TOOLS_FORCE_SAFE_PATHS" in str(exc.value)
+
+    def test_force_safe_paths_does_not_affect_unlisted_hosts_message(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "other.example")
+        monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        with pytest.raises(ValueError) as exc:
+            validate_url("https://factory.example/internal")
+        assert "ignored while" not in str(exc.value)
+
     def test_does_not_allow_private_ip_literal(self, monkeypatch):
         monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "10.0.0.1")
         with pytest.raises(ValueError, match="private/reserved IP"):

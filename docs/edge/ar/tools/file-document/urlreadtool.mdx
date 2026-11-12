@@ -82,4 +82,4 @@ export CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS="files.internal.example.com,assets.int
 - ينطبق الإعداد على كل أدوات crewai-tools التي تجري طلبات آمنة، وليس `URLReadTool` فقط.
 - لا يزال التحقق من شهادات TLS قائمًا. يجب أن ترتبط شهادة المضيف الذي يستخدم جهة إصدار شهادات خاصة بسلسلة تنتهي بجهة تثق بها الأداة.
 
-هذا أضيق نطاقًا من `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` الذي يعطّل حماية المسارات وSSRF على مستوى العملية بأكملها ويجب تجنبه. يمكن للعمال المُدارين تعيين `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` ومع ذلك استخدام قائمة السماح.
+هذا أضيق نطاقًا من `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` الذي يعطّل حماية المسارات وSSRF على مستوى العملية بأكملها ويجب تجنبه. تُتجاهل قائمة السماح عندما يكون `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` معينًا، لأن هذا القفل موجود لمنع أي عملية نشر من تخفيف هذه الفحوصات. لاستخدام القائمة، اترك `CREWAI_TOOLS_FORCE_SAFE_PATHS` غير معين، وعيّن `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`، وأزل `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS` لأن هذا المتغير يعود إلى العمل عند إزالة القفل. افعل ذلك فقط على العمال الذين تديرهم، وليس على العمال المشتركين أو متعددي المستأجرين.

@@ -82,4 +82,4 @@ export CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS="files.internal.example.com,assets.int
 - 이 설정은 `URLReadTool`뿐 아니라 안전한 요청을 사용하는 모든 crewai-tools 도구에 적용됩니다.
 - TLS 인증서는 계속 검증됩니다. 사설 인증 기관을 사용하는 호스트는 도구가 신뢰하는 CA로 이어지는 체인이어야 합니다.
 
-이는 경로 및 SSRF 보호를 프로세스 전체에서 비활성화하므로 피해야 하는 `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`보다 범위가 좁습니다. 관리형 워커는 `CREWAI_TOOLS_FORCE_SAFE_PATHS=true`를 설정하고도 허용 목록을 사용할 수 있습니다.
+이는 경로 및 SSRF 보호를 프로세스 전체에서 비활성화하므로 피해야 하는 `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`보다 범위가 좁습니다. `CREWAI_TOOLS_FORCE_SAFE_PATHS=true`가 설정되어 있으면 허용 목록은 무시됩니다. 이 잠금은 배포 환경이 이러한 검사를 완화하지 못하도록 하기 위한 것이기 때문입니다. 허용 목록을 사용하려면 `CREWAI_TOOLS_FORCE_SAFE_PATHS`를 설정하지 않고, `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`를 설정하며, `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`는 제거하세요. 잠금이 해제되면 해당 플래그가 다시 적용되기 때문입니다. 직접 운영하는 워커에서만 사용하고, 공유 또는 멀티 테넌트 워커에서는 사용하지 마세요.

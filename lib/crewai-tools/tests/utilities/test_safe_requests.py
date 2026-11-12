@@ -539,6 +539,23 @@ def test_create_validated_connection_allows_configured_private_hostname(
     assert sock.getpeername() == ("10.0.0.1", 443)
 
 
+def test_create_validated_connection_ignores_allowlist_under_force_safe_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        create_validated_connection("factory.example", 443)
+
+
 def test_create_validated_connection_blocks_when_any_record_is_private(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

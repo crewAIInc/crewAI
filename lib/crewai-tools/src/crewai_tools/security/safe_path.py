@@ -10,7 +10,8 @@ CREWAI_TOOLS_FORCE_SAFE_PATHS=true so a tenant cannot disable these
 checks by exporting the escape hatch on their own deployment.
 
 Set CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS to a comma-separated list of hosts
-(bare hostname, host:port or URL) that may resolve to private IPs.
+(bare hostname, host:port or URL) that may resolve to private IPs. The
+allowlist is ignored while CREWAI_TOOLS_FORCE_SAFE_PATHS is set.
 """
 
 from __future__ import annotations
@@ -251,12 +252,8 @@ def _entry_hostname(entry: str) -> str:
     return _normalize_hostname(hostname) if hostname else ""
 
 
-def allows_private_host(hostname: str) -> bool:
-    """Whether *hostname* is explicitly allowed to resolve privately.
-
-    Matching is exact on the hostname: no wildcards, and IP addresses are
-    never allowed.
-    """
+def _is_listed_private_host(hostname: str) -> bool:
+    """Whether *hostname* matches an entry of the private-host allowlist."""
     normalized = _normalize_hostname(hostname)
     try:
         ipaddress.ip_address(normalized)
@@ -267,6 +264,32 @@ def allows_private_host(hostname: str) -> bool:
         normalized == _entry_hostname(entry)
         for entry in os.environ.get(_ALLOWED_PRIVATE_HOSTS_ENV, "").split(",")
     )
+
+
+def _allowlist_blocked_by_lock(hostname: str) -> bool:
+    """Whether *hostname* is listed but the forced-safe lock overrides it."""
+    return _env_flag_enabled(_FORCE_SAFE_PATHS_ENV) and _is_listed_private_host(
+        hostname
+    )
+
+
+def allows_private_host(hostname: str) -> bool:
+    """Whether *hostname* is explicitly allowed to resolve privately.
+
+    Matching is exact on the hostname: no wildcards, and IP addresses are
+    never allowed. The allowlist is ignored while ``CREWAI_TOOLS_FORCE_SAFE_PATHS``
+    is set: that mode exists so a deployment's own environment cannot relax
+    these checks, and this allowlist is one such relaxation.
+    """
+    if _allowlist_blocked_by_lock(hostname):
+        logger.warning(
+            "%s is set; ignoring %s for %s",
+            _FORCE_SAFE_PATHS_ENV,
+            _ALLOWED_PRIVATE_HOSTS_ENV,
+            hostname,
+        )
+        return False
+    return _is_listed_private_host(hostname)
 
 
 def validate_url(url: str) -> str:
@@ -325,9 +348,15 @@ def validate_url(url: str) -> str:
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
         if is_blocked_ip(ip_str) and not allows_private_host(parsed.hostname):
+            lock_note = (
+                f" {_ALLOWED_PRIVATE_HOSTS_ENV} is ignored while "
+                f"{_FORCE_SAFE_PATHS_ENV} is set."
+                if _allowlist_blocked_by_lock(parsed.hostname)
+                else ""
+            )
             raise ValueError(
                 f"URL '{url}' resolves to private/reserved IP {ip_str}. "
-                f"Access to internal networks is not allowed. "
+                f"Access to internal networks is not allowed.{lock_note} "
                 f"Set {_UNSAFE_PATHS_ENV}=true to bypass."
             )
 

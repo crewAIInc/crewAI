@@ -82,4 +82,4 @@ Examples of what each value allows, for a request to `https://files.internal.exa
 - The setting applies to every crewai-tools tool that makes safe requests, not only `URLReadTool`.
 - TLS certificates are still verified. A host that uses a private certificate authority must chain to a CA the tool trusts.
 
-This is narrower than `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`, which disables path and SSRF protection process-wide and should be avoided. Managed workers can set `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` and still use the allowlist.
+This is narrower than `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`, which disables path and SSRF protection process-wide and should be avoided. The allowlist is ignored while `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` is set, because that lock exists so a deployment cannot relax these checks. To use the allowlist, leave `CREWAI_TOOLS_FORCE_SAFE_PATHS` unset, set `CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS`, and remove `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`, since that flag takes effect again once the lock is off. Do this only on workers you operate, not on shared or multi-tenant workers.
