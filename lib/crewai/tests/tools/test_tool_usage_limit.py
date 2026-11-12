@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from crewai.tools import BaseTool, tool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 
 
@@ -149,3 +150,55 @@ def test_tool_usage_with_toolusage_class():
     
     result3 = tool_usage._check_usage_limit(tool, "Limited Tool")
     assert "has reached its usage limit of 2 times" in result3
+
+
+def _limited_tool_usage() -> tuple[BaseTool, ToolUsage]:
+    class LimitedTool(BaseTool):
+        name: str = "Limited Tool"
+        description: str = "A tool with usage limits for testing"
+        max_usage_count: int = 2
+
+        def _run(self, input_text: str) -> str:
+            return f"Processed {input_text}"
+
+    tool = LimitedTool()
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool.to_structured_tool()],
+        task=None,
+        function_calling_llm=None,
+    )
+    return tool, tool_usage
+
+
+def _calling(input_text: str) -> ToolCalling:
+    return ToolCalling(tool_name="Limited Tool", arguments={"input_text": input_text})
+
+
+LIMIT_REACHED = (
+    "Tool 'limited_tool' has reached its usage limit of 2 times "
+    "and cannot be used anymore."
+)
+
+
+def test_tool_usage_counts_each_call_once():
+    """ToolUsage.use() runs a tool max_usage_count times, then refuses."""
+    tool, tool_usage = _limited_tool_usage()
+
+    results = [tool_usage.use(calling=_calling(text), tool_string="") for text in "abc"]
+
+    assert results == ["Processed a", "Processed b", LIMIT_REACHED]
+    assert tool.current_usage_count == 2
+
+
+@pytest.mark.asyncio
+async def test_async_tool_usage_counts_each_call_once():
+    """ToolUsage.ause() runs a tool max_usage_count times, then refuses."""
+    tool, tool_usage = _limited_tool_usage()
+
+    results = [
+        await tool_usage.ause(calling=_calling(text), tool_string="") for text in "abc"
+    ]
+
+    assert results == ["Processed a", "Processed b", LIMIT_REACHED]
+    assert tool.current_usage_count == 2
