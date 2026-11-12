@@ -768,6 +768,41 @@ def test_azure_tool_conversion():
     assert "parameters" in azure_tools[0]["function"]
 
 
+_SEARCH_TOOL = [{
+    "type": "function",
+    "function": {
+        "name": "search",
+        "description": "Search",
+        "parameters": {"type": "object", "properties": {}},
+    },
+}]
+
+
+@pytest.mark.usefixtures("mock_azure_credentials")
+def test_azure_non_openai_model_sends_tools_when_supports_tools_enabled():
+    llm = LLM(model="azure/mistral-large", supports_tools=True)
+
+    assert llm.supports_function_calling() is True
+    params = llm._prepare_completion_params(
+        [{"role": "user", "content": "hi"}], tools=_SEARCH_TOOL
+    )
+
+    assert params["tools"][0]["function"]["name"] == "search"
+    assert params["tool_choice"] == "auto"
+
+
+@pytest.mark.usefixtures("mock_azure_credentials")
+def test_azure_openai_model_omits_tools_when_supports_tools_disabled():
+    llm = LLM(model="azure/gpt-4", supports_tools=False)
+
+    assert llm.supports_function_calling() is False
+    params = llm._prepare_completion_params(
+        [{"role": "user", "content": "hi"}], tools=_SEARCH_TOOL
+    )
+
+    assert "tools" not in params
+
+
 def test_azure_environment_variable_endpoint():
     """
     Test that Azure endpoint is properly loaded from environment
