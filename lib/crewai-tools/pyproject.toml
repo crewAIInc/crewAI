@@ -10,12 +10,16 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.40",
+    "crewai==1.15.41",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4>=4.13.4,<5",
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
-    "pymupdf~=1.26.6",
+    # 1.26.6 is the floor for Document.open / Page.get_text. <3 admits
+    # PyMuPDF 2.x so a project can pin it. 2.x requires Python >=3.11, so
+    # Python 3.10 still resolves to 1.x. 1.28.x hangs Page.get_text() on
+    # crafted input (fixed only in 2.0), so that series is excluded.
+    "pymupdf>=1.26.6,!=1.28.*,<3",
 ]
 
 
