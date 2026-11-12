@@ -43,8 +43,12 @@ padrão é `https://api.past.dev`.
 Cada memória no past dev pertence a uma identidade: o id da pessoa ou da conta a
 que a memória se refere, por exemplo o id do usuário na sua aplicação. Seu código
 define a identidade, nunca o modelo. As ferramentas não têm argumento de
-identidade, então um agente não pode ler nem escrever a memória de outra pessoa.
-Crie uma memória ou uma ferramenta para cada usuário.
+identidade, então um agente não pode escolher de quem é a memória que lê ou escreve.
+
+A identidade sozinha não torna a memória privada. Uma memória salva sem `audience`
+é visível para todas as identidades do projeto. Para manter privada a memória de
+cada pessoa, passe uma `audience` que alcance apenas essa pessoa, ou use um projeto
+por tenant. Crie uma memória ou uma ferramenta para cada usuário.
 
 ## Memória da crew
 

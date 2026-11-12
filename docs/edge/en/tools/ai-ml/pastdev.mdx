@@ -43,8 +43,12 @@ is `https://api.past.dev`.
 Every memory in past dev belongs to an identity: the id of the person or
 account the memory is about, for example the user id in your application.
 Your code sets the identity, never the model. The tools have no identity
-argument, so an agent cannot read or write the memory of another person.
-Make one memory or one tool for each user.
+argument, so an agent cannot choose whose memory it reads or writes.
+
+The identity alone does not make memory private. A memory saved with no
+`audience` is visible to every identity in the project. To keep each person's
+memory private, pass an `audience` that reaches only that person, or use one
+project per tenant. Make one memory or one tool for each user.
 
 ## Crew memory
 
