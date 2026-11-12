@@ -171,14 +171,13 @@ PROVIDERS: list[str] = [
 
 # The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
 # project's crewai dependency; a provider not listed here (openai, ollama,
-# cerebras) runs on what `crewai[tools]` installs.
+# cerebras, groq) runs on what `crewai[tools]` installs.
 PROVIDER_EXTRAS: dict[str, str] = {
     "anthropic": "anthropic",
     "gemini": "google-genai",
     "bedrock": "bedrock",
     "azure": "azure-ai-inference",
     # crewAI has no native provider for these and falls back to LiteLLM.
-    "groq": "litellm",
     "huggingface": "litellm",
     "nvidia_nim": "litellm",
     "sambanova": "litellm",
@@ -254,6 +253,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
         "cerebras",
         "dashscope",
         "deepinfra",
+        "groq",
         "hosted_vllm",
         "ollama",
         "ollama_chat",
