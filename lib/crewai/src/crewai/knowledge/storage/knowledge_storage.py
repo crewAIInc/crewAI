@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import is_dataclass, replace
 import logging
 import traceback
 from typing import Any, cast
@@ -34,11 +34,15 @@ def _build_rag_config(
     connection settings (url, api_key, path, ...) are kept and only the
     embedding function is replaced.
 
-    Backends are imported here so that only the configured one is needed.
+    Backends are imported here so that only the configured one is needed. Any
+    other provider (one added with ``register_rag_client_factory``) keeps its
+    active config and only gets the embedding function; its client factory then
+    receives CrewAI's embedding function as is, which takes a list of texts.
 
     Raises:
         ImportError: If ``provider`` is ``"chromadb"`` and chromadb is not installed.
-        ValueError: If ``provider`` is not supported.
+        ValueError: If ``provider`` is neither built in nor the provider of an
+            active config that can carry an embedding function.
     """
     if provider == "chromadb":
         from crewai.rag.chromadb.config import ChromaDBConfig
@@ -67,7 +71,18 @@ def _build_rag_config(
             return replace(cast(QdrantConfig, base_config), embedding_function=wrapped)
         return QdrantConfig(embedding_function=wrapped)
 
-    raise ValueError(f"Unsupported RAG provider for knowledge storage: {provider}")
+    if (
+        base_config is not None
+        and base_config.provider == provider
+        and is_dataclass(base_config)
+    ):
+        return replace(base_config, embedding_function=embedding_function)
+
+    raise ValueError(
+        f"Unsupported RAG provider for knowledge storage: {provider}. Knowledge "
+        "with an embedder supports 'chromadb', 'qdrant', or a provider whose "
+        "config is active through set_rag_config()."
+    )
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
