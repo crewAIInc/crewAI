@@ -1996,8 +1996,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             key=lambda m: m.get("started_at", ""),
         )
 
+        # Concurrent methods can finish in a different order from their starts.
+        # Older histories without completion times retain their start order.
+        state_methods = sorted(
+            sorted_methods,
+            key=lambda m: m.get("finished_at") or m.get("started_at", ""),
+        )
         state_to_apply = None
-        for method in reversed(sorted_methods):
+        for method in reversed(state_methods):
             if method.get("final_state"):
                 state_to_apply = method["final_state"]
                 break
