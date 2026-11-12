@@ -520,10 +520,16 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
   </Accordion>
 
   <Accordion title="Groq">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Groq에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
     `.env` 파일에 다음 환경 변수를 설정하십시오:
 
     ```toml Code
+    # Required
     GROQ_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    GROQ_BASE_URL=https://api.groq.com/openai/v1
     ```
 
     CrewAI 프로젝트에서의 예시 사용법:
@@ -536,10 +542,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
 
     Groq는 production 모델과 preview 모델을 구분하며 모델 ID를 정기적으로 폐기합니다. 프로덕션 모델을 선택하기 전에 [Groq 모델 카탈로그](https://console.groq.com/docs/models)와 [지원 중단 페이지](https://console.groq.com/docs/deprecations)를 확인하세요.
 
-    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
-    ```bash
-    uv add 'crewai[litellm]'
-    ```
+    Groq API는 모든 OpenAI 매개변수를 지원하지 않습니다. 예를 들어 `logprobs`와 `logit_bias`는 지원되지 않습니다. [Groq OpenAI 호환성 문서](https://console.groq.com/docs/openai)를 참고하세요.
   </Accordion>
 
   <Accordion title="IBM watsonx.ai">
