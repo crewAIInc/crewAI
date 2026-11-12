@@ -9,6 +9,72 @@ mode: "wide"
 
 O CrewAI oferece suporte a implementações personalizadas de LLM por meio da classe abstrata `BaseLLM`. Isso permite integrar qualquer provedor de LLM que não tenha suporte nativo no LiteLLM ou implementar mecanismos de autenticação personalizados.
 
+## Experimente Offline Primeiro
+
+Antes de conectar um provedor real, você pode verificar a interface `BaseLLM` com um stub que retorna uma resposta fixa. Ele não precisa de chave de API e não faz requisição HTTP a nenhum modelo. O stub serve apenas para aprendizado e testes; o método `call` é onde uma implementação real envia a requisição ao seu provedor, como no Início Rápido abaixo.
+
+Salve isto como `echo_llm.py`:
+
+```python
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Task
+
+
+class EchoLLM(BaseLLM):
+    """A deterministic stand-in for a model, for learning and testing only."""
+
+    def call(
+        self,
+        messages: str | list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: Any | None = None,
+    ) -> str:
+        # Replace this line with a request to your provider (see Quick Start).
+        # Without native tool calling, agents read the "Final Answer:" line.
+        return "Thought: I can answer directly.\nFinal Answer: Hello from EchoLLM!"
+
+    def supports_function_calling(self) -> bool:
+        return False  # no native tool calling
+
+    def supports_stop_words(self) -> bool:
+        return False  # no native stop-word support
+
+
+llm = EchoLLM(model="echo")
+print(llm.call("Say hello"))
+
+agent = Agent(
+    role="Greeter",
+    goal="Greet the user",
+    backstory="You greet people.",
+    llm=llm,
+)
+task = Task(description="Say hello", expected_output="A greeting", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+print(crew.kickoff().raw)
+```
+
+Execute:
+
+```bash
+python echo_llm.py
+```
+
+Saída esperada:
+
+```text
+Thought: I can answer directly.
+Final Answer: Hello from EchoLLM!
+Hello from EchoLLM!
+```
+
+As duas primeiras linhas são a chamada direta a `call`; a última é o resultado da crew. O `EchoLLM` informa que não tem chamada de ferramentas nativa nem suporte a stop words, então o agente lê o texto após `Final Answer:` como resultado da tarefa.
+
 ## Início Rápido
 
 Aqui está uma implementação mínima de LLM personalizada:
