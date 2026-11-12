@@ -1935,6 +1935,22 @@ class LLM(BaseLLM):
                 )
         return None
 
+    def _force_drop_stop_param(self) -> None:
+        """Add ``stop`` to the parameters LiteLLM drops, keeping the rest.
+
+        The retry after an unsupported ``stop`` needs ``additional_drop_params``
+        to carry ``stop``, but ``additional_params`` also holds settings the
+        caller chose (endpoint, headers, retry counts); replacing the whole dict
+        would silently drop them from this and every later request.
+        """
+        additional_params = dict(self.additional_params)
+        dropped = additional_params.get("additional_drop_params")
+        dropped = list(dropped) if isinstance(dropped, list) else []
+        if "stop" not in dropped:
+            dropped.append("stop")
+        additional_params["additional_drop_params"] = dropped
+        self.additional_params = additional_params
+
     def call(
         self,
         messages: str | list[LLMMessage],
@@ -2040,19 +2056,7 @@ class LLM(BaseLLM):
                     )
 
                     if unsupported_stop:
-                        if (
-                            "additional_drop_params" in self.additional_params
-                            and isinstance(
-                                self.additional_params["additional_drop_params"], list
-                            )
-                        ):
-                            self.additional_params["additional_drop_params"].append(
-                                "stop"
-                            )
-                        else:
-                            self.additional_params = {
-                                "additional_drop_params": ["stop"]
-                            }
+                        self._force_drop_stop_param()
 
                         logging.info("Retrying LLM call without the unsupported 'stop'")
 
@@ -2185,19 +2189,7 @@ class LLM(BaseLLM):
                     )
 
                     if unsupported_stop:
-                        if (
-                            "additional_drop_params" in self.additional_params
-                            and isinstance(
-                                self.additional_params["additional_drop_params"], list
-                            )
-                        ):
-                            self.additional_params["additional_drop_params"].append(
-                                "stop"
-                            )
-                        else:
-                            self.additional_params = {
-                                "additional_drop_params": ["stop"]
-                            }
+                        self._force_drop_stop_param()
 
                         logging.info("Retrying LLM call without the unsupported 'stop'")
 
