@@ -65,7 +65,9 @@ def test_mixed_native_and_digit_column_keeps_both():
 def test_huge_digit_column_does_not_break_queries():
     """A pure-digit column whose sum overflows float64 must not turn every
     query on the sheet into an OverflowError (strix LOW on #9389)."""
-    csv = b"order_id\n" + b"\n".join(str(10**308 + i).encode() for i in range(3)) + b"\n"
+    csv = (
+        b"order_id\n" + b"\n".join(str(10**308 + i).encode() for i in range(3)) + b"\n"
+    )
     workbook = parse(csv, "huge.csv")
     out = query(workbook, "huge.csv", Query(operation="rows"))
     assert "10" in out  # the digits render
