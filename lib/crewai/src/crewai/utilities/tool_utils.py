@@ -110,7 +110,11 @@ async def aexecute_tool_and_check_finality(
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
     tool = tool_name_to_tool_map.get(sanitized_tool_name)
     if tool:
-        tool_input = tool_calling.arguments if tool_calling.arguments else {}
+        # Hooks edit tool_input in place, so it must be the dict the tool runs
+        # with, including for a call that came with no arguments.
+        if not tool_calling.arguments:
+            tool_calling.arguments = {}
+        tool_input = tool_calling.arguments
         hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
             tool_input=tool_input,
@@ -274,7 +278,11 @@ def execute_tool_and_check_finality(
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
     tool = tool_name_to_tool_map.get(sanitized_tool_name)
     if tool:
-        tool_input = tool_calling.arguments if tool_calling.arguments else {}
+        # Hooks edit tool_input in place, so it must be the dict the tool runs
+        # with, including for a call that came with no arguments.
+        if not tool_calling.arguments:
+            tool_calling.arguments = {}
+        tool_input = tool_calling.arguments
         hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
             tool_input=tool_input,
