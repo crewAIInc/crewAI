@@ -1959,7 +1959,7 @@ requires-dist = [
     { name = "pymongo", marker = "python_full_version >= '3.11' and extra == 'mongodb'", specifier = ">=4.18.3" },
     { name = "pymongo", marker = "python_full_version < '3.11' and extra == 'azure-documentdb'", specifier = ">=4.18.2,<4.18.3" },
     { name = "pymongo", marker = "python_full_version < '3.11' and extra == 'mongodb'", specifier = ">=4.18.2,<4.18.3" },
-    { name = "pymupdf", specifier = "~=1.26.6" },
+    { name = "pymupdf", specifier = ">=1.26.6,<3" },
     { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1.1" },
     { name = "python-docx", specifier = "~=1.2.0" },
     { name = "python-docx", marker = "extra == 'rag'", specifier = ">=1.1.0" },
