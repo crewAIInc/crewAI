@@ -1,7 +1,10 @@
 import pytest
 from unittest.mock import MagicMock
 
+from crewai.agents.parser import AgentAction
 from crewai.tools import BaseTool, tool
+from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 
 
@@ -149,3 +152,53 @@ def test_tool_usage_with_toolusage_class():
     
     result3 = tool_usage._check_usage_limit(tool, "Limited Tool")
     assert "has reached its usage limit of 2 times" in result3
+
+
+def _structured_echo(calls: list[str]) -> "CrewStructuredTool":
+    def echo(query: str) -> str:
+        calls.append(query)
+        return "ok"
+
+    structured = CrewStructuredTool.from_function(
+        name="echo", description="Echo the query.", func=echo
+    )
+    structured.max_usage_count = 4
+    structured.current_usage_count = 0
+    return structured
+
+
+def _tool_usage(tool: "CrewStructuredTool") -> ToolUsage:
+    return ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=None,
+        action=AgentAction(thought="run", tool="echo", tool_input={}, text=""),
+    )
+
+
+def test_text_tool_call_counts_one_use_per_execution():
+    calls: list[str] = []
+    structured = _structured_echo(calls)
+
+    usage = _tool_usage(structured)
+    for _ in range(3):
+        usage.use(ToolCalling(tool_name="echo", arguments={"query": "x"}), "echo")
+
+    assert calls == ["x", "x", "x"]
+    assert structured.current_usage_count == 3
+
+
+@pytest.mark.asyncio
+async def test_async_text_tool_call_counts_one_use_per_execution():
+    calls: list[str] = []
+    structured = _structured_echo(calls)
+
+    usage = _tool_usage(structured)
+    for _ in range(3):
+        await usage.ause(
+            ToolCalling(tool_name="echo", arguments={"query": "x"}), "echo"
+        )
+
+    assert calls == ["x", "x", "x"]
+    assert structured.current_usage_count == 3
