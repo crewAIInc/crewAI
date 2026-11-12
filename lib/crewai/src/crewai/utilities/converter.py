@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, TypedDict
 
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
 _I18N = I18N_DEFAULT
+
+logger = logging.getLogger(__name__)
 
 
 class ConverterError(Exception):
@@ -165,7 +168,9 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
-            return json.dumps(self.llm.call(self._build_messages()))
+            return self._coerce_response_to_pydantic(
+                self.llm.call(self._build_messages())
+            ).model_dump_json()
         except HookAborted:
             raise
         except Exception as e:
@@ -185,7 +190,9 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 return await asyncio.to_thread(self._create_instructor().to_json)
-            return json.dumps(await self.llm.acall(self._build_messages()))
+            return self._coerce_response_to_pydantic(
+                await self.llm.acall(self._build_messages())
+            ).model_dump_json()
         except HookAborted:
             raise
         except Exception as e:
@@ -331,7 +338,10 @@ def handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            # With no agent there is no LLM to refit with; Converter relies on
+            # this to retry its own response. Otherwise refit it below.
+            if agent is None:
+                raise
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -345,6 +355,19 @@ def handle_partial_json(
         is_json_output=is_json_output,
         agent=agent,
         converter_cls=converter_cls,
+    )
+
+
+def _warn_conversion_failed(
+    converter: Converter, model: type[BaseModel], error: ConverterError
+) -> None:
+    # Logged whatever `verbose` is. Class names only: the error message can
+    # quote the model's output.
+    logger.warning(
+        "%s could not convert the output to %s (%s); keeping the raw output.",
+        type(converter).__name__,
+        model.__name__,
+        type(error.__cause__ or error).__name__,
     )
 
 
@@ -390,11 +413,16 @@ def convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    exported_result = (
-        converter.to_pydantic() if not is_json_output else converter.to_json()
-    )
+    exported_result: dict[str, Any] | BaseModel | str | ConverterError
+    try:
+        exported_result = (
+            converter.to_pydantic() if not is_json_output else converter.to_json()
+        )
+    except ConverterError as e:
+        exported_result = e
 
     if isinstance(exported_result, ConverterError):
+        _warn_conversion_failed(converter, model, exported_result)
         if agent and getattr(agent, "verbose", True):
             PRINTER.print(
                 content=f"Failed to convert result to model: {exported_result}",
@@ -484,7 +512,10 @@ async def async_handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            # With no agent there is no LLM to refit with; Converter relies on
+            # this to retry its own response. Otherwise refit it below.
+            if agent is None:
+                raise
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -526,13 +557,18 @@ async def async_convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    exported_result = (
-        await converter.ato_pydantic()
-        if not is_json_output
-        else await converter.ato_json()
-    )
+    exported_result: dict[str, Any] | BaseModel | str | ConverterError
+    try:
+        exported_result = (
+            await converter.ato_pydantic()
+            if not is_json_output
+            else await converter.ato_json()
+        )
+    except ConverterError as e:
+        exported_result = e
 
     if isinstance(exported_result, ConverterError):
+        _warn_conversion_failed(converter, model, exported_result)
         if agent and getattr(agent, "verbose", True):
             PRINTER.print(
                 content=f"Failed to convert result to model: {exported_result}",

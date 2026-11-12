@@ -59,6 +59,14 @@ class FlowConversationalDefinition(BaseModel):
         examples=[True],
     )
     system_prompt: str | None = None
+    respect_context_window: bool = Field(
+        default=True,
+        description=(
+            "Compact built-in chat and router LLM requests before the context "
+            "window fills, and retry once after a provider context-limit error. "
+            "The public conversation transcript is preserved."
+        ),
+    )
     llm: Any = Field(
         default=None,
         description=(

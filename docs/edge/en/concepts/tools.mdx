@@ -376,7 +376,8 @@ Detection is strictly declarative. CrewAI never guesses whether a string "looks
 like" an error, so a tool that legitimately returns text about an error is never
 misread as having failed. Failures are recorded when a tool returns a
 `ToolFailure`, when a tool raises, when an MCP server sets `isError`, when a
-tool's `max_usage_count` is spent, or when the agent calls a tool that does not exist.
+tool's `max_usage_count` is spent, when the agent calls a tool that does not exist,
+or when the agent keeps [repeating the same call](#repeated-calls).
 
 ### Choosing a Failure Policy
 
@@ -454,6 +455,25 @@ def on_tool_failure(source, event):
 The event is emitted before the `raise` policy aborts, so subscribers always
 observe the failure. `ToolUsageFinishedEvent` also carries a `failure` field, letting
 a trace UI mark the call as failed without correlating two events.
+
+### Repeated Calls
+
+An agent that calls the same tool with the same arguments and gets the same
+result five times in a row is not making progress. On the fourth such call, the
+result it reads ends with a note telling it to use what it has and give its final
+answer. On the fifth, CrewAI stops its tool use and asks for a final answer from
+what it has already gathered, as it does when `max_iter` is reached, and records
+a failure with reason `ToolFailureReason.REPEATED_CALL`. A step of a plan ends
+with the tool results it has instead.
+
+With text-based (ReAct) tool calling, CrewAI already answers an immediate repeat
+of a call with a notice to try something else, and the count starts from that
+notice, so the warning and the stop each come one call later.
+
+Only consecutive calls count: any other call, or a changed result (a polled job
+that moved on), starts the count again. The stop follows `tool_failure_policy` at
+the task, agent, and crew level: `raise` aborts with `ToolExecutionFailedError`
+instead, and `ignore` still stops the loop but records nothing.
 
 ## Conclusion
 

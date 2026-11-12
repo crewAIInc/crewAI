@@ -52,6 +52,27 @@ except ImportError:
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
 
+def _normalize_litellm_bedrock_kwargs(data: dict[str, Any]) -> dict[str, Any]:
+    """Map LiteLLM Bedrock kwargs to their native-provider equivalents."""
+    normalized_data = dict(data)
+    additional_params = normalized_data.get("additional_params")
+    if isinstance(additional_params, dict):
+        additional_params = dict(additional_params)
+        normalized_data["additional_params"] = additional_params
+
+    for litellm_name, native_name in (
+        ("aws_region_name", "region_name"),
+        ("guardrailConfig", "guardrail_config"),
+    ):
+        value = normalized_data.pop(litellm_name, None)
+        if value is None and isinstance(additional_params, dict):
+            value = additional_params.pop(litellm_name, None)
+        if normalized_data.get(native_name) is None and value is not None:
+            normalized_data[native_name] = value
+
+    return normalized_data
+
+
 def _preprocess_structured_data(
     data: dict[str, Any], response_model: type[BaseModel]
 ) -> dict[str, Any]:
@@ -265,6 +286,8 @@ class BedrockCompletion(BaseLLM):
 
         data.pop("provider", None)
         data["provider"] = "bedrock"
+
+        data = _normalize_litellm_bedrock_kwargs(data)
 
         popped = data.pop("stop_sequences", None)
         seqs = popped if popped is not None else (data.get("stop") or [])
@@ -2222,7 +2245,10 @@ class BedrockCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, BEDROCK_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+            self.model,
+            BEDROCK_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
         )
 
     def supports_multimodal(self) -> bool:

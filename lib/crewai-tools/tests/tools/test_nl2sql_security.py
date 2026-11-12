@@ -598,3 +598,84 @@ class TestCTEUnknownCommand:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="unrecognised"):
             tool._validate_query("WITH cte AS (SELECT 1) FOOBAR")
+
+
+# SQL comment injection bypass tests
+
+
+class TestSQLCommentInjection:
+    """Read-only mode refuses commented statements instead of stripping comments."""
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "/* SELECT */ DELETE FROM users",
+            "-- comment\nDELETE FROM users",
+            "WITH d AS (/* read */ DELETE FROM users) SELECT 1",
+            "WITH d AS (\n-- safe\nDELETE FROM users\n) SELECT 1",
+            "WITH cte AS (SELECT 1) /* read */ DELETE FROM users",
+            "WITH d AS /* x */ (DELETE FROM users) SELECT 1",
+            "/* plan */ EXPLAIN ANALYZE DELETE FROM users",
+            "EXPLAIN /* plan */ ANALYZE DELETE FROM users",
+            "/*!50000 DROP TABLE users */ SELECT 1",
+            "/*M!100000 DROP TABLE users */ SELECT 1",
+            # Comment markers inside identifiers or dollar quotes: a stripper
+            # that missed these quoting rules truncated the statement here.
+            'WITH "a--" AS (SELECT 1) DELETE FROM users',
+            "WITH `a--` AS (SELECT 1) DELETE FROM users",
+            "WITH x AS (SELECT $$--$$) DELETE FROM users",
+            'WITH "a/*" AS (SELECT 1) DELETE FROM users WHERE "*/" = 1',
+            # A quote inside an identifier must not hide a real comment.
+            'WITH "q\'" AS (SELECT 1 --\') SELECT 1\n) DELETE FROM users',
+        ],
+    )
+    def test_commented_statement_is_blocked(self, query):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="query containing SQL comments"):
+            tool._validate_query(query)
+
+    @pytest.mark.parametrize(
+        "query",
+        ["/* get data */ SELECT * FROM users", "-- fetch\nSELECT 1"],
+    )
+    def test_commented_read_query_is_also_blocked(self, query):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="Remove the comments and retry"):
+            tool._validate_query(query)
+
+    def test_comment_markers_inside_string_literals_are_also_blocked(self):
+        """Literal-aware scanning disagreed with identifier quoting; refuse instead."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="query containing SQL comments"):
+            tool._validate_query("SELECT 'a -- b' AS v")
+
+    def test_hash_comment_is_blocked_on_mysql(self):
+        tool = _make_tool(allow_dml=False)
+        tool.db_uri = "mysql+pymysql://user@localhost/db"
+        with pytest.raises(ValueError, match="query containing SQL comments"):
+            tool._validate_query("WITH a AS (SELECT 1 #) SELECT 1\n) DELETE FROM users")
+
+    def test_hash_is_an_operator_on_postgres(self):
+        tool = _make_tool(allow_dml=False)
+        tool.db_uri = "postgresql://user@localhost/db"
+        tool._validate_query("SELECT data #> '{a,b}' FROM docs")
+
+    def test_comments_are_allowed_when_dml_is_allowed(self):
+        tool = _make_tool(allow_dml=True)
+        tool._validate_query("-- note\nSELECT 1")
+
+    def test_commented_write_is_committed_when_dml_is_allowed(self, tmp_path):
+        """DELETE/**/FROM is a DELETE, so allow_dml=True must commit it."""
+        uri = f"sqlite:///{tmp_path / 'items.db'}"
+        engine = create_engine(uri)
+        with engine.connect() as conn:
+            conn.execute(text("CREATE TABLE items (id INTEGER PRIMARY KEY)"))
+            conn.execute(text("INSERT INTO items VALUES (1)"))
+            conn.commit()
+        tool = _make_tool(allow_dml=True)
+        tool.db_uri = uri
+
+        tool.execute_sql("DELETE/**/FROM items")
+
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT id FROM items")).fetchall() == []

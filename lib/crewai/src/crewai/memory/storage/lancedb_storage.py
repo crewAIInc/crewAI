@@ -14,7 +14,8 @@ import time
 from typing import Any
 
 from crewai_core.lock_store import lock as store_lock
-import lancedb  # type: ignore[import-untyped]
+import lancedb
+from lancedb.query import ColumnOrdering
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
@@ -523,10 +524,23 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
-        records = [self._row_to_record(r) for r in rows]
-        records.sort(key=lambda r: r.created_at, reverse=True)
-        return records[offset : offset + limit]
+        if self._table is None or limit <= 0 or offset < 0:
+            return []
+
+        q = self._table.search()
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            q = q.where(_scope_prefix_filter(prefix))
+
+        q = (
+            q.order_by([ColumnOrdering(column_name="created_at", ascending=False)])
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = q.to_list()
+        return [self._row_to_record(row) for row in rows]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"

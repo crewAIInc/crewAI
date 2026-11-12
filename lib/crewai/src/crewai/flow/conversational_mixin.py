@@ -17,12 +17,13 @@ Import surface:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
 from pathlib import Path
+import sys
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
@@ -65,6 +66,7 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.execution import ExecutionTrace
+    from crewai.lite_agent_output import LiteAgentOutput
     from crewai.llms.base_llm import BaseLLM
 
 
@@ -144,6 +146,7 @@ def _config_from_definition(
     """
     return ConversationConfig(
         system_prompt=definition.system_prompt,
+        respect_context_window=definition.respect_context_window,
         llm=definition.llm,
         router=(
             _router_config_from_definition(definition.router, project_root)
@@ -368,7 +371,9 @@ class _ConversationalMixin:
 
     @listen("converse")
     @_conversational_only
-    def converse_turn(self) -> str:
+    def converse_turn(
+        self,
+    ) -> str | LiteAgentOutput | Awaitable[str | LiteAgentOutput]:
         """Built-in chat handler over canonical conversation history."""
         llm = self._default_conversation_llm()
         if llm is None:
@@ -384,7 +389,7 @@ class _ConversationalMixin:
 
         llm_instance = self._coerce_llm(llm)
         with self._conversation_streaming_enabled(llm_instance):
-            response = llm_instance.call(messages=messages)
+            response = self._call_conversation_llm(llm_instance, messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -422,10 +427,14 @@ class _ConversationalMixin:
             *self.build_agent_context("answer_from_history"),
         ]
         with self._conversation_streaming_enabled(llm_instance):
-            response = llm_instance.call(messages=messages)
+            response = self._call_conversation_llm(llm_instance, messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
+
+    @contextmanager
+    def _conversation_turn_scope(self, session_id: str) -> Iterator[None]:
+        yield
 
     def handle_turn(
         self,
@@ -463,57 +472,58 @@ class _ConversationalMixin:
 
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
-        crewai_event_bus.emit(
-            self,
-            ConversationTurnStartedEvent(
-                type="conversation_turn_started",
-                flow_name=self.name or self.__class__.__name__,
-                session_id=sid,
-            ),
-        )
-
-        # Stash the pending turn so the kickoff extension hook picks it up
-        # after persist restore.
-        self._pending_user_message = message
-        self._pending_intents = list(intents) if intents else None
-        self._pending_intent_llm = intent_llm
-
-        failed_event: ConversationTurnFailedEvent | None = None
-        try:
-            # Each turn is a fresh execution; clear graph tracking so the second
-            # turn re-runs instead of being treated as a checkpoint restore.
-            if "from_checkpoint" not in kickoff_kwargs:
-                self._reset_turn_execution_state()
-
-            object.__setattr__(self, "_assistant_reply_appended", False)
-            object.__setattr__(self, "_turn_recorded_results", [])
-            result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
-            if isinstance(result, HumanFeedbackPending):
-                return result
-            self._append_public_turn_result_and_persist(result)
-        except Exception as exc:
-            failed_event = ConversationTurnFailedEvent(
-                type="conversation_turn_failed",
-                flow_name=self.name or self.__class__.__name__,
-                session_id=sid,
-                error=exc,
+        with self._conversation_turn_scope(sid):
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnStartedEvent(
+                    type="conversation_turn_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
             )
-            raise
-        finally:
-            self._pending_user_message = None
-            self._pending_intents = None
-            self._pending_intent_llm = None
-            if failed_event is not None:
-                self._emit_terminal_conversation_turn_event(failed_event)
 
-        self._emit_terminal_conversation_turn_event(
-            ConversationTurnCompletedEvent(
-                type="conversation_turn_completed",
-                flow_name=self.name or self.__class__.__name__,
-                session_id=sid,
-            ),
-        )
-        return result
+            # Stash the pending turn so the kickoff extension hook picks it up
+            # after persist restore.
+            self._pending_user_message = message
+            self._pending_intents = list(intents) if intents else None
+            self._pending_intent_llm = intent_llm
+
+            failed_event: ConversationTurnFailedEvent | None = None
+            try:
+                # Each turn is a fresh execution; clear graph tracking so the second
+                # turn re-runs instead of being treated as a checkpoint restore.
+                if "from_checkpoint" not in kickoff_kwargs:
+                    self._reset_turn_execution_state()
+
+                object.__setattr__(self, "_assistant_reply_appended", False)
+                object.__setattr__(self, "_turn_recorded_results", [])
+                result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                if isinstance(result, HumanFeedbackPending):
+                    return result
+                self._append_public_turn_result_and_persist(result)
+            except Exception as exc:
+                failed_event = ConversationTurnFailedEvent(
+                    type="conversation_turn_failed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                    error=exc,
+                )
+                raise
+            finally:
+                self._pending_user_message = None
+                self._pending_intents = None
+                self._pending_intent_llm = None
+                if failed_event is not None:
+                    self._emit_terminal_conversation_turn_event(failed_event)
+
+            self._emit_terminal_conversation_turn_event(
+                ConversationTurnCompletedEvent(
+                    type="conversation_turn_completed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+            return result
 
     def stream_turn(
         self,
@@ -522,9 +532,14 @@ class _ConversationalMixin:
         session_id: str | None = None,
         intents: Sequence[str] | None = None,
         intent_llm: str | BaseLLM | None = None,
+        stream: bool | None = True,
         **kickoff_kwargs: Any,
     ) -> Any:
-        """Append a user message and stream one conversational turn as frames."""
+        """Stream a turn as frames, optionally controlling LLM token streaming.
+
+        ``stream=None`` enables LLM streaming unless the LLM explicitly sets
+        ``stream=False``. Frame delivery remains active when token streaming is off.
+        """
         if not self._is_conversational_enabled():
             raise ValueError(
                 "Flow.stream_turn() is only available on conversational flows"
@@ -543,65 +558,75 @@ class _ConversationalMixin:
         output_holder: list[StreamSession[Any]] = []
 
         def run_turn() -> Any:
-            crewai_event_bus.emit(
-                self,
-                ConversationTurnStartedEvent(
-                    type="conversation_turn_started",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                ),
-            )
-
-            self._pending_user_message = message
-            self._pending_intents = list(intents) if intents else None
-            self._pending_intent_llm = intent_llm
-
-            try:
-                if "from_checkpoint" not in kickoff_kwargs:
-                    self._reset_turn_execution_state()
-
-                object.__setattr__(self, "_assistant_reply_appended", False)
-                object.__setattr__(self, "_turn_recorded_results", [])
-                original_stream = bool(getattr(self, "stream", False))
-                original_streaming_turn = getattr(
-                    self, "_streaming_conversation_turn", False
+            with self._conversation_turn_scope(sid):
+                crewai_event_bus.emit(
+                    self,
+                    ConversationTurnStartedEvent(
+                        type="conversation_turn_started",
+                        flow_name=self.name or self.__class__.__name__,
+                        session_id=sid,
+                    ),
                 )
+
+                self._pending_user_message = message
+                self._pending_intents = list(intents) if intents else None
+                self._pending_intent_llm = intent_llm
+
                 try:
-                    object.__setattr__(self, "stream", False)
-                    object.__setattr__(self, "_streaming_conversation_turn", True)
-                    result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
-                finally:
-                    object.__setattr__(self, "stream", original_stream)
-                    object.__setattr__(
-                        self, "_streaming_conversation_turn", original_streaming_turn
-                    )
-                if isinstance(result, HumanFeedbackPending):
-                    return result
-                self._append_public_turn_result_and_persist(result)
-            except HumanFeedbackPending as exc:
-                return exc
-            except Exception as exc:
-                failed_event = ConversationTurnFailedEvent(
-                    type="conversation_turn_failed",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                    error=exc,
-                )
-                self._emit_terminal_conversation_turn_event(failed_event)
-                raise
-            finally:
-                self._pending_user_message = None
-                self._pending_intents = None
-                self._pending_intent_llm = None
+                    if "from_checkpoint" not in kickoff_kwargs:
+                        self._reset_turn_execution_state()
 
-            self._emit_terminal_conversation_turn_event(
-                ConversationTurnCompletedEvent(
-                    type="conversation_turn_completed",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                ),
-            )
-            return result
+                    object.__setattr__(self, "_assistant_reply_appended", False)
+                    object.__setattr__(self, "_turn_recorded_results", [])
+                    original_stream = bool(getattr(self, "stream", False))
+                    original_streaming_turn = getattr(
+                        self, "_streaming_conversation_turn", False
+                    )
+                    original_stream_mode = getattr(
+                        self, "_conversation_stream_mode", True
+                    )
+                    try:
+                        object.__setattr__(self, "stream", False)
+                        object.__setattr__(self, "_streaming_conversation_turn", True)
+                        object.__setattr__(self, "_conversation_stream_mode", stream)
+                        result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                    finally:
+                        object.__setattr__(self, "stream", original_stream)
+                        object.__setattr__(
+                            self,
+                            "_streaming_conversation_turn",
+                            original_streaming_turn,
+                        )
+                        object.__setattr__(
+                            self, "_conversation_stream_mode", original_stream_mode
+                        )
+                    if isinstance(result, HumanFeedbackPending):
+                        return result
+                    self._append_public_turn_result_and_persist(result)
+                except HumanFeedbackPending as exc:
+                    return exc
+                except Exception as exc:
+                    failed_event = ConversationTurnFailedEvent(
+                        type="conversation_turn_failed",
+                        flow_name=self.name or self.__class__.__name__,
+                        session_id=sid,
+                        error=exc,
+                    )
+                    self._emit_terminal_conversation_turn_event(failed_event)
+                    raise
+                finally:
+                    self._pending_user_message = None
+                    self._pending_intents = None
+                    self._pending_intent_llm = None
+
+                self._emit_terminal_conversation_turn_event(
+                    ConversationTurnCompletedEvent(
+                        type="conversation_turn_completed",
+                        flow_name=self.name or self.__class__.__name__,
+                        session_id=sid,
+                    ),
+                )
+                return result
 
         stream_session: StreamSession[Any] = StreamSession(
             sync_iterator=create_frame_generator(frame_state, run_turn, output_holder)
@@ -629,6 +654,8 @@ class _ConversationalMixin:
     def chat(
         self,
         *,
+        tui: bool = False,
+        stream: bool | None = None,
         session_id: str | None = None,
         prompt: str = "\nYou: ",
         assistant_prefix: str = "\nAssistant: ",
@@ -641,14 +668,48 @@ class _ConversationalMixin:
     ) -> None:
         """Run an interactive terminal chat loop for a conversational Flow.
 
-        ``chat()`` is a convenience wrapper around ``handle_turn()`` for local
-        REPLs. For web apps, tests, and custom transports, call
-        ``handle_turn()`` directly. The input/output callables are injectable so
+        ``chat()`` consumes ``stream_turn()`` for local
+        REPLs. Use ``tui=True`` for the shared terminal UI, which requires an
+        interactive terminal. Prompt formatting and input/output callables are
+        REPL-only options. Token streaming defaults on unless explicitly
+        disabled on the LLM or with ``stream=False``. Custom ``output_fn``
+        callbacks receive one completed response per turn. For custom streaming
+        transports, use ``stream_turn()``. The input/output callables are injectable so
         callers can customize prompts or exercise the loop without patching
         builtins.
         """
         if not self._is_conversational_enabled():
             raise ValueError("Flow.chat() is only available on conversational flows")
+
+        if tui:
+            from crewai_cli.input_prompt import is_interactive
+            from crewai_cli.kickoff_flow import _run_conversational_flow_tui
+
+            if not is_interactive():
+                raise ValueError(
+                    "chat(tui=True) needs an interactive terminal; use chat() "
+                    "for a plain REPL or handle_turn() for one turn"
+                )
+            if (
+                prompt != "\nYou: "
+                or assistant_prefix != "\nAssistant: "
+                or input_fn is not input
+                or output_fn is not print
+                or not skip_empty
+            ):
+                raise ValueError(
+                    "Prompt formatting, input_fn, output_fn and skip_empty "
+                    "are only configurable in the plain chat() REPL"
+                )
+            _run_conversational_flow_tui(
+                self,
+                stream=stream,
+                session_id=session_id,
+                exit_commands=exit_commands,
+                defer_trace_finalization=defer_trace_finalization,
+                **handle_turn_kwargs,
+            )
+            return
 
         exit_set = {command.lower() for command in exit_commands}
         previous_defer = getattr(self, "defer_trace_finalization", False)
@@ -668,12 +729,41 @@ class _ConversationalMixin:
                 if skip_empty and not message:
                     continue
 
-                result = self.handle_turn(
-                    message,
-                    session_id=session_id,
-                    **handle_turn_kwargs,
-                )
-                output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
+                printed_chunks = False
+                public_events: set[str] = set()
+                try:
+                    with self.stream_turn(
+                        message,
+                        stream=stream,
+                        session_id=session_id,
+                        **handle_turn_kwargs,
+                    ) as turn:
+                        for frame in turn:
+                            if frame.parent_id in public_events or (
+                                frame.type == "method_execution_started"
+                                and frame.data.get("method_name")
+                                in {"converse_turn", "answer_from_history_turn"}
+                            ):
+                                public_events.add(frame.id)
+                            if (
+                                output_fn is print
+                                and frame.id in public_events
+                                and frame.type == "llm_stream_chunk"
+                                and frame.content
+                                and not frame.data.get("tool_call")
+                                and frame.data.get("call_type") != "tool_call"
+                            ):
+                                prefix = assistant_prefix if not printed_chunks else ""
+                                sys.stdout.write(prefix + frame.content)
+                                sys.stdout.flush()
+                                printed_chunks = True
+                        result = turn.result
+                    if not printed_chunks:
+                        output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
+                finally:
+                    if printed_chunks:
+                        sys.stdout.write("\n")
+                        sys.stdout.flush()
         finally:
             self.finalize_session_traces()
             if defer_trace_finalization:
@@ -1100,6 +1190,12 @@ class _ConversationalMixin:
             return None
         return _conversation_state_with_defaults(state_definition.default)
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        # Public custom-handler replies must be recorded while the turn's trace
+        # is active, including trace_scope="turn" and streaming turns.
+        if self._should_apply_pending_kickoff_context():
+            self._append_public_turn_result_and_persist(output)
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         return (
             self._is_conversational_enabled() and self._pending_user_message is not None
@@ -1267,11 +1363,77 @@ class _ConversationalMixin:
         response_format: type[BaseModel],
     ) -> Any:
         try:
-            return llm.call(messages=messages, response_format=response_format)
+            return self._call_conversation_llm(
+                llm, messages=messages, response_format=response_format
+            )
         except TypeError as exc:
             if "response_format" not in str(exc):
                 raise
-            return llm.call(messages=messages, response_model=response_format)
+            return self._call_conversation_llm(
+                llm, messages=messages, response_model=response_format
+            )
+
+    def _call_conversation_llm(
+        self,
+        llm: Any,
+        *,
+        messages: list[LLMMessage],
+        **kwargs: Any,
+    ) -> Any:
+        """Compact request-local context and recover once from provider overflow.
+
+        The canonical transcript remains available for display and persistence.
+        Summary calls disable streaming so their internal output never becomes
+        part of the assistant's streamed reply. Call-only custom LLMs retain
+        their existing behavior.
+        """
+        from crewai_core.printer import Printer
+
+        from crewai.llms.base_llm import BaseLLM, call_stream_override
+        from crewai.utilities.agent_utils import (
+            _proactively_summarize_context,
+            _summarize_context_before_llm_call,
+            is_context_length_exceeded,
+        )
+
+        config = self._conversation_config
+        current_user_message = cast(ConversationState, self.state).current_user_message
+        compact = isinstance(llm, BaseLLM) and (
+            config is None or config.respect_context_window
+        )
+        if compact:
+            original_messages = list(messages)
+            with call_stream_override(llm, False):
+                _proactively_summarize_context(
+                    llm=llm,
+                    messages=messages,
+                    callbacks=[],
+                    printer=Printer(),
+                    tools=None,
+                    response_model=kwargs.get("response_format")
+                    or kwargs.get("response_model"),
+                    verbose=False,
+                    allow_single_user_compaction=True,
+                )
+            if messages != original_messages and current_user_message:
+                messages.append({"role": "user", "content": current_user_message})
+        try:
+            return llm.call(messages=messages, **kwargs)
+        except Exception as exc:
+            if not compact or not is_context_length_exceeded(exc):
+                raise
+            with call_stream_override(llm, False):
+                _summarize_context_before_llm_call(
+                    llm=llm,
+                    messages=messages,
+                    callbacks=[],
+                    printer=Printer(),
+                    verbose=False,
+                    allow_single_user_compaction=True,
+                )
+            if current_user_message:
+                messages.append({"role": "user", "content": current_user_message})
+            return llm.call(messages=messages, **kwargs)
 
     def _build_router_messages(
         self,
@@ -1571,7 +1733,13 @@ class _ConversationalMixin:
 
         from crewai.llms.base_llm import call_stream_override
 
-        with call_stream_override(llm, True):
+        stream = getattr(self, "_conversation_stream_mode", True)
+        if stream is None:
+            stream = not (
+                llm.stream is False
+                and "stream" in getattr(llm, "model_fields_set", set())
+            )
+        with call_stream_override(llm, stream):
             yield
 
     def finalize_session_traces(self, *, discard: bool = False) -> None:
