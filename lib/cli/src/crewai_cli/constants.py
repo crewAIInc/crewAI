@@ -259,6 +259,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
         "ollama_chat",
         "openrouter",
         "snowflake",
+        "together",
     }
 )
 
