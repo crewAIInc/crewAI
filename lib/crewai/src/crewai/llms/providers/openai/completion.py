@@ -2719,9 +2719,10 @@ class OpenAICompletion(BaseLLM):
             if response_id_stream:
                 stream_response_id = response_id_stream
 
+            # A chunk may carry usage alongside choices (e.g. a final chunk with
+            # the last delta and finish_reason), so don't skip its choices.
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
                 usage_data = self._extract_openai_token_usage(completion_chunk)
-                continue
 
             if not completion_chunk.choices:
                 continue
@@ -3006,9 +3007,9 @@ class OpenAICompletion(BaseLLM):
                 if response_id_stream:
                     parsed_stream_response_id = response_id_stream
 
+                # A chunk may carry usage alongside choices; don't skip them.
                 if hasattr(chunk, "usage") and chunk.usage:
                     usage_data = self._extract_openai_token_usage(chunk)
-                    continue
 
                 if not chunk.choices:
                     continue
@@ -3073,9 +3074,9 @@ class OpenAICompletion(BaseLLM):
             if response_id_stream:
                 stream_response_id = response_id_stream
 
+            # A chunk may carry usage alongside choices; don't skip them.
             if hasattr(chunk, "usage") and chunk.usage:
                 usage_data = self._extract_openai_token_usage(chunk)
-                continue
 
             if not chunk.choices:
                 continue
