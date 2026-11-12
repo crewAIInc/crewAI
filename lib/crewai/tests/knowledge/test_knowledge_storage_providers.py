@@ -214,3 +214,65 @@ def test_knowledge_ignores_active_config_of_another_provider():
     config = _build_rag_config("qdrant", lambda texts: [], ChromaDBConfig())
 
     assert isinstance(config, QdrantConfig)
+
+
+def _register_custom_provider(monkeypatch):
+    """A custom vector store: its own config class plus a registered factory."""
+    from dataclasses import field
+    from typing import Literal
+
+    import crewai.rag.factory as rag_factory
+    from crewai.rag.config.base import BaseRagConfig
+    from pydantic.dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class CustomStoreConfig(BaseRagConfig):
+        provider: Literal["custom"] = field(default="custom", init=False)
+        url: str = "http://my-vectordb"
+
+    built = []
+    monkeypatch.setattr(
+        rag_factory,
+        "_factories",
+        {"custom": lambda config: built.append(config) or MagicMock()},
+    )
+    return CustomStoreConfig, built
+
+
+def test_knowledge_with_embedder_uses_the_active_custom_provider(monkeypatch):
+    from crewai.rag.embeddings.providers.custom.embedding_callable import (
+        CustomEmbeddingFunction,
+    )
+
+    config_class, built = _register_custom_provider(monkeypatch)
+    set_rag_config(config_class(url="http://other-vectordb"))
+    built.clear()
+
+    class MyEmbedder(CustomEmbeddingFunction):
+        def __call__(self, input):
+            return TopicEmbedder()(input)
+
+    try:
+        storage = KnowledgeStorage(
+            collection_name="k",
+            embedder={"provider": "custom", "config": {"embedding_callable": MyEmbedder}},
+        )
+    finally:
+        clear_rag_config()
+
+    (config,) = built
+    assert config.provider == "custom"
+    assert config.url == "http://other-vectordb"
+    assert isinstance(config.embedding_function, MyEmbedder)
+    assert storage._client is not None
+
+
+def test_knowledge_without_a_usable_config_for_the_provider_names_it(monkeypatch):
+    from crewai.knowledge.storage.knowledge_storage import _build_rag_config
+
+    config_class, _ = _register_custom_provider(monkeypatch)
+
+    with pytest.raises(ValueError, match="Unsupported RAG provider.*custom"):
+        _build_rag_config("custom", lambda texts: [], None)
+    with pytest.raises(ValueError, match="Unsupported RAG provider.*custom"):
+        _build_rag_config("custom", lambda texts: [], QdrantConfig(embedding_function=lambda t: [0.0]))
