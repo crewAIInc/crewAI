@@ -267,7 +267,7 @@ class TestCreateBatchSlice:
 
         assert batch_ids == ["id1", "id2", "id3"]
         assert batch_texts == ["doc1", "doc2", "doc3"]
-        assert batch_metadatas == [{"a": 1}, {}, {"c": 3}]
+        assert batch_metadatas == [{"a": 1}, None, {"c": 3}]
 
     def test_create_batch_slice_zero_start_index(self) -> None:
         """Test creating a batch slice starting from index 0."""
