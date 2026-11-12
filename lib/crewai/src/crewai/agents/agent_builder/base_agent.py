@@ -250,6 +250,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    # Set once this instance starts a kickoff. Checkpoint saves copy
+    # ``_kickoff_event_id`` into ``checkpoint_kickoff_event_id`` on the live
+    # object, so after a run that field is a stale pointer, not a resume
+    # request; only ``from_checkpoint`` (which resets this) may resume.
+    _has_kicked_off: bool = PrivateAttr(default=False)
     _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
@@ -460,6 +465,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self.agent_executor._resuming = True
         if self.checkpoint_kickoff_event_id is not None:
             self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        self._has_kicked_off = False
         self._rebind_memory_view()
         self._restore_event_scope(state)
 
@@ -728,6 +734,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "apps",
             "mcps",
             "actions",
+            "checkpoint_kickoff_event_id",
         }
 
         existing_llm = shallow_copy(self._llm_for_copy())
