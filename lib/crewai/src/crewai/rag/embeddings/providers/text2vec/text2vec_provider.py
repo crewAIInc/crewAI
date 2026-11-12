@@ -1,18 +1,19 @@
 """Text2Vec embeddings provider."""
 
-from chromadb.utils.embedding_functions.text2vec_embedding_function import (
-    Text2VecEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class Text2VecProvider(BaseEmbeddingsProvider[Text2VecEmbeddingFunction]):
+class Text2VecProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Text2Vec embeddings provider."""
 
-    embedding_callable: type[Text2VecEmbeddingFunction] = Field(
-        default=Text2VecEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "text2vec_embedding_function", "Text2VecEmbeddingFunction"
+        ),
         description="Text2Vec embedding function class",
     )
     model_name: str = Field(
