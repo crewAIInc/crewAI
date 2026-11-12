@@ -23,17 +23,33 @@ class _LockedQdrantClient(SyncQdrantClientBase):
     for concurrent use from several threads: simultaneous writes (or a read during
     a write) raise ``InterfaceError`` and lose points. Clients that share a local
     path also share this one object, so every call goes through one lock.
+
+    The store belongs to the process that opened it. A client inherited through
+    ``os.fork()`` still points at the parent's folder and SQLite connection, so
+    any call from another process raises instead of touching the parent's data.
     """
 
     def __init__(self, **kwargs: Any) -> None:
         # Set before the base class runs, which may already call public methods.
         self._call_lock = threading.RLock()
+        self._owner_pid = os.getpid()
         super().__init__(**kwargs)
 
     def __getattribute__(self, name: str) -> Any:
         attr = super().__getattribute__(name)
         if name.startswith("_") or not callable(attr):
             return attr
+        owner_pid = super().__getattribute__("_owner_pid")
+        if os.getpid() != owner_pid:
+            if name == "close":
+                # Closing here would release the parent's folder lock.
+                return lambda: None
+            raise RuntimeError(
+                f"This local Qdrant client was opened by process {owner_pid} and "
+                f"cannot be used from process {os.getpid()}. It was inherited "
+                "through a fork. Create the client (or the Knowledge/Crew that "
+                "uses it) inside each worker process, after the fork."
+            )
         lock = super().__getattribute__("_call_lock")
         return _with_lock(lock, attr)
 
