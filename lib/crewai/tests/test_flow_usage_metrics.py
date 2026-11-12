@@ -192,6 +192,47 @@ class TestUsageDictToMetrics:
                     successful_requests=1,
                 ),
             ),
+            # Raw Bedrock Converse usage uses camelCase; inputTokens is
+            # uncached input only, so cache reads/writes must be folded in.
+            (
+                {
+                    "inputTokens": 10,
+                    "outputTokens": 5,
+                    "totalTokens": 6641,
+                    "cacheReadInputTokens": 6626,
+                },
+                UsageMetrics(
+                    prompt_tokens=6636,
+                    completion_tokens=5,
+                    total_tokens=6641,
+                    cached_prompt_tokens=6626,
+                    successful_requests=1,
+                ),
+            ),
+            (
+                {
+                    "inputTokens": 10,
+                    "outputTokens": 5,
+                    "totalTokens": 6641,
+                    "cacheWriteInputTokens": 6626,
+                },
+                UsageMetrics(
+                    prompt_tokens=6636,
+                    completion_tokens=5,
+                    total_tokens=6641,
+                    cache_creation_tokens=6626,
+                    successful_requests=1,
+                ),
+            ),
+            (
+                {"inputTokens": 60, "outputTokens": 30, "totalTokens": 90},
+                UsageMetrics(
+                    prompt_tokens=60,
+                    completion_tokens=30,
+                    total_tokens=90,
+                    successful_requests=1,
+                ),
+            ),
         ],
         ids=[
             "none",
@@ -203,6 +244,9 @@ class TestUsageDictToMetrics:
             "anthropic_aliases",
             "gemini_aliases",
             "openai_nested_cached",
+            "bedrock_cache_read",
+            "bedrock_cache_write",
+            "bedrock_uncached",
         ],
     )
     def test_normalization(

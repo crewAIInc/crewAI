@@ -2206,22 +2206,15 @@ class BedrockCompletion(BaseLLM):
         return full_error_msg
 
     def _track_token_usage_internal(self, usage: TokenUsageTypeDef) -> None:  # type: ignore[override]
-        """Track token usage from Bedrock response."""
-        input_tokens = usage.get("inputTokens", 0)
-        output_tokens = usage.get("outputTokens", 0)
-        total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
-        raw_cached = (
-            usage.get("cacheReadInputTokenCount")
-            or usage.get("cacheReadInputTokens")
-            or 0
-        )
-        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
+        """Track token usage from a Bedrock Converse response.
 
-        self._token_usage["prompt_tokens"] += input_tokens
-        self._token_usage["completion_tokens"] += output_tokens
-        self._token_usage["total_tokens"] += total_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
+        Bedrock Converse reports ``inputTokens`` as the non-cached input only,
+        with cache reads and writes in separate fields. Normalization lives
+        in ``UsageMetrics.from_provider_dict`` so the per-LLM counters and
+        the flow aggregator — which receives this same raw Converse
+        ``usage`` dict on ``LLMCallCompletedEvent`` — stay in lockstep.
+        """
+        super()._track_token_usage_internal(dict(usage))
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""

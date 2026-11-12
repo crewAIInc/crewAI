@@ -423,3 +423,131 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert first.total_tokens == 240
         assert first.cached_prompt_tokens == 30
         assert first.successful_requests == 2
+
+
+class TestFromProviderDictBedrockCacheTokens:
+    def test_cache_read_tokens_included_in_prompt_and_total(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 10,
+                "outputTokens": 5,
+                "totalTokens": 6641,
+                "cacheReadInputTokens": 6626,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 6636
+        assert metrics.completion_tokens == 5
+        assert metrics.total_tokens == 6641
+        assert metrics.cached_prompt_tokens == 6626
+        assert metrics.cache_creation_tokens == 0
+
+    def test_cache_write_tokens_included_in_prompt_and_total(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 10,
+                "outputTokens": 5,
+                "totalTokens": 6641,
+                "cacheWriteInputTokens": 6626,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 6636
+        assert metrics.total_tokens == 6641
+        assert metrics.cache_creation_tokens == 6626
+        assert metrics.cached_prompt_tokens == 0
+
+    def test_legacy_token_count_keys_are_accepted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 100,
+                "outputTokens": 50,
+                "totalTokens": 180,
+                "cacheReadInputTokenCount": 30,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 130
+        assert metrics.total_tokens == 180
+        assert metrics.cached_prompt_tokens == 30
+
+    def test_duplicate_cache_aliases_are_not_double_counted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 200,
+                "outputTokens": 100,
+                "cacheReadInputTokenCount": 1000,
+                "cacheReadInputTokens": 1000,
+                "cacheWriteInputTokenCount": 50,
+                "cacheWriteInputTokens": 50,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 1250
+        assert metrics.total_tokens == 1350
+        assert metrics.cached_prompt_tokens == 1000
+        assert metrics.cache_creation_tokens == 50
+
+    def test_zero_legacy_alias_falls_back_to_current_key(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 200,
+                "outputTokens": 100,
+                "cacheReadInputTokenCount": 0,
+                "cacheReadInputTokens": 1000,
+                "cacheWriteInputTokenCount": 0,
+                "cacheWriteInputTokens": 50,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 1250
+        assert metrics.cached_prompt_tokens == 1000
+        assert metrics.cache_creation_tokens == 50
+
+    def test_uncached_camelcase_usage_is_counted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {"inputTokens": 60, "outputTokens": 30, "totalTokens": 90}
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 60
+        assert metrics.completion_tokens == 30
+        assert metrics.total_tokens == 90
+        assert metrics.cached_prompt_tokens == 0
+        assert metrics.cache_creation_tokens == 0
+
+    def test_normalized_dump_is_not_double_counted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "prompt_tokens": 6636,
+                "completion_tokens": 5,
+                "total_tokens": 6641,
+                "cached_prompt_tokens": 6626,
+                "cache_creation_tokens": 0,
+                "successful_requests": 1,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 6636
+        assert metrics.total_tokens == 6641
+        assert metrics.cached_prompt_tokens == 6626
