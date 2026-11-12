@@ -74,6 +74,7 @@ result = crew.kickoff()
 - **engine**: `crawler` (padrão), `rendering` ou `webunlocker`.
 - **wait_in_seconds**: Opcional. Somente com `rendering`, segundos extras de espera após o carregamento da página, de 0 a 30.
 - **max_characters**: Tamanho máximo do texto retornado. O padrão é `20000`.
+- **max_bytes**: Tamanho máximo da página lida, em bytes; uma resposta maior é recusada antes de ser analisada. O padrão é `5242880` (5 MB).
 - **timeout**: Segundos de espera pela Piloterr. O padrão é `120`.
 
 ## Exemplo com Parâmetros

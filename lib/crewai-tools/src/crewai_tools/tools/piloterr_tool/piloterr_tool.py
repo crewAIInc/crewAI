@@ -10,15 +10,16 @@ import requests
 
 
 PILOTERR_API_URL = "https://api.piloterr.com"
+_CHUNK_SIZE = 64 * 1024
 
 
-def _error_message(response: requests.Response, api_key: str) -> str:
+def _error_message(status: int, raw: bytes, api_key: str) -> str:
     """A readable error for the agent, without the API key."""
     detail = ""
     try:
-        body = response.json()
+        body = json.loads(raw)
     except ValueError:
-        detail = response.text.strip()
+        detail = raw.decode("utf-8", errors="replace").strip()
     else:
         if isinstance(body, dict):
             error = body.get("error") or body.get("message") or ""
@@ -28,7 +29,6 @@ def _error_message(response: requests.Response, api_key: str) -> str:
     if api_key:
         detail = detail.replace(api_key, "***")
     detail = detail[:300]
-    status = response.status_code
     # Piloterr answers a rate limit with HTTP 401 and a "Rate limit exceeded" message.
     if status == 429 or (status == 401 and "rate limit" in detail.lower()):
         label = "Piloterr rate limit exceeded"
@@ -45,6 +45,11 @@ class _PiloterrTool(BaseTool):
     """Shared request and error handling for the Piloterr tools."""
 
     timeout: float = 60.0
+    max_bytes: int = Field(
+        default=5 * 1024 * 1024,
+        ge=1,
+        description="Largest response to read, in bytes. Larger responses are refused before parsing.",
+    )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -55,8 +60,12 @@ class _PiloterrTool(BaseTool):
         ]
     )
 
-    def _get(self, path: str, params: dict[str, Any]) -> requests.Response | str:
-        """GET a Piloterr endpoint, or return an error message for the agent."""
+    def _get(self, path: str, params: dict[str, Any]) -> bytes | str:
+        """GET a Piloterr endpoint and return its body, or an error message for the agent.
+
+        The body is streamed and abandoned past ``max_bytes``, so a huge page costs one
+        chunk of memory instead of all of it.
+        """
         api_key = (os.environ.get("PILOTERR_API_KEY") or "").strip()
         if not api_key:
             return "PILOTERR_API_KEY is not set. Get a key at https://app.piloterr.com"
@@ -66,14 +75,24 @@ class _PiloterrTool(BaseTool):
                 params=params,
                 headers={"x-api-key": api_key, "Accept": "application/json"},
                 timeout=self.timeout,
+                stream=True,
             )
+            with response:
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in response.iter_content(chunk_size=_CHUNK_SIZE):
+                    total += len(chunk)
+                    if total > self.max_bytes:
+                        return f"Piloterr's response is larger than {self.max_bytes} bytes; it was not read."
+                    chunks.append(chunk)
         except requests.Timeout:
             return f"Piloterr did not answer within {self.timeout:g} seconds."
         except requests.RequestException as e:
             return f"Could not reach Piloterr: {str(e).replace(api_key, '***')}"
+        raw = b"".join(chunks)
         if not response.ok:
-            return _error_message(response, api_key)
-        return response
+            return _error_message(response.status_code, raw, api_key)
+        return raw
 
 
 class PiloterrGoogleSearchToolSchema(BaseModel):
@@ -120,11 +139,11 @@ class PiloterrGoogleSearchTool(_PiloterrTool):
         if self.location:
             params["location"] = self.location.strip()
 
-        response = self._get("/v2/google/search", params)
-        if isinstance(response, str):
-            return response
+        raw = self._get("/v2/google/search", params)
+        if isinstance(raw, str):
+            return raw
         try:
-            body = response.json()
+            body = json.loads(raw)
         except ValueError:
             return "Piloterr returned a response that is not JSON."
         rows = body.get("organic_results") if isinstance(body, dict) else None
@@ -189,13 +208,14 @@ class PiloterrScrapeWebsiteTool(_PiloterrTool):
         if self.engine == "rendering" and self.wait_in_seconds:
             params["wait_in_seconds"] = self.wait_in_seconds
 
-        response = self._get(f"/v2/website/{self.engine}", params)
-        if isinstance(response, str):
-            return response
+        raw = self._get(f"/v2/website/{self.engine}", params)
+        if isinstance(raw, str):
+            return raw
+        # The API sends the page as a JSON string; accept raw HTML too.
         try:
-            html = response.json()
+            html = json.loads(raw)
         except ValueError:
-            html = response.text
+            html = raw.decode("utf-8", errors="replace")
         if not isinstance(html, str):
             return "Piloterr returned an unexpected response; expected the page HTML."
 

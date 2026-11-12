@@ -74,6 +74,7 @@ result = crew.kickoff()
 - **engine**: `crawler` (default), `rendering` or `webunlocker`.
 - **wait_in_seconds**: Optional. With `rendering` only, extra seconds to wait after the page loads, 0 to 30.
 - **max_characters**: Longest text to return. Default is `20000`.
+- **max_bytes**: Largest page to read, in bytes; a larger response is refused before it is parsed. Default is `5242880` (5 MB).
 - **timeout**: Seconds to wait for Piloterr. Default is `120`.
 
 ## Example with Parameters

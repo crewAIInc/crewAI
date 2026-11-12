@@ -29,4 +29,6 @@ reader = PiloterrScrapeWebsiteTool(
 print(reader.run(website_url="https://example.com"))
 ```
 
+Each tool reads at most `max_bytes` of response (5 MB by default) and refuses a larger one before parsing it.
+
 Errors (missing or invalid key, no credits, rate limit, timeout, a URL that is not an absolute http(s) URL) come back to the agent as text, without the API key.

@@ -74,6 +74,7 @@ result = crew.kickoff()
 - **engine**: `crawler`(기본값), `rendering` 또는 `webunlocker`.
 - **wait_in_seconds**: 선택 사항. `rendering`에서만, 페이지 로드 후 추가로 기다릴 시간(초), 0~30.
 - **max_characters**: 반환할 텍스트의 최대 길이. 기본값은 `20000`입니다.
+- **max_bytes**: 읽을 페이지의 최대 크기(바이트). 더 큰 응답은 분석 전에 거부됩니다. 기본값은 `5242880`(5MB)입니다.
 - **timeout**: Piloterr 응답 대기 시간(초). 기본값은 `120`입니다.
 
 ## 매개변수 사용 예제

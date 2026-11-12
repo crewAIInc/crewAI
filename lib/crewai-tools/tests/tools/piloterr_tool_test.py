@@ -17,14 +17,12 @@ def piloterr_api_key():
 
 
 def _response(status=200, body=None, text=None):
+    raw = text if text is not None else json.dumps(body)
     response = MagicMock(spec=requests.Response)
     response.status_code = status
     response.ok = status < 400
-    if isinstance(body, Exception):
-        response.json.side_effect = body
-    else:
-        response.json.return_value = body
-    response.text = text if text is not None else json.dumps(body)
+    response.__enter__.return_value = response
+    response.iter_content.return_value = [raw.encode()[i : i + 10] for i in range(0, len(raw.encode()), 10)]
     return response
 
 
@@ -81,7 +79,7 @@ def test_scrape_with_the_crawler(mock_get):
 
 @patch("requests.get")
 def test_scrape_rendering_wait_and_raw_html(mock_get):
-    mock_get.return_value = _response(body=ValueError("not JSON"), text=PAGE)
+    mock_get.return_value = _response(text=PAGE)
 
     result = PiloterrScrapeWebsiteTool(engine="rendering", wait_in_seconds=3).run(website_url="https://example.com")
 
@@ -153,3 +151,20 @@ def test_missing_key_and_empty_query_send_no_request(mock_get):
 def test_declare_their_env_var():
     for tool in (PiloterrGoogleSearchTool(), PiloterrScrapeWebsiteTool()):
         assert [env.name for env in tool.env_vars] == ["PILOTERR_API_KEY"]
+
+
+@patch("requests.get")
+def test_large_responses_are_refused_before_parsing(mock_get):
+    mock_get.return_value = _response(body=PAGE)
+
+    result = PiloterrScrapeWebsiteTool(max_bytes=50).run(website_url="https://example.com")
+
+    assert result == "Piloterr's response is larger than 50 bytes; it was not read."
+    assert mock_get.call_args.kwargs["stream"] is True
+    mock_get.return_value.__exit__.assert_called_once()
+
+
+@patch("requests.get")
+def test_error_bodies_that_are_not_json(mock_get):
+    mock_get.return_value = _response(status=502, text="Bad gateway")
+    assert PiloterrGoogleSearchTool().run(search_query="q") == "Piloterr API error (HTTP 502): Bad gateway"
