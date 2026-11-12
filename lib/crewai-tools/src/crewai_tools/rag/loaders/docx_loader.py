@@ -61,10 +61,13 @@ class DOCXLoader(BaseLoader):
         try:
             doc = DocxDocument(file_path)
 
-            text_parts = []
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text_parts.append(paragraph.text)  # noqa: PERF401
+            # Walk paragraphs and tables in document order so table text is
+            # kept next to the text that introduces it.
+            text_parts = [
+                line
+                for block in doc.iter_inner_content()
+                for line in self._block_lines(block)
+            ]
 
             content = "\n".join(text_parts)
 
@@ -83,3 +86,34 @@ class DOCXLoader(BaseLoader):
 
         except Exception as e:
             raise ValueError(f"Error loading DOCX file: {e!s}") from e
+
+    @classmethod
+    def _block_lines(cls, block: Any) -> list[str]:
+        """Return the non-empty text lines of a paragraph or table.
+
+        A table yields one line per row with cells joined by `` | ``. A cell
+        spanning several columns is reported once per row, and tables nested
+        inside a cell are flattened into that cell's text.
+        """
+        from docx.table import Table
+
+        if not isinstance(block, Table):
+            text = block.text
+            return [text] if text.strip() else []
+
+        lines = []
+        for row in block.rows:
+            cells = row.cells
+            row_text = []
+            for i, cell in enumerate(cells):
+                if i and cell._tc is cells[i - 1]._tc:
+                    continue  # horizontally merged cell repeated by python-docx
+                cell_lines = [
+                    line
+                    for inner in cell.iter_inner_content()
+                    for line in cls._block_lines(inner)
+                ]
+                row_text.append(" ".join(cell_lines))
+            if any(row_text):
+                lines.append(" | ".join(row_text))
+        return lines
