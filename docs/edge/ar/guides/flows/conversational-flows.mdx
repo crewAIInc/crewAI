@@ -30,10 +30,16 @@ mode: "wide"
 | `stream_turn(message, session_id=...)` | بث جولة محادثية واحدة كإطارات runtime مرتبة |
 | `chat()` | REPL محلي في الطرفية لـ `Flow` محادثي |
 | `kickoff(inputs={...})` | تشغيل متقدم للـ flow بدون معالجة جولة محادثية |
-| `ask()` | مطالبة حاجزة **داخل** خطوة واحدة (معالج إرشادي أو طلب توضيح) |
+| [`ask()`](/ar/concepts/flows#user-input-in-steps-with-ask) | مطالبة حاجزة **داخل** خطوة واحدة (معالج إرشادي أو طلب توضيح) |
 | `@human_feedback` | الموافقة/الرفض على **مخرجات خطوة** — وليس السطر التالي |
 
-ترفع `handle_turn()` و`stream_turn()` و`chat()` الخطأ `ValueError` ما لم يكن الوضع المحادثاتي مفعّلاً. يؤدي تطبيق `@ConversationConfig(...)` إلى تفعيله تلقائياً؛ وإلا فعيّن `conversational = True`.
+تُرفع `handle_turn()` و`stream_turn()` و`chat()` الخطأ `ValueError` ما لم يكن الوضع المحادثاتي مفعّلاً. يؤدي تطبيق `@ConversationConfig(...)` إلى تفعيله تلقائياً؛ وإلا فعيّن `conversational = True`.
+
+<Tip>
+**`ask()` مقابل `handle_turn()`**:
+- استخدم `self.ask(message, metadata=...)` عندما تحتاج خطوة قيد التشغيل داخل Flow إلى إجابة فورية ومتزامنة (مثل طلب توضيح في منتصف الخطوة، أو مطالبة معالج إرشادي، أو تأكيد) قبل اكتمال الدالة الحالية. يمكنك إرفاق بيانات وصفية للطلب وتوفير `InputProvider` مخصص لتوجيه المطالبات دون حظر إدخال الطرفية. انظر [إدخال المستخدم في الخطوات باستخدام ask()](/ar/concepts/flows#user-input-in-steps-with-ask).
+- استخدم `flow.handle_turn(message, session_id=...)` لدفع جلسة محادثية تبدأ فيها كل رسالة واردة من المستخدم تنفيذاً جديداً لمخطط الـ flow.
+</Tip>
 
 ## بداية سريعة
 

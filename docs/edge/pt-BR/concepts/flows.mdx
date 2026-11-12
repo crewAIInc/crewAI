@@ -716,6 +716,143 @@ Acesse todo o feedback coletado durante um flow via `self.last_human_feedback` (
 
 Para um guia completo sobre feedback humano em flows, incluindo feedback assíncrono/não-bloqueante com providers customizados (Slack, webhooks, etc.), veja [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
 
+### Entrada do Usuário em Passos com ask()
+
+Quando um passo dentro de um flow precisa de entrada direta do usuário — como selecionar uma opção, confirmar uma ação ou responder a uma pergunta de esclarecimento no meio do passo — use `self.ask()`.
+
+Por padrão, o `ask()` solicita a entrada do usuário no terminal via console padrão. No entanto, você pode configurar um `InputProvider` customizado no Flow para integrar com testes automatizados, webhooks, filas de mensagens ou interfaces web/chat customizadas sem bloquear o `stdin`.
+
+#### Providers de Entrada Customizados e Metadados
+
+Um provider de entrada implementa o protocolo `InputProvider` com um único método:
+
+```python
+def request_input(
+    self,
+    message: str,
+    flow: Flow,
+    metadata: dict[str, Any] | None = None,
+) -> InputResponse | str | None:
+    ...
+```
+
+- **Metadados da requisição (Request metadata)**: Você pode passar contexto chave-valor arbitrário (como IDs de prompt, campos obrigatórios ou timeouts) via `self.ask(message, metadata={...})`.
+- **Metadados da resposta (Response metadata)**: O provider pode retornar uma `str` comum, um `InputResponse(text="...", metadata={...})` contendo metadados de transporte ou do chamador (como timestamps, IDs de usuário ou scores de confiança), ou `None` se a entrada não estiver disponível ou for cancelada.
+- **Valor de retorno**: `self.ask()` desempacota o `InputResponse` e retorna a string de resposta diretamente (ou `None`).
+- **Inspecionando metadados de resposta**: O histórico completo — incluindo metadados da requisição e da resposta — é registrado em `flow.input_history`.
+
+#### Exemplo com Scripted Input Provider
+
+Abaixo está um exemplo completo e executável usando um provider scriptado e determinístico. Ele demonstra o envio de metadados na requisição, o recebimento de um `InputResponse` com metadados de resposta e o tratamento de entradas indisponíveis sem bloquear a entrada do terminal ou depender de APIs externas.
+
+```python Code
+from typing import Any, Mapping
+from crewai.flow.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedInputProvider:
+    """Deterministic input provider for automated testing and headless environments."""
+
+    def __init__(self, responses: Mapping[str, InputResponse | str | None]):
+        self.responses = responses
+        self.received_requests: list[dict[str, Any]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | str | None:
+        # Request metadata from self.ask() is delivered here
+        self.received_requests.append(
+            {"message": message, "metadata": metadata or {}}
+        )
+        return self.responses.get(message)
+
+
+class OrderFulfillmentFlow(Flow):
+    # Configure custom input provider at the flow level
+    input_provider = ScriptedInputProvider(
+        responses={
+            "Select shipping method (standard/express):": InputResponse(
+                text="express",
+                metadata={"source": "customer_portal", "confidence": 0.98},
+            ),
+            "Provide gift wrap message (optional):": None,  # Simulated unavailable or skipped input
+        }
+    )
+
+    @start()
+    def process_order(self):
+        # 1. Required prompt with request metadata
+        shipping = self.ask(
+            "Select shipping method (standard/express):",
+            metadata={"step": "shipping_selection", "required": True},
+        )
+        print(f"Selected shipping: {shipping}")
+
+        # 2. Optional prompt where input is unavailable (returns None)
+        gift_message = self.ask(
+            "Provide gift wrap message (optional):",
+            metadata={"step": "gift_wrap", "required": False},
+        )
+        if gift_message is None:
+            # Handle unavailable or skipped input explicitly
+            print("Gift wrap skipped or input unavailable.")
+        else:
+            print(f"Gift wrap message: {gift_message}")
+
+        return "order_processed"
+
+
+if __name__ == "__main__":
+    flow = OrderFulfillmentFlow()
+    result = flow.kickoff()
+    print(f"Flow result: {result}")
+
+    # Inspect input history and response metadata
+    print("\nInput History:")
+    for entry in flow.input_history:
+        print(f"- Prompt: {entry.message}")
+        print(f"  Response text: {entry.response}")
+        print(f"  Request metadata: {entry.metadata}")
+        print(f"  Response metadata: {entry.response_metadata}")
+```
+
+Execute este script:
+
+```bash Command
+python order_flow.py
+```
+
+```text Output
+Selected shipping: express
+Gift wrap skipped or input unavailable.
+Flow result: order_processed
+
+Input History:
+- Prompt: Select shipping method (standard/express):
+  Response text: express
+  Request metadata: {'step': 'shipping_selection', 'required': True}
+  Response metadata: {'source': 'customer_portal', 'confidence': 0.98}
+- Prompt: Provide gift wrap message (optional):
+  Response text: None
+  Request metadata: {'step': 'gift_wrap', 'required': False}
+  Response metadata: None
+```
+
+#### ask() vs handle_turn()
+
+É importante distinguir `self.ask()` de turnos conversacionais:
+
+| Recurso | `self.ask()` | `flow.handle_turn()` |
+| :--- | :--- | :--- |
+| **Contexto de execução** | Chamado **dentro** de um método de passo em execução ativa | Ponto de entrada para iniciar ou avançar um turno completo de flow |
+| **Propósito** | Esclarecimento no meio do passo, pergunta de wizard ou confirmação | Conduzir conversas de múltiplos turnos onde cada mensagem aciona a execução do grafo |
+| **Fluxo de controle** | Chamada síncrona inline pausando o passo atual até ser respondida | Inicia uma nova execução do grafo do flow para aquele turno |
+| **Guia** | Veja acima o uso de `InputProvider` customizado | Veja [Flows Conversacionais](/pt-BR/guides/flows/conversational-flows) |
+
 ## Adicionando Agentes aos Flows
 
 Os agentes podem ser integrados facilmente aos seus flows, oferecendo uma alternativa leve às crews completas quando você precisar executar tarefas simples e focadas. Veja um exemplo de como utilizar um agente em um flow para realizar uma pesquisa de mercado:
