@@ -1,18 +1,19 @@
 """HuggingFace embeddings provider."""
 
-from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-    HuggingFaceEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class HuggingFaceProvider(BaseEmbeddingsProvider[HuggingFaceEmbeddingFunction]):
+class HuggingFaceProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """HuggingFace embeddings provider for the HuggingFace Inference API."""
 
-    embedding_callable: type[HuggingFaceEmbeddingFunction] = Field(
-        default=HuggingFaceEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "huggingface_embedding_function", "HuggingFaceEmbeddingFunction"
+        ),
         description="HuggingFace embedding function class",
     )
     api_key: str | None = Field(
