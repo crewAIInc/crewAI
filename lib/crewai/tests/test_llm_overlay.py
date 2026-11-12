@@ -892,3 +892,28 @@ def test_a_caller_who_chose_litellm_keeps_it_when_the_declared_sdk_is_missing(
 
     assert type(chosen).__name__ == "LLM" and chosen.is_litellm
     assert type(default).__name__ == "OpenAICompletion"
+
+
+def test_alias_provider_canonicalization_preserves_overlay_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TOKEN_KIOSK_API_KEY", "env-key")
+    llm = LLM(
+        model="claude-3-5-sonnet",
+        provider="token-kiosk",
+        api_key="custom-key",
+        base_url="https://custom.token-kiosk.url",
+    )
+    assert llm.provider == "token_kiosk"
+    with llm_overlay({"model:token_kiosk/claude-3-5-sonnet": "token_kiosk/gpt-4o"}):
+        mapped = LLM(
+            model="claude-3-5-sonnet",
+            provider="token-kiosk",
+            api_key="custom-key",
+            base_url="https://custom.token-kiosk.url",
+        )
+    assert mapped.provider == "token_kiosk"
+    assert mapped.model == "gpt-4o"
+    assert mapped.api_key == "custom-key"
+    assert mapped.base_url == "https://custom.token-kiosk.url"
+

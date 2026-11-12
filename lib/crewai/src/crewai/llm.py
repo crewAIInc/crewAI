@@ -514,7 +514,11 @@ class LLM(BaseLLM):
                 model_part if separator and prefix.lower() == "openai" else model
             )
         elif explicit_provider:
-            provider = explicit_provider
+            provider = (
+                PROVIDER_ALIASES.get(explicit_provider.lower(), explicit_provider)
+                if isinstance(explicit_provider, str)
+                else str(explicit_provider)
+            )
             use_native = True
             model_string = model
             if provider == "deepinfra":
