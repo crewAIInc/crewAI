@@ -158,6 +158,52 @@ print(result.quantity)
 
 The override only changes what the agent sees. Direct calls to `tool.run(...)` still return the normal Python value.
 
+### Preserve a Verifiable Tool Result
+
+A typed result can carry evidence alongside an answer. The optional [CAEL bridge](https://github.com/Vovala14/CAEL/tree/d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f/examples/agent_provenance) is a `BaseTool` example that returns the actual local engine response, exact source quotes and IDs, input and engine hashes, and a checked finite rule proof. This bounded logical-premise tool runs without an LLM or API key. It is not a general chat model.
+
+Install the adapter and provide its pinned external runtime. The adapter is MIT-licensed; the CAEL engine and model have a separate non-commercial personal/research licence and are not included in the adapter package.
+
+```bash Code
+uv pip install 'cael-provenance-bridge[crewai] @ git+https://github.com/Vovala14/CAEL.git@d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f#subdirectory=examples/agent_provenance'
+git clone https://github.com/Vovala14/CAEL.git cael-runtime
+git -C cael-runtime checkout 49359eae9aa197d5b92631c16efb74085180a27c
+export CAEL040_ROOT="$PWD/cael-runtime"
+export OTEL_SDK_DISABLED=true
+export CREWAI_TELEMETRY_ENABLED=false
+export CREWAI_DISABLE_VERSION_CHECK=true
+```
+
+Direct `BaseTool.run` calls retain the complete Pydantic envelope. Keep the original request as the trust anchor and verify the complete result before using its citations:
+
+```python Code
+import os
+
+from cael_provenance import CAELRuntime, verify
+from cael_provenance.crewai import CAELProofTool
+
+runtime = CAELRuntime(os.environ["CAEL040_ROOT"])
+request = {
+    "episode_id": "bird-claim",
+    "sources": [
+        {"id": "s1", "text": "Aria is a wren"},
+        {"id": "s2", "text": "Every wren is a bird"},
+        {"id": "s3", "text": "Every bird is visible"},
+    ],
+    "entity": "Aria",
+    "predicate": "visible",
+    "negated": False,
+}
+tool = CAELProofTool(runtime)
+result = tool.run(**request)
+certificate = result.model_dump(mode="json")
+assert verify(certificate, request, runtime)
+assert certificate["reported"]["answer"] == "true"
+assert [item["source_id"] for item in certificate["evidence"]] == ["s1", "s2", "s3"]
+```
+
+Verification establishes a derivation relative to CAEL's parsed premises, not external truth, source authorship, or correct interpretation of arbitrary English. Origins are caller-declared and hashes are not signatures. Unknown and conflicting results stay distinct; unsupported input has no verified answer. If an agent rewrites the result, that new prose is not covered by the original certificate. The linked source includes reproducible framework, checkpoint, isolation and tamper tests, including two retained parser misses.
+
 ### Defining a Cache Function for the Tool
 
 To optimize tool performance with caching, define custom caching strategies using the `cache_function` attribute.
