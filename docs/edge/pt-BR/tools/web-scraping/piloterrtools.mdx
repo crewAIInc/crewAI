@@ -1,0 +1,96 @@
+---
+title: Piloterr
+description: O `PiloterrGoogleSearchTool` e o `PiloterrScrapeWebsiteTool` pesquisam no Google e leem páginas web com a API de dados web da Piloterr.
+icon: spider
+mode: "wide"
+---
+
+# Ferramentas Piloterr
+
+## Descrição
+
+A [Piloterr](https://www.piloterr.com) é uma API de dados web que pesquisa no Google e carrega páginas web na sua própria infraestrutura.
+Duas ferramentas a utilizam:
+
+- **`PiloterrGoogleSearchTool`** pesquisa no Google e retorna os principais resultados orgânicos em JSON, com o `title`, `link`, `snippet` e `position` de cada resultado.
+- **`PiloterrScrapeWebsiteTool`** lê uma página web e retorna seu título e seu texto legível, sem scripts nem estilos.
+
+A Piloterr pode carregar uma página de três maneiras, definidas pelo parâmetro `engine`:
+
+- `crawler` (padrão): uma requisição HTTP simples, a mais rápida, para páginas estáticas e renderizadas no servidor.
+- `rendering`: um navegador headless, para páginas que precisam de JavaScript, com uma espera extra opcional.
+- `webunlocker`: para páginas protegidas por sistemas anti-bot como Cloudflare ou DataDome.
+
+## Instalação
+
+1. Instale o pacote `crewai[tools]`:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+2. Obtenha uma chave de API em [app.piloterr.com](https://app.piloterr.com).
+3. Defina-a na variável de ambiente `PILOTERR_API_KEY`:
+
+```shell
+export PILOTERR_API_KEY="your-api-key"
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import PiloterrGoogleSearchTool, PiloterrScrapeWebsiteTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Answer questions from current web pages",
+    backstory="You search Google, read the most relevant pages and cite them.",
+    tools=[PiloterrGoogleSearchTool(n_results=5), PiloterrScrapeWebsiteTool()],
+)
+
+task = Task(
+    description="Compare the pricing pages of the three most popular vector databases.",
+    expected_output="A table of plans and prices, with the links to the pages.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## Parâmetros
+
+### `PiloterrGoogleSearchTool`
+
+- **n_results**: Número de resultados a retornar, de 1 a 100. O padrão é `10`.
+- **country**: Opcional. Código de país de duas letras, como `us` ou `br`.
+- **language**: Opcional. Idioma dos resultados, como `pt`.
+- **location**: Opcional. Cidade ou região de onde pesquisar, como `São Paulo, Brazil`.
+- **timeout**: Segundos de espera pela Piloterr. O padrão é `60`.
+
+### `PiloterrScrapeWebsiteTool`
+
+- **engine**: `crawler` (padrão), `rendering` ou `webunlocker`.
+- **wait_in_seconds**: Opcional. Somente com `rendering`, segundos extras de espera após o carregamento da página, de 0 a 30.
+- **max_characters**: Tamanho máximo do texto retornado. O padrão é `20000`.
+- **timeout**: Segundos de espera pela Piloterr. O padrão é `120`.
+
+## Exemplo com Parâmetros
+
+```python Code
+from crewai_tools import PiloterrGoogleSearchTool, PiloterrScrapeWebsiteTool
+
+# Google results from Germany, in German
+search = PiloterrGoogleSearchTool(country="de", language="de", n_results=5)
+print(search.run(search_query="beste Laptops 2026"))
+
+# A page that needs JavaScript
+reader = PiloterrScrapeWebsiteTool(engine="rendering", wait_in_seconds=3)
+print(reader.run(website_url="https://example.com"))
+```
+
+## Erros
+
+Os erros voltam para o agente como texto, para que ele possa tentar novamente ou mudar a entrada: chave ausente, chave inválida, falta de créditos, limite de requisições, tempo esgotado ou uma URL que não é uma URL `http(s)` absoluta.
+A chave de API nunca aparece nessas mensagens.

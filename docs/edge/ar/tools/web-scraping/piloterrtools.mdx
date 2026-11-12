@@ -1,0 +1,96 @@
+---
+title: Piloterr
+description: تبحث أداتا `PiloterrGoogleSearchTool` و`PiloterrScrapeWebsiteTool` في Google وتقرآن صفحات الويب عبر واجهة بيانات الويب من Piloterr.
+icon: spider
+mode: "wide"
+---
+
+# أدوات Piloterr
+
+## الوصف
+
+[Piloterr](https://www.piloterr.com) واجهة API لبيانات الويب تبحث في Google وتحمّل صفحات الويب على بنيتها التحتية الخاصة.
+تستخدمها أداتان:
+
+- **`PiloterrGoogleSearchTool`** تبحث في Google وتُرجع أفضل النتائج العضوية بصيغة JSON، مع `title` و`link` و`snippet` و`position` لكل نتيجة.
+- **`PiloterrScrapeWebsiteTool`** تقرأ صفحة ويب وتُرجع عنوانها ونصها المقروء، دون السكربتات والأنماط.
+
+يمكن لـ Piloterr تحميل الصفحة بثلاث طرق، تُحدَّد بالمعامل `engine`:
+
+- ‏`crawler` (الافتراضي): طلب HTTP بسيط، وهو الأسرع، للصفحات الثابتة والصفحات المعروضة من الخادم.
+- ‏`rendering`: متصفح بلا واجهة، للصفحات التي تحتاج إلى JavaScript، مع انتظار إضافي اختياري.
+- ‏`webunlocker`: للصفحات المحمية بأنظمة مكافحة الروبوتات مثل Cloudflare أو DataDome.
+
+## التثبيت
+
+1. ثبّت حزمة `crewai[tools]`:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+2. احصل على مفتاح API من [app.piloterr.com](https://app.piloterr.com).
+3. عيّنه في متغير البيئة `PILOTERR_API_KEY`:
+
+```shell
+export PILOTERR_API_KEY="your-api-key"
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import PiloterrGoogleSearchTool, PiloterrScrapeWebsiteTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Answer questions from current web pages",
+    backstory="You search Google, read the most relevant pages and cite them.",
+    tools=[PiloterrGoogleSearchTool(n_results=5), PiloterrScrapeWebsiteTool()],
+)
+
+task = Task(
+    description="Compare the pricing pages of the three most popular vector databases.",
+    expected_output="A table of plans and prices, with the links to the pages.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## المعاملات
+
+### `PiloterrGoogleSearchTool`
+
+- **n_results**: عدد النتائج المُرجعة، من 1 إلى 100. القيمة الافتراضية `10`.
+- **country**: اختياري. رمز الدولة المكوّن من حرفين، مثل `us` أو `sa`.
+- **language**: اختياري. لغة النتائج، مثل `ar`.
+- **location**: اختياري. المدينة أو المنطقة التي يُجرى منها البحث، مثل `Dubai, United Arab Emirates`.
+- **timeout**: عدد ثواني انتظار Piloterr. القيمة الافتراضية `60`.
+
+### `PiloterrScrapeWebsiteTool`
+
+- **engine**: ‏`crawler` (الافتراضي) أو `rendering` أو `webunlocker`.
+- **wait_in_seconds**: اختياري. مع `rendering` فقط، ثوانٍ إضافية للانتظار بعد تحميل الصفحة، من 0 إلى 30.
+- **max_characters**: أقصى طول للنص المُرجع. القيمة الافتراضية `20000`.
+- **timeout**: عدد ثواني انتظار Piloterr. القيمة الافتراضية `120`.
+
+## مثال مع المعاملات
+
+```python Code
+from crewai_tools import PiloterrGoogleSearchTool, PiloterrScrapeWebsiteTool
+
+# Google results from Germany, in German
+search = PiloterrGoogleSearchTool(country="de", language="de", n_results=5)
+print(search.run(search_query="beste Laptops 2026"))
+
+# A page that needs JavaScript
+reader = PiloterrScrapeWebsiteTool(engine="rendering", wait_in_seconds=3)
+print(reader.run(website_url="https://example.com"))
+```
+
+## الأخطاء
+
+تعود الأخطاء إلى الوكيل نصًا، ليتمكن من إعادة المحاولة أو تغيير مدخلاته: مفتاح مفقود، أو مفتاح غير صالح، أو نفاد الرصيد، أو تجاوز حد الطلبات، أو انتهاء المهلة، أو عنوان ليس عنوان `http(s)` مطلقًا.
+لا يظهر مفتاح API أبدًا في هذه الرسائل.

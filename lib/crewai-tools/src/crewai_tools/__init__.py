@@ -155,6 +155,10 @@ from crewai_tools.tools.patronus_eval_tool.patronus_predefined_criteria_eval_too
     PatronusPredefinedCriteriaEvalTool,
 )
 from crewai_tools.tools.pdf_search_tool.pdf_search_tool import PDFSearchTool
+from crewai_tools.tools.piloterr_tool.piloterr_tool import (
+    PiloterrGoogleSearchTool,
+    PiloterrScrapeWebsiteTool,
+)
 from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import (
     QdrantVectorSearchTool,
 )
@@ -317,6 +321,8 @@ __all__ = [
     "PatronusEvalTool",
     "PatronusLocalEvaluatorTool",
     "PatronusPredefinedCriteriaEvalTool",
+    "PiloterrGoogleSearchTool",
+    "PiloterrScrapeWebsiteTool",
     "QdrantVectorSearchTool",
     "RagTool",
     "S3ReaderTool",

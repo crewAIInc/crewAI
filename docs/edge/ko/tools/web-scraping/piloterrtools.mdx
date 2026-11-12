@@ -1,0 +1,96 @@
+---
+title: Piloterr
+description: PiloterrGoogleSearchTool과 PiloterrScrapeWebsiteTool은 Piloterr 웹 데이터 API로 Google을 검색하고 웹 페이지를 읽습니다.
+icon: spider
+mode: "wide"
+---
+
+# Piloterr 도구
+
+## 설명
+
+[Piloterr](https://www.piloterr.com)는 자체 인프라에서 Google을 검색하고 웹 페이지를 불러오는 웹 데이터 API입니다.
+두 가지 도구가 이를 사용합니다:
+
+- **`PiloterrGoogleSearchTool`**은(는) Google을 검색하여 각 결과의 `title`, `link`, `snippet`, `position`을 담은 상위 자연 검색 결과를 JSON으로 반환합니다.
+- **`PiloterrScrapeWebsiteTool`**은(는) 웹 페이지를 읽어 스크립트와 스타일을 제외한 제목과 읽을 수 있는 텍스트를 반환합니다.
+
+Piloterr는 `engine` 매개변수로 지정하는 세 가지 방식으로 페이지를 불러올 수 있습니다:
+
+- `crawler`(기본값): 정적 페이지와 서버 렌더링 페이지를 위한 가장 빠른 일반 HTTP 요청.
+- `rendering`: JavaScript가 필요한 페이지를 위한 헤드리스 브라우저(선택적 추가 대기 포함).
+- `webunlocker`: Cloudflare나 DataDome 같은 봇 차단으로 보호되는 페이지용.
+
+## 설치
+
+1. `crewai[tools]` 패키지를 설치합니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+2. [app.piloterr.com](https://app.piloterr.com)에서 API 키를 발급받습니다.
+3. `PILOTERR_API_KEY` 환경 변수에 설정합니다:
+
+```shell
+export PILOTERR_API_KEY="your-api-key"
+```
+
+## 예제
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import PiloterrGoogleSearchTool, PiloterrScrapeWebsiteTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Answer questions from current web pages",
+    backstory="You search Google, read the most relevant pages and cite them.",
+    tools=[PiloterrGoogleSearchTool(n_results=5), PiloterrScrapeWebsiteTool()],
+)
+
+task = Task(
+    description="Compare the pricing pages of the three most popular vector databases.",
+    expected_output="A table of plans and prices, with the links to the pages.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## 매개변수
+
+### `PiloterrGoogleSearchTool`
+
+- **n_results**: 반환할 결과 수, 1~100. 기본값은 `10`입니다.
+- **country**: 선택 사항. `us`, `kr` 같은 두 글자 국가 코드.
+- **language**: 선택 사항. `ko` 같은 결과 언어.
+- **location**: 선택 사항. `Seoul, South Korea` 같은 검색 기준 도시 또는 지역.
+- **timeout**: Piloterr 응답 대기 시간(초). 기본값은 `60`입니다.
+
+### `PiloterrScrapeWebsiteTool`
+
+- **engine**: `crawler`(기본값), `rendering` 또는 `webunlocker`.
+- **wait_in_seconds**: 선택 사항. `rendering`에서만, 페이지 로드 후 추가로 기다릴 시간(초), 0~30.
+- **max_characters**: 반환할 텍스트의 최대 길이. 기본값은 `20000`입니다.
+- **timeout**: Piloterr 응답 대기 시간(초). 기본값은 `120`입니다.
+
+## 매개변수 사용 예제
+
+```python Code
+from crewai_tools import PiloterrGoogleSearchTool, PiloterrScrapeWebsiteTool
+
+# Google results from Germany, in German
+search = PiloterrGoogleSearchTool(country="de", language="de", n_results=5)
+print(search.run(search_query="beste Laptops 2026"))
+
+# A page that needs JavaScript
+reader = PiloterrScrapeWebsiteTool(engine="rendering", wait_in_seconds=3)
+print(reader.run(website_url="https://example.com"))
+```
+
+## 오류
+
+오류는 텍스트로 에이전트에 반환되므로, 에이전트가 다시 시도하거나 입력을 바꿀 수 있습니다: 키 누락, 잘못된 키, 크레딧 부족, 요청 한도 초과, 시간 초과, 또는 절대 `http(s)` URL이 아닌 URL.
+API 키는 이 메시지에 절대 나타나지 않습니다.
