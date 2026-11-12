@@ -97,6 +97,23 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
   </Tab>
 </Tabs>
 
+### 비전 기능 감지 재정의
+
+CrewAI는 제공자별 검사와 내장된 모델 기능 데이터를 사용하여 LLM이 비전 및 기타 멀티모달 파일 입력을 지원하는지 판단합니다. Azure 배포에 CrewAI가 식별할 수 없는 사용자 지정 이름을 사용한 경우처럼 이 판단을 재정의해야 할 때만 `supports_vision`을 설정하세요.
+
+`supports_vision`의 기본값은 `None`이며, CrewAI가 지원 여부를 추론하도록 합니다. 멀티모달 파일 입력을 허용하려면 `True`로, 거부하려면 `False`로 설정하세요. 명시적인 값은 항상 CrewAI가 감지한 기능보다 우선합니다.
+
+```python
+from crewai import LLM
+
+llm = LLM(
+    model="azure/vision-production",  # 사용자 지정 Azure 배포 이름
+    supports_vision=True,
+)
+```
+
+이 설정은 CrewAI의 기능 검증만 제어하며, 제공자 엔드포인트, 요청 프로토콜 또는 제공자가 허용하는 파일 형식을 변경하지 않습니다.
+
 <Info>
   CrewAI는 OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, Snowflake Cortex에 대해 네이티브 SDK 통합을 제공합니다 — 제공자별 extras(예: `uv add "crewai[openai]"`) 외에 추가 설치가 필요하지 않습니다.
 

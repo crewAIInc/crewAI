@@ -1617,6 +1617,8 @@ class GeminiCompletion(BaseLLM):
         Returns:
             True if the model supports multimodal inputs.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
         return True
 
     def format_text_content(self, text: str) -> dict[str, Any]:

@@ -222,6 +222,7 @@ class AzureCompletion(BaseLLM):
             "api": "responses",
             "provider": "openai",
             "stream": self.stream,
+            "supports_vision": self.supports_vision,
         }
 
         if self.temperature is not None:
@@ -1438,10 +1439,46 @@ class AzureCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+        Azure's established vision model names are recognized first, followed
+        by LiteLLM's Azure and Azure AI catalog entries for newer model IDs.
 
         Returns:
             True if the model supports images.
         """
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
-        return any(self.model.lower().startswith(m) for m in vision_models)
+        if any(self.model.lower().startswith(m) for m in vision_models):
+            return True
+        return (
+            self.get_model_capability(
+                "supports_vision", providers=["azure", "azure_ai"]
+            )
+            is True
+        )
+
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
+        """Reject files Azure chat completions cannot carry instead of dropping them."""
+        if self.supports_multimodal():
+            self._reject_unsupported_files(messages)
+        return super()._process_message_files(messages, api=api)
+
+    def _reject_unsupported_files(self, messages: list[LLMMessage]) -> None:
+        try:
+            from crewai_files import get_supported_content_types
+        except ImportError:
+            return
+
+        accepted = get_supported_content_types("azure", api=self.api)
+        for msg in messages:
+            for name, file in (msg.get("files") or {}).items():
+                if not any(file.content_type.startswith(t) for t in accepted):
+                    raise ValueError(
+                        f"Model '{self.model}' on Azure accepts only "
+                        f"{', '.join(accepted)} file inputs, but '{name}' is "
+                        f"{file.content_type}. Remove it, or pass its contents "
+                        "as text."
+                    )

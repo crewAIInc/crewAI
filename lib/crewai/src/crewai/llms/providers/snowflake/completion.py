@@ -370,5 +370,13 @@ class SnowflakeCompletion(OpenAICompletion):
         return model.startswith(("openai-", "claude-", "anthropic."))
 
     def supports_multimodal(self) -> bool:
+        if (supports_vision := self._supports_vision_override()) is not None:
+            return supports_vision
+
         model = self.model.lower()
-        return model.startswith(("openai-", "claude-", "anthropic."))
+        if model.startswith(("openai-", "claude-", "anthropic.")):
+            return True
+        return (
+            self.get_model_capability("supports_vision", providers=["snowflake"])
+            is True
+        )
