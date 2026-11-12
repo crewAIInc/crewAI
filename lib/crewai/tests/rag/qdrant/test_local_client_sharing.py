@@ -271,3 +271,78 @@ def test_forked_child_does_not_delete_or_reuse_the_parents_default_folder(
     assert os.read(read_end, 10) == b"own"
     assert os.path.isdir(parent_folder)
     assert parent.client.collection_exists("nothing") is False
+
+
+def _run_in_forked_child(action) -> str:
+    """Run ``action`` in a forked child; return "ok" or the error it raised."""
+    read_end, write_end = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        status = 1
+        try:
+            try:
+                action()
+                os.write(write_end, b"ok")
+            except Exception as e:
+                os.write(write_end, f"{type(e).__name__}: {e}".encode())
+            status = 0
+        finally:
+            os._exit(status)
+    os.waitpid(pid, 0)
+    return os.read(read_end, 4096).decode()
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="needs os.fork")
+def test_inherited_client_is_rejected_in_a_forked_child(tmp_path):
+    client = create_client(_config(tmp_path / "q"))
+
+    outcome = _run_in_forked_child(lambda: client.client.collection_exists("x"))
+
+    assert outcome.startswith("RuntimeError: This local Qdrant client was opened by")
+    assert client.client.collection_exists("x") is False
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="needs os.fork")
+def test_global_rag_client_created_before_a_fork_is_rejected_in_the_child(tmp_path):
+    from crewai.rag.config.utils import clear_rag_config, get_rag_client, set_rag_config
+
+    set_rag_config(_config(tmp_path / "q"))
+    try:
+        get_rag_client()
+
+        outcome = _run_in_forked_child(
+            lambda: get_rag_client().get_or_create_collection(collection_name="k")
+        )
+
+        assert "cannot be used from process" in outcome
+    finally:
+        clear_rag_config()
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="needs os.fork")
+def test_knowledge_storage_client_created_before_a_fork_is_rejected_in_the_child(
+    tmp_path,
+):
+    from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+    storage = KnowledgeStorage(collection_name="k")
+    storage._client = create_client(_config(tmp_path / "q"))
+
+    outcome = _run_in_forked_child(
+        lambda: storage._get_client().get_or_create_collection(collection_name="k")
+    )
+
+    assert "cannot be used from process" in outcome
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="needs os.fork")
+def test_closing_an_inherited_client_in_a_child_leaves_the_parent_folder_locked(
+    tmp_path,
+):
+    client = create_client(_config(tmp_path / "q"))
+
+    outcome = _run_in_forked_child(lambda: client.client.close())
+
+    assert outcome == "ok"
+    with pytest.raises(RuntimeError, match="already accessed by another instance"):
+        SyncQdrantClient(path=str(tmp_path / "q"))
