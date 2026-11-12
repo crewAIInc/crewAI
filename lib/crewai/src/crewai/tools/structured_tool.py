@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from functools import partial
 import inspect
 import json
 import re
@@ -264,8 +265,9 @@ class CrewStructuredTool(BaseModel):
             ...     return a + b
             >>> tool = CrewStructuredTool.from_function(add)
         """
-        name = name or func.__name__
-        description = description or inspect.getdoc(func)
+        annotation_source = func.func if isinstance(func, partial) else func
+        name = name or annotation_source.__name__
+        description = description or inspect.getdoc(annotation_source)
 
         if description is None:
             raise ValueError(
@@ -287,7 +289,8 @@ class CrewStructuredTool(BaseModel):
             name=name,
             description=description,
             args_schema=schema,
-            result_schema=result_schema or _infer_result_schema_from_callable(func),
+            result_schema=result_schema
+            or _infer_result_schema_from_callable(annotation_source),
             func=func,
             result_as_answer=return_direct,
             **kwargs,
@@ -313,7 +316,8 @@ class CrewStructuredTool(BaseModel):
         """
         sig = inspect.signature(func)
 
-        type_hints = get_type_hints(func)
+        annotation_source = func.func if isinstance(func, partial) else func
+        type_hints = get_type_hints(annotation_source)
 
         fields = {}
         for param_name, param in sig.parameters.items():
