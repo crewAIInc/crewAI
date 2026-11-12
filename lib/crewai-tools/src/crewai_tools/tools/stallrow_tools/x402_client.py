@@ -22,6 +22,15 @@ have paid. The key is read from the environment only and is never
 logged. The `eth_account` signer dependency is imported lazily, at the
 moment a payment is actually attempted, so importing this module (and
 the tool built on it) works without it installed.
+
+If the paid retry's response is lost in transport, the payment may or
+may not have settled — so the client fails closed with
+`X402ResponseLostError`: it re-reads the challenge with one unpaid
+probe, names any payment terms the fresh challenge changed, and never
+authorizes a second payment for a call whose first payment may still
+settle. The error distinguishes `payment_confirmed` from
+`metadata_delivered` instead of reporting the paid call as a plain
+failure.
 """
 
 from __future__ import annotations
@@ -80,6 +89,10 @@ class X402UnsupportedAssetError(X402Error):
 
 class X402PaymentError(X402Error):
     """The payment flow failed (bad challenge, rejected payment, ...)."""
+
+
+class X402ResponseLostError(X402PaymentError):
+    """A paid request's response was lost; settlement is unconfirmed."""
 
 
 def parse_payment_required(response: requests.Response) -> dict[str, Any]:
@@ -274,7 +287,9 @@ class X402Client:
 
         Returns the endpoint's JSON body on success. Raises X402Error
         subclasses for every payment-side failure; requests exceptions
-        propagate for transport failures.
+        propagate for transport failures of the unpaid probe, while a
+        transport failure of the paid retry raises
+        `X402ResponseLostError` (see `_response_lost_error`).
         """
         response = requests.post(url, json=payload, timeout=timeout)
         if response.status_code == 200:
@@ -317,12 +332,17 @@ class X402Client:
             )
 
         header = self._payment_header(challenge, requirement)
-        paid = requests.post(
-            url,
-            json=payload,
-            headers={"PAYMENT-SIGNATURE": header},
-            timeout=timeout,
-        )
+        try:
+            paid = requests.post(
+                url,
+                json=payload,
+                headers={"PAYMENT-SIGNATURE": header},
+                timeout=timeout,
+            )
+        except requests.RequestException as e:
+            raise self._response_lost_error(
+                url, payload, requirement, timeout, e
+            ) from e
         if paid.status_code == 402:
             raise X402PaymentError(
                 "payment was not accepted: the endpoint answered 402 again "
@@ -333,6 +353,69 @@ class X402Client:
                 f"paid request failed: HTTP {paid.status_code}: {paid.text[:500]}"
             )
         return self._json_body(paid)
+
+    def _response_lost_error(
+        self,
+        url: str,
+        payload: dict[str, Any],
+        requirement: dict[str, Any],
+        timeout: int,
+        cause: requests.RequestException,
+    ) -> X402ResponseLostError:
+        """Build the error for a paid request whose response was lost.
+
+        The signed authorization was submitted but no response came
+        back, so settlement is unconfirmed and the metadata was not
+        delivered. Before reporting, re-read the endpoint's challenge
+        with one unpaid probe: if the fresh challenge's terms
+        (network, asset, payTo, amount) differ from the ones that were
+        paid, the changes are named in the error. Either way the
+        client fails closed — it never authorizes a second payment
+        for a call whose first payment may still settle.
+        """
+        changed: list[str] = []
+        probe_note = "the fresh challenge could not be re-read"
+        probe: requests.Response | None = None
+        try:
+            probe = requests.post(url, json=payload, timeout=timeout)
+        except requests.RequestException:
+            probe = None
+        if probe is not None and probe.status_code == 402:
+            fresh: dict[str, Any] | None = None
+            try:
+                fresh = select_requirement(parse_payment_required(probe))
+            except X402PaymentError:
+                fresh = None
+            if fresh is not None:
+                probe_note = "the fresh challenge was re-read unpaid"
+                for field in ("network", "asset", "payTo", "amount"):
+                    old = str(requirement.get(field))
+                    new = str(fresh.get(field))
+                    same = (
+                        old.lower() == new.lower()
+                        if field in ("asset", "payTo")
+                        else old == new
+                    )
+                    if not same:
+                        changed.append(f"{field} {old} -> {new}")
+        elif probe is not None:
+            probe_note = (
+                f"the recovery probe was answered HTTP {probe.status_code}, "
+                "not a fresh 402 challenge"
+            )
+        message = (
+            "the paid request's response was lost in transport "
+            f"({cause}); settlement of the submitted payment is "
+            "unconfirmed (payment_confirmed: unknown) and the metadata "
+            "was not delivered (metadata_delivered: false). "
+            f"{probe_note}; no second payment was authorized"
+        )
+        if changed:
+            message += (
+                ": the fresh challenge changed the payment terms "
+                f"({'; '.join(changed)})"
+            )
+        return X402ResponseLostError(message)
 
     def _payment_header(
         self, challenge: dict[str, Any], requirement: dict[str, Any]

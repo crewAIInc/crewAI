@@ -8,6 +8,7 @@ from crewai_tools.tools.stallrow_tools.stallrow_page_metadata_tool import (
     StallRowPageMetadataTool,
 )
 import pytest
+import requests
 
 
 # Hardhat's well-known development account #0 — a public test vector,
@@ -273,6 +274,39 @@ def test_second_402_after_payment_is_an_error(mock_post, _wallet_env):
     assert result.startswith("Error fetching page metadata:")
     assert "402" in result
     assert mock_post.call_count == 2
+
+
+@patch(POST_PATH)
+def test_response_loss_after_payment_fails_closed_on_changed_challenge(
+    mock_post, _wallet_env
+):
+    # The paid request's response is lost in transport: the submitted
+    # payment may or may not have settled, and the metadata never
+    # arrived. The client re-reads the challenge with an unpaid probe;
+    # the fresh challenge demands a higher amount, so it must refuse
+    # to authorize a second payment and surface the payment/delivery
+    # states separately instead of a plain failure.
+    mock_post.side_effect = [
+        _challenge_response(),
+        requests.ConnectionError("connection dropped"),
+        _challenge_response(amount="6000"),
+    ]
+    tool = StallRowPageMetadataTool()
+
+    result = tool._run("https://example.com/")
+
+    assert result.startswith("Error fetching page metadata:")
+    assert "payment_confirmed: unknown" in result
+    assert "metadata_delivered: false" in result
+    assert "no second payment was authorized" in result
+    assert "amount 5000 -> 6000" in result
+    # Unpaid probe, the one paid attempt, the unpaid re-read — and
+    # nothing more: exactly one request ever carried a signature.
+    assert mock_post.call_count == 3
+    assert "PAYMENT-SIGNATURE" in mock_post.call_args_list[1].kwargs["headers"]
+    assert "PAYMENT-SIGNATURE" not in (
+        mock_post.call_args_list[2].kwargs.get("headers") or {}
+    )
 
 
 @patch(POST_PATH)
