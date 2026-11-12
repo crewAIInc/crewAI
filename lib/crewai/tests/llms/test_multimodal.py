@@ -137,6 +137,26 @@ class TestAnthropicMultimodal:
         llm = LLM(model="anthropic/claude-4-opus")
         assert llm.supports_multimodal() is True
 
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "anthropic/claude-sonnet-5-5",
+            "anthropic/claude-opus-5-5",
+            "anthropic/claude-haiku-5-5",
+            "anthropic/claude-fable-5-1",
+            "anthropic/claude-opus-4.8",
+            "anthropic/claude-3-5-sonnet-20241022",
+        ],
+    )
+    def test_supports_multimodal_claude3_and_later(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model", ["anthropic/claude-2.1", "anthropic/claude-instant-1.2"]
+    )
+    def test_does_not_support_pre_claude3(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Anthropic image format uses source-based structure."""
         llm = LLM(model="anthropic/claude-3-sonnet-20240229")
