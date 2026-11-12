@@ -522,12 +522,12 @@ def test_gemini_model_capabilities():
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
     from crewai.llms.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm_2_0, GeminiCompletion)
-    assert llm_2_0.supports_tools == True
+    assert llm_2_0.supports_function_calling() is True
 
     # Test Gemini 1.5 model
     llm_1_5 = LLM(model="google/gemini-1.5-pro")
     assert isinstance(llm_1_5, GeminiCompletion)
-    assert llm_1_5.supports_tools == True
+    assert llm_1_5.supports_function_calling() is True
 
 
 def test_gemini_generation_config():

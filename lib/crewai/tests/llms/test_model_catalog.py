@@ -20,7 +20,6 @@ def synthetic_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(model_catalog, "_EXACT_ENTRIES", exact)
     monkeypatch.setattr(model_catalog, "_NORMALIZED_ENTRIES", normalized)
 
-
 def test_lookup_returns_the_catalog_entry_for_an_explicit_provider() -> None:
     entry = find_model_catalog_entry("gpt-4o", provider="openai")
 
