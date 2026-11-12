@@ -29,6 +29,7 @@ from crewai.rag.qdrant.utils import (
     _is_sync_client,
     _prepare_search_params,
     _process_search_results,
+    _sanitize_collection_name,
 )
 from crewai.rag.types import BaseRecord, SearchResult
 
@@ -90,7 +91,17 @@ class QdrantClient(BaseClient):
                     ),
                 },
             )
-        return _get_collection_params(kwargs)
+        return _get_collection_params(
+            cast(
+                QdrantCollectionCreateParams,
+                {
+                    **kwargs,
+                    "collection_name": _sanitize_collection_name(
+                        kwargs["collection_name"]
+                    ),
+                },
+            )
+        )
 
     def _embed_in_batch(
         self, documents: list[BaseRecord]
@@ -138,7 +149,7 @@ class QdrantClient(BaseClient):
                 alt_client="AsyncQdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
 
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
@@ -178,7 +189,7 @@ class QdrantClient(BaseClient):
                 alt_client="QdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
 
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
@@ -220,7 +231,7 @@ class QdrantClient(BaseClient):
                 alt_client="AsyncQdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
 
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
@@ -271,7 +282,7 @@ class QdrantClient(BaseClient):
                 alt_client="QdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
 
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
@@ -308,7 +319,7 @@ class QdrantClient(BaseClient):
                 alt_client="AsyncQdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
         documents = kwargs["documents"]
         batch_size = kwargs.get("batch_size", self.default_batch_size)
 
@@ -357,7 +368,7 @@ class QdrantClient(BaseClient):
                 alt_client="QdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
         documents = kwargs["documents"]
         batch_size = kwargs.get("batch_size", self.default_batch_size)
 
@@ -410,7 +421,7 @@ class QdrantClient(BaseClient):
                 alt_client="AsyncQdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
         query = kwargs["query"]
         limit = kwargs.get("limit", self.default_limit)
         metadata_filter = kwargs.get("metadata_filter")
@@ -464,7 +475,7 @@ class QdrantClient(BaseClient):
                 alt_client="QdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
         query = kwargs["query"]
         limit = kwargs.get("limit", self.default_limit)
         metadata_filter = kwargs.get("metadata_filter")
@@ -507,7 +518,7 @@ class QdrantClient(BaseClient):
                 alt_client="AsyncQdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
 
         if not self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
@@ -532,7 +543,7 @@ class QdrantClient(BaseClient):
                 alt_client="QdrantClient",
             )
 
-        collection_name = kwargs["collection_name"]
+        collection_name = _sanitize_collection_name(kwargs["collection_name"])
 
         if not await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
