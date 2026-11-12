@@ -147,6 +147,17 @@ Tanto `.yml` quanto `.yaml` são aceitos. Ao renomear ou mover uma configuraçã
 
 Sem um `definition` explícito, a descoberta aceita um único arquivo `agent.py`, `agent.json`, `agent.yml` ou `agent.yaml` na raiz, ou o caminho convencional `src/<package>/agent.py`. Se vários arquivos forem encontrados, ocorrerá um erro; defina `definition` para escolher um deles.
 
+## Adicionar ferramentas pela CLI
+
+Em um terminal, `crewai create agent` para um projeto em JSON ou YAML abre o mesmo seletor de ferramentas do `crewai create crew`, incluindo aplicações da CrewAI Platform. Execute `crewai tool add` no projeto para adicionar mais ferramentas depois, pelo seletor ou pelo nome:
+
+```shell Terminal
+crewai tool add
+crewai tool add SerperDevTool platform:gmail/send-email
+```
+
+O comando acrescenta itens à lista `tools` da definição e altera a dependência `crewai` para `crewai[tools]` quando uma ferramenta precisa dela; execute `crewai install` em seguida. As aplicações da CrewAI Platform são validadas no AMP antes de serem adicionadas, e o Enterprise Action Auth Token é salvo em `.env`. Execute `crewai tool setup` para validar as aplicações da plataforma que já estão na definição, por exemplo depois de clonar o projeto. Agents em Python são editados em `agent.py`.
+
 ## Adicionar uma ferramenta personalizada
 
 Use o arquivo incluído `tools/support_hours.py` como ponto de partida para outra ferramenta:
