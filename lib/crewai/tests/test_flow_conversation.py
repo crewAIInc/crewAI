@@ -1711,6 +1711,80 @@ class TestPersistCustomListenReplies:
         ]
 
 
+class TestConversationalPersistenceGuideExample:
+    """Smoke check for the guide's runnable persistence example.
+
+    Mirrors the "Runnable example: persistence and restart" section of
+    ``docs/edge/en/guides/flows/conversational-flows.mdx``: a deterministic
+    conversational Flow (no LLM) whose history survives a fresh instance
+    when both share one ``SQLiteFlowPersistence`` store and session id.
+    """
+
+    SESSION = "guide-persistence-session"
+
+    @staticmethod
+    def _roles(messages: Any) -> list[tuple[Any, Any]]:
+        rows: list[tuple[Any, Any]] = []
+        for message in messages:
+            if hasattr(message, "role"):
+                rows.append((message.role, message.content))
+            else:
+                rows.append((message["role"], message["content"]))
+        return rows
+
+    def test_guide_example_restores_history_across_instances(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "guide-example.db"))
+
+        @ConversationConfig()
+        @persist(store)
+        class OrderDeskFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                message = (self.state.current_user_message or "").lower()
+                if "order" in message:
+                    return "order_status"
+                return "general"
+
+            @listen("order_status")
+            def handle_order_status(self) -> str:
+                reply = "Your order is on its way."
+                self.append_assistant_message(reply)
+                return reply
+
+            @listen("general")
+            def handle_general(self) -> str:
+                reply = f"You said: {self.state.current_user_message}"
+                self.append_assistant_message(reply)
+                return reply
+
+        first = OrderDeskFlow()
+        first.handle_turn("Where is my order?", session_id=self.SESSION)
+        first.finalize_session_traces()
+        assert self._roles(first.state.messages) == [
+            ("user", "Where is my order?"),
+            ("assistant", "Your order is on its way."),
+        ]
+
+        restarted = OrderDeskFlow()
+        restarted.handle_turn("And what about returns?", session_id=self.SESSION)
+        restarted.finalize_session_traces()
+        assert self._roles(restarted.state.messages) == [
+            ("user", "Where is my order?"),
+            ("assistant", "Your order is on its way."),
+            ("user", "And what about returns?"),
+            ("assistant", "You said: And what about returns?"),
+        ]
+
+        other = OrderDeskFlow()
+        other.handle_turn("Where is my order?", session_id="guide-other-session")
+        other.finalize_session_traces()
+        assert self._roles(other.state.messages) == [
+            ("user", "Where is my order?"),
+            ("assistant", "Your order is on its way."),
+        ]
+
+
 class TestFalsyRouteTurnFallback:
     """A falsy ``route_turn()`` must never replay a previous turn's intent.
 
