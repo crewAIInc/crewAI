@@ -7,6 +7,8 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import logging
+from pathlib import Path
 from threading import Barrier, Lock, Thread
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -231,6 +233,71 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
         assert written["trace_url"] == url
     else:
         assert written is None
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+@pytest.mark.parametrize(
+    ("target", "error_type"),
+    [
+        ("Console.print", BrokenPipeError),
+        ("Console", OSError),
+        ("Panel", ValueError),
+    ],
+)
+def test_trace_link_rendering_failure_does_not_fail_execution(
+    collector: SimpleNamespace,
+    recorded_runs: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    authenticated: bool,
+    target: str,
+    error_type: type[Exception],
+) -> None:
+    from crewai.execution import begin_execution, end_execution, get_execution_uuid
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    url = collector.url + "/crewai_plus/otel_traces/run?access_code=private-viewer-code"
+    collector.grant_override = {"trace_url": url}
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    with trace_consent(lambda: True):
+        token = begin_execution(tracing=True)
+        execution_id = get_execution_uuid()
+        try:
+            record(get_trace_session())
+        finally:
+            with (
+                caplog.at_level(logging.WARNING),
+                patch(
+                    f"crewai.telemetry.tracing.grants.{target}",
+                    side_effect=error_type(f"private renderer details: {url}"),
+                ),
+            ):
+                end_execution(token)
+
+    assert get_trace_session() is None
+    assert get_execution_uuid() is None
+    assert len(collector.batches) == 1
+    assert spans(collector.batches[0][1])[0].name == "execute flow"
+    written = _last_run(recorded_runs)
+    assert written is not None
+    assert written["execution_id"] == execution_id
+    assert written["trace_url"] == url
+    assert written["tier"] == ("authenticated" if authenticated else "ephemeral")
+    warnings = [
+        entry
+        for entry in caplog.records
+        if entry.name == "crewai.telemetry.tracing.grants"
+        and entry.levelno == logging.WARNING
+    ]
+    assert len(warnings) == 1
+    assert warnings[0].getMessage() == (
+        f"Could not display execution trace link ({error_type.__name__})"
+    )
+    assert warnings[0].exc_info is None
+    assert "private" not in caplog.text
+    assert url not in caplog.text
 
 
 @pytest.mark.parametrize("first_status", [200, 401])

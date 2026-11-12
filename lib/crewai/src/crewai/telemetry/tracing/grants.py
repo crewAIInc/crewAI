@@ -411,7 +411,14 @@ class GrantSpanExporter(SpanExporter):
             # Counts that a trace reached AMP, never its contents. The legacy
             # TraceBatchManager emits the same names for runs outside a kickoff.
             Telemetry().feature_usage_span(f"tracing:{tier}_sent")
-            self._show_trace_link()
+            try:
+                self._show_trace_link()
+            except Exception as error:
+                # Display failures must not invalidate an already exported run.
+                # Error messages may contain trace contents or viewer credentials.
+                logger.warning(
+                    "Could not display execution trace link (%s)", type(error).__name__
+                )
 
     def _show_trace_link(self) -> None:
         """Show where to see the run that was just exported, once.
