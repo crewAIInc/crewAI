@@ -63,7 +63,12 @@ class AutomSearchTool(BaseTool):
     args_schema: type[BaseModel] = AutomSearchToolSchema
     engine: Literal["google", "bing", "brave", "duckduckgo", "yahoo"] = "google"
     search_type: Literal["search", "news"] = "search"
-    n_results: int = Field(default=10, ge=1, le=100)
+    n_results: int = Field(
+        default=10,
+        ge=1,
+        le=10,
+        description="Number of results to return. Autom returns one page of about 10 results.",
+    )
     country: str | None = Field(
         default=None, description="Two-letter country code, such as us."
     )

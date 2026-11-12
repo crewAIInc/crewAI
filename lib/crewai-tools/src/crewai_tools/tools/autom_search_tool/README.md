@@ -20,7 +20,7 @@ from crewai_tools import AutomSearchTool
 tool = AutomSearchTool(
     engine="google",  # google (default), bing, brave, duckduckgo or yahoo
     search_type="search",  # search (default) or news (Google News)
-    n_results=10,  # 1 to 100
+    n_results=10,  # 1 to 10: Autom returns one page of results
     country="us",  # optional two-letter country code
     language="en",  # optional, Google only
     location="New York",  # optional, Google web search only

@@ -131,3 +131,9 @@ def test_missing_key_and_empty_query_send_no_request(mock_get):
 
 def test_declares_its_env_var():
     assert [env.name for env in AutomSearchTool().env_vars] == ["AUTOM_API_KEY"]
+
+
+@pytest.mark.parametrize("n_results", [0, 11])
+def test_n_results_stays_within_one_page(n_results):
+    with pytest.raises(ValueError):
+        AutomSearchTool(n_results=n_results)
