@@ -353,6 +353,38 @@ class TestDeepInfraProviderDirect:
         assert provider.api_base == "https://proxy.example.com/v1/openai"
         assert catalog_get.call_args.args[0] == "https://proxy.example.com/v1/openai/models"
 
+    def test_generic_variables_do_not_configure_the_provider(
+        self, monkeypatch, catalog_get
+    ):
+        """Test variables that belong to other tools leave the embedder alone.
+
+        MODEL_NAME is crewAI's chat model and API_BASE is Ollama's server; with
+        no model configured, the catalog still picks the embedding model.
+        """
+        monkeypatch.setenv("DEEPINFRA_API_KEY", "di-env-key")
+        monkeypatch.setenv("MODEL_NAME", "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash")
+        monkeypatch.setenv("API_BASE", "http://localhost:11434")
+        monkeypatch.setenv("API_KEY", "another-service-key")
+        monkeypatch.setenv("DEFAULT_HEADERS", '{"X-Other": "1"}')
+        catalog_get.side_effect = None
+        catalog_get.return_value = _catalog_response(("BAAI/bge-m3", ["embed"]))
+
+        provider = DeepInfraProvider()
+
+        assert provider.model_name == "BAAI/bge-m3"
+        assert provider.api_base == "https://api.deepinfra.com/v1/openai"
+        assert provider.api_key == "di-env-key"
+        assert provider.default_headers is None
+        assert catalog_get.call_args.args[0] == CATALOG_URL
+
+    def test_generic_api_key_is_not_sent_to_deepinfra(self, monkeypatch):
+        """Test an API_KEY meant for another service does not stand in for DeepInfra's."""
+        monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
+        monkeypatch.setenv("API_KEY", "another-service-key")
+
+        with pytest.raises(ValidationError, match="api_key|DEEPINFRA_API_KEY"):
+            DeepInfraProvider(model_name="BAAI/bge-m3")
+
     def test_model_alias_normalization(self):
         """Test 'model' parameter maps to 'model_name'."""
         provider = DeepInfraProvider(

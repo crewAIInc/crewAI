@@ -9,6 +9,8 @@ from chromadb.utils.embedding_functions.openai_embedding_function import (
 )
 import httpx
 from pydantic import AliasChoices, Field, model_validator
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from typing_extensions import Self
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
@@ -96,6 +98,34 @@ def resolve_default_model(api_base: str = DEFAULT_API_BASE) -> str:
     return model_id
 
 
+# The environment variables the provider reads, by field.
+_ENV_VARS = {"api_key": "DEEPINFRA_API_KEY", "api_base": "DEEPINFRA_API_BASE"}
+
+
+class _DeepInfraEnvSource(PydanticBaseSettingsSource):
+    """Read the provider's settings from DeepInfra's own variables only.
+
+    The default settings source matches every field name and alias against the
+    environment, ignoring case. Variables that belong to other tools would then
+    configure the embedder: ``MODEL_NAME``, which crewAI reads for the chat
+    model, would become the embedding model, ``API_BASE`` the endpoint and
+    ``API_KEY`` the credential sent to DeepInfra.
+    """
+
+    def get_field_value(
+        self, field: FieldInfo, field_name: str
+    ) -> tuple[Any, str, bool]:
+        env_name = _ENV_VARS.get(field_name)
+        return (os.environ.get(env_name) if env_name else None), field_name, False
+
+    def __call__(self) -> dict[str, Any]:
+        return {
+            field_name: os.environ[env_name]
+            for field_name, env_name in _ENV_VARS.items()
+            if env_name in os.environ
+        }
+
+
 class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     """DeepInfra embeddings provider.
 
@@ -105,6 +135,18 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     DeepInfra currently recommends is read from its catalog; pin ``model_name``
     for stores that must stay stable across runs.
     """
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Take settings from the embedder config, then DeepInfra's variables."""
+        return init_settings, _DeepInfraEnvSource(settings_cls)
 
     @model_validator(mode="before")
     @classmethod
