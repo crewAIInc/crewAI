@@ -43,6 +43,17 @@ def _deserialize_schema(v: Any) -> type[BaseModel] | None:
     return None
 
 
+def _unwrap_partial(
+    func: Callable[..., Any],
+) -> tuple[Callable[..., Any], set[str]]:
+    """Find the original callable and all keywords bound by partials."""
+    bound_keywords: set[str] = set()
+    while isinstance(func, partial):
+        bound_keywords.update(func.keywords or {})
+        func = func.func
+    return func, bound_keywords
+
+
 def _infer_result_schema_from_callable(
     func: Callable[..., Any],
 ) -> type[BaseModel] | None:
@@ -265,7 +276,7 @@ class CrewStructuredTool(BaseModel):
             ...     return a + b
             >>> tool = CrewStructuredTool.from_function(add)
         """
-        annotation_source = func.func if isinstance(func, partial) else func
+        annotation_source, _ = _unwrap_partial(func)
         name = name or annotation_source.__name__
         description = description or inspect.getdoc(annotation_source)
 
@@ -316,12 +327,12 @@ class CrewStructuredTool(BaseModel):
         """
         sig = inspect.signature(func)
 
-        annotation_source = func.func if isinstance(func, partial) else func
+        annotation_source, bound_keywords = _unwrap_partial(func)
         type_hints = get_type_hints(annotation_source)
 
         fields = {}
         for param_name, param in sig.parameters.items():
-            if param_name in ("self", "cls"):
+            if param_name in ("self", "cls") or param_name in bound_keywords:
                 continue
 
             annotation = type_hints.get(param_name, Any)
@@ -340,6 +351,20 @@ class CrewStructuredTool(BaseModel):
         sig = inspect.signature(self.func)
         schema_fields = self.args_schema.model_fields
 
+        _, bound_keywords = _unwrap_partial(self.func)
+        if bound_keywords:
+            schema_properties = self.args_schema.model_json_schema().get(
+                "properties", {}
+            )
+            exposed_keywords = bound_keywords & (
+                schema_fields.keys() | schema_properties.keys()
+            )
+            if exposed_keywords:
+                names = ", ".join(sorted(exposed_keywords))
+                raise ValueError(
+                    f"args_schema cannot expose partial-bound keywords: {names}"
+                )
+
         for param_name, param in sig.parameters.items():
             if param_name in ("self", "cls"):
                 continue
@@ -357,6 +382,15 @@ class CrewStructuredTool(BaseModel):
                         f"not found in args_schema"
                     )
 
+    def _reject_partial_keyword_overrides(self, arguments: dict[str, Any]) -> None:
+        """Reject attempts to replace keywords configured by the tool author."""
+        if arguments and isinstance(self.func, partial):
+            _, bound_keywords = _unwrap_partial(self.func)
+            overridden = bound_keywords.intersection(arguments)
+            if overridden:
+                names = ", ".join(sorted(overridden))
+                raise ValueError(f"Cannot override partial-bound keywords: {names}")
+
     def _parse_args(self, raw_args: str | dict[str, Any]) -> dict[str, Any]:
         """Parse and validate the input arguments against the schema.
 
@@ -372,14 +406,18 @@ class CrewStructuredTool(BaseModel):
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
 
+        if isinstance(raw_args, dict):
+            self._reject_partial_keyword_overrides(raw_args)
         if not self.args_schema:
             return raw_args if isinstance(raw_args, dict) else {}
         try:
             validated_args = self.args_schema.model_validate(raw_args)
-            return dict(validated_args.model_dump())
+            parsed_args = dict(validated_args.model_dump())
         except Exception as e:
             hint = build_schema_hint(self.args_schema)
             raise ValueError(f"Arguments validation failed: {e}{hint}") from e
+        self._reject_partial_keyword_overrides(parsed_args)
+        return parsed_args
 
     async def ainvoke(
         self,
@@ -398,6 +436,7 @@ class CrewStructuredTool(BaseModel):
             The result of the tool execution
         """
         parsed_args = self._parse_args(input)
+        self._reject_partial_keyword_overrides(kwargs)
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
@@ -419,6 +458,7 @@ class CrewStructuredTool(BaseModel):
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Legacy method for compatibility."""
         if not self.args_schema:
+            self._reject_partial_keyword_overrides(kwargs)
             return self.func(*args, **kwargs)
         input_dict = dict(zip(self.args_schema.model_fields.keys(), args, strict=False))
         input_dict.update(kwargs)
@@ -432,6 +472,7 @@ class CrewStructuredTool(BaseModel):
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
+        self._reject_partial_keyword_overrides(kwargs)
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
