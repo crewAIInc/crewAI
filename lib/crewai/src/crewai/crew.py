@@ -27,6 +27,7 @@ from pydantic import (
     Field,
     Json,
     PrivateAttr,
+    SerializeAsAny,
     field_validator,
     model_validator,
 )
@@ -369,7 +370,7 @@ class Crew(FlowTrackable, BaseModel):
         description="list of execution logs for tasks",
     )
     knowledge_sources: Annotated[
-        list[BaseKnowledgeSource] | None,
+        list[SerializeAsAny[BaseKnowledgeSource]] | None,
         BeforeValidator(_resolve_knowledge_sources),
     ] = Field(
         default=None,
