@@ -217,6 +217,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "runcrate",
 ]
 
 
@@ -242,6 +243,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "runcrate": "runcrate",
 }
 
 
@@ -473,6 +475,10 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "runcrate":
+            # Runcrate serves many open model families behind one endpoint
+            return True
+
         return False
 
     @classmethod
@@ -698,6 +704,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "runcrate",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

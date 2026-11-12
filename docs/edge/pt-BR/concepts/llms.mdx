@@ -761,6 +761,39 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+
+  <Accordion title="Runcrate">
+    O CrewAI se conecta à [Runcrate](https://www.runcrate.ai/?utm_source=crewai&utm_medium=directory&utm_campaign=gpu_pricing) pelo cliente OpenAI nativo, então não é preciso instalar o LiteLLM.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    RUNCRATE_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy
+    RUNCRATE_BASE_URL=https://api.runcrate.ai/v1
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="runcrate/deepseek-ai/DeepSeek-V4.1-Flash",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Recursos da Runcrate:
+      - Modelos abertos (DeepSeek, GLM, Qwen, Kimi, gpt-oss e outros) em uma única API compatível com OpenAI
+      - Chamada de ferramentas, streaming e saídas estruturadas em JSON nos modelos compatíveis
+      - Os modelos abertos são gratuitos com sua conta do GitHub
+    </Info>
+
+    Os IDs de modelo já estão no formato `org/model`, então uma referência completa tem três segmentos,
+    por exemplo `runcrate/zai-org/GLM-5.3`. A lista pública de modelos em
+    `https://api.runcrate.ai/v1/models` não exige autenticação. Crie uma chave de API em
+    [runcrate.ai](https://www.runcrate.ai/dashboard/api-keys).
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming

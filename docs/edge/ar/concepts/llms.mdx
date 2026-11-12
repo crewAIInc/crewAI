@@ -1045,6 +1045,39 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Runcrate">
+    يتصل CrewAI بـ [Runcrate](https://www.runcrate.ai/?utm_source=crewai&utm_medium=directory&utm_campaign=gpu_pricing) عبر عميل OpenAI الأصلي، لذلك لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    RUNCRATE_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy
+    RUNCRATE_BASE_URL=https://api.runcrate.ai/v1
+    ```
+
+    مثال على الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="runcrate/deepseek-ai/DeepSeek-V4.1-Flash",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Runcrate:
+      - نماذج مفتوحة (DeepSeek وGLM وQwen وKimi وgpt-oss وغيرها) عبر واجهة API واحدة متوافقة مع OpenAI
+      - استدعاء الأدوات والبث والمخرجات المنظمة بصيغة JSON في النماذج المدعومة
+      - النماذج المفتوحة مجانية مع حسابك على GitHub
+    </Info>
+
+    معرّفات النماذج بصيغة `org/model` بالفعل، لذا يتكون المرجع الكامل من ثلاثة أجزاء،
+    مثل `runcrate/zai-org/GLM-5.3`. قائمة النماذج العامة على
+    `https://api.runcrate.ai/v1/models` لا تتطلب مصادقة. أنشئ مفتاح API من
+    [runcrate.ai](https://www.runcrate.ai/dashboard/api-keys).
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
