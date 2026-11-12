@@ -435,6 +435,10 @@ def _value(table: Table, column: str, raw: str) -> object:
     kind = table.kinds[column]
     text = raw.strip()
     if kind in ("integer", "number"):
+        # An integer-kind column keeps exact Python ints when the text exceeds
+        # float64 precision; the filter value must match that exactly.
+        if kind == "integer" and text.strip().isdigit():
+            return int(text)
         parsed = numbers(pd.Series([text]), table.decimal_comma).iloc[0]
         if pd.isna(parsed):
             parsed = numbers(pd.Series([text]), not table.decimal_comma).iloc[0]

@@ -648,8 +648,12 @@ def text_of(value: object, limit: int | None = None) -> str:
         return "true" if value else "false"
     if isinstance(value, float) and math.isnan(value):
         return ""
-    if isinstance(value, (int, float)):
-        return number_text(float(value))
+    if isinstance(value, int):
+        # A Python int (e.g. an exact big integer kept out of float64 by
+        # _typed) must not go through float: that is the precision loss.
+        return str(value)
+    if isinstance(value, float):
+        return number_text(value)
     if isinstance(value, np.datetime64):
         value = value.astype("datetime64[us]").item()
     if isinstance(value, datetime.datetime):
@@ -856,8 +860,33 @@ def _typed(raw: Column, decimal_comma: bool) -> tuple[Column, str, int]:
             native = present[is_number].astype(float)
             out[native.index] = native
             out[numeric_text.dropna().index] = numeric_text.dropna()
+            # Integers wider than float64's 15-16 significant digits lose
+            # precision through the float conversion (19-digit order IDs, snowflake
+            # IDs collapse to one value). Keep the exact text for pure-digit
+            # columns whose values do not fit a float64 exactly.
+            digit_texts = numeric_text.dropna().index
+            exact_int = (
+                len(digit_texts)
+                and bool(
+                    numeric_text.dropna().map(lambda v: float(v).is_integer()).all()
+                )
+                and bool(
+                    texts.loc[digit_texts]
+                    .str.fullmatch(r"\d+")
+                    .reindex(digit_texts)
+                    .fillna(False)
+                    .all()
+                )
+                and any(len(t.replace(" ", "")) > 15 for t in texts.loc[digit_texts])
+            )
+            if exact_int:
+                ints = texts.loc[digit_texts].str.replace(" ", "", regex=False).map(int)
+                out = pd.Series(pd.NA, index=raw.index, dtype=object)
+                out[ints.index] = ints
             finite = out.dropna()
-            if len(finite) and bool((finite == finite.round()).all()):
+            if len(finite) and bool(
+                (finite.astype(float) == finite.astype(float).round()).all()
+            ):
                 kind = "integer"
         elif kind == "date":
             out = pd.Series(pd.NaT, index=raw.index, dtype=_DATES)
