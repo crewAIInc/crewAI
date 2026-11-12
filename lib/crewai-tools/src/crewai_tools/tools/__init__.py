@@ -1,6 +1,7 @@
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.autom_search_tool.autom_search_tool import AutomSearchTool
 from crewai_tools.tools.azure_documentdb_vector_search_tool import (
     AzureDocumentDBToolSchema,
     AzureDocumentDBVectorSearchConfig,
@@ -226,6 +227,7 @@ __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
+    "AutomSearchTool",
     "AzureDocumentDBToolSchema",
     "AzureDocumentDBVectorSearchConfig",
     "AzureDocumentDBVectorSearchTool",

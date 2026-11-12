@@ -1,0 +1,85 @@
+---
+title: Autom Search
+description: The `AutomSearchTool` searches Google, Bing, Brave, DuckDuckGo or Yahoo with the Autom SERP API and returns the top results.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AutomSearchTool`
+
+## Description
+
+The `AutomSearchTool` searches the web with [Autom](https://www.autom.dev), a SERP API that runs the search on the engine at the time of the call.
+It returns the top organic results as JSON, with the `title`, `link`, `snippet` and `position` of each result.
+Google News results also carry the `date` and `source`.
+
+It can search Google (the default), Bing, Brave, DuckDuckGo or Yahoo, and Google News.
+
+## Installation
+
+1. Install the `crewai[tools]` package:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+2. Get an API key at [app.autom.dev](https://app.autom.dev).
+3. Set it in the `AUTOM_API_KEY` environment variable:
+
+```shell
+export AUTOM_API_KEY="your-api-key"
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AutomSearchTool
+
+search = AutomSearchTool(n_results=5)
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="You search the web and cite the links you used.",
+    tools=[search],
+)
+
+task = Task(
+    description="What did the latest CrewAI release add?",
+    expected_output="A short summary with the links to the sources.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## Parameters
+
+- **engine**: `google` (default), `bing`, `brave`, `duckduckgo` or `yahoo`.
+- **search_type**: `search` (default) or `news`. News results come from Google News.
+- **n_results**: Number of results to return, 1 to 100. Default is `10`.
+- **country**: Optional. Two-letter country code, such as `us` or `fr`.
+- **language**: Optional. Language of the results, such as `en` (Google only).
+- **location**: Optional. City or region to search from, such as `Paris, France` (Google web search only).
+- **timeout**: Seconds to wait for Autom. Default is `60`.
+
+## Example with Parameters
+
+```python Code
+from crewai_tools import AutomSearchTool
+
+# Google News results from France, in French
+news = AutomSearchTool(search_type="news", country="fr", language="fr", n_results=5)
+print(news.run(search_query="intelligence artificielle"))
+
+# Brave results
+brave = AutomSearchTool(engine="brave", n_results=3)
+print(brave.run(search_query="open source agent frameworks"))
+```
+
+## Errors
+
+Errors come back to the agent as text, so it can retry or change its query: a missing key, an invalid key, a lack of credits, a rate limit or a timeout.
+The API key never appears in these messages.
