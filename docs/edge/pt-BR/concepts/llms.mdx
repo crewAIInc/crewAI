@@ -761,6 +761,37 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+
+  <Accordion title="Fireworks AI">
+    O CrewAI se comunica com o Fireworks AI pelo cliente OpenAI nativo, então não é necessário instalar o LiteLLM.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    FIREWORKS_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    FIREWORKS_BASE_URL=https://api.fireworks.ai/inference/v1
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Recursos do Fireworks AI:
+      - Modelos de pesos abertos por trás de um endpoint compatível com OpenAI
+      - Streaming, chamada de ferramentas e saídas estruturadas com JSON schema
+      - Implantações serverless e on-demand
+    </Info>
+
+    Apenas o prefixo `fireworks_ai/` é removido. O caminho `accounts/<account>/models/<model>`
+    que vem depois chega ao SDK sem alteração, então IDs de modelo por conta continuam funcionando.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming
