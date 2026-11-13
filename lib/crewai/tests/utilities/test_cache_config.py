@@ -211,6 +211,39 @@ class TestParseCacheUrlUsername:
             assert result["username"] == "acluser"
 
 
+class TestParseCacheUrlPercentEncoding:
+    """URL userinfo is percent-encoded; credentials must reach the server
+    decoded, the same way redis-py's from_url treats them.
+    """
+
+    def test_decodes_reserved_characters_in_credentials(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"VALKEY_URL": "redis://us%40er:p%40ss%3Aw%2Fo%23rd@myhost:6379/0"},
+            clear=True,
+        ):
+            result = parse_cache_url()
+            assert result is not None
+            assert result["username"] == "us@er"
+            assert result["password"] == "p@ss:w/o#rd"
+            assert result["host"] == "myhost"
+
+    def test_password_only_url_with_encoded_password(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://:p%25w@myhost:6379/0"}, clear=True
+        ):
+            result = parse_cache_url()
+            assert result is not None
+            assert result["username"] is None
+            assert result["password"] == "p%w"
+
+    def test_decoded_password_reaches_aiocache_config(self) -> None:
+        with patch.dict(
+            os.environ, {"REDIS_URL": "redis://:p%40ss@myhost:6379/0"}, clear=True
+        ):
+            assert get_aiocache_config()["default"]["password"] == "p@ss"
+
+
 class TestUseValkeyCache:
     """Tests for use_valkey_cache()."""
 

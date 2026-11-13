@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 _logger = logging.getLogger(__name__)
@@ -24,16 +24,20 @@ def parse_cache_url() -> dict[str, Any] | None:
     if not url:
         return None
     parsed = urlparse(url)
+    # urlparse leaves userinfo percent-encoded. Decode it (as redis-py's
+    # from_url does) so a secret containing "@", ":", "/" or "#" reaches the
+    # server as written rather than in its encoded form.
     # A password-only URL (redis://:pw@host) yields username="". Normalize the
     # empty string to None so credential builders can treat "no ACL user" as
     # password-only auth instead of authenticating as a blank ACL user.
-    username = parsed.username or None
+    username = unquote(parsed.username) if parsed.username else None
+    password = unquote(parsed.password) if parsed.password is not None else None
     return {
         "host": parsed.hostname or "localhost",
         "port": parsed.port or 6379,
         "db": _parse_db_from_path(parsed.path),
         "username": username,
-        "password": parsed.password,
+        "password": password,
         "use_tls": parsed.scheme in ("rediss", "valkeys"),
     }
 
