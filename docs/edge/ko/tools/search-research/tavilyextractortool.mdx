@@ -21,6 +21,8 @@ uv add 'crewai[tools]' tavily-python
 export TAVILY_API_KEY='your-tavily-api-key'
 ```
 
+프록시나 Tavily 호환 엔드포인트를 통해 요청을 보내려면 `TAVILY_API_BASE_URL`을 설정하세요(또는 도구를 생성할 때 `api_base_url`을 전달하세요). 설정하지 않으면 Tavily의 기본 API URL을 사용합니다.
+
 ## 예제 사용법
 
 다음은 CrewAI agent 내에서 `TavilyExtractorTool`을 초기화하고 사용하는 방법입니다:
