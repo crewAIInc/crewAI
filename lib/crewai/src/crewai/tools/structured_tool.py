@@ -6,7 +6,8 @@ import inspect
 import json
 import re
 import textwrap
-from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
+import threading
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast, get_type_hints
 import warnings
 
 from pydantic import (
@@ -191,6 +192,9 @@ class CrewStructuredTool(BaseModel):
 
     This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
+
+    Concurrent invocations share a usage budget without serializing the
+    wrapped function's execution.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -215,6 +219,8 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
+    # Only slot claims share this lock; keep it out of Pydantic model state.
+    _usage_lock: ClassVar[threading.Lock] = threading.Lock()
 
     @property
     def formatted_description(self) -> str:
@@ -395,12 +401,7 @@ class CrewStructuredTool(BaseModel):
         """
         parsed_args = self._parse_args(input)
 
-        if self.has_reached_max_usage_count():
-            raise ToolUsageLimitExceededError(
-                f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
-            )
-
-        self._increment_usage_count()
+        self._claim_usage()
 
         try:
             if inspect.iscoroutinefunction(self.func):
@@ -429,12 +430,7 @@ class CrewStructuredTool(BaseModel):
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
 
-        if self.has_reached_max_usage_count():
-            raise ToolUsageLimitExceededError(
-                f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
-            )
-
-        self._increment_usage_count()
+        self._claim_usage()
 
         if inspect.iscoroutinefunction(self.func):
             return asyncio.run(self.func(**parsed_args, **kwargs))
@@ -445,6 +441,15 @@ class CrewStructuredTool(BaseModel):
             return asyncio.run(result)
 
         return result
+
+    def _claim_usage(self) -> None:
+        """Check and consume one usage slot without serializing tool execution."""
+        with self._usage_lock:
+            if self.has_reached_max_usage_count():
+                raise ToolUsageLimitExceededError(
+                    f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
+                )
+            self._increment_usage_count()
 
     def has_reached_max_usage_count(self) -> bool:
         """Check if the tool has reached its maximum usage count."""
