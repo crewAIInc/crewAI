@@ -236,6 +236,10 @@ def _fetch_deepinfra(_api_key: str | None) -> list[dict[str, Any]]:
     not tagged ``chat`` (embeddings, image, speech, video models) is dropped,
     which is more reliable than guessing from the id. Entries without tags
     fall back to the id heuristic.
+
+    Raises when no chat model is left: unlike a local Ollama with nothing
+    installed, an empty hosted catalog does not make the curated models
+    unusable, so the caller falls back to them instead of manual entry.
     """
     data = _http_get_json(_DEEPINFRA_MODELS_URL)
     items = data.get("data", [])
@@ -253,6 +257,8 @@ def _fetch_deepinfra(_api_key: str | None) -> list[dict[str, Any]]:
         entries.append(
             _entry(model_id, _humanize(model_id), created=float(len(items) - rank))
         )
+    if not entries:
+        raise ValueError("DeepInfra catalog listed no chat models")
     return entries
 
 
