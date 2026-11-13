@@ -1126,6 +1126,7 @@ class LLM(BaseLLM):
                         model=response_model,
                         llm=self,
                     )
+                    conversion_error: _ResponseModelConversionError | None = None
                     try:
                         with model_call_hooks_dispatched():
                             result = instructor_instance.to_pydantic()
@@ -1136,20 +1137,35 @@ class LLM(BaseLLM):
                         # not text: a schema error's text quotes model output,
                         # so output saying "maximum context length" would
                         # otherwise be treated as a context-limit error.
-                        from litellm.exceptions import ContextWindowExceededError
+                        from litellm.exceptions import (
+                            ContextWindowExceededError,
+                            RateLimitError,
+                        )
 
-                        if isinstance(e, LLMContextLengthExceededError):
+                        # A real provider throttle keeps the shared retry.
+                        if isinstance(
+                            e, (LLMContextLengthExceededError, RateLimitError)
+                        ):
                             raise
                         # Convert here: the outer handler only spots context
                         # errors by text and would salvage raw text otherwise.
                         if isinstance(e, ContextWindowExceededError):
                             raise LLMContextLengthExceededError(str(e)) from e
-                        # Leave out {e}: it quotes model output, which call()'s
-                        # 'stop' retry check reads. The cause stays on __cause__.
-                        raise _ResponseModelConversionError(
+                        # {e} quotes model output. Keep it out of the message
+                        # and out of the exception chain: call()'s 'stop' retry
+                        # reads the message, and the rate-limit retry reads
+                        # every linked cause. It goes to the debug log instead.
+                        logging.debug(
+                            f"Streaming response_model conversion failed: {e!r}"
+                        )
+                        conversion_error = _ResponseModelConversionError(
                             "Failed to convert streaming response to "
                             f"{response_model.__name__}"
-                        ) from e
+                        )
+                    if conversion_error is not None:
+                        # Raised outside the except block so Python does not
+                        # link the original error as __context__.
+                        raise conversion_error
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
