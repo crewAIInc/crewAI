@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,7 +13,7 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import Message, Task as A2ATask, TaskState, TaskStatus
 
-from crewai.a2a.utils.task import cancel, cancellable, execute
+from crewai.a2a.utils.task import cancel, cancellable, execute, list_tasks
 
 
 @pytest.fixture
@@ -373,3 +374,60 @@ class TestExecuteAndCancelIntegration:
 
             with pytest.raises(asyncio.CancelledError):
                 await execute_task
+
+
+def _completed_task(task_id: str, context_id: str, timestamp: str | None) -> A2ATask:
+    return A2ATask(
+        id=task_id,
+        context_id=context_id,
+        status=TaskStatus(state=TaskState.completed, timestamp=timestamp),
+    )
+
+
+def test_list_tasks_sorts_aware_and_missing_timestamps():
+    """Tasks without a timestamp must not crash sorting against aware ones."""
+    now = datetime.now(timezone.utc)
+    tasks = [
+        _completed_task("missing-ts", "ctx-1", None),
+        _completed_task("older", "ctx-1", (now - timedelta(hours=2)).isoformat()),
+        _completed_task("newer", "ctx-1", now.isoformat()),
+    ]
+
+    result, _next_token, total = list_tasks(tasks=tasks, context_id="ctx-1")
+
+    assert total == 3
+    assert [task.id for task in result] == ["newer", "older", "missing-ts"]
+
+
+def test_list_tasks_accepts_naive_status_timestamp_after():
+    now = datetime.now(timezone.utc)
+    tasks = [
+        _completed_task("old", "ctx-1", (now - timedelta(hours=2)).isoformat()),
+        _completed_task("new", "ctx-1", now.isoformat()),
+    ]
+
+    result, _next_token, total = list_tasks(
+        tasks=tasks,
+        context_id="ctx-1",
+        status_timestamp_after=datetime(2000, 1, 1),
+    )
+
+    assert total == 2
+    assert [task.id for task in result] == ["new", "old"]
+
+
+def test_list_tasks_filters_out_tasks_older_than_cutoff():
+    now = datetime.now(timezone.utc)
+    tasks = [
+        _completed_task("old", "ctx-1", (now - timedelta(hours=2)).isoformat()),
+        _completed_task("new", "ctx-1", now.isoformat()),
+    ]
+
+    result, _next_token, total = list_tasks(
+        tasks=tasks,
+        context_id="ctx-1",
+        status_timestamp_after=now - timedelta(hours=1),
+    )
+
+    assert total == 1
+    assert result[0].id == "new"
