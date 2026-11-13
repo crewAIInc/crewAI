@@ -159,6 +159,22 @@ class TestPrepareDocumentsForChromaDB:
 
         assert result.metadatas == [{}, {}]
 
+    def test_prepare_documents_drops_none_metadata_values(self) -> None:
+        """Test that None metadata values are dropped, since ChromaDB rejects them."""
+        documents: list[BaseRecord] = [
+            {"content": "d1", "metadata": {"title": "clean"}},
+            {"content": "d2", "metadata": {"title": "Video", "description": None}},
+            {"content": "d3", "metadata": [{"author": None, "length": 0}]},
+        ]
+
+        result = _prepare_documents_for_chromadb(documents)
+
+        assert result.metadatas == [
+            {"title": "clean"},
+            {"title": "Video"},
+            {"length": 0},
+        ]
+
     def test_prepare_documents_hash_consistency(self) -> None:
         """Test that identical content produces identical hashes."""
         documents1: list[BaseRecord] = [
