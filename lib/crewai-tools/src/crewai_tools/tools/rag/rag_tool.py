@@ -20,6 +20,7 @@ from pydantic import (
 )
 from typing_extensions import Self, Unpack
 
+from crewai_tools.rag.content_item import parse_data_type, resolve_content_item
 from crewai_tools.tools.rag.types import (
     AddDocumentParams,
     ContentItem,
@@ -252,6 +253,12 @@ class RagTool(BaseTool):
     ) -> None:
         """Add content to the knowledge base.
 
+        A document dictionary is read as a ``source`` and a ``content``: the
+        ``content`` body is indexed as plain text and the ``source`` is kept
+        as the ``source`` metadata of the indexed chunks. A body is never
+        read from disk and never fetched, so it is indexed as the text it
+        is. Pass an explicit ``data_type`` such as ``"text_file"`` to load
+        the ``source`` instead of indexing the body.
 
         Args:
             *args: Content items to add (strings, paths, or document dicts)
@@ -274,6 +281,9 @@ class RagTool(BaseTool):
 
             # Auto-detect type from extension
             rag_tool.add("path/to/document.pdf")  # auto-detects PDF
+
+            # Index a document body, keeping its origin as metadata
+            rag_tool.add({"source": "batch-A", "content": "Solve 2x + 3 = 11."})
         """
         # Validate file paths and URLs before adding to prevent
         # unauthorized file reads and SSRF.
@@ -294,12 +304,16 @@ class RagTool(BaseTool):
                 raise ValueError(f"Blocked unsafe {label}: {e}") from e
 
         validated_args: list[ContentItem] = []
+        data_type = parse_data_type(kwargs.get("data_type"))
         for arg in args:
-            source_ref = (
-                str(arg.get("source", arg.get("content", "")))
-                if isinstance(arg, dict)
-                else str(arg)
-            )
+            item = resolve_content_item(arg, data_type)
+            if item.inline:
+                # The document body is indexed as plain text. It is never
+                # read from disk and never fetched, so it needs no check.
+                validated_args.append(arg)
+                continue
+
+            source_ref = item.reference
 
             # Check if it's a URL — only catch urlparse-specific errors here;
             # validate_url's ValueError must propagate so it is never silently bypassed.
@@ -332,9 +346,9 @@ class RagTool(BaseTool):
                 # Use the resolved path to prevent symlink TOCTOU
                 if isinstance(arg, dict):
                     arg = {**arg}
-                    if "source" in arg:
+                    if item.field == "source":
                         arg["source"] = resolved_ref
-                    elif "content" in arg:
+                    elif item.field == "content":
                         arg["content"] = resolved_ref
                 else:
                     arg = resolved_ref
