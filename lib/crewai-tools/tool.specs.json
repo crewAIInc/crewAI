@@ -14544,6 +14544,104 @@
       }
     },
     {
+      "description": "A tool that can be used to search the internet with a search_query. Returns a list of results, each with a title, link and snippet.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Keirolabs (https://platform.keirolabs.cloud)",
+          "name": "KEIROLABS_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Search the internet with Keirolabs",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "base_url": {
+            "default": "https://api.keirolabs.cloud",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "KeirolabsSearchTool",
+        "type": "object"
+      },
+      "name": "KeirolabsSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for KeirolabsSearchTool.",
+        "properties": {
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "KeirolabsSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Performs an API call to Linkup to retrieve contextual information.",
       "env_vars": [
         {
