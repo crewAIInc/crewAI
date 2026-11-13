@@ -1682,6 +1682,23 @@ class Agent(BaseAgent):
             )
             return None
 
+    def _take_resume_kickoff_event_id(self) -> str | None:
+        """Return the kickoff event id to resume, or None to start fresh.
+
+        Checkpoint saves copy ``_kickoff_event_id`` into
+        ``checkpoint_kickoff_event_id`` on the live agent, so once this
+        instance has kicked off, that field is a stale pointer to the previous
+        run rather than a resume request. Only an agent restored by
+        ``from_checkpoint`` (which resets ``_has_kicked_off``) resumes. The
+        pointer is consumed either way.
+        """
+        resume_event_id = (
+            None if self._has_kicked_off else self.checkpoint_kickoff_event_id
+        )
+        self.checkpoint_kickoff_event_id = None
+        self._has_kicked_off = True
+        return resume_event_id
+
     def _prepare_kickoff(
         self,
         messages: str | list[LLMMessage],
@@ -2010,9 +2027,9 @@ class Agent(BaseAgent):
             )
 
             try:
-                if self.checkpoint_kickoff_event_id is not None:
-                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                    self.checkpoint_kickoff_event_id = None
+                resume_event_id = self._take_resume_kickoff_event_id()
+                if resume_event_id is not None:
+                    self._kickoff_event_id = resume_event_id
                 else:
                     started_event = LiteAgentExecutionStartedEvent(
                         agent_info=agent_info,
@@ -2394,9 +2411,9 @@ class Agent(BaseAgent):
             )
 
             try:
-                if self.checkpoint_kickoff_event_id is not None:
-                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                    self.checkpoint_kickoff_event_id = None
+                resume_event_id = self._take_resume_kickoff_event_id()
+                if resume_event_id is not None:
+                    self._kickoff_event_id = resume_event_id
                 else:
                     started_event = LiteAgentExecutionStartedEvent(
                         agent_info=agent_info,

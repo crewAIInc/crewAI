@@ -227,6 +227,14 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=TaskOutputStorageHandler
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    # Set once this instance starts a kickoff; reset by ``_restore_runtime``.
+    # See ``crews.utils.prepare_kickoff`` for why it gates resuming.
+    _has_kicked_off: bool = PrivateAttr(default=False)
+    # Whether the current kickoff resumes a checkpoint, decided once in
+    # ``prepare_kickoff``: checkpoint saves made during the run rewrite
+    # ``checkpoint_kickoff_event_id``, so it can't be re-read later.
+    # None until a kickoff decides it.
+    _resuming: bool | None = PrivateAttr(default=None)
     _execution_start_dispatched: bool = PrivateAttr(default=False)
     _execution_end_dispatched: bool = PrivateAttr(default=False)
 
@@ -545,6 +553,7 @@ class Crew(FlowTrackable, BaseModel):
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:
             self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        self._has_kicked_off = False
         if self.checkpoint_train is not None:
             self._train = self.checkpoint_train
 
@@ -1576,7 +1585,12 @@ class Crew(FlowTrackable, BaseModel):
             manager.set_cache_handler(self._cache_handler)
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
-        if self.checkpoint_kickoff_event_id is None:
+        resuming = (
+            self.checkpoint_kickoff_event_id is not None
+            if self._resuming is None
+            else self._resuming
+        )
+        if not resuming:
             return None
         for i, task in enumerate(tasks):
             if task.output is None:
