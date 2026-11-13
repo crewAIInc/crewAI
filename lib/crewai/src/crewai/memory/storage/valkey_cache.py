@@ -10,10 +10,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import threading
 from typing import Any
 
 from glide import GlideClient, GlideClientConfiguration, NodeAddress
+
+from crewai.memory.storage.valkey_io_loop import on_io_loop
 
 
 _logger = logging.getLogger(__name__)
@@ -60,34 +61,18 @@ class ValkeyCache:
         self._password = password
         self._default_ttl = default_ttl
         self._use_tls = use_tls
+        # The client and its creation lock are only ever touched on the shared
+        # Valkey I/O loop (see valkey_io_loop), so they never need rebinding
+        # when callers come from different event loops or threads.
         self._client: GlideClient | None = None
         self._client_lock: asyncio.Lock | None = None
-        # Track the event loop the client/lock were bound to. UploadCache's sync
-        # methods each call asyncio.run(), which creates and closes a fresh loop;
-        # a GlideClient/Lock bound to a closed loop cannot be reused, so we
-        # rebind when the running loop differs from the one we cached on.
-        self._loop: asyncio.AbstractEventLoop | None = None
-        # Guards the loop-change rebind bookkeeping below. The asyncio.Lock is
-        # itself loop-bound, so it can't serialize the swap of that very lock
-        # across loops/threads; a plain threading.Lock can. This only wraps the
-        # cheap swap, never the awaited client creation.
-        self._rebind_lock = threading.Lock()
 
-    def _get_lock(self) -> asyncio.Lock:
-        """Get or create the client lock (lazy, avoids binding to a specific event loop at init)."""
-        # Guard creation so concurrent callers on the same loop share one lock
-        # instead of each allocating their own (which would defeat the
-        # double-check below).
-        with self._rebind_lock:
-            if self._client_lock is None:
-                self._client_lock = asyncio.Lock()
-            return self._client_lock
-
+    @on_io_loop
     async def _get_client(self) -> GlideClient:
-        """Get or create Valkey client (lazy initialization).
+        """Get or create the Valkey client (lazy initialization).
 
-        Uses a double-check lock pattern to prevent concurrent callers
-        from creating multiple client instances.
+        Runs on the Valkey I/O loop. A double-check lock keeps concurrent
+        callers from creating more than one client.
 
         Returns:
             Initialized GlideClient instance.
@@ -96,34 +81,11 @@ class ValkeyCache:
             RuntimeError: If connection to Valkey fails.
             TimeoutError: If connection attempt times out (10 seconds).
         """
-        # If we're now on a different event loop than the client/lock were bound
-        # to (e.g. a previous asyncio.run() loop was closed), drop the stale
-        # instances so they are recreated on the current loop. The swap is done
-        # under a threading.Lock so concurrent callers arriving on a new loop
-        # can't each reset the asyncio lock and race to create duplicate
-        # clients. Best-effort close the old client so we don't leak it.
-        running_loop = asyncio.get_running_loop()
-        stale_client = None
-        with self._rebind_lock:
-            if self._loop is not None and self._loop is not running_loop:
-                stale_client = self._client
-                self._client = None
-                self._client_lock = None
-            self._loop = running_loop
-        if stale_client is not None:
-            try:
-                await stale_client.close()
-            except Exception as e:
-                # The old loop is gone; closing may fail. Log and move on
-                # rather than leaving the rebind half-done.
-                _logger.debug(
-                    "Best-effort close of stale Valkey client failed: %s",
-                    type(e).__name__,
-                )
-        self._loop = running_loop
+        if self._client_lock is None:
+            self._client_lock = asyncio.Lock()
 
         if self._client is None:
-            async with self._get_lock():
+            async with self._client_lock:
                 if self._client is None:
                     host = self._host
                     port = self._port
@@ -177,6 +139,7 @@ class ValkeyCache:
 
         return self._client
 
+    @on_io_loop
     async def get(self, key: str) -> Any | None:
         """Get value from cache.
 
@@ -198,6 +161,7 @@ class ValkeyCache:
             _logger.warning(f"Failed to deserialize cached value for key: {key}")
             return None
 
+    @on_io_loop
     async def set(
         self,
         key: str,
@@ -242,6 +206,7 @@ class ValkeyCache:
         else:
             await client.set(key, serialized)
 
+    @on_io_loop
     async def delete(self, key: str) -> None:
         """Delete value from cache.
 
@@ -251,6 +216,7 @@ class ValkeyCache:
         client = await self._get_client()
         await client.delete([key])
 
+    @on_io_loop
     async def exists(self, key: str) -> bool:
         """Check if key exists in cache.
 
@@ -264,6 +230,7 @@ class ValkeyCache:
         result = await client.exists([key])
         return result > 0
 
+    @on_io_loop
     async def clear(self, prefix: str = "") -> int:
         """Delete all keys matching a prefix (server-side, not just local state).
 
@@ -296,6 +263,7 @@ class ValkeyCache:
                 break
         return deleted
 
+    @on_io_loop
     async def close(self) -> None:
         """Close Valkey client connection."""
         if self._client:

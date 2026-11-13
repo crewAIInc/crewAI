@@ -512,23 +512,24 @@ class TestValkeyCacheEdgeCases:
 
 
 class TestValkeyCacheEventLoopRebind:
-    """UploadCache's sync methods each call asyncio.run(), creating and closing
-    a fresh event loop. A GlideClient/Lock bound to a closed loop cannot be
-    reused, so _get_client must rebind when the running loop changes.
+    """UploadCache's sync methods each call asyncio.run(), and callers may sit
+    on different loops in different threads. All GLIDE work runs on the shared
+    Valkey I/O loop, so one client serves every caller.
     """
 
-    def test_client_rebinds_across_event_loops(self) -> None:
+    def test_one_client_shared_across_event_loops(self) -> None:
         import asyncio
 
-        cache = ValkeyCache(host="localhost", port=6379, db=0)
+        from crewai.memory.storage.valkey_io_loop import get_io_loop
 
-        created_on: list[int] = []
+        cache = ValkeyCache(host="localhost", port=6379, db=0)
+        created_on: list[asyncio.AbstractEventLoop] = []
         created: list[AsyncMock] = []
 
         async def fake_create(_config: object) -> AsyncMock:
-            # Record the identity of the loop each client is created on.
-            created_on.append(id(asyncio.get_running_loop()))
+            created_on.append(asyncio.get_running_loop())
             client = AsyncMock()
+            client.get.return_value = None
             created.append(client)
             return client
 
@@ -537,17 +538,56 @@ class TestValkeyCacheEventLoopRebind:
             side_effect=fake_create,
         ):
             # Two separate asyncio.run() calls => two different, closed loops.
-            asyncio.run(cache._get_client())
-            first_loop = cache._loop
-            asyncio.run(cache._get_client())
-            second_loop = cache._loop
+            asyncio.run(cache.get("k"))
+            asyncio.run(cache.get("k"))
 
-        # A fresh client was created on each distinct loop, and the cache
-        # rebound to the second loop rather than reusing the closed-loop client.
-        assert len(created_on) == 2
-        assert first_loop is not second_loop
-        # The stale first client was closed on rebind (no connection leak).
-        created[0].close.assert_awaited()
+        assert len(created) == 1
+        assert created_on[0] is get_io_loop()
+        assert created[0].get.await_count == 2
+        created[0].close.assert_not_awaited()
+
+    def test_loops_in_other_threads_share_client_during_creation(self) -> None:
+        """A caller on another loop arriving while the client is still being
+        created must wait for that client, not start a second one or close it.
+        """
+        import asyncio
+        import threading
+
+        cache = ValkeyCache(host="localhost", port=6379, db=0)
+        created: list[AsyncMock] = []
+        creating = threading.Event()
+        release = threading.Event()
+        got: dict[str, object] = {}
+
+        async def fake_create(_config: object) -> AsyncMock:
+            creating.set()
+            await asyncio.to_thread(release.wait, 5)
+            client = AsyncMock()
+            created.append(client)
+            return client
+
+        async def first() -> None:
+            got["first"] = await cache._get_client()
+
+        async def second() -> None:
+            await asyncio.to_thread(creating.wait, 5)
+            pending = asyncio.ensure_future(cache._get_client())
+            await asyncio.sleep(0.05)  # let it reach the creation lock
+            release.set()
+            got["second"] = await pending
+
+        with patch(
+            "crewai.memory.storage.valkey_cache.GlideClient.create",
+            side_effect=fake_create,
+        ):
+            t = threading.Thread(target=asyncio.run, args=(first(),))
+            t.start()
+            asyncio.run(second())
+            t.join(5)
+
+        assert len(created) == 1
+        assert got["first"] is got["second"] is created[0]
+        created[0].close.assert_not_awaited()
 
     def test_concurrent_callers_share_one_client(self) -> None:
         import asyncio
