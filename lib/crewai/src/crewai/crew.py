@@ -126,6 +126,11 @@ from crewai.tools.tool_failure import ToolFailurePolicy
 from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities.agent_utils import (
+    _reset_caller_loop,
+    _set_caller_loop,
+    run_in_kickoff_thread,
+)
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.env import get_env_context
@@ -1174,14 +1179,24 @@ class Crew(FlowTrackable, BaseModel):
             ctx = StreamingContext(use_async=True)
 
             async def run_crew() -> None:
+                # Capture this loop before offloading self.kickoff, exactly as the
+                # non-streaming path below does: the worker thread must still bridge its
+                # async native tools back onto the caller's loop (issue #7630 family).
+                caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
                 try:
                     self.stream = False
-                    result = await asyncio.to_thread(self.kickoff, inputs, input_files)
+                    # Dedicated pool, not the loop's default executor: the parked kickoff
+                    # thread must not compete with tool coroutines that need a worker
+                    # thread of their own (CWE-833, see run_native_tool_result).
+                    result = await run_in_kickoff_thread(
+                        self.kickoff, inputs, input_files
+                    )
                     if isinstance(result, CrewOutput):
                         ctx.result_holder.append(result)
                 except Exception as e:
                     signal_error(ctx.state, e, is_async=True)
                 finally:
+                    _reset_caller_loop(caller_loop_token)
                     self.stream = True
                     signal_end(ctx.state, is_async=True)
 
@@ -1195,7 +1210,15 @@ class Crew(FlowTrackable, BaseModel):
 
             return streaming_output
 
-        return await asyncio.to_thread(self.kickoff, inputs, input_files)
+        # The whole crew runs in a worker thread, but its async native tools must
+        # still bridge back onto THIS loop (issue #7630 family): anything bound to
+        # the caller's loop (e.g. an httpx.AsyncClient created before kickoff) works
+        # instead of failing with "attached to a different loop".
+        caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
+        try:
+            return await run_in_kickoff_thread(self.kickoff, inputs, input_files)  # type: ignore[no-any-return]
+        finally:
+            _reset_caller_loop(caller_loop_token)
 
     async def kickoff_for_each_async(
         self,
