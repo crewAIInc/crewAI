@@ -2,10 +2,21 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_serializer
 
 from crewai.events.base_events import BaseEvent
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
+
+
+def _serialize_error(error: Any) -> Any:
+    """Keep an exception in ``error`` JSON-serializable.
+
+    ``model_dump(mode="json")`` cannot serialize an exception object, which
+    breaks every checkpoint written after a tool raised.
+    """
+    if isinstance(error, BaseException):
+        return str(error)
+    return error
 
 
 class ToolUsageEvent(BaseEvent):
@@ -81,6 +92,10 @@ class ToolUsageErrorEvent(ToolUsageEvent):
     error: Any
     type: Literal["tool_usage_error"] = "tool_usage_error"
 
+    @field_serializer("error", when_used="json")
+    def _serialize_error(self, error: Any) -> Any:
+        return _serialize_error(error)
+
 
 class ToolFailureDetectedEvent(ToolUsageEvent):
     """Event emitted when a tool completed but reported that it failed.
@@ -102,12 +117,20 @@ class ToolValidateInputErrorEvent(ToolUsageEvent):
     error: Any
     type: Literal["tool_validate_input_error"] = "tool_validate_input_error"
 
+    @field_serializer("error", when_used="json")
+    def _serialize_error(self, error: Any) -> Any:
+        return _serialize_error(error)
+
 
 class ToolSelectionErrorEvent(ToolUsageEvent):
     """Event emitted when a tool selection encounters an error"""
 
     error: Any
     type: Literal["tool_selection_error"] = "tool_selection_error"
+
+    @field_serializer("error", when_used="json")
+    def _serialize_error(self, error: Any) -> Any:
+        return _serialize_error(error)
 
 
 class ToolExecutionErrorEvent(BaseEvent):
@@ -119,6 +142,10 @@ class ToolExecutionErrorEvent(BaseEvent):
     tool_args: dict[str, Any]
     tool_class: Callable[..., Any]
     agent: Any | None = None
+
+    @field_serializer("error", when_used="json")
+    def _serialize_error(self, error: Any) -> Any:
+        return _serialize_error(error)
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
