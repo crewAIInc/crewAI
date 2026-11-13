@@ -526,6 +526,102 @@ If the supplied `restore_from_state_id` does not match any persisted state, the 
 
 The persistence system's architecture emphasizes technical precision and customization options, allowing developers to maintain full control over state management while benefiting from built-in reliability features.
 
+## Collecting Input with `ask()`
+
+`ask()` pauses the running flow method until an answer arrives. By default it reads from the
+console, which makes tests awkward. A custom **input provider** replaces the console: any
+object with `request_input(message, flow, metadata=None)` works, so you can wire a UI, a
+queue, or a scripted list without changing the flow.
+
+The provider can read the request `metadata` and can answer with an `InputResponse` that
+carries metadata of its own. `ask()` always returns the text (or `None` when no answer is
+available); the metadata of both directions is kept on `flow.input_history`.
+
+```python scripted_input.py
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Deterministic provider: replays a list of answers, then reports no input."""
+
+    def __init__(self, answers: list[str | None]) -> None:
+        self._answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        self.received_metadata.append(metadata)
+        if not self._answers:
+            return None
+        answer = self._answers.pop(0)
+        if answer is None:
+            return None
+        return InputResponse(
+            text=answer,
+            metadata={"source": "script", "prompt": message},
+        )
+
+
+provider = ScriptedProvider(["CrewAI", None])
+
+
+class SurveyFlow(Flow):
+    input_provider = provider
+
+    @start()
+    def gather(self):
+        # The request metadata reaches the provider.
+        topic = self.ask(
+            "What topic should we research?",
+            metadata={"channel": "#research"},
+        )
+        print("topic:", topic)
+
+        # A provider with nothing to say returns None; that is not an answer.
+        extra = self.ask("Anything else?")
+        if extra is None:
+            print("no further input available, using the fallback")
+            extra = "(none)"
+        return f"{topic} / {extra}"
+
+
+flow = SurveyFlow()
+print("result:", flow.kickoff())
+
+for entry in flow.input_history:
+    print(entry["message"], "->", entry["response"], "|", entry["response_metadata"])
+```
+
+Run it and you should see:
+
+```text
+topic: CrewAI
+no further input available, using the fallback
+result: CrewAI / (none)
+What topic should we research? -> CrewAI | {'source': 'script', 'prompt': 'What topic should we research?'}
+Anything else? -> None | None
+```
+
+Two things are worth calling out. The provider still received the request metadata for the
+second question even though it had no answer, and each entry in `flow.input_history` keeps
+`message`, `response`, `method_name`, `timestamp`, `metadata` (request) and
+`response_metadata` (answer) — `input_history` returns a copy, so editing it does not change
+what the flow recorded.
+
+`ask()` and `handle_turn()` solve different problems. `ask()` blocks a **step that is already
+running** and returns a string to that method. `handle_turn()` starts a **conversational
+turn** on the Flow: it routes the message, runs the matching listeners, and appends to the
+conversation history. Use `ask()` for a question inside a workflow step; use
+`handle_turn()` when the whole flow is a chat. See
+[Conversational Flows](/en/guides/flows/conversational-flows) for the latter.
+
 ## Flow Control
 
 ### Conditional Logic: `or`
