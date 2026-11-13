@@ -17,6 +17,16 @@ Aqui está uma implementação mínima de LLM personalizada:
 # (não traduzir blocos de código)
 ```
 
+## Um exemplo offline executável
+
+Os exemplos acima chamam um endpoint HTTP real. Para experimentar a interface `BaseLLM` sem nenhuma chave de API ou chamada de rede, use um stub que retorna uma resposta fixa. É útil para aprender os pontos de extensão e para testes; substitua o corpo de `call` por uma requisição a um provedor real (como mostrado acima) quando estiver pronto.
+
+```python
+# (não traduzir blocos de código)
+```
+
+Este stub é apenas para aprendizado e testes. Para usar um modelo real, substitua o corpo de `call` por uma requisição à API do seu provedor e declare `supports_function_calling` e `supports_stop_words` honestamente para esse provedor.
+
 ## Usando Seu LLM Personalizado
 
 ```python
