@@ -634,18 +634,116 @@ reply = stream.result
 
 Para um Flow não conversacional, definir `stream = True` faz `kickoff()` retornar uma `StreamSession`. Não defina `flow.stream = True` ao usar `handle_turn()`; `stream_turn()` controla o ciclo de vida do streaming conversacional.
 
+## Backup e migração de uma conversa persistida
+
+Um backend `FlowPersistence` armazena o estado mais recente de cada id de sessão. Para ler essa conversa hoje é preciso construir um Flow e chamar `handle_turn()`, o que acrescenta um novo turno. `ConversationSnapshot` lê o estado armazenado diretamente, permitindo exibir o histórico, fazer backup de uma sessão ou movê-la para outro backend sem avançar a conversa.
+
+Snapshots **não** são checkpoints. `CheckpointConfig` serializa o Flow inteiro (métodos concluídos, progresso do grafo, recursos de execução) para recuperação após falha. Um snapshot contém apenas o blob do estado da conversa persistida. Restaurá-lo recupera o estado da conversa; não restaura trabalhos em segundo plano em execução nem recursos de execução.
+
+O exemplo abaixo é determinístico: `route_turn()` é sobrescrito, portanto não exige LLM, chave de API nem acesso à rede. `trace_scope="turn"` finaliza automaticamente o trace de cada turno, dispensando uma chamada explícita a `finalize_session_traces()`.
+
+```python
+# conversation_snapshot_demo.py
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from crewai.flow import (
+    ConversationConfig,
+    ConversationSnapshot,
+    ConversationState,
+    Flow,
+    listen,
+    persist,
+    read_snapshot,
+    write_snapshot,
+)
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+SESSION_ID = "customer-4471"
+
+
+def make_bot(store: SQLiteFlowPersistence) -> type[Flow[ConversationState]]:
+    """Build the same deterministic bot against one persistence backend."""
+
+    @ConversationConfig(trace_scope="turn")
+    @persist(store)
+    class SupportBot(Flow[ConversationState]):
+        conversational = True
+
+        def route_turn(self, context: dict) -> str | None:
+            return "echo"
+
+        @listen("echo")
+        def handle_echo(self) -> str:
+            return f"echo: {self.state.current_user_message}"
+
+    return SupportBot
+
+
+with TemporaryDirectory() as tmp:
+    primary = SQLiteFlowPersistence(str(Path(tmp) / "primary.db"))
+    replica = SQLiteFlowPersistence(str(Path(tmp) / "replica.db"))
+
+    # Turn 1 on the primary database.
+    make_bot(primary)().handle_turn("Where is my order?", session_id=SESSION_ID)
+
+    # Read without running a turn: the session is not advanced.
+    snapshot = read_snapshot(SESSION_ID, primary)
+    assert snapshot is not None
+    print("transcript:", snapshot.transcript)
+
+    # A portable artifact: versioned, deterministic JSON.
+    payload = snapshot.to_json()
+    Path(tmp, "backup.json").write_text(payload, encoding="utf-8")
+
+    # Restore into a different backend, then resume on a fresh Flow instance.
+    restored = ConversationSnapshot.from_json(payload)
+    write_snapshot(restored, replica)
+    make_bot(replica)().handle_turn("Has it shipped?", session_id=SESSION_ID)
+
+    resumed_snapshot = read_snapshot(SESSION_ID, replica)
+    assert resumed_snapshot is not None
+    print("resumed:", resumed_snapshot.transcript)
+
+    # A different session id starts a separate conversation.
+    make_bot(replica)().handle_turn("New topic", session_id="customer-9999")
+    other_snapshot = read_snapshot("customer-9999", replica)
+    assert other_snapshot is not None
+    print("other:", other_snapshot.transcript)
+```
+
+Execute com:
+
+```bash
+python conversation_snapshot_demo.py
+```
+
+Saída esperada (o framework também imprime painéis de progresso do Flow e linhas de status da persistência, omitidos aqui):
+
+```text
+transcript: [('user', 'Where is my order?'), ('assistant', 'echo: Where is my order?')]
+resumed: [('user', 'Where is my order?'), ('assistant', 'echo: Where is my order?'), ('user', 'Has it shipped?'), ('assistant', 'echo: Has it shipped?')]
+other: [('user', 'New topic'), ('assistant', 'echo: New topic')]
+```
+
+`copy_snapshot("customer-4471", source=primary, target=replica)` é um atalho para o par leitura-gravação. `read_snapshot()` chama apenas `load_state()` e nunca escreve; `write_snapshot()` acrescenta uma nova linha de estado, preservando o histórico existente e a trilha de auditoria do backend. Ambos funcionam com qualquer implementação de `FlowPersistence` — backends customizados não precisam de métodos extras.
+
 ## Imports
 
 ```python
 from crewai.flow import (
     ChatState,
+    ConversationSnapshot,
     ConversationalConfig,
     ConversationalInputs,
     Flow,
+    copy_snapshot,
     listen,
     persist,
+    read_snapshot,
     router,
     start,
+    write_snapshot,
 )
 from crewai.flow.conversation import prepare_conversational_turn
 from crewai.flow import (
