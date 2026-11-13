@@ -14,6 +14,13 @@ MCP_DISCOVERY_TIMEOUT = 15
 MCP_MAX_RETRIES = 3
 
 
+class _ToolCallInterruptedError(Exception):
+    """The tools/call request was sent but no result came back.
+
+    The server may already have run the tool, so the call is not retried.
+    """
+
+
 class MCPToolWrapper(BaseTool):
     """Lightweight wrapper for MCP tools that connects on-demand."""
 
@@ -123,6 +130,9 @@ class MCPToolWrapper(BaseTool):
             result = await operation_func(**kwargs)
             return result, "", False
 
+        except _ToolCallInterruptedError as e:
+            return None, str(e), False
+
         except ImportError:
             return (
                 None,
@@ -166,15 +176,18 @@ class MCPToolWrapper(BaseTool):
         from mcp.client.streamable_http import streamablehttp_client
 
         server_url = self.mcp_server_params["url"]
+        call_sent = False
 
         try:
 
             async def _do_mcp_call() -> str:
+                nonlocal call_sent
                 async with streamablehttp_client(
                     server_url, terminate_on_close=True
                 ) as (read, write, _):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
+                        call_sent = True
                         result = await session.call_tool(
                             self.original_tool_name, kwargs
                         )
@@ -187,9 +200,19 @@ class MCPToolWrapper(BaseTool):
                 _do_mcp_call(), timeout=MCP_TOOL_EXECUTION_TIMEOUT
             )
 
-        except asyncio.CancelledError as e:
-            raise asyncio.TimeoutError("MCP operation was cancelled") from e
-        except Exception as e:
+        except (asyncio.CancelledError, Exception) as e:
+            if call_sent:
+                if isinstance(e, (asyncio.CancelledError, asyncio.TimeoutError)):
+                    reason = "timed out"
+                else:
+                    reason = f"failed: {e!s}"
+                raise _ToolCallInterruptedError(
+                    f"MCP tool '{self.original_tool_name}' {reason} after the "
+                    "call was sent. It was not retried because the server may "
+                    "already have run it."
+                ) from e
+            if isinstance(e, asyncio.CancelledError):
+                raise asyncio.TimeoutError("MCP operation was cancelled") from e
             if e.__cause__ is not None:
                 raise asyncio.TimeoutError(
                     f"MCP connection error: {e.__cause__}"
