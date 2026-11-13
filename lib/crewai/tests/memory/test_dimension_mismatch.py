@@ -163,7 +163,16 @@ def test_background_save_propagates_dimension_mismatch(tmp_path: Path) -> None:
         mem._background_encode_batch(["content"], None, None, None, None, None, False, None)
 
 
-def test_background_save_still_swallows_shutdown_runtime_error(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "message",
+    [
+        "cannot schedule new futures after shutdown",
+        "cannot schedule new futures after interpreter shutdown",
+    ],
+)
+def test_background_save_still_swallows_shutdown_runtime_error(
+    tmp_path: Path, message: str
+) -> None:
     from unittest.mock import MagicMock
 
     from crewai.memory.unified_memory import Memory
@@ -175,7 +184,7 @@ def test_background_save_still_swallows_shutdown_runtime_error(tmp_path: Path) -
     )
 
     def raise_shutdown(*_args: object, **_kwargs: object) -> None:
-        raise RuntimeError("cannot schedule new futures after shutdown")
+        raise RuntimeError(message)
 
     mem._encode_batch = raise_shutdown  # type: ignore[method-assign]
 

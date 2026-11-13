@@ -706,11 +706,12 @@ class Memory(BaseModel):
         except RuntimeError as e:
             # The encoding pipeline uses asyncio.run() -> to_thread() internally.
             # If the process is shutting down, the default executor is closed and
-            # to_thread raises "cannot schedule new futures after shutdown".
-            # Only that specific case is safe to abandon silently -- the process
-            # is exiting anyway. Any other RuntimeError (embedder/LLM init failure,
-            # encode error) is a real save failure and must not disappear.
-            if "cannot schedule new futures after shutdown" in str(e):
+            # to_thread raises "cannot schedule new futures after shutdown", or
+            # "... after interpreter shutdown" during interpreter exit. Only those
+            # cases are safe to abandon silently -- the process is exiting anyway.
+            # Any other RuntimeError (embedder/LLM init failure, encode error) is
+            # a real save failure and must not disappear.
+            if "cannot schedule new futures after" in str(e):
                 return []
             # Re-raise so the future carries the exception. The failure event is
             # emitted once by _on_save_done (the future's done-callback) from
