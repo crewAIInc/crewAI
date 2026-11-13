@@ -653,7 +653,33 @@ class TestInputHistory:
         assert len(flow._input_history) == 1
         assert flow._input_history[0]["response"] is None
 
+    def test_input_history_public_accessor(self) -> None:
+        """input_history returns a copy of the recorded ask() entries."""
 
+        class MetadataProvider:
+            def request_input(self, message, flow, metadata=None):
+                return InputResponse(text="AI", metadata={"answered_by": "test"})
+
+        class TestFlow(Flow):
+            input_provider = MetadataProvider()
+
+            @start()
+            def gather(self):
+                self.ask("Topic?", metadata={"channel": "#research"})
+                return "done"
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        history = flow.input_history
+        assert len(history) == 1
+        assert history[0]["message"] == "Topic?"
+        assert history[0]["response"] == "AI"
+        assert history[0]["metadata"] == {"channel": "#research"}
+        assert history[0]["response_metadata"] == {"answered_by": "test"}
+
+        history.clear()
+        assert len(flow.input_history) == 1, "input_history must hand out a copy"
 
 
 class TestAskIntegration:
@@ -1194,3 +1220,80 @@ class TestAskMetadata:
         assert bob_entry is not None
         assert bob_entry["response"] == "answer from bob"
         assert bob_entry["response_metadata"] == {"responded_by": "bob"}
+
+
+class TestScriptedInputProviderDocsExample:
+    """Smoke test for docs/edge/en/concepts/flows.mdx custom input provider."""
+
+    def test_scripted_provider_metadata_and_unavailable_input(self) -> None:
+        class ScriptedProvider(InputProvider):
+            def __init__(self, replies: list[str | InputResponse | None]) -> None:
+                self.replies = list(replies)
+                self.seen: list[tuple[str, dict[str, Any] | None]] = []
+
+            def request_input(
+                self,
+                message: str,
+                flow: Flow[Any],
+                metadata: dict[str, Any] | None = None,
+            ) -> str | InputResponse | None:
+                self.seen.append((message, metadata))
+                if not self.replies:
+                    return None
+                return self.replies.pop(0)
+
+        provider = ScriptedProvider(
+            [
+                InputResponse(
+                    text="vector databases",
+                    metadata={"answered_by": "script", "thread_id": "t1"},
+                )
+            ]
+        )
+
+        class ResearchWizardFlow(Flow):
+            input_provider = provider
+
+            @start()
+            def gather(self) -> dict[str, str | None]:
+                topic = self.ask(
+                    "What should we research?",
+                    metadata={"channel": "#research"},
+                )
+                if topic is None:
+                    return {"status": "cancelled", "topic": None, "depth": None}
+
+                depth = self.ask(
+                    "How deep should we go?",
+                    metadata={"channel": "#research"},
+                )
+                if depth is None:
+                    return {"status": "partial", "topic": topic, "depth": None}
+
+                return {"status": "ok", "topic": topic, "depth": depth}
+
+        flow = ResearchWizardFlow()
+        result = flow.kickoff()
+
+        assert result == {
+            "status": "partial",
+            "topic": "vector databases",
+            "depth": None,
+        }
+        assert provider.seen == [
+            ("What should we research?", {"channel": "#research"}),
+            ("How deep should we go?", {"channel": "#research"}),
+        ]
+
+        assert len(flow.input_history) == 2
+        first = flow.input_history[0]
+        assert first["response"] == "vector databases"
+        assert first["metadata"] == {"channel": "#research"}
+        assert first["response_metadata"] == {
+            "answered_by": "script",
+            "thread_id": "t1",
+        }
+
+        second = flow.input_history[1]
+        assert second["response"] is None
+        assert second["metadata"] == {"channel": "#research"}

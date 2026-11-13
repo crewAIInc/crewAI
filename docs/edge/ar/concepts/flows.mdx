@@ -726,6 +726,106 @@ def next_step(self, result: HumanFeedbackResult):
 
 للحصول على دليل كامل حول التغذية الراجعة البشرية في التدفقات، بما في ذلك **التغذية الراجعة غير المتزامنة/غير الحاجبة** مع مزودين مخصصين (Slack، webhooks، إلخ)، انظر [التغذية الراجعة البشرية في التدفقات](/ar/learn/human-feedback-in-flows).
 
+### مزود إدخال مخصص لـ `Flow.ask()`
+
+يؤدي `Flow.ask()` إلى حجب الخطوة الحالية حتى يعيد `input_provider` إجابة، أو ينتهي المهلة، أو يعيد المزود `None`. يقرأ `ConsoleProvider` الافتراضي من stdin. نفّذ بروتوكول `InputProvider` لتوجيه المطالبات من سكربت أو طابور أو WebSocket أو واجهة مخصصة — دون الحجب على وحدة التحكم.
+
+هذا **يختلف عن جولات المحادثة**:
+
+| API | الاستخدام |
+|-----|-----------|
+| `self.ask(message, metadata=...)` | معالج أو توضيح **داخل** خطوة قيد التشغيل |
+| `flow.handle_turn(message, session_id=...)` | **بدء** جولة محادثة جديدة من REST أو WebSocket أو اختبار |
+
+راجع [التدفقات المحادثة](/edge/ar/guides/flows/conversational-flows) لـ `handle_turn()`.
+
+يعيد `ask()` دائمًا `str | None` لكود التدفق. قد يعيد المزود سلسلة عادية أو `None` عند عدم توفر الإدخال، أو `InputResponse` مع بيانات وصفية للرد. تُمرَّر بيانات الطلب من `ask()` إلى `request_input(message, flow, metadata=None)`.
+
+المثال أدناه يستخدم **مزودًا مكتوبًا مسبقًا** (بدون stdin أو استدعاءات LLM أو مفاتيح API). يجيب على المطالبة الأولى مع بيانات `InputResponse` الوصفية، ثم يعيد `None` على المطالبة الثانية حتى يمكن للتدفق التفرع صراحةً.
+
+```python Code
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Returns pre-scripted replies; records each (message, metadata) pair."""
+
+    def __init__(self, replies: list[str | InputResponse | None]) -> None:
+        self.replies = list(replies)
+        self.seen: list[tuple[str, dict[str, Any] | None]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow[Any],
+        metadata: dict[str, Any] | None = None,
+    ) -> str | InputResponse | None:
+        self.seen.append((message, metadata))
+        if not self.replies:
+            return None
+        return self.replies.pop(0)
+
+
+class ResearchWizardFlow(Flow):
+    input_provider = ScriptedProvider(
+        [
+            InputResponse(
+                text="vector databases",
+                metadata={"answered_by": "script", "thread_id": "t1"},
+            )
+        ]
+    )
+
+    @start()
+    def gather(self) -> dict[str, str | None]:
+        topic = self.ask(
+            "What should we research?",
+            metadata={"channel": "#research"},
+        )
+        if topic is None:
+            return {"status": "cancelled", "topic": None, "depth": None}
+
+        depth = self.ask(
+            "How deep should we go?",
+            metadata={"channel": "#research"},
+        )
+        if depth is None:
+            return {"status": "partial", "topic": topic, "depth": None}
+
+        return {"status": "ok", "topic": topic, "depth": depth}
+```
+
+بعد `kickoff()`، افحص بيانات الرد الوصفية عبر `flow.input_history`:
+
+```python Code
+flow = ResearchWizardFlow()
+result = flow.kickoff()
+
+print("result:", result)
+print("provider saw:", flow.input_provider.seen)
+first = flow.input_history[0]
+print("response_metadata:", first["response_metadata"])
+```
+
+<CodeGroup>
+
+```bash Run
+cd lib/crewai && uv run python examples/flow_custom_input_provider.py
+```
+
+```text Output
+result: {'status': 'partial', 'topic': 'vector databases', 'depth': None}
+provider saw: [('What should we research?', {'channel': '#research'}), ('How deep should we go?', {'channel': '#research'})]
+response_metadata: {'answered_by': 'script', 'thread_id': 't1'}
+```
+
+</CodeGroup>
+
+السكربت القابل للتشغيل في `lib/crewai/examples/flow_custom_input_provider.py`. لتطبيقات محادثة متعددة الجولات، استخدم `handle_turn()` — راجع [التدفقات المحادثة](/edge/ar/guides/flows/conversational-flows).
+
 ## إضافة Agents إلى التدفقات
 
 يمكن دمج Agents بسلاسة في تدفقاتك، مما يوفر بديلًا خفيف الوزن لفرق Crew الكاملة عندما تحتاج إلى تنفيذ مهام أبسط وأكثر تركيزًا. إليك مثال على كيفية استخدام Agent ضمن تدفق لإجراء أبحاث السوق:

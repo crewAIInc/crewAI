@@ -35,6 +35,8 @@ Use **`flow.handle_turn(message, session_id=...)`** for every user message from 
 
 `handle_turn()`, `stream_turn()`, and `chat()` raise `ValueError` unless conversational mode is enabled. Applying `@ConversationConfig(...)` enables it automatically; otherwise set `conversational = True`.
 
+For a **scripted custom input provider** that drives `ask()` without stdin (metadata, `InputResponse`, and unavailable input), see [Custom input provider for `Flow.ask()`](/edge/en/concepts/flows#custom-input-provider-for-flowask) in the Flows guide.
+
 ## Quick start
 
 ```python

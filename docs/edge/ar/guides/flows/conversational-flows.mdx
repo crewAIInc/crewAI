@@ -35,6 +35,8 @@ mode: "wide"
 
 ترفع `handle_turn()` و`stream_turn()` و`chat()` الخطأ `ValueError` ما لم يكن الوضع المحادثاتي مفعّلاً. يؤدي تطبيق `@ConversationConfig(...)` إلى تفعيله تلقائياً؛ وإلا فعيّن `conversational = True`.
 
+لمثال **مزود إدخال مخصص مكتوب مسبقًا** يشغّل `ask()` دون stdin (بيانات وصفية، `InputResponse`، وإدخال غير متاح)، راجع [مزود إدخال مخصص لـ `Flow.ask()`](/edge/ar/concepts/flows#custom-input-provider-for-flowask) في دليل التدفقات.
+
 ## بداية سريعة
 
 ```python
