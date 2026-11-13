@@ -787,27 +787,30 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="Nvidia NIM">
+    CrewAI talks to NVIDIA NIM through its native OpenAI client, so no LiteLLM install is needed.
+
     Set the following environment variables in your `.env` file:
     ```toml Code
-    NVIDIA_API_KEY=<your-api-key>
+    # Required
+    NVIDIA_NIM_API_KEY=<your-api-key>
+
+    # Optional, point at a self-hosted NIM endpoint
+    NVIDIA_NIM_BASE_URL=https://integrate.api.nvidia.com/v1
     ```
 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
+        model="nvidia_nim/nvidia/nemotron-3-super-120b-a12b",
         temperature=0.7
     )
     ```
 
+    Model ids are already in `publisher/model` form, so a full reference carries three segments,
+    for example `nvidia_nim/nvidia/nemotron-3-super-120b-a12b`.
     NVIDIA NIM's hosted catalog changes frequently. Use the
     [NVIDIA NIM model catalog](https://build.nvidia.com/models) to select a
     current endpoint and verify its model ID, modalities, and context limits.
-
-    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
-    ```bash
-    uv add 'crewai[litellm]'
-    ```
   </Accordion>
 
   <Accordion title="NVIDIA Nemotron">
@@ -821,7 +824,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     **Hosted NVIDIA NIM usage:**
     ```toml Code
-    NVIDIA_API_KEY=<your-api-key>
+    NVIDIA_NIM_API_KEY=<your-api-key>
     ```
 
     ```python Code
@@ -858,11 +861,6 @@ In this section, you'll find detailed examples that help you select, configure, 
     **Reasoning mode:** Nemotron 3 Ultra supports configurable reasoning via its chat template using `enable_thinking=True` or `enable_thinking=False`. If you are using a hosted endpoint, check your provider's documentation for how that flag is exposed.
 
     For model details, license, and deployment guidance, see the [NVIDIA Nemotron 3 Ultra model card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4).
-
-    **Note:** Hosted NVIDIA NIM usage uses LiteLLM. Add it as a dependency to your project:
-    ```bash
-    uv add 'crewai[litellm]'
-    ```
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
