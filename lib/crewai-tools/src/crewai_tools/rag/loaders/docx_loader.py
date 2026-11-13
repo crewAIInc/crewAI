@@ -91,11 +91,13 @@ class DOCXLoader(BaseLoader):
     def _block_lines(cls, block: Any) -> list[str]:
         """Return the non-empty text lines of a paragraph or table.
 
-        A table yields one line per row with cells joined by `` | ``. A cell
-        spanning several columns is reported once per row, and tables nested
-        inside a cell are flattened into that cell's text.
+        A table yields one line per row with cells joined by `` | ``. Each
+        physical cell is read once: a cell spanning several columns appears
+        once, and the continuation of a vertically merged cell is left empty.
+        Line breaks inside a cell and tables nested in it are flattened into
+        the cell's text, so a row always stays on one line.
         """
-        from docx.table import Table
+        from docx.table import Table, _Cell
 
         if not isinstance(block, Table):
             text = block.text
@@ -103,17 +105,21 @@ class DOCXLoader(BaseLoader):
 
         lines = []
         for row in block.rows:
-            cells = row.cells
+            # Iterate the row's own <w:tc> elements rather than ``row.cells``,
+            # which repeats a cell once per spanned grid column and maps a
+            # vertical-merge continuation back to the merged cell, re-reading
+            # its content (and any nested tables) for every row it spans.
             row_text = []
-            for i, cell in enumerate(cells):
-                if i and cell._tc is cells[i - 1]._tc:
-                    continue  # horizontally merged cell repeated by python-docx
+            for tc in row._tr.tc_lst:
+                if tc.vMerge == "continue":
+                    row_text.append("")
+                    continue
                 cell_lines = [
                     line
-                    for inner in cell.iter_inner_content()
+                    for inner in _Cell(tc, block).iter_inner_content()
                     for line in cls._block_lines(inner)
                 ]
-                row_text.append(" ".join(cell_lines))
+                row_text.append(" ".join(" ".join(cell_lines).split()))
             if any(row_text):
                 lines.append(" | ".join(row_text))
         return lines

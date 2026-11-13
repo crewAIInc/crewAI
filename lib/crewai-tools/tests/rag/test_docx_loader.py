@@ -207,6 +207,60 @@ class TestDOCXLoaderTables:
 
         assert result.content == "Spanning header | Total\na | b | 3"
 
+    def test_vertically_merged_cell_is_read_once_and_columns_stay_aligned(
+        self, save_docx
+    ):
+        def build(doc) -> None:
+            table = _table(doc, [["Region", "Q", "Sales"], ["", "Q1", "10"], ["", "Q2", "20"]])
+            merged = table.cell(0, 0).merge(table.cell(2, 0))
+            merged.text = "North"
+
+        result = DOCXLoader().load(SourceContent(save_docx(build)))
+
+        assert result.content == "North | Q | Sales\n | Q1 | 10\n | Q2 | 20"
+
+    def test_line_break_inside_cell_keeps_row_on_one_line(self, save_docx):
+        def build(doc) -> None:
+            table = _table(doc, [["Address", "Phone"]])
+            run = table.cell(0, 0).paragraphs[0].add_run()
+            run.add_break()
+            run.add_text("Floor 2")
+            table.cell(0, 1).add_paragraph("ext. 42")
+
+        result = DOCXLoader().load(SourceContent(save_docx(build)))
+
+        assert result.content == "Address Floor 2 | Phone ext. 42"
+
+    def test_nested_vertical_merges_do_not_multiply_output(self, save_docx):
+        # Each level nests the next table inside a cell merged across 5 rows.
+        # Reading the merged cell once per spanned row would emit the leaf
+        # 5**4 = 625 times and take exponential time.
+        def nest(cell, depth: int) -> None:
+            table = cell.add_table(rows=5, cols=2)
+            merged = table.cell(0, 0).merge(table.cell(4, 0))
+            if depth == 0:
+                merged.text = "LEAF"
+            else:
+                nest(merged, depth - 1)
+
+        def build(doc) -> None:
+            outer = doc.add_table(rows=1, cols=1)
+            nest(outer.cell(0, 0), 3)
+
+        result = DOCXLoader().load(SourceContent(save_docx(build)))
+
+        assert result.content.count("LEAF") == 1
+        assert len(result.content) < 200
+
+    def test_huge_declared_column_span_is_not_expanded(self, save_docx):
+        def build(doc) -> None:
+            table = _table(doc, [["wide", "x"]])
+            table.cell(0, 0)._tc.grid_span = 5_000_000
+
+        result = DOCXLoader().load(SourceContent(save_docx(build)))
+
+        assert result.content == "wide | x"
+
     def test_empty_rows_are_skipped_and_empty_cells_kept_in_place(self, save_docx):
         def build(doc) -> None:
             _table(doc, [["Name", "", "Note"], ["", "", ""], ["x", "", "y"]])
