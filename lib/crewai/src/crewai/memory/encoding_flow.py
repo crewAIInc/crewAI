@@ -15,12 +15,13 @@ import contextvars
 from datetime import datetime
 import logging
 import math
-from typing import Any, ClassVar
+from typing import Annotated, Any, ClassVar
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PlainSerializer
 
 from crewai.flow.flow import Flow, listen, start
+from crewai.flow.runtime import _serialize_initial_state
 from crewai.memory.analyze import (
     ConsolidationPlan,
     MemoryAnalysis,
@@ -86,7 +87,11 @@ class EncodingFlow(Flow[EncodingState]):
 
     _skip_auto_memory: bool = True
 
-    initial_state: type[EncodingState] = EncodingState
+    # Keep the base Flow JSON serializer: a bare class ref breaks checkpoints.
+    initial_state: Annotated[
+        type[EncodingState],
+        PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
+    ] = EncodingState
 
     def __init__(
         self,
