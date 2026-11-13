@@ -726,6 +726,67 @@ def next_step(self, result: HumanFeedbackResult):
 
 للحصول على دليل كامل حول التغذية الراجعة البشرية في التدفقات، بما في ذلك **التغذية الراجعة غير المتزامنة/غير الحاجبة** مع مزودين مخصصين (Slack، webhooks، إلخ)، انظر [التغذية الراجعة البشرية في التدفقات](/ar/learn/human-feedback-in-flows).
 
+## طلب الإدخال باستخدام `ask()` ومزوّد إدخال مخصص
+
+داخل خطوة قيد التشغيل، يمكن لـ Flow طلب إدخال باستخدام `self.ask(...)`. افتراضيًا يقرأ من الطرفية، لكن يمكنك توصيل **مزوّد إدخال** خاص بك (روبوت Slack، أو واجهة ويب، أو بيئة اختبار) بتعيين `input_provider` على الـ Flow. ينفّذ المزوّد الدالة `request_input(message, flow, metadata=None)` ويُرجع الإجابة كسلسلة نصية، أو كـ `InputResponse` (لإرفاق بيانات وصفية للاستجابة)، أو `None` عندما يكون الإدخال غير متاح. على خلاف `handle_turn()` الذي يبدأ دورة محادثة كاملة، يطلب `ask()` قيمة واحدة في منتصف خطوة قيد التشغيل.
+
+```python
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedInputProvider:
+    """A deterministic input provider: answers come from a script, not the console."""
+
+    def __init__(self, answers):
+        self.answers = answers
+
+    def request_input(self, message, flow, metadata=None):
+        # `metadata` is whatever the Flow passed to ask(); a real provider would use it to route
+        # the question (channel, user id, ...). Returning None means "no input available".
+        return self.answers.get(message)
+
+
+class OnboardingFlow(Flow):
+    input_provider = ScriptedInputProvider(
+        {
+            "What's your name?": InputResponse(text="Ada", metadata={"responded_by": "harness"}),
+            "Favorite language?": None,  # input unavailable (cancelled / dropped)
+        }
+    )
+
+    @start()
+    def collect(self):
+        name = self.ask("What's your name?", metadata={"field": "name"})
+        language = self.ask("Favorite language?", metadata={"field": "language"})
+        if language is None:
+            language = "(not provided)"
+        return f"Hello, {name}! Favourite language: {language}"
+
+
+flow = OnboardingFlow()
+print(flow.kickoff())
+# ask() returns only the text; the provider's response metadata is kept in the input history.
+for entry in flow._input_history:
+    print(f"- {entry['message']!r} -> {entry['response']!r} (response_metadata={entry['response_metadata']})")
+```
+
+احفظ هذا في ملف `custom_input_provider.py` وشغّله:
+
+```bash
+python custom_input_provider.py
+```
+
+المخرجات المتوقعة (يطبع CrewAI أيضًا لوحات تنفيذ التدفق):
+
+```text
+Hello, Ada! Favourite language: (not provided)
+- "What's your name?" -> 'Ada' (response_metadata={'responded_by': 'harness'})
+- 'Favorite language?' -> None (response_metadata=None)
+```
+
+يُرجع `ask()` النص فقط؛ وتُحفظ البيانات الوصفية لاستجابة المزوّد في سجل إدخال الـ Flow (`flow._input_history`). عالج إجابة `None` صراحةً — فهي تعني أن الإدخال غير متاح، وليست إجابة فارغة. المزوّدات متزامنة، ويشغّلها CrewAI في خيط منفصل حتى لا يحجب `ask()` حلقة الأحداث.
+
 ## إضافة Agents إلى التدفقات
 
 يمكن دمج Agents بسلاسة في تدفقاتك، مما يوفر بديلًا خفيف الوزن لفرق Crew الكاملة عندما تحتاج إلى تنفيذ مهام أبسط وأكثر تركيزًا. إليك مثال على كيفية استخدام Agent ضمن تدفق لإجراء أبحاث السوق:
