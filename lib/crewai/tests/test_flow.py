@@ -70,6 +70,28 @@ def test_flow_with_multiple_starts():
     assert execution_order.index("step_d") > execution_order.index("step_b")
 
 
+@pytest.mark.parametrize("stream", [False, True])
+@pytest.mark.parametrize("use_async", [False, True])
+def test_flow_without_start_method_fails_on_kickoff(use_async, stream):
+    """Test that kickoff raises instead of finishing when nothing can run."""
+    execution_order = []
+
+    class NoStartFlow(Flow):
+        @listen("never_emitted")
+        def orphan(self):
+            execution_order.append("orphan")
+
+    flow = NoStartFlow(stream=stream)
+
+    with pytest.raises(ValueError, match="'NoStartFlow' has no start method"):
+        if use_async:
+            asyncio.run(flow.kickoff_async())
+        else:
+            flow.kickoff()
+
+    assert execution_order == []
+
+
 def test_cyclic_flow():
     """Test a cyclic flow that runs a finite number of iterations."""
     execution_order = []
