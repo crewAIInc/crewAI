@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
@@ -2065,7 +2067,9 @@ class BedrockCompletion(BaseLLM):
         return converse_messages, system_message
 
     @staticmethod
-    def _convert_content_for_converse(content: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _convert_content_for_converse(
+        content: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Convert OpenAI-style multimodal content parts to Converse blocks.
 
         ``LLMMessage.content`` documents its list form as multimodal parts,
@@ -2087,22 +2091,35 @@ class BedrockCompletion(BaseLLM):
             if block_type == "image_url":
                 image_info = block.get("image_url", {})
                 url = image_info.get("url", "") if isinstance(image_info, dict) else ""
-                # Converse image blocks require ``{"image": {"format": str,
-                # "source": {"bytes": b"..."}}}``.  Parse the data URI's media
-                # type into the image format and strip the base64 prefix.
-                if isinstance(url, str) and url.startswith("data:") and ";base64," in url:
+                # Converse image blocks take raw bytes in ``source.bytes``;
+                # boto3 base64-encodes that blob itself, so the data URI's
+                # payload must be decoded first, as BedrockFormatter does.
+                if (
+                    isinstance(url, str)
+                    and url.startswith("data:")
+                    and ";base64," in url
+                ):
                     header, b64_data = url.split(";base64,", 1)
                     media_type = (
                         header.split("data:", 1)[1] if "data:" in header else ""
                     )
-                    image_format = media_type.split("/")[-1] if "/" in media_type else ""
+                    image_format = (
+                        media_type.split("/")[-1] if "/" in media_type else ""
+                    )
+                    if image_format == "jpg":
+                        image_format = "jpeg"
                     # Converse only accepts jpeg/png/gif/webp.
                     if image_format in {"jpeg", "png", "gif", "webp"}:
+                        try:
+                            image_bytes = base64.b64decode(b64_data, validate=True)
+                        except (binascii.Error, ValueError):
+                            converted.append(block)
+                            continue
                         converted.append(
                             {
                                 "image": {
                                     "format": image_format,
-                                    "source": {"bytes": b64_data},
+                                    "source": {"bytes": image_bytes},
                                 }
                             }
                         )
