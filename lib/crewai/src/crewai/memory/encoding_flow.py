@@ -28,7 +28,7 @@ from crewai.memory.analyze import (
     analyze_for_save,
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
-from crewai.memory.utils import join_scope_paths
+from crewai.memory.utils import join_scope_paths, normalize_scope_path
 
 
 logger = logging.getLogger(__name__)
@@ -332,7 +332,7 @@ class EncodingFlow(Flow[EncodingState]):
                 if item.root_scope:
                     item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
                 else:
-                    item.resolved_scope = inner_scope
+                    item.resolved_scope = normalize_scope_path(inner_scope)
                 item.resolved_categories = (
                     item.categories
                     if item.categories is not None
@@ -372,7 +372,7 @@ class EncodingFlow(Flow[EncodingState]):
         if item.root_scope:
             item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
         else:
-            item.resolved_scope = inner_scope if inner_scope != "/" else "/"
+            item.resolved_scope = normalize_scope_path(inner_scope)
 
         item.resolved_categories = item.categories or []
         item.resolved_metadata = item.metadata or {}

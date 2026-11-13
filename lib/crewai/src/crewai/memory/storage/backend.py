@@ -43,7 +43,14 @@ class EmbeddingDimensionMismatchError(ValueError):
 
 @runtime_checkable
 class StorageBackend(Protocol):
-    """Protocol for pluggable memory storage backends."""
+    """Protocol for pluggable memory storage backends.
+
+    Scope filters (``scope_prefix`` / ``scope``) are matched as scope *paths*:
+    a bare name such as ``"sales"`` and its anchored form ``"/sales"`` select
+    the same records, and a prefix selects every scope below it.  Records are
+    stored with the canonical anchored form, so a backend that matches raw
+    strings has to anchor the prefix before comparing.
+    """
 
     def save(self, records: list[MemoryRecord]) -> None:
         """Save memory records to storage.

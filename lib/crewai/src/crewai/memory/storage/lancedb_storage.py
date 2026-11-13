@@ -19,6 +19,7 @@ from lancedb.query import ColumnOrdering
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.utils import normalize_scope_path
 
 
 _logger = logging.getLogger(__name__)
@@ -52,15 +53,61 @@ def _id_in_filter(record_ids: list[str]) -> str:
     return f"id IN ({ids_expr})"
 
 
+def _canonical_scope_prefix(scope_prefix: str) -> str:
+    """Return ``scope_prefix`` as a canonical scope path.
+
+    A scope path is anchored at the root (``"/sales"``, not ``"sales"``) and has
+    runs of slashes collapsed, the form
+    :func:`crewai.memory.utils.normalize_scope_path` produces.  Scopes are
+    matched with a raw string prefix, so spelling differences address different
+    rows: an unanchored prefix (``LIKE 'sales%'``) and an anchored one
+    (``LIKE '/sales%'``) select different sets, and a prefix that keeps a
+    doubled slash (``LIKE '//sales%'``) matches nothing at all, because the
+    write path stores ``"//sales"`` as ``"/sales"``.  Every filter site has to
+    canonicalize the same way, or the same scope resolves differently depending
+    on which call reached it.
+
+    An empty or root-only prefix is returned as ``""``, which the callers read
+    as "every scope".
+    """
+    if not scope_prefix:
+        return scope_prefix
+    normalized = normalize_scope_path(scope_prefix)
+    return "" if normalized == "/" else normalized
+
+
 def _scope_prefix_filter(prefix: str) -> str:
     r"""Build a predicate matching scopes that start with ``prefix``.
+
+    The prefix is anchored as a scope path first, so ``"sales"`` and
+    ``"/sales"`` select the same rows. Scopes written by releases that did not
+    anchor them were stored exactly as the caller typed them, so the unanchored
+    spelling of the same path is matched as well — the scope itself or its
+    ``sales/`` descendants — until a migration rewrites those rows. That legacy
+    half is deliberately not `LIKE 'sales%'`, which would widen the match into
+    siblings such as ``sales-eu`` that were never part of the scope.
+
+    Prefix, not subtree: a scope prefix is a string prefix by contract (see
+    ``test_lancedb_filter_escaping``), so ``/share\`` reaches ``/share\docs``.
+    Every scoped operation — including the destructive ``delete`` and
+    ``reset`` — goes through this one predicate, so they cannot disagree about
+    which rows a scope owns.
 
     ``\``, ``%`` and ``_`` in the prefix are escaped so they match literally;
     only the appended trailing ``%`` acts as a wildcard. Lance supports only
     ``\`` as the ``LIKE`` escape character.
     """
-    pattern = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
+    canonical = _canonical_scope_prefix(prefix)
+
+    def escaped(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    clauses = [f"scope LIKE '{_sql_str(escaped(canonical))}%' ESCAPE '\\'"]
+    legacy = canonical.lstrip("/")
+    if legacy:
+        clauses.append(f"scope = '{_sql_str(legacy)}'")
+        clauses.append(f"scope LIKE '{_sql_str(escaped(legacy))}/%' ESCAPE '\\'")
+    return f"({' OR '.join(clauses)})"
 
 
 class LanceDBStorage:
@@ -468,10 +515,9 @@ class LanceDBStorage:
                 return before - int(self._table.count_rows())
             conditions = []
             if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                if not prefix.startswith("/"):
-                    prefix = "/" + prefix
-                conditions.append(f"{_scope_prefix_filter(prefix)} OR scope = '/'")
+                conditions.append(
+                    f"{_scope_prefix_filter(scope_prefix)} OR scope = '/'"
+                )
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:
@@ -543,10 +589,8 @@ class LanceDBStorage:
         return [self._row_to_record(row) for row in rows]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
-        scope = scope.rstrip("/") or "/"
-        prefix = scope if scope != "/" else ""
-        if prefix and not prefix.startswith("/"):
-            prefix = "/" + prefix
+        prefix = _canonical_scope_prefix(scope)
+        scope = prefix or "/"
         rows = self._scan_rows(
             prefix or None,
             columns=["scope", "categories_str", "created_at"],
@@ -566,7 +610,9 @@ class LanceDBStorage:
         child_prefix = (prefix + "/") if prefix else "/"
         children: set[str] = set()
         for row in rows:
-            sc = str(row.get("scope", ""))
+            # Legacy rows can hold an unanchored scope ("sales/eu"); compare
+            # the canonical form so they still report as children.
+            sc = normalize_scope_path(str(row.get("scope", "")))
             if child_prefix and sc.startswith(child_prefix):
                 rest = sc[len(child_prefix) :]
                 first_component = rest.split("/", 1)[0]
@@ -599,12 +645,12 @@ class LanceDBStorage:
         )
 
     def list_scopes(self, parent: str = "/") -> list[str]:
-        parent = parent.rstrip("/") or ""
+        parent = _canonical_scope_prefix(parent)
         prefix = (parent + "/") if parent else "/"
         rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
         children: set[str] = set()
         for row in rows:
-            sc = str(row.get("scope", ""))
+            sc = normalize_scope_path(str(row.get("scope", "")))
             if sc.startswith(prefix) and sc != (prefix.rstrip("/") or "/"):
                 rest = sc[len(prefix) :]
                 first_component = rest.split("/", 1)[0]
@@ -642,12 +688,14 @@ class LanceDBStorage:
                 return
             if self._table is None:
                 return
-            prefix = scope_prefix.rstrip("/")
+            prefix = _canonical_scope_prefix(scope_prefix)
             if prefix:
-                literal = _sql_str(prefix)
-                self._do_write(
-                    "delete", f"scope >= '{literal}' AND scope < '{literal}/\uffff'"
-                )
+                # Same predicate every other scoped operation uses: the scope
+                # and its slash-delimited descendants, in both the anchored and
+                # the legacy unanchored spelling. A range would be wider — it
+                # sorts hyphenated and dotted siblings (`/sales-eu`, `/sales.x`)
+                # inside the interval and deletes them too.
+                self._do_write("delete", _scope_prefix_filter(scope_prefix))
 
     def optimize(self) -> None:
         """Compact the table synchronously and refresh the scope index.
