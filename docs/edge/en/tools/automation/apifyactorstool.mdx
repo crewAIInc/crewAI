@@ -79,6 +79,45 @@ agent = Agent(
 
 You can run other Actors from [Apify Store](https://apify.com/store) simply by changing the `actor_name` and, when using it manually, adjusting the `run_input` based on the Actor input schema.
 
+### Actors with typed inputs
+
+`apify/rag-web-browser` takes a single query. Many Actors have several typed input fields. The tool puts the Actor's input schema in the description of its `run_input` argument, so an agent can fill in those fields from the task. This example uses the [LinkedIn Jobs API Actor](https://apify.com/johnvc/linkedin-jobs-api), which takes a keyword, a location, a `timeRange` of `past-day`, `past-week` or `past-month`, and a `maxJobs` cap:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import ApifyActorsTool
+
+# The Actor's input schema goes into the description of the tool's run_input argument.
+jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
+
+# Run it manually to see the output shape
+jobs = jobs_tool.run(run_input={
+    "keyword": "machine learning engineer",
+    "location": "United States",
+    "timeRange": "past-week",
+    "maxJobs": 10,
+})
+for job in jobs:
+    print(job.get("title"), "at", job.get("companyName"), "-", job.get("salary") or "no salary listed")
+
+# Or let an agent pick the arguments from the task
+analyst = Agent(
+    role="Job market analyst",
+    goal="Summarize who is hiring for a role and what they pay",
+    backstory="You compare job listings and report the pattern, not the individual postings.",
+    tools=[jobs_tool],
+)
+task = Task(
+    description="Find machine learning engineer jobs posted in the past week in the United States, "
+                "cap it at 25, and report the five companies with the most openings and the salary range where listed.",
+    expected_output="A short report with a company table and the salary range.",
+    agent=analyst,
+)
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+The Actor charges per job returned, so `maxJobs` also caps the cost of a run.
+
 For an example of usage with agents, see the [CrewAI Actor template](https://apify.com/templates/python-crewai).
 
 ## Configuration

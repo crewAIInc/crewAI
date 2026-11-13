@@ -79,6 +79,45 @@ agent = Agent(
 
 Você pode executar outros Actors da [Apify Store](https://apify.com/store) apenas alterando o `actor_name` e, ao usar manualmente, ajustando o `run_input` de acordo com o esquema de entrada do Actor.
 
+### Actors com entradas tipadas
+
+O `apify/rag-web-browser` recebe uma única consulta. Muitos Actors têm vários campos de entrada tipados. A ferramenta inclui o esquema de entrada do Actor na descrição do seu argumento `run_input`, para que o agente possa preencher esses campos a partir da tarefa. Este exemplo usa o [Actor LinkedIn Jobs API](https://apify.com/johnvc/linkedin-jobs-api), que recebe uma palavra-chave, uma localização, um `timeRange` (`past-day`, `past-week` ou `past-month`) e um limite `maxJobs`:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import ApifyActorsTool
+
+# The Actor's input schema goes into the description of the tool's run_input argument.
+jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
+
+# Run it manually to see the output shape
+jobs = jobs_tool.run(run_input={
+    "keyword": "machine learning engineer",
+    "location": "United States",
+    "timeRange": "past-week",
+    "maxJobs": 10,
+})
+for job in jobs:
+    print(job.get("title"), "at", job.get("companyName"), "-", job.get("salary") or "no salary listed")
+
+# Or let an agent pick the arguments from the task
+analyst = Agent(
+    role="Job market analyst",
+    goal="Summarize who is hiring for a role and what they pay",
+    backstory="You compare job listings and report the pattern, not the individual postings.",
+    tools=[jobs_tool],
+)
+task = Task(
+    description="Find machine learning engineer jobs posted in the past week in the United States, "
+                "cap it at 25, and report the five companies with the most openings and the salary range where listed.",
+    expected_output="A short report with a company table and the salary range.",
+    agent=analyst,
+)
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+O Actor cobra por vaga retornada, então `maxJobs` também limita o custo de uma execução.
+
 Para um exemplo de uso com agentes, consulte o [template CrewAI Actor](https://apify.com/templates/python-crewai).
 
 ## Configuração
