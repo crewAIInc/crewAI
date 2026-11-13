@@ -159,7 +159,15 @@ def _flow_definition_from(
     )
     flow_definition = getattr(flow_class, "flow_definition", None)
     if callable(flow_definition):
-        return cast(FlowDefinition, flow_definition())
+        definition = cast(FlowDefinition, flow_definition())
+        # A flow built with Flow.from_declaration is a plain Flow, so its
+        # class definition has no methods; the ones it runs are on the
+        # instance.
+        if not definition.methods and not isinstance(flow_or_definition, type):
+            instance_definition = getattr(flow_or_definition, "_definition", None)
+            if isinstance(instance_definition, FlowDefinition):
+                return instance_definition
+        return definition
     raise TypeError(
         "build_flow_structure requires a FlowDefinition or a Flow class/instance "
         "with flow_definition()."
