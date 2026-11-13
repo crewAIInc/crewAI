@@ -1143,7 +1143,11 @@ class AzureCompletion(BaseLLM):
                 function_name = call_data["name"]
 
                 try:
-                    function_args = json.loads(call_data["arguments"])
+                    function_args = (
+                        json.loads(call_data["arguments"])
+                        if call_data["arguments"].strip()
+                        else {}
+                    )
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse streamed tool arguments: {e}")
                     continue
