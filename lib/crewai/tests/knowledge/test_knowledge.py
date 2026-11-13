@@ -11,6 +11,7 @@ from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
 from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+from pydantic import ValidationError
 
 
 @pytest.fixture(autouse=True)
@@ -636,3 +637,61 @@ def test_hash_based_id_generation_with_doc_id_in_metadata(mock_vector_db):
     for doc_id in result_without_doc_id.ids:
         assert len(doc_id) == 64, "ID should be 64 characters"
         assert all(c in "0123456789abcdef" for c in doc_id), "ID should be hex"
+
+
+def test_overlap_above_chunk_size_is_rejected_at_construction() -> None:
+    """The step goes negative, which used to store zero documents without any error."""
+    with pytest.raises(
+        ValidationError,
+        match=r"chunk_overlap \(200\) must be smaller than chunk_size \(100\)",
+    ):
+        StringKnowledgeSource(content="x" * 5000, chunk_size=100, chunk_overlap=200)
+
+
+def test_overlap_matching_chunk_size_is_rejected_at_construction() -> None:
+    """The step hits zero, which used to raise `range() arg 3 must not be zero` from add()."""
+    with pytest.raises(
+        ValidationError,
+        match=r"chunk_overlap \(100\) must be smaller than chunk_size \(100\)",
+    ):
+        StringKnowledgeSource(content="x" * 5000, chunk_size=100, chunk_overlap=100)
+
+
+@pytest.mark.parametrize(
+    ("chunk_size", "chunk_overlap"),
+    [(0, 0), (-5, 0), (100, -1)],
+)
+def test_non_positive_chunk_settings_are_rejected_at_construction(
+    chunk_size: int, chunk_overlap: int
+) -> None:
+    with pytest.raises(ValidationError):
+        StringKnowledgeSource(
+            content="x" * 5000, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
+
+
+def test_file_sources_inherit_the_chunk_settings_guard(tmpdir) -> None:
+    path = Path(tmpdir.join("data.txt"))
+    path.write_text("some text", encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="chunk_overlap"):
+        TextFileKnowledgeSource(file_paths=[path], chunk_size=10, chunk_overlap=50)
+
+
+@pytest.mark.parametrize(
+    ("chunk_size", "chunk_overlap"),
+    [(1000, 200), (100, 99), (100, 0)],
+)
+def test_accepted_chunk_settings_still_produce_chunks(
+    chunk_size: int, chunk_overlap: int
+) -> None:
+    from unittest.mock import MagicMock
+
+    source = StringKnowledgeSource(
+        content="x" * 5000, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
+    source.storage = MagicMock()
+    source.add()
+
+    assert len(source.chunks) > 1
+    source.storage.save.assert_called_once_with(source.chunks)
