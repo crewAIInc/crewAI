@@ -672,7 +672,8 @@ class GeminiCompletion(BaseLLM):
                 for item in content:
                     if isinstance(item, dict):
                         if "text" in item:
-                            parts.append(types.Part.from_text(text=str(item["text"])))
+                            if isinstance(item["text"], str):
+                                parts.append(types.Part.from_text(text=item["text"]))
                         elif "inlineData" in item:
                             inline = item["inlineData"]
                             parts.append(
