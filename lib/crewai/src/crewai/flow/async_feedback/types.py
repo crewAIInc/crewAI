@@ -73,7 +73,9 @@ class PendingFeedbackContext:
     requested_at: datetime = field(default_factory=datetime.now)
     execution_uuid: str | None = None
     trace_context: tuple[int, int] | None = None
-    method_outputs: list[Any] | None = None
+    completed_methods: list[str] | None = None
+    method_outputs: list[dict[str, Any]] | None = None
+    method_execution_counts: dict[str, int] | None = None
 
     @staticmethod
     def _make_json_safe(value: Any) -> Any:
@@ -120,7 +122,11 @@ class PendingFeedbackContext:
             "requested_at": self.requested_at.isoformat(),
             "execution_uuid": self.execution_uuid,
             "trace_context": list(self.trace_context) if self.trace_context else None,
-            "method_outputs": self._make_json_safe(self.method_outputs),
+            "completed_methods": self.completed_methods,
+            "method_outputs": self._make_json_safe(self.method_outputs)
+            if self.method_outputs is not None
+            else None,
+            "method_execution_counts": self.method_execution_counts,
         }
 
     @classmethod
@@ -162,7 +168,9 @@ class PendingFeedbackContext:
             trace_context=(trace_context[0], trace_context[1])
             if trace_context
             else None,
+            completed_methods=data.get("completed_methods"),
             method_outputs=data.get("method_outputs"),
+            method_execution_counts=data.get("method_execution_counts"),
         )
 
 
