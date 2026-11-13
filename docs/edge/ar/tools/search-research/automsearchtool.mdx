@@ -1,0 +1,85 @@
+---
+title: بحث Autom
+description: تبحث أداة `AutomSearchTool` في Google أو Bing أو Brave أو DuckDuckGo أو Yahoo عبر واجهة Autom SERP API وتُرجع أفضل النتائج.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AutomSearchTool`
+
+## الوصف
+
+تبحث أداة `AutomSearchTool` في الويب عبر [Autom](https://www.autom.dev)، وهي واجهة SERP API تُجري البحث على المحرك لحظة الاستدعاء.
+تُرجع أفضل النتائج العضوية بصيغة JSON، مع `title` و`link` و`snippet` و`position` لكل نتيجة.
+وتتضمن نتائج Google News أيضًا `date` و`source`.
+
+يمكنها البحث في Google (الافتراضي) أو Bing أو Brave أو DuckDuckGo أو Yahoo، وفي Google News.
+
+## التثبيت
+
+1. ثبّت حزمة `crewai[tools]`:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+2. احصل على مفتاح API من [app.autom.dev](https://app.autom.dev).
+3. عيّنه في متغير البيئة `AUTOM_API_KEY`:
+
+```shell
+export AUTOM_API_KEY="your-api-key"
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AutomSearchTool
+
+search = AutomSearchTool(n_results=5)
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="You search the web and cite the links you used.",
+    tools=[search],
+)
+
+task = Task(
+    description="What did the latest CrewAI release add?",
+    expected_output="A short summary with the links to the sources.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## المعاملات
+
+- **engine**: ‏`google` (الافتراضي) أو `bing` أو `brave` أو `duckduckgo` أو `yahoo`.
+- **search_type**: ‏`search` (الافتراضي) أو `news`. تأتي نتائج الأخبار من Google News.
+- **n_results**: عدد النتائج المُرجعة، من 1 إلى 10 (تُرجع Autom صفحة واحدة من النتائج). القيمة الافتراضية `10`.
+- **country**: اختياري. رمز الدولة المكوّن من حرفين، مثل `us` أو `sa`.
+- **language**: اختياري. لغة النتائج، مثل `ar` (في Google فقط).
+- **location**: اختياري. المدينة أو المنطقة التي يُجرى منها البحث، مثل `Dubai, United Arab Emirates` (في بحث الويب في Google فقط).
+- **timeout**: عدد ثواني انتظار Autom. القيمة الافتراضية `60`.
+
+## مثال مع المعاملات
+
+```python Code
+from crewai_tools import AutomSearchTool
+
+# Google News results from France, in French
+news = AutomSearchTool(search_type="news", country="fr", language="fr", n_results=5)
+print(news.run(search_query="intelligence artificielle"))
+
+# Brave results
+brave = AutomSearchTool(engine="brave", n_results=3)
+print(brave.run(search_query="open source agent frameworks"))
+```
+
+## الأخطاء
+
+تعود الأخطاء إلى الوكيل نصًا، ليتمكن من إعادة المحاولة أو تغيير استعلامه: مفتاح مفقود، أو مفتاح غير صالح، أو نفاد الرصيد، أو تجاوز حد الطلبات، أو انتهاء المهلة.
+لا يظهر مفتاح API أبدًا في هذه الرسائل.

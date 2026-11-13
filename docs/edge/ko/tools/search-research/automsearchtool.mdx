@@ -1,0 +1,85 @@
+---
+title: Autom 검색
+description: AutomSearchTool은(는) Autom SERP API로 Google, Bing, Brave, DuckDuckGo 또는 Yahoo를 검색하여 상위 결과를 반환합니다.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AutomSearchTool`
+
+## 설명
+
+`AutomSearchTool`은(는) 호출 시점에 검색 엔진에서 검색을 실행하는 SERP API인 [Autom](https://www.autom.dev)으로 웹을 검색합니다.
+각 결과의 `title`, `link`, `snippet`, `position`을 담은 상위 자연 검색 결과를 JSON으로 반환합니다.
+Google 뉴스 결과에는 `date`와 `source`도 포함됩니다.
+
+Google(기본값), Bing, Brave, DuckDuckGo, Yahoo와 Google 뉴스를 검색할 수 있습니다.
+
+## 설치
+
+1. `crewai[tools]` 패키지를 설치합니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+2. [app.autom.dev](https://app.autom.dev)에서 API 키를 발급받습니다.
+3. `AUTOM_API_KEY` 환경 변수에 설정합니다:
+
+```shell
+export AUTOM_API_KEY="your-api-key"
+```
+
+## 예제
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AutomSearchTool
+
+search = AutomSearchTool(n_results=5)
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="You search the web and cite the links you used.",
+    tools=[search],
+)
+
+task = Task(
+    description="What did the latest CrewAI release add?",
+    expected_output="A short summary with the links to the sources.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## 매개변수
+
+- **engine**: `google`(기본값), `bing`, `brave`, `duckduckgo` 또는 `yahoo`.
+- **search_type**: `search`(기본값) 또는 `news`. 뉴스 결과는 Google 뉴스에서 가져옵니다.
+- **n_results**: 반환할 결과 수, 1~10(Autom은 결과 한 페이지를 반환합니다). 기본값은 `10`입니다.
+- **country**: 선택 사항. `us`, `kr` 같은 두 글자 국가 코드.
+- **language**: 선택 사항. `ko` 같은 결과 언어(Google 전용).
+- **location**: 선택 사항. `Seoul, South Korea` 같은 검색 기준 도시 또는 지역(Google 웹 검색 전용).
+- **timeout**: Autom 응답 대기 시간(초). 기본값은 `60`입니다.
+
+## 매개변수 사용 예제
+
+```python Code
+from crewai_tools import AutomSearchTool
+
+# Google News results from France, in French
+news = AutomSearchTool(search_type="news", country="fr", language="fr", n_results=5)
+print(news.run(search_query="intelligence artificielle"))
+
+# Brave results
+brave = AutomSearchTool(engine="brave", n_results=3)
+print(brave.run(search_query="open source agent frameworks"))
+```
+
+## 오류
+
+오류는 텍스트로 에이전트에 반환되므로, 에이전트가 다시 시도하거나 검색어를 바꿀 수 있습니다: 키 누락, 잘못된 키, 크레딧 부족, 요청 한도 초과, 시간 초과.
+API 키는 이 메시지에 절대 나타나지 않습니다.
