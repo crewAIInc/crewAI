@@ -168,6 +168,22 @@ class ValkeyStorage:
     def _metadata_key(key: str, value: str) -> str:
         return f"metadata:{key}:{value}"
 
+    @staticmethod
+    def _metadata_matches(
+        metadata: dict[str, Any], metadata_filter: dict[str, Any]
+    ) -> bool:
+        """Typed AND match of ``metadata_filter`` against a record's metadata.
+
+        Every key must be present and its value equal (``==``) to the filter's.
+        The ``metadata:{key}:{value}`` index sets store ``str(value)``, so they
+        conflate ``5`` with ``"5"`` and a missing key with ``"None"``; use this
+        to confirm candidates from those sets. Search and delete share it so
+        recall and forget agree on the same filter, as with LanceDB and Qdrant.
+        """
+        return all(
+            k in metadata and metadata[k] == v for k, v in metadata_filter.items()
+        )
+
     def __init__(
         self,
         host: str = "localhost",
@@ -1146,6 +1162,16 @@ class ValkeyStorage:
         # Step 2: Fetch record data to identify which indexes to clean
         records_data = await self._fetch_records_for_deletion(list(ids_to_delete))
 
+        # The metadata index sets match on str(value), so confirm each
+        # candidate with the same typed comparison search uses. Otherwise
+        # {"count": 5} would also delete records where count is "5".
+        if metadata_filter:
+            records_data = {
+                record_id: data
+                for record_id, data in records_data.items()
+                if self._metadata_matches(data["metadata"], metadata_filter)
+            }
+
         # Step 3: Delete records and clean indexes
         for record_id, data in records_data.items():
             record_key = self._record_key(record_id)
@@ -1634,10 +1660,7 @@ class ValkeyStorage:
                 records = [
                     (rec, score)
                     for rec, score in records
-                    if all(
-                        k in rec.metadata and rec.metadata[k] == v
-                        for k, v in metadata_filter.items()
-                    )
+                    if self._metadata_matches(rec.metadata, metadata_filter)
                 ]
 
             # Enforce original limit after post-filtering

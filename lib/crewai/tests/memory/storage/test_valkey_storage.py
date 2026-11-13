@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -2285,6 +2286,54 @@ class TestValkeyStorageDelete:
         assert "metadata:count:42" in metadata_keys
         assert "metadata:score:3.14" in metadata_keys
         assert "metadata:active:True" in metadata_keys
+
+    @pytest.mark.parametrize(
+        ("filter_value", "stored_match", "stored_other"),
+        [(5, "5", '"5"'), (True, "true", '"True"'), (None, "null", '"None"')],
+    )
+    @pytest.mark.asyncio
+    async def test_delete_by_metadata_compares_typed_values(
+        self,
+        valkey_storage: ValkeyStorage,
+        mock_glide_client: AsyncMock,
+        filter_value: Any,
+        stored_match: str,
+        stored_other: str,
+    ) -> None:
+        """The metadata index sets key on str(value), so 5 and "5" share one
+        set. Delete must apply the same typed match as search and only remove
+        the record whose value really equals the filter.
+        """
+
+        def record(record_id: str, value_json: str) -> dict[str, Any]:
+            return {
+                "id": record_id,
+                "content": "Content",
+                "scope": "/test",
+                "categories": "[]",
+                "metadata": f'{{"count": {value_json}}}',
+                "importance": "0.5",
+                "created_at": "2024-01-01T10:00:00",
+                "last_accessed": "2024-01-01T11:00:00",
+                "embedding": b"",
+                "source": "",
+                "private": "false",
+            }
+
+        # Both records sit in the same metadata:count:<str(value)> set.
+        mock_glide_client.smembers.return_value = {"typed", "string"}
+        rows = {
+            "record:typed": record("typed", stored_match),
+            "record:string": record("string", stored_other),
+        }
+        mock_glide_client.hgetall.side_effect = lambda key: rows[key]
+
+        count = await valkey_storage.adelete(metadata_filter={"count": filter_value})
+
+        assert count == 1
+        deleted = [c.args[0] for c in mock_glide_client.delete.call_args_list]
+        assert ["record:typed"] in deleted
+        assert ["record:string"] not in deleted
 
     @pytest.mark.asyncio
     async def test_delete_handles_missing_record_data_gracefully(
