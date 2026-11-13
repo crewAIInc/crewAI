@@ -1,0 +1,74 @@
+---
+title: Asyntai Tools
+description: Let CrewAI agents answer from a website's knowledge base and read its chats and leads through Asyntai
+icon: comments
+mode: "wide"
+---
+
+# Asyntai Tools
+
+[Asyntai](https://asyntai.com) is an AI chatbot for websites. It answers visitors from the website's own pages, documents and knowledge base, and it captures leads. These tools let a CrewAI agent ask that knowledge base, add knowledge to it, and read the leads and conversations it collected.
+
+## Installation
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## Requirements
+
+- An [Asyntai](https://asyntai.com) account on the Starter plan or higher
+- An Asyntai API key, from the dashboard under Settings > API
+
+```bash
+export ASYNTAI_API_KEY='your-key-here'
+```
+
+## Available Tools
+
+| Tool | What it does |
+| --- | --- |
+| `AsyntaiAskWebsiteTool` | Answers a question from the website's knowledge base |
+| `AsyntaiListWebsitesTool` | Lists the websites on the account, with their ids |
+| `AsyntaiAddTextTool` | Adds a title and a text to the knowledge base |
+| `AsyntaiAddUrlTool` | Reads a web page and adds its content to the knowledge base |
+| `AsyntaiListKnowledgeTool` | Lists the entries in the knowledge base |
+| `AsyntaiGetLeadsTool` | Reads the visitors who left contact details |
+| `AsyntaiGetConversationTool` | Reads the messages of one website chat |
+
+## Example
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AsyntaiAskWebsiteTool, AsyntaiGetLeadsTool
+
+agent = Agent(
+    role="Customer success assistant",
+    goal="Answer from our website and follow up with new leads",
+    backstory="You know our website and our customers.",
+    tools=[AsyntaiAskWebsiteTool(), AsyntaiGetLeadsTool()],
+)
+
+task = Task(
+    description="Read the 5 newest leads and find what our website says about the return policy.",
+    expected_output="The leads and the return policy.",
+    agent=agent,
+)
+
+print(Crew(agents=[agent], tasks=[task]).kickoff())
+```
+
+## Parameters
+
+Every tool accepts these constructor parameters:
+
+- `api_key`: Asyntai API key. Defaults to the `ASYNTAI_API_KEY` environment variable.
+- `website_id`: Default Asyntai website. Without it, the primary website is used.
+- `api_base_url`: Base URL of the Asyntai API. Defaults to `https://asyntai.com/api/v1`.
+- `timeout`: Timeout in seconds for each API request. Defaults to 60.
+
+## Notes
+
+- `AsyntaiAskWebsiteTool` returns a `session_id`. Pass it to the next call to ask a follow-up question.
+- The tools return a readable error text to the agent and do not raise.
+- See the [Asyntai documentation](https://asyntai.com/documentation/integrations/crewai/) for more detail.
