@@ -669,24 +669,36 @@ class MCPToolResolver:
                     session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
                 )
 
-                tools_result = await asyncio.wait_for(
-                    session.list_tools(),
-                    timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
-                )
-
                 schemas = {}
-                for tool in tools_result.tools:
-                    args_schema = None
-                    if hasattr(tool, "inputSchema") and tool.inputSchema:
-                        args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
-                        )
+                seen_cursors: set[str] = set()
+                cursor: str | None = None
 
-                    schemas[sanitize_tool_name(tool.name)] = {
-                        "description": getattr(tool, "description", ""),
-                        "args_schema": args_schema,
-                    }
-                return schemas
+                while True:
+                    tools_result = await asyncio.wait_for(
+                        session.list_tools(cursor=cursor),
+                        timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
+                    )
+
+                    for tool in tools_result.tools:
+                        args_schema = None
+                        if hasattr(tool, "inputSchema") and tool.inputSchema:
+                            args_schema = self._json_schema_to_pydantic(
+                                sanitize_tool_name(tool.name), tool.inputSchema
+                            )
+
+                        schemas[sanitize_tool_name(tool.name)] = {
+                            "description": getattr(tool, "description", ""),
+                            "args_schema": args_schema,
+                        }
+
+                    if tools_result.nextCursor is None:
+                        return schemas
+                    if tools_result.nextCursor in seen_cursors:
+                        raise RuntimeError(
+                            "MCP server returned a repeated tools/list pagination cursor"
+                        )
+                    seen_cursors.add(tools_result.nextCursor)
+                    cursor = tools_result.nextCursor
 
     @staticmethod
     def _json_schema_to_pydantic(tool_name: str, json_schema: dict[str, Any]) -> type:
