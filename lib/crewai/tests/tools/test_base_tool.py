@@ -259,6 +259,20 @@ class CodeExecutorTool(BaseTool):
         return f"Executed {language}: {code}"
 
 
+class GreetInput(BaseModel):
+    name: str
+    nickname: str | None = None
+
+
+class EchoKwargsTool(BaseTool):
+    name: str = "echo_kwargs"
+    description: str = "Echo the keyword arguments it receives as JSON"
+    args_schema: type[BaseModel] = GreetInput
+
+    def _run(self, **kwargs: object) -> str:
+        return json.dumps(kwargs, sort_keys=True)
+
+
 class TestBaseToolRunValidation:
     """Tests for args_schema validation in BaseTool.run()."""
 
@@ -313,6 +327,34 @@ class TestBaseToolRunValidation:
         t = CodeExecutorTool()
         result = t.run(code="1+1", extra_hallucinated_field="junk")
         assert result == "Executed python: 1+1"
+
+    def test_run_omits_unset_optional_args_that_default_to_none(self) -> None:
+        """Optional args the caller never set must not be forwarded as None,
+        which MCP servers with strict schemas reject as JSON null (GH-7891)."""
+        t = EchoKwargsTool()
+        assert json.loads(t.run(name="Ada")) == {"name": "Ada"}
+
+    def test_run_keeps_explicit_none_for_optional_args(self) -> None:
+        """An optional arg the caller explicitly set to None keeps being sent."""
+        t = EchoKwargsTool()
+        assert json.loads(t.run(name="Ada", nickname=None)) == {
+            "name": "Ada",
+            "nickname": None,
+        }
+
+    def test_run_keeps_non_none_defaults_for_unset_args(self) -> None:
+        """Unset args with a real schema default are still filled in."""
+
+        class SearchInput(BaseModel):
+            query: str
+            limit: int = 10
+            lang: str | None = None
+
+        class SearchTool(EchoKwargsTool):
+            args_schema: type[BaseModel] = SearchInput
+
+        t = SearchTool()
+        assert json.loads(t.run(query="crewai")) == {"query": "crewai", "limit": 10}
 
     def test_run_increments_usage_after_validation(self) -> None:
         """Usage count should still increment after validated execution."""
@@ -644,6 +686,17 @@ class TestBaseToolArunValidation:
         t = AsyncCodeExecutorTool()
         result = await t.arun(code="print('hello')")
         assert result == "Async executed python: print('hello')"
+
+    @pytest.mark.asyncio
+    async def test_arun_omits_unset_optional_args_that_default_to_none(self) -> None:
+        """arun() must drop unset None-valued optional args as well (GH-7891)."""
+
+        class AsyncEchoKwargsTool(EchoKwargsTool):
+            async def _arun(self, **kwargs: object) -> str:
+                return json.dumps(kwargs, sort_keys=True)
+
+        t = AsyncEchoKwargsTool()
+        assert json.loads(await t.arun(name="Ada")) == {"name": "Ada"}
 
     @pytest.mark.asyncio
     async def test_arun_with_no_args_raises_validation_error(self) -> None:
