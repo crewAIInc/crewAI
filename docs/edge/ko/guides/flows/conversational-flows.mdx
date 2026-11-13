@@ -84,6 +84,76 @@ flow.handle_turn("주문 어디까지 왔나요?", session_id=session_id)
 flow.handle_turn("반품은 어떻게 하나요?", session_id=session_id)
 ```
 
+## 세션 저장 및 재개
+
+세션 ID와 `@persist`가 있으면 **새** `Flow` 인스턴스가 대화를 이어받을 수 있습니다.
+같은 인메모리 인스턴스를 재사용하는 것은 다른 일입니다. 그 인스턴스는 애초에 떠난 적이 없습니다.
+
+`SQLiteFlowPersistence`는 세션마다 한 행을 저장합니다. 같은 스토어로 새 인스턴스를 만들고
+`handle_turn(..., session_id=...)`를 호출하면 저장된 메시지가 먼저 복원된 뒤 새 턴이 덧붙으므로,
+기록은 순서를 유지하고 중복되지 않습니다.
+
+```python resume_session.py
+from typing import Any
+
+from crewai.flow import Flow, listen, start
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+store = SQLiteFlowPersistence("./notes.db")
+SESSION = "notes-demo"
+
+
+@persist(store)
+class NoteTaker(Flow):
+    conversational = True
+
+    @start()
+    def begin(self) -> None:
+        pass
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        return "note"
+
+    @listen("note")
+    def take_note(self) -> str:
+        reply = f"noted: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+first = NoteTaker()
+first.handle_turn("buy milk", session_id=SESSION)
+print("first:", [(message.role, message.content) for message in first.state.messages])
+
+second = NoteTaker()
+second.handle_turn("and eggs", session_id=SESSION)
+print("second:", [(message.role, message.content) for message in second.state.messages])
+
+other = NoteTaker()
+other.handle_turn("different", session_id="other-session")
+print("other:", [(message.role, message.content) for message in other.state.messages])
+```
+
+실행하면 다음과 같이 출력됩니다:
+
+```text
+first: [('user', 'buy milk'), ('assistant', 'noted: buy milk')]
+second: [('user', 'buy milk'), ('assistant', 'noted: buy milk'), ('user', 'and eggs'), ('assistant', 'noted: and eggs')]
+other: [('user', 'different'), ('assistant', 'noted: different')]
+```
+
+`second`는 `first`가 아니라 새 객체이며 전체 대화를 담고 있습니다. `other`는 세션 ID가
+다르면 별도의 대화가 시작된다는 것을 보여줍니다.
+
+재시작으로 복원되는 것은 **저장된 대화 상태**입니다. 즉 메시지, 플로우에 저장된 상태,
+세션 행입니다. 실행 중이던 백그라운드 작업, 진행 중인 메서드 실행, 열려 있던 리소스
+(예: 진행 중인 LLM 스트림)는 복원되지 않습니다. 그것들은 종료된 프로세스에 속했으며,
+새 인스턴스는 다음 턴에서 새 작업을 시작합니다.
+
+`defer_trace_finalization=True`를 설정한 경우(설정 또는 인스턴스에서) 턴별 trace
+finalization은 의도적으로 건너뛰어집니다. 세션이 실제로 끝날 때
+`flow.finalize_session_traces()`를 한 번 호출하여 지연된 배치를 플러시하십시오.
+
 ## 턴 스트리밍
 
 UI나 런타임에서 한 채팅 턴의 구조화된 이벤트가 필요하면 `stream_turn()`을 사용하세요. Flow 라우팅, LLM chunk, tool 활동, 대화 메시지를 순서가 보장된 frame으로 제공하는 stream session을 반환합니다.

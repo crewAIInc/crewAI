@@ -84,6 +84,76 @@ flow.handle_turn("Where is my order?", session_id=session_id)
 flow.handle_turn("What about returns?", session_id=session_id)
 ```
 
+## Persistindo e retomando uma sessão
+
+Um id de sessão mais `@persist` é o que permite que uma instância **nova** de `Flow` retome a
+conversa. Reutilizar a mesma instância em memória é outra coisa: ela nunca saiu do lugar.
+
+`SQLiteFlowPersistence` grava uma linha por sessão. Criar uma instância nova com o mesmo store
+e chamar `handle_turn(..., session_id=...)` restaura primeiro as mensagens gravadas e só então
+acrescenta o novo turno, então o histórico mantém a ordem e não ganha duplicatas.
+
+```python resume_session.py
+from typing import Any
+
+from crewai.flow import Flow, listen, start
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+store = SQLiteFlowPersistence("./notes.db")
+SESSION = "notes-demo"
+
+
+@persist(store)
+class NoteTaker(Flow):
+    conversational = True
+
+    @start()
+    def begin(self) -> None:
+        pass
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        return "note"
+
+    @listen("note")
+    def take_note(self) -> str:
+        reply = f"noted: {self.state.current_user_message}"
+        self.append_assistant_message(reply)
+        return reply
+
+
+first = NoteTaker()
+first.handle_turn("buy milk", session_id=SESSION)
+print("first:", [(message.role, message.content) for message in first.state.messages])
+
+second = NoteTaker()
+second.handle_turn("and eggs", session_id=SESSION)
+print("second:", [(message.role, message.content) for message in second.state.messages])
+
+other = NoteTaker()
+other.handle_turn("different", session_id="other-session")
+print("other:", [(message.role, message.content) for message in other.state.messages])
+```
+
+Execute e você deverá ver:
+
+```text
+first: [('user', 'buy milk'), ('assistant', 'noted: buy milk')]
+second: [('user', 'buy milk'), ('assistant', 'noted: buy milk'), ('user', 'and eggs'), ('assistant', 'noted: and eggs')]
+other: [('user', 'different'), ('assistant', 'noted: different')]
+```
+
+`second` é um objeto novo, não é `first`, e carrega toda a troca; `other` mostra que um id de
+sessão diferente inicia uma conversa separada.
+
+O que um reinício restaura é o **estado de conversa persistido**: mensagens, o estado gravado do
+flow e a linha da sessão. Ele não restaura trabalho em segundo plano em execução, execuções de
+métodos em andamento nem recursos abertos, como um stream de LLM ativo — isso pertencia ao
+processo que encerrou, e a instância nova começa trabalho novo no próximo turno.
+
+Se você definir `defer_trace_finalization=True` (no `ConversationConfig` ou na instância), a
+finalização de trace por turno é ignorada de propósito; chame `flow.finalize_session_traces()`
+uma vez quando a sessão realmente terminar, para liberar o lote adiado.
+
 ## Streaming de um turno
 
 Use `stream_turn()` quando uma UI ou um runtime precisar de eventos estruturados para um turno de chat. Ele retorna uma sessão de stream com frames ordenados para roteamento do Flow, chunks do LLM, atividade de tools e mensagens da conversa.
