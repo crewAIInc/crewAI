@@ -457,17 +457,13 @@ class TestProviderConfigurations:
             assert call_args["provider"] == "deepinfra"
             assert call_args["config"]["api_key"] == "test-deepinfra-key"
 
-    @patch("crewai.rag.embeddings.providers.deepinfra.deepinfra_provider.resolve_default_model")
     @patch("crewai.rag.embeddings.factory.build_embedder")
-    def test_deepinfra_default_model_without_model_arg(self, mock_build_embedder, mock_resolve):
-        """Test EmbeddingService(provider='deepinfra') without a model asks the DeepInfra catalog."""
+    def test_deepinfra_default_model_without_model_arg(self, mock_build_embedder):
+        """Test constructing EmbeddingService(provider='deepinfra') without a model uses the DeepInfra default."""
         mock_build_embedder.return_value = Mock()
-        mock_resolve.return_value = "Qwen/Qwen3-Embedding-8B"
 
-        with patch.dict(os.environ, {}, clear=True):
-            service = EmbeddingService(provider="deepinfra", api_key="test-key")
+        service = EmbeddingService(provider="deepinfra", api_key="test-key")
 
-        mock_resolve.assert_called_once_with("https://api.deepinfra.com/v1/openai")
         assert service.config.provider == "deepinfra"
         assert service.config.model == "Qwen/Qwen3-Embedding-8B"
         mock_build_embedder.assert_called_once()
@@ -475,30 +471,13 @@ class TestProviderConfigurations:
         assert call_args["provider"] == "deepinfra"
         assert call_args["config"]["model_name"] == "Qwen/Qwen3-Embedding-8B"
 
-    @patch("crewai.rag.embeddings.providers.deepinfra.deepinfra_provider.resolve_default_model")
     @patch("crewai.rag.embeddings.factory.build_embedder")
-    def test_deepinfra_default_model_follows_configured_api_base(self, mock_build_embedder, mock_resolve):
-        """Test the catalog lookup uses the api_base given in extra_config."""
+    def test_deepinfra_auto_model_is_left_to_the_provider(self, mock_build_embedder):
+        """Test model='auto' reaches the provider, which reads it from the catalog."""
         mock_build_embedder.return_value = Mock()
-        mock_resolve.return_value = "Qwen/Qwen3-Embedding-8B"
 
-        with patch.dict(os.environ, {"DEEPINFRA_API_BASE": "https://env.example.com/v1/openai"}, clear=True):
-            service = EmbeddingService.create_deepinfra_service(
-                api_key="test-key",
-                extra_config={"api_base": "https://stage2.api.deepinfra.com/v1/openai"},
-            )
+        EmbeddingService.create_deepinfra_service(model="auto", api_key="test-key")
 
-        mock_resolve.assert_called_once_with("https://stage2.api.deepinfra.com/v1/openai")
-        assert service.config.model == "Qwen/Qwen3-Embedding-8B"
-
-    @patch("crewai.rag.embeddings.providers.deepinfra.deepinfra_provider.resolve_default_model")
-    @patch("crewai.rag.embeddings.factory.build_embedder")
-    def test_deepinfra_default_model_follows_env_api_base(self, mock_build_embedder, mock_resolve):
-        """Test the catalog lookup honours DEEPINFRA_API_BASE like the provider does."""
-        mock_build_embedder.return_value = Mock()
-        mock_resolve.return_value = "Qwen/Qwen3-Embedding-8B"
-
-        with patch.dict(os.environ, {"DEEPINFRA_API_BASE": "https://env.example.com/v1/openai"}, clear=True):
-            EmbeddingService.create_deepinfra_service(api_key="test-key")
-
-        mock_resolve.assert_called_once_with("https://env.example.com/v1/openai")
+        call_args = mock_build_embedder.call_args[0][0]
+        assert call_args["provider"] == "deepinfra"
+        assert call_args["config"]["model_name"] == "auto"

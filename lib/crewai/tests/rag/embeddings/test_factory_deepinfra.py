@@ -14,7 +14,6 @@ from crewai.rag.embeddings.providers.deepinfra import deepinfra_provider
 from crewai.rag.embeddings.providers.deepinfra.deepinfra_provider import (
     DEFAULT_MODEL,
     DeepInfraProvider,
-    effective_api_base,
 )
 
 
@@ -143,8 +142,18 @@ class TestDeepInfraEmbedderFactory:
         assert isinstance(embedder, OpenAIEmbeddingFunction)
         assert embedder.model_name == "Qwen/Qwen3-Embedding-4B"
 
-    def test_build_embedder_without_model_uses_catalog_model(self, catalog_get):
-        """Test an embedder built without a model embeds with the catalog's pick."""
+    def test_build_embedder_without_model_uses_static_default(self, catalog_get):
+        """Test an embedder built without a model embeds with the fixed default."""
+        embedder = build_embedder(
+            {"provider": "deepinfra", "config": {"api_key": "test-key"}}
+        )
+
+        assert isinstance(embedder, OpenAIEmbeddingFunction)
+        assert embedder.model_name == DEFAULT_MODEL
+        catalog_get.assert_not_called()
+
+    def test_build_embedder_with_auto_model_uses_catalog_model(self, catalog_get):
+        """Test an embedder built with model_name='auto' embeds with the catalog's pick."""
         catalog_get.side_effect = None
         catalog_get.return_value = _catalog_response(
             ("deepseek-ai/DeepSeek-V4-Flash", ["chat"]),
@@ -152,17 +161,23 @@ class TestDeepInfraEmbedderFactory:
         )
 
         embedder = build_embedder(
-            {"provider": "deepinfra", "config": {"api_key": "test-key"}}
+            {"provider": "deepinfra", "config": {"api_key": "test-key", "model_name": "auto"}}
         )
 
         assert isinstance(embedder, OpenAIEmbeddingFunction)
         assert embedder.model_name == "BAAI/bge-m3"
 
 
-class TestDeepInfraDefaultModel:
-    """Test how the default model is resolved from the DeepInfra catalog."""
+class TestDeepInfraAutoModel:
+    """Test how model_name='auto' is resolved from the DeepInfra catalog."""
 
-    def test_first_embedding_model_in_catalog_order(self, catalog_get):
+    def test_default_model_does_not_read_catalog(self, catalog_get):
+        """Test the default model is the fixed one, with no catalog request."""
+        assert DeepInfraProvider(api_key="test-key").model_name == DEFAULT_MODEL
+        catalog_get.assert_not_called()
+
+    @pytest.mark.parametrize("key", ["model_name", "model"])
+    def test_first_embedding_model_in_catalog_order(self, catalog_get, key):
         """Test the first model tagged 'embed' wins, in the order the catalog sends."""
         catalog_get.side_effect = None
         catalog_get.return_value = _catalog_response(
@@ -171,7 +186,7 @@ class TestDeepInfraDefaultModel:
             ("BAAI/bge-m3", ["embed"]),
         )
 
-        provider = DeepInfraProvider(api_key="test-key")
+        provider = DeepInfraProvider(api_key="test-key", **{key: "auto"})
 
         assert provider.model_name == "Qwen/Qwen3-Embedding-4B"
         catalog_get.assert_called_once_with(
@@ -184,7 +199,9 @@ class TestDeepInfraDefaultModel:
         catalog_get.return_value = _catalog_response(("BAAI/bge-m3", ["embed"]))
 
         provider = DeepInfraProvider(
-            api_key="test-key", api_base="https://proxy.example.com/v1/openai/"
+            api_key="test-key",
+            model_name="auto",
+            api_base="https://proxy.example.com/v1/openai/",
         )
 
         assert provider.model_name == "BAAI/bge-m3"
@@ -198,15 +215,16 @@ class TestDeepInfraDefaultModel:
         assert provider.model_name == "BAAI/bge-m3"
         catalog_get.assert_not_called()
 
-    def test_falls_back_when_catalog_unreachable(self, catalog_get):
-        """Test a connection error leaves the static default in place."""
-        provider = DeepInfraProvider(api_key="test-key")
+    def test_unreachable_catalog_raises(self, catalog_get):
+        """Test a connection error fails construction and says how to pin a model."""
+        with pytest.raises(ValidationError, match="could not be read") as exc_info:
+            DeepInfraProvider(api_key="test-key", model_name="auto")
 
-        assert provider.model_name == DEFAULT_MODEL == "Qwen/Qwen3-Embedding-8B"
-        catalog_get.assert_called_once()
+        assert "Set model_name to an embedding model id" in str(exc_info.value)
+        assert CATALOG_URL in str(exc_info.value)
 
-    def test_falls_back_on_http_error(self, catalog_get):
-        """Test an HTTP error status leaves the static default in place."""
+    def test_http_error_raises(self, catalog_get):
+        """Test an HTTP error status fails construction instead of substituting a model."""
         response = MagicMock()
         response.raise_for_status.side_effect = httpx.HTTPStatusError(
             "boom", request=MagicMock(), response=MagicMock()
@@ -214,72 +232,83 @@ class TestDeepInfraDefaultModel:
         catalog_get.side_effect = None
         catalog_get.return_value = response
 
-        assert DeepInfraProvider(api_key="test-key").model_name == DEFAULT_MODEL
+        with pytest.raises(ValidationError, match="could not be read"):
+            DeepInfraProvider(api_key="test-key", model_name="auto")
 
     @pytest.mark.parametrize(
         "payload",
-        [{"object": "list"}, {"data": "nope"}, [{"id": "x"}]],
-        ids=["no-data-key", "data-not-a-list", "not-an-object"],
+        [{"object": "list"}, [{"id": "x"}]],
+        ids=["no-data-key", "not-an-object"],
     )
-    def test_falls_back_on_malformed_payload(self, catalog_get, payload):
-        """Test an unexpected payload shape leaves the static default in place."""
+    def test_malformed_payload_raises(self, catalog_get, payload):
+        """Test an unexpected payload shape fails construction."""
         response = MagicMock()
         response.raise_for_status.return_value = None
         response.json.return_value = payload
         catalog_get.side_effect = None
         catalog_get.return_value = response
 
-        assert DeepInfraProvider(api_key="test-key").model_name == DEFAULT_MODEL
+        with pytest.raises(ValidationError, match="could not be read"):
+            DeepInfraProvider(api_key="test-key", model_name="auto")
 
-    def test_falls_back_on_invalid_json(self, catalog_get):
-        """Test a non-JSON body leaves the static default in place."""
+    def test_invalid_json_raises(self, catalog_get):
+        """Test a non-JSON body fails construction."""
         response = MagicMock()
         response.raise_for_status.return_value = None
         response.json.side_effect = ValueError("not json")
         catalog_get.side_effect = None
         catalog_get.return_value = response
 
-        assert DeepInfraProvider(api_key="test-key").model_name == DEFAULT_MODEL
+        with pytest.raises(ValidationError, match="could not be read"):
+            DeepInfraProvider(api_key="test-key", model_name="auto")
 
-    def test_falls_back_when_no_embedding_model_tagged(self, catalog_get):
-        """Test a catalog without 'embed' tags leaves the static default in place."""
+    @pytest.mark.parametrize(
+        "response",
+        [
+            _catalog_response(
+                ("deepseek-ai/DeepSeek-V4-Flash", ["chat"]), ("untagged/model", [])
+            ),
+            MagicMock(
+                **{"raise_for_status.return_value": None, "json.return_value": {"data": "nope"}}
+            ),
+        ],
+        ids=["no-embed-tag", "data-not-a-list"],
+    )
+    def test_no_embedding_model_raises(self, catalog_get, response):
+        """Test a catalog without an 'embed' entry fails construction."""
         catalog_get.side_effect = None
-        catalog_get.return_value = _catalog_response(
-            ("deepseek-ai/DeepSeek-V4-Flash", ["chat"]),
-            ("untagged/model", []),
-        )
+        catalog_get.return_value = response
 
-        assert DeepInfraProvider(api_key="test-key").model_name == DEFAULT_MODEL
+        with pytest.raises(ValidationError, match="found no model tagged 'embed'"):
+            DeepInfraProvider(api_key="test-key", model_name="auto")
 
-    def test_successful_pick_is_cached_per_api_base(self, catalog_get):
-        """Test the catalog is read once per base URL, not once per provider."""
+    def test_successful_pick_is_cached_per_normalized_api_base(self, catalog_get):
+        """Test the catalog is read once per base URL, ignoring a trailing slash."""
         catalog_get.side_effect = None
         catalog_get.return_value = _catalog_response(("BAAI/bge-m3", ["embed"]))
 
-        DeepInfraProvider(api_key="test-key")
-        DeepInfraProvider(api_key="test-key")
-        DeepInfraProvider(api_key="test-key", api_base="https://proxy.example.com/v1")
+        DeepInfraProvider(api_key="test-key", model_name="auto")
+        DeepInfraProvider(
+            api_key="test-key",
+            model_name="auto",
+            api_base="https://api.deepinfra.com/v1/openai/",
+        )
+        DeepInfraProvider(
+            api_key="test-key", model_name="auto", api_base="https://proxy.example.com/v1"
+        )
 
         assert catalog_get.call_count == 2
 
     def test_failed_lookup_is_not_cached(self, catalog_get):
-        """Test a failed lookup does not pin the fallback for later providers."""
-        assert DeepInfraProvider(api_key="test-key").model_name == DEFAULT_MODEL
+        """Test a failed lookup does not keep later providers from succeeding."""
+        with pytest.raises(ValidationError):
+            DeepInfraProvider(api_key="test-key", model_name="auto")
 
         catalog_get.side_effect = None
         catalog_get.return_value = _catalog_response(("BAAI/bge-m3", ["embed"]))
 
-        assert DeepInfraProvider(api_key="test-key").model_name == "BAAI/bge-m3"
+        assert DeepInfraProvider(api_key="test-key", model_name="auto").model_name == "BAAI/bge-m3"
         assert catalog_get.call_count == 2
-
-    def test_effective_api_base_precedence(self, monkeypatch):
-        """Test an explicit base beats DEEPINFRA_API_BASE, which beats the default."""
-        assert effective_api_base() == "https://api.deepinfra.com/v1/openai"
-
-        monkeypatch.setenv("DEEPINFRA_API_BASE", "https://env.example.com/v1/openai")
-
-        assert effective_api_base() == "https://env.example.com/v1/openai"
-        assert effective_api_base("https://explicit.example.com/v1") == "https://explicit.example.com/v1"
 
 
 class TestDeepInfraProviderDirect:
@@ -348,7 +377,10 @@ class TestDeepInfraProviderDirect:
         monkeypatch.setenv("DEEPINFRA_API_KEY", "di-env-key")
         monkeypatch.setenv("DEEPINFRA_API_BASE", "https://proxy.example.com/v1/openai")
 
-        provider = DeepInfraProvider()
+        catalog_get.side_effect = None
+        catalog_get.return_value = _catalog_response(("BAAI/bge-m3", ["embed"]))
+
+        provider = DeepInfraProvider(model_name="auto")
 
         assert provider.api_base == "https://proxy.example.com/v1/openai"
         assert catalog_get.call_args.args[0] == "https://proxy.example.com/v1/openai/models"
@@ -359,23 +391,21 @@ class TestDeepInfraProviderDirect:
         """Test variables that belong to other tools leave the embedder alone.
 
         MODEL_NAME is crewAI's chat model and API_BASE is Ollama's server; with
-        no model configured, the catalog still picks the embedding model.
+        no model configured, the embedder keeps its own default.
         """
         monkeypatch.setenv("DEEPINFRA_API_KEY", "di-env-key")
         monkeypatch.setenv("MODEL_NAME", "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash")
         monkeypatch.setenv("API_BASE", "http://localhost:11434")
         monkeypatch.setenv("API_KEY", "another-service-key")
         monkeypatch.setenv("DEFAULT_HEADERS", '{"X-Other": "1"}')
-        catalog_get.side_effect = None
-        catalog_get.return_value = _catalog_response(("BAAI/bge-m3", ["embed"]))
 
         provider = DeepInfraProvider()
 
-        assert provider.model_name == "BAAI/bge-m3"
+        assert provider.model_name == DEFAULT_MODEL
         assert provider.api_base == "https://api.deepinfra.com/v1/openai"
         assert provider.api_key == "di-env-key"
         assert provider.default_headers is None
-        assert catalog_get.call_args.args[0] == CATALOG_URL
+        catalog_get.assert_not_called()
 
     def test_generic_api_key_is_not_sent_to_deepinfra(self, monkeypatch):
         """Test an API_KEY meant for another service does not stand in for DeepInfra's."""

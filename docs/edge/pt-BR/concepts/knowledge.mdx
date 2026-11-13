@@ -626,7 +626,7 @@ crew = Crew(
     embedder={
         "provider": "deepinfra",
         "config": {
-            "model_name": "Qwen/Qwen3-Embedding-8B",  # Omit to use the model DeepInfra currently recommends; pin it for persisted stores
+            "model_name": "Qwen/Qwen3-Embedding-8B",  # Default; "auto" uses the model DeepInfra currently recommends, which can change between runs
             "api_key": "your-deepinfra-api-key"  # Optional if DEEPINFRA_API_KEY is set
         }
     }

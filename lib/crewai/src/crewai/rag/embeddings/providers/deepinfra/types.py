@@ -8,8 +8,8 @@ from typing_extensions import Required, TypedDict
 class DeepInfraProviderConfig(TypedDict, total=False):
     """Configuration for DeepInfra provider.
 
-    Without ``model_name`` (or its ``model`` alias) the embedding model DeepInfra
-    currently recommends is read from its catalog; pin it for persisted stores.
+    ``model_name="auto"`` (or ``model="auto"``) reads the embedding model DeepInfra
+    currently recommends from its catalog; that pick can change between runs.
     """
 
     api_key: str

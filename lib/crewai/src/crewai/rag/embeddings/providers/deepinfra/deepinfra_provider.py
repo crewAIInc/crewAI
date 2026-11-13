@@ -1,6 +1,5 @@
 """DeepInfra embeddings provider."""
 
-import logging
 import os
 from typing import Any
 
@@ -16,27 +15,20 @@ from typing_extensions import Self
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 
 
-logger = logging.getLogger(__name__)
-
 DEFAULT_API_BASE = "https://api.deepinfra.com/v1/openai"
 DEFAULT_MODEL = "Qwen/Qwen3-Embedding-8B"
+AUTO_MODEL = "auto"
 EMBEDDING_TAG = "embed"
 CATALOG_PARAMS = {"filter": "with_meta", "sort_by": "crewai"}
 CATALOG_TIMEOUT = 3.0
+_PIN_HINT = (
+    f"Set model_name to an embedding model id instead, such as {DEFAULT_MODEL!r}."
+)
 
-# Successful catalog picks per base URL. A process keeps the model it started
-# with, so every store it opens shares one embedding space, and a new process
-# picks up catalog changes. Failures are never cached.
+# Catalog picks per normalized base URL. A process keeps the model it started
+# with, so every store it opens shares one embedding space. Failures raise and
+# are not cached, so a later provider can succeed once the catalog is back.
 _catalog_picks: dict[str, str] = {}
-
-
-def effective_api_base(api_base: str | None = None) -> str:
-    """Return the base URL the provider would use for ``api_base``.
-
-    Mirrors the provider's precedence: an explicit value, then the
-    ``DEEPINFRA_API_BASE`` environment variable, then the public default.
-    """
-    return api_base or os.environ.get("DEEPINFRA_API_BASE") or DEFAULT_API_BASE
 
 
 def _embedding_model_id(entry: Any) -> str | None:
@@ -50,28 +42,28 @@ def _embedding_model_id(entry: Any) -> str | None:
     return None
 
 
-def resolve_default_model(api_base: str = DEFAULT_API_BASE) -> str:
+def resolve_catalog_model(api_base: str = DEFAULT_API_BASE) -> str:
     """Return the embedding model DeepInfra currently recommends.
 
     Reads the OpenAI-compatible model list sorted for crewAI and returns the
-    first model tagged ``embed``, so the default follows the catalog without a
-    crewAI release. Falls back to ``DEFAULT_MODEL`` when the catalog cannot be
-    read or lists no embedding model; failures are not cached, so the next
-    provider retries. A successful pick is kept for the life of the process,
-    per base URL, because stores opened by one process must share an embedding
-    space. Persisted stores that must stay stable across runs should pin
-    ``model_name`` rather than rely on this default.
+    first model tagged ``embed``. This is what ``model_name="auto"`` resolves
+    to. A pick is kept for the life of the process, per base URL, because
+    stores opened by one process must share an embedding space.
 
     Args:
         api_base: Base URL of the DeepInfra OpenAI-compatible API.
 
     Returns:
         The model id to embed with.
+
+    Raises:
+        ValueError: The catalog could not be read or lists no embedding model.
     """
-    cached = _catalog_picks.get(api_base)
+    base = api_base.rstrip("/")
+    cached = _catalog_picks.get(base)
     if cached is not None:
         return cached
-    url = f"{api_base.rstrip('/')}/models"
+    url = f"{base}/models"
     try:
         response = httpx.get(url, params=CATALOG_PARAMS, timeout=CATALOG_TIMEOUT)
         response.raise_for_status()
@@ -79,22 +71,16 @@ def resolve_default_model(api_base: str = DEFAULT_API_BASE) -> str:
             filter(None, map(_embedding_model_id, response.json()["data"])), None
         )
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
-        logger.warning(
-            "Could not read the DeepInfra model catalog at %s (%s); using %s",
-            url,
-            e,
-            DEFAULT_MODEL,
-        )
-        return DEFAULT_MODEL
+        raise ValueError(
+            f"model_name={AUTO_MODEL!r} needs the DeepInfra model catalog, which "
+            f"could not be read at {url} ({e}). {_PIN_HINT}"
+        ) from e
     if model_id is None:
-        logger.warning(
-            "No model tagged %r in the DeepInfra catalog at %s; using %s",
-            EMBEDDING_TAG,
-            url,
-            DEFAULT_MODEL,
+        raise ValueError(
+            f"model_name={AUTO_MODEL!r} found no model tagged {EMBEDDING_TAG!r} in "
+            f"the DeepInfra model catalog at {url}. {_PIN_HINT}"
         )
-        return DEFAULT_MODEL
-    _catalog_picks[api_base] = model_id
+    _catalog_picks[base] = model_id
     return model_id
 
 
@@ -131,9 +117,9 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
 
     DeepInfra serves open-weight embedding models through an OpenAI-compatible
     endpoint, so this provider reuses the OpenAI embedding function with the
-    DeepInfra base URL. When no model is configured, the embedding model
-    DeepInfra currently recommends is read from its catalog; pin ``model_name``
-    for stores that must stay stable across runs.
+    DeepInfra base URL. With ``model_name="auto"`` the embedding model DeepInfra
+    currently recommends is read from its catalog when the provider is built;
+    that pick can change between runs, so persisted stores should use a fixed id.
     """
 
     @classmethod
@@ -181,10 +167,10 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         return data
 
     @model_validator(mode="after")
-    def _default_model_from_catalog(self) -> Self:
-        """Fill in the catalog's recommended model when none was configured."""
-        if "model_name" not in self.model_fields_set:
-            self.model_name = resolve_default_model(self.api_base)
+    def _resolve_auto_model(self) -> Self:
+        """Replace ``model_name="auto"`` with the catalog's recommended model."""
+        if self.model_name == AUTO_MODEL:
+            self.model_name = resolve_catalog_model(self.api_base)
         return self
 
     embedding_callable: type[OpenAIEmbeddingFunction] = Field(
@@ -200,8 +186,8 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     model_name: str = Field(
         default=DEFAULT_MODEL,
         description=(
-            "Model name to use for embeddings; when omitted, the embedding model "
-            "DeepInfra currently recommends is read from its catalog"
+            "Model name to use for embeddings; 'auto' reads the embedding model "
+            "DeepInfra currently recommends from its catalog"
         ),
         validation_alias=AliasChoices(
             "model_name",
