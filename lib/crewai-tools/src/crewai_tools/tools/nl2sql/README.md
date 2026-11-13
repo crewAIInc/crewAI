@@ -61,6 +61,14 @@ def researcher(self) -> Agent:
     )
 ```
 
+The tool infers the SQL dialect from `db_uri` and includes dialect-specific
+query-generation guidance for the agent. You can override the detected dialect
+when needed:
+
+```python
+nl2sql = NL2SQLTool(db_uri="sqlite:///example.db", dialect="sqlite")
+```
+
 ## Example
 
 The primary task goal was:
