@@ -32,6 +32,7 @@ from crewai.a2a.task_helpers import (
 )
 from crewai.a2a.updates.base import StreamingHandlerKwargs, extract_common_params
 from crewai.a2a.updates.streaming.params import (
+    process_artifact_update,
     process_status_update,
 )
 from crewai.events.event_bus import crewai_event_bus
@@ -60,6 +61,7 @@ class StreamingHandler:
         new_messages: list[Message],
         agent_card: AgentCard,
         result_parts: list[str],
+        artifact_positions: dict[str, int],
         **kwargs: Unpack[StreamingHandlerKwargs],
     ) -> TaskStateResult | None:
         """Attempt to recover from a stream interruption by checking task state.
@@ -73,6 +75,8 @@ class StreamingHandler:
             new_messages: List of collected messages.
             agent_card: The agent card.
             result_parts: Accumulated result text parts.
+            artifact_positions: Index of each artifact's last text part in
+                ``result_parts``, so appended chunks continue the same text.
             **kwargs: Handler parameters.
 
         Returns:
@@ -151,11 +155,8 @@ class StreamingHandler:
                             )
 
                             if isinstance(update, TaskArtifactUpdateEvent):
-                                artifact = update.artifact
-                                result_parts.extend(
-                                    part.root.text
-                                    for part in artifact.parts
-                                    if part.root.kind == "text"
+                                process_artifact_update(
+                                    update, result_parts, artifact_positions
                                 )
 
                             if (
@@ -257,6 +258,7 @@ class StreamingHandler:
         params = extract_common_params(kwargs)
 
         result_parts: list[str] = []
+        artifact_positions: dict[str, int] = {}
         final_result: TaskStateResult | None = None
         event_stream = client.send_message(message)
         chunk_index = 0
@@ -312,10 +314,8 @@ class StreamingHandler:
 
                     if isinstance(update, TaskArtifactUpdateEvent):
                         artifact = update.artifact
-                        result_parts.extend(
-                            part.root.text
-                            for part in artifact.parts
-                            if part.root.kind == "text"
+                        process_artifact_update(
+                            update, result_parts, artifact_positions
                         )
                         artifact_size = None
                         if artifact.parts:
@@ -397,6 +397,7 @@ class StreamingHandler:
                         new_messages=new_messages,
                         agent_card=agent_card,
                         result_parts=result_parts,
+                        artifact_positions=artifact_positions,
                         **recovery_kwargs,
                     )
                 )
@@ -484,6 +485,7 @@ class StreamingHandler:
                         new_messages=new_messages,
                         agent_card=agent_card,
                         result_parts=result_parts,
+                        artifact_positions=artifact_positions,
                         **recovery_kwargs,
                     )
                 )
