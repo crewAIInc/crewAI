@@ -264,3 +264,70 @@ class TestExpiredTtlFloor:
         )
 
         assert captured["ttl"] >= 1
+
+
+class TestAiocacheBackendClearNamespace:
+    """AiocacheBackend.clear must scope to its namespace, not FLUSHDB the whole
+    shared Redis/Valkey database.
+    """
+
+    def test_clear_passes_namespace(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai_files.cache.upload_cache import AiocacheBackend
+
+        fake_cache = MagicMock()
+        fake_cache.namespace = "crewai_uploads"
+        fake_cache.clear = AsyncMock()
+
+        backend = AiocacheBackend(fake_cache)
+        asyncio.run(backend.clear())
+
+        # Namespace-scoped clear (KEYS ns:* + DELETE), never a bare FLUSHDB.
+        fake_cache.clear.assert_awaited_once_with(namespace="crewai_uploads")
+
+    def test_clear_without_namespace_falls_back(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai_files.cache.upload_cache import AiocacheBackend
+
+        fake_cache = MagicMock()
+        fake_cache.namespace = ""
+        fake_cache.clear = AsyncMock()
+
+        backend = AiocacheBackend(fake_cache)
+        asyncio.run(backend.clear())
+
+        fake_cache.clear.assert_awaited_once_with()
+
+
+class TestClearRemovesUntrackedEntries:
+    """clear() must empty the backend namespace, including entries this
+    instance never tracked (written by another process or a previous run).
+    """
+
+    def test_clear_removes_entry_written_by_another_instance(self) -> None:
+        import asyncio
+
+        now = datetime.now(timezone.utc)
+        upload = CachedUpload(
+            file_id="file-other",
+            provider="gemini",
+            file_uri=None,
+            content_type="image/png",
+            uploaded_at=now,
+            expires_at=now + timedelta(hours=1),
+        )
+        cache = UploadCache(namespace="test_clear_untracked")
+
+        async def scenario() -> CachedUpload | None:
+            # Write straight to the backend so this UploadCache does not track it.
+            await cache._backend.set("upload:gemini:abc", upload, ttl=3600)
+            # Sanity check: the entry is visible before clear().
+            assert await cache.aget_by_hash("abc", "gemini") is not None
+            await cache.aclear()
+            return await cache.aget_by_hash("abc", "gemini")
+
+        assert asyncio.run(scenario()) is None

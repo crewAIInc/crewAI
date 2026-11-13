@@ -109,6 +109,7 @@ class CacheBackend(Protocol):
     async def get(self, key: str) -> CachedUpload | None: ...
     async def set(self, key: str, value: CachedUpload, ttl: int) -> None: ...
     async def delete(self, key: str) -> bool: ...
+    async def clear(self) -> None: ...
 
 
 class AiocacheBackend:
@@ -129,6 +130,21 @@ class AiocacheBackend:
     async def delete(self, key: str) -> bool:
         result = await self._cache.delete(key)
         return bool(result > 0 if isinstance(result, int) else result)
+
+    async def clear(self) -> None:
+        # Scope the clear to this cache's namespace. aiocache's Redis backend
+        # treats clear() with no namespace as FLUSHDB, which would wipe unrelated
+        # keys (A2A cancel flags, other app data) in a shared instance. Passing
+        # the namespace makes it delete only this cache's keys, and still covers
+        # entries written by other processes or left from a previous run.
+        namespace = getattr(self._cache, "namespace", None)
+        if namespace:
+            await self._cache.clear(namespace=namespace)
+        else:
+            # No namespace configured; fall back to the default clear so an
+            # unnamespaced cache still resets (memory backend, or an explicit
+            # empty namespace where FLUSHDB is the only option).
+            await self._cache.clear()
 
 
 class ValkeyCacheBackend:
@@ -180,6 +196,12 @@ class ValkeyCacheBackend:
         if existed:
             await self._cache.delete(self._key(key))
         return existed
+
+    async def clear(self) -> None:
+        # Flush every key under this backend's namespace, including entries
+        # written by other processes/runs, not just locally-tracked keys.
+        prefix = f"{self._namespace}:" if self._namespace else ""
+        await self._cache.clear(prefix)
 
 
 class UploadCache:
@@ -470,10 +492,10 @@ class UploadCache:
             Number of entries cleared.
         """
         count = sum(len(keys) for keys in self._provider_keys.values())
-        # Delete all tracked keys individually (works for all backends)
-        for keys in self._provider_keys.values():
-            for key in keys:
-                await self._backend.delete(key)
+        # Flush the whole backend namespace so entries written by another
+        # process, or left from a previous run, are removed too -- not just the
+        # keys tracked in this instance's _provider_keys map.
+        await self._backend.clear()
         self._provider_keys.clear()
         self._key_access_order.clear()
         if count > 0:
