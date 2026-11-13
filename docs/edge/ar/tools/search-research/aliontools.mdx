@@ -1,0 +1,81 @@
+---
+title: أدوات Alion
+description: تبحث أدوات Alion عن الشركات والشركات الناشئة وإعلانات الوظائف وتستعلم عن ملفات الشركات من رسم Alion البياني الحي للشركات.
+icon: building
+mode: "wide"
+---
+
+# أدوات Alion
+
+## الوصف
+
+[Alion](https://alion.io/developers) رسم بياني حي للشركات حول العالم، يُبنى من مواقع الشركات نفسها ومواقع الوظائف والسجلات العامة: ما تفعله كل شركة، وأين تعمل، وتقنياتها، وجولات تمويلها ومستثمروها، وسرعة توظيفها، إضافة إلى إعلانات وظائف موثّقة. تتيح أدوات Alion للوكلاء بناء قوائم العملاء المحتملين، ودراسة سوق ما، والعثور على شركات مشابهة، ومعرفة الوظائف التي توظّف لها شركة معينة.
+
+| الأداة | ما تفعله | مفتاح API |
+|---|---|---|
+| `AlionCompanySearchTool` | تبحث عن الشركات حسب القطاع والدولة والحجم وكونها شركة ناشئة ومرحلة التمويل والجولات الأخيرة والمستثمر والتقنية والتوظيف | غير مطلوب |
+| `AlionSimilarCompaniesTool` | تجد شركات مشابهة لشركة معينة، ويمكن حصرها في دولة واحدة | غير مطلوب |
+| `AlionJobSearchTool` | تبحث في إعلانات الوظائف الموثّقة حسب الدور والشركة والدولة والمدينة ونمط العمل والمستوى الوظيفي والتقنية والراتب ورعاية التأشيرة | غير مطلوب |
+| `AlionCompanyProfileTool` | تعرض شركة واحدة بالتفصيل: التمويل والتوظيف والتقنيات والمكاتب ورعاية التأشيرة | مطلوب للملف الكامل |
+
+## التثبيت
+
+تستخدم الأدوات اعتماديات `crewai-tools` فقط:
+
+```shell
+uv add crewai-tools
+```
+
+## خطوات البدء
+
+1. **لا حاجة إلى مفتاح للبدء**: تعمل أدوات البحث دون حساب في Alion، ضمن حصة يومية لكل شبكة (300 استدعاء يوميًا).
+2. **مفتاح API اختياري**: أنشئ مفتاحًا من [alion.io/developers/keys](https://alion.io/developers/keys) وعيّنه في `ALION_API_KEY` للحصول على ملفات الشركات الكاملة.
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlionCompanySearchTool, AlionJobSearchTool, AlionSimilarCompaniesTool
+
+scout = Agent(
+    role="Startup scout",
+    goal="Find recently funded startups in a market and what they hire for",
+    backstory="You map markets from live company data and never guess.",
+    tools=[AlionCompanySearchTool(), AlionSimilarCompaniesTool(), AlionJobSearchTool()],
+)
+
+task = Task(
+    description=(
+        "Find fintech startups in Germany that raised an early-stage round in the last 180 days, "
+        "then list the roles the three largest of them are hiring for."
+    ),
+    expected_output="A markdown table of company, domain, last round, round date and open roles.",
+    agent=scout,
+)
+
+print(Crew(agents=[scout], tasks=[task]).kickoff())
+```
+
+## المعاملات
+
+### معاملات المُنشئ
+
+تقبل الأدوات الأربع:
+
+- **api_key**: اختياري. مفتاح API من Alion. القيمة الافتراضية هي متغير البيئة `ALION_API_KEY`؛ وبدون مفتاح تستخدم الأدوات العنوان المفتوح والمجاني لـ Alion.
+- **timeout**: اختياري. عدد الثواني لكل استدعاء (الافتراضي `60`).
+
+### معاملات التشغيل
+
+- `AlionCompanySearchTool`: `query`، `country`، `industry`، `size`، `startup`، `funding_stage`، `raised_since`، `investor`، `technology`، `hiring`، `sort`، `limit`.
+- `AlionSimilarCompaniesTool`: `company` (مطلوب)، `country`، `limit`.
+- `AlionJobSearchTool`: `query`، `role`، `company`، `country`، `city`، `work_mode`، `seniority`، `technology`، `salary_min_usd`، `posted_since`، `visa_sponsorship`، `limit`.
+- `AlionCompanyProfileTool`: `domain` أو `name`.
+
+## المخرجات
+
+تُرجع كل أداة `{"success": True, "result": {...}}` مع إجابة Alion، أو `{"success": False, "error": "..."}` عند فشل الاستدعاء، ليتمكن الوكيل من التكيّف. وبدون مفتاح، تُرجع `AlionCompanyProfileTool` الشركة التي يشير إليها النطاق أو الاسم، مع ملاحظة بأن الملف الكامل يتطلب `ALION_API_KEY`.
+
+## الخلاصة
+
+تمنح أدوات Alion الوكلاء بيانات حية عن الشركات والشركات الناشئة والتوظيف دون أي إعداد: أضفها إلى وكيل وابدأ البحث. للحصول على ملفات الشركات الكاملة والمستثمرين وإحصاءات الرواتب، أضف مفتاح API من Alion. يشغّل Alion أيضًا خادم MCP على `https://alion.io/mcp/open` يمكن ربطه عبر الحقل `mcps` لدى الوكيل.
