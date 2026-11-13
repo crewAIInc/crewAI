@@ -304,7 +304,16 @@ class CrewAIRagAdapter(Adapter):
                             continue
             else:
                 metadata: dict[str, Any] = base_metadata.copy()
-                source_content = SourceContent(source_ref)
+                text_body = (
+                    arg.get("content")
+                    if data_type == DataType.TEXT
+                    and isinstance(arg, dict)
+                    and "source" in arg
+                    else None
+                )
+                source_content = SourceContent(
+                    text_body if isinstance(text_body, str) else source_ref
+                )
 
                 if data_type in [
                     DataType.PDF_FILE,
@@ -324,6 +333,12 @@ class CrewAIRagAdapter(Adapter):
 
                 loader_result: LoaderResult = loader.load(source_content, **kwargs)
 
+                doc_id = loader_result.doc_id
+                if isinstance(text_body, str):
+                    doc_id = hashlib.sha256(
+                        f"{source_ref}:{doc_id}".encode()
+                    ).hexdigest()
+
                 chunks = chunker.chunk(loader_result.content)
 
                 for i, chunk in enumerate(chunks):
@@ -338,7 +353,7 @@ class CrewAIRagAdapter(Adapter):
                         chunk_metadata.update(arg.get("metadata", {}))
 
                     chunk_hash = hashlib.sha256(
-                        f"{loader_result.doc_id}_{i}_{chunk}".encode()
+                        f"{doc_id}_{i}_{chunk}".encode()
                     ).hexdigest()
                     chunk_id = str(uuid.UUID(chunk_hash[:32]))
 
