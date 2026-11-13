@@ -59,3 +59,17 @@ def test_run_http_error(mock_post):
 
     assert "HTTP Error" in result
     assert "Forbidden" in result
+
+
+@patch.dict(
+    "os.environ",
+    {"BRIGHT_DATA_API_KEY": "test_api_key", "BRIGHT_DATA_ZONE": "test_zone"},
+)
+@patch("crewai_tools.tools.brightdata_tool.brightdata_unlocker.requests.post")
+def test_run_uses_constructor_data_format(mock_post):
+    mock_post.return_value = Mock(text="<html></html>", raise_for_status=Mock())
+    tool = BrightDataWebUnlockerTool(data_format="html")
+
+    tool.run(url="https://example.com")
+
+    assert "data_format" not in mock_post.call_args.kwargs["json"]

@@ -29,20 +29,20 @@ class TavilyResearchToolSchema(BaseModel):
         ...,
         description="The research task or question to investigate.",
     )
-    model: Literal["mini", "pro", "auto"] = Field(
-        default="auto",
+    model: Literal["mini", "pro", "auto"] | None = Field(
+        default=None,
         description="The model used by the Tavily research agent.",
     )
     output_schema: dict[str, Any] | None = Field(
         default=None,
         description="Optional JSON Schema that structures the research output.",
     )
-    stream: bool = Field(
-        default=False,
+    stream: bool | None = Field(
+        default=None,
         description="Whether to stream research progress and results as SSE chunks.",
     )
-    citation_format: Literal["numbered", "mla", "apa", "chicago"] = Field(
-        default="numbered",
+    citation_format: Literal["numbered", "mla", "apa", "chicago"] | None = Field(
+        default=None,
         description="Citation format for the research report.",
     )
 
