@@ -6,6 +6,7 @@ AgentAction or AgentFinish objects.
 """
 
 from dataclasses import dataclass
+import json
 
 from json_repair import repair_json
 from pydantic import BaseModel
@@ -167,6 +168,17 @@ def _safe_repair_json(tool_input: str) -> str:
     Returns:
         The repaired JSON string or original if repair fails.
     """
+    # Keep only a leading JSON object that more text follows, such as another
+    # Action block the model wrote in the same turn. json-repair keeps the last
+    # of several objects, which would give the first action another one's input.
+    try:
+        leading, end = json.JSONDecoder().raw_decode(tool_input)
+    except ValueError:
+        pass
+    else:
+        if isinstance(leading, dict) and tool_input[end:].strip():
+            return json.dumps(leading)
+
     if tool_input.startswith("[") and tool_input.endswith("]"):
         return tool_input
 

@@ -314,6 +314,39 @@ def test_safe_repair_json_unexpected_trailing_characters():
     assert result == expected_repaired_json
 
 
+def test_safe_repair_json_keeps_the_first_of_several_objects():
+    tool_input = '{"path": "draft_old.md"}\nObservation: {"path": "report_final.md"}'
+    result = parser._safe_repair_json(tool_input)
+    assert result == '{"path": "draft_old.md"}'
+
+
+@pytest.mark.parametrize(
+    ("second_action", "expected_tool", "expected_input"),
+    [
+        ("read_file", "archive_file", '{"path": "draft_old.md"}'),
+        ("archive_file", "archive_file", '{"path": "draft_old.md"}'),
+    ],
+    ids=["different_tools", "same_tool"],
+)
+def test_valid_action_parsing_with_two_actions_uses_the_first_action_input(
+    second_action, expected_tool, expected_input
+):
+    # Only the first action runs, so it must get its own input, not the input
+    # of an action the model wrote after it in the same turn.
+    text = (
+        "Thought: Archive the old draft first.\n"
+        "Action: archive_file\n"
+        'Action Input: {"path": "draft_old.md"}\n'
+        "Thought: Then the next file.\n"
+        f"Action: {second_action}\n"
+        'Action Input: {"path": "report_final.md"}'
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert result.tool == expected_tool
+    assert result.tool_input == expected_input
+
+
 def test_safe_repair_json_special_characters_key():
     invalid_json = '{"task!@#": "Research XAI", "context$%^": "Explainable AI", "coworker&*()": "Senior Researcher"}'
     expected_repaired_json = '{"task!@#": "Research XAI", "context$%^": "Explainable AI", "coworker&*()": "Senior Researcher"}'
