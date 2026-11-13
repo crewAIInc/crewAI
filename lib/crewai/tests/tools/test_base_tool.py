@@ -7,7 +7,8 @@ from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
 from crewai.tools import BaseTool, tool
-from pydantic import BaseModel, Field, RootModel
+from crewai.tools.base_tool import Tool
+from pydantic import BaseModel, Field, RootModel, ValidationError
 import pytest
 
 
@@ -792,3 +793,65 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
+
+
+def _shout(text: str) -> str:
+    return text.upper()
+
+
+class _ToolHolder:
+    @tool("holder_echo")
+    def echo(text: str) -> str:
+        """Echo the text back."""
+        return text
+
+
+class TestToolFuncJsonSerialization:
+    """``Tool.func`` is written to JSON as a dotted path for checkpoints."""
+
+    def test_module_level_func_round_trips(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        original = Tool(name="shout", description="Shout the text.", func=_shout)
+
+        restored = Tool.model_validate_json(original.model_dump_json())
+
+        assert restored.func is _shout
+        assert restored.run(text="hi") == "HI"
+
+    def test_local_func_is_dropped_with_warning(self) -> None:
+        @tool("local_echo")
+        def local_echo(text: str) -> str:
+            """Echo the text back."""
+            return text
+
+        with pytest.warns(UserWarning, match="cannot be JSON-serialized"):
+            data = local_echo.model_dump(mode="json")
+
+        assert data["func"] is None
+        assert local_echo.model_dump()["func"] is local_echo.func
+
+    def test_class_defined_tool_round_trips(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        dumped = _ToolHolder.echo.model_dump_json()
+        assert json.loads(dumped)["func"] == f"{__name__}._ToolHolder.echo"
+
+        restored = Tool.model_validate_json(dumped)
+
+        assert restored.func is _ToolHolder.echo.func
+        assert restored.run(text="hi") == "hi"
+
+    def test_class_defined_tool_is_refused_without_opt_in(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+        dumped = _ToolHolder.echo.model_dump_json()
+
+        with pytest.raises(
+            ValidationError,
+            match=r"Refusing to resolve callback path '\S+\._ToolHolder\.echo'",
+        ):
+            Tool.model_validate_json(dumped)
