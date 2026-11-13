@@ -23,7 +23,8 @@ Veja um exemplo mínimo de como utilizar a ferramenta:
 
 ```python
 from crewai import Agent
-from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+from crewai_tools import QdrantVectorSearchTool
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 # Inicialize a ferramenta com QdrantConfig
 qdrant_tool = QdrantVectorSearchTool(
@@ -122,7 +123,7 @@ pdf_path = "path/to/your/document.pdf"
 load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
 
 # Inicializar ferramenta de busca Qdrant
-from crewai_tools import QdrantConfig
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 qdrant_tool = QdrantVectorSearchTool(
     qdrant_config=QdrantConfig(
@@ -220,7 +221,8 @@ Para filtragens complexas, use instâncias de Filter do Qdrant na sua configura�
 
 ```python
 from qdrant_client.http import models as qmodels
-from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+from crewai_tools import QdrantVectorSearchTool
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 # Criar um filtro para condições específicas
 preset_filter = qmodels.Filter(
@@ -315,7 +317,7 @@ def custom_embeddings(text: str) -> list[float]:
     return embeddings[0].tolist()
 
 # Usar embeddings personalizados com a ferramenta
-from crewai_tools import QdrantConfig
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 
 tool = QdrantVectorSearchTool(
     qdrant_config=QdrantConfig(
