@@ -176,3 +176,61 @@ def test_cyclic_flow_with_conditional_start():
     ]
 
     assert execution_log == expected
+
+
+def test_cyclic_flow_resumed_from_checkpoint_keeps_looping(tmp_path):
+    """A method that failed before the checkpoint must re-run on each loop pass.
+
+    Methods that complete after the resume are not checkpoint-completed, so
+    they must not be skipped when the loop comes back to them.
+    """
+    import glob
+    import os
+
+    from crewai import CheckpointConfig, RuntimeState
+    from crewai.flow.flow import or_
+    from crewai.state.checkpoint_listener import _do_checkpoint
+
+    passes = []
+    failures = [1]
+
+    class LoopFlow(Flow):
+        @start()
+        def begin(self):
+            self.state["count"] = 0
+
+        @listen(or_(begin, "again"))
+        def work(self):
+            passes.append(self.state["count"])
+            if failures[0] > 0:
+                failures[0] -= 1
+                raise RuntimeError("transient failure")
+
+        @router(work)
+        def check(self):
+            self.state["count"] += 1
+            return "again" if self.state["count"] < 3 else "done"
+
+        @listen("done")
+        def finish(self):
+            self.state["finished"] = True
+
+    config = CheckpointConfig(location=str(tmp_path))
+    flow = LoopFlow()
+    try:
+        flow.kickoff()
+    except RuntimeError:
+        pass
+
+    # Write the checkpoint synchronously instead of through the event bus,
+    # whose handlers run on a thread pool and make the test order dependent.
+    _do_checkpoint(RuntimeState(root=[flow]), config)
+    latest = max(
+        glob.glob(f"{tmp_path}/**/*.json", recursive=True), key=os.path.getmtime
+    )
+    restored = LoopFlow.from_checkpoint(CheckpointConfig(restore_from=latest))
+    restored.kickoff()
+
+    assert passes == [0, 0, 1, 2]
+    assert restored.state["count"] == 3
+    assert restored.state["finished"] is True
