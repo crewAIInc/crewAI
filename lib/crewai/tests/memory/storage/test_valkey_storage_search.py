@@ -74,8 +74,8 @@ def create_mock_ft_search_response(
         fields["private"] = "true" if record.private else "false"
 
         # Add score (Valkey Search returns cosine distance, not similarity)
-        # Convert similarity to distance: distance = 2 * (1 - similarity)
-        distance = 2.0 * (1.0 - score)
+        # COSINE distance = 1 - cosine_similarity
+        distance = 1.0 - score
         fields["score"] = str(distance)
 
         # Add embedding if present
@@ -937,8 +937,43 @@ class TestValkeyStorageVectorSearch:
         # Verify similarity score is correctly converted
         assert len(results) == 1
         assert results[0][0].id == "record-1"
-        # Distance 0.1 -> Similarity = 1 - (0.1 / 2) = 0.95
-        assert abs(results[0][1] - 0.95) < 0.01
+        # Distance 0.1 -> cosine similarity = 1 - 0.1 = 0.9
+        assert abs(results[0][1] - 0.9) < 1e-9
+
+    @pytest.mark.parametrize(
+        ("distance", "similarity"),
+        [
+            # Distances Valkey Search returns for a query of [1, 0] against
+            # [1, 0], a 60-degree vector, [0, 1] and [-1, 0].
+            ("0", 1.0),
+            ("0.5", 0.5),
+            ("1", 0.0),
+            ("2", 0.0),
+        ],
+    )
+    def test_parse_search_result_maps_cosine_distance_to_cosine_similarity(
+        self, valkey_storage: ValkeyStorage, distance: str, similarity: float
+    ) -> None:
+        """The score must be true cosine similarity, because callers compare it
+        to cosine thresholds (e.g. consolidation_threshold=0.85).
+        """
+        record = MemoryRecord(id="r", content="c", scope="/test")
+        fields = {
+            "id": record.id,
+            "content": record.content,
+            "scope": record.scope,
+            "categories": "[]",
+            "metadata": "{}",
+            "importance": str(record.importance),
+            "created_at": record.created_at.isoformat(),
+            "last_accessed": record.last_accessed.isoformat(),
+            "source": "",
+            "private": "false",
+            "score": distance,
+        }
+        parsed = valkey_storage._parse_search_result(fields, min_score=0.0)
+        assert parsed is not None
+        assert parsed[1] == pytest.approx(similarity)
 
     @patch("crewai.memory.storage.valkey_storage.ft.search")
     @patch("crewai.memory.storage.valkey_storage.ft.list")

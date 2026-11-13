@@ -1686,8 +1686,10 @@ class ValkeyStorage:
     ) -> tuple[MemoryRecord, float] | None:
         """Extract score, apply min_score filter, and deserialize a search hit.
 
-        Score is converted from cosine distance ([0, 2]) to similarity ([0, 1])
-        and clamped to that range.
+        Valkey Search's COSINE metric returns distance ``1 - cosine_similarity``
+        (range [0, 2]), so the similarity is ``1 - distance``. It is clamped to
+        [0, 1]: thresholds such as ``consolidation_threshold`` are compared
+        against true cosine similarity, and opposite vectors count as 0.
 
         Returns:
             (MemoryRecord, score) or None if filtered out or deserialization fails.
@@ -1697,7 +1699,7 @@ class ValkeyStorage:
         for score_key in ("__score", "score"):
             if score_key in field_dict:
                 distance = float(field_dict[score_key])
-                score = max(0.0, min(1.0, 1.0 - (distance / 2.0)))
+                score = max(0.0, min(1.0, 1.0 - distance))
                 break
 
         if score < min_score:
