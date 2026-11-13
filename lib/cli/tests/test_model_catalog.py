@@ -183,6 +183,29 @@ def test_vendor_deepinfra_curated_labels_win(monkeypatch):
     assert models == [("Qwen/Qwen3.5-27B", "Qwen3.5 27B")]
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"data": []},
+        {
+            "data": [
+                {"id": "intfloat/multilingual-e5-large", "metadata": {"tags": ["embed"]}},
+                {"id": "black-forest-labs/FLUX-2-pro", "metadata": {"tags": ["image-gen"]}},
+                {"id": "openai/whisper-large-v3"},
+            ]
+        },
+    ],
+    ids=["empty", "no-chat-models"],
+)
+def test_vendor_deepinfra_without_chat_models_uses_fallback(monkeypatch, payload):
+    # Unlike an empty local Ollama, an empty hosted catalog does not make the
+    # curated models unusable, so the picker keeps offering them.
+    monkeypatch.setattr(mc, "_http_get_json", lambda *a, **k: payload)
+    fallback = [("deepseek-ai/DeepSeek-V4.1-Flash", "DeepSeek V4.1 Flash")]
+
+    assert mc.get_provider_models("deepinfra", fallback) == fallback
+
+
 def test_vendor_gemini_requires_generate_content(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "key")
     payload = {
