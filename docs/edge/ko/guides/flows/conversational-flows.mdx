@@ -114,6 +114,76 @@ result = stream.result
 
 핸들러는 보이는 응답이 반환값과 다를 때, 또는 히스토리를 자를 때 **`append_assistant_message(reply)`**를 호출하세요. public 문자열 반환값도 assistant로 기록되며 `@persist` 스냅샷에 포함되므로, 새 Flow 인스턴스에서도 복원됩니다. 사용자 입력은 `handle_turn`이 이미 저장합니다 — 핸들러에서 다시 추가하지 마세요.
 
+## 대화 영속화 및 재개
+
+`@persist`와 `SQLiteFlowPersistence`를 사용하면 대화가 *새로운* `Flow` 인스턴스 사이에서도 유지됩니다. 동일한 영속화 설정과 동일한 `session_id`를 가진 새 인스턴스는 다음 턴을 처리하기 전에 이전 메시지를 복원하며, 다른 `session_id`는 별도의 대화입니다. 아래 예제는 결정론적이며 오프라인으로 동작합니다 — 스크립트된 라우트, 모델 호출 없음 — 그래서 그대로 실행할 수 있습니다.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+store = SQLiteFlowPersistence("conversation.db")
+
+
+@persist(store)
+class ResearchBot(Flow):
+    conversational = True
+
+    def route_turn(self, context):
+        # A deterministic route so the example needs no LLM; a real bot picks an intent here.
+        return "research"
+
+    @listen("research")
+    def run_research(self):
+        return f"researched: {self.state.current_user_message}"
+
+
+def roles(messages):
+    return [
+        (m.role, m.content) if hasattr(m, "role") else (m["role"], m["content"])
+        for m in messages
+    ]
+
+
+# First turn.
+ResearchBot().handle_turn("what is CrewAI?", session_id="demo")
+
+# A brand-new instance with the same persistence + session id resumes the history.
+resumed = ResearchBot()
+resumed.handle_turn("tell me more", session_id="demo")
+print("resumed session:")
+for role, content in roles(resumed.state.messages):
+    print(f"  {role}: {content}")
+
+# A different session id is a separate conversation.
+other = ResearchBot()
+other.handle_turn("hello", session_id="other")
+print("other session:")
+for role, content in roles(other.state.messages):
+    print(f"  {role}: {content}")
+```
+
+이 코드를 `conversation_persistence.py`로 저장하고 실행하세요(새로운 `conversation.db`에서 시작):
+
+```bash
+python conversation_persistence.py
+```
+
+예상 출력(CrewAI는 플로우 실행 패널도 함께 출력합니다):
+
+```text
+resumed session:
+  user: what is CrewAI?
+  assistant: researched: what is CrewAI?
+  user: tell me more
+  assistant: researched: tell me more
+other session:
+  user: hello
+  assistant: researched: hello
+```
+
+새 인스턴스는 *영속화된 상태*, 즉 메시지 기록을 복원할 뿐, 실행 중인 백그라운드 작업이나 실행 리소스를 복원하지는 않습니다. `handle_turn`이 사용자 메시지를 저장하고, 핸들러의 문자열 반환값은 어시스턴트 응답으로 기록되어 스냅샷에 포함되므로 핸들러에서 둘 중 어느 것도 다시 추가하지 마세요.
+
 ## 설정 개요
 
 `Flow` 서브클래스에 `ConversationConfig`를 데코레이터로 적용하면 채팅 기본값이 부착되고 대화형 모드도 활성화됩니다. 아래의 [전체 필드 레퍼런스](#conversationconfig)를 참고하세요. 턴마다 `handle_turn(..., intents=..., intent_llm=...)`로 사전 분류 설정을 재정의할 수 있습니다.

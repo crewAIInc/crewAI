@@ -114,6 +114,76 @@ Each `handle_turn` runs this pipeline:
 
 Handlers should call **`append_assistant_message(reply)`** when the visible reply is not the return value, or when you trim history. A public string return is also recorded as assistant and included in the `@persist` snapshot, so a fresh Flow instance restores it. The user line is already stored by `handle_turn` — do not append it again in handlers.
 
+## Persisting and resuming a conversation
+
+With `@persist` and `SQLiteFlowPersistence`, a conversation survives across *fresh* `Flow` instances: a new instance given the same persistence and the same `session_id` restores the earlier messages before handling the next turn, while a different `session_id` is a separate conversation. The example below is deterministic and offline — a scripted route, no model calls — so it runs as-is.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+store = SQLiteFlowPersistence("conversation.db")
+
+
+@persist(store)
+class ResearchBot(Flow):
+    conversational = True
+
+    def route_turn(self, context):
+        # A deterministic route so the example needs no LLM; a real bot picks an intent here.
+        return "research"
+
+    @listen("research")
+    def run_research(self):
+        return f"researched: {self.state.current_user_message}"
+
+
+def roles(messages):
+    return [
+        (m.role, m.content) if hasattr(m, "role") else (m["role"], m["content"])
+        for m in messages
+    ]
+
+
+# First turn.
+ResearchBot().handle_turn("what is CrewAI?", session_id="demo")
+
+# A brand-new instance with the same persistence + session id resumes the history.
+resumed = ResearchBot()
+resumed.handle_turn("tell me more", session_id="demo")
+print("resumed session:")
+for role, content in roles(resumed.state.messages):
+    print(f"  {role}: {content}")
+
+# A different session id is a separate conversation.
+other = ResearchBot()
+other.handle_turn("hello", session_id="other")
+print("other session:")
+for role, content in roles(other.state.messages):
+    print(f"  {role}: {content}")
+```
+
+Save it as `conversation_persistence.py` and run it (start from a fresh `conversation.db`):
+
+```bash
+python conversation_persistence.py
+```
+
+Expected output (CrewAI also prints its flow-execution panels):
+
+```text
+resumed session:
+  user: what is CrewAI?
+  assistant: researched: what is CrewAI?
+  user: tell me more
+  assistant: researched: tell me more
+other session:
+  user: hello
+  assistant: researched: hello
+```
+
+The fresh instance restores *persisted state* — the message history — not running background work or execution resources. `handle_turn` stores the user line, and a handler's string return is recorded as the assistant reply and included in the snapshot, so don't append either again in your handler.
+
 ## Configuration overview
 
 Decorating a `Flow` subclass with `ConversationConfig` both attaches the chat defaults and enables conversational mode. See the [full field reference](#conversationconfig) below. Override pre-classification per turn with `handle_turn(..., intents=..., intent_llm=...)`.
