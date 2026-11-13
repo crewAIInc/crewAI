@@ -44,6 +44,11 @@ if TYPE_CHECKING:
     )
 
 
+# Before Python 3.13, threading.Lock and threading.RLock are factory functions,
+# not classes, so isinstance() needs the types of the locks they return.
+_LOCK_TYPES: tuple[type, ...] = (type(threading.Lock()), type(threading.RLock()))
+
+
 def _passthrough(v: Any) -> Any:
     """PlainValidator that accepts any value, bypassing strict union discrimination."""
     return v
@@ -197,7 +202,7 @@ class Memory(BaseModel):
             if k in {"_save_pool", "_pending_lock", "_reset_lock"}:
                 attr = self.__private_attributes__[k]
                 private[k] = attr.get_default()
-            elif isinstance(v, (ThreadPoolExecutor, threading.Lock)):
+            elif isinstance(v, (ThreadPoolExecutor, *_LOCK_TYPES)):
                 attr = self.__private_attributes__[k]
                 private[k] = attr.get_default()
             else:
