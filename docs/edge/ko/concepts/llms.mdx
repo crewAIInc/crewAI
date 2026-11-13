@@ -164,6 +164,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     - `previous_response_id`: 멀티턴을 위한 이전 응답 ID
     - `include`: 응답에 포함할 추가 데이터 (예: `["reasoning.encrypted_content"]`)
     - `builtin_tools`: OpenAI 내장 도구 목록: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `tool_search`: `True`로 설정하면 함수 도구 로딩을 지연하고 모델이 OpenAI 호스팅 도구 검색으로 필요할 때 불러옵니다 (기본값: 비활성화)
     - `parse_tool_outputs`: 파싱된 내장 도구 출력과 함께 구조화된 `ResponsesAPIResult` 반환
     - `auto_chain`: 멀티턴 대화를 위한 응답 ID 자동 추적 및 사용
     - `auto_chain_reasoning`: ZDR(제로 데이터 보존) 준수를 위한 암호화된 추론 항목 추적

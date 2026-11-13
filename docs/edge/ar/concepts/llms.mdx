@@ -211,6 +211,7 @@ mode: "wide"
     - `previous_response_id`: معرّف الاستجابة السابقة للمحادثات متعددة الأدوار
     - `include`: بيانات إضافية لتضمينها في الاستجابة (مثل `["reasoning.encrypted_content"]`)
     - `builtin_tools`: قائمة أدوات OpenAI المدمجة: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `tool_search`: اضبطه على `True` لتأجيل تحميل أدوات الدوال وترك النموذج يحمّلها عند الحاجة عبر بحث الأدوات المستضاف من OpenAI (معطّل افتراضيًا)
     - `parse_tool_outputs`: إعادة `ResponsesAPIResult` منظمة مع مخرجات أدوات مدمجة محللة
     - `auto_chain`: تتبع واستخدام معرّفات الاستجابة تلقائيًا للمحادثات متعددة الأدوار
     - `auto_chain_reasoning`: تتبع عناصر الاستدلال المشفرة للامتثال لـ ZDR
