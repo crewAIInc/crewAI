@@ -1194,3 +1194,64 @@ class TestAskMetadata:
         assert bob_entry is not None
         assert bob_entry["response"] == "answer from bob"
         assert bob_entry["response_metadata"] == {"responded_by": "bob"}
+
+
+class TestScriptedInputProviderSmoke:
+    """Smoke test for the docs example: scripted provider, no stdin / no LLM.
+
+    Mirrors the "Custom input provider (scripted, no stdin / no LLM)"
+    example in docs/edge/en/guides/flows/conversational-flows.mdx.
+    """
+
+    def test_scripted_provider_returns_input_response_with_metadata(self) -> None:
+        """A scripted InputProvider returning InputResponse flows through ask()."""
+
+        class ScriptedProvider(InputProvider):
+            def __init__(self, scripts: list[str | InputResponse | None]) -> None:
+                self.scripts = list(scripts)
+                self.calls: list[tuple[str, dict[str, Any] | None]] = []
+
+            def request_input(
+                self,
+                message: str,
+                flow: Flow[Any],
+                metadata: dict[str, Any] | None = None,
+            ) -> str | InputResponse | None:
+                self.calls.append((message, metadata))
+                if not self.scripts:
+                    return None
+                return self.scripts.pop(0)
+
+        provider = ScriptedProvider(
+            [
+                InputResponse(
+                    text="AI",
+                    metadata={"responded_by": "script-1", "thread_id": "t1"},
+                )
+            ]
+        )
+
+        class ResearchFlow(Flow):
+            input_provider = provider
+
+            @start()
+            def gather(self):
+                topic = self.ask("Topic?", metadata={"user_id": "u123"})
+                if topic is None:
+                    return "No input received"
+                return topic
+
+        flow = ResearchFlow()
+        result = flow.kickoff()
+
+        assert result == "AI"
+        assert provider.calls == [("Topic?", {"user_id": "u123"})]
+
+        entry = flow._input_history[0]
+        assert entry["response"] == "AI"
+        assert entry["metadata"] == {"user_id": "u123"}
+        assert entry["response_metadata"] == {
+            "responded_by": "script-1",
+            "thread_id": "t1",
+        }
+
