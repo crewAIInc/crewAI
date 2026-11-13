@@ -1001,6 +1001,29 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="Together AI">
+    CrewAI talks to Together AI through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    TOGETHER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    TOGETHER_BASE_URL=https://api.together.ai/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        temperature=0.7
+    )
+    ```
+
+    Model ids are in `org/model` form, so a full reference carries three segments, for example `together/Qwen/Qwen2.5-72B-Instruct-Turbo`. See the [Together AI model list](https://docs.together.ai/docs/serverless-models) for current ids.
+  </Accordion>
+
   <Accordion title="Perplexity AI">
     Set the following environment variables in your `.env` file:
     ```toml Code
