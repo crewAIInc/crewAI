@@ -54,6 +54,41 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     return name
 
 
+def resolve_tool_names(
+    names: list[str] | tuple[str, ...],
+    max_length: int = _MAX_TOOL_NAME_LENGTH,
+) -> list[str]:
+    """Resolve tool names to unique, stable provider-facing identifiers.
+
+    Every unique sanitized name is preserved. Later occurrences of a colliding
+    name receive a numeric suffix, skipping candidates that are already used or
+    are the sanitized base name of another tool in the same collection.
+
+    Args:
+        names: Original tool names in their advertised order.
+        max_length: Maximum provider-facing name length.
+
+    Returns:
+        Sanitized names in input order, unique within the collection.
+    """
+    bases = [sanitize_tool_name(name, max_length) for name in names]
+    reserved = set(bases)
+    used: set[str] = set()
+    resolved: list[str] = []
+
+    for base in bases:
+        candidate = base
+        counter = 2
+        while candidate in used or (candidate != base and candidate in reserved):
+            suffix = f"_{counter}"
+            candidate = f"{base[: max_length - len(suffix)].rstrip('_')}{suffix}"
+            counter += 1
+        used.add(candidate)
+        resolved.append(candidate)
+
+    return resolved
+
+
 def slugify(text: str, separator: str = "_") -> str:
     """Convert text to a URL-safe slug.
 
