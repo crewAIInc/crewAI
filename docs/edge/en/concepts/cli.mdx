@@ -87,6 +87,16 @@ crewai create agent python_support --format python
 
 Standalone Agent projects default to `agent.json`. Use `--format yaml` for configuration in YAML, or `--format python` for an exported Python Agent. This experimental project/loading contract may change and requires matching preview CLI/SDK builds. See [Standalone Agent Projects](/edge/en/guides/agents/standalone-agent-projects) for setup, tools, runtime inputs, and deployment limits.
 
+In a terminal, JSON and YAML agents open the same tool picker as `crewai create crew`. Add tools to an existing agent project later with `crewai tool add`:
+
+```shell Terminal
+crewai tool add                                  # pick from the list
+crewai tool add SerperDevTool platform:gmail     # or name them
+crewai tool setup                                # connect the definition's CrewAI Platform apps
+```
+
+`crewai tool add` appends to the definition's `tools` list. CrewAI Platform applications are checked on AMP first, and the Enterprise Action Auth Token is saved to `.env`. `crewai tool setup` repeats that check for the apps already in the definition, for example after cloning the project.
+
 #### Tool
 
 Scaffold a custom tool repository:

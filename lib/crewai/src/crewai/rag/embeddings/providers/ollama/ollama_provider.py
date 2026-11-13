@@ -1,18 +1,20 @@
 """Ollama embeddings provider."""
 
-from chromadb.utils.embedding_functions.ollama_embedding_function import (
-    OllamaEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class OllamaProvider(BaseEmbeddingsProvider[OllamaEmbeddingFunction]):
+class OllamaProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Ollama embeddings provider."""
 
-    embedding_callable: type[OllamaEmbeddingFunction] = Field(
-        default=OllamaEmbeddingFunction, description="Ollama embedding function class"
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "ollama_embedding_function", "OllamaEmbeddingFunction"
+        ),
+        description="Ollama embedding function class",
     )
     url: str = Field(
         default="http://localhost:11434/api/embeddings",

@@ -147,6 +147,17 @@ Python 프로젝트 템플릿은 `src/python_support/agent.py`에서 `agent = Ag
 
 `definition`을 명시하지 않으면 루트의 `agent.py`, `agent.json`, `agent.yml`, `agent.yaml` 또는 일반적인 `src/<package>/agent.py` 중 하나를 검색합니다. 여러 파일이 발견되면 오류가 발생하므로 `definition`을 설정해 하나를 선택하세요.
 
+## CLI로 도구 추가하기
+
+터미널에서 JSON 또는 YAML 프로젝트에 대해 `crewai create agent`를 실행하면 CrewAI Platform 애플리케이션을 포함하여 `crewai create crew`와 동일한 도구 선택기가 열립니다. 나중에 도구를 더 추가하려면 프로젝트에서 `crewai tool add`를 실행하고, 선택기에서 고르거나 이름으로 지정하세요:
+
+```shell Terminal
+crewai tool add
+crewai tool add SerperDevTool platform:gmail/send-email
+```
+
+이 명령은 정의의 `tools` 목록에 도구를 추가하고, 도구에 필요한 경우 `crewai` 의존성을 `crewai[tools]`로 변경합니다. 그런 다음 `crewai install`을 실행하세요. CrewAI Platform 애플리케이션은 추가되기 전에 AMP에서 검증되며, Enterprise Action Auth Token은 `.env`에 저장됩니다. 프로젝트를 클론한 후처럼 정의에 이미 있는 플랫폼 애플리케이션을 검증하려면 `crewai tool setup`을 실행하세요. Python Agent는 대신 `agent.py`에서 편집합니다.
+
 ## 사용자 지정 도구 추가하기
 
 포함된 `tools/support_hours.py`를 새 도구의 출발점으로 사용하세요:
