@@ -882,9 +882,11 @@ def _typed(raw: Column, decimal_comma: bool) -> tuple[Column, str, int]:
             if exact_int:
                 # Keep exact Python ints for digit text that float64 would round,
                 # but preserve native numeric cells (an Excel file stores floats)
-                # that were already placed into `out`.
+                # that were already placed into `out`. Use None for blanks (not
+                # pd.NA): astype(float) on an object column treats None as
+                # missing but raises on pd.NA.
                 ints = texts.loc[digit_texts].str.replace(" ", "", regex=False).map(int)
-                exact_out = pd.Series(pd.NA, index=raw.index, dtype=object)
+                exact_out = pd.Series(None, index=raw.index, dtype=object)
                 exact_out[ints.index] = ints
                 native_mask = out.notna() & ~exact_out.notna()
                 exact_out[native_mask] = out[native_mask]
