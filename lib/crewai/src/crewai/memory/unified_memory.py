@@ -738,27 +738,35 @@ class Memory(BaseModel):
 
             if depth == "shallow":
                 embedding = embed_text(self._embedder, query)
-                if not embedding:
+                if not embedding or limit <= 0:
                     results: list[MemoryMatch] = []
                 else:
-                    raw = self._storage.search(
-                        embedding,
-                        scope_prefix=effective_scope,
-                        categories=categories,
-                        limit=limit,
-                        min_score=0.0,
-                    )
-                    if not include_private:
+                    search_limit = limit
+                    while True:
+                        candidates = self._storage.search(
+                            embedding,
+                            scope_prefix=effective_scope,
+                            categories=categories,
+                            limit=search_limit,
+                            min_score=0.0,
+                        )
+                        if include_private:
+                            raw = candidates
+                            break
+
                         raw = [
-                            (r, s)
-                            for r, s in raw
-                            # A private record is visible only to the source that
-                            # created it. `r.source == source` alone would also
-                            # match source=None records (None == None) and leak
-                            # them to every default caller.
-                            if not r.private
-                            or (source is not None and r.source == source)
+                            (record, score)
+                            for record, score in candidates
+                            if not record.private
+                            or (source is not None and record.source == source)
                         ]
+                        if len(raw) >= limit or len(candidates) < search_limit:
+                            raw = raw[:limit]
+                            break
+
+                        # Hidden records used up candidate slots. Look further
+                        # without changing the storage backend interface.
+                        search_limit *= 2
                     results = []
                     for r, s in raw:
                         composite, reasons = compute_composite_score(r, s, self._config)
