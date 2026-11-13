@@ -90,6 +90,16 @@ if TYPE_CHECKING:
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+
+class _ResponseModelConversionError(Exception):
+    """Raised when a completed stream's content fails response_model conversion.
+
+    Kept distinct from the streaming except-block's generic salvage path: a
+    conversion failure means the stream finished fine and the content just
+    doesn't match the schema, not that the stream broke mid-flight.
+    """
+
+
 # litellm is lazy-loaded to avoid its module-level dotenv.load_dotenv()
 # from polluting env vars (e.g. MODEL= overriding embedder model_name).
 # The TYPE_CHECKING imports give mypy the real types; at runtime the names
@@ -1116,9 +1126,46 @@ class LLM(BaseLLM):
                         model=response_model,
                         llm=self,
                     )
-                    with model_call_hooks_dispatched():
-                        result = instructor_instance.to_pydantic()
-                    structured_response = result.model_dump_json()
+                    conversion_error: _ResponseModelConversionError | None = None
+                    try:
+                        with model_call_hooks_dispatched():
+                            result = instructor_instance.to_pydantic()
+                        structured_response = result.model_dump_json()
+                    except Exception as e:
+                        # to_pydantic() calls the LLM, so a real context-limit
+                        # error keeps its normal handling below. Match on type,
+                        # not text: a schema error's text quotes model output,
+                        # so output saying "maximum context length" would
+                        # otherwise be treated as a context-limit error.
+                        from litellm.exceptions import (
+                            ContextWindowExceededError,
+                            RateLimitError,
+                        )
+
+                        # A real provider throttle keeps the shared retry.
+                        if isinstance(
+                            e, (LLMContextLengthExceededError, RateLimitError)
+                        ):
+                            raise
+                        # Convert here: the outer handler only spots context
+                        # errors by text and would salvage raw text otherwise.
+                        if isinstance(e, ContextWindowExceededError):
+                            raise LLMContextLengthExceededError(str(e)) from e
+                        # {e} quotes model output. Keep it out of the message
+                        # and out of the exception chain: call()'s 'stop' retry
+                        # reads the message, and the rate-limit retry reads
+                        # every linked cause. It goes to the debug log instead.
+                        logging.debug(
+                            f"Streaming response_model conversion failed: {e!r}"
+                        )
+                        conversion_error = _ResponseModelConversionError(
+                            "Failed to convert streaming response to "
+                            f"{response_model.__name__}"
+                        )
+                    if conversion_error is not None:
+                        # Raised outside the except block so Python does not
+                        # link the original error as __context__.
+                        raise conversion_error
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
@@ -1163,6 +1210,8 @@ class LLM(BaseLLM):
             return full_response
 
         except (LLMContextLengthExceededError, EmptyLLMResponseError):
+            raise
+        except _ResponseModelConversionError:
             raise
         except Exception as e:
             error_msg = str(e)
@@ -1983,6 +2032,8 @@ class LLM(BaseLLM):
             TypeError: If messages format is invalid
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
+            _ResponseModelConversionError: If a completed stream's content
+                cannot be converted to ``response_model``
         """
         with llm_call_context():
             self._emit_call_started_event(
