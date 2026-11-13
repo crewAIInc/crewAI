@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextvars
 from datetime import datetime
 import logging
+import threading
 from typing import Any
 from uuid import uuid4
 
@@ -334,10 +336,37 @@ def embed_text(embedder: Any, text: str) -> list[float]:
     return list(first)
 
 
-# Reusable thread pool for running embedder calls from sync context
-# when an async event loop is already running. Uses max_workers=2 so
-# a single slow/timed-out call doesn't block subsequent embeds.
-_EMBED_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+# How long embed_texts waits for an offloaded embedder call.
+_EMBED_TIMEOUT_SECONDS = 30.0
+
+
+def _call_embedder_with_timeout(embedder: Any, texts: list[str]) -> Any:
+    """Run ``embedder(texts)`` on its own daemon thread and wait for it.
+
+    The call runs in a copy of the caller's contextvars, so request-scoped
+    state (credentials, tracing, ``crewai.context``) reaches the embedder.
+
+    Each call gets a fresh thread instead of a slot in a shared pool. A
+    Python thread can't be killed, so a call that hangs past the timeout keeps
+    running; in a fixed-size pool a few of those would fill every worker and
+    make later, healthy calls time out too. Here a hung call only ties up its
+    own thread.
+
+    Raises:
+        concurrent.futures.TimeoutError: If the call takes longer than
+            ``_EMBED_TIMEOUT_SECONDS``.
+    """
+    future: concurrent.futures.Future[Any] = concurrent.futures.Future()
+    ctx = contextvars.copy_context()
+
+    def run() -> None:
+        try:
+            future.set_result(ctx.run(embedder, texts))
+        except BaseException as e:
+            future.set_exception(e)
+
+    threading.Thread(target=run, name="crewai-embed", daemon=True).start()
+    return future.result(timeout=_EMBED_TIMEOUT_SECONDS)
 
 
 def embed_texts(
@@ -348,12 +377,12 @@ def embed_texts(
     The embedder already accepts ``list[str]``, so this just calls it once
     with the full batch and normalises the output format.
 
-    When called from an async context, offloads the embedder to a thread pool
-    so the embedding work doesn't run on the event loop thread. The calling
-    thread still blocks on the result (unavoidable for a sync function), but
-    this prevents the embedder from starving the event loop's I/O callbacks.
-    The pool uses ``max_workers=2`` so a single timed-out call doesn't block
-    subsequent embeds.
+    When called from an async context, offloads the embedder to a separate
+    thread so the embedding work doesn't run on the event loop thread. The
+    calling thread still blocks on the result (unavoidable for a sync
+    function), but this prevents the embedder from starving the event loop's
+    I/O callbacks. Each offloaded call gets its own thread, so a timed-out
+    call doesn't block subsequent embeds.
 
     Note: the proper long-term fix is making ``Memory.recall()`` async.
 
@@ -392,12 +421,12 @@ def embed_texts(
 
     result: Any
     if in_async_context:
-        # Sync function called from an async context: offload to the thread
-        # pool so the embedder doesn't run on the event-loop thread. The
+        # Sync function called from an async context: offload to another
+        # thread so the embedder doesn't run on the event-loop thread. The
         # .result() call blocks this thread, which is acceptable because the
         # public callers (Memory.recall(), encoding flow) are synchronous.
         try:
-            result = _EMBED_POOL.submit(embedder, texts_to_embed).result(timeout=30)
+            result = _call_embedder_with_timeout(embedder, texts_to_embed)
         except concurrent.futures.TimeoutError as e:
             # On the save path, returning empty embeddings would persist
             # unsearchable memories (a zero/missing vector) with no signal that
@@ -416,11 +445,11 @@ def embed_texts(
     else:
         # Not in an async context. Save paths still need the fail-loud timeout
         # guarantee (EncodingFlow steps run via asyncio.to_thread, so they land
-        # here with no running loop). Enforce the 30s timeout via the pool when
+        # here with no running loop). Enforce the 30s timeout on another thread when
         # raise_on_timeout is set; otherwise run directly on this thread.
         if raise_on_timeout:
             try:
-                result = _EMBED_POOL.submit(embedder, texts_to_embed).result(timeout=30)
+                result = _call_embedder_with_timeout(embedder, texts_to_embed)
             except concurrent.futures.TimeoutError as e:
                 raise TimeoutError(
                     "Embedder timed out after 30s; not persisting empty embeddings."

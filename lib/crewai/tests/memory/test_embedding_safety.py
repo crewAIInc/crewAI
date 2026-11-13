@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
+import contextvars
+import threading
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -121,53 +123,82 @@ class TestEmbedTextsTimeout:
     fails loudly instead of persisting unsearchable empty-vector memories.
     """
 
-    def _timing_out_pool(self):
-        import concurrent.futures
-        from unittest.mock import MagicMock
-
-        fut = MagicMock()
-        fut.result.side_effect = concurrent.futures.TimeoutError()
-        pool = MagicMock()
-        pool.submit.return_value = fut
-        return pool
-
-    def test_timeout_returns_empty_by_default(self) -> None:
+    @pytest.fixture
+    def short_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import crewai.memory.types as types_mod
 
-        embedder = MagicMock(return_value=[[0.1, 0.2]])
+        monkeypatch.setattr(types_mod, "_EMBED_TIMEOUT_SECONDS", 0.05)
 
+    @pytest.fixture
+    def hanging_embedder(self) -> Any:
+        """An embedder that blocks until the test ends (a hung API call)."""
+        release = threading.Event()
+
+        def embedder(texts: list[str]) -> list[list[float]]:
+            release.wait(5)
+            return [[0.1, 0.2] for _ in texts]
+
+        yield embedder
+        release.set()
+
+    def test_timeout_returns_empty_by_default(
+        self, short_timeout: None, hanging_embedder: Any
+    ) -> None:
         async def run() -> list[list[float]]:
-            return embed_texts(embedder, ["hello", "world"])
+            return embed_texts(hanging_embedder, ["hello", "world"])
 
-        with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
-            result = asyncio.run(run())
-        assert result == [[], []]
+        assert asyncio.run(run()) == [[], []]
 
-    def test_timeout_raises_when_requested(self) -> None:
-        import crewai.memory.types as types_mod
-
-        embedder = MagicMock(return_value=[[0.1, 0.2]])
-
+    def test_timeout_raises_when_requested(
+        self, short_timeout: None, hanging_embedder: Any
+    ) -> None:
         async def run() -> list[list[float]]:
-            return embed_texts(embedder, ["hello"], raise_on_timeout=True)
+            return embed_texts(hanging_embedder, ["hello"], raise_on_timeout=True)
 
-        with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
-            with pytest.raises(TimeoutError):
-                asyncio.run(run())
+        with pytest.raises(TimeoutError):
+            asyncio.run(run())
 
-    def test_timeout_raises_on_sync_save_path_no_event_loop(self) -> None:
+    def test_timeout_raises_on_sync_save_path_no_event_loop(
+        self, short_timeout: None, hanging_embedder: Any
+    ) -> None:
         """EncodingFlow steps run via asyncio.to_thread, so embed_texts is
         called with no running loop. raise_on_timeout must still fire there,
         not just in the async-context branch.
         """
-        import crewai.memory.types as types_mod
-
-        embedder = MagicMock(return_value=[[0.1, 0.2]])
-
         # Called directly (no running event loop).
-        with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
+        with pytest.raises(TimeoutError):
+            embed_texts(hanging_embedder, ["hello"], raise_on_timeout=True)
+
+    def test_hung_calls_do_not_starve_later_embeds(
+        self, short_timeout: None, hanging_embedder: Any
+    ) -> None:
+        """Calls that time out keep running in the background. They must not
+        use up the capacity that later, healthy embeds need.
+        """
+        for _ in range(3):
             with pytest.raises(TimeoutError):
-                embed_texts(embedder, ["hello"], raise_on_timeout=True)
+                embed_texts(hanging_embedder, ["stuck"], raise_on_timeout=True)
+
+        healthy = MagicMock(return_value=[[0.3, 0.4]])
+        assert embed_texts(healthy, ["ok"], raise_on_timeout=True) == [[0.3, 0.4]]
+
+    def test_offloaded_embed_sees_caller_contextvars(self) -> None:
+        request_id: contextvars.ContextVar[str] = contextvars.ContextVar("rid")
+        seen: list[str] = []
+
+        def embedder(texts: list[str]) -> list[list[float]]:
+            seen.append(request_id.get("<unset>"))
+            return [[0.1] for _ in texts]
+
+        async def run() -> None:
+            request_id.set("req-async")
+            embed_texts(embedder, ["a"])
+
+        asyncio.run(run())
+        request_id.set("req-sync-save")
+        embed_texts(embedder, ["b"], raise_on_timeout=True)
+
+        assert seen == ["req-async", "req-sync-save"]
 
     def test_no_timeout_sync_path_runs_directly(self) -> None:
         """Without raise_on_timeout, the sync path runs the embedder directly
