@@ -400,6 +400,43 @@ blog_task = Task(
 )
 ```
 
+### 결정 기반 가드레일
+
+`DecisionGuardrail`은 결정 서비스(예: OpenAI Decisions API 어댑터)에 태스크 출력에 대한 예/아니오 질문 하나를 묻고, 반환된 확률이 사용자가 설정한 임계값 이상일 때만 출력을 승인합니다. 이 기능은 선택 사항입니다. 질문에 답하는 어댑터를 직접 제공하므로, 어댑터를 추가하지 않으면 CrewAI는 API를 호출하지 않습니다.
+
+```python Code
+from crewai import Task
+from crewai.tasks.decision_guardrail import DecisionGuardrail, PredicateAnswer
+
+
+class MyDecider:
+    """Any object with this `predicate` method works, e.g. a Decisions API adapter."""
+
+    def predicate(self, input: str, *, name: str, instructions: str) -> PredicateAnswer | None:
+        probability = ...  # ask your decision service about `input`
+        return PredicateAnswer(name=name, probability=probability)
+
+
+summary_task = Task(
+    description="Summarize the attached article",
+    expected_output="A summary that cites its sources",
+    agent=writer_agent,
+    guardrail=DecisionGuardrail(
+        "The summary cites at least one source",
+        decider=MyDecider(),
+        threshold=0.8,
+    ),
+)
+```
+
+결정 가드레일은 다음과 같이 동작합니다:
+
+1. 확률이 임계값 이상이면 원래 출력을 변경하지 않고 `(True, output)`을 반환합니다. 확률이 임계값과 정확히 같아도 통과합니다.
+2. 그렇지 않으면 확률과 임계값을 명시한 `(False, feedback)`을 반환하며, 다른 가드레일과 마찬가지로 에이전트가 재시도합니다.
+3. 안전하게 실패합니다: 답변 누락, 다른 질문에 대한 답변, 유효하지 않은 확률, decider 오류가 발생하면 출력을 승인하지 않고 거부합니다.
+
+임계값은 0과 1 사이의 숫자여야 합니다. 가장 최근의 유효한 답변은 `guardrail.last_answer`로 확인할 수 있습니다.
+
 ### Guardrail 함수 요구사항
 
 1. **함수 시그니처**:
