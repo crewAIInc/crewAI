@@ -49,6 +49,10 @@ class ToolCallHookContext:
             Can be modified by returning a new string from after_tool_call hook.
         raw_tool_result: Raw Python tool execution result (only set for
             after_tool_call hooks). This is not modified by after hooks.
+        tool_call_id: The model-assigned tool call id on the native
+            tool-calling path, or None on the text (ReAct) path. Lets a hook
+            correlate before/after callbacks with the LLM's tool_calls entries
+            and external traces, even when the same tool runs in parallel.
     """
 
     def __init__(
@@ -61,6 +65,7 @@ class ToolCallHookContext:
         crew: Crew | None = None,
         tool_result: str | None = None,
         raw_tool_result: Any | None = None,
+        tool_call_id: str | None = None,
     ) -> None:
         """Initialize tool call hook context.
 
@@ -73,6 +78,7 @@ class ToolCallHookContext:
             crew: Optional crew instance
             tool_result: Optional tool result (for after hooks)
             raw_tool_result: Optional raw tool result (for after hooks)
+            tool_call_id: Optional model tool call id (native path only)
         """
         self.tool_name = tool_name
         self.tool_input = tool_input
@@ -82,6 +88,7 @@ class ToolCallHookContext:
         self.crew = crew
         self.tool_result = tool_result
         self.raw_tool_result = raw_tool_result
+        self.tool_call_id = tool_call_id
 
     def request_human_input(
         self,
@@ -396,3 +403,4 @@ def clear_all_tool_call_hooks() -> tuple[int, int]:
     before_count = clear_before_tool_call_hooks()
     after_count = clear_after_tool_call_hooks()
     return (before_count, after_count)
+
