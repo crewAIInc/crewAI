@@ -217,6 +217,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "together",
 ]
 
 
@@ -242,6 +243,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "together": "together",
 }
 
 
@@ -473,6 +475,10 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "together":
+            # Together ids are org/model; only the provider prefix is stripped.
+            return True
+
         return False
 
     @classmethod
@@ -698,6 +704,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "together",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
