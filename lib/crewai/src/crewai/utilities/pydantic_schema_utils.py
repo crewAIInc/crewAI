@@ -1262,7 +1262,23 @@ def _json_schema_to_pydantic_type(
         return bool
     if type_ == "array":
         items_schema = json_schema.get("items")
-        if items_schema:
+        prefix_items = json_schema.get("prefixItems")
+        # Draft-07 tuple validation and 2020-12 prefixItems both describe an
+        # array positionally with a list of schemas. Flatten them, plus any
+        # rest schema, into one element union rather than passing the list to
+        # the single-schema path, which would fail with "list object has no
+        # attribute 'get'".
+        item_schemas: list[Any] = []
+        if isinstance(prefix_items, list):
+            item_schemas.extend(prefix_items)
+            if isinstance(items_schema, dict):
+                item_schemas.append(items_schema)
+        elif isinstance(items_schema, list):
+            item_schemas.extend(items_schema)
+            additional_items = json_schema.get("additionalItems")
+            if isinstance(additional_items, dict):
+                item_schemas.append(additional_items)
+        elif isinstance(items_schema, dict):
             item_type = _json_schema_to_pydantic_type(
                 items_schema,
                 root_schema,
@@ -1271,6 +1287,22 @@ def _json_schema_to_pydantic_type(
                 in_progress=in_progress,
             )
             return list[item_type]  # type: ignore[valid-type]
+        if item_schemas:
+            item_types: list[Any] = []
+            for index, item_schema in enumerate(item_schemas):
+                item_type = _json_schema_to_pydantic_type(
+                    item_schema,
+                    root_schema,
+                    name_=f"{name_ or 'Item'}Option{index}",
+                    enrich_descriptions=enrich_descriptions,
+                    in_progress=in_progress,
+                )
+                if item_type not in item_types:
+                    item_types.append(item_type)
+            element_type = (
+                item_types[0] if len(item_types) == 1 else Union[tuple(item_types)]  # noqa: UP007
+            )
+            return list[element_type]  # type: ignore[valid-type]
         return list
     if type_ == "object":
         properties = json_schema.get("properties")
