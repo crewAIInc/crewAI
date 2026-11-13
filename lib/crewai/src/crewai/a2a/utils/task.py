@@ -160,49 +160,48 @@ def cancellable(
 
         task_id = context.task_id
 
-        async def poll_for_cancel_valkey() -> bool:
-            """Poll ValkeyCache for cancellation flag.
+        async def read_cancel_flag() -> Any:
+            if _task_cache is not None:
+                return await _task_cache.get(f"cancel:{task_id}")
+            return await caches.get("default").get(f"cancel:{task_id}")
 
-            A cache error must not complete the watcher: the decorator would
-            otherwise treat it as a cancellation, so an unreachable Valkey would
-            abort every running task. Log the first error of a failure streak
+        async def poll_for_cancel() -> bool:
+            """Poll the cache for the cancellation flag until it is set.
+
+            A cache error must not end the watcher. Once it ends, nothing
+            observes the flag, so a later cancel() would be acknowledged while
+            the task kept running. Log the first error of a failure streak
             (not every 100ms poll) and keep polling.
             """
             failing = False
             while True:
                 try:
-                    if _task_cache is not None and await _task_cache.get(
-                        f"cancel:{task_id}"
-                    ):
+                    if await read_cancel_flag():
                         return True
                     failing = False
                 except Exception as e:
                     if not failing:
                         logger.warning(
-                            "Cancel watcher Valkey error, continuing to poll",
+                            "Cancel watcher cache error, continuing to poll",
                             extra={"task_id": task_id, "error": str(e)},
                         )
                     failing = True
                 await asyncio.sleep(0.1)
 
-        async def poll_for_cancel_aiocache() -> bool:
-            """Poll aiocache for cancellation flag."""
-            cache = caches.get("default")
-            while True:
-                if await cache.get(f"cancel:{task_id}"):
-                    return True
-                await asyncio.sleep(0.1)
-
         async def watch_for_cancel() -> bool:
-            """Watch for cancellation events via pub/sub or polling."""
-            if _task_cache is not None:
-                # ValkeyCache: use polling (pub/sub not implemented yet)
-                return await poll_for_cancel_valkey()
+            """Watch for cancellation via pub/sub or polling.
 
-            # aiocache: use pub/sub if Redis, otherwise poll
+            Returns only when a cancel has been seen. If Redis pub/sub fails
+            (connection loss, an ACL NOPERM on SUBSCRIBE, ...) or its stream
+            ends, fall back to polling so cancellation stays armed for the life
+            of the task.
+            """
+            # ValkeyCache has no pub/sub yet; the in-memory cache has none.
+            if _task_cache is not None:
+                return await poll_for_cancel()
             cache = caches.get("default")
             if isinstance(cache, SimpleMemoryCache):
-                return await poll_for_cancel_aiocache()
+                return await poll_for_cancel()
 
             try:
                 client = cache.client
@@ -211,13 +210,16 @@ def cancellable(
                 async for message in pubsub.listen():
                     if message["type"] == "message":
                         return True
-            except (OSError, ConnectionError) as e:
+                logger.warning(
+                    "Cancel watcher pub/sub stream ended, falling back to polling",
+                    extra={"task_id": task_id},
+                )
+            except Exception as e:
                 logger.warning(
                     "Cancel watcher Redis error, falling back to polling",
                     extra={"task_id": task_id, "error": str(e)},
                 )
-                return await poll_for_cancel_aiocache()
-            return False
+            return await poll_for_cancel()
 
         execute_task = asyncio.create_task(fn(*args, **kwargs))
         cancel_watch = asyncio.create_task(watch_for_cancel())

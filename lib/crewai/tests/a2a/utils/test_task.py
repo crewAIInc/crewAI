@@ -541,3 +541,75 @@ class TestCancelWatcherErrors:
             return "finished"
 
         assert await work(mock_context) == "finished"
+
+
+class TestRedisCancelWatcherStaysArmed:
+    """aiocache Redis path: if pub/sub fails or its stream ends, the watcher
+    must fall back to polling so a later cancel() still stops the task.
+    """
+
+    @staticmethod
+    def _install(
+        monkeypatch: pytest.MonkeyPatch, redis_like: MagicMock
+    ) -> None:
+        import crewai.a2a.utils.task as task_mod
+
+        redis_like.delete = AsyncMock(return_value=True)
+        fake_caches = MagicMock()
+        fake_caches.get.return_value = redis_like
+        monkeypatch.setattr(task_mod, "_cache_initialized", True)
+        monkeypatch.setattr(task_mod, "_task_cache", None)
+        monkeypatch.setattr(task_mod, "caches", fake_caches)
+
+    @staticmethod
+    async def _run_until_cancelled(mock_context: MagicMock) -> None:
+        @cancellable
+        async def slow(context: RequestContext) -> str:
+            await asyncio.sleep(5)
+            return "should not reach"
+
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(slow(mock_context), timeout=2)
+
+    @pytest.mark.asyncio
+    async def test_cancel_detected_after_pubsub_error(
+        self, mock_context: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        redis_like = MagicMock()
+        # e.g. an ACL NOPERM on SUBSCRIBE: not an OSError/ConnectionError.
+        redis_like.client.pubsub.side_effect = RuntimeError("NOPERM")
+        redis_like.get = AsyncMock(side_effect=[None, None, True])
+        self._install(monkeypatch, redis_like)
+
+        await self._run_until_cancelled(mock_context)
+
+    @pytest.mark.asyncio
+    async def test_cancel_detected_after_pubsub_stream_ends(
+        self, mock_context: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def no_messages() -> Any:
+            return
+            yield  # pragma: no cover - makes this an async generator
+
+        pubsub = MagicMock()
+        pubsub.subscribe = AsyncMock()
+        pubsub.listen = no_messages
+        redis_like = MagicMock()
+        redis_like.client.pubsub.return_value = pubsub
+        redis_like.get = AsyncMock(side_effect=[None, True])
+        self._install(monkeypatch, redis_like)
+
+        await self._run_until_cancelled(mock_context)
+
+    @pytest.mark.asyncio
+    async def test_cancel_detected_after_cache_get_errors(
+        self, mock_context: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        redis_like = MagicMock()
+        redis_like.client.pubsub.side_effect = OSError("connection reset")
+        redis_like.get = AsyncMock(
+            side_effect=[RuntimeError("redis down"), RuntimeError("redis down"), True]
+        )
+        self._install(monkeypatch, redis_like)
+
+        await self._run_until_cancelled(mock_context)
