@@ -80,6 +80,16 @@ crewai create agent python_support --format python
 
 독립형 Agent 프로젝트는 기본적으로 `agent.json`을 사용합니다. YAML 구성을 사용하려면 `--format yaml`을, Python Agent를 내보내려면 `--format python`을 지정하세요. 이 실험적 프로젝트 및 로딩 계약은 변경될 수 있으며 호환되는 CLI/SDK 미리보기 빌드가 필요합니다. 설정, 도구, 런타임 입력 및 배포 제한은 [독립형 Agent 프로젝트](/edge/ko/guides/agents/standalone-agent-projects)를 참고하세요.
 
+터미널에서 JSON 및 YAML Agent는 `crewai create crew`와 동일한 도구 선택기를 엽니다. 나중에 기존 Agent 프로젝트에 도구를 추가하려면 `crewai tool add`를 사용하세요:
+
+```shell Terminal
+crewai tool add                                  # pick from the list
+crewai tool add SerperDevTool platform:gmail     # or name them
+crewai tool setup                                # connect the definition's CrewAI Platform apps
+```
+
+`crewai tool add`는 정의의 `tools` 목록에 도구를 추가합니다. CrewAI Platform 애플리케이션은 먼저 AMP에서 확인되며, Enterprise Action Auth Token은 `.env`에 저장됩니다. `crewai tool setup`은 프로젝트를 클론한 후처럼 정의에 이미 있는 앱에 대해 같은 확인을 다시 수행합니다.
+
 #### 사용 중단된 플래그 별칭
 
 이전 snake_case 플래그는 여전히 동작하지만 `--help`에는 표시되지 않습니다. 아래 각 명령 섹션에 문서화된 kebab-case 형식을 사용하세요.
