@@ -1,7 +1,5 @@
 """Tests for backward compatibility of embedding provider configurations."""
 
-from unittest.mock import patch
-
 import pytest
 
 from crewai.rag.embeddings.factory import build_embedder, PROVIDER_PATHS
@@ -96,11 +94,7 @@ class TestModelKeyBackwardCompatibility:
         monkeypatch.delenv("EMBEDDINGS_DEEPINFRA_MODEL_NAME", raising=False)
         monkeypatch.delenv("DEEPINFRA_MODEL_NAME", raising=False)
 
-        with patch(
-            "crewai.rag.embeddings.providers.deepinfra.deepinfra_provider.resolve_default_model",
-            return_value="Qwen/Qwen3-Embedding-8B",
-        ):
-            provider = DeepInfraProvider(api_key="test-key")
+        provider = DeepInfraProvider(api_key="test-key")
 
         assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
 
