@@ -380,11 +380,15 @@ class UploadCache:
             logger.debug(f"Cleared {count} cache entries")
         return count
 
-    async def aget_all_for_provider(self, provider: ProviderType) -> list[CachedUpload]:
+    async def aget_all_for_provider(
+        self, provider: ProviderType, *, include_expired: bool = False
+    ) -> list[CachedUpload]:
         """Get all cached uploads for a provider.
 
         Args:
             provider: The provider name.
+            include_expired: If True, also return entries past their expiry
+                that the backend still holds.
 
         Returns:
             List of cached uploads for the provider.
@@ -395,7 +399,9 @@ class UploadCache:
         results: list[CachedUpload] = []
         for key in list(self._provider_keys[provider]):
             cached = await self._cache.get(key)
-            if isinstance(cached, CachedUpload) and not cached.is_expired():
+            if isinstance(cached, CachedUpload) and (
+                include_expired or not cached.is_expired()
+            ):
                 results.append(cached)
         return results
 
@@ -477,10 +483,12 @@ class UploadCache:
         result: int = self._run_sync(self.aclear())
         return result
 
-    def get_all_for_provider(self, provider: ProviderType) -> list[CachedUpload]:
+    def get_all_for_provider(
+        self, provider: ProviderType, *, include_expired: bool = False
+    ) -> list[CachedUpload]:
         """Sync wrapper for aget_all_for_provider."""
         result: list[CachedUpload] = self._run_sync(
-            self.aget_all_for_provider(provider)
+            self.aget_all_for_provider(provider, include_expired=include_expired)
         )
         return result
 
