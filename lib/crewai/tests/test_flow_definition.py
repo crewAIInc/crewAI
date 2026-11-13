@@ -1561,3 +1561,54 @@ def test_skill_with_skips_is_shorter():
     assert "call: script" not in trimmed
     assert "call: tool" not in trimmed
     assert len(trimmed) < len(full)
+
+
+def test_flow_definition_is_built_once_when_first_requested_from_two_threads(
+    monkeypatch,
+):
+    import threading
+
+    import crewai.flow.runtime as flow_runtime
+
+    class ConcurrentlyStartedFlow(Flow):
+        @start()
+        def begin(self):
+            return "started"
+
+    original_build = flow_runtime.build_flow_definition
+    builds: list[type] = []
+    first_build_started = threading.Event()
+    second_build_started = threading.Event()
+    release_first_build = threading.Event()
+
+    def build_slowly(flow_class):
+        builds.append(flow_class)
+        if len(builds) == 1:
+            first_build_started.set()
+            release_first_build.wait(timeout=5)
+        else:
+            second_build_started.set()
+        return original_build(flow_class)
+
+    monkeypatch.setattr(flow_runtime, "build_flow_definition", build_slowly)
+
+    definitions = []
+    first = threading.Thread(
+        target=lambda: definitions.append(ConcurrentlyStartedFlow.flow_definition())
+    )
+    second = threading.Thread(
+        target=lambda: definitions.append(ConcurrentlyStartedFlow.flow_definition())
+    )
+    first.start()
+    assert first_build_started.wait(timeout=5)
+    second.start()
+    # The second request must wait for the first build instead of starting
+    # its own; give it the chance to start one before releasing the first.
+    second_build_started.wait(timeout=0.5)
+    release_first_build.set()
+    first.join(timeout=5)
+    second.join(timeout=5)
+
+    assert builds == [ConcurrentlyStartedFlow]
+    assert len(definitions) == 2
+    assert definitions[0] is definitions[1]
