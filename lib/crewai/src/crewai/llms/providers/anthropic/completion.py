@@ -86,8 +86,15 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
         Literal["claude-fable-5"],
         Literal["claude-opus-5"],
         Literal["claude-sonnet-5"],
+        Literal["claude-haiku-5"],
         Literal["claude-opus-4-8"],
         Literal["claude-opus-4.8"],
+        Literal["claude-opus-4-7"],
+        Literal["claude-opus-4.7"],
+        Literal["claude-opus-4-6"],
+        Literal["claude-opus-4.6"],
+        Literal["claude-sonnet-4-6"],
+        Literal["claude-sonnet-4.6"],
         Literal["claude-sonnet-4-5"],
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
@@ -99,8 +106,15 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     "claude-fable-5",
     "claude-opus-5",
     "claude-sonnet-5",
+    "claude-haiku-5",
     "claude-opus-4-8",
     "claude-opus-4.8",
+    "claude-opus-4-7",
+    "claude-opus-4.7",
+    "claude-opus-4-6",
+    "claude-opus-4.6",
+    "claude-sonnet-4-6",
+    "claude-sonnet-4.6",
     "claude-sonnet-4-5",
     "claude-sonnet-4.5",
     "claude-opus-4-5",
@@ -113,9 +127,9 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Covers Claude Fable 5, Opus 5, Sonnet 5, Opus 4.8 and the 4.5-era models
-    (Sonnet 4.5, Opus 4.5, Haiku 4.5). Other models require the tool-based
-    fallback approach.
+    Covers Claude Fable 5, Opus 5, Sonnet 5, Haiku 5, Opus 4.8, Opus 4.7,
+    Opus 4.6, Sonnet 4.6 and the 4.5-era models (Sonnet 4.5, Opus 4.5,
+    Haiku 4.5). Other models require the tool-based fallback approach.
 
     Args:
         model: The model name/identifier.
