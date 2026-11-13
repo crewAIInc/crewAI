@@ -553,6 +553,45 @@ def test_gemini_generation_config():
     assert hasattr(config, 'max_output_tokens') or 'max_output_tokens' in str(config)
 
 
+_SAFETY_SETTINGS = {
+    "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+    "HARM_CATEGORY_HATE_SPEECH": "BLOCK_MEDIUM_AND_ABOVE",
+}
+
+
+def test_gemini_generation_config_converts_safety_settings():
+    """The documented {category: threshold} mapping becomes SafetySettings.
+
+    GenerateContentConfig only accepts a list of SafetySetting, so passing the
+    mapping through unchanged made every call fail validation.
+    """
+    from google.genai import types as genai_types
+
+    llm = LLM(model="google/gemini-2.0-flash-001", safety_settings=_SAFETY_SETTINGS)
+
+    config = llm._prepare_generation_config()
+
+    assert config.safety_settings == [
+        genai_types.SafetySetting(
+            category=genai_types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold=genai_types.HarmBlockThreshold.BLOCK_NONE,
+        ),
+        genai_types.SafetySetting(
+            category=genai_types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold=genai_types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        ),
+    ]
+
+
+def test_gemini_to_config_dict_round_trips_safety_settings():
+    llm = LLM(model="google/gemini-2.0-flash-001", safety_settings=_SAFETY_SETTINGS)
+
+    config = llm.to_config_dict()
+
+    assert config["safety_settings"] == _SAFETY_SETTINGS
+    assert LLM(**config).safety_settings == _SAFETY_SETTINGS
+
+
 def test_gemini_model_detection():
     """
     Test that various Gemini model formats are properly detected
