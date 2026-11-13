@@ -16,9 +16,14 @@ class OpenRouterProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     @model_validator(mode="before")
     @classmethod
     def _normalize_model_alias(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "model" in data and "model_name" not in data:
+        # Chroma's OpenAIEmbeddingFunction accepts model_name only. Keep the
+        # documented `model` alias for config, but drop it before model_dump
+        # so build_embedder_from_provider does not forward an unknown kwarg.
+        if isinstance(data, dict) and "model" in data:
             data = data.copy()
-            data["model_name"] = data["model"]
+            if "model_name" not in data:
+                data["model_name"] = data["model"]
+            data.pop("model", None)
         return data
 
     embedding_callable: type[OpenAIEmbeddingFunction] = Field(
