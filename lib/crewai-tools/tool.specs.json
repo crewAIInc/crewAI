@@ -11730,6 +11730,801 @@
       }
     },
     {
+      "description": "Get a company's brand identity from its website with Geekflare: name, logos, brand colors, fonts, and social profiles, as JSON. Fields the site doesn't publish are omitted.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Geekflare (https://dash.geekflare.com)",
+          "name": "GEEKFLARE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Geekflare Brand",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get a company's brand identity from its website.\n\nAttributes:\n    mode: \"standard\", or \"enriched\" to add company intelligence.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geekflare API key. Defaults to the GEEKFLARE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.geekflare.com",
+            "description": "Geekflare API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "mode": {
+            "default": "standard",
+            "description": "Depth of brand data.",
+            "enum": [
+              "standard",
+              "enriched"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180,
+            "description": "Request timeout in seconds.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "GeekflareBrandTool",
+        "type": "object"
+      },
+      "name": "GeekflareBrandTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for GeekflareBrandTool.",
+        "properties": {
+          "url": {
+            "description": "Website URL or domain, e.g. https://stripe.com.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GeekflareBrandToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Fetch a public web page with Geekflare and return its content as JSON (Markdown by default). Only for publicly accessible pages.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Geekflare (https://dash.geekflare.com)",
+          "name": "GEEKFLARE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Geekflare Scrape Website",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Scrape a public web page into Markdown, text, HTML, or structured JSON.\n\nAttributes:\n    formats: Output format(s), up to 3. The *-llm variants strip boilerplate.\n    render_js: Force JavaScript rendering on or off; None decides automatically.\n    wait_time: Seconds to wait after page load before capturing.\n    device: Device to emulate.\n    template: Ready-made structured extraction: \"product\" (title, price,\n        availability, images, ratings) or \"contact\" (emails, phones, socials).",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geekflare API key. Defaults to the GEEKFLARE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.geekflare.com",
+            "description": "Geekflare API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "device": {
+            "default": "desktop",
+            "description": "Device to emulate.",
+            "enum": [
+              "desktop",
+              "mobile"
+            ],
+            "title": "Device",
+            "type": "string"
+          },
+          "formats": {
+            "description": "Output format(s).",
+            "items": {
+              "enum": [
+                "markdown",
+                "markdown-llm",
+                "html",
+                "html-llm",
+                "text",
+                "text-llm",
+                "json"
+              ],
+              "type": "string"
+            },
+            "title": "Formats",
+            "type": "array"
+          },
+          "render_js": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Force JS rendering.",
+            "title": "Render Js"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "enum": [
+                  "product",
+                  "contact"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured extraction template.",
+            "title": "Template"
+          },
+          "timeout": {
+            "default": 180,
+            "description": "Request timeout in seconds.",
+            "title": "Timeout",
+            "type": "integer"
+          },
+          "wait_time": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Seconds to wait after load.",
+            "title": "Wait Time"
+          }
+        },
+        "required": [],
+        "title": "GeekflareScrapeWebsiteTool",
+        "type": "object"
+      },
+      "name": "GeekflareScrapeWebsiteTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for GeekflareScrapeWebsiteTool.",
+        "properties": {
+          "url": {
+            "description": "Full URL of the public page to scrape.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GeekflareScrapeWebsiteToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Take a screenshot of a web page with Geekflare and return JSON that includes a hosted image URL.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Geekflare (https://dash.geekflare.com)",
+          "name": "GEEKFLARE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Geekflare Screenshot",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Capture a screenshot of a web page and return a hosted image URL.\n\nAttributes:\n    full_page: Capture the whole page instead of the viewport.\n    device: Device to emulate.\n    image_type: png, jpeg, or webp.\n    selector: CSS selector of a single element to capture.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geekflare API key. Defaults to the GEEKFLARE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.geekflare.com",
+            "description": "Geekflare API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "device": {
+            "default": "desktop",
+            "description": "Device to emulate.",
+            "enum": [
+              "desktop",
+              "mobile"
+            ],
+            "title": "Device",
+            "type": "string"
+          },
+          "full_page": {
+            "default": false,
+            "description": "Capture the full page.",
+            "title": "Full Page",
+            "type": "boolean"
+          },
+          "image_type": {
+            "default": "png",
+            "description": "Image format.",
+            "enum": [
+              "png",
+              "jpeg",
+              "webp"
+            ],
+            "title": "Image Type",
+            "type": "string"
+          },
+          "selector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "CSS selector of one element to capture.",
+            "title": "Selector"
+          },
+          "timeout": {
+            "default": 180,
+            "description": "Request timeout in seconds.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "GeekflareScreenshotTool",
+        "type": "object"
+      },
+      "name": "GeekflareScreenshotTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for GeekflareScreenshotTool.",
+        "properties": {
+          "url": {
+            "description": "Full URL of the page to capture.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GeekflareScreenshotToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the live web with Geekflare and return results with titles, URLs, and snippets as JSON. Use for current information and for finding sources.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Geekflare (https://dash.geekflare.com)",
+          "name": "GEEKFLARE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Geekflare Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search the web, news, or images with Geekflare, or fetch the full Google SERP.\n\nAttributes:\n    limit: Number of results (1-100).\n    source: web, news, or images.\n    location: Country code (ISO alpha-2) for localized results.\n    city: City for localized results, e.g. \"London,England,United Kingdom\".\n    time: Recency filter: any, h, d, w, m, y, or with a count such as d7.\n    include_domains: Only return results from these domains.\n    exclude_domains: Exclude results from these domains.\n    serp: Return the full Google results page (organic results, AI Overview,\n        People Also Ask, related searches).\n    grounded_answer: Add an AI answer grounded in the results (ignored with serp).",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geekflare API key. Defaults to the GEEKFLARE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.geekflare.com",
+            "description": "Geekflare API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "City for localized results.",
+            "title": "City"
+          },
+          "exclude_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exclude results from these domains.",
+            "title": "Exclude Domains"
+          },
+          "grounded_answer": {
+            "default": false,
+            "description": "Add an AI answer grounded in the results.",
+            "title": "Grounded Answer",
+            "type": "boolean"
+          },
+          "include_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only return results from these domains.",
+            "title": "Include Domains"
+          },
+          "limit": {
+            "default": 10,
+            "description": "Number of results.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code, e.g. us.",
+            "title": "Location"
+          },
+          "serp": {
+            "default": false,
+            "description": "Return the full Google SERP.",
+            "title": "Serp",
+            "type": "boolean"
+          },
+          "source": {
+            "default": "web",
+            "description": "Search source.",
+            "enum": [
+              "web",
+              "news",
+              "images"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Recency filter.",
+            "title": "Time"
+          },
+          "timeout": {
+            "default": 180,
+            "description": "Request timeout in seconds.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "GeekflareSearchTool",
+        "type": "object"
+      },
+      "name": "GeekflareSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for GeekflareSearchTool.",
+        "properties": {
+          "query": {
+            "description": "The search query.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "GeekflareSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Run a website check with Geekflare and return the result as JSON: uptime, DNS records, TLS/SSL certificate, redirect chain, broken links, load time, meta tags, or a Lighthouse audit. Reports findings only; it does not change the website.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Geekflare (https://dash.geekflare.com)",
+          "name": "GEEKFLARE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Geekflare Website Diagnostics",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run website diagnostics with Geekflare.\n\nAttributes:\n    follow_redirect: Follow redirects before checking, where supported.\n    lighthouse_device: Device for Lighthouse audits.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geekflare API key. Defaults to the GEEKFLARE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.geekflare.com",
+            "description": "Geekflare API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "follow_redirect": {
+            "default": false,
+            "description": "Follow redirects before checking.",
+            "title": "Follow Redirect",
+            "type": "boolean"
+          },
+          "lighthouse_device": {
+            "default": "desktop",
+            "description": "Device for Lighthouse audits.",
+            "enum": [
+              "desktop",
+              "mobile"
+            ],
+            "title": "Lighthouse Device",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180,
+            "description": "Request timeout in seconds.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "GeekflareWebsiteDiagnosticsTool",
+        "type": "object"
+      },
+      "name": "GeekflareWebsiteDiagnosticsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for GeekflareWebsiteDiagnosticsTool.",
+        "properties": {
+          "check": {
+            "description": "Which check to run: site_status (up/down and HTTP status), dns_records, tls_scan (certificate and TLS versions), redirect_check, broken_links, load_time, meta_tags (title, description, Open Graph), or lighthouse (performance/SEO/accessibility scores; slow).",
+            "enum": [
+              "site_status",
+              "dns_records",
+              "tls_scan",
+              "redirect_check",
+              "broken_links",
+              "load_time",
+              "meta_tags",
+              "lighthouse"
+            ],
+            "title": "Check",
+            "type": "string"
+          },
+          "url": {
+            "description": "Website URL or domain, e.g. https://example.com.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "check"
+        ],
+        "title": "GeekflareWebsiteDiagnosticsToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that leverages CrewAI Studio's capabilities to automatically generate complete CrewAI automations based on natural language descriptions. It translates high-level requirements into functional CrewAI implementations.",
       "env_vars": [
         {
