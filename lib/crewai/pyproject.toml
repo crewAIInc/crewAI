@@ -130,6 +130,10 @@ spreadsheets = [
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]
+valkey = [
+    # >=2.5.2 required: client_info_tag (LIB-NAME attribution) shipped in 2.5.2.
+    "valkey-glide>=2.5.2,<3",
+]
 
 
 [tool.uv]
