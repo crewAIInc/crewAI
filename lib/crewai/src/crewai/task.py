@@ -59,6 +59,7 @@ from crewai.tools.tool_failure import (
     merge_tool_failures,
     tool_failure_collector,
 )
+from crewai.tools.tool_results import tool_results_collector
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import (
@@ -730,7 +731,10 @@ class Task(BaseModel):
             dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
             context = pre_step_ctx.payload
 
-            with tool_failure_collector() as execution_failures:
+            with (
+                tool_failure_collector() as execution_failures,
+                tool_results_collector(),
+            ):
                 result = await agent.aexecute_task(
                     task=self,
                     context=context,
@@ -889,7 +893,10 @@ class Task(BaseModel):
             dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
             context = pre_step_ctx.payload
 
-            with tool_failure_collector() as execution_failures:
+            with (
+                tool_failure_collector() as execution_failures,
+                tool_results_collector(),
+            ):
                 result = agent.execute_task(
                     task=self,
                     context=context,
@@ -1502,7 +1509,10 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
-            with tool_failure_collector() as retry_failures:
+            with (
+                tool_failure_collector() as retry_failures,
+                tool_results_collector(),
+            ):
                 result = agent.execute_task(
                     task=self,
                     context=context,
@@ -1623,7 +1633,10 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
-            with tool_failure_collector() as retry_failures:
+            with (
+                tool_failure_collector() as retry_failures,
+                tool_results_collector(),
+            ):
                 result = await agent.aexecute_task(
                     task=self,
                     context=context,
