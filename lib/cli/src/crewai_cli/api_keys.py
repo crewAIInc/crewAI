@@ -569,7 +569,7 @@ def _load_jsonc(path: Path) -> dict[str, object]:
     allowed. Empty when it cannot be, which the run's own loader reports."""
     try:
         text = _JSONC_STRING_OR_COMMENT.sub(
-            lambda match: match.group(1) or "", path.read_text(encoding="utf-8")
+            lambda match: match.group(1) or "", path.read_text(encoding="utf-8-sig")
         )
         definition = json.loads(
             _JSONC_STRING_OR_TRAILING_COMMA.sub(
