@@ -151,6 +151,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "DEEPINFRA_API_KEY",
         }
     ],
+    "wiro": [
+        {
+            "prompt": "Enter your WIRO API key (press Enter to skip)",
+            "key_name": "WIRO_API_KEY",
+        }
+    ],
 }
 
 
@@ -259,6 +265,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
         "ollama_chat",
         "openrouter",
         "snowflake",
+        "wiro",
     }
 )
 

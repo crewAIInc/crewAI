@@ -788,6 +788,39 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Wiro AI">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Wiro AI에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    WIRO_API_KEY=<your-api-key>
+
+    # Optional, overrides the default base URL
+    WIRO_BASE_URL=https://llm.wiro.ai/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="wiro/openai/gpt-5-4-nano"
+    )
+    ```
+
+    <Info>
+      Wiro AI 특징:
+      - 하나의 OpenAI 호환 API와 하나의 API 키로 제공되는 GPT, Claude, Gemini, Grok, DeepSeek, Qwen 등의 모델
+      - 도구 호출, 스트리밍, JSON 스키마 구조화 출력 지원
+      - 기본값은 Chat Completions이며, `api="responses"`로 Responses API 사용 가능
+    </Info>
+
+    모델 ID는 이미 `owner/model` 형식이므로 전체 참조는 세 개의 세그먼트로 구성됩니다.
+    예: `wiro/claude/sonnet-5`. 현재 ID는 [모델 카탈로그](https://wiro.ai/models?categories=llm-tool-call)를
+    참조하거나 API 키로 `GET https://llm.wiro.ai/v1/models`를 호출해 확인하세요.
+    API 키는 [wiro.ai/panel/project/new](https://wiro.ai/panel/project/new)에서 프로젝트를 만들어 발급받으세요.
+    API에 대한 설명은 [게이트웨이 문서](https://wiro.ai/docs/completions-api)를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

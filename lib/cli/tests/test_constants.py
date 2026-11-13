@@ -225,6 +225,7 @@ def test_provider_for_model_matches_every_prefix_crewai_routes() -> None:
         ("cerebras/llama3.1-8b", set()),
         ("deepseek/deepseek-chat", set()),
         ("deepinfra/meta-llama/llama-4-scout-17b-16e-instruct", set()),
+        ("wiro/openai/gpt-5-4-nano", set()),
     ],
 )
 def test_crewai_extras_for_a_model_its_provider_runs_natively(
@@ -404,6 +405,7 @@ def test_classic_provider_extra_covers_every_model_it_lists() -> None:
         ("deepseek", ["DEEPSEEK_API_KEY"]),
         ("dashscope", ["DASHSCOPE_API_KEY"]),
         ("deepinfra", ["DEEPINFRA_API_KEY"]),
+        ("wiro", ["WIRO_API_KEY"]),
         ("mistral", []),
     ],
 )
