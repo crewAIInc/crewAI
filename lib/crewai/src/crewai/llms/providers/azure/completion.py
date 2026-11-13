@@ -723,7 +723,7 @@ class AzureCompletion(BaseLLM):
         if stops and self.supports_stop_words():
             params["stop"] = stops
 
-        if tools and self.is_openai_model:
+        if tools and self.supports_function_calling():
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
@@ -1310,7 +1310,7 @@ class AzureCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self.is_openai_model
+        return self._resolve_supports_function_calling(self.is_openai_model)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words.

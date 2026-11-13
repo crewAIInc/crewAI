@@ -44,6 +44,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.model_catalog import find_model_catalog_entry
 from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
@@ -297,6 +298,13 @@ class BaseLLM(BaseModel, ABC):
     api_key: str | None = None
     base_url: str | None = None
     provider: str = Field(default="openai")
+    supports_tools: bool | None = Field(
+        default=None,
+        description=(
+            "Explicitly enable or disable tool use. When None, the model's "
+            "LiteLLM catalog entry decides, falling back to the provider default."
+        ),
+    )
     prefer_upload: bool = False
     is_litellm: bool = False
     stop: list[str] = Field(
@@ -382,6 +390,28 @@ class BaseLLM(BaseModel, ABC):
             "cache_creation_tokens": 0,
         }
     )
+    _catalog_entry: dict[str, Any] | None = PrivateAttr(default=None)
+    _catalog_entry_resolved: bool = PrivateAttr(default=False)
+
+    @property
+    def catalog_entry(self) -> dict[str, Any] | None:
+        """Return the resolved LiteLLM catalog entry, when one is unambiguous."""
+        if not self._catalog_entry_resolved:
+            self._catalog_entry = find_model_catalog_entry(self.model, self.provider)
+            self._catalog_entry_resolved = True
+        return self._catalog_entry
+
+    def _litellm_catalog_supports_function_calling(self) -> bool | None:
+        """Return the LiteLLM catalog's ``supports_function_calling``, if it has one."""
+        value = (self.catalog_entry or {}).get("supports_function_calling")
+        return value if isinstance(value, bool) else None
+
+    def _resolve_supports_function_calling(self, default: bool) -> bool:
+        """Resolve function calling: explicit setting, then catalog, then ``default``."""
+        if self.supports_tools is not None:
+            return self.supports_tools
+        catalog_support = self._litellm_catalog_supports_function_calling()
+        return default if catalog_support is None else catalog_support
 
     @model_validator(mode="before")
     @classmethod
