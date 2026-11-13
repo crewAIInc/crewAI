@@ -310,3 +310,68 @@ def test_escape_search_query_escapes_whitespace() -> None:
     escaped = s._escape_search_query("customer support")
     assert " " not in escaped.replace("\\ ", "")  # only escaped spaces remain
     assert "\\ " in escaped
+
+
+class TestValkeyStorageEventLoops:
+    """Sync methods and the async API (asave/asearch/adelete) are called from
+    different event loops. The GLIDE client must be created, and used, only on
+    the shared Valkey I/O loop, whichever API the caller came in through.
+    """
+
+    def test_sync_and_async_callers_share_one_client_on_io_loop(self) -> None:
+        import asyncio
+
+        from crewai.memory.storage.valkey_io_loop import get_io_loop
+
+        storage = ValkeyStorage(host="localhost", port=6379, vector_dim=4)
+        created_on: list[asyncio.AbstractEventLoop] = []
+        used_on: list[asyncio.AbstractEventLoop] = []
+
+        async def hgetall(_key: str) -> dict[str, str]:
+            used_on.append(asyncio.get_running_loop())
+            return {}
+
+        async def fake_create(_config: object) -> AsyncMock:
+            created_on.append(asyncio.get_running_loop())
+            client = AsyncMock()
+            client.hgetall.side_effect = hgetall
+            return client
+
+        with patch(
+            "crewai.memory.storage.valkey_storage.GlideClient.create",
+            side_effect=fake_create,
+        ):
+            # Async API from a short-lived caller loop, then the sync API, then
+            # the async API again from a different loop.
+            asyncio.run(storage.adelete(record_ids=["a"]))
+            storage.delete(record_ids=["b"])
+            asyncio.run(storage.adelete(record_ids=["c"]))
+
+        io_loop = get_io_loop()
+        assert created_on == [io_loop]
+        assert used_on == [io_loop, io_loop, io_loop]
+
+    def test_aclose_then_reuse_from_another_loop(self) -> None:
+        import asyncio
+
+        storage = ValkeyStorage(host="localhost", port=6379, vector_dim=4)
+        created: list[AsyncMock] = []
+
+        async def fake_create(_config: object) -> AsyncMock:
+            client = AsyncMock()
+            client.hgetall.return_value = {}
+            created.append(client)
+            return client
+
+        with patch(
+            "crewai.memory.storage.valkey_storage.GlideClient.create",
+            side_effect=fake_create,
+        ):
+            asyncio.run(storage.adelete(record_ids=["a"]))
+            asyncio.run(storage.aclose())
+            storage.delete(record_ids=["b"])
+            storage.close()
+
+        assert len(created) == 2
+        created[0].close.assert_awaited_once()
+        created[1].close.assert_awaited_once()

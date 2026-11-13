@@ -45,6 +45,11 @@ from glide import (
 import numpy as np
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
+from crewai.memory.storage.valkey_io_loop import (
+    get_io_loop,
+    on_io_loop,
+    run_on_io_loop_sync,
+)
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 
@@ -254,7 +259,9 @@ class ValkeyStorage:
         # Note: Valkey handles concurrency at the server level, so this is a no-op lock
         self._write_lock = threading.RLock()
 
-        # Async lock for lazy client initialization (prevents connection races)
+        # Async lock for lazy client initialization (prevents connection
+        # races). Like the client, it is only touched on the shared Valkey I/O
+        # loop, so it never ends up bound to another caller's loop.
         self._client_lock: asyncio.Lock | None = None
 
     def _get_client_lock(self) -> asyncio.Lock:
@@ -263,6 +270,7 @@ class ValkeyStorage:
             self._client_lock = asyncio.Lock()
         return self._client_lock
 
+    @on_io_loop
     async def _get_client(self) -> GlideClient:
         """Get or create Valkey client with lazy initialization.
 
@@ -346,12 +354,13 @@ class ValkeyStorage:
     def _run_async(self, coro: Coroutine[Any, Any, Any]) -> Any:
         """Bridge async operations to sync context.
 
-        Uses a dedicated background thread with a persistent event loop so the
-        Valkey client (and its TCP connection) can be reused across calls.
+        Runs the coroutine on the shared Valkey I/O loop (a long-lived loop in
+        a daemon thread), the same loop the async API uses, so one client and
+        its TCP connection serve both.
 
         Concurrent sync callers are serialized via a lock to avoid overloading
-        the single-threaded background event loop (e.g. when the encoding flow
-        dispatches parallel searches from a ThreadPoolExecutor).
+        the single-threaded I/O loop (e.g. when the encoding flow dispatches
+        parallel searches from a ThreadPoolExecutor).
 
         Args:
             coro: Coroutine to execute.
@@ -360,43 +369,9 @@ class ValkeyStorage:
             Result of the coroutine execution.
         """
         with self._sync_lock:
-            bg_loop = self._get_or_create_loop()
-            future = asyncio.run_coroutine_threadsafe(coro, bg_loop)
-            return future.result()
+            return run_on_io_loop_sync(coro)
 
-    # ------------------------------------------------------------------
-    # Persistent event-loop helpers
-    # ------------------------------------------------------------------
-    # Class-level: a single background event loop shared by ALL ValkeyStorage
-    # instances.  This is intentional — the loop is just an I/O scheduler and
-    # the glide client handles per-connection state internally.
-    # _bg_lock guards loop creation; _sync_lock (instance-level, set in
-    # __init__) serialises sync callers so they don't flood the loop.
-    # ------------------------------------------------------------------
-    _bg_loop: asyncio.AbstractEventLoop | None = None
-    _bg_thread: threading.Thread | None = None
-    _bg_lock: threading.Lock = threading.Lock()
-
-    @classmethod
-    def _get_or_create_loop(cls) -> asyncio.AbstractEventLoop:
-        """Return a long-lived event loop running on a background daemon thread."""
-        if cls._bg_loop is not None and cls._bg_loop.is_running():
-            return cls._bg_loop
-
-        with cls._bg_lock:
-            # Double-check after acquiring lock
-            if cls._bg_loop is not None and cls._bg_loop.is_running():
-                return cls._bg_loop
-
-            loop = asyncio.new_event_loop()
-            thread = threading.Thread(
-                target=loop.run_forever, daemon=True, name="valkey-io"
-            )
-            thread.start()
-            cls._bg_loop = loop
-            cls._bg_thread = thread
-            return loop
-
+    @on_io_loop
     async def __aenter__(self) -> ValkeyStorage:
         """Async context manager entry."""
         await self._get_client()
@@ -411,6 +386,7 @@ class ValkeyStorage:
         """Async context manager exit."""
         await self.aclose()
 
+    @on_io_loop
     async def aclose(self) -> None:
         """Async close: release the Glide client connection."""
         if self._client:
@@ -424,15 +400,9 @@ class ValkeyStorage:
         """
         if self._client:
             try:
-                bg_loop = type(self)._bg_loop
-                if bg_loop is not None and bg_loop.is_running():
-                    asyncio.run_coroutine_threadsafe(
-                        self._client.close(), bg_loop
-                    ).result(timeout=5)
-                else:
-                    close_result = self._client.close()
-                    if asyncio.iscoroutine(close_result):
-                        asyncio.run(close_result)
+                asyncio.run_coroutine_threadsafe(self.aclose(), get_io_loop()).result(
+                    timeout=5
+                )
             except Exception as e:
                 _logger.debug(f"Error closing Valkey client: {e}")
             finally:
@@ -440,15 +410,12 @@ class ValkeyStorage:
 
     def __del__(self) -> None:
         """Cleanup client connection on deletion."""
-        if self._client:
+        client = getattr(self, "_client", None)
+        if client:
             try:
-                bg_loop = type(self)._bg_loop
-                if bg_loop is not None and bg_loop.is_running():
-                    asyncio.run_coroutine_threadsafe(self._client.close(), bg_loop)
-                else:
-                    close_result = self._client.close()
-                    if asyncio.iscoroutine(close_result):
-                        asyncio.run(close_result)
+                # The client lives on the I/O loop; close it there without
+                # blocking the garbage collector.
+                asyncio.run_coroutine_threadsafe(client.close(), get_io_loop())
             except Exception as e:
                 _logger.debug(f"Error closing client during cleanup: {e}")
 
@@ -853,6 +820,7 @@ class ValkeyStorage:
         elif batch_dim != self._vector_dim:
             raise EmbeddingDimensionMismatchError(self._vector_dim, batch_dim)
 
+    @on_io_loop
     async def asave(self, records: list[MemoryRecord]) -> None:
         """Save multiple records as a batch.
 
@@ -1084,6 +1052,7 @@ class ValkeyStorage:
             record.id, record.scope, record.categories, record.metadata, timestamp
         )
 
+    @on_io_loop
     async def adelete(
         self,
         scope_prefix: str | None = None,
@@ -1757,6 +1726,7 @@ class ValkeyStorage:
             text = text.replace(ws, f"\\{ws}")
         return text
 
+    @on_io_loop
     async def asearch(
         self,
         query_embedding: list[float],
