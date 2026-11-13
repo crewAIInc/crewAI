@@ -480,6 +480,21 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 If the supplied `restore_from_state_id` does not match any persisted state, the kickoff falls back silently — same as the existing `inputs["id"]` resume not-found behavior. Combining `restore_from_state_id` with `from_checkpoint` raises a `ValueError`; pick one hydration source. Pinning `inputs["id"]` while forking shares a persistence key with another flow — usually you want only `restore_from_state_id`.
 
+### Inspecting State History
+
+`SQLiteFlowPersistence` keeps every snapshot it saves, while `load_state` returns only the latest. Use `list_state_history` to page through a flow's snapshot metadata — row `id`, `method_name`, and `timestamp` — without loading the state payloads. Records are ordered oldest first by row `id`; `limit` must be between 1 and `MAX_HISTORY_LIMIT` (1000) and `offset` must be non-negative. A record's `id` is a storage row ID, not a flow `state.id` — it cannot be passed to `restore_from_state_id`. For inspection tools such as the CLI, `read_flow_state_history` opens the database read-only and returns an empty list when the database file, table, or flow does not exist. It never creates the database or its tables, though reading a WAL-mode database may create or leave behind `-wal`/`-shm` sidecar files next to it. Other backends may override `list_state_history`; the base implementation raises `NotImplementedError`.
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, read_flow_state_history
+
+persistence = SQLiteFlowPersistence("flows.db")
+for record in persistence.list_state_history(flow.state.id, limit=20, offset=0):
+    print(record.id, record.method_name, record.timestamp)
+
+# Read-only: never creates the database or tables, never changes schema or data
+records = read_flow_state_history("flows.db", flow.state.id)
+```
+
 ### How It Works
 
 1. **Unique State Identification**

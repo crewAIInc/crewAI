@@ -470,6 +470,21 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 Se o `restore_from_state_id` informado não corresponder a nenhum estado persistido, o kickoff retorna silenciosamente ao comportamento padrão — o mesmo comportamento do `inputs["id"]` quando não encontrado. Combinar `restore_from_state_id` com `from_checkpoint` lança um `ValueError`; escolha uma única fonte de hidratação. Fixar `inputs["id"]` durante o fork compartilha uma chave de persistência com outro flow — geralmente você quer apenas `restore_from_state_id`.
 
+### Inspecionando o Histórico de Estado
+
+O `SQLiteFlowPersistence` mantém todos os snapshots que salva, enquanto `load_state` retorna apenas o mais recente. Use `list_state_history` para paginar os metadados dos snapshots de um flow — `id` da linha, `method_name` e `timestamp` — sem carregar os payloads de estado. Os registros são ordenados do mais antigo para o mais recente pelo `id` da linha; `limit` deve estar entre 1 e `MAX_HISTORY_LIMIT` (1000) e `offset` não pode ser negativo. O `id` de um registro é um ID de linha do armazenamento, não o `state.id` do flow — ele não pode ser passado para `restore_from_state_id`. Para ferramentas de inspeção como a CLI, `read_flow_state_history` abre o banco de dados somente para leitura e retorna uma lista vazia quando o arquivo do banco de dados, a tabela ou o flow não existem. Ele nunca cria o banco de dados nem suas tabelas, embora ler um banco em modo WAL possa criar ou deixar arquivos auxiliares `-wal`/`-shm` ao lado dele. Outros backends podem sobrescrever `list_state_history`; a implementação base lança `NotImplementedError`.
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, read_flow_state_history
+
+persistence = SQLiteFlowPersistence("flows.db")
+for record in persistence.list_state_history(flow.state.id, limit=20, offset=0):
+    print(record.id, record.method_name, record.timestamp)
+
+# Read-only: never creates the database or tables, never changes schema or data
+records = read_flow_state_history("flows.db", flow.state.id)
+```
+
 ### Como Funciona
 
 1. **Identificação Única do Estado**

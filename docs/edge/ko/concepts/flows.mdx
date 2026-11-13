@@ -470,6 +470,21 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 제공된 `restore_from_state_id`가 어떤 영속 상태와도 일치하지 않으면, kickoff는 조용히 기본 동작으로 폴백됩니다 — 기존 `inputs["id"]`의 미발견 동작과 동일합니다. `restore_from_state_id`를 `from_checkpoint`와 결합하면 `ValueError`가 발생합니다; 하나의 하이드레이션 소스를 선택하세요. 포크 중 `inputs["id"]`를 고정하면 다른 플로우와 영속 키를 공유하게 됩니다 — 일반적으로 `restore_from_state_id`만 사용하는 것이 좋습니다.
 
+### 상태 기록 조회
+
+`SQLiteFlowPersistence`는 저장한 모든 스냅샷을 보관하지만, `load_state`는 최신 스냅샷만 반환합니다. `list_state_history`를 사용하면 상태 페이로드를 로드하지 않고 플로우 스냅샷의 메타데이터(행 `id`, `method_name`, `timestamp`)를 페이지 단위로 조회할 수 있습니다. 레코드는 행 `id` 기준으로 오래된 순서대로 정렬되며, `limit`은 1에서 `MAX_HISTORY_LIMIT`(1000) 사이여야 하고 `offset`은 음수가 아니어야 합니다. 레코드의 `id`는 저장소의 행 ID이며 플로우의 `state.id`가 아니므로 `restore_from_state_id`에 전달할 수 없습니다. CLI와 같은 조회 도구에서는 `read_flow_state_history`가 데이터베이스를 읽기 전용으로 열고, 데이터베이스 파일이나 테이블 또는 플로우가 없으면 빈 리스트를 반환합니다. 데이터베이스나 테이블을 생성하지는 않지만, WAL 모드 데이터베이스를 읽으면 옆에 `-wal`/`-shm` 사이드카 파일이 생성되거나 남을 수 있습니다. 다른 백엔드는 `list_state_history`를 재정의할 수 있으며, 기본 구현은 `NotImplementedError`를 발생시킵니다.
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, read_flow_state_history
+
+persistence = SQLiteFlowPersistence("flows.db")
+for record in persistence.list_state_history(flow.state.id, limit=20, offset=0):
+    print(record.id, record.method_name, record.timestamp)
+
+# Read-only: never creates the database or tables, never changes schema or data
+records = read_flow_state_history("flows.db", flow.state.id)
+```
+
 ### 작동 방식
 
 1. **고유 상태 식별**
