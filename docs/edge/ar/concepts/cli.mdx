@@ -103,6 +103,16 @@ crewai create agent python_support --format python
 
 تستخدم مشاريع Agent المستقلة الملف `agent.json` افتراضيًا. استخدم `--format yaml` لتهيئة YAML أو `--format python` لتصدير Agent بلغة Python. قد يتغير عقد المشروع والتحميل التجريبي هذا، ويتطلب إصدارات معاينة متوافقة من CLI وSDK. راجع [مشاريع Agent المستقلة](/edge/ar/guides/agents/standalone-agent-projects) للإعداد والأدوات ومدخلات التشغيل وحدود النشر.
 
+في الطرفية، تفتح Agents بصيغتي JSON وYAML منتقي الأدوات نفسه الذي يفتحه `crewai create crew`. أضف الأدوات إلى مشروع Agent موجود لاحقًا باستخدام `crewai tool add`:
+
+```shell Terminal
+crewai tool add                                  # pick from the list
+crewai tool add SerperDevTool platform:gmail     # or name them
+crewai tool setup                                # connect the definition's CrewAI Platform apps
+```
+
+يضيف `crewai tool add` الأدوات إلى قائمة `tools` في التعريف. يتم التحقق من تطبيقات CrewAI Platform على AMP أولًا، ويُحفظ Enterprise Action Auth Token في `.env`. يكرر `crewai tool setup` هذا التحقق للتطبيقات الموجودة بالفعل في التعريف، على سبيل المثال بعد استنساخ المشروع.
+
 #### أسماء مستعار قديمة للأعلام (مهملة)
 
 لا تزال أعلام snake_case القديمة تعمل، لكنها مخفية من `--help`. يُفضّل استخدام صيغ kebab-case الموثّقة في أقسام الأوامر أدناه.
