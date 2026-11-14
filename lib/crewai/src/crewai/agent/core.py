@@ -10,7 +10,7 @@ import inspect
 import json
 import os
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock
 import time
 from typing import (
     TYPE_CHECKING,
@@ -1102,8 +1102,21 @@ class Agent(BaseAgent):
             TimeoutError: If execution exceeds the timeout.
             RuntimeError: If execution fails for other reasons.
         """
+        if not hasattr(self, "_execution_cancelled"):
+            self._execution_cancelled = Event()
+
+        if getattr(self, "_timed_out_worker_running", False):
+            # A previous attempt timed out and its worker still holds the agent
+            # executor. Retrying now would surface as "Executor is already
+            # running" - a RuntimeError the retry loop treats as retryable -
+            # instead of the timeout that actually happened.
+            raise TimeoutError(
+                f"Task '{task.description}' timed out and the previous attempt is still running."
+            )
+
         ctx = contextvars.copy_context()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor = concurrent.futures.ThreadPoolExecutor()
+        try:
             future = executor.submit(
                 ctx.run,
                 self._execute_without_timeout,
@@ -1115,6 +1128,14 @@ class Agent(BaseAgent):
                 return future.result(timeout=timeout)
             except concurrent.futures.TimeoutError as e:
                 future.cancel()
+                self._timed_out_worker_running = True
+                self._execution_cancelled.set()
+
+                def _clear_timeout_flag(_future):
+                    self._timed_out_worker_running = False
+                    self._execution_cancelled.clear()
+
+                future.add_done_callback(_clear_timeout_flag)
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
@@ -1126,6 +1147,11 @@ class Agent(BaseAgent):
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
+        finally:
+            # Do not wait for the timed-out worker: shutdown(wait=True) (the
+            # context manager's default) blocked the caller until the task
+            # finished, so TimeoutError arrived only after the full run.
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.

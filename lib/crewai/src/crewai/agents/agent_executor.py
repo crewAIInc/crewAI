@@ -9,6 +9,7 @@ from datetime import datetime
 import inspect
 import json
 import threading
+from threading import Event
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 from uuid import uuid4
 
@@ -198,6 +199,13 @@ class AgentExecutorState(BaseModel):
         default_factory=list,
         description="Audit trail for debugging (NOT used for LLM calls)",
     )
+
+
+class _ExecutionCancelledError(Exception):
+    """Raised inside the executor loop when the caller's timeout has expired.
+
+    Propagates out of the worker thread without being fed back to the LLM as
+    an observation, so the loop stops before the next LLM call or tool run."""
 
 
 class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
@@ -1920,6 +1928,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     def execute_tool_action(self) -> Literal["tool_completed", "tool_result_is_final"]:
         """Execute the tool action and handle the result."""
 
+        if AgentExecutor._caller_cancelled(self):
+            raise _ExecutionCancelledError()
+
         action = cast(AgentAction, self.state.current_answer)
 
         fingerprint_context = {}
@@ -2019,6 +2030,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "native_tool_completed" normally, or "tool_result_is_final" if
             a tool with result_as_answer=True was executed.
         """
+        if AgentExecutor._caller_cancelled(self):
+            raise _ExecutionCancelledError()
+
         if not self.state.pending_tool_calls:
             return "native_tool_completed"
 
@@ -2516,6 +2530,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
+    def _caller_cancelled(self) -> bool:
+        """True when the caller's max_execution_time expired and the worker
+        should stop before the next LLM call or tool execution."""
+        try:
+            cancelled = getattr(self.agent, "_execution_cancelled", None)
+        except AttributeError:
+            return False
+        if cancelled is None or not isinstance(cancelled, Event):
+            return False
+        return cancelled.is_set()
+
     @router(or_(initialize_reasoning, continue_iteration))
     def check_max_iterations(
         self,
@@ -2523,6 +2548,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         "force_final_answer", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
+        if AgentExecutor._caller_cancelled(self):
+            raise _ExecutionCancelledError()
+
         if has_reached_max_iterations(
             self.state.iterations, self.max_iter
         ) or repeated_tool_call_limit_reached(self._tool_call_counts):
