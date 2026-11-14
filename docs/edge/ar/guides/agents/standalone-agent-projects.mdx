@@ -147,6 +147,17 @@ max_iter: 8
 
 إذا لم تحدد `definition` صراحةً، يبحث النظام عن ملف واحد في الجذر باسم `agent.py` أو `agent.json` أو `agent.yml` أو `agent.yaml`، أو عن المسار المعتاد `src/<package>/agent.py`. يؤدي العثور على ملفات متعددة إلى خطأ؛ اضبط `definition` لاختيار أحدها.
 
+## إضافة الأدوات من CLI
+
+في الطرفية، يفتح `crewai create agent` لمشروع بصيغة JSON أو YAML منتقي الأدوات نفسه الذي يفتحه `crewai create crew`، بما في ذلك تطبيقات CrewAI Platform. شغّل `crewai tool add` داخل المشروع لإضافة المزيد من الأدوات لاحقًا، إما من المنتقي أو بالاسم:
+
+```shell Terminal
+crewai tool add
+crewai tool add SerperDevTool platform:gmail/send-email
+```
+
+يضيف الأمر الأدوات إلى قائمة `tools` في التعريف، ويغيّر الاعتمادية `crewai` إلى `crewai[tools]` عندما تحتاجها إحدى الأدوات؛ شغّل `crewai install` بعد ذلك. يتم التحقق من تطبيقات CrewAI Platform على AMP قبل إضافتها، ويُحفظ Enterprise Action Auth Token في `.env`. شغّل `crewai tool setup` للتحقق من تطبيقات المنصة الموجودة بالفعل في التعريف، على سبيل المثال بعد استنساخ المشروع. أما Agents بلغة Python فتُعدَّل في `agent.py` بدلًا من ذلك.
+
 ## إضافة أداة مخصصة
 
 استخدم الملف المُضمّن `tools/support_hours.py` كنقطة بداية لأداة أخرى:
