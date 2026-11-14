@@ -38,11 +38,13 @@ class CrewJSONEncoder(json.JSONEncoder):
 
     @staticmethod
     def _handle_pydantic_model(obj: BaseModel) -> str | Any:
+        """Preserve model dump shapes, including non-dictionary root values."""
         try:
             data = obj.model_dump()
-            for key, value in data.items():
-                if isinstance(value, BaseModel):
-                    data[key] = str(value)
+            if isinstance(data, dict):
+                for key, value in data.items():
+                    if isinstance(value, BaseModel):
+                        data[key] = str(value)
             return data
         except RecursionError:
             return str(obj)
