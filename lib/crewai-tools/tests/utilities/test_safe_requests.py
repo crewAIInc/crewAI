@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import socket
+import threading
+import time
 from io import BytesIO
 from typing import Any
 
@@ -14,10 +17,12 @@ from crewai_tools.security.safe_requests import (
     SSRFProtectedAdapter,
     create_safe_session,
     safe_get,
+    safe_get_bounded,
 )
 from crewai_tools.security.ssrf_adapter import (
     _assert_safe_peer,
     create_validated_connection,
+    cut_connections_at,
 )
 
 
@@ -57,6 +62,76 @@ def public_dns(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_safe_get_blocks_direct_internal_url() -> None:
     with pytest.raises(ValueError, match="private/reserved IP"):
         safe_get("http://127.0.0.1/admin", timeout=15)
+
+
+def test_safe_get_allows_configured_private_hostname(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+    _mock_get(monkeypatch, lambda url, **_kwargs: _response(url, 200))
+
+    response = safe_get(
+        "https://factory.example/document",
+    )
+
+    assert response.status_code == 200
+
+
+def test_safe_get_follows_redirect_from_private_host_to_public_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    addresses = {"factory.example": "10.0.0.1", "public.example": "93.184.216.34"}
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", (addresses[host], port))
+        ],
+    )
+
+    def respond(url: str, **_kwargs: Any) -> requests.Response:
+        if "factory.example" in url:
+            return _response(url, 302, location="https://public.example/document")
+        return _response(url, 200)
+
+    _mock_get(monkeypatch, respond)
+
+    response = safe_get("https://factory.example/document")
+
+    assert response.status_code == 200
+    assert response.history[0].url == "https://factory.example/document"
+
+
+def test_safe_get_rechecks_private_host_allowlist_on_redirect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+    _mock_get(
+        monkeypatch,
+        lambda url, **_kwargs: _response(
+            url, 302, location="https://other-private.example/document"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        safe_get(
+            "https://factory.example/document",
+        )
 
 
 def _mock_get(monkeypatch: pytest.MonkeyPatch, get_response: Any) -> None:
@@ -425,6 +500,62 @@ def test_create_validated_connection_pins_resolved_ip(
     assert sock.getpeername() == ("93.184.216.34", 80)
 
 
+def test_create_validated_connection_allows_configured_private_hostname(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+
+    class RecordingSocket:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.peer: tuple[str, int] | None = None
+
+        def setsockopt(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        def settimeout(self, timeout: Any) -> None:
+            return None
+
+        def connect(self, sockaddr: tuple[str, int]) -> None:
+            self.peer = sockaddr
+
+        def getpeername(self) -> tuple[str, int]:
+            assert self.peer is not None
+            return self.peer
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+    monkeypatch.setattr(socket, "socket", lambda *args, **kwargs: RecordingSocket())
+
+    sock = create_validated_connection("factory.example", 443)
+
+    assert sock.getpeername() == ("10.0.0.1", 443)
+
+
+def test_create_validated_connection_ignores_allowlist_under_force_safe_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+    monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda _host, port, *_args, **_kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", port))
+        ],
+    )
+
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        create_validated_connection("factory.example", 443)
+
+
 def test_create_validated_connection_blocks_when_any_record_is_private(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -591,3 +722,95 @@ def test_non_streamed_raw_get_closes_session_before_return(
 
     assert session.closed is True
     assert response.content == b"hello"
+
+
+# A server that keeps a download alive by trickling bytes, each well inside the
+# read timeout, so only a deadline on the whole download can end it.
+
+TRICKLES = {
+    "headers": (b"HTTP/1.1 200 OK\r\n", b"X-Slow: " + b"a" * 10_000),
+    "body": (b"HTTP/1.1 200 OK\r\nContent-Type: text/csv\r\n\r\n", b"a," * 10_000),
+    "body-with-length": (
+        b"HTTP/1.1 200 OK\r\nContent-Length: 20000\r\n\r\n",
+        b"a," * 10_000,
+    ),
+    # The client's hello is answered with a TLS record header announcing 16 KB,
+    # whose bytes then trickle in.
+    "tls-handshake": (b"\x16\x03\x03\x40\x00", b"\x02" * 10_000),
+}
+
+
+@pytest.fixture
+def loopback(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
+    """Serves one response on 127.0.0.1: a head sent at once, then a tail one
+    byte every 50 ms, or at once when ``trickle`` is off."""
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+    monkeypatch.delenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", raising=False)
+    server = socket.create_server(("127.0.0.1", 0))
+    stop = threading.Event()
+
+    def serve(head: bytes, tail: bytes, trickle: bool, scheme: str = "http") -> str:
+        def run() -> None:
+            conn, _ = server.accept()
+            with conn:
+                conn.recv(65536)
+                conn.sendall(head)
+                if not trickle:
+                    conn.sendall(tail)
+                    return
+                for byte in tail:
+                    if stop.wait(0.05):
+                        return
+                    try:
+                        conn.sendall(bytes([byte]))
+                    except OSError:
+                        return
+
+        threading.Thread(target=run, daemon=True).start()
+        return f"{scheme}://127.0.0.1:{server.getsockname()[1]}/data.csv"
+
+    yield serve
+    stop.set()
+    server.close()
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+@pytest.mark.parametrize("stall", list(TRICKLES))
+def test_a_download_a_server_trickles_ends_at_the_deadline(
+    loopback: Any, stall: str
+) -> None:
+    scheme = "https" if stall == "tls-handshake" else "http"
+    url = loopback(*TRICKLES[stall], trickle=True, scheme=scheme)
+    started = time.monotonic()
+
+    with pytest.raises(ValueError, match="did not finish by the deadline"):
+        safe_get_bounded(url, max_bytes=1_000_000, timeout=5, deadline=started + 0.5)
+
+    assert time.monotonic() - started < 2
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_a_download_done_before_the_deadline_is_returned_whole(loopback: Any) -> None:
+    head, tail = TRICKLES["body-with-length"]
+    url = loopback(head, tail, trickle=False)
+
+    body, _, _ = safe_get_bounded(
+        url, max_bytes=1_000_000, timeout=5, deadline=time.monotonic() + 5
+    )
+
+    assert body == tail
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_a_connection_made_after_the_deadline_passed_is_cut(loopback: Any) -> None:
+    """As the next redirect hop can be: the timer has already run when it connects."""
+    url = loopback(*TRICKLES["body"], trickle=True)
+    started = time.monotonic()
+
+    with cut_connections_at(started) as cut:
+        assert cut.wait(1)
+        with pytest.raises(requests.RequestException):
+            response = safe_get(url, timeout=5, stream=True)
+            b"".join(response.iter_content(65536))
+
+    assert time.monotonic() - started < 2

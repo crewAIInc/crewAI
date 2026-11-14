@@ -1,0 +1,146 @@
+---
+title: تكامل TrueFoundry
+icon: chart-line
+mode: "wide"
+---
+
+توفر TrueFoundry [بوابة ذكاء اصطناعي](https://www.truefoundry.com/ai-gateway) جاهزة للمؤسسات يمكنها التكامل مع أطر العمل الوكيلية مثل CrewAI وتوفير الحوكمة والمراقبة لتطبيقات الذكاء الاصطناعي. تعمل بوابة TrueFoundry AI كواجهة موحدة للوصول إلى LLM، وتوفر:
+
+- **وصول موحد لـ API**: الاتصال بأكثر من 250 نموذج LLM (OpenAI وClaude وGemini وGroq وMistral) عبر API واحد
+- **زمن استجابة منخفض**: زمن استجابة داخلي أقل من 3 مللي ثانية مع توجيه ذكي وموازنة أحمال
+- **أمان المؤسسة**: امتثال SOC 2 وHIPAA وGDPR مع RBAC وتسجيل المراجعة
+- **إدارة الحصص والتكاليف**: حصص قائمة على الرموز المميزة وتحديد المعدل وتتبع استخدام شامل
+- **المراقبة**: تسجيل كامل للطلبات/الاستجابات ومقاييس وتتبعات مع احتفاظ قابل للتخصيص
+
+## كيف يتكامل TrueFoundry مع CrewAI
+
+
+### التثبيت والإعداد
+
+<Steps>
+<Step title="تثبيت CrewAI">
+```bash
+pip install crewai
+```
+</Step>
+
+<Step title="الحصول على رمز وصول TrueFoundry">
+1. سجّل في [حساب TrueFoundry](https://www.truefoundry.com/register)
+2. اتبع الخطوات هنا في [البدء السريع](https://docs.truefoundry.com/gateway/quick-start)
+</Step>
+
+<Step title="إعداد CrewAI مع TrueFoundry">
+![إعداد كود TrueFoundry](/images/new-code-snippet.png)
+
+```python
+from crewai import LLM
+
+# Create an LLM instance with TrueFoundry AI Gateway
+truefoundry_llm = LLM(
+    model="openai-main/gpt-4o",  # Similarly, you can call any model from any provider
+    base_url="your_truefoundry_gateway_base_url",
+    api_key="your_truefoundry_api_key"
+)
+
+# Use in your CrewAI agents
+from crewai import Agent
+
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config['researcher'],
+        llm=truefoundry_llm,
+        verbose=True
+    )
+```
+</Step>
+</Steps>
+
+### مثال كامل على CrewAI
+
+```python
+from crewai import Agent, Task, Crew, LLM
+
+# Configure LLM with TrueFoundry
+llm = LLM(
+    model="openai-main/gpt-4o",
+    base_url="your_truefoundry_gateway_base_url",
+    api_key="your_truefoundry_api_key"
+)
+
+# Create agents
+researcher = Agent(
+    role='Research Analyst',
+    goal='Conduct detailed market research',
+    backstory='Expert market analyst with attention to detail',
+    llm=llm,
+    verbose=True
+)
+
+writer = Agent(
+    role='Content Writer',
+    goal='Create comprehensive reports',
+    backstory='Experienced technical writer',
+    llm=llm,
+    verbose=True
+)
+
+# Create tasks
+research_task = Task(
+    description='Research AI market trends for 2024',
+    agent=researcher,
+    expected_output='Comprehensive research summary'
+)
+
+writing_task = Task(
+    description='Create a market research report',
+    agent=writer,
+    expected_output='Well-structured report with insights',
+    context=[research_task]
+)
+
+# Create and execute crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+### المراقبة والحوكمة
+
+راقب وكلاء CrewAI من خلال علامة تبويب المقاييس في TrueFoundry:
+![مقاييس TrueFoundry](/images/gateway-metrics.png)
+
+مع بوابة الذكاء الاصطناعي من TrueFoundry، يمكنك مراقبة وتحليل:
+
+- **مقاييس الأداء**: تتبع مقاييس زمن الاستجابة الرئيسية مثل زمن استجابة الطلب ووقت أول رمز (TTFS) وزمن الاستجابة بين الرموز (ITL) بنسب مئوية P99 وP90 وP50
+- **التكلفة واستخدام الرموز المميزة**: احصل على رؤية لتكاليف تطبيقك مع تفاصيل دقيقة لرموز الإدخال/الإخراج والنفقات المرتبطة لكل نموذج
+- **أنماط الاستخدام**: افهم كيف يُستخدم تطبيقك مع تحليلات تفصيلية لنشاط المستخدم وتوزيع النماذج والاستخدام حسب الفريق
+- **تحديد المعدل وموازنة الأحمال**: يمكنك إعداد تحديد المعدل وموازنة الأحمال والاحتياط لنماذجك
+
+## التتبع
+
+لفهم أعمق حول التتبع، يرجى مراجعة [البدء بالتتبع](https://docs.truefoundry.com/docs/tracing/tracing-getting-started). للتتبع، يمكنك إضافة Traceloop SDK:
+
+```bash
+pip install traceloop-sdk
+```
+
+```python
+from traceloop.sdk import Traceloop
+
+# Initialize enhanced tracing
+Traceloop.init(
+    api_endpoint="https://your-truefoundry-endpoint/api/tracing",
+    headers={
+        "Authorization": f"Bearer {your_truefoundry_pat_token}",
+        "TFY-Tracing-Project": "your_project_name",
+    },
+)
+```
+
+يوفر هذا ارتباط تتبع إضافي عبر سير عمل CrewAI بالكامل.
+![تتبع CrewAI مع TrueFoundry](/images/tracing_crewai.png)

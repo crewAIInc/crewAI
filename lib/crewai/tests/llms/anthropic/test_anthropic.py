@@ -47,14 +47,19 @@ def test_anthropic_completion_is_used_when_claude_provider():
 
 
 
-def test_anthropic_completion_module_is_imported():
+def test_anthropic_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using Anthropic provider
     """
     module_name = "crewai.llms.providers.anthropic.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    import crewai.llms.providers.anthropic as anthropic_package
+
+    if hasattr(anthropic_package, "completion"):
+        monkeypatch.setattr(
+            anthropic_package, "completion", anthropic_package.completion
+        )
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="anthropic/claude-3-5-sonnet-20241022")
 

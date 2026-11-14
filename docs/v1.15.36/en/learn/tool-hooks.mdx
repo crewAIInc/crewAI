@@ -1,0 +1,340 @@
+---
+title: Tool Call Hooks
+description: Learn how to use tool call hooks to intercept, modify, and control tool execution in CrewAI
+mode: "wide"
+---
+
+Tool Call Hooks provide fine-grained control over tool execution during agent
+operations. These hooks allow you to intercept tool calls, modify inputs,
+transform outputs, implement safety checks, and add comprehensive logging or
+monitoring.
+
+## Overview
+
+Tool hooks are executed at two interception points:
+
+| Point | When | Hook receives |
+|-------|------|---------------|
+| `PRE_TOOL_CALL` | Before every tool execution | `ToolCallHookContext` |
+| `POST_TOOL_CALL` | After every tool execution | `ToolCallHookContext` (with results set) |
+
+Write them with the [`@on` decorator](/edge/en/learn/execution-hooks). The
+[legacy `@before_tool_call` / `@after_tool_call` decorators](#legacy-decorators)
+keep working unchanged — both styles register on the same engine and run in one
+ordered chain.
+
+## Hook Signature
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint, ToolCallHookContext
+
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def before_hook(ctx: ToolCallHookContext) -> None:
+    # Mutate ctx.tool_input in place, or
+    # raise HookAborted(reason, source) to block the call
+    ...
+
+@on(InterceptionPoint.POST_TOOL_CALL)
+def after_hook(ctx: ToolCallHookContext) -> str | None:
+    # Return a string to replace ctx.tool_result
+    # Return None to keep the original result
+    ...
+```
+
+Unlike the boundary and step points, the tool-call points pass the rich
+`ToolCallHookContext` directly as the hook argument (there is no separate
+`ctx.payload`): mutate `ctx.tool_input` in place before the call, and return a
+string to replace the result after it.
+
+When a call is blocked, the tool does not run and the agent receives
+`"Tool execution blocked by hook. Tool: <name>"` as the result — the run
+continues. `POST_TOOL_CALL` hooks still fire on blocked calls, so monitoring
+hooks see every attempt.
+
+## Tool Hook Context
+
+The `ToolCallHookContext` object provides comprehensive access to tool
+execution state:
+
+```python
+class ToolCallHookContext:
+    tool_name: str                    # Name of the tool being called
+    tool_input: dict[str, Any]        # Mutable tool input parameters
+    tool: CrewStructuredTool          # Tool instance reference
+    agent: Agent | BaseAgent | None   # Agent executing the tool
+    task: Task | None                 # Current task
+    crew: Crew | None                 # Crew instance
+    tool_result: str | None           # Agent-facing result string (POST_TOOL_CALL only)
+    raw_tool_result: Any | None       # Raw Python result (POST_TOOL_CALL only)
+```
+
+For typed tool outputs, `tool_result` is the string the agent sees. By default,
+this is JSON. If the tool uses custom formatting, it can be Markdown or another
+string. Use `raw_tool_result` when your hook needs the typed object or
+dictionary; it is not affected by result replacement.
+
+The context also exposes `request_human_input(prompt, default_message)`, which
+pauses live console updates and collects input from the terminal — useful for
+approval gates.
+
+### Modifying Tool Inputs
+
+**Important:** Always modify tool inputs in-place:
+
+```python
+# ✅ Correct - modify in-place
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def sanitize_input(ctx: ToolCallHookContext) -> None:
+    ctx.tool_input['query'] = ctx.tool_input['query'].lower()
+
+# ❌ Wrong - replaces dict reference; the tool never sees it
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def wrong_approach(ctx: ToolCallHookContext) -> None:
+    ctx.tool_input = {'query': 'new query'}
+```
+
+## Registration Methods
+
+### 1. Global Hooks
+
+Apply to all tool calls across all crews. Use `tools=` / `agents=` filters to
+scope a hook:
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def log_tool_call(ctx):
+    print(f"Tool: {ctx.tool_name}, input: {ctx.tool_input}")
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["delete_file", "drop_table"])
+def block_destructive(ctx):
+    raise HookAborted(reason=f"{ctx.tool_name} is not allowed", source="safety-policy")
+
+@on(InterceptionPoint.POST_TOOL_CALL, tools=["web_search"], agents=["Researcher"])
+def log_search_results(ctx):
+    print(f"search returned {len(ctx.tool_result or '')} chars")
+```
+
+### 2. Crew-Scoped Hooks
+
+Apply the same decorator to a method inside a `@CrewBase` class to scope the
+hook to that crew only:
+
+```python
+from crewai.hooks import on, InterceptionPoint
+
+@CrewBase
+class MyProjCrew:
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def validate_tool_inputs(self, ctx):
+        # Only applies to this crew
+        if ctx.tool_name == "web_search" and not ctx.tool_input.get("query"):
+            raise HookAborted(reason="empty search query", source="input-validation")
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
+```
+
+## Common Use Cases
+
+### 1. Safety Guardrails
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def safety_check(ctx: ToolCallHookContext) -> None:
+    destructive = {'delete_file', 'drop_table', 'remove_user', 'system_shutdown'}
+    if ctx.tool_name in destructive:
+        raise HookAborted(reason=f"{ctx.tool_name} is destructive", source="safety-policy")
+```
+
+### 2. Human Approval Gate
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "make_purchase", "delete_file"])
+def require_approval(ctx: ToolCallHookContext) -> None:
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
+        default_message=f"Input: {ctx.tool_input}\nType 'yes' to approve:",
+    )
+    if response.lower() != 'yes':
+        raise HookAborted(reason="denied by operator", source="approval-gate")
+```
+
+### 3. Input Validation and Sanitization
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["web_search"])
+def validate_query(ctx: ToolCallHookContext) -> None:
+    query = ctx.tool_input.get('query', '')
+    if len(query) < 3:
+        raise HookAborted(reason="search query too short", source="input-validation")
+    ctx.tool_input['query'] = query.strip().lower()
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["read_file"])
+def validate_path(ctx: ToolCallHookContext) -> None:
+    path = ctx.tool_input.get('path', '')
+    if '..' in path or path.startswith('/'):
+        raise HookAborted(reason="invalid file path", source="input-validation")
+```
+
+### 4. Result Sanitization
+
+```python
+import re
+
+@on(InterceptionPoint.POST_TOOL_CALL)
+def sanitize_sensitive_data(ctx: ToolCallHookContext) -> str | None:
+    if not ctx.tool_result:
+        return None
+    result = re.sub(
+        r'(api[_-]?key|token)["\']?\s*[:=]\s*["\']?[\w-]+',
+        r'\1: [REDACTED]',
+        ctx.tool_result,
+        flags=re.IGNORECASE,
+    )
+    return re.sub(
+        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+        '[EMAIL-REDACTED]',
+        result,
+    )
+```
+
+### 5. Tool Usage Analytics
+
+```python
+import time
+from collections import defaultdict
+
+tool_stats = defaultdict(lambda: {'count': 0, 'total_time': 0})
+
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def start_timer(ctx: ToolCallHookContext) -> None:
+    ctx.tool_input['_start_time'] = time.time()
+
+@on(InterceptionPoint.POST_TOOL_CALL)
+def track_tool_usage(ctx: ToolCallHookContext) -> None:
+    start_time = ctx.tool_input.pop('_start_time', time.time())
+    tool_stats[ctx.tool_name]['count'] += 1
+    tool_stats[ctx.tool_name]['total_time'] += time.time() - start_time
+```
+
+### 6. Rate Limiting
+
+```python
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+tool_call_history = defaultdict(list)
+
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def rate_limit_tools(ctx: ToolCallHookContext) -> None:
+    now = datetime.now()
+    history = tool_call_history[ctx.tool_name]
+    history[:] = [t for t in history if now - t < timedelta(minutes=1)]
+    if len(history) >= 10:
+        raise HookAborted(reason=f"rate limit exceeded for {ctx.tool_name}",
+                          source="rate-limiter")
+    history.append(now)
+```
+
+## Hook Management
+
+```python
+from crewai.hooks import (
+    InterceptionPoint,
+    clear_all_hooks,
+    clear_hooks,
+    get_hooks,
+    unregister_hook,
+)
+
+# Unregister a specific hook
+unregister_hook(InterceptionPoint.PRE_TOOL_CALL, my_hook)
+
+# Clear one point, or everything (e.g. between tests)
+clear_hooks(InterceptionPoint.POST_TOOL_CALL)
+clear_all_hooks()
+
+# Inspect what's registered
+print(len(get_hooks(InterceptionPoint.PRE_TOOL_CALL)))
+```
+
+The legacy management API (`register_before_tool_call_hook`,
+`unregister_before_tool_call_hook`, `clear_before_tool_call_hooks`,
+`clear_all_tool_call_hooks`, `get_before_tool_call_hooks`, and their `after_`
+counterparts) operates on the same underlying registries, so either API can
+manage hooks registered by the other.
+
+## Legacy Decorators
+
+The original per-point decorators keep working unchanged and run in the same
+registration-order chain as `@on` hooks:
+
+```python
+from crewai.hooks import before_tool_call, after_tool_call
+
+@before_tool_call
+def block_dangerous_tools(context):
+    if context.tool_name in ('delete_database', 'drop_table'):
+        return False  # Block execution
+    return None
+
+@after_tool_call(tools=["web_search"])
+def sanitize_results(context):
+    if context.tool_result and "password" in context.tool_result.lower():
+        return context.tool_result.replace("password", "[REDACTED]")
+    return None
+```
+
+Differences from `@on`:
+
+- **Blocking** is `return False` from a before hook — equivalent to raising
+  `HookAborted`, but without a custom reason or source for telemetry. The agent
+  sees the same `"Tool execution blocked by hook"` message.
+- **Signatures** are point-specific: before hooks return `bool | None`, after
+  hooks return `str | None`. The context object is the same
+  `ToolCallHookContext`.
+- **Filters and crew-scoping** work the same way:
+  `@before_tool_call(tools=[...], agents=[...])`, and applying the decorator to
+  a `@CrewBase` method scopes it to that crew.
+
+Prefer `@on` for new code; keep the legacy style where it is already in use —
+there is no behavioral penalty.
+
+## Best Practices
+
+1. **Keep hooks focused and fast** — they run on every tool call
+2. **Modify in-place** — always mutate `ctx.tool_input`, never replace the dict
+3. **Prefer filters over conditionals** — `tools=` / `agents=` keep hook bodies small
+4. **Abort loudly** — raise `HookAborted` with a meaningful reason and source;
+   any other exception is swallowed (fail-open)
+5. **Use type hints** — annotate with `ToolCallHookContext` for IDE support
+6. **Clear hooks in tests** — call `clear_all_hooks()` between test runs
+
+## Troubleshooting
+
+### Hook Not Executing
+- Verify the hook is registered before crew execution
+- Check whether an earlier hook blocked the call (subsequent pre hooks don't run)
+- Check `tools=` / `agents=` filters against the actual tool name and agent role
+
+### Input Modifications Not Working
+- Use in-place modifications: `ctx.tool_input['key'] = value`
+- Don't replace the dict: `ctx.tool_input = {}`
+
+### Result Modifications Not Working
+- Return the modified string from a `POST_TOOL_CALL` hook
+- Returning `None` keeps the original result
+
+### Tool Blocked Unexpectedly
+- Check all pre hooks for `HookAborted` / `return False` conditions
+- The abort reason and source appear on the `HookDispatchedEvent` telemetry
+
+## Related Documentation
+
+- [Execution Hooks Overview →](/edge/en/learn/execution-hooks)
+- [LLM Call Hooks →](/edge/en/learn/llm-hooks)
+- [Execution Boundary Hooks →](/edge/en/learn/execution-boundary-hooks)
+- [Step Hooks →](/edge/en/learn/step-hooks)
