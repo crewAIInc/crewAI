@@ -62,6 +62,7 @@ _PROVIDERS: list[tuple[str, str]] = [
     ("nvidia_nim", "NVIDIA NIM"),
     ("huggingface", "Hugging Face"),
     ("cerebras", "Cerebras"),
+    ("deepinfra", "DeepInfra"),
     ("sambanova", "SambaNova"),
     ("watson", "IBM watsonx"),
 ]
@@ -130,6 +131,14 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "cerebras": [
         ("gpt-oss-120b", "GPT-OSS 120B"),
         ("qwen-3.8-27b", "Qwen 3.8 27B"),
+    ],
+    # The first chat models of DeepInfra's catalog in the order it ranks them
+    # for crewAI, which is what the live picker shows; checked on 2026-11-10.
+    "deepinfra": [
+        ("deepseek-ai/DeepSeek-V4.1-Flash", "DeepSeek V4.1 Flash"),
+        ("zai-org/GLM-5.3-Flash", "GLM-5.3 Flash"),
+        ("deepseek-ai/DeepSeek-V4-Pro-0813", "DeepSeek V4 Pro"),
+        ("zai-org/GLM-5.3", "GLM-5.3"),
     ],
     "sambanova": [
         ("gpt-oss-120b", "GPT-OSS 120B"),
