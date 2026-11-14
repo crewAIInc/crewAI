@@ -14,6 +14,18 @@ MCP_DISCOVERY_TIMEOUT = 15
 MCP_MAX_RETRIES = 3
 
 
+class MCPExecutionError(Exception):
+    """A non-timeout failure raised from inside an MCP client task group."""
+
+
+def _leaf_exceptions(exc: BaseException) -> list[BaseException]:
+    """Flatten (nested) exception groups into their leaf exceptions."""
+    sub_exceptions = getattr(exc, "exceptions", None)
+    if not isinstance(sub_exceptions, tuple | list) or not sub_exceptions:
+        return [exc]
+    return [leaf for sub in sub_exceptions for leaf in _leaf_exceptions(sub)]
+
+
 class MCPToolWrapper(BaseTool):
     """Lightweight wrapper for MCP tools that connects on-demand."""
 
@@ -130,6 +142,9 @@ class MCPToolWrapper(BaseTool):
                 False,
             )
 
+        except MCPExecutionError as e:
+            return None, f"MCP execution error: {e!s}", False
+
         except asyncio.TimeoutError:
             return (
                 None,
@@ -190,11 +205,10 @@ class MCPToolWrapper(BaseTool):
         except asyncio.CancelledError as e:
             raise asyncio.TimeoutError("MCP operation was cancelled") from e
         except Exception as e:
-            if e.__cause__ is not None:
-                raise asyncio.TimeoutError(
-                    f"MCP connection error: {e.__cause__}"
-                ) from e.__cause__
-
-            if "TaskGroup" in str(e) or "unhandled errors" in str(e):
+            leaves = _leaf_exceptions(e)
+            if any(isinstance(leaf, asyncio.TimeoutError) for leaf in leaves):
                 raise asyncio.TimeoutError(f"MCP connection error: {e}") from e
-            raise
+            if len(leaves) == 1 and leaves[0] is e:
+                raise
+            details = "; ".join(f"{type(leaf).__name__}: {leaf}" for leaf in leaves)
+            raise MCPExecutionError(details) from e
