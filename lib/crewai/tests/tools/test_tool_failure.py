@@ -918,15 +918,15 @@ class TestFailuresAreNotCached:
         from crewai.agents.cache.cache_handler import CacheHandler
 
         cache = CacheHandler()
-        cache.add(tool="t", input="{}", output=ToolFailure(message="nope"))
-        assert cache.read(tool="t", input="{}") is None
+        cache.add(tool="t", tool_input="{}", output=ToolFailure(message="nope"))
+        assert cache.read(tool="t", tool_input="{}") is None
 
     def test_cache_handler_still_stores_successes(self) -> None:
         from crewai.agents.cache.cache_handler import CacheHandler
 
         cache = CacheHandler()
-        cache.add(tool="t", input="{}", output="fine")
-        assert cache.read(tool="t", input="{}") == "fine"
+        cache.add(tool="t", tool_input="{}", output="fine")
+        assert cache.read(tool="t", tool_input="{}") == "fine"
 
     def test_repeated_failures_are_recorded_once_each(self) -> None:
         """Two failing calls give two records, not a replayed cache hit."""
@@ -1064,10 +1064,10 @@ class TestHookBlockDoesNotInheritCachedFailure:
         class FailureReplayingCache:
             """Stands in for a custom cache that does retain failures."""
 
-            def read(self, tool: str, input: str) -> Any:
+            def read(self, tool: str, tool_input: str) -> Any:
                 return ToolFailure(message="stale cached failure", code="cached")
 
-            def add(self, tool: str, input: str, output: Any) -> None:
+            def add(self, tool: str, tool_input: str, output: Any) -> None:
                 pass
 
         agent = Agent(role="r", goal="g", backstory="b")
