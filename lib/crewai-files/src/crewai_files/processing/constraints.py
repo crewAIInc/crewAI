@@ -238,10 +238,9 @@ OPENAI_RESPONSES_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=33_554_432,  # 32 MB total across all file inputs
         max_pages=100,
     ),
-    audio=AudioConstraints(
-        max_size_bytes=26_214_400,  # 25 MB - whisper limit
-        max_duration_seconds=1500,  # 25 minutes, arbitrary-ish, this is from the transcriptions limit
-    ),
+    # No audio constraint: the Responses formatter only emits image and PDF
+    # blocks, so advertising audio support made every audio input raise
+    # TypeError instead of being handled by the file tool fallback.
     supports_file_upload=True,
     file_upload_threshold_bytes=5_242_880,
     supports_url_references=True,
