@@ -276,7 +276,8 @@
                           "edge/en/tools/search-research/serpapi-googlesearchtool",
                           "edge/en/tools/search-research/serpapi-googleshoppingtool",
                           "edge/en/tools/search-research/databricks-query-tool",
-                          "edge/en/tools/search-research/youai-search"
+                          "edge/en/tools/search-research/youai-search",
+                          "edge/en/tools/search-research/agentsearchtool"
                         ]
                       },
                       {
@@ -23290,7 +23291,8 @@
                           "edge/pt-BR/tools/search-research/websitesearchtool",
                           "edge/pt-BR/tools/search-research/codedocssearchtool",
                           "edge/pt-BR/tools/search-research/youtubechannelsearchtool",
-                          "edge/pt-BR/tools/search-research/youtubevideosearchtool"
+                          "edge/pt-BR/tools/search-research/youtubevideosearchtool",
+                          "edge/pt-BR/tools/search-research/agentsearchtool"
                         ]
                       },
                       {
@@ -44418,7 +44420,8 @@
                           "edge/ko/tools/search-research/arxivpapertool",
                           "edge/ko/tools/search-research/serpapi-googlesearchtool",
                           "edge/ko/tools/search-research/serpapi-googleshoppingtool",
-                          "edge/ko/tools/search-research/databricks-query-tool"
+                          "edge/ko/tools/search-research/databricks-query-tool",
+                          "edge/ko/tools/search-research/agentsearchtool"
                         ]
                       },
                       {
@@ -66244,7 +66247,8 @@
                           "edge/ar/tools/search-research/arxivpapertool",
                           "edge/ar/tools/search-research/serpapi-googlesearchtool",
                           "edge/ar/tools/search-research/serpapi-googleshoppingtool",
-                          "edge/ar/tools/search-research/databricks-query-tool"
+                          "edge/ar/tools/search-research/databricks-query-tool",
+                          "edge/ar/tools/search-research/agentsearchtool"
                         ]
                       },
                       {
