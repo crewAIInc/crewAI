@@ -1,36 +1,19 @@
 """Type definitions for RAG configuration."""
 
-from typing import TYPE_CHECKING, Annotated, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
-from pydantic import Field
-
-from crewai.rag.config.constants import DISCRIMINATOR
+from crewai.rag.config.base import BaseRagConfig
 
 
-# Linter freaks out on conditional imports, assigning in the type checking fixes it
 if TYPE_CHECKING:
-    from crewai.rag.chromadb.config import ChromaDBConfig as ChromaDBConfig_
+    from crewai.rag.chromadb.config import ChromaDBConfig
+    from crewai.rag.qdrant.config import QdrantConfig
 
-    ChromaDBConfig = ChromaDBConfig_
-    from crewai.rag.qdrant.config import QdrantConfig as QdrantConfig_
-
-    QdrantConfig = QdrantConfig_
+    SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig
+    RagConfigType: TypeAlias = SupportedProviderConfig
 else:
-    try:
-        from crewai.rag.chromadb.config import ChromaDBConfig
-    except ImportError:
-        from crewai.rag.config.optional_imports.providers import (
-            MissingChromaDBConfig as ChromaDBConfig,
-        )
-
-    try:
-        from crewai.rag.qdrant.config import QdrantConfig
-    except ImportError:
-        from crewai.rag.config.optional_imports.providers import (
-            MissingQdrantConfig as QdrantConfig,
-        )
-
-SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig
-RagConfigType: TypeAlias = Annotated[
-    SupportedProviderConfig, Field(discriminator=DISCRIMINATOR)
-]
+    # At runtime every provider config derives from BaseRagConfig. Naming the
+    # concrete classes here would import every provider backend (e.g. chromadb)
+    # whenever crewai is imported, even when it is not installed or not used.
+    SupportedProviderConfig: TypeAlias = BaseRagConfig
+    RagConfigType: TypeAlias = BaseRagConfig

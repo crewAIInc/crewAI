@@ -1,8 +1,11 @@
 """Utility functions for Qdrant operations."""
 
 import asyncio
+from collections.abc import Mapping
+import json
+import re
 from typing import TypeGuard
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import (
     AsyncQdrantClient,
@@ -29,6 +32,34 @@ from crewai.rag.qdrant.types import (
     QueryEmbedding,
 )
 from crewai.rag.types import BaseRecord, SearchResult
+
+
+# Characters Qdrant rejects in collection names (and that would otherwise become
+# path separators in a local store), plus control characters.
+_INVALID_COLLECTION_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_MAX_COLLECTION_NAME_BYTES = 255
+
+
+def _sanitize_collection_name(name: str) -> str:
+    """Make a collection name valid for Qdrant.
+
+    Replaces characters Qdrant rejects with ``_`` and limits the name to 255
+    bytes. Names that are already valid are returned unchanged, so existing
+    collections keep their names.
+
+    Args:
+        name: The requested collection name, e.g. one built from an agent role.
+
+    Returns:
+        A name accepted by both local and server Qdrant.
+    """
+    sanitized = _INVALID_COLLECTION_CHARS.sub("_", name)
+    if sanitized in {".", ".."}:
+        sanitized = sanitized.replace(".", "_")
+    encoded = sanitized.encode("utf-8")
+    if len(encoded) > _MAX_COLLECTION_NAME_BYTES:
+        sanitized = encoded[:_MAX_COLLECTION_NAME_BYTES].decode("utf-8", "ignore")
+    return sanitized
 
 
 def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
@@ -125,7 +156,6 @@ def _prepare_search_params(
     collection_name: str,
     query_embedding: QueryEmbedding,
     limit: int,
-    score_threshold: float | None,
     metadata_filter: MetadataFilter | None,
 ) -> PreparedSearchParams:
     """Prepare search parameters for Qdrant query_points.
@@ -134,7 +164,6 @@ def _prepare_search_params(
         collection_name: Name of the collection to search.
         query_embedding: Embedding vector for the query.
         limit: Maximum number of results.
-        score_threshold: Optional minimum similarity score.
         metadata_filter: Optional metadata filters.
 
     Returns:
@@ -149,9 +178,6 @@ def _prepare_search_params(
         "with_payload": True,
         "with_vectors": False,
     }
-
-    if score_threshold is not None:
-        search_kwargs["score_threshold"] = score_threshold
 
     if metadata_filter:
         filter_conditions: list[FilterCondition] = []
@@ -180,11 +206,18 @@ def _normalize_qdrant_score(score: float) -> float:
     return max(0.0, min(1.0, normalized))
 
 
-def _process_search_results(response: QueryResponse) -> list[SearchResult]:
+def _process_search_results(
+    response: QueryResponse, score_threshold: float | None = None
+) -> list[SearchResult]:
     """Process Qdrant search response into SearchResult format.
+
+    The threshold is applied to the normalized score, the same 0-1 scale the
+    results report and ChromaDB filters on. Qdrant's own ``score_threshold``
+    compares the raw cosine similarity, so it is not sent with the query.
 
     Args:
         response: Response from Qdrant query_points method.
+        score_threshold: Optional minimum normalized score (0-1) for results.
 
     Returns:
         List of SearchResult dictionaries.
@@ -193,6 +226,8 @@ def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     for point in response.points:
         payload = point.payload or {}
         score = _normalize_qdrant_score(score=point.score)
+        if score_threshold is not None and score < score_threshold:
+            continue
         result: SearchResult = {
             "id": str(point.id),
             "content": payload.get("content", ""),
@@ -204,6 +239,18 @@ def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     return results
 
 
+def _default_doc_id(content: str, metadata: Mapping[str, object]) -> str:
+    """Derive a stable point ID from a document's content and metadata.
+
+    Saving the same document again then overwrites its point instead of adding a
+    duplicate, matching how the ChromaDB client identifies documents.
+    """
+    key = content
+    if metadata:
+        key = f"{content}|{json.dumps(metadata, sort_keys=True, default=str)}"
+    return str(uuid5(NAMESPACE_URL, key))
+
+
 def _create_point_from_document(
     doc: BaseRecord, embedding: QueryEmbedding
 ) -> PointStruct:
@@ -211,12 +258,12 @@ def _create_point_from_document(
 
     Args:
         doc: Document dictionary containing content, metadata, and optional doc_id.
+            Without a doc_id, a deterministic ID is derived from content and metadata.
         embedding: The embedding vector for the document content.
 
     Returns:
         PointStruct ready to be upserted to Qdrant.
     """
-    doc_id = doc.get("doc_id", str(uuid4()))
     vector = _ensure_list_embedding(embedding)
 
     metadata = doc.get("metadata", {})
@@ -224,6 +271,8 @@ def _create_point_from_document(
         metadata = metadata[0] if metadata else {}
     elif not isinstance(metadata, dict):
         metadata = dict(metadata) if metadata else {}
+
+    doc_id = doc.get("doc_id") or _default_doc_id(doc["content"], metadata)
 
     return PointStruct(
         id=doc_id,

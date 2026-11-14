@@ -1731,15 +1731,15 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
         patch(
             "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
         ) as mock_base_knowledge_storage,
-        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+        patch("crewai.rag.qdrant.factory.QdrantClient") as mock_vector_client,
     ):
         mock_storage_instance = mock_knowledge_storage.return_value
         mock_storage_instance.sources = [string_source]
         mock_storage_instance.query.return_value = [{"content": content}]
         mock_storage_instance.save.return_value = None
 
-        mock_chromadb_instance = mock_chromadb.return_value
-        mock_chromadb_instance.add_documents.return_value = None
+        mock_vector_client_instance = mock_vector_client.return_value
+        mock_vector_client_instance.add_documents.return_value = None
 
         mock_base_knowledge_storage.return_value = mock_storage_instance
 
@@ -1780,15 +1780,15 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
         patch(
             "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
         ) as mock_base_knowledge_storage,
-        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+        patch("crewai.rag.qdrant.factory.QdrantClient") as mock_vector_client,
     ):
         mock_storage_instance = mock_knowledge_storage.return_value
         mock_storage_instance.sources = [string_source]
         mock_storage_instance.query.return_value = [{"content": content}]
         mock_storage_instance.save.return_value = None
 
-        mock_chromadb_instance = mock_chromadb.return_value
-        mock_chromadb_instance.add_documents.return_value = None
+        mock_vector_client_instance = mock_vector_client.return_value
+        mock_vector_client_instance.add_documents.return_value = None
 
         mock_base_knowledge_storage.return_value = mock_storage_instance
 
@@ -1822,15 +1822,17 @@ def test_agent_with_knowledge_sources_extensive_role():
     string_source = StringKnowledgeSource(content=content)
 
     with (
-        patch("crewai.knowledge") as mock_knowledge,
         patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage.save"
         ) as mock_save,
+        patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage.search"
+        ) as mock_search,
     ):
-        mock_knowledge_instance = mock_knowledge.return_value
-        mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
         mock_save.return_value = None
+        mock_search.return_value = [
+            {"id": "1", "content": content, "metadata": {}, "score": 0.9}
+        ]
 
         agent = Agent(
             role="Information Agent with extensive role description that is longer than 80 characters",
@@ -1925,7 +1927,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
         patch(
             "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
         ) as mock_base_knowledge_storage,
-        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+        patch("crewai.rag.qdrant.factory.QdrantClient") as mock_vector_client,
     ):
         mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
@@ -1936,8 +1938,8 @@ def test_agent_with_knowledge_sources_generate_search_query():
         mock_storage_instance.query.return_value = [{"content": content}]
         mock_storage_instance.save.return_value = None
 
-        mock_chromadb_instance = mock_chromadb.return_value
-        mock_chromadb_instance.add_documents.return_value = None
+        mock_vector_client_instance = mock_vector_client.return_value
+        mock_vector_client_instance.add_documents.return_value = None
 
         mock_base_knowledge_storage.return_value = mock_storage_instance
 
@@ -2138,7 +2140,7 @@ def test_get_knowledge_search_query():
         patch(
             "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
         ) as mock_base_knowledge_storage,
-        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+        patch("crewai.rag.qdrant.factory.QdrantClient") as mock_vector_client,
         patch.object(agent, "_get_knowledge_search_query") as mock_get_query,
     ):
         mock_storage_instance = mock_knowledge_storage.return_value
@@ -2146,8 +2148,8 @@ def test_get_knowledge_search_query():
         mock_storage_instance.query.return_value = [{"content": content}]
         mock_storage_instance.save.return_value = None
 
-        mock_chromadb_instance = mock_chromadb.return_value
-        mock_chromadb_instance.add_documents.return_value = None
+        mock_vector_client_instance = mock_vector_client.return_value
+        mock_vector_client_instance.add_documents.return_value = None
 
         mock_base_knowledge_storage.return_value = mock_storage_instance
 

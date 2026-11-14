@@ -1,3 +1,4 @@
+from dataclasses import is_dataclass, replace
 import logging
 import traceback
 from typing import Any, cast
@@ -7,9 +8,12 @@ from pydantic import Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
-from crewai.rag.config.utils import get_rag_client
+from crewai.rag.config.types import RagConfigType
+from crewai.rag.config.utils import (
+    get_active_rag_config,
+    get_rag_client,
+    get_rag_provider,
+)
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
@@ -17,6 +21,68 @@ from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
+
+
+def _build_rag_config(
+    provider: str,
+    embedding_function: Any,
+    base_config: RagConfigType | None = None,
+) -> RagConfigType:
+    """Build a RAG config for ``provider`` around a CrewAI embedding function.
+
+    When ``base_config`` is the active config for the same provider, its
+    connection settings (url, api_key, path, ...) are kept and only the
+    embedding function is replaced.
+
+    Backends are imported here so that only the configured one is needed. Any
+    other provider (one added with ``register_rag_client_factory``) keeps its
+    active config and only gets the embedding function; its client factory then
+    receives CrewAI's embedding function as is, which takes a list of texts.
+
+    Raises:
+        ImportError: If ``provider`` is ``"chromadb"`` and chromadb is not installed.
+        ValueError: If ``provider`` is neither built in nor the provider of an
+            active config that can carry an embedding function.
+    """
+    if provider == "chromadb":
+        from crewai.rag.chromadb.config import ChromaDBConfig
+
+        if base_config is not None and base_config.provider == provider:
+            return replace(
+                cast(ChromaDBConfig, base_config), embedding_function=embedding_function
+            )
+
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*'model_fields'.*is deprecated.*",
+            module=r"^chromadb(\.|$)",
+        )
+        return ChromaDBConfig(embedding_function=embedding_function)
+
+    if provider == "qdrant":
+        from crewai.rag.qdrant.config import QdrantConfig
+        from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
+        from crewai.rag.qdrant.types import QdrantEmbeddingFunctionWrapper
+
+        wrapped = cast(
+            QdrantEmbeddingFunctionWrapper, QdrantEmbeddingAdapter(embedding_function)
+        )
+        if base_config is not None and base_config.provider == provider:
+            return replace(cast(QdrantConfig, base_config), embedding_function=wrapped)
+        return QdrantConfig(embedding_function=wrapped)
+
+    if (
+        base_config is not None
+        and base_config.provider == provider
+        and is_dataclass(base_config)
+    ):
+        return replace(base_config, embedding_function=embedding_function)
+
+    raise ValueError(
+        f"Unsupported RAG provider for knowledge storage: {provider}. Knowledge "
+        "with an embedder supports 'chromadb', 'qdrant', or a provider whose "
+        "config is active through set_rag_config()."
+    )
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -36,18 +102,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     @model_validator(mode="after")
     def _init_client(self) -> Self:
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*'model_fields'.*is deprecated.*",
-            module=r"^chromadb(\.|$)",
-        )
-
         if self.embedder:
             embedding_function = build_embedder(self.embedder)  # type: ignore[arg-type]
-            config = ChromaDBConfig(
-                embedding_function=cast(
-                    ChromaEmbeddingFunctionWrapper, embedding_function
-                )
+            config = _build_rag_config(
+                get_rag_provider(), embedding_function, get_active_rag_config()
             )
             self._client = create_client(config)
         return self
