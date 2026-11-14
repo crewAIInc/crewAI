@@ -263,12 +263,13 @@ def save_last_messages(agent: Agent) -> None:
     Args:
         agent: The agent instance.
     """
-    if not agent.agent_executor or not hasattr(agent.agent_executor, "messages"):
-        agent._last_messages = []
+    executor = agent._active_executor()
+    if not executor or not hasattr(executor, "messages"):
+        agent._store_last_messages([])
         return
 
     sanitized_messages: list[LLMMessage] = []
-    for msg in agent.agent_executor.messages:
+    for msg in executor.messages:
         role = msg.get("role", "")
         if role not in ("user", "assistant", "system", "tool"):
             continue
@@ -289,7 +290,7 @@ def save_last_messages(agent: Agent) -> None:
                 sanitized_msg["tool_calls"] = tool_calls
         sanitized_messages.append(sanitized_msg)
 
-    agent._last_messages = sanitized_messages
+    agent._store_last_messages(sanitized_messages)
 
 
 def prepare_tools(
