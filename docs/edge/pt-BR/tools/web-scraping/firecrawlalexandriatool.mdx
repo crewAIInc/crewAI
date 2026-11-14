@@ -1,0 +1,59 @@
+---
+title: Firecrawl Alexandria
+description: A ferramenta `FirecrawlAlexandriaTool` executa capacidades dos provedores de dados do Firecrawl Alexandria e retorna dados estruturados.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlAlexandriaTool`
+
+## Descrição
+
+O [Firecrawl Alexandria](https://www.firecrawl.dev/alexandria?utm_source=crewai&utm_medium=integration) oferece aos agentes dados estruturados de mais de 100 provedores de dados (registros de empresas, registros públicos, finanças, esportes e mais) por meio da API do Firecrawl. Esta ferramenta executa uma capacidade de um provedor e retorna seus dados. Ela também cobre a descoberta: a capacidade `find-tools` do provedor `firecrawl` busca no catálogo e lista as opções de cada capacidade.
+
+## Instalação
+
+- Obtenha uma chave de API em [firecrawl.dev](https://www.firecrawl.dev/?utm_source=crewai&utm_medium=integration) e defina-a nas variáveis de ambiente (`FIRECRAWL_API_KEY`).
+- Instale o [Firecrawl SDK](https://github.com/firecrawl/firecrawl) junto com o pacote `crewai[tools]`:
+
+```shell
+pip install 'firecrawl-py>=4.43.0' 'crewai[tools]'
+```
+
+## Exemplo
+
+```python Code
+from crewai_tools import FirecrawlAlexandriaTool
+
+tool = FirecrawlAlexandriaTool()
+
+# Find a capability and its options (free)
+tool.run(
+    provider="firecrawl",
+    capability="find-tools",
+    options='{"query": "SEC filer profile by ticker", "level": "tools", "expand": ["options"], "limit": 5}',
+)
+
+# Run it
+tool.run(
+    provider="sec-gov",
+    capability="filings/company",
+    options='{"ticker": "AAPL"}',
+)
+```
+
+Um agente com esta ferramenta segue os mesmos dois passos sozinho: chama `find-tools` com uma consulta e depois executa a capacidade escolhida.
+
+O `find-tools` é gratuito. Executar uma capacidade custa os créditos que o `find-tools` lista como `creditsCost`, e alguns provedores pedem que você aceite os termos deles na sua conta do Firecrawl antes.
+
+## Argumentos
+
+- `api_key`: Opcional. Especifica a chave de API do Firecrawl. O padrão é a variável de ambiente `FIRECRAWL_API_KEY`.
+
+Argumentos de execução:
+
+- `provider`: O id do provedor no Alexandria, por exemplo `sec-gov`, ou `firecrawl` para `find-tools`.
+- `capability`: A capacidade desse provedor, por exemplo `filings/company`.
+- `options`: Opcional. Uma string com um objeto JSON das entradas da capacidade, por exemplo `'{"ticker": "AAPL"}'`.
+
+Se a chamada falhar (por exemplo, uma opção ausente ou uma capacidade desconhecida), a ferramenta retorna um `ToolFailure` com o código e a mensagem do erro.

@@ -1,0 +1,59 @@
+---
+title: Firecrawl Alexandria
+description: أداة `FirecrawlAlexandriaTool` تشغّل قدرات مزوّدي البيانات في Firecrawl Alexandria وتُرجع بيانات منظمة.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlAlexandriaTool`
+
+## الوصف
+
+يوفّر [Firecrawl Alexandria](https://www.firecrawl.dev/alexandria?utm_source=crewai&utm_medium=integration) للوكلاء بيانات منظمة من أكثر من 100 مزوّد بيانات (إفصاحات الشركات، والسجلات العامة، والمالية، والرياضة وغيرها) عبر Firecrawl API. تشغّل هذه الأداة قدرة واحدة لدى مزوّد وتُرجع بياناتها. كما تغطي الاكتشاف: قدرة `find-tools` لدى المزوّد `firecrawl` تبحث في الفهرس وتعرض خيارات كل قدرة.
+
+## التثبيت
+
+- احصل على مفتاح API من [firecrawl.dev](https://www.firecrawl.dev/?utm_source=crewai&utm_medium=integration) وعيّنه في متغيرات البيئة (`FIRECRAWL_API_KEY`).
+- ثبّت [Firecrawl SDK](https://github.com/firecrawl/firecrawl) مع حزمة `crewai[tools]`:
+
+```shell
+pip install 'firecrawl-py>=4.43.0' 'crewai[tools]'
+```
+
+## مثال
+
+```python Code
+from crewai_tools import FirecrawlAlexandriaTool
+
+tool = FirecrawlAlexandriaTool()
+
+# Find a capability and its options (free)
+tool.run(
+    provider="firecrawl",
+    capability="find-tools",
+    options='{"query": "SEC filer profile by ticker", "level": "tools", "expand": ["options"], "limit": 5}',
+)
+
+# Run it
+tool.run(
+    provider="sec-gov",
+    capability="filings/company",
+    options='{"ticker": "AAPL"}',
+)
+```
+
+يتّبع الوكيل الذي يملك هذه الأداة الخطوتين نفسيهما بمفرده: يستدعي `find-tools` باستعلام، ثم يشغّل القدرة التي اختارها.
+
+استخدام `find-tools` مجاني. يكلّف تشغيل أي قدرة الأرصدة التي يعرضها `find-tools` في `creditsCost`، وبعض المزوّدين يطلبون قبول شروطهم في حساب Firecrawl أولاً.
+
+## المعاملات
+
+- `api_key`: اختياري. يحدد مفتاح Firecrawl API. القيمة الافتراضية هي متغير البيئة `FIRECRAWL_API_KEY`.
+
+معاملات التشغيل:
+
+- `provider`: معرّف المزوّد في Alexandria، مثل `sec-gov`، أو `firecrawl` لاستخدام `find-tools`.
+- `capability`: قدرة ذلك المزوّد، مثل `filings/company`.
+- `options`: اختياري. سلسلة نصية لكائن JSON بمدخلات القدرة، مثل `'{"ticker": "AAPL"}'`.
+
+إذا فشل الاستدعاء (مثل خيار مفقود أو قدرة غير معروفة)، تُرجع الأداة `ToolFailure` يتضمن رمز الخطأ ورسالته.
