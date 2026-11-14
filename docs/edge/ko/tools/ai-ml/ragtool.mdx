@@ -131,6 +131,14 @@ def knowledge_expert(self) -> Agent:
     )
 ```
 
+## 벡터 데이터베이스
+
+`RagTool`은 기본적으로 로컬 Qdrant 데이터베이스에 콘텐츠를 저장하며, 임베더로는 OpenAI의 `text-embedding-3-small`을 사용합니다. ChromaDB를 사용하려면 `pip install "crewai[chromadb]"`로 설치하고 `vectordb` 설정에서 `"provider": "chromadb"`를 지정하세요.
+
+<Note>
+이전 버전에서 ChromaDB에 저장한 콘텐츠는 Qdrant 기본값에서 읽히지 않습니다. 콘텐츠를 다시 추가하거나 `chromadb` 프로바이더를 지정하세요.
+</Note>
+
 ## 고급 구성
 
 구성 딕셔너리를 제공하여 `RagTool`의 동작을 사용자 지정할 수 있습니다.
@@ -177,6 +185,10 @@ rag_tool = RagTool(config=config, summarize=True)
 ```
 
 ### 지원되는 프로바이더
+
+<Note>
+다음 프로바이더는 ChromaDB를 사용하므로 `pip install "crewai[chromadb]"`가 필요합니다: `bedrock`, `cohere`, `google-generativeai`, `huggingface`, `instructor`, `jina`, `ollama`, `onnx`, `openclip`, `roboflow`, `sentence-transformer`, `text2vec`. 그 외(`openai`, `azure`, `openrouter`, `google-vertex`, `voyageai`, `watsonx`, `oracle`, `custom` 등)는 필요하지 않습니다.
+</Note>
 
 <AccordionGroup>
   <Accordion title="OpenAI">

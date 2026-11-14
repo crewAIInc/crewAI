@@ -10,6 +10,9 @@ from crewai_tools.rag.data_types import DataType
 import pytest
 
 
+pytest.importorskip("chromadb", reason="RAG needs the crewai[chromadb] extra")
+
+
 class FakeEmbeddings:
     """Return deterministic vectors and capture the embedded text."""
 
@@ -55,7 +58,7 @@ def rag() -> tuple[RAG, FakeCollection, FakeEmbeddings]:
     client = Mock()
     client.get_or_create_collection.return_value = collection
     with (
-        patch("crewai_tools.rag.core.chromadb.Client", return_value=client),
+        patch("chromadb.Client", return_value=client),
         patch("crewai_tools.rag.core.EmbeddingService", return_value=embeddings),
     ):
         instance = RAG()

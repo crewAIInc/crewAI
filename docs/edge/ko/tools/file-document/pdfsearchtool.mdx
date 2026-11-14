@@ -45,7 +45,7 @@ tool = PDFSearchTool(pdf='path/to/your/document.pdf')
 
 ## 커스텀 모델 및 임베딩
 
-기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다. 참고: 임베딩은 벡터DB에 저장되어야 하므로 vectordb 설정이 필요합니다.
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다. 참고: 임베딩은 벡터DB에 저장되어야 하므로 vectordb 설정이 필요합니다. 기본 벡터DB는 로컬 Qdrant이며, `chromadb`는 `pip install "crewai[chromadb]"`가 필요합니다.
 
 ```python Code
 from crewai_tools import PDFSearchTool
@@ -81,9 +81,9 @@ tool = PDFSearchTool(
             },
         },
 
-        # 필수: 벡터DB 설정
+        # 선택 사항(기본값은 Qdrant): 벡터DB 설정
         "vectordb": {
-            "provider": "chromadb",  # 또는 "qdrant"
+            "provider": "chromadb",  # crewai[chromadb] 필요; 기본값은 "qdrant"
             "config": {
                 # Chroma 설정 예시
                 # "settings": Settings(
