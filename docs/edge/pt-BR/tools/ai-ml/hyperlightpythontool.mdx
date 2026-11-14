@@ -1,0 +1,100 @@
+---
+title: Ferramenta Python Hyperlight
+description: A `HyperlightPythonTool` executa o Python escrito pelo agente em uma micro-VM Hyperlight local, isolada por hardware, sem conta nem chave de API.
+icon: microchip
+mode: "wide"
+---
+
+# `HyperlightPythonTool`
+
+## Descrição
+
+A `HyperlightPythonTool` permite que agentes CrewAI executem Python em uma micro-VM na sua própria máquina, usando o [Hyperlight](https://github.com/hyperlight-dev/hyperlight) com um kernel convidado [Unikraft](https://unikraft.org) por meio da CLI [`hluk`](https://github.com/hyperlight-dev/hyperlight-unikraft).
+
+- Cada chamada roda em uma micro-VM nova, restaurada de um snapshot pronto, em dezenas de milissegundos.
+- O código fica isolado do host pelo hypervisor: KVM no Linux, WHP no Windows, Hypervisor.framework no macOS com Apple silicon.
+- O convidado não tem acesso à rede, a menos que você libere hosts com `net_allow`.
+- Nada é mantido entre chamadas: variáveis, imports e arquivos somem quando a chamada termina, exceto em diretórios do host que você montar com `hluk_args`.
+
+## Instalação
+
+Instale o `crewai-tools` e o binário `hluk`:
+
+```shell
+uv add crewai-tools
+```
+
+```shell
+# Linux, macOS
+curl -fsSL https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.sh | sh
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.ps1 | iex
+```
+
+No Linux, seu usuário precisa de acesso a `/dev/kvm`. A primeira chamada baixa a imagem do runtime e salva o snapshot pronto, o que pode levar um minuto; as chamadas seguintes começam em milissegundos.
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import HyperlightPythonTool
+
+analyst = Agent(
+    role="Data analyst",
+    goal="Answer questions by running Python",
+    backstory="You check every number by computing it.",
+    tools=[HyperlightPythonTool()],
+)
+
+task = Task(
+    description="What is the standard deviation of the first 100 prime numbers?",
+    expected_output="The value, rounded to two decimals.",
+    agent=analyst,
+)
+
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+Você também pode chamar a ferramenta diretamente:
+
+```python Code
+tool = HyperlightPythonTool()
+result = tool.run(code="import numpy as np\nprint(np.arange(10).sum())")
+```
+
+## Argumentos
+
+- `code: str` — Obrigatório. O script Python a executar.
+
+## Retorno
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "45\n",
+  "stderr": "",
+  "timed_out": false
+}
+```
+
+`exit_code` é `null` e `timed_out` é `true` quando o código roda por mais tempo que `timeout`.
+
+## Parâmetros
+
+- `hluk_path: str | None` — Caminho do binário `hluk`. Por padrão, o `hluk` no `PATH`.
+- `runtime: str` — Imagem do runtime, por nome ou referência completa. Padrão `"agent"`: CPython 3.12 com numpy, pandas, scipy, scikit-learn, matplotlib, pillow e requests.
+- `net_allow: tuple[str, ...]` — Hosts ou IPs aos quais o convidado pode se conectar. Padrão: nenhum.
+- `envs: dict[str, str] | None` — Variáveis de ambiente definidas dentro do sandbox. Elas são passadas na linha de comando do `hluk`, que outros processos do host podem ler, então não coloque segredos aqui.
+- `scratch_mb: int | None` — Memória do convidado em MiB. Por padrão, o tamanho com que a imagem do runtime é testada.
+- `hluk_args: tuple[str, ...]` — Argumentos extras para `hluk run`, por exemplo `["--mount", "/data:/data:ro"]`.
+- `timeout: float` — Segundos que o código de uma chamada pode rodar. Padrão `60`.
+- `startup_timeout: float` — Segundos que a primeira chamada pode levar para baixar a imagem e salvar o snapshot. Padrão `300`.
+- `max_output_bytes: int` — Bytes mantidos de stdout e de stderr por chamada. Saídas maiores mantêm o início e o fim. Padrão 1 MiB.
+
+## Liberando acesso à rede
+
+```python Code
+tool = HyperlightPythonTool(net_allow=["api.github.com"])
+```
+
+Conexões com qualquer outro host são recusadas.

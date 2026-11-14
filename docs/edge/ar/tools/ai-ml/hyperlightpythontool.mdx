@@ -1,0 +1,100 @@
+---
+title: أداة Hyperlight Python
+description: تشغّل `HyperlightPythonTool` شيفرة Python التي يكتبها الوكيل داخل آلة Hyperlight افتراضية مصغّرة محلية ومعزولة بالعتاد، دون حساب أو مفتاح API.
+icon: microchip
+mode: "wide"
+---
+
+# `HyperlightPythonTool`
+
+## الوصف
+
+تتيح `HyperlightPythonTool` لوكلاء CrewAI تشغيل Python داخل آلة افتراضية مصغّرة على جهازك، باستخدام [Hyperlight](https://github.com/hyperlight-dev/hyperlight) مع نواة ضيف [Unikraft](https://unikraft.org) عبر واجهة سطر الأوامر [`hluk`](https://github.com/hyperlight-dev/hyperlight-unikraft).
+
+- يعمل كل استدعاء في آلة افتراضية مصغّرة جديدة مستعادة من لقطة جاهزة، خلال عشرات المللي ثانية.
+- يعزل المشرف الافتراضي (hypervisor) الشيفرة عن المضيف: KVM على Linux، وWHP على Windows، وHypervisor.framework على macOS بمعالجات Apple silicon.
+- لا يملك الضيف وصولًا إلى الشبكة ما لم تسمح بمضيفين عبر `net_allow`.
+- لا يبقى شيء بين الاستدعاءات: تختفي المتغيرات وعمليات الاستيراد والملفات عند انتهاء الاستدعاء، باستثناء مجلدات المضيف التي تربطها عبر `hluk_args`.
+
+## التثبيت
+
+ثبّت `crewai-tools` والملف التنفيذي `hluk`:
+
+```shell
+uv add crewai-tools
+```
+
+```shell
+# Linux, macOS
+curl -fsSL https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.sh | sh
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.ps1 | iex
+```
+
+على Linux، يحتاج مستخدمك إلى صلاحية الوصول إلى `/dev/kvm`. يُنزّل الاستدعاء الأول صورة بيئة التشغيل ويحفظ لقطتها الجاهزة، وقد يستغرق ذلك دقيقة؛ أما الاستدعاءات اللاحقة فتبدأ خلال مللي ثوانٍ.
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import HyperlightPythonTool
+
+analyst = Agent(
+    role="Data analyst",
+    goal="Answer questions by running Python",
+    backstory="You check every number by computing it.",
+    tools=[HyperlightPythonTool()],
+)
+
+task = Task(
+    description="What is the standard deviation of the first 100 prime numbers?",
+    expected_output="The value, rounded to two decimals.",
+    agent=analyst,
+)
+
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+يمكنك أيضًا استدعاء الأداة مباشرة:
+
+```python Code
+tool = HyperlightPythonTool()
+result = tool.run(code="import numpy as np\nprint(np.arange(10).sum())")
+```
+
+## الوسائط
+
+- `code: str` — مطلوب. سكربت Python المراد تشغيله.
+
+## القيمة المُعادة
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "45\n",
+  "stderr": "",
+  "timed_out": false
+}
+```
+
+تكون `exit_code` بقيمة `null` و`timed_out` بقيمة `true` عندما يتجاوز تشغيل الشيفرة `timeout`.
+
+## المعاملات
+
+- `hluk_path: str | None` — مسار الملف التنفيذي `hluk`. الافتراضي هو `hluk` الموجود في `PATH`.
+- `runtime: str` — صورة بيئة التشغيل، بالاسم أو بمرجع الصورة الكامل. الافتراضي `"agent"`: CPython 3.12 مع numpy وpandas وscipy وscikit-learn وmatplotlib وpillow وrequests.
+- `net_allow: tuple[str, ...]` — المضيفون أو عناوين IP التي يمكن للضيف الاتصال بها. الافتراضي: لا شيء.
+- `envs: dict[str, str] | None` — متغيرات البيئة التي تُضبط داخل البيئة المعزولة. تُمرَّر عبر سطر أوامر `hluk` الذي يمكن للعمليات الأخرى على المضيف قراءته، لذا لا تضع فيها أسرارًا.
+- `scratch_mb: int | None` — ذاكرة الضيف بوحدة MiB. الافتراضي هو الحجم الذي تُختبر به صورة بيئة التشغيل.
+- `hluk_args: tuple[str, ...]` — وسائط إضافية لـ `hluk run`، مثل `["--mount", "/data:/data:ro"]`.
+- `timeout: float` — عدد الثواني التي يمكن أن تعمل فيها شيفرة الاستدعاء. الافتراضي `60`.
+- `startup_timeout: float` — عدد الثواني المتاحة للاستدعاء الأول لتنزيل الصورة وحفظ اللقطة. الافتراضي `300`.
+- `max_output_bytes: int` — عدد البايتات المحفوظة من stdout ومن stderr لكل استدعاء. يحتفظ المخرج الأطول ببدايته ونهايته. الافتراضي 1 MiB.
+
+## السماح بالوصول إلى الشبكة
+
+```python Code
+tool = HyperlightPythonTool(net_allow=["api.github.com"])
+```
+
+تُرفض الاتصالات بأي مضيف آخر.
