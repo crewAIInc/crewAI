@@ -3490,3 +3490,119 @@ def test_legacy_experimental_discriminator_is_rejected() -> None:
 
     with pytest.raises(ValidationError):
         AgentExecutor.model_validate({"executor_type": "experimental"})
+
+
+class TestReplanDoesNotRecountHandledFailures:
+    """Failures the planner already saw must not trigger the next replan."""
+
+    @staticmethod
+    def _executor_after_replan(
+        new_statuses: tuple[str, ...] = ("completed", "completed"),
+    ) -> AgentExecutor:
+        from crewai.utilities.planning_types import PlanStep
+        from crewai.utilities.reasoning_handler import (
+            AgentReasoningOutput,
+            ReasoningPlan,
+        )
+
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False, planning_config=None), task=None
+        )
+        executor.state.todos = TodoList(
+            items=[
+                TodoItem(
+                    step_number=1,
+                    description="fetch a",
+                    status="failed",
+                    result="Error: timeout",
+                ),
+                TodoItem(
+                    step_number=2,
+                    description="fetch b",
+                    status="failed",
+                    result="Error: timeout",
+                ),
+                TodoItem(step_number=3, description="report"),
+            ]
+        )
+        output = AgentReasoningOutput(
+            plan=ReasoningPlan(
+                plan="retry with a mirror",
+                steps=[
+                    PlanStep(step_number=4, description="fetch a from mirror"),
+                    PlanStep(step_number=5, description="fetch b from mirror"),
+                ],
+                ready=True,
+            )
+        )
+        executor.state.replan_count += 1
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            reasoning.return_value.handle_agent_reasoning.return_value = output
+            executor._trigger_replan("two fetches failed")
+        for todo, status in zip(
+            executor.state.todos.get_pending_todos(), new_statuses, strict=False
+        ):
+            todo.status = status  # type: ignore[assignment]
+            if status == "failed":
+                todo.result = "Error: mirror down"
+        return executor
+
+    def test_successful_batch_after_a_replan_does_not_replan_again(self):
+        executor = self._executor_after_replan(("completed", "completed"))
+
+        assert executor._should_replan() == (False, "")
+        assert AgentExecutor.after_parallel_execution(executor) == (
+            "all_todos_complete"
+        )
+        assert executor.state.replan_count == 1
+
+    def test_one_new_failure_is_not_enough_to_replan_again(self):
+        executor = self._executor_after_replan(("failed", "completed"))
+
+        assert executor._should_replan() == (False, "")
+
+    def test_two_new_failures_still_trigger_a_replan(self):
+        executor = self._executor_after_replan(("failed", "failed"))
+
+        should_replan, reason = executor._should_replan()
+
+        assert should_replan is True
+        assert "2 failures" in reason
+
+    def test_failures_before_the_first_replan_still_trigger_it(self):
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False, planning_config=None), task=None
+        )
+        executor.state.todos = TodoList(
+            items=[
+                TodoItem(step_number=1, description="a", status="failed"),
+                TodoItem(step_number=2, description="b", status="failed"),
+                TodoItem(step_number=3, description="c"),
+            ]
+        )
+
+        should_replan, reason = executor._should_replan()
+
+        assert should_replan is True
+        assert "2 failures" in reason
+
+    def test_failed_replan_leaves_failures_eligible_for_the_next_replan(self):
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False, planning_config=None), task=None
+        )
+        executor.state.todos = TodoList(
+            items=[
+                TodoItem(step_number=1, description="a", status="failed"),
+                TodoItem(step_number=2, description="b", status="failed"),
+                TodoItem(step_number=3, description="c"),
+            ]
+        )
+        executor.state.replan_count += 1
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            reasoning.return_value.handle_agent_reasoning.side_effect = RuntimeError(
+                "planner down"
+            )
+            executor._trigger_replan("two steps failed")
+
+        assert executor.state.replanned_failure_ids == set()
+        assert executor._should_replan()[0] is True

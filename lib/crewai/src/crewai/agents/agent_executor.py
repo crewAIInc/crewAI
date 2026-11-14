@@ -190,6 +190,10 @@ class AgentExecutorState(BaseModel):
     last_replan_reason: str | None = Field(
         default=None, description="Reason for the last replan, if any"
     )
+    replanned_failure_ids: set[str] = Field(
+        default_factory=set,
+        description="Ids of failed todos a replan has already been given",
+    )
     observations: dict[int, StepObservation] = Field(
         default_factory=dict,
         description="Planner's observation per step (keyed by step_number)",
@@ -2860,6 +2864,30 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     # Dynamic Replanning Methods
     # -------------------------------------------------------------------------
 
+    def _unhandled_failures(self) -> tuple[list[TodoItem], list[TodoItem]]:
+        """Failed todos, and todos with an error result, no replan has seen yet.
+
+        A replan keeps the failed todos as history, so they would otherwise
+        count again and trigger the next replan as soon as it is checked.
+
+        Returns:
+            The failed todos and the todos whose result starts with ``Error:``.
+        """
+        handled = self.state.replanned_failure_ids
+        failed = [
+            todo
+            for todo in self.state.todos.get_failed_todos()
+            if todo.id not in handled
+        ]
+        errored = [
+            todo
+            for todo in self.state.todos.items
+            if todo.result
+            and todo.result.startswith("Error:")
+            and todo.id not in handled
+        ]
+        return failed, errored
+
     def _should_replan(self) -> tuple[bool, str]:
         """Determine if dynamic replanning is needed.
 
@@ -2878,16 +2906,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return False, "Max replan attempts reached"
 
         # Check for failed todos (now actually tracked via "failed" status)
-        failed_todos = self.state.todos.get_failed_todos()
+        failed_todos, error_todos = self._unhandled_failures()
         if len(failed_todos) >= 2:
             return True, f"Multiple todos failed ({len(failed_todos)} failures)"
 
         # Check for todos with error results
-        error_todos = [
-            todo
-            for todo in self.state.todos.items
-            if todo.result and todo.result.startswith("Error:")
-        ]
         if len(error_todos) >= 2:
             return (
                 True,
@@ -2926,6 +2949,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             reason: The reason for triggering the replan.
         """
         self.state.last_replan_reason = reason
+        failed, errored = self._unhandled_failures()
+        seen_failure_ids = {todo.id for todo in failed + errored}
 
         if self.agent.verbose:
             PRINTER.print(
@@ -2988,6 +3013,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     for step in output.plan.steps
                 ]
                 self.state.todos.replace_pending_todos(new_todos)
+                # Mark failures handled only once a new plan replaced the pending steps,
+                # so a failed replan leaves them eligible for the next one.
+                self.state.replanned_failure_ids.update(seen_failure_ids)
 
                 if self.agent.verbose:
                     PRINTER.print(
@@ -3175,6 +3203,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.todos = TodoList()
             self.state.replan_count = 0
             self.state.last_replan_reason = None
+            self.state.replanned_failure_ids = set()
             self.state.observations = {}
             self.state.execution_log = []
 
@@ -3266,6 +3295,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.todos = TodoList()
             self.state.replan_count = 0
             self.state.last_replan_reason = None
+            self.state.replanned_failure_ids = set()
             self.state.observations = {}
             self.state.execution_log = []
 
@@ -3610,6 +3640,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.state.todos = TodoList()
         self.state.replan_count = 0
         self.state.last_replan_reason = None
+        self.state.replanned_failure_ids = set()
         self.state.observations = {}
         self.state.execution_log = []
 
