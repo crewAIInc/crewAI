@@ -1508,6 +1508,35 @@ def test_bedrock_cached_token_alternate_key():
         assert llm._token_usage['cached_prompt_tokens'] == 25
 
 
+def test_bedrock_cache_read_and_write_tokens_are_included_in_prompt_usage():
+    """Bedrock's billed input includes both cache reads and cache writes."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.return_value = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 18911,
+                'cacheReadInputTokens': 18891,
+                'cacheWriteInputTokens': 5,
+            }
+        }
+
+        llm.call("Hello")
+        assert llm._token_usage['prompt_tokens'] == 18906
+        assert llm._token_usage['completion_tokens'] == 5
+        assert llm._token_usage['total_tokens'] == 18911
+        assert llm._token_usage['cached_prompt_tokens'] == 18891
+        assert llm._token_usage['cache_creation_tokens'] == 5
+
+
 def test_bedrock_no_cache_tokens_defaults_to_zero():
     """Test that missing cache token keys default to zero."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
