@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import Flow, HumanFeedbackResult, and_, start, listen, human_feedback
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -780,6 +780,58 @@ class TestFlowResumeWithFeedback:
 
             assert flow.last_human_feedback.outcome == "approved"
             assert flow.result_path == "approved"
+
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resume_routing_replays_method_and_outcome_triggers(
+        self, mock_emit: MagicMock
+    ) -> None:
+        """A resumed route fires direct listeners and method/outcome joins."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class TestFlow(Flow):
+                method_listener_ran: bool = False
+                outcome_listener_ran: bool = False
+                join_listener_ran: bool = False
+
+                @start()
+                @human_feedback(message="Approve?", emit=["approved", "rejected"])
+                def review(self):
+                    return "content"
+
+                @listen(review)
+                def remember_review(self):
+                    self.method_listener_ran = True
+
+                @listen("approved")
+                def handle_approved(self):
+                    self.outcome_listener_ran = True
+
+                @listen(and_(review, "approved"))
+                def handle_join(self):
+                    self.join_listener_ran = True
+
+            context = PendingFeedbackContext(
+                flow_id="route-trigger-test-123",
+                flow_class="test.TestFlow",
+                method_name="review",
+                method_output="content",
+                message="Approve?",
+                emit=["approved", "rejected"],
+            )
+            persistence.save_pending_feedback(
+                flow_uuid=context.flow_id,
+                context=context,
+                state_data={"id": context.flow_id},
+            )
+
+            flow = TestFlow.from_pending(context.flow_id, persistence)
+            with patch.object(flow, "_collapse_to_outcome", return_value="approved"):
+                flow.resume("looks good")
+
+            assert flow.method_listener_ran
+            assert flow.outcome_listener_ran
+            assert flow.join_listener_ran
 
     @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_terminal_resume_with_emit_returns_method_output(
