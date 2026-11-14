@@ -307,6 +307,20 @@ class Task(BaseModel):
         default=None,
         description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
     )
+    max_execution_budget_usd: float | None = Field(
+        default=None,
+        description="Maximum execution budget in USD for this task. Execution halts with SpendLimitExceeded if reached.",
+    )
+    max_task_iterations: int | None = Field(
+        default=None,
+        description="Maximum iterations allowed for this task. Execution halts with IterationLimitExceeded if reached.",
+    )
+    pre_task_callback: SerializableCallable | None = Field(
+        default=None,
+        description="Pre-flight callback hook executed before task execution. Receives (task, agent, context). Returning False halts execution with PreTaskAttestationError.",
+    )
+    _start_token_usage: Any | None = PrivateAttr(default=None)
+    _crew: Any | None = PrivateAttr(default=None)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrails: list[GuardrailCallable] = PrivateAttr(
         default_factory=list,
@@ -646,6 +660,20 @@ class Task(BaseModel):
             return None
         return (self.end_time - self.start_time).total_seconds()
 
+    @property
+    def crew(self) -> Any:
+        """Get the crew associated with this task."""
+        if self._crew is not None:
+            return self._crew
+        if self.agent and hasattr(self.agent, "crew"):
+            return self.agent.crew
+        return None
+
+    @crew.setter
+    def crew(self, value: Any) -> None:
+        """Set the crew associated with this task."""
+        self._crew = value
+
     def execute_async(
         self,
         agent: BaseAgent | None = None,
@@ -730,6 +758,16 @@ class Task(BaseModel):
             dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
             context = pre_step_ctx.payload
 
+            # Pre-flight task attestation hook
+            await self._ainvoke_pre_task_callback(agent, context)
+
+            if agent and hasattr(agent, "llm") and hasattr(agent.llm, "get_token_usage_summary"):
+                self._start_token_usage = agent.llm.get_token_usage_summary()
+            elif agent and hasattr(agent, "_token_process"):
+                self._start_token_usage = agent._token_process.get_summary()
+            else:
+                self._start_token_usage = None
+
             with tool_failure_collector() as execution_failures:
                 result = await agent.aexecute_task(
                     task=self,
@@ -738,6 +776,19 @@ class Task(BaseModel):
                 )
 
             self._post_agent_execution(agent)
+
+            if self.max_execution_budget_usd is not None:
+                task_spend = self.calculate_spend_usd(agent)
+                if task_spend > self.max_execution_budget_usd:
+                    from crewai.utilities.exceptions.task_security_exceptions import (
+                        SpendLimitExceeded,
+                    )
+
+                    raise SpendLimitExceeded(
+                        f"Task '{self.name or self.description}' spend of ${task_spend:.4f} exceeded maximum budget of ${self.max_execution_budget_usd:.4f}",
+                        current_spend=task_spend,
+                        max_budget=self.max_execution_budget_usd,
+                    )
 
             if isinstance(result, BaseModel):
                 raw = result.model_dump_json()
@@ -889,6 +940,16 @@ class Task(BaseModel):
             dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
             context = pre_step_ctx.payload
 
+            # Pre-flight task attestation hook
+            self._invoke_pre_task_callback(agent, context)
+
+            if agent and hasattr(agent, "llm") and hasattr(agent.llm, "get_token_usage_summary"):
+                self._start_token_usage = agent.llm.get_token_usage_summary()
+            elif agent and hasattr(agent, "_token_process"):
+                self._start_token_usage = agent._token_process.get_summary()
+            else:
+                self._start_token_usage = None
+
             with tool_failure_collector() as execution_failures:
                 result = agent.execute_task(
                     task=self,
@@ -897,6 +958,19 @@ class Task(BaseModel):
                 )
 
             self._post_agent_execution(agent)
+
+            if self.max_execution_budget_usd is not None:
+                task_spend = self.calculate_spend_usd(agent)
+                if task_spend > self.max_execution_budget_usd:
+                    from crewai.utilities.exceptions.task_security_exceptions import (
+                        SpendLimitExceeded,
+                    )
+
+                    raise SpendLimitExceeded(
+                        f"Task '{self.name or self.description}' spend of ${task_spend:.4f} exceeded maximum budget of ${self.max_execution_budget_usd:.4f}",
+                        current_spend=task_spend,
+                        max_budget=self.max_execution_budget_usd,
+                    )
 
             if isinstance(result, BaseModel):
                 raw = result.model_dump_json()
@@ -1419,6 +1493,146 @@ Follow these guidelines:
             Fingerprint: The fingerprint of the task
         """
         return self.security_config.fingerprint
+
+    def calculate_spend_usd(self, agent: BaseAgent | None = None) -> float:
+        """Calculate the USD spend accrued during this task's execution."""
+        from crewai.utilities.cost_calculator import calculate_token_cost
+
+        executing_agent = agent or self.agent
+        if not executing_agent:
+            return 0.0
+
+        model = None
+        current_usage = None
+        if hasattr(executing_agent, "llm") and hasattr(
+            executing_agent.llm, "get_token_usage_summary"
+        ):
+            current_usage = executing_agent.llm.get_token_usage_summary()
+            model = getattr(executing_agent.llm, "model", None)
+        elif hasattr(executing_agent, "_token_process"):
+            current_usage = executing_agent._token_process.get_summary()
+
+        if current_usage is None:
+            return 0.0
+
+        if self._start_token_usage is not None:
+            task_usage = current_usage.delta_since(self._start_token_usage)
+        else:
+            task_usage = current_usage
+
+        return calculate_token_cost(task_usage, model)
+
+    def _invoke_pre_task_callback(
+        self, agent: BaseAgent | None, context: str | None
+    ) -> None:
+        """Invoke pre-flight task attestation hooks on task and crew."""
+        from crewai.utilities.exceptions.task_security_exceptions import (
+            PreTaskAttestationError,
+        )
+
+        context_data = {
+            "context": context,
+            "task_id": str(self.id),
+            "task_name": self.name,
+            "description": self.description,
+            "expected_output": self.expected_output,
+        }
+
+        # 1. Task-level pre_task_callback
+        if self.pre_task_callback is not None:
+            res = self._execute_callback_flexibly(
+                self.pre_task_callback, agent, context_data
+            )
+            if res is False:
+                raise PreTaskAttestationError(
+                    f"Pre-flight task attestation failed for task '{self.name or self.description}'",
+                    task=self,
+                    agent=agent,
+                )
+
+        # 2. Crew-level pre_task_callback
+        crew = getattr(agent, "crew", None) or getattr(self, "crew", None)
+        if (
+            crew
+            and getattr(crew, "pre_task_callback", None) is not None
+            and crew.pre_task_callback != self.pre_task_callback
+        ):
+            res = self._execute_callback_flexibly(
+                crew.pre_task_callback, agent, context_data
+            )
+            if res is False:
+                raise PreTaskAttestationError(
+                    f"Pre-flight crew task attestation failed for task '{self.name or self.description}'",
+                    task=self,
+                    agent=agent,
+                )
+
+    async def _ainvoke_pre_task_callback(
+        self, agent: BaseAgent | None, context: str | None
+    ) -> None:
+        """Invoke pre-flight task attestation hooks asynchronously."""
+        from crewai.utilities.exceptions.task_security_exceptions import (
+            PreTaskAttestationError,
+        )
+
+        context_data = {
+            "context": context,
+            "task_id": str(self.id),
+            "task_name": self.name,
+            "description": self.description,
+            "expected_output": self.expected_output,
+        }
+
+        callbacks: list[tuple[Any, str]] = []
+        if self.pre_task_callback is not None:
+            callbacks.append((self.pre_task_callback, "task"))
+
+        crew = getattr(agent, "crew", None) or getattr(self, "crew", None)
+        if (
+            crew
+            and getattr(crew, "pre_task_callback", None) is not None
+            and crew.pre_task_callback != self.pre_task_callback
+        ):
+            callbacks.append((crew.pre_task_callback, "crew"))
+
+        for cb, scope in callbacks:
+            res = await self._aexecute_callback_flexibly(cb, agent, context_data)
+            if res is False:
+                raise PreTaskAttestationError(
+                    f"Pre-flight {scope} task attestation failed for task '{self.name or self.description}'",
+                    task=self,
+                    agent=agent,
+                )
+
+    def _execute_callback_flexibly(
+        self, cb: Any, agent: BaseAgent | None, context_data: dict[str, Any]
+    ) -> Any:
+        try:
+            return cb(self, agent, context_data)
+        except TypeError:
+            try:
+                return cb(self, agent)
+            except TypeError:
+                return cb(self)
+
+    async def _aexecute_callback_flexibly(
+        self, cb: Any, agent: BaseAgent | None, context_data: dict[str, Any]
+    ) -> Any:
+        import inspect
+
+        if inspect.iscoroutinefunction(cb):
+            try:
+                return await cb(self, agent, context_data)
+            except TypeError:
+                try:
+                    return await cb(self, agent)
+                except TypeError:
+                    return await cb(self)
+        else:
+            res = self._execute_callback_flexibly(cb, agent, context_data)
+            if inspect.isawaitable(res):
+                return await res
+            return res
 
     def _invoke_guardrail_function(
         self,

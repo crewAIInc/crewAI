@@ -9,6 +9,17 @@ This module provides security-related functionality for CrewAI, including:
 
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
+from crewai.utilities.exceptions.task_security_exceptions import (
+    IterationLimitExceeded,
+    PreTaskAttestationError,
+    SpendLimitExceeded,
+)
 
 
-__all__ = ["Fingerprint", "SecurityConfig"]
+__all__ = [
+    "Fingerprint",
+    "IterationLimitExceeded",
+    "PreTaskAttestationError",
+    "SecurityConfig",
+    "SpendLimitExceeded",
+]
