@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
@@ -1916,6 +1917,41 @@ class BedrockCompletion(BaseLLM):
             from_agent,
         )
 
+    @staticmethod
+    def _convert_content_blocks(content: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Translate OpenAI text and inline images, preserving native Converse blocks."""
+        converted: list[dict[str, Any]] = []
+        for block in content:
+            if block.get("type") == "text":
+                converted.append({"text": block["text"]})
+            elif block.get("type") == "image_url":
+                image_info = block.get("image_url", {})
+                url = image_info.get("url", "") if isinstance(image_info, dict) else ""
+                if (
+                    isinstance(url, str)
+                    and url.startswith("data:image/")
+                    and ";base64," in url
+                ):
+                    header, data = url.split(";base64,", 1)
+                    image_format = header.removeprefix("data:image/")
+                    if image_format == "jpg":
+                        image_format = "jpeg"
+                    converted.append(
+                        {
+                            "image": {
+                                "format": image_format,
+                                "source": {
+                                    "bytes": base64.b64decode(data, validate=True)
+                                },
+                            }
+                        }
+                    )
+                else:
+                    converted.append(block)
+            else:
+                converted.append(block)
+        return converted
+
     def _format_messages_for_converse(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -1982,7 +2018,12 @@ class BedrockCompletion(BaseLLM):
                     )
                 else:
                     if isinstance(content, list):
-                        converse_messages.append({"role": role, "content": content})
+                        converse_messages.append(
+                            {
+                                "role": role,
+                                "content": self._convert_content_blocks(content),
+                            }
+                        )
                     else:
                         text_content = content if content else ""
                         converse_messages.append(
