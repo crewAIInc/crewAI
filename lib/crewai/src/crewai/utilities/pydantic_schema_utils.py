@@ -98,6 +98,11 @@ class ModelDescription(TypedDict):
     json_schema: JsonSchemaInfo
 
 
+def _decode_ref_token(token: str) -> str:
+    """Decode a JSON Pointer token in RFC 6901 order, preserving literal ``~1``."""
+    return token.replace("~1", "/").replace("~0", "~")
+
+
 def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
     """Recursively resolve all local $refs in the given JSON Schema using $defs as the source.
 
@@ -118,7 +123,7 @@ def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
         if isinstance(node, dict):
             ref = node.get("$ref")
             if isinstance(ref, str) and ref.startswith("#/$defs/"):
-                def_name = ref.replace("#/$defs/", "")
+                def_name = _decode_ref_token(ref[len("#/$defs/") :])
                 if def_name not in defs:
                     raise KeyError(f"Definition '{def_name}' not found in $defs.")
                 if def_name in expanding:
@@ -785,7 +790,7 @@ def _inline_top_level_ref(schema: dict[str, Any]) -> dict[str, Any]:
     schema = deepcopy(schema)
     ref = schema.get("$ref")
     if isinstance(ref, str) and ref.startswith("#/$defs/"):
-        def_name = ref[len("#/$defs/") :]
+        def_name = _decode_ref_token(ref[len("#/$defs/") :])
         defs = schema.get("$defs", {})
         if def_name in defs:
             resolved: dict[str, Any] = deepcopy(defs[def_name])
@@ -1096,7 +1101,7 @@ def _resolve_ref(ref: str, root_schema: dict[str, Any]) -> dict[str, Any]:
         ref_schema = root_schema
         start_idx = 1
     for path in ref_path[start_idx:]:
-        ref_schema = cast(dict[str, Any], ref_schema[path])
+        ref_schema = cast(dict[str, Any], ref_schema[_decode_ref_token(path)])
     return ref_schema
 
 
