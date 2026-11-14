@@ -215,19 +215,25 @@ If your LLM doesn't support stop words natively:
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
-    
-    # Manually truncate at stop words
+
+    # Manually truncate at the earliest stop word, whatever the list order
     if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
-    
+        positions = [content.find(stop_word) for stop_word in self.stop]
+        positions = [position for position in positions if position != -1]
+        if positions:
+            content = content[: min(positions)].strip()
+
     return content
 
 def supports_stop_words(self) -> bool:
     return False  # Tell CrewAI we handle stop words manually
 ```
+
+The cut goes at the **earliest** match, not at the first entry in `self.stop`, so
+reordering the list does not change the result: `self.stop = ["LATE", "EARLY"]` and
+`self.stop = ["EARLY", "LATE"]` both turn `"hello EARLY middle LATE tail"` into
+`"hello"`. `BaseLLM._apply_stop_words` behaves the same way and also trims the
+whitespace left before the stop word, which is why the example calls `.strip()`.
 
 ## Function Calling
 

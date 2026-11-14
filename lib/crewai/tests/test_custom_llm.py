@@ -374,3 +374,62 @@ def test_timeout_handling_llm():
     with pytest.raises(TimeoutError, match="LLM request failed after 2 attempts"):
         llm.call("Test message")
     assert len(llm.calls) == 2  # Initial call + failed retry attempt
+
+
+class ManualStopWordLLM(BaseLLM):
+    """The manual stop-word fallback documented in ``docs/edge/en/learn/custom-llm.mdx``.
+
+    Kept next to the guide's example so the documented snippet and its check
+    cannot drift apart: the truncation below is the one the guide shows.
+    """
+
+    def __init__(self, response: str, stop: List[str]):
+        super().__init__(model="test-model")
+        self.response = response
+        self.stop = stop
+
+    def call(
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        tools: Optional[List[dict]] = None,
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        content = self.response
+
+        # Manually truncate at the earliest stop word, whatever the list order
+        if self.stop:
+            positions = [content.find(stop_word) for stop_word in self.stop]
+            positions = [position for position in positions if position != -1]
+            if positions:
+                content = content[: min(positions)].strip()
+
+        return content
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 8192
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
+
+
+@pytest.mark.parametrize("stop", [["LATE", "EARLY"], ["EARLY", "LATE"]])
+def test_documented_stop_word_fallback_stops_at_the_earliest_match(stop: List[str]) -> None:
+    """Both stop-list orders cut at EARLY, the earliest match in the response."""
+    llm = ManualStopWordLLM("hello EARLY middle LATE tail", stop)
+    assert llm.call("Test message") == "hello"
+
+
+def test_documented_stop_word_fallback_leaves_unmatched_responses_alone() -> None:
+    """A response with no stop word is returned unchanged."""
+    llm = ManualStopWordLLM("nothing to cut here", ["LATE", "EARLY"])
+    assert llm.call("Test message") == "nothing to cut here"
