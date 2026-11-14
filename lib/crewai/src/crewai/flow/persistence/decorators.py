@@ -53,11 +53,16 @@ LOG_MESSAGES: Final[dict[str, str]] = {
 }
 
 
+class _MissingFlowStateError(ValueError):
+    """Signal that a flow has no state without conflating validation errors."""
+
+
 def _stamp_persistence_metadata(
     target: Any,
     persistence: FlowPersistence,
     verbose: bool,
 ) -> None:
+    """Attach persistence configuration metadata to a flow target."""
     target.__flow_persistence_config__ = SimpleNamespace(
         persistence=persistence,
         verbose=verbose,
@@ -89,12 +94,11 @@ class PersistenceDecorator:
         Raises:
             ValueError: If flow has no state or state lacks an ID
             RuntimeError: If state persistence fails
-            AttributeError: If flow instance lacks required state attributes
         """
         try:
             state = getattr(flow_instance, "state", None)
             if state is None:
-                raise ValueError("Flow instance has no state")
+                raise _MissingFlowStateError
 
             flow_uuid: str | None = None
             if isinstance(state, dict):
@@ -130,7 +134,7 @@ class PersistenceDecorator:
                     PRINTER.print(error_msg, color="red")
                 logger.error(error_msg)
                 raise RuntimeError(f"State persistence failed: {e!s}") from e
-        except AttributeError as e:
+        except (_MissingFlowStateError, AttributeError) as e:
             error_msg = LOG_MESSAGES["state_missing"]
             if verbose:
                 PRINTER.print(error_msg, color="red")
