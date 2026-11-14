@@ -65,6 +65,9 @@ crew = Crew(
 | **Guardrail** _(optional)_             | `guardrail`             | `Optional[Callable]`        | Function to validate task output before proceeding to next task.                                                |
 | **Guardrails** _(optional)_            | `guardrails`            | `Optional[List[Callable]]`  | List of guardrails to validate task output before proceeding to next task.                                      |
 | **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`             | Maximum number of retries when guardrail validation fails. Defaults to 3.                                       |
+| **Pre Task Callback** _(optional)_     | `pre_task_callback`     | `Optional[Callable]`        | Guard hook executed before task execution for attestation. Defaults to None.                                    |
+| **Max Execution Budget USD** _(optional)_ | `max_execution_budget_usd` | `Optional[float]`       | Maximum dollar budget for the task execution. Raises SpendLimitExceeded if reached.                             |
+| **Max Task Iterations** _(optional)_   | `max_task_iterations`   | `Optional[int]`             | Maximum iterations allowed for the task execution. Raises IterationLimitExceeded if reached.                    |
 
 <Note type="warning" title="Deprecated: max_retries">
   The task attribute `max_retries` is deprecated and will be removed in v1.0.0.

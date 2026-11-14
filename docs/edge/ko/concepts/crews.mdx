@@ -34,6 +34,9 @@ crewAI에서 crew는 일련의 작업을 달성하기 위해 함께 협력하는
 | **Planning LLM** *(선택사항)*          | `planning_llm`         | 계획 과정에서 AgentPlanner가 사용하는 언어 모델.                                                                                                                                                                 |
 | **Knowledge Sources** _(선택사항)_     | `knowledge_sources`    | crew 수준에서 사용 가능한 지식 소스. 모든 agent가 접근 가능.                                                                                                                                                             |
 | **Stream** _(선택사항)_                | `stream`               | 스트리밍 출력을 활성화하여 crew 실행 중 실시간 업데이트를 받을 수 있습니다. 청크를 반복할 수 있는 `CrewStreamingOutput` 객체를 반환합니다. 기본값은 `False`.                                                                    |
+| **사전 태스크 콜백** _(선택사항)_      | `pre_task_callback`    | 각 태스크 전에 실행되는 플러그형 가드 훅 `Callable[[Task, Agent, Dict[str, Any]], bool]`입니다. `False`를 반환하거나 실패하면 `PreTaskAttestationError`를 발생시킵니다. 기본값은 `None`.                                      |
+| **최대 실행 예산 USD** _(선택사항)_    | `max_execution_budget_usd` | 크루 실행 전반에 걸쳐 허용되는 최대 달러 지출입니다. 초과 시 `SpendLimitExceeded`를 발생시킵니다. 기본값은 `None`.                                                                                                          |
+| **최대 태스크 반복 횟수** _(선택사항)_ | `max_task_iterations`  | 크루 내 태스크에 적용되는 기본 최대 반복 횟수 상한입니다. 도달 시 `IterationLimitExceeded`를 발생시킵니다. 기본값은 `None`.                                                                                                 |
 
 <Tip>
 **Crew Max RPM**: `max_rpm` 속성은 crew가 분당 처리할 수 있는 최대 요청 수를 설정하며, 개별 agent의 `max_rpm` 설정을 crew 단위로 지정할 경우 오버라이드합니다.

@@ -267,6 +267,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _deferred_file_reader: Any = PrivateAttr(default=None)
     _deferred_file_reader_added_by_executor: bool = PrivateAttr(default=False)
     _deferred_file_aliases: list[str] = PrivateAttr(default_factory=list)
+    _task_start_usage: Any | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -2516,6 +2517,23 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
+    def _calculate_current_task_spend(self) -> float:
+        """Calculate spend accrued during the active task invocation."""
+        from crewai.utilities.cost_calculator import calculate_token_cost
+
+        if not self.llm:
+            return 0.0
+
+        model = getattr(self.llm, "model", None)
+        if hasattr(self.llm, "get_token_usage_summary"):
+            current = self.llm.get_token_usage_summary()
+            if hasattr(self, "_task_start_usage") and self._task_start_usage is not None:
+                usage = current.delta_since(self._task_start_usage)
+            else:
+                usage = current
+            return calculate_token_cost(usage, model)
+        return 0.0
+
     @router(or_(initialize_reasoning, continue_iteration))
     def check_max_iterations(
         self,
@@ -2523,6 +2541,53 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         "force_final_answer", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
+        # Enforce deterministic iteration ceilings
+        max_task_iters = None
+        if self.task and getattr(self.task, "max_task_iterations", None) is not None:
+            max_task_iters = self.task.max_task_iterations
+        elif self.crew and getattr(self.crew, "max_task_iterations", None) is not None:
+            max_task_iters = self.crew.max_task_iterations
+
+        if max_task_iters is not None and self.state.iterations >= max_task_iters:
+            from crewai.utilities.exceptions.task_security_exceptions import (
+                IterationLimitExceeded,
+            )
+
+            task_desc = self.task.description if self.task else "unknown"
+            raise IterationLimitExceeded(
+                f"Task '{task_desc}' reached maximum iteration ceiling of {max_task_iters} (current: {self.state.iterations}).",
+                iterations=self.state.iterations,
+                max_iterations=max_task_iters,
+            )
+
+        # Enforce deterministic spend ceilings
+        if self.task and getattr(self.task, "max_execution_budget_usd", None) is not None:
+            from crewai.utilities.exceptions.task_security_exceptions import (
+                SpendLimitExceeded,
+            )
+
+            task_spend = self._calculate_current_task_spend()
+            if task_spend > self.task.max_execution_budget_usd:
+                raise SpendLimitExceeded(
+                    f"Task '{self.task.description}' spend of ${task_spend:.4f} exceeded budget ceiling of ${self.task.max_execution_budget_usd:.4f}.",
+                    current_spend=task_spend,
+                    max_budget=self.task.max_execution_budget_usd,
+                )
+
+        if self.crew and getattr(self.crew, "max_execution_budget_usd", None) is not None:
+            from crewai.utilities.exceptions.task_security_exceptions import (
+                SpendLimitExceeded,
+            )
+
+            if hasattr(self.crew, "calculate_spend_usd"):
+                crew_spend = self.crew.calculate_spend_usd()
+                if crew_spend > self.crew.max_execution_budget_usd:
+                    raise SpendLimitExceeded(
+                        f"Crew execution spend of ${crew_spend:.4f} exceeded budget ceiling of ${self.crew.max_execution_budget_usd:.4f}.",
+                        current_spend=crew_spend,
+                        max_budget=self.crew.max_execution_budget_usd,
+                    )
+
         if has_reached_max_iterations(
             self.state.iterations, self.max_iter
         ) or repeated_tool_call_limit_reached(self._tool_call_counts):
@@ -3179,6 +3244,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.execution_log = []
 
             self._kickoff_input = inputs.get("input", "")
+            if self.llm and hasattr(self.llm, "get_token_usage_summary"):
+                self._task_start_usage = self.llm.get_token_usage_summary()
+            else:
+                self._task_start_usage = None
 
             if self.llm is None or self.prompt is None:
                 raise RuntimeError(
@@ -3270,6 +3339,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.execution_log = []
 
             self._kickoff_input = inputs.get("input", "")
+            if self.llm and hasattr(self.llm, "get_token_usage_summary"):
+                self._task_start_usage = self.llm.get_token_usage_summary()
+            else:
+                self._task_start_usage = None
 
             if self.llm is None or self.prompt is None:
                 raise RuntimeError(

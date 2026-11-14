@@ -306,6 +306,18 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Callback to be executed after each task for all agents execution.",
     )
+    pre_task_callback: SerializableCallable | None = Field(
+        default=None,
+        description="Pre-flight callback hook executed before each task for all agents execution. Receives (task, agent, context). Returning False halts execution with PreTaskAttestationError.",
+    )
+    max_execution_budget_usd: float | None = Field(
+        default=None,
+        description="Maximum execution budget in USD for the crew execution. Execution halts with SpendLimitExceeded if reached.",
+    )
+    max_task_iterations: int | None = Field(
+        default=None,
+        description="Maximum iterations allowed per task in this crew. Execution halts with IterationLimitExceeded if reached.",
+    )
     before_kickoff_callbacks: list[SerializableCallable] = Field(
         default_factory=list,
         description=(
@@ -660,6 +672,11 @@ class Crew(FlowTrackable, BaseModel):
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)  # type: ignore[assignment]
+
+        for agent in self.agents:
+            agent.crew = self
+        for task in self.tasks:
+            task.crew = self
 
         return self
 
@@ -1387,6 +1404,19 @@ class Crew(FlowTrackable, BaseModel):
         last_sync_output: TaskOutput | None = None
 
         for task_index, task in enumerate(tasks):
+            if self.max_execution_budget_usd is not None:
+                current_spend = self.calculate_spend_usd()
+                if current_spend > self.max_execution_budget_usd:
+                    from crewai.utilities.exceptions.task_security_exceptions import (
+                        SpendLimitExceeded,
+                    )
+
+                    raise SpendLimitExceeded(
+                        f"Crew execution spend of ${current_spend:.4f} exceeded maximum budget of ${self.max_execution_budget_usd:.4f}",
+                        current_spend=current_spend,
+                        max_budget=self.max_execution_budget_usd,
+                    )
+
             exec_data, task_outputs, last_sync_output = prepare_task_execution(
                 self, task, task_index, start_index, task_outputs, last_sync_output
             )
@@ -1429,6 +1459,19 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+
+                if self.max_execution_budget_usd is not None:
+                    current_spend = self.calculate_spend_usd()
+                    if current_spend > self.max_execution_budget_usd:
+                        from crewai.utilities.exceptions.task_security_exceptions import (
+                            SpendLimitExceeded,
+                        )
+
+                        raise SpendLimitExceeded(
+                            f"Crew execution spend of ${current_spend:.4f} exceeded maximum budget of ${self.max_execution_budget_usd:.4f}",
+                            current_spend=current_spend,
+                            max_budget=self.max_execution_budget_usd,
+                        )
 
         if pending_tasks:
             task_outputs.extend(
@@ -1608,6 +1651,19 @@ class Crew(FlowTrackable, BaseModel):
         last_sync_output: TaskOutput | None = None
 
         for task_index, task in enumerate(tasks):
+            if self.max_execution_budget_usd is not None:
+                current_spend = self.calculate_spend_usd()
+                if current_spend > self.max_execution_budget_usd:
+                    from crewai.utilities.exceptions.task_security_exceptions import (
+                        SpendLimitExceeded,
+                    )
+
+                    raise SpendLimitExceeded(
+                        f"Crew execution spend of ${current_spend:.4f} exceeded maximum budget of ${self.max_execution_budget_usd:.4f}",
+                        current_spend=current_spend,
+                        max_budget=self.max_execution_budget_usd,
+                    )
+
             exec_data, task_outputs, last_sync_output = prepare_task_execution(
                 self, task, task_index, start_index, task_outputs, last_sync_output
             )
@@ -1648,6 +1704,19 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+
+                if self.max_execution_budget_usd is not None:
+                    current_spend = self.calculate_spend_usd()
+                    if current_spend > self.max_execution_budget_usd:
+                        from crewai.utilities.exceptions.task_security_exceptions import (
+                            SpendLimitExceeded,
+                        )
+
+                        raise SpendLimitExceeded(
+                            f"Crew execution spend of ${current_spend:.4f} exceeded maximum budget of ${self.max_execution_budget_usd:.4f}",
+                            current_spend=current_spend,
+                            max_budget=self.max_execution_budget_usd,
+                        )
 
         if futures:
             task_outputs.extend(self._process_async_tasks(futures, was_replayed))
@@ -2349,6 +2418,37 @@ class Crew(FlowTrackable, BaseModel):
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
+
+    def calculate_spend_usd(self) -> float:
+        """Calculates and returns cumulative USD spend across all crew agents."""
+        from crewai.utilities.cost_calculator import calculate_token_cost
+
+        total_spend = 0.0
+        for agent in self.agents:
+            model = (
+                getattr(agent.llm, "model", None) if hasattr(agent, "llm") else None
+            )
+            if isinstance(agent.llm, BaseLLM):
+                usage = agent.llm.get_token_usage_summary()
+                total_spend += calculate_token_cost(usage, model)
+            elif hasattr(agent, "_token_process"):
+                usage = agent._token_process.get_summary()
+                total_spend += calculate_token_cost(usage, model)
+
+        if self.manager_agent:
+            model = (
+                getattr(self.manager_agent.llm, "model", None)
+                if hasattr(self.manager_agent, "llm")
+                else None
+            )
+            if isinstance(self.manager_agent.llm, BaseLLM):
+                usage = self.manager_agent.llm.get_token_usage_summary()
+                total_spend += calculate_token_cost(usage, model)
+            elif hasattr(self.manager_agent, "_token_process"):
+                usage = self.manager_agent._token_process.get_summary()
+                total_spend += calculate_token_cost(usage, model)
+
+        return total_spend
 
     def test(
         self,
