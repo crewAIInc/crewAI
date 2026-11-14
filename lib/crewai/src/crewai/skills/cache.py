@@ -11,6 +11,7 @@ import json
 import logging
 from pathlib import Path
 import tarfile
+from tempfile import TemporaryDirectory
 from typing import TypedDict
 import zipfile
 
@@ -86,6 +87,7 @@ class SkillCacheManager:
         """Unpack an archive into the cache and write metadata.
 
         Uses tarfile with filter='data' for path-traversal protection.
+        Prepare the archive and metadata before replacing an existing entry.
 
         Args:
             org: Organisation slug.
@@ -97,33 +99,37 @@ class SkillCacheManager:
             Path to the stored skill directory.
         """
         skill_dir = self._skill_dir(org, name)
-        if skill_dir.exists():
-            import shutil
-
-            shutil.rmtree(skill_dir)
-        skill_dir.mkdir(parents=True, exist_ok=True)
+        skill_dir.parent.mkdir(parents=True, exist_ok=True)
 
         import io
 
-        try:
-            with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
-                try:
-                    tf.extractall(skill_dir, filter="data")
-                except TypeError:
-                    _safe_extractall(tf, skill_dir)
-        except tarfile.TarError:
-            with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
-                _safe_extract_zip(zf, skill_dir)
+        with TemporaryDirectory(dir=skill_dir.parent) as temporary_dir:
+            staged = Path(temporary_dir) / "skill"
+            staged.mkdir()
+            try:
+                with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
+                    try:
+                        tf.extractall(staged, filter="data")
+                    except TypeError:
+                        _safe_extractall(tf, staged)
+            except tarfile.TarError:
+                with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
+                    _safe_extract_zip(zf, staged)
 
-        meta: SkillMetadata = {
-            "org": org,
-            "name": name,
-            "version": version,
-            "installed_at": datetime.now(tz=timezone.utc).isoformat(),
-        }
-        (skill_dir / _META_FILENAME).write_text(
-            json.dumps(meta, indent=2), encoding="utf-8"
-        )
+            meta: SkillMetadata = {
+                "org": org,
+                "name": name,
+                "version": version,
+                "installed_at": datetime.now(tz=timezone.utc).isoformat(),
+            }
+            (staged / _META_FILENAME).write_text(
+                json.dumps(meta, indent=2), encoding="utf-8"
+            )
+            if skill_dir.exists():
+                import shutil
+
+                shutil.rmtree(skill_dir)
+            staged.replace(skill_dir)
         return skill_dir
 
     def list_cached(self) -> list[SkillMetadata]:
