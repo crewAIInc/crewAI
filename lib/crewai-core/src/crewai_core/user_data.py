@@ -36,7 +36,14 @@ def _load_user_data() -> dict[str, Any]:
     p = _user_data_file()
     if p.exists():
         try:
-            return cast(dict[str, Any], json.loads(p.read_text()))
+            data = json.loads(p.read_text())
+            if not isinstance(data, dict):
+                logger.warning(
+                    "Failed to load user data: expected a JSON object, got %s",
+                    type(data).__name__,
+                )
+                return {}
+            return cast(dict[str, Any], data)
         except (json.JSONDecodeError, OSError, PermissionError) as e:
             logger.warning("Failed to load user data: %s", e)
     return {}
