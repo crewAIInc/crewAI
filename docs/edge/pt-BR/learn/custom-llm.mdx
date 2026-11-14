@@ -70,11 +70,34 @@ O CrewAI adiciona automaticamente `"\nObservation:"` como stop word para control
 # (não traduzir blocos de código)
 ```
 
-Se o seu LLM não suporta stop words nativamente:
+Se o seu LLM não suporta stop words nativamente, trunque a resposta com o helper
+herdado `BaseLLM._apply_stop_words()`:
 
 ```python
-# (não traduzir blocos de código)
+def call(self, messages, tools=None, callbacks=None, available_functions=None):
+    response = self._make_api_call(messages, tools)
+    content = response["choices"][0]["message"]["content"]
+    
+    # Truncate at the stop word that appears earliest in the response
+    return self._apply_stop_words(content)
+
+def supports_stop_words(self) -> bool:
+    return False  # Tell CrewAI we handle stop words manually
 ```
+
+O helper corta na stop word que aparece mais cedo no texto da resposta, portanto o
+resultado nunca depende da ordem de `self.stop`. Para a resposta
+`"hello EARLY middle LATE tail"`, tanto `["LATE", "EARLY"]` quanto
+`["EARLY", "LATE"]` retornam `"hello"` — o texto truncado passa por `.strip()`, de
+modo que o espaço antes de `EARLY` é removido intencionalmente. Uma resposta que não
+contém nenhuma das stop words é retornada sem alterações.
+
+<Warning>
+Não trunque na primeira *entrada* de `self.stop` que estiver presente (por exemplo,
+usando `content.split(stop_word)[0]` em um laço que para na primeira ocorrência
+encontrada). Isso mantém o texto que o modelo emitiu depois de uma stop word listada
+mais adiante, e a saída muda quando a lista de stop words é reordenada.
+</Warning>
 
 ## Chamada de Funções
 
