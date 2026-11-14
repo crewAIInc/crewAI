@@ -95,3 +95,63 @@ def test_json_log_appends_serializable_metadata(tmp_path: Path) -> None:
     assert records[0]["metadata"] == {"count": 1}
     assert records[1]["metadata"] == {"labels": ["a", "b"]}
     assert path.read_text(encoding="utf-8").endswith("\n")
+
+@pytest.mark.parametrize(
+    "corrupt_content",
+    [
+        '{"already": "an object"}',
+        '"bare string"',
+        "42",
+        "true",
+        "null",
+    ],
+)
+def test_json_log_recovers_from_non_list_json(
+    tmp_path: Path, corrupt_content: str
+) -> None:
+    path = tmp_path / "logs.json"
+    path.write_text(corrupt_content, encoding="utf-8")
+
+    handler = FileHandler(str(path))
+    handler.log(message="recovered record")
+
+    records = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(records, list)
+    assert len(records) == 1
+    assert records[0]["message"] == "recovered record"
+
+    handler.log(message="second record")
+    records = json.loads(path.read_text(encoding="utf-8"))
+    assert [r["message"] for r in records] == ["recovered record", "second record"]
+
+def test_json_log_warns_on_non_list_and_decode_error(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    import logging
+
+    # 1. Non-list JSON warning
+    path = tmp_path / "non_list.json"
+    path.write_text('{"already": "an object"}', encoding="utf-8")
+    handler = FileHandler(str(path))
+    with caplog.at_level(logging.WARNING):
+        handler.log(message="recovered from non-list")
+
+    assert any(
+        "contained non-list JSON (dict)" in record.message
+        for record in caplog.records
+    )
+
+    caplog.clear()
+
+    # 2. Corrupt JSON decode error warning
+    corrupt_path = tmp_path / "corrupt.json"
+    corrupt_path.write_text("{broken json", encoding="utf-8")
+    corrupt_handler = FileHandler(str(corrupt_path))
+    with caplog.at_level(logging.WARNING):
+        corrupt_handler.log(message="recovered from corrupt")
+
+    assert any(
+        "contained invalid JSON" in record.message
+        for record in caplog.records
+    )
+
