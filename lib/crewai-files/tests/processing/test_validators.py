@@ -642,3 +642,48 @@ class TestRealVideoFile:
 
         assert "duration" in str(exc_info.value).lower()
         assert "2s" in str(exc_info.value)
+
+    def test_validate_image_corrupted_bytes_raises_validation_error(self):
+        """Test validate_image rejects corrupted image bytes when dimension limits are set."""
+        from crewai_files.processing.validators import validate_image
+
+        # Include valid PNG magic bytes so format check passes and dimension parser runs
+        corrupted_png = b"\x89PNG\r\n\x1a\ncorrupted_png_payload"
+        file = ImageFile(
+            source=FileBytes(data=corrupted_png, filename="bad.png")
+        )
+        constraints = ImageConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            supported_formats=("image/png",),
+            max_width=1000,
+        )
+
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_image(file, constraints)
+        assert "could not be parsed" in str(exc_info.value).lower()
+
+        # When raise_on_error=False, it should return the error message
+        errors = validate_image(file, constraints, raise_on_error=False)
+        assert len(errors) > 0
+        assert any("could not be parsed" in e.lower() for e in errors)
+
+    def test_validate_pdf_corrupted_bytes_raises_validation_error(self):
+        """Test validate_pdf rejects corrupted PDF bytes when page limits are set."""
+        from crewai_files.processing.validators import validate_pdf
+
+        file = PDFFile(
+            source=FileBytes(data=b"%PDF-1.4\ncorrupted_pdf_data", filename="bad.pdf")
+        )
+        constraints = PDFConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_pages=5,
+        )
+
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_pdf(file, constraints)
+        assert "could not be parsed" in str(exc_info.value).lower()
+
+        # When raise_on_error=False, it should return the error message
+        errors = validate_pdf(file, constraints, raise_on_error=False)
+        assert len(errors) > 0
+        assert any("could not be parsed" in e.lower() for e in errors)
