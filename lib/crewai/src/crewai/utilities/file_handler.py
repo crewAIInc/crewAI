@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import logging
 import os
 import pickle
 from typing import Any, TypedDict
@@ -25,6 +26,9 @@ class LogEntry(TypedDict, total=False):
     error: str
     duration: float
     metadata: dict[str, Any]
+
+
+logger = logging.getLogger(__name__)
 
 
 class FileHandler:
@@ -96,8 +100,20 @@ class FileHandler:
                             if isinstance(existing_data, list):
                                 existing_data.append(log_entry)
                             else:
+                                logger.warning(
+                                    "Log file %s contained non-list JSON (%s); replacing with fresh log list.",
+                                    self._path,
+                                    type(existing_data).__name__,
+                                )
                                 existing_data = [log_entry]
-                    except (json.JSONDecodeError, FileNotFoundError):
+                    except json.JSONDecodeError as err:
+                        logger.warning(
+                            "Log file %s contained invalid JSON (%s); replacing with fresh log list.",
+                            self._path,
+                            err,
+                        )
+                        existing_data = [log_entry]
+                    except FileNotFoundError:
                         existing_data = [log_entry]
 
                     serialized = json.dumps(existing_data, indent=4)

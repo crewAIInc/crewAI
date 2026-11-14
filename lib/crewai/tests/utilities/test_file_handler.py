@@ -124,3 +124,34 @@ def test_json_log_recovers_from_non_list_json(
     records = json.loads(path.read_text(encoding="utf-8"))
     assert [r["message"] for r in records] == ["recovered record", "second record"]
 
+def test_json_log_warns_on_non_list_and_decode_error(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    import logging
+
+    # 1. Non-list JSON warning
+    path = tmp_path / "non_list.json"
+    path.write_text('{"already": "an object"}', encoding="utf-8")
+    handler = FileHandler(str(path))
+    with caplog.at_level(logging.WARNING):
+        handler.log(message="recovered from non-list")
+
+    assert any(
+        "contained non-list JSON (dict)" in record.message
+        for record in caplog.records
+    )
+
+    caplog.clear()
+
+    # 2. Corrupt JSON decode error warning
+    corrupt_path = tmp_path / "corrupt.json"
+    corrupt_path.write_text("{broken json", encoding="utf-8")
+    corrupt_handler = FileHandler(str(corrupt_path))
+    with caplog.at_level(logging.WARNING):
+        corrupt_handler.log(message="recovered from corrupt")
+
+    assert any(
+        "contained invalid JSON" in record.message
+        for record in caplog.records
+    )
+
