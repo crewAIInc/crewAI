@@ -759,6 +759,7 @@ memory = Memory(
 
 - **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
 - **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`. Para implantações em produção, você pode usar o `MongoDBStorageBackend` do pacote `crewai-mongodb-memory`. Para saber mais, veja o [tutorial de implementação do MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/).
+- **API de memória hospedada**: Para manter a memória no [past dev](https://past.dev) em vez de um armazenamento local, passe o `PastDevMemory` do pacote `crewai-pastdotdev` como `memory=`. O past dev faz sua própria extração, embedding e ranqueamento. Veja a [página do past dev](/pt-BR/tools/ai-ml/pastdev).
 
 
 ## Descoberta
