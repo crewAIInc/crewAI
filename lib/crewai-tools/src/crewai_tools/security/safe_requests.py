@@ -126,13 +126,19 @@ def _raw_get(url: str, **kwargs: Any) -> requests.Response:
             session.close()
 
 
-def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
+def safe_get(
+    url: str,
+    *,
+    max_redirects: int = 10,
+    **kwargs: Any,
+) -> requests.Response:
     """GET a URL while validating each redirect target before following it.
 
     On success the hops are attached to the returned response's ``history`` and
     are the caller's to close. On failure they are closed here: a caller given
     an exception has no handle on them, and a streamed hop holds its connection
-    until its body is read or closed.
+    until its body is read or closed. Private hosts must be explicitly listed
+    in ``CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS``; every redirect is checked again.
     """
     current_url = validate_url(url)
     _reject_proxies(kwargs)
