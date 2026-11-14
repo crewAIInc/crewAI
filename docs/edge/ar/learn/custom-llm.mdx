@@ -52,4 +52,24 @@ result = crew.kickoff()
 
 طريقة `call()` هي قلب تنفيذ LLM. يجب أن تقبل الرسائل وتعيد استجابة نصية وتعالج الأدوات واستدعاء الدوال إذا كانت مدعومة.
 
+## دعم كلمات التوقف
+
+يضيف CrewAI تلقائيًا `"\nObservation:"` ككلمة توقف للتحكم في سلوك الوكيل. إذا كان LLM يدعم كلمات التوقف، أدرج `self.stop` في طلب واجهة البرمجة.
+
+إذا كان LLM لا يدعم كلمات التوقف بشكل أصلي، اقطع الاستجابة باستخدام `BaseLLM._apply_stop_words`. موضع القطع هو أقدم ظهور لأي كلمة توقف في النص المولَّد. كل من `stop=["LATE", "EARLY"]` و`stop=["EARLY", "LATE"]` يحوّلان `"hello EARLY middle LATE tail"` إلى `"hello"`، لأن `EARLY` تظهر أولًا والجزء المتبقي يمر عبر `str.strip()`. يُعاد النص كما هو عندما لا يحتوي على أي كلمة توقف.
+
+```python
+def call(self, messages, tools=None, callbacks=None, available_functions=None):
+    response = self._make_api_call(messages, tools)
+    content = response["choices"][0]["message"]["content"]
+
+    # Earliest stop word in the text wins; the kept prefix is stripped.
+    content = self._apply_stop_words(content)
+
+    return content
+
+def supports_stop_words(self) -> bool:
+    return False  # Tell CrewAI we handle stop words manually
+```
+
 يغطي هذا الدليل أساسيات تنفيذ LLM مخصصة في CrewAI.
