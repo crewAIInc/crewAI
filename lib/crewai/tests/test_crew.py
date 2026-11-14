@@ -4203,6 +4203,101 @@ def test_conditional_should_skip(researcher, writer):
         assert result.raw.startswith("Task 1 output")
 
 
+@pytest.fixture
+def conditional_context_crew() -> tuple[Crew, _ScriptedReActLLM, _ScriptedReActLLM]:
+    gate_llm = _ScriptedReActLLM("Final Answer: RUN", "Final Answer: SKIP")
+    conditional_llm = _ScriptedReActLLM("Final Answer: FIRST_RUN_ONLY")
+    consumer_llm = _ScriptedReActLLM("Final Answer: Done")
+    agents = [
+        Agent(role=role, goal=role, backstory=role, llm=llm, allow_delegation=False)
+        for role, llm in (
+            ("Gate", gate_llm),
+            ("Researcher", conditional_llm),
+            ("Consumer", consumer_llm),
+        )
+    ]
+    gate = Task(
+        description="Choose RUN or SKIP", expected_output="A decision", agent=agents[0]
+    )
+    conditional = ConditionalTask(
+        description="Produce the optional research",
+        expected_output="Research",
+        agent=agents[1],
+        condition=lambda output: output.raw == "RUN",
+    )
+    consumer = Task(
+        description="Summarize the supplied context",
+        expected_output="A summary",
+        agent=agents[2],
+        context=[conditional],
+    )
+    return (
+        Crew(
+            agents=agents,
+            tasks=[gate, conditional, consumer],
+            memory=False,
+            tracing=False,
+        ),
+        conditional_llm,
+        consumer_llm,
+    )
+
+
+@pytest.mark.parametrize("entry", ["kickoff", "akickoff", "kickoff_async"])
+def test_skipped_conditional_task_clears_previous_run_context(
+    conditional_context_crew: tuple[Crew, _ScriptedReActLLM, _ScriptedReActLLM],
+    entry: str,
+) -> None:
+    crew, conditional_llm, consumer_llm = conditional_context_crew
+    conditional, consumer = crew.tasks[1:]
+
+    with patch.object(consumer_llm, "call", wraps=consumer_llm.call) as model_call:
+        for expected_context in ("FIRST_RUN_ONLY", ""):
+            kickoff = getattr(crew, entry)
+            result = kickoff() if entry == "kickoff" else asyncio.run(kickoff())
+
+            assert result.tasks_output[1].raw == expected_context
+            assert consumer.prompt_context == expected_context
+            assert (
+                "FIRST_RUN_ONLY" in json.dumps(model_call.call_args.args[0])
+            ) == bool(expected_context)
+
+    assert conditional.output is None
+    assert conditional_llm.calls == 1
+
+
+@pytest.mark.parametrize("start_index", [1, 2], ids=["conditional", "consumer"])
+def test_conditional_task_context_during_replay(
+    conditional_context_crew: tuple[Crew, _ScriptedReActLLM, _ScriptedReActLLM],
+    start_index: int,
+) -> None:
+    crew, conditional_llm, consumer_llm = conditional_context_crew
+    conditional = cast(ConditionalTask, crew.tasks[1])
+    consumer = crew.tasks[2]
+    crew.kickoff()
+    assert consumer.prompt_context == "FIRST_RUN_ONLY"
+
+    condition = MagicMock(return_value=False)
+    conditional.condition = condition
+    expected_context = "" if start_index == 1 else "FIRST_RUN_ONLY"
+    with patch.object(consumer_llm, "call", wraps=consumer_llm.call) as model_call:
+        result = crew.replay(str(crew.tasks[start_index].id))
+
+    assert result.tasks_output[1].raw == expected_context
+    assert consumer.prompt_context == expected_context
+    assert ("FIRST_RUN_ONLY" in json.dumps(model_call.call_args.args[0])) == bool(
+        expected_context
+    )
+    assert conditional_llm.calls == 1
+    if start_index == 1:
+        condition.assert_called_once()
+        assert conditional.output is None
+    else:
+        condition.assert_not_called()
+        assert conditional.output is not None
+        assert conditional.output.raw == "FIRST_RUN_ONLY"
+
+
 @pytest.mark.vcr()
 def test_conditional_should_execute(researcher, writer):
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
