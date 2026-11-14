@@ -137,6 +137,11 @@ class TestAnthropicMultimodal:
         llm = LLM(model="anthropic/claude-4-opus")
         assert llm.supports_multimodal() is True
 
+    def test_supports_multimodal_claude5(self) -> None:
+        """Test Claude 5 supports multimodal."""
+        llm = LLM(model="anthropic/claude-sonnet-5-5")
+        assert llm.supports_multimodal() is True
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Anthropic image format uses source-based structure."""
         llm = LLM(model="anthropic/claude-3-sonnet-20240229")
