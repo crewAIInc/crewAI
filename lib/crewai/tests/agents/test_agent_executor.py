@@ -734,6 +734,128 @@ class TestAgentExecutor:
             assert result == "completed"
             mock_synthesize.assert_called_once()
 
+    def test_finalize_synthesizes_when_expected_output_requests_json(
+        self, mock_dependencies
+    ):
+        """Regression test for #9048: planning must not drop JSON expected_output.
+
+        A polished prose step result must not shortcut synthesis when the task
+        explicitly asks for JSON - the shortcut would return prose as the final
+        answer and drop the requested format.
+        """
+        with patch.object(AgentExecutor, "_show_logs"):
+            executor = _build_executor(**mock_dependencies)
+            executor.task.expected_output = (
+                'Return only one JSON object with total, currency="USD", '
+                'and receipt_id="ORDER-1042".'
+            )
+            executor.state.todos.items = [
+                TodoItem(
+                    step_number=1,
+                    description="Calculate the total",
+                    tool_to_use=None,
+                    status="completed",
+                    result=(
+                        "The sandwich costs $8 and the coffee costs $3, so the "
+                        "bill comes to $11 in total. I added the two prices "
+                        "carefully and double checked the arithmetic for the "
+                        "receipt. The amount due is eleven dollars exactly."
+                    ),
+                ),
+            ]
+
+            def _set_current_answer() -> None:
+                executor.state.current_answer = AgentFinish(
+                    thought="Synthesized",
+                    output='{"total": 11, "currency": "USD", "receipt_id": "ORDER-1042"}',
+                    text='{"total": 11, "currency": "USD", "receipt_id": "ORDER-1042"}',
+                )
+
+            with patch.object(
+                executor,
+                "_synthesize_final_answer_from_todos",
+                side_effect=_set_current_answer,
+            ) as mock_synthesize:
+                result = executor.finalize()
+
+            assert result == "completed"
+            mock_synthesize.assert_called_once()
+
+    def test_finalize_skips_synthesis_when_json_expected_output_already_met(
+        self, mock_dependencies
+    ):
+        """Shortcut still applies when the step result already satisfies JSON."""
+        json_result = (
+            '{"total": 11.0, "currency": "USD", "receipt_id": "ORDER-1042", '
+            '"items": [{"name": "sandwich", "price": 8.0}, '
+            '{"name": "coffee", "price": 3.0}], '
+            '"note": "Totals verified against menu prices for the order."}'
+        )
+        assert len(json_result) >= 200
+        with patch.object(AgentExecutor, "_show_logs"):
+            executor = _build_executor(**mock_dependencies)
+            executor.task.expected_output = (
+                'Return only one JSON object with total, currency="USD", '
+                'and receipt_id="ORDER-1042".'
+            )
+            executor.state.todos.items = [
+                TodoItem(
+                    step_number=1,
+                    description="Calculate the total",
+                    tool_to_use=None,
+                    status="completed",
+                    result=json_result,
+                ),
+            ]
+
+            with patch.object(
+                executor, "_synthesize_final_answer_from_todos"
+            ) as mock_synthesize:
+                result = executor.finalize()
+
+            assert result == "completed"
+            assert executor.state.current_answer.output == json_result
+            mock_synthesize.assert_not_called()
+
+    def test_synthesize_final_answer_prompt_includes_expected_output(
+        self, mock_dependencies
+    ):
+        """Synthesis prompt must carry the task's expected output (#9048)."""
+        executor = _build_executor(**mock_dependencies)
+        executor.task.description = (
+            "Calculate the total for a sandwich costing $8 and a coffee costing $3."
+        )
+        executor.task.expected_output = (
+            'Return only one JSON object with total, currency="USD", '
+            'and receipt_id="ORDER-1042".'
+        )
+        executor.response_model = None
+        executor.llm.call.return_value = (
+            '{"total": 11, "currency": "USD", "receipt_id": "ORDER-1042"}'
+        )
+        executor.state.todos.items = [
+            TodoItem(
+                step_number=1,
+                description="Calculate the total",
+                tool_to_use=None,
+                status="completed",
+                result="The total is $11.",
+            ),
+        ]
+
+        executor._synthesize_final_answer_from_todos()
+
+        executor.llm.call.assert_called_once()
+        messages = executor.llm.call.call_args[0][0]
+        user_message = next(m for m in messages if m["role"] == "user")
+        assert "## Expected Output" in user_message["content"]
+        assert 'receipt_id="ORDER-1042"' in user_message["content"]
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert (
+            executor.state.current_answer.output
+            == '{"total": 11, "currency": "USD", "receipt_id": "ORDER-1042"}'
+        )
+
     def test_format_prompt(self, mock_dependencies):
         """Test prompt formatting."""
         executor = _build_executor(**mock_dependencies)
