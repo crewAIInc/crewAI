@@ -18,6 +18,7 @@ from crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_p
 from crewai.rag.embeddings.providers.instructor.instructor_provider import InstructorProvider
 from crewai.rag.embeddings.providers.openclip.openclip_provider import OpenCLIPProvider
 from crewai.rag.embeddings.providers.openrouter.openrouter_provider import OpenRouterProvider
+from crewai.rag.embeddings.providers.deepinfra.deepinfra_provider import DeepInfraProvider
 
 
 class TestGoogleProviderAlias:
@@ -77,6 +78,25 @@ class TestModelKeyBackwardCompatibility:
         provider = OpenRouterProvider(api_key="test-key")
 
         assert provider.model_name == "openai/text-embedding-3-small"
+
+    def test_deepinfra_provider_accepts_model_key(self):
+        """Test DeepInfra provider accepts 'model' as alias for 'model_name'."""
+        provider = DeepInfraProvider(
+            api_key="test-key",
+            model="Qwen/Qwen3-Embedding-4B",
+        )
+        assert provider.model_name == "Qwen/Qwen3-Embedding-4B"
+
+    def test_deepinfra_provider_ignores_chat_model_env(self, monkeypatch):
+        """Test DeepInfra embeddings don't inherit unrelated chat model env vars."""
+        monkeypatch.setenv("OPENAI_MODEL_NAME", "gpt-5.5")
+        monkeypatch.setenv("MODEL", "gpt-5.5")
+        monkeypatch.delenv("EMBEDDINGS_DEEPINFRA_MODEL_NAME", raising=False)
+        monkeypatch.delenv("DEEPINFRA_MODEL_NAME", raising=False)
+
+        provider = DeepInfraProvider(api_key="test-key")
+
+        assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
 
     def test_azure_provider_ignores_openai_chat_model_env(self, monkeypatch):
         """Test Azure embeddings don't inherit the OpenAI chat model env var."""
