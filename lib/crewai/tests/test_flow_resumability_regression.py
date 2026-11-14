@@ -5,10 +5,16 @@ These tests ensure that:
 2. Cyclic flows can re-execute methods on each iteration
 """
 
+import os
+from pathlib import Path
+import time
 from typing import Dict
+
+import pytest
 
 from crewai.flow.flow import Flow, listen, router, start
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.state.checkpoint_config import CheckpointConfig
 
 
 def test_hitl_resumption_skips_completed_listeners(tmp_path):
@@ -176,3 +182,111 @@ def test_cyclic_flow_with_conditional_start():
     ]
 
     assert execution_log == expected
+
+
+def test_resumed_flow_replays_completed_router_outcome(tmp_path):
+    """A flow resumed from a checkpoint replays a completed router's outcome.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/8437:
+    after failing in a listener of a router's route, the restored run skipped
+    the failed listener and everything after it, because the completed router
+    never re-emitted its result to the listeners subscribed to that outcome.
+    """
+    attempts = []
+
+    class ShipFlow(Flow):
+        @start()
+        def begin(self):
+            pass
+
+        @router(begin)
+        def route(self):
+            return "approved"
+
+        @listen("approved")
+        def ship(self):
+            attempts.append("ship")
+            time.sleep(0.2)  # Let route's checkpoint land before failing.
+            if len(attempts) == 1:
+                raise RuntimeError("transient failure")
+            self.state["shipped"] = True
+
+    location = str(tmp_path)
+    flow = ShipFlow(
+        checkpoint=CheckpointConfig(
+            location=location, on_events=["method_execution_finished"]
+        )
+    )
+    with pytest.raises(RuntimeError, match="transient failure"):
+        flow.kickoff()
+
+    latest = max(Path(location).rglob("*.json"), key=os.path.getmtime)
+    restored = ShipFlow.from_checkpoint(CheckpointConfig(restore_from=str(latest)))
+
+    restored.kickoff()
+
+    assert attempts == ["ship", "ship"]
+    assert restored.state["shipped"] is True
+
+
+def test_resumed_flow_replays_hitl_router_outcome_not_artifact(tmp_path):
+    """A resumed flow replays an HITL router's collapsed human outcome.
+
+    For @human_feedback routers with emit, the recorded method output is the
+    reviewed artifact, while routing in the original run used the collapsed
+    human outcome. Replaying the artifact would fire a branch the reviewer
+    did not authorize.
+    """
+    from crewai.flow.human_feedback import human_feedback
+
+    executed = []
+
+    class EmptyProvider:
+        def request_feedback(self, context, flow):
+            return ""
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self):
+            pass
+
+        @router(begin)
+        @human_feedback(
+            message="Review:",
+            emit=["approved", "rejected"],
+            default_outcome="rejected",
+            provider=EmptyProvider(),
+        )
+        def review(self):
+            return "approved"  # artifact text equals the other route label
+
+        @listen("approved")
+        def publish(self):
+            executed.append("publish")
+
+        @listen("rejected")
+        def revise(self):
+            executed.append("revise")
+            time.sleep(0.2)  # Let review's checkpoint land before failing.
+            if executed.count("revise") == 1:
+                raise RuntimeError("transient failure")
+            self.state["done"] = True
+
+    location = str(tmp_path)
+    flow = ReviewFlow(
+        checkpoint=CheckpointConfig(
+            location=location, on_events=["method_execution_finished"]
+        )
+    )
+    with pytest.raises(RuntimeError, match="transient failure"):
+        flow.kickoff()
+
+    assert "publish" not in executed
+
+    latest = max(Path(location).rglob("*.json"), key=os.path.getmtime)
+    restored = ReviewFlow.from_checkpoint(CheckpointConfig(restore_from=str(latest)))
+
+    restored.kickoff()
+
+    assert executed == ["revise", "revise"]
+    assert restored.state["done"] is True
