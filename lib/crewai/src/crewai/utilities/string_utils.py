@@ -45,6 +45,12 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = _DISALLOWED_CHARS_PATTERN.sub("_", name)
     name = _DUPLICATE_UNDERSCORE_PATTERN.sub("_", name)
     name = name.strip("_")
+    # Provider function-name validators require an alphabetic or underscore
+    # first character, while their remaining identifier grammar allows digits.
+    # Keep the sanitized name stable and valid for every provider by reserving
+    # a leading underscore for names that begin with a digit.
+    if name and name[0].isdigit():
+        name = f"_{name}"
 
     if len(name) > max_length:
         name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]

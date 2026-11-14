@@ -1,7 +1,19 @@
 from typing import Any, Dict, List, Union
 
 import pytest
-from crewai.utilities.string_utils import interpolate_only
+from crewai.utilities.string_utils import interpolate_only, sanitize_tool_name
+
+
+class TestSanitizeToolName:
+    """Tests for provider-compatible tool-name sanitization."""
+
+    def test_prefixes_digit_leading_names(self):
+        assert sanitize_tool_name("3D Renderer") == "_3d_renderer"
+        assert sanitize_tool_name("2FA Verifier") == "_2fa_verifier"
+
+    def test_keeps_alphabetic_and_empty_names_unchanged(self):
+        assert sanitize_tool_name("Web Search") == "web_search"
+        assert sanitize_tool_name("") == ""
 
 
 class TestInterpolateOnly:
