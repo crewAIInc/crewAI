@@ -53,6 +53,30 @@ def _is_async_client(client: ChromaDBClientType) -> TypeGuard[AsyncClientAPI]:
     return isinstance(client, AsyncClientAPI)
 
 
+def _sanitize_metadata_for_chromadb(
+    metadata: Mapping[str, object],
+) -> dict[str, str | int | float | bool]:
+    """Keep only the metadata values ChromaDB accepts.
+
+    ChromaDB rejects ``None`` with ``TypeError: Cannot convert Python object to
+    MetadataValue`` and refuses list values, so a single ``None`` anywhere in a
+    batch used to discard the whole batch. This mirrors
+    ``crewai_tools.rag.misc.sanitize_metadata_for_chromadb`` (the adapter path,
+    fixed in #9058) without taking a dependency in that direction.
+    """
+    sanitized: dict[str, str | int | float | bool] = {}
+    for key, value in metadata.items():
+        if value is None:
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            sanitized[key] = value
+        elif isinstance(value, (list, tuple)):
+            sanitized[key] = " | ".join(str(item) for item in value)
+        else:
+            sanitized[key] = str(value)
+    return sanitized
+
+
 def _prepare_documents_for_chromadb(
     documents: list[BaseRecord],
 ) -> PreparedDocuments:
@@ -92,6 +116,8 @@ def _prepare_documents_for_chromadb(
                     processed_metadata = metadata
             else:
                 processed_metadata = {}
+
+            processed_metadata = _sanitize_metadata_for_chromadb(processed_metadata)
 
             if doc_id in seen_ids:
                 idx = seen_ids[doc_id]

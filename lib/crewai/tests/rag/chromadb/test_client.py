@@ -1,5 +1,6 @@
 """Tests for ChromaDBClient implementation."""
 
+from typing import cast
 from unittest.mock import AsyncMock, Mock
 
 from crewai.rag.chromadb.client import ChromaDBClient
@@ -341,6 +342,37 @@ class TestChromaDBClient:
         call_args = mock_collection.upsert.call_args
         assert call_args[1]["metadatas"] is None
 
+    def test_add_documents_drops_none_metadata_values(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """A None metadata value must not discard the rest of the batch."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+
+        documents = cast(
+            "list[BaseRecord]",
+            [
+                {"doc_id": "d1", "content": "d1", "metadata": {"title": "clean"}},
+                {
+                    "doc_id": "d2",
+                    "content": "d2",
+                    "metadata": {"title": "Video", "description": None},
+                },
+                {"doc_id": "d3", "content": "d3", "metadata": {"title": "clean2"}},
+            ],
+        )
+
+        client.add_documents(collection_name="test_collection", documents=documents)
+
+        call_args = mock_collection.upsert.call_args
+        assert len(call_args.kwargs["ids"]) == 3
+        assert call_args.kwargs["documents"] == ["d1", "d2", "d3"]
+        assert call_args.kwargs["metadatas"] == [
+            {"title": "clean"},
+            {"title": "Video"},
+            {"title": "clean2"},
+        ]
+
     def test_add_documents_empty_list_raises_error(
         self, client, mock_chromadb_client
     ) -> None:
@@ -436,6 +468,41 @@ class TestChromaDBClient:
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
         assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+
+    @pytest.mark.asyncio
+    async def test_aadd_documents_drops_none_metadata_values(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """A None metadata value must not discard the rest of the batch (async)."""
+        mock_collection = AsyncMock()
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+            return_value=mock_collection
+        )
+
+        documents = cast(
+            "list[BaseRecord]",
+            [
+                {"doc_id": "d1", "content": "d1", "metadata": {"title": "clean"}},
+                {
+                    "doc_id": "d2",
+                    "content": "d2",
+                    "metadata": {"title": "Video", "description": None},
+                },
+                {"doc_id": "d3", "content": "d3", "metadata": {"title": "clean2"}},
+            ],
+        )
+
+        await async_client.aadd_documents(
+            collection_name="test_collection", documents=documents
+        )
+
+        call_args = mock_collection.upsert.call_args
+        assert len(call_args.kwargs["ids"]) == 3
+        assert call_args.kwargs["metadatas"] == [
+            {"title": "clean"},
+            {"title": "Video"},
+            {"title": "clean2"},
+        ]
 
     @pytest.mark.asyncio
     async def test_aadd_documents_empty_list_raises_error(

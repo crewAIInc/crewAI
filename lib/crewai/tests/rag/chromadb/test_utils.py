@@ -1,5 +1,7 @@
 """Tests for ChromaDB utility functions."""
 
+from typing import cast
+
 from crewai.rag.chromadb.types import PreparedDocuments
 from crewai.rag.chromadb.utils import (
     MAX_COLLECTION_LENGTH,
@@ -158,6 +160,74 @@ class TestPrepareDocumentsForChromaDB:
         result = _prepare_documents_for_chromadb(documents)
 
         assert result.metadatas == [{}, {}]
+
+    def test_prepare_documents_drops_none_metadata_values(self) -> None:
+        """Test that a None metadata value is dropped instead of failing the batch."""
+        documents = cast(
+            "list[BaseRecord]",
+            [
+                {"doc_id": "d1", "content": "d1", "metadata": {"title": "clean"}},
+                {
+                    "doc_id": "d2",
+                    "content": "d2",
+                    "metadata": {"title": "Video", "description": None},
+                },
+                {"doc_id": "d3", "content": "d3", "metadata": {"title": "clean2"}},
+            ],
+        )
+
+        result = _prepare_documents_for_chromadb(documents)
+
+        assert result.ids == ["d1", "d2", "d3"]
+        assert result.metadatas == [
+            {"title": "clean"},
+            {"title": "Video"},
+            {"title": "clean2"},
+        ]
+
+    def test_prepare_documents_does_not_mutate_caller_metadata(self) -> None:
+        """Test that preparing documents leaves the caller's metadata dict untouched."""
+        metadata: dict[str, str | None] = {"title": "Video", "description": None}
+        documents = cast(
+            "list[BaseRecord]",
+            [{"doc_id": "d1", "content": "d1", "metadata": metadata}],
+        )
+
+        _prepare_documents_for_chromadb(documents)
+
+        assert metadata == {"title": "Video", "description": None}
+
+    def test_prepared_metadata_is_accepted_by_chromadb(self) -> None:
+        """Test that a mixed batch is written whole, with the None key dropped."""
+        import chromadb
+
+        collection = chromadb.Client().get_or_create_collection(  # type: ignore[attr-defined]
+            "test_prepared_none_metadata"
+        )
+        documents = cast(
+            "list[BaseRecord]",
+            [
+                {"doc_id": "d1", "content": "d1", "metadata": {"title": "clean"}},
+                {
+                    "doc_id": "d2",
+                    "content": "d2",
+                    "metadata": {"title": "Video", "description": None},
+                },
+                {"doc_id": "d3", "content": "d3", "metadata": {"title": "clean2"}},
+            ],
+        )
+
+        prepared = _prepare_documents_for_chromadb(documents)
+        collection.add(
+            ids=prepared.ids,
+            documents=prepared.texts,
+            metadatas=prepared.metadatas,
+            embeddings=[[0.1, 0.2]] * len(prepared.ids),
+        )
+
+        assert collection.count() == 3
+        stored = collection.get(ids=["d2"], include=["metadatas"])["metadatas"]
+        assert stored == [{"title": "Video"}]
 
     def test_prepare_documents_hash_consistency(self) -> None:
         """Test that identical content produces identical hashes."""
