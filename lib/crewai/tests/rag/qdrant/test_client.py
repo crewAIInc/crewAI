@@ -141,6 +141,23 @@ class TestQdrantClient:
         mock_qdrant_client.get_collection.assert_called_once_with("test_collection")
         assert result == mock_collection_info
 
+    def test_get_or_create_collection_uses_configured_vectors(self, mock_qdrant_client):
+        """Knowledge collections use the configured embedding dimensions."""
+        mock_qdrant_client.collection_exists.return_value = False
+        vectors_config = Mock()
+        client = QdrantClient(
+            client=mock_qdrant_client,
+            embedding_function=Mock(),
+            vectors_config=vectors_config,
+        )
+
+        client.get_or_create_collection(collection_name="test_collection")
+
+        assert (
+            mock_qdrant_client.create_collection.call_args.kwargs["vectors_config"]
+            is vectors_config
+        )
+
     def test_get_or_create_collection_wrong_client_type(self, mock_async_qdrant_client):
         """Test get_or_create_collection raises TypeError for async client."""
         client = QdrantClient(

@@ -16,6 +16,7 @@ from crewai.rag.qdrant.types import (
     EmbeddingFunction,
     QdrantClientType,
     QdrantCollectionCreateParams,
+    VectorsConfig,
 )
 from crewai.rag.qdrant.utils import (
     _create_point_from_document,
@@ -40,6 +41,7 @@ class QdrantClient(BaseClient):
         embedding_function: Function to generate embeddings for documents.
         default_limit: Default number of results to return in searches.
         default_score_threshold: Default minimum score for search results.
+        vectors_config: Vector configuration used when lazily creating collections.
     """
 
     def __init__(
@@ -49,6 +51,7 @@ class QdrantClient(BaseClient):
         default_limit: int = 5,
         default_score_threshold: float = 0.6,
         default_batch_size: int = 100,
+        vectors_config: VectorsConfig | None = None,
     ) -> None:
         """Initialize QdrantClient with client and embedding function.
 
@@ -58,12 +61,14 @@ class QdrantClient(BaseClient):
             default_limit: Default number of results to return in searches.
             default_score_threshold: Default minimum score for search results.
             default_batch_size: Default batch size for adding documents.
+            vectors_config: Optional vector configuration for new collections.
         """
         self.client = client
         self.embedding_function = embedding_function
         self.default_limit = default_limit
         self.default_score_threshold = default_score_threshold
         self.default_batch_size = default_batch_size
+        self.vectors_config = vectors_config
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
@@ -100,6 +105,8 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
+        if self.vectors_config is not None and "vectors_config" not in kwargs:
+            kwargs = {**kwargs, "vectors_config": self.vectors_config}
         params = _get_collection_params(kwargs)
         self.client.create_collection(**params)
 
@@ -140,6 +147,8 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
+        if self.vectors_config is not None and "vectors_config" not in kwargs:
+            kwargs = {**kwargs, "vectors_config": self.vectors_config}
         params = _get_collection_params(kwargs)
         await self.client.create_collection(**params)
 
@@ -182,6 +191,8 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
+        if self.vectors_config is not None and "vectors_config" not in kwargs:
+            kwargs = {**kwargs, "vectors_config": self.vectors_config}
         params = _get_collection_params(kwargs)
         self.client.create_collection(**params)
 
@@ -226,6 +237,8 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
+        if self.vectors_config is not None and "vectors_config" not in kwargs:
+            kwargs = {**kwargs, "vectors_config": self.vectors_config}
         params = _get_collection_params(kwargs)
         await self.client.create_collection(**params)
 
