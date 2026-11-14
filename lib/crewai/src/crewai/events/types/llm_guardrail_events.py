@@ -50,7 +50,12 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
         elif callable(self.guardrail):
             self.guardrail_type = "function"
             self.guardrail_name = getattr(self.guardrail, "__name__", None)
-            self.guardrail = getsource(self.guardrail).strip()
+            try:
+                self.guardrail = getsource(self.guardrail).strip()
+            except (OSError, TypeError):
+                # Valid callables can lack inspectable source; event metadata
+                # must not prevent the guardrail from running.
+                self.guardrail = self.guardrail_name or type(self.guardrail).__name__
 
 
 class LLMGuardrailCompletedEvent(LLMGuardrailBaseEvent):
