@@ -1,0 +1,154 @@
+---
+title: Confident AI
+description: Integração do Confident AI com o CrewAI, com rastreamento nativo em OpenTelemetry e avaliação
+icon: shield-check
+mode: "wide"
+---
+
+# Integração Confident AI
+
+Este guia demonstra como integrar o **Confident AI** ao **CrewAI** usando `confident-trace`. Ao final deste guia, cada kickoff de crew aparecerá como um trace com a hierarquia completa de crew → task → agent → tool, permitindo que você veja o que seus agents fizeram e avalie o quão bem eles se saíram.
+
+> **O que é Confident AI?** [Confident AI](https://www.confident-ai.com/) é uma plataforma de observabilidade e avaliação de LLM para equipes que constroem aplicações de IA confiáveis em desenvolvimento e em produção. [`confident-trace`](https://github.com/confident-ai/confident-trace) é o seu SDK de rastreamento nativo em OpenTelemetry.
+
+## Primeiros Passos
+
+Vamos percorrer um exemplo simples de uso do CrewAI integrado ao Confident AI para rastreamento e avaliação.
+
+### Passo 1: Instale as Dependências
+
+```bash
+pip install confident-trace crewai openai
+```
+
+### Passo 2: Configure as Variáveis de Ambiente
+
+Obtenha a API key do seu projeto no [Confident AI](https://app.confident-ai.com) e defina-a junto com a chave do provedor de modelo que sua crew utiliza:
+
+```bash
+export CONFIDENT_API_KEY="<your-confident-api-key>"
+export OPENAI_API_KEY="<your-openai-key>"
+```
+
+Para usuários na região da UE, configure o endpoint OTEL para a versão da UE, caso contrário seus traces serão enviados para os servidores dos EUA:
+
+```bash
+export CONFIDENT_OTEL_ENDPOINT="https://eu.otel.confident-ai.com/v1/traces"
+```
+
+### Passo 3: Crie uma Aplicação CrewAI
+
+Chame `init()` uma única vez na inicialização, antes de dar kickoff em qualquer crew. Continue importando `Agent`, `Task` e `Crew` de `crewai` normalmente — o framework instalado é detectado automaticamente, portanto não há exporter nem instrumentor para configurar.
+
+```python
+from confident_trace import init, shutdown
+from crewai import Agent, Crew, Task
+
+init()
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanations.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    llm="openai/gpt-4o-mini",
+)
+
+task = Task(
+    description="Explain the given topic",
+    expected_output="A clear and concise explanation.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+
+try:
+    result = crew.kickoff({"input": "What are LLMs?"})
+    print(result.raw)
+finally:
+    shutdown()
+```
+
+O código da sua crew permanece exatamente o mesmo. O `confident-trace` anexa automaticamente o rótulo de integração `CrewAI` aos seus spans e captura:
+
+- **Execução de crew, task e flow** — nomes das operações, duração, status e as relações pai-filho entre as etapas.
+- **Execução dos agents** — o prompt da task enviado a cada agent e a resposta final do agent.
+- **Chamadas de modelo** — mensagens, detalhes do modelo, solicitações de tools, motivos de finalização e [uso de tokens](https://www.confident-ai.com/docs/llm-tracing/features/token-usage-cost).
+- **Chamadas de tools** — nomes das tools e seus [inputs/outputs](https://www.confident-ai.com/docs/llm-tracing/features/input-output).
+- **Spans personalizados** — quaisquer spans de aplicação criados dentro de uma tool ou flow permanecem aninhados sob ela.
+
+Inputs, outputs e mensagens capturados seguem a [política de conteúdo](https://www.confident-ai.com/docs/llm-tracing/features/masking). Configuração de agents, credenciais, memory stores e estado de checkpoint não são exportados.
+
+Os spans do CrewAI descrevem a *estrutura* de uma execução. A chamada à OpenAI (ou Anthropic, Gemini, Bedrock) dentro de cada task aparece como um [LLM span](https://www.confident-ai.com/docs/llm-tracing/features/span-types#llm-spans) capturado pela integração do provedor que o `init()` ativa junto com o CrewAI. Os spans de modelo só aparecem quando o LLM da crew passa por um SDK de provedor suportado — implementações customizadas de `LLM` e rotas do LiteLLM que contornam esses SDKs mostrarão a estrutura da crew, mas nenhum LLM span.
+
+O `init()` intercepta os limites de execução do CrewAI — `Crew.kickoff` e suas variantes assíncronas, a execução de tasks, `Agent.execute_task` / `aexecute_task`, `Flow.kickoff_async` / `resume_async` e métodos de Flow, além dos métodos de execução/invocação de tools. Métodos assíncronos de conveniência delegam a esses limites, portanto você não verá spans duplicados.
+
+Em um servidor de longa duração, chame `init()` na inicialização e `shutdown()` durante o desligamento gracioso, após o término do trabalho ativo da crew — nunca por requisição.
+
+### Passo 4: Veja os Seus Traces
+
+Execute o seu script:
+
+```bash
+python main.py
+```
+
+Abra o **Observatory** no seu projeto do [Confident AI](https://app.confident-ai.com) para inspecionar o trace e seus spans filhos.
+
+Se você não vir um trace, quase sempre é porque o programa foi encerrado antes que os traces fossem enviados. Certifique-se de chamar `shutdown()` antes de sair.
+
+## Online Evals
+
+Você pode configurar o que acontece com os traces recebidos na [página de workflows](https://www.confident-ai.com/docs/llm-tracing/workflows) do Confident AI.
+
+![Página de workflows do Confident AI](https://confident-docs.s3.us-east-1.amazonaws.com/confident-trace-workflows.png)
+
+Estes são os workflows que você pode configurar:
+
+- **Regras de avaliação** — avalie os traces recebidos com base em uma [metric collection](https://www.confident-ai.com/docs/metrics/metric-collections).
+- **Classificadores** — rotule seus traces por problema, sentimento ou qualquer dimensão que você definir, o que permite agrupá-los ou filtrá-los depois.
+- **Ingestão em filas** — encaminhe seus traces de produção para filas de anotação, para que sua equipe interna de revisão os anote manualmente.
+- **Ingestão em datasets** — envie seus traces de produção para datasets e reutilize-os como casos de teste, iterando sobre os resultados para melhorar ao longo do tempo.
+
+Você pode criar workflows personalizados para diferentes modelos de dados, como traces, spans e threads, individualmente conforme a sua necessidade.
+
+Para avaliar um componente ou trace manualmente, passe uma metric collection via `update_trace` — veja [online evaluations](https://www.confident-ai.com/docs/llm-tracing/online-evals).
+
+## Propriedades do Trace
+
+Use um trace context para anexar tags, metadata e um user ID que você já conhece antes do kickoff começar. Isso não cria nenhum span adicional — o trace iniciado por `crew.kickoff()` herda tudo o que você passar:
+
+```python
+from confident_trace import init, trace_context
+
+init()
+
+with trace_context(
+    tags=["support"],
+    metadata={"release": "2026-09"},
+    user_id="user-42",
+):
+    result = crew.kickoff({"input": "What are LLMs?"})
+```
+
+## Agrupe Traces em Threads
+
+O `confident-trace` oferece um método `turn()` que você pode usar para agrupar dois kickoffs sequenciais do CrewAI em um único turn. Reutilize o mesmo thread ID nos turns seguintes para agrupá-los em uma única thread que você pode visualizar e avaliar no Confident AI:
+
+```python
+from confident_trace import init, turn
+
+init()
+
+with turn("support-turn", thread_id="chat-42"):
+    context = crew.kickoff({"input": "Find the relevant account details."})
+    answer = crew.kickoff({"input": f"Summarize these details: {context.raw}"})
+```
+
+## Referências
+
+- [Guia de integração do CrewAI](https://www.confident-ai.com/docs/integrations/third-party/crew-ai) - Referência completa de configuração
+- [Rastreamento de LLM no Confident AI](https://www.confident-ai.com/docs/llm-tracing/introduction) - Como funcionam traces, spans e threads
+- [Online evals](https://www.confident-ai.com/docs/llm-tracing/online-evals) - Avalie traces conforme são ingeridos
+- [Threads](https://www.confident-ai.com/docs/llm-tracing/features/threads) - Agrupe kickoffs em conversas
+- [confident-trace no GitHub](https://github.com/confident-ai/confident-trace) - Código-fonte e issues
+- **Precisa de ajuda com a integração?** [Fale com uma pessoa.](https://www.confident-ai.com/book-a-demo)
