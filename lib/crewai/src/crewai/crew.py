@@ -1021,6 +1021,7 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        self._assert_no_agent_executor_running()
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
@@ -1244,6 +1245,7 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        self._assert_no_agent_executor_running()
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.akickoff(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
@@ -1302,6 +1304,7 @@ class Crew(FlowTrackable, BaseModel):
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
+
         except Exception as e:
             from crewai.telemetry.tracing.grants import TraceGrantError
 
@@ -1325,6 +1328,29 @@ class Crew(FlowTrackable, BaseModel):
             detach(token)
             end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
+
+    def _assert_no_agent_executor_running(self) -> None:
+        """Reject a reentrant kickoff before it changes shared task inputs."""
+        agents = list(self.agents)
+        if self.manager_agent is not None:
+            agents.append(self.manager_agent)
+        seen_agent_ids = {id(agent) for agent in agents}
+        for task in self.tasks:
+            if task.agent is not None and id(task.agent) not in seen_agent_ids:
+                agents.append(task.agent)
+                seen_agent_ids.add(id(task.agent))
+
+        for agent in agents:
+            executor = agent.agent_executor
+            execution_lock = getattr(executor, "_execution_lock", None)
+            if execution_lock is None:
+                continue
+            with execution_lock:
+                if getattr(executor, "_is_executing", False):
+                    raise RuntimeError(
+                        "Executor is already running. "
+                        "Cannot invoke the same executor instance concurrently."
+                    )
 
     async def akickoff_for_each(
         self,
