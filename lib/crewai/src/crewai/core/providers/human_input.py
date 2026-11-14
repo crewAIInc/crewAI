@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from contextvars import ContextVar, Token
 import sys
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 
 if TYPE_CHECKING:
@@ -143,6 +143,33 @@ class HumanInputProvider(Protocol):
             return answer.output
         return answer.output.model_dump_json()
 
+    @staticmethod
+    def _render_answer_panel(formatter: Any, answer: AgentFinish) -> None:
+        """Print the agent's current answer above the feedback prompt.
+
+        Rendered in training mode as well as normal mode: both prompts ask the
+        operator to judge the result, so the result has to be visible in both.
+
+        Args:
+            formatter: Event-listener formatter owning the rich console.
+            answer: The agent's finished answer to display.
+        """
+        from rich.panel import Panel
+        from rich.text import Text
+
+        result_content = Text()
+        result_content.append(
+            HumanInputProvider._get_output_string(answer), style="bright_green"
+        )
+        formatter.console.print(
+            Panel(
+                result_content,
+                title="✅ Agent Final Answer",
+                border_style="green",
+                padding=(1, 2),
+            )
+        )
+
 
 class SyncHumanInputProvider(HumanInputProvider):
     """Default human input provider with sync and async support."""
@@ -179,12 +206,20 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
-        feedback = self._prompt_input(context.crew)
+        is_verbose = context.agent.verbose or bool(
+            context.crew and getattr(context.crew, "verbose", False)
+        )
+        feedback = self._prompt_input(
+            context.crew,
+            answer=None if is_verbose else formatted_answer,
+        )
 
         if context._is_training_mode():
             return self._handle_training_feedback(formatted_answer, feedback, context)
 
-        return self._handle_regular_feedback(formatted_answer, feedback, context)
+        return self._handle_regular_feedback(
+            formatted_answer, feedback, context, show_answer=not is_verbose
+        )
 
     async def handle_feedback_async(
         self,
@@ -200,7 +235,13 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
-        feedback = await self._prompt_input_async(context.crew)
+        is_verbose = context.agent.verbose or bool(
+            context.crew and getattr(context.crew, "verbose", False)
+        )
+        feedback = await self._prompt_input_async(
+            context.crew,
+            answer=None if is_verbose else formatted_answer,
+        )
 
         if context._is_training_mode():
             return await self._handle_training_feedback_async(
@@ -208,7 +249,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             )
 
         return await self._handle_regular_feedback_async(
-            formatted_answer, feedback, context
+            formatted_answer, feedback, context, show_answer=not is_verbose
         )
 
     @staticmethod
@@ -239,6 +280,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         current_answer: AgentFinish,
         initial_feedback: str,
         context: ExecutorContext,
+        show_answer: bool = False,
     ) -> AgentFinish:
         """Process regular feedback with iteration loop.
 
@@ -246,6 +288,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             current_answer: The agent's current answer.
             initial_feedback: Initial human feedback string.
             context: Executor context for callbacks.
+            show_answer: When True, display the updated answer before each prompt.
 
         Returns:
             Final answer after all feedback iterations.
@@ -259,7 +302,10 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = context._invoke_loop()
-                feedback = self._prompt_input(context.crew)
+                feedback = self._prompt_input(
+                    context.crew,
+                    answer=answer if show_answer else None,
+                )
 
         return answer
 
@@ -291,6 +337,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         current_answer: AgentFinish,
         initial_feedback: str,
         context: AsyncExecutorContext,
+        show_answer: bool = False,
     ) -> AgentFinish:
         """Process regular feedback with async iteration loop.
 
@@ -298,6 +345,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             current_answer: The agent's current answer.
             initial_feedback: Initial human feedback string.
             context: Async executor context for callbacks.
+            show_answer: When True, display the updated answer before each prompt.
 
         Returns:
             Final answer after all feedback iterations.
@@ -311,16 +359,25 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = await context._ainvoke_loop()
-                feedback = await self._prompt_input_async(context.crew)
+                feedback = await self._prompt_input_async(
+                    context.crew,
+                    answer=answer if show_answer else None,
+                )
 
         return answer
 
     @staticmethod
-    def _prompt_input(crew: Crew | None) -> str:
+    def _prompt_input(
+        crew: Crew | None,
+        answer: AgentFinish | None = None,
+    ) -> str:
         """Show rich panel and prompt for input.
 
         Args:
             crew: The crew instance for context.
+            answer: When provided, the agent result is printed before the
+                feedback prompt so the operator can see it even when verbose
+                is disabled.
 
         Returns:
             User input string from terminal.
@@ -334,6 +391,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         formatter.pause_live_updates()
 
         try:
+            if answer is not None:
+                HumanInputProvider._render_answer_panel(formatter, answer)
+
             if crew and getattr(crew, "_train", False):
                 prompt_text = (
                     "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
@@ -369,11 +429,17 @@ class SyncHumanInputProvider(HumanInputProvider):
             formatter.resume_live_updates()
 
     @staticmethod
-    async def _prompt_input_async(crew: Crew | None) -> str:
+    async def _prompt_input_async(
+        crew: Crew | None,
+        answer: AgentFinish | None = None,
+    ) -> str:
         """Show rich panel and prompt for input without blocking the event loop.
 
         Args:
             crew: The crew instance for context.
+            answer: When provided, the agent result is printed before the
+                feedback prompt so the operator can see it even when verbose
+                is disabled.
 
         Returns:
             User input string from terminal.
@@ -387,6 +453,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         formatter.pause_live_updates()
 
         try:
+            if answer is not None:
+                HumanInputProvider._render_answer_panel(formatter, answer)
+
             if crew and getattr(crew, "_train", False):
                 prompt_text = (
                     "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
