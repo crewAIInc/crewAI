@@ -6,7 +6,7 @@ concurrent readers or a single exclusive writer.
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from threading import Condition
+from threading import Condition, local
 
 
 class RWLock:
@@ -26,13 +26,21 @@ class RWLock:
         self._cond = Condition()
         self._readers = 0
         self._writer = False
+        self._waiting_writers = 0
+        self._read_depth = local()
 
     def r_acquire(self) -> None:
-        """Acquire a read lock, blocking if a writer holds the lock."""
+        """Acquire a read lock, blocking if a writer holds or awaits the lock."""
+        depth = getattr(self._read_depth, "value", 0)
         with self._cond:
-            while self._writer:
-                self._cond.wait()
+            # A reader that already holds the lock re-enters without waiting:
+            # blocking it here would deadlock the thread against its own read
+            # lock once a writer queues up.
+            if depth == 0:
+                while self._writer or self._waiting_writers > 0:
+                    self._cond.wait()
             self._readers += 1
+        self._read_depth.value = depth + 1
 
     def r_release(self) -> None:
         """Release a read lock and notify waiting writers if last reader."""
@@ -40,6 +48,7 @@ class RWLock:
             self._readers -= 1
             if self._readers == 0:
                 self._cond.notify_all()
+        self._read_depth.value = max(getattr(self._read_depth, "value", 1) - 1, 0)
 
     @contextmanager
     def r_locked(self) -> Generator[None, None, None]:
@@ -57,9 +66,15 @@ class RWLock:
     def w_acquire(self) -> None:
         """Acquire a write lock, blocking if any readers or writers are active."""
         with self._cond:
-            while self._writer or self._readers > 0:
-                self._cond.wait()
-            self._writer = True
+            # Readers that arrive from now on wait for this writer, otherwise a
+            # steady stream of readers starves it forever.
+            self._waiting_writers += 1
+            try:
+                while self._writer or self._readers > 0:
+                    self._cond.wait()
+                self._writer = True
+            finally:
+                self._waiting_writers -= 1
 
     def w_release(self) -> None:
         """Release a write lock and notify all waiting threads."""
