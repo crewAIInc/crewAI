@@ -196,6 +196,31 @@ class TestFormatMapping:
         assert obj.alarm == t
 
 
+    def test_email_format_without_email_validator(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """email-validator is optional, so email fields must fall back to str."""
+        import importlib
+        import sys
+
+        from crewai.utilities import pydantic_schema_utils
+
+        schema = {
+            "type": "object",
+            "properties": {"signer_email": {"type": "string", "format": "email"}},
+            "required": ["signer_email"],
+        }
+        monkeypatch.setitem(sys.modules, "email_validator", None)
+        module = importlib.reload(pydantic_schema_utils)
+        try:
+            Model = module.create_model_from_schema(schema)
+            obj = Model(signer_email="ada@example.com")
+            assert obj.signer_email == "ada@example.com"
+        finally:
+            monkeypatch.undo()
+            importlib.reload(pydantic_schema_utils)
+
+
 class TestNestedObjects:
     def test_nested_object_creates_model(self) -> None:
         schema = {
