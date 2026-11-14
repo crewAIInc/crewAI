@@ -2391,3 +2391,108 @@ def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
         assert finished.wait(timeout=5)
 
     assert order.index("save-done") < order.index("flow-finished")
+
+
+def test_conditional_start_triggered_by_method_name_and_reference():
+    ran_by_name: list[str] = []
+
+    class MethodNameFlow(Flow):
+        @start()
+        def init(self):
+            ran_by_name.append("init")
+
+        @start("init")
+        def maybe_begin(self):
+            ran_by_name.append("maybe_begin")
+
+        @listen(and_(init, maybe_begin))
+        def proceed(self):
+            ran_by_name.append("proceed")
+
+    flow_name = MethodNameFlow()
+    flow_name.kickoff()
+    assert ran_by_name == ["init", "maybe_begin", "proceed"]
+
+    ran_by_ref: list[str] = []
+
+    class MethodRefFlow(Flow):
+        @start()
+        def init(self):
+            ran_by_ref.append("init")
+
+        @start(init)
+        def maybe_begin(self):
+            ran_by_ref.append("maybe_begin")
+
+        @listen(and_(init, maybe_begin))
+        def proceed(self):
+            ran_by_ref.append("proceed")
+
+    flow_ref = MethodRefFlow()
+    flow_ref.kickoff()
+    assert ran_by_ref == ["init", "maybe_begin", "proceed"]
+
+
+def test_conditional_start_with_and_condition_on_methods():
+    ran: list[str] = []
+
+    class AndMethodFlow(Flow):
+        @start()
+        def step_a(self):
+            ran.append("a")
+
+        @listen(step_a)
+        def step_b(self):
+            ran.append("b")
+
+        @start(and_(step_a, step_b))
+        def step_c(self):
+            ran.append("c")
+
+    flow = AndMethodFlow()
+    flow.kickoff()
+    assert ran == ["a", "b", "c"]
+
+
+def test_conditional_start_with_or_condition_runs_once():
+    ran: list[str] = []
+
+    class OrStartFlow(Flow):
+        @start()
+        def step_a(self):
+            ran.append("a")
+
+        @start()
+        def step_b(self):
+            ran.append("b")
+
+        @start(or_(step_a, step_b))
+        def step_c(self):
+            ran.append("c")
+
+    OrStartFlow().kickoff()
+    assert ran.count("c") == 1
+
+
+def test_conditional_start_with_or_condition_refires_on_router_loop():
+    runs: list[str] = []
+
+    class OrStartLoopFlow(Flow):
+        @start()
+        def init(self):
+            pass
+
+        @router(init)
+        def first(self):
+            return "go"
+
+        @start(or_("go", "retry"))
+        def work(self):
+            runs.append("w")
+
+        @router(work)
+        def check(self):
+            return "retry" if len(runs) < 3 else "done"
+
+    OrStartLoopFlow().kickoff()
+    assert runs == ["w", "w", "w"]

@@ -1122,7 +1122,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             trigger_str = str(trigger)
             to_discard: list[FlowMethodName] = []
             for listener_name in candidates:
-                condition = self._listen_condition(listener_name)
+                condition = self._listen_condition(
+                    listener_name
+                ) or self._start_condition(listener_name)
                 if condition is None:
                     continue
                 if trigger_str in _iter_condition_events(condition):
@@ -3296,21 +3298,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         ]
                         await asyncio.gather(*tasks)
 
-                if current_trigger in router_results:
-                    for method_name in self._start_method_names():
-                        if self._start_condition_triggered_by(
-                            method_name, current_trigger
-                        ) and method_name not in ran_for_trigger.get(
-                            str(current_trigger), set()
-                        ):
-                            if method_name in self._completed_methods:
-                                # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
-                                was_resuming = self._is_execution_resuming
-                                self._is_execution_resuming = False
-                                await self._execute_start_method(method_name)
-                                self._is_execution_resuming = was_resuming
-                            else:
-                                await self._execute_start_method(method_name)
+                for method_name in self._start_method_names():
+                    start_condition = self._start_condition(method_name)
+                    once_per_cycle = start_condition is not None and _is_multi_event_or(
+                        start_condition
+                    )
+                    if once_per_cycle and method_name in self._fired_or_listeners:
+                        continue
+                    if self._start_condition_triggered_by(
+                        method_name, current_trigger
+                    ) and method_name not in ran_for_trigger.get(
+                        str(current_trigger), set()
+                    ):
+                        ran_for_trigger.setdefault(str(current_trigger), set()).add(
+                            method_name
+                        )
+                        if once_per_cycle:
+                            self._fired_or_listeners.add(method_name)
+                        await self._execute_start_method(method_name)
 
     def _condition_met(
         self,
