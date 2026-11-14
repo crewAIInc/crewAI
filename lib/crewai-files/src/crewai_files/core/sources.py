@@ -517,12 +517,14 @@ class FileUrl(BaseModel):
         return self._content_type
 
     def _guess_content_type(self) -> str:
-        """Guess content type from URL extension."""
+        """Guess content type from the URL, falling back to the supplied filename."""
         from urllib.parse import urlparse
 
         parsed = urlparse(self.url)
         path = parsed.path
         guessed, _ = mimetypes.guess_type(path)
+        if guessed in (None, OCTET_STREAM) and self.filename:
+            guessed, _ = mimetypes.guess_type(self.filename)
         return guessed or "application/octet-stream"
 
     def read(self) -> bytes:
