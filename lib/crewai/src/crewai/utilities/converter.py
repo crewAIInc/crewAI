@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 from typing import TYPE_CHECKING, Any, Final, TypedDict
 
 from crewai_core.printer import PRINTER
@@ -22,8 +21,61 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
 
-_JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_JSON_DECODER: Final[json.JSONDecoder] = json.JSONDecoder(strict=False)
 _I18N = I18N_DEFAULT
+
+
+_MAX_JSON_CANDIDATES: Final[int] = 100
+
+
+def _extract_first_json_object(result: str) -> Any | None:
+    """Return the first valid JSON object in *result*, or ``None``.
+
+    A greedy ``({.*})`` regex over a result like ``'{"a": 1}
+    Note: {"b": 2}'``
+    matches the whole string and fails to parse even though a perfectly valid
+    object is present, falling back to an unnecessary LLM refit. Scanning for
+    the first object that ``json.JSONDecoder.raw_decode`` accepts avoids that.
+
+    Single pass tracking brace depth outside strings: candidates nested inside
+    an earlier unterminated brace are skipped (the parse would return a
+    fragment of the truncated outer object), and the attempt cap stops a
+    pathological repeating pattern from pinning the worker with quadratic
+    rescans.
+    """
+    attempts = 0
+    depth = 0
+    in_string = False
+    escaped = False
+    for index, char in enumerate(result):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and in_string:
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            if depth == 0 and attempts < _MAX_JSON_CANDIDATES:
+                attempts += 1
+                try:
+                    parsed, _end = _JSON_DECODER.raw_decode(result, index)
+                except json.JSONDecodeError:
+                    depth += 1
+                    continue
+                except RecursionError:
+                    depth += 1
+                    continue
+                return parsed
+            depth += 1
+        elif char == "}":
+            depth = max(depth - 1, 0)
+    return None
+
 
 logger = logging.getLogger(__name__)
 
@@ -319,19 +371,8 @@ def handle_partial_json(
     Returns:
         The converted result as a dict, BaseModel, or original string.
     """
-    match = _JSON_PATTERN.search(result)
-    if match:
-        try:
-            parsed = json.loads(match.group(), strict=False)
-        except json.JSONDecodeError:
-            return convert_with_instructions(
-                result=result,
-                model=model,
-                is_json_output=is_json_output,
-                agent=agent,
-                converter_cls=converter_cls,
-            )
-
+    parsed = _extract_first_json_object(result)
+    if parsed is not None:
         try:
             exported_result = model.model_validate(parsed)
             if is_json_output:
@@ -493,19 +534,8 @@ async def async_handle_partial_json(
     converter_cls: type[Converter] | None = None,
 ) -> dict[str, Any] | BaseModel | str:
     """Async equivalent of ``handle_partial_json`` — defers LLM fallback to ``acall``."""
-    match = _JSON_PATTERN.search(result)
-    if match:
-        try:
-            parsed = json.loads(match.group(), strict=False)
-        except json.JSONDecodeError:
-            return await async_convert_with_instructions(
-                result=result,
-                model=model,
-                is_json_output=is_json_output,
-                agent=agent,
-                converter_cls=converter_cls,
-            )
-
+    parsed = _extract_first_json_object(result)
+    if parsed is not None:
         try:
             exported_result = model.model_validate(parsed)
             if is_json_output:
