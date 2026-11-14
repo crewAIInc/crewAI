@@ -449,7 +449,14 @@ def _value(table: Table, column: str, raw: str) -> object:
     text = raw.strip()
     if kind in ("integer", "number"):
         # An integer-kind column keeps exact Python ints when the text exceeds
-        # float64 precision; the filter value must match that exactly.
+        # float64 precision; the filter value must match that exactly. A number
+        # column can hold those exact ints too (a single non-integral native
+        # cell keeps the kind as "number"), so wide digit text is always read
+        # exactly: comparing an int to a float is exact in Python, while going
+        # through float64 would drop digits from both sides.
+        digits = text.replace(" ", "")
+        if digits.isdigit() and len(digits) > 15:
+            return int(digits)
         if kind == "integer" and text.strip().isdigit():
             return int(text)
         parsed = numbers(pd.Series([text]), table.decimal_comma).iloc[0]

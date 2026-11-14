@@ -1,8 +1,11 @@
 """Integers wider than float64's ~15 significant digits must survive reading,
 filtering and rendering exactly (#9380)."""
 
+import io
+
 from crewai_files.spreadsheets.answers import Filter, Query, query
 from crewai_files.spreadsheets.reading import parse
+import openpyxl
 
 
 CSV = (
@@ -80,3 +83,50 @@ def test_empty_cells_render_blank_in_exact_int_columns():
     workbook = parse(csv, "na.csv")
     out = query(workbook, "na.csv", Query(operation="rows"))
     assert "<NA>" not in out
+
+
+def _mixed_workbook() -> bytes:
+    """An order_id column with exact digit text plus one non-integral number."""
+    book = openpyxl.Workbook()
+    sheet = book.active
+    sheet.title = "Orders"
+    sheet.append(["order_id", "note"])
+    sheet.append(["1234567890123456789", "a"])
+    sheet.append(["1234567890123456790", "b"])
+    sheet.append([1.5, "c"])
+    buffer = io.BytesIO()
+    book.save(buffer)
+    return buffer.getvalue()
+
+
+def test_number_column_keeps_exact_int_filters():
+    """A non-integral native cell keeps the kind as "number" without rounding
+    the wide digit text, so an eq filter must still match it exactly."""
+    workbook = parse(_mixed_workbook(), "mixed.xlsx")
+    table = workbook.sheets[0].table()
+    assert table.kinds["order_id"] == "number"
+
+    out = query(
+        workbook,
+        "mixed.xlsx",
+        Query(
+            operation="rows",
+            where=[Filter(column="order_id", op="eq", values=["1234567890123456790"])],
+        ),
+    )
+    assert "1 of 3 rows match" in out
+    assert "1234567890123456790" in out
+    assert "1234567890123456768" not in out
+
+
+def test_number_column_ne_filter_compares_exactly():
+    workbook = parse(_mixed_workbook(), "mixed.xlsx")
+    out = query(
+        workbook,
+        "mixed.xlsx",
+        Query(
+            operation="rows",
+            where=[Filter(column="order_id", op="ne", values=["1234567890123456790"])],
+        ),
+    )
+    assert "2 of 3 rows match" in out
