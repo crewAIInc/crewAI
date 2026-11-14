@@ -2720,8 +2720,9 @@ class OpenAICompletion(BaseLLM):
                 stream_response_id = response_id_stream
 
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
+                # Usage can ride on a chunk that still has a delta (vLLM sends
+                # it on every chunk with continuous_usage_stats): keep the delta.
                 usage_data = self._extract_openai_token_usage(completion_chunk)
-                continue
 
             if not completion_chunk.choices:
                 continue
@@ -3007,8 +3008,8 @@ class OpenAICompletion(BaseLLM):
                     parsed_stream_response_id = response_id_stream
 
                 if hasattr(chunk, "usage") and chunk.usage:
+                    # A content chunk may carry usage too: keep its delta.
                     usage_data = self._extract_openai_token_usage(chunk)
-                    continue
 
                 if not chunk.choices:
                     continue
@@ -3074,8 +3075,8 @@ class OpenAICompletion(BaseLLM):
                 stream_response_id = response_id_stream
 
             if hasattr(chunk, "usage") and chunk.usage:
+                # A content chunk may carry usage too: keep its delta.
                 usage_data = self._extract_openai_token_usage(chunk)
-                continue
 
             if not chunk.choices:
                 continue
