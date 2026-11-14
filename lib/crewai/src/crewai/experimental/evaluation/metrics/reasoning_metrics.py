@@ -25,6 +25,7 @@ from crewai.experimental.evaluation.base_evaluator import (
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.types import LLMMessage
 
 
@@ -236,7 +237,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 messages.append(content)
             elif isinstance(content, list) and len(content) > 0:
                 messages.extend(
-                    msg["content"]
+                    message_content_text(msg)
                     for msg in content
                     if isinstance(msg, dict) and "content" in msg
                 )
@@ -281,10 +282,11 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             if isinstance(content, str):
                 call_lengths.append(len(content))
             elif isinstance(content, list) and len(content) > 0:
-                total_length = 0
-                for msg in content:
-                    if isinstance(msg, dict) and "content" in msg:
-                        total_length += len(msg["content"])
+                total_length = sum(
+                    len(message_content_text(msg))
+                    for msg in content
+                    if isinstance(msg, dict) and "content" in msg
+                )
                 call_lengths.append(total_length)
 
             start_time = call.get("start_time")
@@ -405,7 +407,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 sample = content
             elif isinstance(content, list) and len(content) > 0:
                 sample_parts = [
-                    msg["content"]
+                    message_content_text(msg)
                     for msg in content
                     if isinstance(msg, dict) and "content" in msg
                 ]
