@@ -188,9 +188,11 @@ def test_create_picker_supports_tool_skill_and_template(
     assert result.exit_code == 0, result.output
     mock_pick.assert_called_once()
     picker_options = mock_pick.call_args[0][1]
+    assert "experimental" in dict(picker_options)["agent"]
     assert {option[0] for option in picker_options} == {
         "crew",
         "flow",
+        "agent",
         "tool",
         "skill",
         "template",

@@ -365,31 +365,17 @@ def update_pyproject_dependencies(
 
     workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
-    current_extra: str | None = None
-    extra_header = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*\[")
-
-    for i, line in enumerate(lines):
-        match = extra_header.match(line)
-        if match:
-            current_extra = match.group(1)
-        elif line.strip().startswith("]"):
-            current_extra = None
-
+    for i in range(len(lines)):
         for pkg in workspace_packages:
-            if pkg == "crewai-files" and current_extra == "file-processing":
-                continue
-            if f"{pkg}==" in line:
-                stripped = line.lstrip()
-                indent = line[: len(line) - len(stripped)]
-
-                if '"' in line:
-                    lines[i] = f'{indent}"{pkg}=={new_version}",'
-                elif "'" in line:
-                    lines[i] = f"{indent}'{pkg}=={new_version}',"
-                else:
-                    lines[i] = f"{indent}{pkg}=={new_version},"
-
-                updated = True
+            # `pkg==` or `pkg[extra,...] == `, not the tail of a longer name; only
+            # the version changes, and every pin on the line does.
+            pin = re.compile(
+                rf"(?<![\w.-])({re.escape(pkg)}(?:\[[^\]]*\])?\s*==\s*)[^\s\"',;]+"
+            )
+            lines[i], count = pin.subn(
+                lambda match: f"{match.group(1)}{new_version}", lines[i]
+            )
+            updated = updated or count > 0
 
     if updated:
         file_path.write_text("\n".join(lines) + "\n")

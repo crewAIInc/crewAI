@@ -6,6 +6,7 @@ import zipfile
 import pytest
 import re
 import requests
+from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
 
 from crewai_tools import URLReadTool
 from crewai_tools.security.safe_requests import safe_get_bounded
@@ -60,12 +61,8 @@ def build_pdf(text: str = "Quarterly revenue was 42") -> bytes:
         document.close()
 
 
-PRESIGNED_URL = (
-    "https://temp.4d4f16c61d89ec64e760039c4ec50717.r2.cloudflarestorage.com/"
-    "668641/share_point/SHARE_POINT_DOWNLOAD_FILE_BY_SERVER_RELATIVE_URL/"
-    "response/34e077085d293bdb832a6b7c93b9e222"
-    "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=1954b3d4"
-)
+# Extensionless on purpose: these cases sniff the body, not a path suffix.
+PRESIGNED_URL = "https://example.com/file?X-Amz-Signature=test"
 
 
 def build_docx(text: str = "Signed and delivered") -> bytes:
@@ -326,7 +323,7 @@ def test_octet_stream_with_unknown_extension_is_rejected():
 
 
 def test_validation_failure_is_returned_as_error():
-    """An SSRF rejection reaches the agent as an error string, not an exception."""
+    """An SSRF rejection reaches the agent as a structured tool failure."""
     tool = URLReadTool()
     with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
         fetch.side_effect = ValueError(
@@ -334,8 +331,10 @@ def test_validation_failure_is_returned_as_error():
         )
         result = tool.run(url="http://169.254.169.254/")
 
-    assert result.startswith("Error:")
-    assert "private/reserved IP" in result
+    assert isinstance(result, ToolFailure)
+    assert result.reason is ToolFailureReason.TOOL_REPORTED
+    assert result.message.startswith("Error:")
+    assert "private/reserved IP" in result.message
 
 
 def test_request_failure_is_returned_as_error():
@@ -345,7 +344,9 @@ def test_request_failure_is_returned_as_error():
         fetch.side_effect = requests.ConnectionError("connection refused")
         result = tool.run(url="https://example.com/f.txt")
 
-    assert result.startswith("Error: Failed to fetch")
+    assert isinstance(result, ToolFailure)
+    assert result.reason is ToolFailureReason.TOOL_REPORTED
+    assert result.message.startswith("Error: Failed to fetch")
 
 
 def test_custom_headers_are_merged_over_defaults():
@@ -859,6 +860,30 @@ class TestSafeGetBounded:
                 safe_get_bounded("https://example.com/f", max_bytes=max_bytes)
 
         safe_get.assert_not_called()
+
+    def test_a_deadline_already_past_fails_before_requesting(self):
+        with patch("crewai_tools.security.safe_requests.safe_get") as safe_get:
+            with pytest.raises(ValueError, match="did not finish by the deadline"):
+                safe_get_bounded(
+                    "https://example.com/f",
+                    max_bytes=1024,
+                    deadline=time.monotonic() - 1,
+                )
+
+        safe_get.assert_not_called()
+
+    def test_a_body_that_arrives_before_the_deadline_is_returned(self):
+        response = FakeResponse(b"payload", chunk_size=2)
+        with patch(
+            "crewai_tools.security.safe_requests.safe_get", return_value=response
+        ):
+            body, _, _ = safe_get_bounded(
+                "https://example.com/f",
+                max_bytes=1024,
+                deadline=time.monotonic() + 60,
+            )
+
+        assert body == b"payload"
 
     def test_stops_reading_once_the_limit_is_crossed(self):
         """The cap must abandon the stream, not buffer the whole body first."""
