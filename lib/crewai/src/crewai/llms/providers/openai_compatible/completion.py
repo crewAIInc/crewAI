@@ -97,6 +97,27 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "token_kiosk": ProviderConfig(
+        base_url="https://api-token-kiosk.gaib.ai/v1",
+        api_key_env="TOKEN_KIOSK_API_KEY",
+        base_url_env="TOKEN_KIOSK_BASE_URL",
+        default_headers={"HTTP-Referer": "https://crewai.com"},
+        api_key_required=True,
+    ),
+    "tokenkiosk": ProviderConfig(
+        base_url="https://api-token-kiosk.gaib.ai/v1",
+        api_key_env="TOKEN_KIOSK_API_KEY",
+        base_url_env="TOKEN_KIOSK_BASE_URL",
+        default_headers={"HTTP-Referer": "https://crewai.com"},
+        api_key_required=True,
+    ),
+    "token-kiosk": ProviderConfig(
+        base_url="https://api-token-kiosk.gaib.ai/v1",
+        api_key_env="TOKEN_KIOSK_API_KEY",
+        base_url_env="TOKEN_KIOSK_BASE_URL",
+        default_headers={"HTTP-Referer": "https://crewai.com"},
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
