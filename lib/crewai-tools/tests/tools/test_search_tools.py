@@ -288,6 +288,26 @@ def test_code_docs_search_tool(mock_adapter):
     )
 
 
+def test_github_search_tool_constructor_content_types_are_used_for_later_add(mock_adapter):
+    mock_adapter.query.return_value = "repo description"
+
+    tool = GithubSearchTool(
+        gh_token="test_token",
+        content_types=["repo"],
+        adapter=mock_adapter,
+    )
+    result = tool._run(
+        github_repo="crewai/crewai",
+        search_query="tell me about crewai repo",
+    )
+
+    assert "repo description" in result
+    mock_adapter.add.assert_called_once_with(
+        "https://github.com/crewai/crewai",
+        data_type=DataType.GITHUB,
+        metadata={"content_types": ["repo"], "gh_token": "test_token"},
+    )
+
 def test_github_search_tool(mock_adapter):
     mock_adapter.query.return_value = "repo description"
 
