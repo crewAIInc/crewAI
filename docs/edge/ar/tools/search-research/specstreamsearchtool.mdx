@@ -24,7 +24,7 @@ uv add 'crewai[tools]'
 
 ## خطوات البدء
 
-1. **احصل على مفتاح API** من [specstream.ai](https://specstream.ai). تحصل الحسابات الجديدة على رصيد بقيمة 10 دولارات.
+1. **احصل على مفتاح API** من [specstream.ai](https://specstream.ai).
 2. **اضبط المفتاح** في بيئتك:
 
 ```bash
@@ -110,7 +110,3 @@ Crew(agents=[researcher], tasks=[task]).kickoff()
 ```
 
 إذا ردّ الـ API بخطأ، تُطلق الأداتان `RuntimeError` يتضمن حالة HTTP ورسالة الـ API.
-
-## الأسعار
-
-يكلّف البحث 5 دولارات لكل 1,000 عملية بحث، أو دولارًا واحدًا لكل 1,000 مع `speed="fast"`. ويكلّف الاستخراج 0.80 دولار لكل 1,000 صفحة. راجع [specstream.ai](https://specstream.ai) للتفاصيل.

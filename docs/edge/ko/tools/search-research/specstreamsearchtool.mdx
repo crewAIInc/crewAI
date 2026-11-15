@@ -24,7 +24,7 @@ uv add 'crewai[tools]'
 
 ## 시작하기
 
-1. [specstream.ai](https://specstream.ai)에서 **API 키를 발급**받으세요. 신규 계정에는 $10 크레딧이 제공됩니다.
+1. [specstream.ai](https://specstream.ai)에서 **API 키를 발급**받으세요.
 2. 환경 변수에 **키를 설정**하세요:
 
 ```bash
@@ -110,7 +110,3 @@ Crew(agents=[researcher], tasks=[task]).kickoff()
 ```
 
 API가 오류를 반환하면 두 도구 모두 HTTP 상태와 API 메시지를 담은 `RuntimeError`를 발생시킵니다.
-
-## 가격
-
-검색은 1,000회당 $5이며, `speed="fast"`를 사용하면 1,000회당 $1입니다. 추출은 1,000페이지당 $0.80입니다. 자세한 내용은 [specstream.ai](https://specstream.ai)를 참고하세요.
