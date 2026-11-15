@@ -779,3 +779,89 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_retry_preserves_upstream_context():
+    """Test that retried tasks retain their original upstream context alongside validation errors (#8219)."""
+    recorded_contexts = []
+
+    def guardrail(output: TaskOutput):
+        if "repaired" in output.raw:
+            return (True, output.raw)
+        return (False, "missing required citation")
+
+    agent = Mock()
+    agent.role = "writer"
+    agent.verbose = False
+    agent.crew = None
+    agent.last_messages = []
+
+    def mock_execute_task(task, context=None, tools=None):
+        recorded_contexts.append(context)
+        if len(recorded_contexts) == 1:
+            return "initial flawed output"
+        return "repaired output citing ACCT-8841"
+
+    agent.execute_task.side_effect = mock_execute_task
+
+    task = create_smart_task(
+        description="Write case note citing ACCT-8841",
+        expected_output="case note",
+        agent=agent,
+        guardrail=guardrail,
+        guardrail_max_retries=2,
+    )
+
+    upstream_context = "UPSTREAM_TASK_OUTPUT: Account facts: ACCT-8841, Customer: Ms. Lin"
+    result = task.execute_sync(agent=agent, context=upstream_context)
+
+    assert result.raw == "repaired output citing ACCT-8841"
+    assert len(recorded_contexts) == 2
+    # First attempt receives initial upstream context
+    assert recorded_contexts[0] == upstream_context
+    # Retried attempt must preserve the upstream context and append validation error
+    assert upstream_context in recorded_contexts[1]
+    assert "missing required citation" in recorded_contexts[1]
+
+
+@pytest.mark.asyncio
+async def test_async_guardrail_retry_preserves_upstream_context():
+    """Test that async retried tasks retain their original upstream context alongside validation errors (#8219)."""
+    recorded_contexts = []
+
+    def guardrail(output: TaskOutput):
+        if "repaired" in output.raw:
+            return (True, output.raw)
+        return (False, "missing required citation")
+
+    agent = Mock()
+    agent.role = "writer"
+    agent.verbose = False
+    agent.crew = None
+    agent.last_messages = []
+    agent.agent_executor = None
+
+    async def mock_aexecute_task(task, context=None, tools=None):
+        recorded_contexts.append(context)
+        if len(recorded_contexts) == 1:
+            return "initial flawed output"
+        return "repaired output citing ACCT-8841"
+
+    agent.aexecute_task = mock_aexecute_task
+
+    task = create_smart_task(
+        description="Write case note citing ACCT-8841",
+        expected_output="case note",
+        agent=agent,
+        guardrail=guardrail,
+        guardrail_max_retries=2,
+    )
+
+    upstream_context = "UPSTREAM_TASK_OUTPUT: Account facts: ACCT-8841, Customer: Ms. Lin"
+    result = await task.aexecute_sync(agent=agent, context=upstream_context)
+
+    assert result.raw == "repaired output citing ACCT-8841"
+    assert len(recorded_contexts) == 2
+    assert recorded_contexts[0] == upstream_context
+    assert upstream_context in recorded_contexts[1]
+    assert "missing required citation" in recorded_contexts[1]
