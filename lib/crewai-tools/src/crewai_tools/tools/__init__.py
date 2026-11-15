@@ -160,6 +160,12 @@ from crewai_tools.tools.scrapegraph_scrape_tool.scrapegraph_scrape_tool import (
 from crewai_tools.tools.scrapfly_scrape_website_tool.scrapfly_scrape_website_tool import (
     ScrapflyScrapeWebsiteTool,
 )
+from crewai_tools.tools.secfeed_tool.secfeed_tools import (
+    SecFeed8KReportsTool,
+    SecFeedFilingSearchTool,
+    SecFeedFinancialStatementsTool,
+    SecFeedInsiderTradesTool,
+)
 from crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool import (
     SeleniumScrapingTool,
 )
@@ -308,6 +314,10 @@ __all__ = [
     "ScrapegraphScrapeTool",
     "ScrapegraphScrapeToolSchema",
     "ScrapflyScrapeWebsiteTool",
+    "SecFeed8KReportsTool",
+    "SecFeedFilingSearchTool",
+    "SecFeedFinancialStatementsTool",
+    "SecFeedInsiderTradesTool",
     "SeleniumScrapingTool",
     "SerpApiGoogleSearchTool",
     "SerpApiGoogleShoppingTool",

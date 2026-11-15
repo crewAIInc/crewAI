@@ -27,6 +27,7 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 - **Database Integrations**: `MySQLSearchTool`
 - **Vector Database Integrations**: [AzureDocumentDBVectorSearchTool](src/crewai_tools/tools/azure_documentdb_vector_search_tool/README.md), `MongoDBVectorSearchTool`, `QdrantVectorSearchTool`, `WeaviateVectorSearchTool`
 - **API Integrations**: `SerperApiTool`, `ExaSearchTool`
+- **Financial Data**: [SecFeed SEC filing tools](src/crewai_tools/tools/secfeed_tool/README.md) (`SecFeedFilingSearchTool`, `SecFeedFinancialStatementsTool`, `SecFeedInsiderTradesTool`, `SecFeed8KReportsTool`)
 - **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`
 
 And many more robust tools to simplify your agent integrations.

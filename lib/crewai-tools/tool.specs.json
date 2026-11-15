@@ -22795,6 +22795,502 @@
       }
     },
     {
+      "description": "A company's latest 8-K current reports and what each covers (earnings releases, material agreements, leadership changes, other events), with links.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SecFeed (https://secfeedapi.com/signup/)",
+          "name": "SECFEED_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SecFeed 8-K reports",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Latest 8-K current reports and the items each one covers.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "SecFeed API key",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://secfeedapi.com",
+            "description": "SecFeed API base URL",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SecFeed8KReportsTool",
+        "type": "object"
+      },
+      "name": "SecFeed8KReportsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "limit": {
+            "default": 10,
+            "description": "How many reports, up to 50",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "ticker": {
+            "description": "Stock ticker, e.g. NVDA",
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "title": "SecFeed8KReportsSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Reads the right section (Business, Risk Factors, MD&A or Market Risk) of a company's latest 10-K or 10-Q and returns the passages most relevant to the question, with a link to the filing.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SecFeed (https://secfeedapi.com/signup/)",
+          "name": "SECFEED_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SecFeed SEC filing search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Answers a question from the right section of a company's latest 10-K or 10-Q.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "SecFeed API key",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://secfeedapi.com",
+            "description": "SecFeed API base URL",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SecFeedFilingSearchTool",
+        "type": "object"
+      },
+      "name": "SecFeedFilingSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "form": {
+            "default": "10-K",
+            "description": "10-K for the latest annual report, 10-Q for the latest quarter",
+            "enum": [
+              "10-K",
+              "10-Q"
+            ],
+            "title": "Form",
+            "type": "string"
+          },
+          "question": {
+            "description": "What to find out from the filing",
+            "title": "Question",
+            "type": "string"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional: business, risk, mdna or market_risk. Picked from the question when empty.",
+            "title": "Section"
+          },
+          "ticker": {
+            "description": "Stock ticker, e.g. NVDA",
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "question"
+        ],
+        "title": "SecFeedFilingSearchSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Income statement, balance sheet and cash flow figures from a company's latest 10-K or 10-Q, taken from the filing's XBRL data, latest periods side by side.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SecFeed (https://secfeedapi.com/signup/)",
+          "name": "SECFEED_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SecFeed financial statements",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Income statement, balance sheet and cash flow from XBRL.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "SecFeed API key",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://secfeedapi.com",
+            "description": "SecFeed API base URL",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SecFeedFinancialStatementsTool",
+        "type": "object"
+      },
+      "name": "SecFeedFinancialStatementsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "form": {
+            "default": "10-K",
+            "description": "10-K for annual figures, 10-Q for the latest quarter",
+            "enum": [
+              "10-K",
+              "10-Q"
+            ],
+            "title": "Form",
+            "type": "string"
+          },
+          "ticker": {
+            "description": "Stock ticker, e.g. NVDA",
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "title": "SecFeedFinancialStatementsSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Latest Form 4 insider transactions for a company: role, buy or sell, shares, price, value and whether the trade was under a 10b5-1 plan.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SecFeed (https://secfeedapi.com/signup/)",
+          "name": "SECFEED_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SecFeed insider trades",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Latest Form 4 insider transactions for a company.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "SecFeed API key",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://secfeedapi.com",
+            "description": "SecFeed API base URL",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "Request timeout in seconds",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SecFeedInsiderTradesTool",
+        "type": "object"
+      },
+      "name": "SecFeedInsiderTradesTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "P for open market buys only, S for sales only, empty for all",
+            "title": "Code"
+          },
+          "limit": {
+            "default": 20,
+            "description": "How many transactions, up to 50",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "ticker": {
+            "description": "Stock ticker, e.g. NVDA",
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "title": "SecFeedInsiderTradesSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content.",
       "env_vars": [],
       "humanized_name": "Read a website content",
