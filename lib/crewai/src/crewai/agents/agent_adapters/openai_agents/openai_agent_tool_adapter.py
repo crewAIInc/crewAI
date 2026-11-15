@@ -99,9 +99,13 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                 Returns:
                     Tool execution result.
                 """
-                param_name: str = next(
-                    iter(tool.args_schema.model_json_schema()["properties"].keys())
-                )
+
+                def single_argument(value: str) -> dict[str, str]:
+                    properties = tool.args_schema.model_json_schema()["properties"]
+                    param_name = next(iter(properties), None)
+                    if param_name is None:
+                        raise ValueError(f"Tool '{tool.name}' does not take arguments.")
+                    return {param_name: value}
 
                 args_dict: dict[str, Any]
                 if isinstance(arguments, dict):
@@ -110,9 +114,9 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                     try:
                         args_dict = json.loads(arguments)
                     except json.JSONDecodeError:
-                        args_dict = {param_name: arguments}
+                        args_dict = single_argument(arguments)
                 else:
-                    args_dict = {param_name: str(arguments)}
+                    args_dict = single_argument(str(arguments))
 
                 output: Any | Awaitable[Any] = tool._run(**args_dict)
 

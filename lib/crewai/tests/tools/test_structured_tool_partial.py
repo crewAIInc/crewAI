@@ -5,6 +5,7 @@ from functools import partial
 from pydantic import BaseModel, Field
 import pytest
 
+from crewai.tools.base_tool import Tool
 from crewai.tools.structured_tool import CrewStructuredTool
 
 
@@ -120,4 +121,95 @@ def test_partial_tool_rejects_bound_keyword_in_explicit_schema(
         CrewStructuredTool.from_function(
             partial(search_collection, collection="handbook"),
             args_schema=ExposedCollectionAlias if use_alias else ExposedCollection,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fully_bound", [False, True])
+async def test_registered_partial_rejects_keyword_override(fully_bound: bool) -> None:
+    from crewai import Agent
+
+    def lookup(collection: str, query: str) -> str:
+        """Look up a document."""
+        return f"{collection}:{query}"
+
+    arguments = {} if fully_bound else {"query": "travel"}
+    bound = {"collection": "handbook"}
+    if fully_bound:
+        bound["query"] = "travel"
+    structured = CrewStructuredTool.from_function(partial(lookup, **bound))
+    agent = Agent(
+        role="Reader",
+        goal="Find documents",
+        backstory="Test",
+        tools=[Tool.from_langchain(structured)],
+    )
+    registered = agent.tools[0]
+
+    assert registered.run(**arguments) == "handbook:travel"
+    with pytest.raises(
+        ValueError, match="Cannot override partial-bound keywords: collection"
+    ):
+        registered.run(collection="other", **arguments)
+
+    async def async_lookup(collection: str, query: str) -> str:
+        """Look up a document asynchronously."""
+        return lookup(collection, query)
+
+    async_structured = CrewStructuredTool.from_function(partial(async_lookup, **bound))
+    async_agent = Agent(
+        role="Reader",
+        goal="Find documents",
+        backstory="Test",
+        tools=[Tool.from_langchain(async_structured)],
+    )
+    async_registered = async_agent.tools[0]
+    assert await async_registered.arun(**arguments) == "handbook:travel"
+    with pytest.raises(
+        ValueError, match="Cannot override partial-bound keywords: collection"
+    ):
+        await async_registered.arun(collection="other", **arguments)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fully_bound", [False, True])
+async def test_openai_adapter_preserves_registered_partial_bindings(
+    fully_bound: bool,
+) -> None:
+    import json
+
+    pytest.importorskip("agents")
+    from crewai import Agent
+    from crewai.agents.agent_adapters.openai_agents.openai_agent_tool_adapter import (
+        OpenAIAgentToolAdapter,
+    )
+
+    def lookup(collection: str, query: str) -> str:
+        """Look up a document."""
+        return f"{collection}:{query}"
+
+    arguments = {} if fully_bound else {"query": "travel"}
+    bound = {"collection": "handbook"}
+    if fully_bound:
+        bound["query"] = "travel"
+    structured = CrewStructuredTool.from_function(partial(lookup, **bound))
+    agent = Agent(
+        role="Reader",
+        goal="Find documents",
+        backstory="Test",
+        tools=[Tool.from_langchain(structured)],
+    )
+    adapter = OpenAIAgentToolAdapter()
+    adapter.configure_tools(agent.tools)
+    openai_tool = adapter.converted_tools[0]
+
+    assert (
+        await openai_tool.on_invoke_tool(None, json.dumps(arguments))
+        == "handbook:travel"
+    )
+    with pytest.raises(
+        ValueError, match="Cannot override partial-bound keywords: collection"
+    ):
+        await openai_tool.on_invoke_tool(
+            None, json.dumps({"collection": "other", **arguments})
         )
