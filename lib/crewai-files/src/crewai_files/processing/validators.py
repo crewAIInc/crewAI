@@ -29,6 +29,14 @@ from crewai_files.processing.exceptions import (
 logger = logging.getLogger(__name__)
 
 
+class _ImageParseError(Exception):
+    """Raised when Pillow cannot parse image content."""
+
+
+class _PDFParseError(Exception):
+    """Raised when pypdf cannot parse PDF content."""
+
+
 def _get_image_dimensions(content: bytes) -> tuple[int, int] | None:
     """Get image dimensions using Pillow if available.
 
@@ -37,19 +45,26 @@ def _get_image_dimensions(content: bytes) -> tuple[int, int] | None:
 
     Returns:
         Tuple of (width, height) or None if Pillow unavailable.
+
+    Raises:
+        _ImageParseError: If Pillow fails to parse the image content.
     """
     try:
         from PIL import Image
-
-        with Image.open(io.BytesIO(content)) as img:
-            width, height = img.size
-            return int(width), int(height)
     except ImportError:
         logger.warning(
             "Pillow not installed - cannot validate image dimensions. "
             "Install with: pip install Pillow"
         )
         return None
+
+    try:
+        with Image.open(io.BytesIO(content)) as img:
+            width, height = img.size
+            return int(width), int(height)
+    except Exception as e:
+        logger.debug(f"Could not determine image dimensions: {e}")
+        raise _ImageParseError(f"Could not determine image dimensions: {e}") from e
 
 
 def _get_pdf_page_count(content: bytes) -> int | None:
@@ -60,18 +75,25 @@ def _get_pdf_page_count(content: bytes) -> int | None:
 
     Returns:
         Page count or None if pypdf unavailable.
+
+    Raises:
+        _PDFParseError: If pypdf fails to parse the PDF content.
     """
     try:
         from pypdf import PdfReader
-
-        reader = PdfReader(io.BytesIO(content))
-        return len(reader.pages)
     except ImportError:
         logger.warning(
             "pypdf not installed - cannot validate PDF page count. "
             "Install with: pip install pypdf"
         )
         return None
+
+    try:
+        reader = PdfReader(io.BytesIO(content))
+        return len(reader.pages)
+    except Exception as e:
+        logger.debug(f"Could not determine PDF page count: {e}")
+        raise _PDFParseError(f"Could not determine PDF page count: {e}") from e
 
 
 def _get_audio_duration(content: bytes, filename: str | None = None) -> float | None:
@@ -260,27 +282,34 @@ def validate_image(
     )
 
     if constraints.max_width is not None or constraints.max_height is not None:
-        dimensions = _get_image_dimensions(content)
-        if dimensions is not None:
-            width, height = dimensions
+        try:
+            dimensions = _get_image_dimensions(content)
+        except _ImageParseError:
+            msg = f"Image '{filename}' could not be parsed"
+            errors.append(msg)
+            if raise_on_error:
+                raise FileValidationError(msg, file_name=filename)
+        else:
+            if dimensions is not None:
+                width, height = dimensions
 
-            if constraints.max_width and width > constraints.max_width:
-                msg = (
-                    f"Image '{filename}' width ({width}px) exceeds "
-                    f"maximum ({constraints.max_width}px)"
-                )
-                errors.append(msg)
-                if raise_on_error:
-                    raise FileValidationError(msg, file_name=filename)
+                if constraints.max_width and width > constraints.max_width:
+                    msg = (
+                        f"Image '{filename}' width ({width}px) exceeds "
+                        f"maximum ({constraints.max_width}px)"
+                    )
+                    errors.append(msg)
+                    if raise_on_error:
+                        raise FileValidationError(msg, file_name=filename)
 
-            if constraints.max_height and height > constraints.max_height:
-                msg = (
-                    f"Image '{filename}' height ({height}px) exceeds "
-                    f"maximum ({constraints.max_height}px)"
-                )
-                errors.append(msg)
-                if raise_on_error:
-                    raise FileValidationError(msg, file_name=filename)
+                if constraints.max_height and height > constraints.max_height:
+                    msg = (
+                        f"Image '{filename}' height ({height}px) exceeds "
+                        f"maximum ({constraints.max_height}px)"
+                    )
+                    errors.append(msg)
+                    if raise_on_error:
+                        raise FileValidationError(msg, file_name=filename)
 
     return errors
 
@@ -315,15 +344,22 @@ def validate_pdf(
     )
 
     if constraints.max_pages is not None:
-        page_count = _get_pdf_page_count(content)
-        if page_count is not None and page_count > constraints.max_pages:
-            msg = (
-                f"PDF '{filename}' page count ({page_count}) exceeds "
-                f"maximum ({constraints.max_pages})"
-            )
+        try:
+            page_count = _get_pdf_page_count(content)
+        except _PDFParseError:
+            msg = f"PDF '{filename}' could not be parsed"
             errors.append(msg)
             if raise_on_error:
                 raise FileValidationError(msg, file_name=filename)
+        else:
+            if page_count is not None and page_count > constraints.max_pages:
+                msg = (
+                    f"PDF '{filename}' page count ({page_count}) exceeds "
+                    f"maximum ({constraints.max_pages})"
+                )
+                errors.append(msg)
+                if raise_on_error:
+                    raise FileValidationError(msg, file_name=filename)
 
     return errors
 
