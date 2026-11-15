@@ -12,7 +12,7 @@ from crewai_tools.rag.base_loader import BaseLoader
 from crewai_tools.rag.chunkers.base_chunker import BaseChunker
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.embedding_service import EmbeddingService
-from crewai_tools.rag.misc import compute_sha256
+from crewai_tools.rag.misc import compute_sha256, sanitize_metadata_for_chromadb
 from crewai_tools.rag.source_content import SourceContent
 from crewai_tools.tools.rag.rag_tool import Adapter
 
@@ -99,11 +99,17 @@ class RAG(Adapter):
         loader_result = loader.load(source_content)
         doc_id = loader_result.doc_id
 
+        # Precedence, lowest to highest: loader metadata (sanitized for ChromaDB),
+        # caller metadata, then generated chunk_index/data_type/source/doc_id.
+        base_metadata = {
+            **sanitize_metadata_for_chromadb(loader_result.metadata),
+            **(metadata or {}),
+        }
+
         chunks = chunker.chunk(loader_result.content)
         documents = []
         for i, chunk in enumerate(chunks):
-            doc_metadata = (metadata or {}).copy()
-            doc_metadata["chunk_index"] = i
+            doc_metadata = {**base_metadata, "chunk_index": i}
             documents.append(
                 Document(
                     id=compute_sha256(chunk),
