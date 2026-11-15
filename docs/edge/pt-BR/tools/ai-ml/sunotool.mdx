@@ -5,9 +5,13 @@ icon: music
 mode: "wide"
 ---
 
-Esta integração independente é fornecida pela Ace Data Cloud, não é produto oficial de Suno ou CrewAI. O código foi integrado e o repositório Ace publicou wheel/sdist estáveis 0.1.0 no GitHub. Não há alegação de publicação PyPI ou catálogo AMP. Instale o commit integrado abaixo ou o wheel vinculado a SHA256 nas notas da versão. Esta página proposta não comprova listagem oficial.
+Esta integração independente é fornecida pela Ace Data Cloud, não é produto oficial de Suno ou CrewAI. O código foi integrado e há uma versão estável 0.1.0 com wheel/sdist no GitHub. A versão [PyPI 0.1.0](https://pypi.org/project/crewai-suno/0.1.0/) está disponível; os SHA256 dos dois arquivos foram conferidos com esses artefatos do GitHub em 2026-11-15. A publicação no PyPI não comprova inclusão oficial no CrewAI ou catálogo AMP. Esta página proposta não comprova listagem oficial.
 
-Instale o pacote independente a partir do commit exato revisado. Ele usa CrewAI BaseTool diretamente, sem configurar MCP ou escrever um wrapper.
+Instale o pacote independente pelo nome no PyPI. Ele usa CrewAI BaseTool diretamente, sem configurar MCP ou escrever um wrapper. As alternativas com commit exato e wheel vinculado a SHA256 continuam abaixo.
+
+```bash
+uv add crewai-suno==0.1.0
+```
 
 ```bash
 uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'

@@ -5,9 +5,13 @@ icon: music
 mode: "wide"
 ---
 
-يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Suno أو CrewAI. دُمج المصدر ويوجد إصدار GitHub ثابت 0.1.0 مع wheel/sdist في مستودع Ace. لا ندّعي نشر PyPI أو الإدراج في AMP. ثبّت المصدر المدمج الثابت أدناه أو استخدم أمر wheel المرتبط بـSHA256 في ملاحظات الإصدار. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Suno أو CrewAI. دُمج المصدر ويتوفر إصدار GitHub ثابت 0.1.0 مع wheel/sdist. يتوفر [PyPI 0.1.0](https://pypi.org/project/crewai-suno/0.1.0/)، وتم التحقق في 2026-11-15 من تطابق قيم SHA256 للملفين مع أصول GitHub. لا يعني النشر على PyPI الإدراج الرسمي في CrewAI أو كتالوج AMP. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
 
-ثبّت الحزمة المستقلة المراجعة من نسخة المصدر المحددة. تستخدم CrewAI BaseTool مباشرة، دون إعداد MCP أو كتابة غلاف مخصص.
+ثبّت الحزمة المستقلة باسمها من PyPI. تستخدم CrewAI BaseTool مباشرة، دون إعداد MCP أو كتابة غلاف مخصص. تبقى أدناه بدائل المصدر المحدد وwheel المرتبط بـSHA256.
+
+```bash
+uv add crewai-suno==0.1.0
+```
 
 ```bash
 uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'

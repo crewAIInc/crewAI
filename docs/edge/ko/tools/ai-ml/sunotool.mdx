@@ -5,9 +5,13 @@ icon: music
 mode: "wide"
 ---
 
-이 독립 통합은 Ace Data Cloud가 제공하며 Suno 또는 CrewAI 공식 제품이 아닙니다. 소스는 병합되었고 Ace 저장소의 안정 GitHub 0.1.0 wheel/sdist 릴리스가 있습니다. PyPI 출시나 AMP 등록은 주장하지 않습니다. 아래 병합 소스 SHA 또는 릴리스 노트의 SHA256 고정 wheel을 설치하세요. 이 제안 문서는 공식 등록의 증거가 아닙니다.
+이 독립 통합은 Ace Data Cloud가 제공하며 Suno 또는 CrewAI 공식 제품이 아닙니다. 소스는 병합되었고 안정 GitHub 0.1.0 wheel/sdist 릴리스가 있습니다. [PyPI 0.1.0](https://pypi.org/project/crewai-suno/0.1.0/)도 제공되며, 2026-11-15 두 파일의 SHA256이 해당 GitHub 자산과 일치함을 확인했습니다. PyPI 출시는 CrewAI 또는 AMP 카탈로그의 공식 등록을 의미하지 않습니다. 이 제안 문서는 공식 등록의 증거가 아닙니다.
 
-검토된 정확한 소스 커밋에서 독립 패키지를 설치하세요. CrewAI BaseTool을 직접 사용하므로 MCP 설정이나 별도 래퍼가 필요하지 않습니다.
+PyPI에서 독립 패키지를 이름으로 설치하세요. CrewAI BaseTool을 직접 사용하므로 MCP 설정이나 별도 래퍼가 필요하지 않습니다. 아래의 정확한 소스 및 SHA256 고정 wheel 설치 방법도 계속 사용할 수 있습니다.
+
+```bash
+uv add crewai-suno==0.1.0
+```
 
 ```bash
 uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'
