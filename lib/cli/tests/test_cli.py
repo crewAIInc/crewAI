@@ -240,9 +240,9 @@ def test_replay_task_id_snake_case_alias_warns(replay_task_command, runner):
 def test_replay_without_task_id(replay_task_command, runner):
     result = runner.invoke(replay)
 
-    assert result.exit_code == 0, result.output
-    replay_task_command.assert_called_once_with(None, trained_agents_file=None)
-    assert "Replaying the crew from task None" in result.output
+    assert result.exit_code == 2, result.output
+    replay_task_command.assert_not_called()
+    assert "Missing option '--task-id'" in result.output
 
 
 @mock.patch("crewai_cli.cli.run_crew")
