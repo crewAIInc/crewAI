@@ -77,6 +77,14 @@ class TestSkillCreate:
             with pytest.raises(SystemExit):
                 skill_command.create("existing-skill", in_project=False)
 
+    @pytest.mark.parametrize("name", ["nested/skill", "nested\\skill", ".hidden"])
+    def test_create_rejects_non_single_segment_names(self, skill_command, name):
+        with in_temp_dir() as td:
+            with pytest.raises(SystemExit):
+                skill_command.create(name, in_project=False)
+            assert not (Path(td) / "nested").exists()
+            assert not (Path(td) / ".hidden").exists()
+
 
 class TestSkillInstall:
     def _zip_skill(self, name: str) -> bytes:

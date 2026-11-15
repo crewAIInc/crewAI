@@ -64,6 +64,22 @@ def _printable(text: str) -> str:
     return "".join(c for c in text if c.isprintable())
 
 
+def _validate_skill_name(name: str) -> None:
+    """Reject names that are not a single, non-hidden path segment."""
+    if (
+        not name
+        or name.startswith(".")
+        or "/" in name
+        or "\\" in name
+        or len(Path(name).parts) != 1
+    ):
+        console.print(
+            "[red]Invalid skill name: must be a single, non-empty path segment "
+            "(no slashes, no '..').[/red]"
+        )
+        raise SystemExit(1)
+
+
 _SKILL_MD_TEMPLATE = """\
 ---
 name: {name}
@@ -92,6 +108,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         If pyproject.toml is present (crew project), creates ./skills/{name}/.
         Otherwise creates ./{name}/.
         """
+        _validate_skill_name(name)
         if in_project and os.path.isfile("pyproject.toml"):
             skill_dir = Path("skills") / name
         else:
