@@ -24,6 +24,9 @@ from crewai.utilities.errors import AgentRepositoryError
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.a2a.auth.client_schemes import BearerTokenAuth
+from crewai.a2a.auth.server_schemes import SimpleTokenAuth
+from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
 from crewai.agents.cache import CacheHandler
 from crewai.tools import tool
 from crewai.utilities import RPMController
@@ -135,6 +138,95 @@ def test_agent_copy_does_not_emit_i18n_deprecation_warning():
     assert not any(
         "Agent.i18n is deprecated" in str(w.message) for w in caught_warnings
     )
+
+
+def test_agent_copy_with_a2a_bearer_auth():
+    """Agent.copy() keeps an authenticated A2A config (regression test for #9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AClientConfig(
+            endpoint="http://example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="test-token"),
+        ),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AClientConfig)
+    assert isinstance(copied.a2a.auth, BearerTokenAuth)
+    assert copied.a2a.auth.token == "test-token"
+    assert copied.a2a.endpoint == agent.a2a.endpoint
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
+
+
+def test_agent_copy_with_deprecated_a2a_config_auth():
+    """Agent.copy() keeps auth on the deprecated A2AConfig path (#9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AConfig(
+            endpoint="http://example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="test-token"),
+        ),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AConfig)
+    assert isinstance(copied.a2a.auth, BearerTokenAuth)
+    assert copied.a2a.auth.token == "test-token"
+    assert copied.a2a is not agent.a2a
+
+
+def test_agent_copy_with_a2a_auth_list():
+    """Agent.copy() keeps auth when a2a is a list of configs (#9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=[
+            A2AClientConfig(
+                endpoint="http://example.com/.well-known/agent-card.json",
+                auth=BearerTokenAuth(token="test-token"),
+            ),
+            A2AClientConfig(endpoint="http://example.org"),
+        ],
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, list)
+    assert len(copied.a2a) == 2
+    assert isinstance(copied.a2a[0].auth, BearerTokenAuth)
+    assert copied.a2a[0].auth.token == "test-token"
+    assert copied.a2a[1].auth is None
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a[0] is not agent.a2a[0]
+
+
+def test_agent_copy_with_a2a_server_auth():
+    """Agent.copy() keeps auth on an A2A server config (#9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AServerConfig(auth=SimpleTokenAuth()),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AServerConfig)
+    assert isinstance(copied.a2a.auth, SimpleTokenAuth)
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
 
 
 def test_agent_with_only_system_template():
