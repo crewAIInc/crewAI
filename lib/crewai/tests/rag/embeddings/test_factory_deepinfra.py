@@ -2,9 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-from chromadb.utils.embedding_functions.openai_embedding_function import (
-    OpenAIEmbeddingFunction,
-)
 import httpx
 import pytest
 from pydantic import ValidationError
@@ -14,6 +11,9 @@ from crewai.rag.embeddings.providers.deepinfra import deepinfra_provider
 from crewai.rag.embeddings.providers.deepinfra.deepinfra_provider import (
     DEFAULT_MODEL,
     DeepInfraProvider,
+)
+from crewai.rag.embeddings.providers.openai.embedding_callable import (
+    OpenAIEmbeddingFunction,
 )
 
 
@@ -141,6 +141,23 @@ class TestDeepInfraEmbedderFactory:
 
         assert isinstance(embedder, OpenAIEmbeddingFunction)
         assert embedder.model_name == "Qwen/Qwen3-Embedding-4B"
+
+    def test_embeds_through_the_deepinfra_endpoint(self):
+        """Test the native OpenAI function sends the request to DeepInfra."""
+        with patch("openai.OpenAI") as client_cls:
+            create = client_cls.return_value.embeddings.create
+            create.return_value = MagicMock(data=[MagicMock(embedding=[0.25, -0.5])])
+
+            embedder = build_embedder(
+                {"provider": "deepinfra", "config": {"api_key": "di-key"}}
+            )
+            vectors = embedder(["hello"])
+
+        client_cls.assert_called_once_with(
+            api_key="di-key", base_url="https://api.deepinfra.com/v1/openai"
+        )
+        create.assert_called_once_with(model=DEFAULT_MODEL, input=["hello"])
+        assert [list(v) for v in vectors] == [[0.25, -0.5]]
 
     def test_build_embedder_without_model_uses_static_default(self, catalog_get):
         """Test an embedder built without a model embeds with the fixed default."""

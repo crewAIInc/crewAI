@@ -3,9 +3,6 @@
 import os
 from typing import Any
 
-from chromadb.utils.embedding_functions.openai_embedding_function import (
-    OpenAIEmbeddingFunction,
-)
 import httpx
 from pydantic import AliasChoices, Field, model_validator
 from pydantic.fields import FieldInfo
@@ -13,6 +10,9 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from typing_extensions import Self
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.providers.openai.embedding_callable import (
+    OpenAIEmbeddingFunction,
+)
 
 
 DEFAULT_API_BASE = "https://api.deepinfra.com/v1/openai"
@@ -153,14 +153,14 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     def _reject_dimensions(cls, data: Any) -> Any:
         """Refuse ``dimensions`` rather than accept a value that never reaches the API.
 
-        chromadb's ``OpenAIEmbeddingFunction`` only sends ``dimensions`` for OpenAI
+        ``OpenAIEmbeddingFunction`` only sends ``dimensions`` for OpenAI
         ``text-embedding-3`` models, so for a DeepInfra model the vectors would
         silently keep the model's full size.
         """
         if isinstance(data, dict) and data.get("dimensions") is not None:
             raise ValueError(
                 "dimensions is not supported by the deepinfra embedding provider: "
-                "chromadb's OpenAIEmbeddingFunction only forwards it for OpenAI "
+                "the OpenAI embedding function only forwards it for OpenAI "
                 "text-embedding-3 models, so the vectors would keep the model's "
                 "full size. Choose a model with the size you need instead."
             )
