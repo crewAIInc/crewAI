@@ -207,6 +207,12 @@ from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
     SnowflakeConfig,
     SnowflakeSearchTool,
 )
+from crewai_tools.tools.specstream_extract_tool.specstream_extract_tool import (
+    SpecStreamExtractTool,
+)
+from crewai_tools.tools.specstream_search_tool.specstream_search_tool import (
+    SpecStreamSearchTool,
+)
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
@@ -339,6 +345,8 @@ __all__ = [
     "SingleStoreSearchTool",
     "SnowflakeConfig",
     "SnowflakeSearchTool",
+    "SpecStreamExtractTool",
+    "SpecStreamSearchTool",
     "SpiderTool",
     "StagehandTool",
     "TXTSearchTool",

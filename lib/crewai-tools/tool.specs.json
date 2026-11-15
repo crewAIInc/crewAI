@@ -26634,6 +26634,274 @@
       }
     },
     {
+      "description": "Reads the main text of one or more web pages with the SpecStream Extract API. Returns a JSON list with url, status, title and text for each page.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SpecStream",
+          "name": "SPECSTREAM_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SpecStream Extract",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Reads the main text of web pages with the SpecStream Extract API.\n\nAttributes:\n    api_key: The SpecStream API key. Read from SPECSTREAM_API_KEY if not given.\n    base_url: The SpecStream API address.\n    format: Return each page as \"markdown\" or plain \"text\".\n    timeout: Request timeout in seconds.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The SpecStream API key. Read from SPECSTREAM_API_KEY if not given.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.specstream.ai",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "format": {
+            "default": "markdown",
+            "enum": [
+              "markdown",
+              "text"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SpecStreamExtractTool",
+        "type": "object"
+      },
+      "name": "SpecStreamExtractTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for SpecStreamExtractTool.",
+        "properties": {
+          "urls": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The URL or list of URLs (up to 20) to read.",
+            "title": "Urls"
+          }
+        },
+        "required": [
+          "urls"
+        ],
+        "title": "SpecStreamExtractToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Searches the live web with the SpecStream Search API. Returns a JSON list of results with title, url, snippet and the published date when the page states one.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SpecStream",
+          "name": "SPECSTREAM_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SpecStream Web Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Searches the live web with the SpecStream Search API.\n\nAttributes:\n    api_key: The SpecStream API key. Read from SPECSTREAM_API_KEY if not given.\n    base_url: The SpecStream API address.\n    max_results: Default number of results when the agent does not ask for one.\n    timeout: Request timeout in seconds.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The SpecStream API key. Read from SPECSTREAM_API_KEY if not given.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.specstream.ai",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "max_results": {
+            "default": 10,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 60,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SpecStreamSearchTool",
+        "type": "object"
+      },
+      "name": "SpecStreamSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for SpecStreamSearchTool.",
+        "properties": {
+          "max_results": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "How many results to return (1 to 100). Defaults to 10.",
+            "title": "Max Results"
+          },
+          "query": {
+            "description": "The search query, in everyday words.",
+            "title": "Query",
+            "type": "string"
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "fast"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "'fast' returns the engines' first ranked results at a lower price.",
+            "title": "Speed"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SpecStreamSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool to scrape or crawl a website and return LLM-ready content.",
       "env_vars": [
         {

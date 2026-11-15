@@ -1,0 +1,116 @@
+---
+title: Ferramentas de Busca SpecStream
+description: O `SpecStreamSearchTool` e o `SpecStreamExtractTool` pesquisam a web em tempo real e leem páginas com a API da SpecStream.
+icon: magnifying-glass
+mode: "wide"
+---
+
+## Descrição
+
+A CrewAI oferece duas ferramentas para as APIs web da [SpecStream](https://specstream.ai):
+
+| Ferramenta | O que faz |
+| --- | --- |
+| `SpecStreamSearchTool` | Pesquisa a web em tempo real e retorna `title`, `url`, `snippet` e `published` (a data da página, quando ela informa uma) para cada resultado. |
+| `SpecStreamExtractTool` | Lê o texto principal de até 20 URLs e retorna `url`, `status`, `title` e `text` para cada página. |
+
+As duas ferramentas chamam a API com `requests`, então não precisam de pacote extra.
+
+## Instalação
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## Primeiros Passos
+
+1. **Obtenha uma chave de API** em [specstream.ai](https://specstream.ai). Novas contas recebem US$ 10 de crédito.
+2. **Defina a chave** no seu ambiente:
+
+```bash
+export SPECSTREAM_API_KEY='your-specstream-api-key'
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import SpecStreamExtractTool, SpecStreamSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Answer questions from current web sources",
+    backstory="You search the web, then read the best pages before you answer.",
+    tools=[SpecStreamSearchTool(), SpecStreamExtractTool()],
+)
+
+task = Task(
+    description="Find the latest crewAI release and summarize what changed.",
+    expected_output="A short summary with the source URLs.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## Parâmetros
+
+### SpecStreamSearchTool
+
+Parâmetros de execução:
+
+- **query**: Obrigatório. A consulta de busca.
+- **max_results**: Opcional. Quantos resultados retornar, de 1 a 100. Padrão: 10.
+- **speed**: Opcional. `"fast"` retorna os primeiros resultados ranqueados pelos buscadores a um preço menor; `"default"` executa a busca completa.
+
+Parâmetros do construtor:
+
+- **api_key**: Opcional. Por padrão, usa a variável de ambiente `SPECSTREAM_API_KEY`.
+- **max_results**: Opcional. O número padrão de resultados. Padrão: 10.
+- **timeout**: Opcional. Tempo limite da requisição em segundos. Padrão: 60.
+
+### SpecStreamExtractTool
+
+Parâmetros de execução:
+
+- **urls**: Obrigatório. Uma URL ou uma lista de até 20 URLs.
+
+Parâmetros do construtor:
+
+- **api_key**: Opcional. Por padrão, usa a variável de ambiente `SPECSTREAM_API_KEY`.
+- **format**: Opcional. `"markdown"` (padrão) ou `"text"`.
+- **timeout**: Opcional. Tempo limite da requisição em segundos. Padrão: 120.
+
+## Formato de Retorno
+
+O `SpecStreamSearchTool` retorna uma string JSON:
+
+```json
+[
+  {
+    "title": "Result title",
+    "url": "https://example.com/page",
+    "snippet": "Text from the page that matches the query...",
+    "published": "2026-02-25"
+  }
+]
+```
+
+O `SpecStreamExtractTool` retorna uma string JSON:
+
+```json
+[
+  {
+    "url": "https://example.com",
+    "status": "ok",
+    "title": "Example Domain",
+    "text": "The main text of the page..."
+  }
+]
+```
+
+Se a API responder com um erro, as duas ferramentas lançam um `RuntimeError` com o status HTTP e a mensagem da API.
+
+## Preços
+
+A busca custa US$ 5 por 1.000 buscas, ou US$ 1 por 1.000 com `speed="fast"`. A extração custa US$ 0,80 por 1.000 páginas. Veja [specstream.ai](https://specstream.ai) para mais detalhes.

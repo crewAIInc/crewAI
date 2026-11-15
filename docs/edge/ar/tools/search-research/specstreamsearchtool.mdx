@@ -1,0 +1,116 @@
+---
+title: أدوات بحث SpecStream
+description: تبحث أداتا `SpecStreamSearchTool` و`SpecStreamExtractTool` في الويب المباشر وتقرآن الصفحات باستخدام SpecStream API.
+icon: magnifying-glass
+mode: "wide"
+---
+
+## الوصف
+
+يوفر CrewAI أداتين لواجهات [SpecStream](https://specstream.ai) البرمجية للويب:
+
+| الأداة | ما تفعله |
+| --- | --- |
+| `SpecStreamSearchTool` | تبحث في الويب المباشر وتعيد `title` و`url` و`snippet` و`published` (تاريخ الصفحة عندما تذكره) لكل نتيجة. |
+| `SpecStreamExtractTool` | تقرأ النص الرئيسي لما يصل إلى 20 رابطًا وتعيد `url` و`status` و`title` و`text` لكل صفحة. |
+
+تستدعي الأداتان الـ API عبر `requests`، لذا لا تحتاجان إلى أي حزمة إضافية.
+
+## التثبيت
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## خطوات البدء
+
+1. **احصل على مفتاح API** من [specstream.ai](https://specstream.ai). تحصل الحسابات الجديدة على رصيد بقيمة 10 دولارات.
+2. **اضبط المفتاح** في بيئتك:
+
+```bash
+export SPECSTREAM_API_KEY='your-specstream-api-key'
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import SpecStreamExtractTool, SpecStreamSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Answer questions from current web sources",
+    backstory="You search the web, then read the best pages before you answer.",
+    tools=[SpecStreamSearchTool(), SpecStreamExtractTool()],
+)
+
+task = Task(
+    description="Find the latest crewAI release and summarize what changed.",
+    expected_output="A short summary with the source URLs.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## المعاملات
+
+### SpecStreamSearchTool
+
+معاملات التشغيل:
+
+- **query**: مطلوب. عبارة البحث.
+- **max_results**: اختياري. عدد النتائج المُعادة، من 1 إلى 100. القيمة الافتراضية 10.
+- **speed**: اختياري. تعيد `"fast"` أولى النتائج المرتبة من محركات البحث بسعر أقل؛ وتشغّل `"default"` البحث الكامل.
+
+معاملات المُنشئ:
+
+- **api_key**: اختياري. يُقرأ افتراضيًا من متغير البيئة `SPECSTREAM_API_KEY`.
+- **max_results**: اختياري. العدد الافتراضي للنتائج. القيمة الافتراضية 10.
+- **timeout**: اختياري. مهلة الطلب بالثواني. القيمة الافتراضية 60.
+
+### SpecStreamExtractTool
+
+معاملات التشغيل:
+
+- **urls**: مطلوب. رابط واحد أو قائمة تضم حتى 20 رابطًا.
+
+معاملات المُنشئ:
+
+- **api_key**: اختياري. يُقرأ افتراضيًا من متغير البيئة `SPECSTREAM_API_KEY`.
+- **format**: اختياري. `"markdown"` (افتراضي) أو `"text"`.
+- **timeout**: اختياري. مهلة الطلب بالثواني. القيمة الافتراضية 120.
+
+## صيغة الإرجاع
+
+تعيد `SpecStreamSearchTool` سلسلة JSON:
+
+```json
+[
+  {
+    "title": "Result title",
+    "url": "https://example.com/page",
+    "snippet": "Text from the page that matches the query...",
+    "published": "2026-02-25"
+  }
+]
+```
+
+تعيد `SpecStreamExtractTool` سلسلة JSON:
+
+```json
+[
+  {
+    "url": "https://example.com",
+    "status": "ok",
+    "title": "Example Domain",
+    "text": "The main text of the page..."
+  }
+]
+```
+
+إذا ردّ الـ API بخطأ، تُطلق الأداتان `RuntimeError` يتضمن حالة HTTP ورسالة الـ API.
+
+## الأسعار
+
+يكلّف البحث 5 دولارات لكل 1,000 عملية بحث، أو دولارًا واحدًا لكل 1,000 مع `speed="fast"`. ويكلّف الاستخراج 0.80 دولار لكل 1,000 صفحة. راجع [specstream.ai](https://specstream.ai) للتفاصيل.

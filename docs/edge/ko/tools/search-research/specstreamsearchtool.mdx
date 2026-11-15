@@ -1,0 +1,116 @@
+---
+title: SpecStream 검색 도구
+description: SpecStreamSearchTool과 SpecStreamExtractTool은 SpecStream API로 실시간 웹을 검색하고 페이지를 읽습니다.
+icon: magnifying-glass
+mode: "wide"
+---
+
+## 설명
+
+CrewAI는 [SpecStream](https://specstream.ai) 웹 API를 위한 두 가지 도구를 제공합니다:
+
+| 도구 | 기능 |
+| --- | --- |
+| `SpecStreamSearchTool` | 실시간 웹을 검색하고 각 결과의 `title`, `url`, `snippet`, `published`(페이지에 날짜가 있는 경우 해당 날짜)를 반환합니다. |
+| `SpecStreamExtractTool` | 최대 20개 URL의 본문을 읽고 각 페이지의 `url`, `status`, `title`, `text`를 반환합니다. |
+
+두 도구 모두 `requests`로 API를 호출하므로 추가 패키지가 필요하지 않습니다.
+
+## 설치
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## 시작하기
+
+1. [specstream.ai](https://specstream.ai)에서 **API 키를 발급**받으세요. 신규 계정에는 $10 크레딧이 제공됩니다.
+2. 환경 변수에 **키를 설정**하세요:
+
+```bash
+export SPECSTREAM_API_KEY='your-specstream-api-key'
+```
+
+## 예시
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import SpecStreamExtractTool, SpecStreamSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Answer questions from current web sources",
+    backstory="You search the web, then read the best pages before you answer.",
+    tools=[SpecStreamSearchTool(), SpecStreamExtractTool()],
+)
+
+task = Task(
+    description="Find the latest crewAI release and summarize what changed.",
+    expected_output="A short summary with the source URLs.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## 매개변수
+
+### SpecStreamSearchTool
+
+실행 매개변수:
+
+- **query**: 필수. 검색어입니다.
+- **max_results**: 선택. 반환할 결과 수(1~100)입니다. 기본값은 10입니다.
+- **speed**: 선택. `"fast"`는 검색 엔진의 상위 결과를 더 낮은 가격으로 반환하고, `"default"`는 전체 검색을 실행합니다.
+
+생성자 매개변수:
+
+- **api_key**: 선택. 기본값은 `SPECSTREAM_API_KEY` 환경 변수입니다.
+- **max_results**: 선택. 기본 결과 수입니다. 기본값은 10입니다.
+- **timeout**: 선택. 요청 제한 시간(초)입니다. 기본값은 60입니다.
+
+### SpecStreamExtractTool
+
+실행 매개변수:
+
+- **urls**: 필수. URL 하나 또는 최대 20개 URL의 목록입니다.
+
+생성자 매개변수:
+
+- **api_key**: 선택. 기본값은 `SPECSTREAM_API_KEY` 환경 변수입니다.
+- **format**: 선택. `"markdown"`(기본값) 또는 `"text"`입니다.
+- **timeout**: 선택. 요청 제한 시간(초)입니다. 기본값은 120입니다.
+
+## 반환 형식
+
+`SpecStreamSearchTool`은 JSON 문자열을 반환합니다:
+
+```json
+[
+  {
+    "title": "Result title",
+    "url": "https://example.com/page",
+    "snippet": "Text from the page that matches the query...",
+    "published": "2026-02-25"
+  }
+]
+```
+
+`SpecStreamExtractTool`은 JSON 문자열을 반환합니다:
+
+```json
+[
+  {
+    "url": "https://example.com",
+    "status": "ok",
+    "title": "Example Domain",
+    "text": "The main text of the page..."
+  }
+]
+```
+
+API가 오류를 반환하면 두 도구 모두 HTTP 상태와 API 메시지를 담은 `RuntimeError`를 발생시킵니다.
+
+## 가격
+
+검색은 1,000회당 $5이며, `speed="fast"`를 사용하면 1,000회당 $1입니다. 추출은 1,000페이지당 $0.80입니다. 자세한 내용은 [specstream.ai](https://specstream.ai)를 참고하세요.

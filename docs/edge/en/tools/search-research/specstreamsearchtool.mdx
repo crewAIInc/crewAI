@@ -1,0 +1,116 @@
+---
+title: SpecStream Search Tools
+description: The `SpecStreamSearchTool` and `SpecStreamExtractTool` search the live web and read pages with the SpecStream API.
+icon: magnifying-glass
+mode: "wide"
+---
+
+## Description
+
+CrewAI offers two tools for the [SpecStream](https://specstream.ai) web APIs:
+
+| Tool | What it does |
+| --- | --- |
+| `SpecStreamSearchTool` | Searches the live web and returns `title`, `url`, `snippet` and `published` (the page's date when it states one) for each result. |
+| `SpecStreamExtractTool` | Reads the main text of up to 20 URLs and returns `url`, `status`, `title` and `text` for each page. |
+
+Both tools call the API with `requests`, so they need no extra package.
+
+## Installation
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## Steps to Get Started
+
+1. **Get an API key** at [specstream.ai](https://specstream.ai). New accounts get $10 of credit.
+2. **Set the key** in your environment:
+
+```bash
+export SPECSTREAM_API_KEY='your-specstream-api-key'
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import SpecStreamExtractTool, SpecStreamSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Answer questions from current web sources",
+    backstory="You search the web, then read the best pages before you answer.",
+    tools=[SpecStreamSearchTool(), SpecStreamExtractTool()],
+)
+
+task = Task(
+    description="Find the latest crewAI release and summarize what changed.",
+    expected_output="A short summary with the source URLs.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## Parameters
+
+### SpecStreamSearchTool
+
+Run parameters:
+
+- **query**: Required. The search query.
+- **max_results**: Optional. How many results to return, 1 to 100. Defaults to 10.
+- **speed**: Optional. `"fast"` returns the engines' first ranked results at a lower price; `"default"` runs the full search.
+
+Constructor parameters:
+
+- **api_key**: Optional. Defaults to the `SPECSTREAM_API_KEY` environment variable.
+- **max_results**: Optional. The default number of results. Defaults to 10.
+- **timeout**: Optional. Request timeout in seconds. Defaults to 60.
+
+### SpecStreamExtractTool
+
+Run parameters:
+
+- **urls**: Required. One URL or a list of up to 20 URLs.
+
+Constructor parameters:
+
+- **api_key**: Optional. Defaults to the `SPECSTREAM_API_KEY` environment variable.
+- **format**: Optional. `"markdown"` (default) or `"text"`.
+- **timeout**: Optional. Request timeout in seconds. Defaults to 120.
+
+## Return Format
+
+`SpecStreamSearchTool` returns a JSON string:
+
+```json
+[
+  {
+    "title": "Result title",
+    "url": "https://example.com/page",
+    "snippet": "Text from the page that matches the query...",
+    "published": "2026-02-25"
+  }
+]
+```
+
+`SpecStreamExtractTool` returns a JSON string:
+
+```json
+[
+  {
+    "url": "https://example.com",
+    "status": "ok",
+    "title": "Example Domain",
+    "text": "The main text of the page..."
+  }
+]
+```
+
+If the API answers with an error, both tools raise a `RuntimeError` with the HTTP status and the API's message.
+
+## Pricing
+
+Search costs $5 per 1,000 searches, or $1 per 1,000 with `speed="fast"`. Extract costs $0.80 per 1,000 pages. See [specstream.ai](https://specstream.ai) for details.
