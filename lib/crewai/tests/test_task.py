@@ -1,6 +1,7 @@
 """Test Agent creation and execution basic functionality."""
 
 import ast
+from datetime import date
 import json
 import os
 import threading
@@ -711,6 +712,46 @@ def test_save_task_json_output():
             if isinstance(saved_content, str):
                 data = json.loads(saved_content)
                 assert "score" in data
+
+
+class _Article(BaseModel):
+    title: str
+    published: date
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        '{"title": "AI agents", "published": "2026-11-13"}',
+        _Article(title="AI agents", published=date(2026, 11, 13)),
+    ],
+    ids=["json_text", "model"],
+)
+def test_output_json_with_a_date_field_is_saved_as_json(tmp_path, answer):
+    writer = Agent(
+        role="Writer",
+        goal="Write articles",
+        backstory="You write articles.",
+        allow_delegation=False,
+    )
+    output_file = tmp_path / "article.json"
+    task = Task(
+        description="Write an article about AI agents",
+        expected_output="An article",
+        agent=writer,
+        output_json=_Article,
+        output_file=str(output_file),
+    )
+    crew = Crew(agents=[writer], tasks=[task])
+
+    with patch.object(Agent, "execute_task", return_value=answer):
+        result = crew.kickoff()
+
+    expected = {"title": "AI agents", "published": "2026-11-13"}
+    assert result.json_dict == expected
+    assert json.loads(result.json) == expected
+    assert json.loads(result.tasks_output[0].json) == expected
+    assert json.loads(output_file.read_text(encoding="utf-8")) == expected
 
 
 @pytest.mark.vcr()
