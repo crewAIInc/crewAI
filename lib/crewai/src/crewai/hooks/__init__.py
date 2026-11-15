@@ -9,6 +9,7 @@ from crewai.hooks.decorators import (
 from crewai.hooks.dispatch import (
     EXECUTION_BOUNDARY_POINTS,
     HookAborted,
+    HookErrorPolicy,
     InterceptionPoint,
     clear as clear_hooks,
     clear_all as clear_all_hooks,
@@ -88,6 +89,7 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 __all__ = [
     "EXECUTION_BOUNDARY_POINTS",
     "HookAborted",
+    "HookErrorPolicy",
     "InterceptionPoint",
     "LLMCallHookContext",
     "ToolCallHookContext",

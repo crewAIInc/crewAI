@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from crewai_core.printer import PRINTER
 
@@ -10,6 +10,7 @@ from crewai.hooks.dispatch import (
     InterceptionPoint,
     dispatch,
     get_global_hook_list,
+    set_error_policy,
 )
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
@@ -207,6 +208,8 @@ def run_after_tool_call_hooks(context: ToolCallHookContext) -> str | None:
 
 def register_before_tool_call_hook(
     hook: BeforeToolCallHookType | BeforeToolCallHookCallable,
+    *,
+    on_error: Literal["fail_open", "abort"] = "fail_open",
 ) -> None:
     """Register a global before_tool_call hook.
 
@@ -219,6 +222,11 @@ def register_before_tool_call_hook(
             - Modify tool_input in-place
             - Return False to block tool execution
             - Return True or None to allow execution
+        on_error: What to do when ``hook`` raises something other than
+            ``HookAborted``. ``"fail_open"`` (default) swallows the error and
+            lets the tool run, which protects against a buggy hook. ``"abort"``
+            treats the error as ``HookAborted`` and blocks the tool call, which
+            is what a hook acting as a security control needs.
             IMPORTANT: Modify tool_input in-place (e.g., context.tool_input['key'] = value).
             Do NOT replace the dict (context.tool_input = {}), as this will not affect
             the actual tool execution.
@@ -239,11 +247,14 @@ def register_before_tool_call_hook(
         >>>
         >>> register_before_tool_call_hook(block_dangerous_tools)
     """
+    set_error_policy(hook, on_error)
     _before_tool_call_hooks.append(hook)
 
 
 def register_after_tool_call_hook(
     hook: AfterToolCallHookType | AfterToolCallHookCallable,
+    *,
+    on_error: Literal["fail_open", "abort"] = "fail_open",
 ) -> None:
     """Register a global after_tool_call hook.
 
@@ -255,6 +266,11 @@ def register_after_tool_call_hook(
         hook: Function that receives ToolCallHookContext and can modify
             the tool result. Return modified result string or None to keep
             the original result. The tool_result is available in context.tool_result.
+        on_error: What to do when ``hook`` raises something other than
+            ``HookAborted``. ``"fail_open"`` (default) keeps the unmodified
+            result and lets the run continue. ``"abort"`` treats the error as
+            ``HookAborted``, so a redaction hook that fails cannot let the
+            unredacted result reach the model.
 
     Example:
         >>> def sanitize_output(context: ToolCallHookContext) -> str | None:
@@ -270,6 +286,7 @@ def register_after_tool_call_hook(
         >>>
         >>> register_after_tool_call_hook(log_tool_results)
     """
+    set_error_policy(hook, on_error)
     _after_tool_call_hooks.append(hook)
 
 

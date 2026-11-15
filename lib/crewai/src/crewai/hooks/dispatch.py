@@ -89,6 +89,50 @@ class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
 
 HookFn = Callable[[Any], Any]
 
+
+class HookErrorPolicy(str, Enum):
+    """What dispatch does when a hook raises something other than ``HookAborted``.
+
+    ``FAIL_OPEN`` is the historical behaviour: the error is swallowed so a buggy
+    user hook cannot break the framework. ``ABORT`` treats the failure as
+    :class:`HookAborted`, which is what a hook acting as a security control needs
+    - a hook that cannot reach a decision must not let the operation through.
+    """
+
+    FAIL_OPEN = "fail_open"
+    ABORT = "abort"
+
+
+_error_policies: dict[HookFn, HookErrorPolicy] = {}
+
+
+def set_error_policy(hook: HookFn, policy: HookErrorPolicy | str) -> None:
+    """Choose what dispatch does when ``hook`` raises something other than ``HookAborted``.
+
+    Args:
+        hook: The callable that was or will be registered. It has to be hashable.
+        policy: ``"fail_open"`` (the default for every hook) or ``"abort"``.
+    """
+    resolved = HookErrorPolicy(policy)
+    try:
+        if resolved is HookErrorPolicy.FAIL_OPEN:
+            _error_policies.pop(hook, None)
+        else:
+            _error_policies[hook] = resolved
+    except TypeError as error:
+        raise ValueError(
+            "on_error='abort' needs a hashable hook callable; wrap it in a function."
+        ) from error
+
+
+def _error_policy(hook: HookFn) -> HookErrorPolicy:
+    """The error policy registered for ``hook``, fail-open by default."""
+    try:
+        return _error_policies.get(hook, HookErrorPolicy.FAIL_OPEN)
+    except TypeError:  # an unhashable callable can never carry a policy
+        return HookErrorPolicy.FAIL_OPEN
+
+
 # (ctx, result) -> modified?  A reducer maps a hook's return value onto the
 # context using point-specific semantics. It may raise HookAborted.
 Reducer = Callable[[Any, Any], bool]
@@ -133,6 +177,7 @@ def unregister(point: InterceptionPoint, hook: HookFn) -> bool:
     target = hook if hook in hooks else getattr(hook, "_registered_hook", hook)
     try:
         hooks.remove(target)
+        _error_policies.pop(target, None)
         return True
     except ValueError:
         return False
@@ -145,14 +190,19 @@ def get_hooks(point: InterceptionPoint) -> list[HookFn]:
 
 def clear(point: InterceptionPoint) -> int:
     """Clear all global hooks for a point. Returns the number cleared."""
-    count = len(_global_hooks[point])
-    _global_hooks[point].clear()
+    hooks = _global_hooks[point]
+    count = len(hooks)
+    for hook in hooks:
+        _error_policies.pop(hook, None)
+    hooks.clear()
     return count
 
 
 def clear_all() -> None:
     """Clear all global hooks across every interception point."""
     for hooks in _global_hooks.values():
+        for hook in hooks:
+            _error_policies.pop(hook, None)
         hooks.clear()
 
 
@@ -282,6 +332,10 @@ def _invoke_hook(
             aborted.source = hook
         raise
     except Exception as error:
+        if _error_policy(hook) is HookErrorPolicy.ABORT:
+            raise HookAborted(
+                f"{source_name(hook) or 'hook'} failed: {error}", source=hook
+            ) from error
         if verbose:
             from crewai_core.printer import PRINTER
 
