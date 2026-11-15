@@ -1,7 +1,10 @@
+import re
 from typing import Any, Dict, List, Union
 
 import pytest
-from crewai.utilities.string_utils import interpolate_only
+from crewai.tools import BaseTool
+from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+from crewai.utilities.string_utils import interpolate_only, sanitize_tool_name
 
 
 class TestInterpolateOnly:
@@ -184,3 +187,70 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+
+class ChineseSearchTool(BaseTool):
+    """Tool whose name has no ASCII letters or digits."""
+
+    name: str = "搜索工具"
+    description: str = "搜索网络获取信息"
+
+    def _run(self, query: str) -> str:
+        return f"results for {query}"
+
+
+class ChineseFetchTool(BaseTool):
+    """Second non-ASCII-named tool, to exercise collision handling."""
+
+    name: str = "抓取网页"
+    description: str = "抓取网页内容"
+
+    def _run(self, query: str) -> str:
+        return f"page {query}"
+
+
+class TestSanitizeToolName:
+    """Tests for the sanitize_tool_name empty-result fallback."""
+
+    def test_non_ascii_only_name_never_sanitizes_to_empty(self):
+        """A name with no ASCII letters/digits still yields a provider-valid name."""
+        result = sanitize_tool_name("搜索工具")
+
+        assert result
+        assert re.fullmatch(r"[a-z0-9_]{1,64}", result)
+
+    def test_punctuation_only_name_never_sanitizes_to_empty(self):
+        """A name erased entirely by the cleaning pipeline gets a fallback."""
+        result = sanitize_tool_name("!!!")
+
+        assert result
+        assert re.fullmatch(r"[a-z0-9_]{1,64}", result)
+
+    def test_distinct_non_ascii_names_get_distinct_results(self):
+        """Two different erased names must not collapse onto one fallback."""
+        assert sanitize_tool_name("搜索工具") != sanitize_tool_name("抓取网页")
+
+    def test_fallback_is_deterministic(self):
+        """The same input always produces the same fallback name."""
+        first = sanitize_tool_name("搜索工具")
+        sanitize_tool_name("抓取网页")
+        second = sanitize_tool_name("搜索工具")
+
+        assert first == second
+
+    def test_ascii_and_empty_names_are_unchanged(self):
+        """Names that already sanitize cleanly keep their existing output."""
+        assert sanitize_tool_name("My Tool") == "my_tool"
+        assert sanitize_tool_name("searchTool") == "search_tool"
+        assert sanitize_tool_name("") == ""
+
+    def test_openai_schema_has_no_empty_function_names(self):
+        """Function-calling schemas never carry an empty or duplicated name."""
+        tools: list[BaseTool] = [ChineseSearchTool(), ChineseFetchTool()]
+
+        schemas, available_functions, _ = convert_tools_to_openai_schema(tools)
+
+        names = [schema["function"]["name"] for schema in schemas]
+        assert all(names)
+        assert len(set(names)) == len(tools)
+        assert set(names) == set(available_functions)
