@@ -208,3 +208,21 @@ def test_a_filtered_crew_method_keeps_its_policy():
     _register_crew_hooks(Crew(), Crew)
 
     assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_an_on_method_keeps_its_policy():
+    """``@on`` sets ``_registered_hook`` only for plain functions; a method is
+    linked back through the filter wrapper's ``__wrapped__`` and ``__func__``."""
+    from crewai.hooks import InterceptionPoint, on
+    from crewai.project.crew_base import _register_crew_hooks
+
+    class Crew:
+        @on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email"])
+        def guard(self, context: ToolCallHookContext) -> None:
+            raise RuntimeError("policy service unreachable")
+
+    set_error_policy(Crew.guard, "abort")
+
+    _register_crew_hooks(Crew(), Crew)
+
+    assert run_before_tool_call_hooks(_context()) is True
