@@ -10,6 +10,7 @@ from crewai.agents.parser import AgentAction
 from crewai.hooks import (
     HookAborted,
     clear_all_tool_call_hooks,
+    set_error_policy,
     unregister_before_tool_call_hook,
 )
 from crewai.hooks.tool_hooks import (
@@ -111,3 +112,57 @@ def test_a_failing_policy_hook_blocks_the_tool_call() -> None:
 
     assert ran == []
     assert "blocked by hook" in tool_result.result
+
+
+def test_a_filtered_hook_keeps_its_policy():
+    """A filtered hook is registered as a wrapper; the policy must still apply."""
+    from crewai.hooks import before_tool_call
+
+    @before_tool_call(tools=["send_email"])
+    def policy(context: ToolCallHookContext) -> None:
+        raise RuntimeError("policy service unreachable")
+
+    set_error_policy(policy, "abort")
+
+    assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_a_filtered_hook_that_does_not_match_stays_out_of_the_way():
+    """The wrapper skips other tools before the policy can matter."""
+    from crewai.hooks import before_tool_call
+
+    @before_tool_call(tools=["other_tool"])
+    def policy(context: ToolCallHookContext) -> None:
+        raise RuntimeError("policy service unreachable")
+
+    set_error_policy(policy, "abort")
+
+    assert run_before_tool_call_hooks(_context()) is False
+
+
+def test_an_on_hook_keeps_its_policy():
+    """``@on`` stores the wrapper on the original as ``_registered_hook``."""
+    from crewai.hooks import InterceptionPoint, on
+
+    @on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email"])
+    def policy(context: ToolCallHookContext) -> None:
+        raise RuntimeError("policy service unreachable")
+
+    set_error_policy(policy, "abort")
+
+    assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_unregistering_a_filtered_hook_drops_its_policy():
+    from crewai.hooks import before_tool_call, clear_all_tool_call_hooks
+
+    @before_tool_call(tools=["send_email"])
+    def policy(context: ToolCallHookContext) -> None:
+        raise RuntimeError("policy service unreachable")
+
+    set_error_policy(policy, "abort")
+    clear_all_tool_call_hooks()
+
+    register_before_tool_call_hook(policy)
+
+    assert run_before_tool_call_hooks(_context()) is False

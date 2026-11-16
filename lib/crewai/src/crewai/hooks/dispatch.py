@@ -110,7 +110,8 @@ def set_error_policy(hook: HookFn, policy: HookErrorPolicy | str) -> None:
     """Choose what dispatch does when ``hook`` raises something other than ``HookAborted``.
 
     Args:
-        hook: The callable that was or will be registered. It has to be hashable.
+        hook: The callable that was or will be registered, or the original
+            function of a filtered hook. It has to be hashable.
         policy: ``"fail_open"`` (the default for every hook) or ``"abort"``.
     """
     resolved = HookErrorPolicy(policy)
@@ -125,12 +126,41 @@ def set_error_policy(hook: HookFn, policy: HookErrorPolicy | str) -> None:
         ) from error
 
 
+def _policy_candidates(hook: Any) -> Iterator[Any]:
+    """The callables a policy for ``hook`` may have been registered under.
+
+    A filtered hook (``@before_tool_call(tools=...)``, ``@on(..., agents=...)``,
+    a ``@CrewBase`` filter) is registered as a wrapper while the caller keeps the
+    original function, so ``set_error_policy`` can be called with either one.
+    ``functools.wraps`` keeps the original on ``__wrapped__``; ``@on`` also stashes
+    the registered wrapper on the original.
+    """
+    seen: set[int] = set()
+    candidate: Any = hook
+    while candidate is not None and id(candidate) not in seen:
+        seen.add(id(candidate))
+        yield candidate
+        candidate = getattr(candidate, "__wrapped__", None) or getattr(
+            candidate, "_registered_hook", None
+        )
+
+
 def _error_policy(hook: HookFn) -> HookErrorPolicy:
     """The error policy registered for ``hook``, fail-open by default."""
-    try:
-        return _error_policies.get(hook, HookErrorPolicy.FAIL_OPEN)
-    except TypeError:  # an unhashable callable can never carry a policy
-        return HookErrorPolicy.FAIL_OPEN
+    for candidate in _policy_candidates(hook):
+        try:
+            policy = _error_policies.get(candidate)
+        except TypeError:  # an unhashable callable can never carry a policy
+            continue
+        if policy is not None:
+            return policy
+    return HookErrorPolicy.FAIL_OPEN
+
+
+def _pop_error_policy(hook: Any) -> None:
+    """Drop the policy of ``hook`` and of the functions it wraps or came from."""
+    for candidate in _policy_candidates(hook):
+        _error_policies.pop(candidate, None)
 
 
 # (ctx, result) -> modified?  A reducer maps a hook's return value onto the
@@ -177,7 +207,8 @@ def unregister(point: InterceptionPoint, hook: HookFn) -> bool:
     target = hook if hook in hooks else getattr(hook, "_registered_hook", hook)
     try:
         hooks.remove(target)
-        _error_policies.pop(target, None)
+        _pop_error_policy(target)
+        _pop_error_policy(hook)
         return True
     except ValueError:
         return False
@@ -193,7 +224,7 @@ def clear(point: InterceptionPoint) -> int:
     hooks = _global_hooks[point]
     count = len(hooks)
     for hook in hooks:
-        _error_policies.pop(hook, None)
+        _pop_error_policy(hook)
     hooks.clear()
     return count
 
@@ -202,7 +233,7 @@ def clear_all() -> None:
     """Clear all global hooks across every interception point."""
     for hooks in _global_hooks.values():
         for hook in hooks:
-            _error_policies.pop(hook, None)
+            _pop_error_policy(hook)
         hooks.clear()
 
 
