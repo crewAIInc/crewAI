@@ -1,7 +1,8 @@
 """Test Agent creation and execution basic functionality."""
 
 import ast
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 import json
 import os
 import threading
@@ -717,41 +718,54 @@ def test_save_task_json_output():
 class _Article(BaseModel):
     title: str
     published: date
+    updated: datetime
+    price: Decimal
 
 
 @pytest.mark.parametrize(
     "answer",
     [
-        '{"title": "AI agents", "published": "2026-11-13"}',
-        _Article(title="AI agents", published=date(2026, 11, 13)),
+        '{"title": "AI agents", "published": "2026-11-13", "updated": "2026-11-13T09:30:00", "price": "9.99"}',
+        _Article(
+            title="AI agents",
+            published=date(2026, 11, 13),
+            updated=datetime(2026, 11, 13, 9, 30),
+            price=Decimal("9.99"),
+        ),
     ],
     ids=["json_text", "model"],
 )
-def test_output_json_with_a_date_field_is_saved_as_json(tmp_path, answer):
+def test_output_json_with_a_date_field_is_saved_as_json(tmp_path, monkeypatch, answer):
+    monkeypatch.chdir(tmp_path)
     writer = Agent(
         role="Writer",
         goal="Write articles",
         backstory="You write articles.",
         allow_delegation=False,
     )
-    output_file = tmp_path / "article.json"
     task = Task(
         description="Write an article about AI agents",
         expected_output="An article",
         agent=writer,
         output_json=_Article,
-        output_file=str(output_file),
+        output_file="article.json",
     )
     crew = Crew(agents=[writer], tasks=[task])
 
     with patch.object(Agent, "execute_task", return_value=answer):
         result = crew.kickoff()
 
-    expected = {"title": "AI agents", "published": "2026-11-13"}
+    expected = {
+        "title": "AI agents",
+        "published": "2026-11-13",
+        "updated": "2026-11-13T09:30:00",
+        "price": "9.99",
+    }
     assert result.json_dict == expected
     assert json.loads(result.json) == expected
     assert json.loads(result.tasks_output[0].json) == expected
-    assert json.loads(output_file.read_text(encoding="utf-8")) == expected
+    saved = (tmp_path / "article.json").read_text(encoding="utf-8")
+    assert json.loads(saved) == expected
 
 
 @pytest.mark.vcr()
