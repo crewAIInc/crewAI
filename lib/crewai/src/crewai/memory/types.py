@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import concurrent.futures
+import contextvars
 from datetime import datetime
+import logging
+import threading
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+
+_logger = logging.getLogger(__name__)
 
 # When searching the vector store, we ask for more results than the caller
 # requested so that post-search steps (composite scoring, deduplication,
@@ -57,6 +63,23 @@ class MemoryRecord(BaseModel):
         repr=False,
         description="Vector embedding for semantic search. Excluded from serialization to save tokens.",
     )
+
+    @field_validator("embedding", mode="before")
+    @classmethod
+    def validate_embedding(cls, v: Any) -> list[float] | None:
+        """Ensure embedding is always list[float] or None, never bytes."""
+        if v is None:
+            return None
+        if isinstance(v, bytes):
+            # Convert bytes to list[float] if needed
+            import numpy as np
+
+            if len(v) == 0:
+                return None
+            arr = np.frombuffer(v, dtype=np.float32)
+            return [float(x) for x in arr]
+        return [float(x) for x in v]
+
     source: str | None = Field(
         default=None,
         description=(
@@ -298,7 +321,11 @@ def embed_text(embedder: Any, text: str) -> list[float]:
     """
     if not text or not text.strip():
         return []
+
+    # Just call the embedder directly - the blocking issue needs to be fixed
+    # at a higher level (making Memory.recall() async)
     result = embedder([text])
+
     if not result:
         return []
     first = result[0]
@@ -309,19 +336,69 @@ def embed_text(embedder: Any, text: str) -> list[float]:
     return list(first)
 
 
-def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
+# How long embed_texts waits for an offloaded embedder call.
+_EMBED_TIMEOUT_SECONDS = 30.0
+
+
+def _call_embedder_with_timeout(embedder: Any, texts: list[str]) -> Any:
+    """Run ``embedder(texts)`` on its own daemon thread and wait for it.
+
+    The call runs in a copy of the caller's contextvars, so request-scoped
+    state (credentials, tracing, ``crewai.context``) reaches the embedder.
+
+    Each call gets a fresh thread instead of a slot in a shared pool. A
+    Python thread can't be killed, so a call that hangs past the timeout keeps
+    running; in a fixed-size pool a few of those would fill every worker and
+    make later, healthy calls time out too. Here a hung call only ties up its
+    own thread.
+
+    Raises:
+        concurrent.futures.TimeoutError: If the call takes longer than
+            ``_EMBED_TIMEOUT_SECONDS``.
+    """
+    future: concurrent.futures.Future[Any] = concurrent.futures.Future()
+    ctx = contextvars.copy_context()
+
+    def run() -> None:
+        try:
+            future.set_result(ctx.run(embedder, texts))
+        except BaseException as e:
+            future.set_exception(e)
+
+    threading.Thread(target=run, name="crewai-embed", daemon=True).start()
+    return future.result(timeout=_EMBED_TIMEOUT_SECONDS)
+
+
+def embed_texts(
+    embedder: Any, texts: list[str], *, raise_on_timeout: bool = False
+) -> list[list[float]]:
     """Embed multiple texts in a single API call.
 
     The embedder already accepts ``list[str]``, so this just calls it once
     with the full batch and normalises the output format.
 
+    When called from an async context, offloads the embedder to a separate
+    thread so the embedding work doesn't run on the event loop thread. The
+    calling thread still blocks on the result (unavoidable for a sync
+    function), but this prevents the embedder from starving the event loop's
+    I/O callbacks. Each offloaded call gets its own thread, so a timed-out
+    call doesn't block subsequent embeds.
+
+    Note: the proper long-term fix is making ``Memory.recall()`` async.
+
     Args:
         embedder: Callable that accepts a list of strings and returns embeddings.
         texts: List of texts to embed.
+        raise_on_timeout: When True, a 30s embedder timeout raises TimeoutError
+            instead of returning empty embeddings. Save paths set this so a
+            timed-out batch fails loudly rather than persisting unsearchable
+            (empty/zero-vector) memories.
 
     Returns:
         List of embeddings, one per input text. Empty texts produce empty lists.
     """
+    import asyncio
+
     if not texts:
         return []
     valid: list[tuple[int, str]] = [
@@ -330,7 +407,56 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     if not valid:
         return [[] for _ in texts]
 
-    result = embedder([t for _, t in valid])
+    texts_to_embed = [t for _, t in valid]
+
+    # Detect whether we're running inside an event loop *before* invoking the
+    # embedder, so an embedder RuntimeError can never be mistaken for
+    # "no running loop" and retried on the loop thread (which would both
+    # double-invoke the embedder and put blocking work back on the event loop).
+    in_async_context = True
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        in_async_context = False
+
+    result: Any
+    if in_async_context:
+        # Sync function called from an async context: offload to another
+        # thread so the embedder doesn't run on the event-loop thread. The
+        # .result() call blocks this thread, which is acceptable because the
+        # public callers (Memory.recall(), encoding flow) are synchronous.
+        try:
+            result = _call_embedder_with_timeout(embedder, texts_to_embed)
+        except concurrent.futures.TimeoutError as e:
+            # On the save path, returning empty embeddings would persist
+            # unsearchable memories (a zero/missing vector) with no signal that
+            # encoding failed. Raise so the save fails loudly instead. Callers
+            # that can tolerate a miss (e.g. recall) keep the default and get
+            # empty embeddings back.
+            if raise_on_timeout:
+                raise TimeoutError(
+                    "Embedder timed out after 30s; not persisting empty embeddings."
+                ) from e
+            _logger.warning(
+                "Embedder timed out after 30s, returning empty embeddings. "
+                "The worker thread may still be running."
+            )
+            return [[] for _ in texts]
+    else:
+        # Not in an async context. Save paths still need the fail-loud timeout
+        # guarantee (EncodingFlow steps run via asyncio.to_thread, so they land
+        # here with no running loop). Enforce the 30s timeout on another thread when
+        # raise_on_timeout is set; otherwise run directly on this thread.
+        if raise_on_timeout:
+            try:
+                result = _call_embedder_with_timeout(embedder, texts_to_embed)
+            except concurrent.futures.TimeoutError as e:
+                raise TimeoutError(
+                    "Embedder timed out after 30s; not persisting empty embeddings."
+                ) from e
+        else:
+            result = embedder(texts_to_embed)
+
     embeddings: list[list[float]] = [[] for _ in texts]
     for (orig_idx, _), emb in zip(valid, result, strict=False):
         if hasattr(emb, "tolist"):
