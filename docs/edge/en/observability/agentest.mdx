@@ -1,0 +1,68 @@
+---
+title: agentest
+description: Regression-test CrewAI agents with deterministic checks, with no LLM calls in the test loop.
+icon: flask-vial
+mode: "wide"
+---
+
+# agentest Overview
+
+[agentest](https://github.com/srpadmanabhuni/agentest) is an open-source, deterministic test runner for AI agents. It ships a set of executable checks that assert on the parts of an agent that tend to break quietly: tools that get called with the wrong arguments, guardrails that stop firing, prompts that lose an instruction after an edit, and outputs that change shape between runs.
+
+The checks are plain Python functions, so they run next to your crew's tests and in CI. Nothing in the test loop calls a model, which means the same run gives the same answer on your laptop and on a build machine.
+
+## What the checks cover
+
+- **Tool usage**: which tools an agent picked, in what order, and with which arguments. You can assert a tool was never called, or that it was called with one specific argument.
+- **Output contracts**: required fields, types, ranges and forbidden content on the final answer.
+- **Prompt and guardrail state**: that an instruction is still in the prompt, and that a guardrail trips on the inputs it is supposed to trip on.
+- **Trajectory**: the order of the steps, so a refactor that reshuffles the work fails instead of just producing a nicer log.
+
+## Setup
+
+<Steps>
+    <Step title="Install">
+      ```shell
+      pip install agentest
+      ```
+    </Step>
+    <Step title="Write a check">
+      A check is a function that asserts on the agent it is handed. See the [agentest README](https://github.com/srpadmanabhuni/agentest) for the exact import path in the version you install.
+
+      ```python
+      from crewai import Agent
+      from crewai_tools import ScrapeWebsiteTool
+
+      def test_researcher_keeps_its_scraper():
+          agent = Agent(
+              role="Researcher",
+              goal="Find primary sources",
+              backstory="Reads filings for a living.",
+              tools=[ScrapeWebsiteTool()],
+          )
+          assert [tool.name for tool in agent.tools] == ["Read website content"]
+      ```
+
+      agentest's own checks plug in alongside this one. The important part is that
+      a failure here reads like a normal test failure, not like a diff of two
+      agent transcripts.
+    </Step>
+    <Step title="Run it">
+      ```shell
+      pytest tests/ -q
+      ```
+    </Step>
+</Steps>
+
+## How it fits with the rest of this section
+
+The tracing platforms here (Langfuse, Opik, Arize Phoenix, Weave, LangDB and the others) tell you what a crew did on a real run. agentest covers the other half: it takes what you learned from that trace and turns it into a check that runs on every commit, before a crew reaches a model at all.
+
+Most teams end up with both. Trace locally while the crew is still changing shape, then add a check for every trace you had to open twice.
+
+If you want to compare scored runs instead of asserting on them, `crewai test` is the built-in option; see [Testing](/en/concepts/testing).
+
+## Resources
+
+- [agentest on GitHub](https://github.com/srpadmanabhuni/agentest)
+- [CrewAI Testing docs](/en/concepts/testing)
