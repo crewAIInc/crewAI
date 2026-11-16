@@ -1,7 +1,8 @@
 import asyncio
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from copy import deepcopy
+from threading import Barrier, Event
 
 import pytest
 
@@ -115,16 +116,77 @@ async def test_cancelled_tool_cleans_up_and_keeps_its_spent_slot() -> None:
         await tool.ainvoke({})
 
 
-def test_tool_remains_deep_copyable_with_an_independent_budget() -> None:
+@pytest.mark.parametrize("converted", [False, True])
+@pytest.mark.parametrize("copy_method", ["deepcopy", "model_copy"])
+def test_tool_remains_deep_copyable_with_an_independent_budget(
+    converted: bool, copy_method: str
+) -> None:
     def echo(value: int) -> int:
         """Return the supplied value."""
         return value
 
-    original = CrewStructuredTool.from_function(echo, max_usage_count=1)
-    copied = original.model_copy(deep=True)
-    assert copied == original
-
+    base = EchoTool(max_usage_count=2)
+    original = (
+        base.to_structured_tool()
+        if converted
+        else CrewStructuredTool.from_function(echo, max_usage_count=2)
+    )
     assert original.invoke({"value": 1}) == 1
-    assert copied.current_usage_count == 0
+    copied = (
+        deepcopy(original)
+        if copy_method == "deepcopy"
+        else original.model_copy(deep=True)
+    )
+    # Converted callables bind to the copied BaseTool instead of the original.
+    if not converted:
+        assert copied == original
+    assert copied.current_usage_count == 1
+
     assert copied.invoke({"value": 2}) == 2
-    assert original.current_usage_count == copied.current_usage_count == 1
+    assert original.current_usage_count == 1
+    if converted:
+        assert base.current_usage_count == 1
+    assert original.invoke({"value": 3}) == 3
+    assert original.current_usage_count == copied.current_usage_count == 2
+    with pytest.raises(ToolUsageLimitExceededError):
+        copied.invoke({"value": 4})
+    with pytest.raises(ToolUsageLimitExceededError):
+        original.invoke({"value": 5})
+
+
+@pytest.mark.parametrize("copy_method", [None, "deepcopy", "model_copy"])
+def test_usage_claims_on_separate_instances_do_not_contend(
+    copy_method: str | None,
+) -> None:
+    checking_budget = Event()
+    release_budget = Event()
+
+    class WaitingTool(CrewStructuredTool):
+        def has_reached_max_usage_count(self) -> bool:
+            if self is waiting:
+                checking_budget.set()
+                assert release_budget.wait(timeout=10)
+            return super().has_reached_max_usage_count()
+
+    def echo(value: int) -> int:
+        """Return the supplied value."""
+        return value
+
+    waiting = WaitingTool.from_function(echo, max_usage_count=1)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(waiting.invoke, {"value": 1})
+        try:
+            assert checking_budget.wait(timeout=5)
+            if copy_method == "deepcopy":
+                independent = deepcopy(waiting)
+            elif copy_method == "model_copy":
+                independent = waiting.model_copy(deep=True)
+            else:
+                independent = CrewStructuredTool.from_function(echo, max_usage_count=1)
+            second = pool.submit(independent.invoke, {"value": 2})
+            assert second.result(timeout=5) == 2
+        finally:
+            release_budget.set()
+        assert first.result(timeout=5) == 1
+
+    assert waiting.current_usage_count == independent.current_usage_count == 1

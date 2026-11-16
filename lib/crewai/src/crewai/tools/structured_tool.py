@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import dataclass, field
 import inspect
 import json
 import re
 import textwrap
 import threading
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast, get_type_hints
+from types import TracebackType
+from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
 import warnings
 
 from pydantic import (
@@ -183,6 +185,33 @@ def format_description_for_llm(
     )
 
 
+@dataclass
+class _UsageLock:
+    """A per-tool mutex that is recreated when its tool is copied."""
+
+    # Synchronization is not part of a tool's value equality.
+    _lock: threading.Lock = field(
+        default_factory=threading.Lock, compare=False, repr=False
+    )
+
+    def __enter__(self) -> None:
+        self._lock.acquire()
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self._lock.release()
+
+    def __copy__(self) -> Self:
+        return type(self)()
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> Self:
+        return self.__copy__()
+
+
 class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
@@ -219,8 +248,7 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
-    # Only slot claims share this lock; keep it out of Pydantic model state.
-    _usage_lock: ClassVar[threading.Lock] = threading.Lock()
+    _usage_lock: _UsageLock = PrivateAttr(default_factory=_UsageLock)
 
     @property
     def formatted_description(self) -> str:

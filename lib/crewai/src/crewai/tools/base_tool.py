@@ -5,7 +5,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import importlib
 from inspect import Parameter, signature
-import threading
 from typing import (
     Any,
     Generic,
@@ -31,6 +30,7 @@ from typing_extensions import TypeIs
 
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
+    _UsageLock,
     _deserialize_schema,
     _format_tool_output_for_agent,
     _infer_result_schema_from_callable,
@@ -223,7 +223,7 @@ class BaseTool(BaseModel, ABC):
         default=0,
         description="Current number of times this tool has been used.",
     )
-    _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _usage_lock: _UsageLock = PrivateAttr(default_factory=_UsageLock)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
