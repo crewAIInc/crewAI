@@ -27,7 +27,7 @@ import requests
 
 OTLP_LOGGER = OTLPSpanExporter.__module__
 ENDPOINT = "http://127.0.0.1:9/v1/traces"
-FINAL_ERROR = "Failed to export span batch due to timeout, max retries or shutdown."
+FINAL_ERROR = "Failed to export spans batch due to timeout, max retries or shutdown."
 
 
 def _finished_span() -> ReadableSpan:
@@ -51,7 +51,7 @@ def test_unreachable_collector_logs_nothing(caplog: pytest.LogCaptureFixture) ->
 
     with (
         patch(
-            "requests.Session.post",
+            "requests.Session.request",
             side_effect=requests.exceptions.ConnectionError("collector down"),
         ),
         caplog.at_level(logging.DEBUG),
@@ -69,7 +69,7 @@ def test_user_otlp_exporters_keep_their_logs(caplog: pytest.LogCaptureFixture) -
 
     with (
         patch(
-            "requests.Session.post",
+            "requests.Session.request",
             side_effect=requests.exceptions.ConnectionError("collector down"),
         ),
         caplog.at_level(logging.DEBUG),
@@ -88,13 +88,13 @@ def test_filter_is_scoped_to_the_exporting_thread(
     entered = threading.Event()
     release = threading.Event()
 
-    def blocked_post(*_args: object, **_kwargs: object) -> None:
+    def blocked_request(*_args: object, **_kwargs: object) -> None:
         entered.set()
         release.wait(5)
         raise requests.exceptions.ConnectionError("collector down")
 
     with (
-        patch("requests.Session.post", side_effect=blocked_post),
+        patch("requests.Session.request", side_effect=blocked_request),
         caplog.at_level(logging.DEBUG),
     ):
         worker = threading.Thread(target=exporter.export, args=([_finished_span()],))
@@ -135,7 +135,7 @@ def test_telemetry_pipeline_is_silent_when_collector_rejects(
 ) -> None:
     with (
         patch(
-            "requests.Session.post",
+            "requests.Session.request",
             side_effect=requests.exceptions.HTTPError("400 Client Error"),
         ),
         caplog.at_level(logging.DEBUG),

@@ -490,6 +490,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         return model_class
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        """Allow an extension to record output before execution tracing closes."""
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
         return False
@@ -1314,6 +1317,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
+        instance._method_outputs = list(pending_context.method_outputs or [])
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1625,6 +1629,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
+                e.context.method_outputs = list(self._method_outputs)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -2489,6 +2494,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
+                    e.context.method_outputs = list(self._method_outputs)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
@@ -2529,6 +2535,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
+            self._record_kickoff_output(final_output)
 
             if self._event_futures:
                 await asyncio.gather(
