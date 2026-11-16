@@ -1,5 +1,6 @@
 """Tests for RagTool.add() method with various data_type values."""
 
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, Mock, patch
@@ -553,3 +554,91 @@ class TestJSONLIngestion:
             if line.strip()
         ] == ['{"first": 1}', '{"second": 2}']
         assert all(doc["metadata"]["record_count"] == 2 for doc in documents)
+
+
+class TestNotebookIngestion:
+    """Notebook registration works through the public RagTool API."""
+
+    NOTEBOOK = {
+        "nbformat": 4,
+        "cells": [
+            {"cell_type": "markdown", "source": "# Sales"},
+            {"cell_type": "code", "source": ["import pandas as pd\n", "pd.Series()"]},
+        ],
+    }
+    LINES = [
+        "[cell 1: markdown]",
+        "# Sales",
+        "[cell 2: code]",
+        "import pandas as pd",
+        "pd.Series()",
+    ]
+
+    @pytest.mark.parametrize(
+        ("extension", "data_type"),
+        [
+            (".ipynb", None),
+            (".txt", "notebook"),
+            (".txt", DataType.NOTEBOOK),
+            (".ipynb", "file"),
+        ],
+    )
+    def test_add_cells(
+        self,
+        rag_tool: RagTool,
+        mock_rag_client: MagicMock,
+        tmp_path: Path,
+        extension: str,
+        data_type: str | DataType | None,
+    ) -> None:
+        """Store the real loader's cell markers, source, and metadata."""
+        path = tmp_path / f"analysis{extension}"
+        path.write_text(json.dumps(self.NOTEBOOK), encoding="utf-8")
+
+        rag_tool.add(path, data_type=data_type, metadata={"project": "example"})
+
+        mock_rag_client.add_documents.assert_called_once()
+        documents = mock_rag_client.add_documents.call_args.kwargs["documents"]
+        assert [
+            line
+            for document in documents
+            for line in document["content"].splitlines()
+            if line.strip()
+        ] == self.LINES
+        for document in documents:
+            metadata = document["metadata"]
+            assert metadata["data_type"] == str(DataType.NOTEBOOK)
+            assert metadata["format"] == "ipynb"
+            assert metadata["cell_count"] == 2
+            assert metadata["project"] == "example"
+            assert metadata["source"] == str(path)
+
+    @pytest.mark.parametrize("data_type", [None, "notebook", DataType.NOTEBOOK])
+    def test_missing_file(
+        self,
+        rag_tool: RagTool,
+        tmp_path: Path,
+        data_type: str | DataType | None,
+    ) -> None:
+        """Missing notebook paths fail consistently for explicit and inferred types."""
+        with pytest.raises(FileNotFoundError, match="File does not exist"):
+            rag_tool.add(path=tmp_path / "missing.ipynb", data_type=data_type)
+
+    def test_directory_discovers_notebook(
+        self, rag_tool: RagTool, mock_rag_client: MagicMock, tmp_path: Path
+    ) -> None:
+        """Directory ingestion uses the same notebook loader registry."""
+        path = tmp_path / "analysis.ipynb"
+        path.write_text(json.dumps(self.NOTEBOOK), encoding="utf-8")
+
+        rag_tool.add(tmp_path)
+
+        mock_rag_client.add_documents.assert_called_once()
+        documents = mock_rag_client.add_documents.call_args.kwargs["documents"]
+        assert [
+            line
+            for document in documents
+            for line in document["content"].splitlines()
+            if line.strip()
+        ] == self.LINES
+        assert all(doc["metadata"]["cell_count"] == 2 for doc in documents)

@@ -50,6 +50,7 @@ def knowledge_expert(self) -> Agent:
 - 📊 CSV 파일
 - 📃 JSON 파일
 - JSONL 파일 (`.jsonl` 및 `.ndjson`)
+- Jupyter 노트북 (`.ipynb`)
 - 📝 텍스트
 - 📁 디렉터리/폴더
 - 🌐 HTML 웹 페이지
@@ -102,10 +103,18 @@ rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
 
 # Auto-detect a local JSONL file by its extension
 rag_tool.add(path="path/to/your/records.ndjson")
+
+# Add a local Jupyter notebook (auto-detected by its .ipynb extension)
+rag_tool.add(path="path/to/your/analysis.ipynb")
 ```
 
 JSONL 파일은 각 줄에 하나의 JSON 값을 포함합니다. JSONL 로더는 로컬 파일을 지원하며,
 JSONL URL을 인식하더라도 해당 콘텐츠를 가져오지는 않습니다.
+
+Jupyter 노트북은 셀 소스 기준으로 인덱싱되며, 각 셀 앞에 `[cell N: type]` 마커가 붙습니다.
+노트북은 절대 실행되지 않으며 셀 출력은 인덱싱되지 않습니다. 노트북 로더는 로컬 파일을 지원하며,
+노트북 URL을 인식하더라도 해당 콘텐츠를 가져오지는 않습니다. 명시적으로 선택하려면
+`data_type="notebook"`을 사용하세요.
 
 ## 에이전트 통합 예시
 
