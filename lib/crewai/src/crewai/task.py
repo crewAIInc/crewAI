@@ -65,6 +65,7 @@ from crewai.utilities.converter import (
     Converter,
     async_convert_to_model,
     convert_to_model,
+    validate_model,
 )
 from crewai.utilities.file_store import (
     clear_task_files,
@@ -1299,7 +1300,7 @@ Follow these guidelines:
                 self.converter_cls,
             )
             pydantic_output, json_output = self._unpack_model_output(
-                model_output, model
+                model_output, model, is_json_output=self.output_json is not None
             )
 
         return pydantic_output, json_output
@@ -1320,7 +1321,7 @@ Follow these guidelines:
                 self.converter_cls,
             )
             pydantic_output, json_output = self._unpack_model_output(
-                model_output, model
+                model_output, model, is_json_output=self.output_json is not None
             )
 
         return pydantic_output, json_output
@@ -1329,18 +1330,19 @@ Follow these guidelines:
     def _unpack_model_output(
         model_output: dict[str, Any] | BaseModel | str,
         model: type[BaseModel],
+        *,
+        is_json_output: bool,
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
+        # A string is either JSON a converter produced or the original answer
+        # that conversion fell back to; keep the validated result when it fits.
+        if isinstance(model_output, str):
+            try:
+                model_output = validate_model(model_output, model, is_json_output)
+            except ValidationError:
+                return None, None
         if isinstance(model_output, BaseModel):
             return model_output, None
-        if isinstance(model_output, dict):
-            return None, model_output
-        # A string is either JSON a converter produced or the original answer
-        # that conversion fell back to; keep it only when it fits the model.
-        try:
-            model.model_validate_json(model_output)
-        except ValidationError:
-            return None, None
-        return None, json.loads(model_output)
+        return None, model_output
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
