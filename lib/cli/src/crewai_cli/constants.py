@@ -151,6 +151,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "DEEPINFRA_API_KEY",
         }
     ],
+    "crusoe": [
+        {
+            "prompt": "Enter your CRUSOE API key (press Enter to skip)",
+            "key_name": "CRUSOE_API_KEY",
+        }
+    ],
 }
 
 
@@ -252,6 +258,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
     {
         "azure",
         "cerebras",
+        "crusoe",
         "dashscope",
         "deepinfra",
         "hosted_vllm",

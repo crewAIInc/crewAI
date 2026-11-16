@@ -97,6 +97,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "crusoe": ProviderConfig(
+        base_url="https://api.inference.crusoecloud.com/v1",
+        api_key_env="CRUSOE_API_KEY",
+        base_url_env="CRUSOE_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -150,6 +156,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - crusoe: Crusoe (https://crusoe.ai)
 
     Example:
         # Using provider prefix

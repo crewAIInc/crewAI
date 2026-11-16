@@ -105,6 +105,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_crusoe_config(self):
+        """Test Crusoe provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["crusoe"]
+        assert config.base_url == "https://api.inference.crusoecloud.com/v1"
+        assert config.api_key_env == "CRUSOE_API_KEY"
+        assert config.base_url_env == "CRUSOE_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -411,6 +419,46 @@ class TestLLMIntegration:
         """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
 
+    @pytest.mark.parametrize(
+        "model_id",
+        [
+            "openai/gpt-oss-120b",
+            "zai-org/GLM-5.3",
+            "deepseek-ai/DeepSeek-V4.1-Flash",
+            "google/gemma-4-31b-it",
+        ],
+    )
+    def test_llm_creates_openai_compatible_for_crusoe(self, model_id):
+        """Crusoe ids are org/model and the org can be a crewAI prefix too:
+        only the leading crusoe/ names the provider, the rest is the model id."""
+        with patch.dict(os.environ, {"CRUSOE_API_KEY": "test-key"}):
+            llm = LLM(model=f"crusoe/{model_id}")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "crusoe"
+            assert llm.model == model_id
+            assert llm.base_url == "https://api.inference.crusoecloud.com/v1"
+
+    def test_crusoe_base_url_env_override(self):
+        """CRUSOE_BASE_URL replaces the default Crusoe endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "CRUSOE_API_KEY": "test-key",
+                "CRUSOE_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="crusoe/openai/gpt-oss-120b")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_crusoe_explicit_provider(self):
+        """Explicit provider="crusoe" routes natively and keeps the org/model id."""
+        with patch.dict(os.environ, {"CRUSOE_API_KEY": "test-key"}):
+            llm = LLM(model="openai/gpt-oss-120b", provider="crusoe")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "crusoe"
+            assert llm.model == "openai/gpt-oss-120b"
+
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
         with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
@@ -455,6 +503,7 @@ KEYED_PROVIDERS = {
     "cerebras": "llama3.1-8b",
     "dashscope": "qwen-turbo",
     "deepinfra": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "crusoe": "openai/gpt-oss-120b",
 }
 
 WEATHER_TOOL = {
@@ -665,3 +714,22 @@ class TestCallMatrixWithAKey:
             "tool_call_id": "call_1",
             "content": "sunny, 21C",
         }
+
+    def test_crusoe_sends_the_org_and_model_id_unchanged(self, server):
+        """The request names the id after crusoe/ as its model, org included."""
+        import httpx
+
+        requests, replies = server
+        replies.append(
+            httpx.Response(200, json=_completion({"content": "Hello there"}))
+        )
+        llm = self.build("crusoe")
+
+        with patch.dict(os.environ, {}, clear=True):
+            assert llm.call("Say hi") == "Hello there"
+
+        assert (
+            str(requests[0].url)
+            == "https://api.inference.crusoecloud.com/v1/chat/completions"
+        )
+        assert json.loads(requests[0].content)["model"] == "openai/gpt-oss-120b"

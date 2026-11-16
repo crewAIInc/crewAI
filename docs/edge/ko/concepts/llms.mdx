@@ -788,6 +788,39 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Crusoe">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Crusoe에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    CRUSOE_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private endpoint
+    CRUSOE_BASE_URL=https://api.inference.crusoecloud.com/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="crusoe/openai/gpt-oss-120b",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Crusoe 특징:
+      - 하나의 OpenAI 호환 API로 제공되는 오픈 웨이트 모델 (gpt-oss, GLM, DeepSeek, Qwen, Gemma, Nemotron)
+      - 도구 호출, 스트리밍, JSON 스키마 구조화 출력 지원
+      - 모델 엔드포인트가 반환하는 토큰 단위 가격과 컨텍스트 길이
+    </Info>
+
+    모델 ID는 이미 `org/model` 형식이므로 전체 참조는 세 개의 세그먼트로 구성됩니다.
+    예: `crusoe/zai-org/GLM-5.3`. 현재 목록은
+    [사용 가능한 모델](https://docs.crusoe.ai/serverless-inference/available-models/) 페이지를,
+    정확한 ID, 컨텍스트 길이, 가격은 `GET /v1/models`를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
