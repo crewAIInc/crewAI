@@ -855,3 +855,24 @@ async def test_passing_guardrail_result_fills_output_pydantic_async(
 
     assert result.pydantic == Score(**expected)
     assert json.loads(result.raw) == expected
+
+
+@pytest.mark.parametrize(
+    "guardrail_result",
+    [Score(name="y", score=9), {"name": "y", "score": 9}],
+    ids=["model", "dict"],
+)
+def test_passing_guardrail_result_replaces_native_structured_output(guardrail_result):
+    agent = _structured_output_agent()
+    agent.execute_task.return_value = Score(name="x", score=3)
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_pydantic=Score,
+        guardrail=lambda output: (True, guardrail_result),
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.pydantic == Score(name="y", score=9)
+    assert json.loads(result.raw) == {"name": "y", "score": 9}
