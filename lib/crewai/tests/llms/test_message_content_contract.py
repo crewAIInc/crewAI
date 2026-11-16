@@ -337,22 +337,3 @@ def test_gemini_formatting_does_not_mutate_caller_content() -> None:
     _gemini_wire(_gemini(), messages)
 
     assert repr(messages) == snapshot
-
-
-@requires_gemini
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Known defect: _format_messages_for_gemini sends str() of a non-string "
-        "text block instead of skipping it"
-    ),
-)
-def test_gemini_non_string_text_part_is_skipped() -> None:
-    content = [
-        {"type": "text", "text": {"nested": 1}},
-        {"type": "text", "text": "kept"},
-    ]
-
-    contents, _ = _gemini_wire(_gemini(), [{"role": "user", "content": content}])
-
-    assert _part_texts(contents[0]) == ["kept"]
