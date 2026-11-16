@@ -26634,6 +26634,992 @@
       }
     },
     {
+      "description": "List the comments on a post or video, one page per call: text, author, time and likes per comment. Platforms: facebook, instagram, reddit, rumble, snapchat, tiktok, youtube. Pass the post's url; the platform is read from the link. When the answer has `has_more` true, pass its `cursor` back for the next page. Costs 1 credit per page; a failed call is free.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape comments",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "List the comments on a post or video with SocialScrape.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapeCommentsTool",
+        "type": "object"
+      },
+      "name": "SocialScrapeCommentsTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `cursor` of the previous answer, to get the next page. Leave it out for the first page.",
+            "title": "Cursor"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The post's id. Needs `platform`.",
+            "title": "Id"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Platform key, needed only with `id`. One of: facebook, instagram, reddit, rumble, snapchat, tiktok, youtube.",
+            "title": "Platform"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full URL of the post or video. The platform is read from it.",
+            "title": "Url"
+          }
+        },
+        "title": "SocialScrapeCommentsToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Run any SocialScrape endpoint by its id, for example youtube.channel.videos or facebook.ad_library.search, with its parameters by name. Covers ad libraries, followers, hashtags, playlists, music, shops and more than 190 other endpoints. Most cost 1 credit per call; a failed call is free. If a parameter is wrong the answer names what the endpoint takes.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape endpoint",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run any SocialScrape data endpoint by its id.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapeEndpointTool",
+        "type": "object"
+      },
+      "name": "SocialScrapeEndpointTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "endpoint": {
+            "description": "Endpoint id, for example youtube.channel.videos or facebook.ad_library.search. The list is in the API reference at https://socialscrape.dev/docs/api.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "description": "The endpoint's parameters by name, for example {\"handle\": \"nasa\"}.",
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "SocialScrapeEndpointToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get one post, video, tweet, pin or clip: text, author, time, stats and media links. Platforms: bluesky, cosmos, facebook, instagram, kick, kwai, linkedin, pinterest, reddit, rumble, snapchat, telegram, threads, tiktok, truthsocial, twitch, twitter, youtube. Pass its url; the platform is read from the link. Costs 1 credit; a failed lookup is free.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape post",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get one post, video, tweet, pin or clip by its URL with SocialScrape.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapePostTool",
+        "type": "object"
+      },
+      "name": "SocialScrapePostTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The post's id. Needs `platform`.",
+            "title": "Id"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Platform key, needed only with `id`. One of: bluesky, cosmos, facebook, instagram, kick, kwai, linkedin, pinterest, reddit, rumble, snapchat, telegram, threads, tiktok, truthsocial, twitch, twitter, youtube.",
+            "title": "Platform"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full URL of the post, video, tweet, pin or clip. The platform is read from it.",
+            "title": "Url"
+          }
+        },
+        "title": "SocialScrapePostToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List the latest posts or videos of a profile, channel or page, newest first, one page per call: text, time, stats and media links. Platforms: bluesky, cosmos, facebook, instagram, kwai, linkedin, rumble, telegram, threads, tiktok, truthsocial, twitch, twitter, youtube. Pass the platform and a handle, url or id. When the answer has `has_more` true, pass its `cursor` back for the next page. Costs 1 credit per page; a failed call is free.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape posts",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "List the latest posts or videos of a profile, channel or page with SocialScrape.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapePostsTool",
+        "type": "object"
+      },
+      "name": "SocialScrapePostsTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `cursor` of the previous answer, to get the next page. Leave it out for the first page.",
+            "title": "Cursor"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Username or handle, with or without the leading @.",
+            "title": "Handle"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The platform's own id of the account, if it has one.",
+            "title": "Id"
+          },
+          "platform": {
+            "description": "Platform key. One of: bluesky, cosmos, facebook, instagram, kwai, linkedin, rumble, telegram, threads, tiktok, truthsocial, twitch, twitter, youtube.",
+            "title": "Platform",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full URL of the profile, channel or page.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "platform"
+        ],
+        "title": "SocialScrapePostsToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get a profile from a social platform: name, bio, links, verification and follower counts. Platforms: apple_music, bluesky, cosmos, facebook, github, instagram, kwai, linkedin, snapchat, soundcloud, spotify, threads, tiktok, truthsocial, twitch, twitter, youtube. Pass the platform and a handle, url or id. Costs 1 credit; a failed lookup is free.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape profile",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get a profile, channel or artist from a social platform with SocialScrape.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapeProfileTool",
+        "type": "object"
+      },
+      "name": "SocialScrapeProfileTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Username or handle, with or without the leading @.",
+            "title": "Handle"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The platform's own id of the account, if it has one.",
+            "title": "Id"
+          },
+          "platform": {
+            "description": "Platform key. One of: apple_music, bluesky, cosmos, facebook, github, instagram, kwai, linkedin, snapchat, soundcloud, spotify, threads, tiktok, truthsocial, twitch, twitter, youtube.",
+            "title": "Platform",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full URL of the profile, channel or page.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "platform"
+        ],
+        "title": "SocialScrapeProfileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search one platform by keyword, one page per call. Posts and videos on most platforms, tracks and artists on Spotify and Apple Music, web results on Google. Platforms: apple_music, cosmos, facebook, google, instagram, linkedin, pinterest, reddit, rumble, spotify, threads, tiktok, twitter, youtube. When the answer has `has_more` true, pass its `cursor` back for the next page. Costs 1 credit per page; a failed call is free.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search one platform by keyword with SocialScrape.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapeSearchTool",
+        "type": "object"
+      },
+      "name": "SocialScrapeSearchTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `cursor` of the previous answer, to get the next page. Leave it out for the first page.",
+            "title": "Cursor"
+          },
+          "platform": {
+            "description": "Platform key. One of: apple_music, cosmos, facebook, google, instagram, linkedin, pinterest, reddit, rumble, spotify, threads, tiktok, twitter, youtube.",
+            "title": "Platform",
+            "type": "string"
+          },
+          "query": {
+            "description": "Search terms.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform",
+          "query"
+        ],
+        "title": "SocialScrapeSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get the transcript of a video from its URL: the full text, its language and where it came from (captions, or AI transcription of the audio when there are none). Works with YouTube, TikTok, Instagram and other video links. Costs 1 credit from captions, and 1 credit for AI transcription up to 2 minutes of audio. Longer audio needs allow_long_transcription and costs 5 credits per started minute. A failed call is free.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SocialScrape (https://socialscrape.dev/app)",
+          "name": "SOCIALSCRAPE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SocialScrape transcript",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get the transcript of a video from its URL with SocialScrape.",
+        "properties": {
+          "max_age_days": {
+            "anyOf": [
+              {
+                "maximum": 30,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age Days"
+          },
+          "max_output_chars": {
+            "default": 50000,
+            "minimum": 1000,
+            "title": "Max Output Chars",
+            "type": "integer"
+          },
+          "trim": {
+            "default": true,
+            "title": "Trim",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "SocialScrapeTranscriptTool",
+        "type": "object"
+      },
+      "name": "SocialScrapeTranscriptTool",
+      "package_dependencies": [
+        "socialscrape-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "allow_long_transcription": {
+            "default": false,
+            "description": "Allow AI transcription of audio longer than 2 minutes when the video has no captions, at 5 credits per started minute. Without it such a video answers an error that names the cost, which is free.",
+            "title": "Allow Long Transcription",
+            "type": "boolean"
+          },
+          "include_segments": {
+            "default": false,
+            "description": "Also return the timed segments (start, end, text).",
+            "title": "Include Segments",
+            "type": "boolean"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Preferred caption language as a BCP 47 code, for example en or pt-BR.",
+            "title": "Language"
+          },
+          "url": {
+            "description": "Full URL of the video.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "SocialScrapeTranscriptToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool to scrape or crawl a website and return LLM-ready content.",
       "env_vars": [
         {

@@ -1,0 +1,70 @@
+---
+title: SocialScrape Tools
+description: Profiles, posts, comments, search and video transcripts across 29 social platforms through the SocialScrape API.
+icon: share-nodes
+mode: "wide"
+---
+
+# SocialScrape Tools
+
+[SocialScrape](https://socialscrape.dev) is a social media data API with one key and one JSON shape across 29 platforms: profiles, posts, comments, search, ad libraries and video transcripts. SocialScrape maintains these tools (support@socialscrape.dev), and every endpoint is documented in the [SocialScrape API reference](https://socialscrape.dev/docs).
+
+## Installation
+
+```shell
+uv add crewai-tools socialscrape-sdk
+# or
+pip install 'crewai-tools[socialscrape]'
+```
+
+## Environment Variables
+
+- `SOCIALSCRAPE_API_KEY` (required). Create a key at [socialscrape.dev/app](https://socialscrape.dev/app).
+
+## Included Tools
+
+- `SocialScrapeProfileTool`: a profile by `platform` and one of `handle`, `url` or `id`.
+- `SocialScrapePostsTool`: a profile's posts or videos, paged with `cursor`.
+- `SocialScrapePostTool`: one post from a `url`, or from a `platform` and an `id`.
+- `SocialScrapeCommentsTool`: comments on a post, paged with `cursor`.
+- `SocialScrapeTranscriptTool`: the transcript of a video `url`. Options: `language`, `allow_long_transcription`, `include_segments`.
+- `SocialScrapeSearchTool`: search a `platform` for a `query`.
+- `SocialScrapeEndpointTool`: any other SocialScrape endpoint by id, such as `facebook.ad_library.search`, with `params`.
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import (
+    SocialScrapeProfileTool,
+    SocialScrapeTranscriptTool,
+)
+
+researcher = Agent(
+    role="Social media researcher",
+    goal="Summarise what a creator says and how large their audience is",
+    backstory="You work only from the data the tools return.",
+    tools=[SocialScrapeProfileTool(), SocialScrapeTranscriptTool()],
+)
+
+task = Task(
+    description="Look up the TikTok profile nasa and report its follower count.",
+    expected_output="One short paragraph.",
+    agent=researcher,
+)
+
+print(Crew(agents=[researcher], tasks=[task]).kickoff())
+```
+
+## Arguments
+
+All tools accept these when constructed:
+
+- `api_key`: Optional. Defaults to the `SOCIALSCRAPE_API_KEY` environment variable.
+- `max_age_days`: Optional. Accept a cached result up to this many days old (0 to 30). Cached repeats are free.
+- `trim`: Optional. Return the compact response shape. Default `True`.
+- `max_output_chars`: Optional. Cut long answers at this length. Default 50000.
+
+## Credits
+
+Most requests cost 1 credit. Failed requests and cached repeats are free. Each answer includes `credits_charged` and `credits_remaining`. AI transcription of a video without captions costs more and needs `allow_long_transcription=True`.

@@ -1911,6 +1911,9 @@ snowflake = [
     { name = "snowflake-connector-python" },
     { name = "snowflake-sqlalchemy" },
 ]
+socialscrape = [
+    { name = "socialscrape-sdk", marker = "python_full_version >= '3.11'" },
+]
 spider-client = [
     { name = "spider-client" },
 ]
@@ -1987,6 +1990,7 @@ requires-dist = [
     { name = "singlestoredb", marker = "extra == 'singlestore'", specifier = ">=1.12.4" },
     { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=4.7.3,<5" },
     { name = "snowflake-sqlalchemy", marker = "extra == 'snowflake'", specifier = ">=1.11.0" },
+    { name = "socialscrape-sdk", marker = "python_full_version >= '3.11' and extra == 'socialscrape'", specifier = ">=0.1.2,<1" },
     { name = "soupsieve", marker = "python_full_version < '3.11.5'", specifier = ">=2.10" },
     { name = "soupsieve", marker = "python_full_version >= '3.11.5'", specifier = ">=4.0" },
     { name = "spider-client", marker = "extra == 'spider-client'", specifier = ">=0.1.25" },
@@ -2000,7 +2004,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "azure-documentdb", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oracledb", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "azure-documentdb", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oracledb", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "socialscrape", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -9471,6 +9475,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/82/54/f9f7e3701e4b35bcb9fbdc14cdb347133bbe3c5a9e87071649f3934b283d/snowflake_sqlalchemy-1.11.0.tar.gz", hash = "sha256:95866fe499a8ba692f01eb107741050efc553361e1674e3e44ea4a890b4df00c", size = 248059, upload-time = "2026-07-08T08:53:39.248Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/9a/f8d0165f5d2447a0d7e10dc309c7ea1af6782aa1b357164d25dcb567b196/snowflake_sqlalchemy-1.11.0-py3-none-any.whl", hash = "sha256:f5fad9e86441812ad1f23aef92a2e612d65408338221ae39b9becedb7329a6e2", size = 117058, upload-time = "2026-07-08T08:53:38.053Z" },
+]
+
+[[package]]
+name = "socialscrape-sdk"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/11/f6b4ad63dec4b2131b644bc910c7d9caa1592d9f6ac7ad729cec92c841c0/socialscrape_sdk-0.1.2.tar.gz", hash = "sha256:34e28df5e04257e8f4bb5fca21b906d86bd623347a2c900e15c82fd9e4d2754e", size = 92684, upload-time = "2026-11-07T02:06:13.164Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/7a/b0bd889d3715b0c66ef2f53ee0ab9d47574a19eeef113f36666b37b5003e/socialscrape_sdk-0.1.2-py3-none-any.whl", hash = "sha256:d5c6623830e1dbdd6d562c757121d31e5f3d791aec145eaac17b13a4f389513f", size = 94058, upload-time = "2026-11-07T02:06:12.059Z" },
 ]
 
 [[package]]

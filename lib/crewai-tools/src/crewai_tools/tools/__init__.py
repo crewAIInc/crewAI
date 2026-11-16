@@ -194,6 +194,15 @@ from crewai_tools.tools.snowflake_search_tool import (
     SnowflakeSearchTool,
     SnowflakeSearchToolInput,
 )
+from crewai_tools.tools.socialscrape_tool import (
+    SocialScrapeCommentsTool,
+    SocialScrapeEndpointTool,
+    SocialScrapePostTool,
+    SocialScrapePostsTool,
+    SocialScrapeProfileTool,
+    SocialScrapeSearchTool,
+    SocialScrapeTranscriptTool,
+)
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
@@ -322,6 +331,13 @@ __all__ = [
     "SnowflakeConfig",
     "SnowflakeSearchTool",
     "SnowflakeSearchToolInput",
+    "SocialScrapeCommentsTool",
+    "SocialScrapeEndpointTool",
+    "SocialScrapePostTool",
+    "SocialScrapePostsTool",
+    "SocialScrapeProfileTool",
+    "SocialScrapeSearchTool",
+    "SocialScrapeTranscriptTool",
     "SpiderTool",
     "StagehandTool",
     "TXTSearchTool",

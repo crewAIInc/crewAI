@@ -153,6 +153,10 @@ xml = [
     # override, so consumers installing crewai-tools[xml] get this floor.
     "nltk>=3.10.4",
 ]
+socialscrape = [
+    # The SDK needs Python 3.11, the same split the mongodb extra makes.
+    "socialscrape-sdk>=0.1.2,<1; python_version >= '3.11'",
+]
 oxylabs = [
     # 3.x keeps the RealtimeClient surface these tools use and adds sources;
     # allow it rather than pinning consumers to a single release.
