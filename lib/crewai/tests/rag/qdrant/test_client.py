@@ -8,6 +8,7 @@ from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.types import BaseRecord
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import QdrantClient as SyncQdrantClient
+from qdrant_client.models import Distance, VectorParams
 
 
 @pytest.fixture
@@ -214,6 +215,49 @@ class TestQdrantClient:
             match=r"Method aget_or_create_collection\(\) requires",
         ):
             await client.aget_or_create_collection(collection_name="test_collection")
+
+    @pytest.mark.parametrize(
+        "method", ["create_collection", "get_or_create_collection"]
+    )
+    def test_new_collection_uses_default_vectors_config(
+        self, mock_qdrant_client, method
+    ):
+        """Test that collections created without vectors_config use the default."""
+        vectors_config = VectorParams(size=4, distance=Distance.COSINE)
+        client = QdrantClient(
+            client=mock_qdrant_client,
+            embedding_function=Mock(),
+            default_vectors_config=vectors_config,
+        )
+        mock_qdrant_client.collection_exists.return_value = False
+
+        getattr(client, method)(collection_name="test_collection")
+
+        call_args = mock_qdrant_client.create_collection.call_args
+        assert call_args.kwargs["vectors_config"] == vectors_config
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "method", ["acreate_collection", "aget_or_create_collection"]
+    )
+    async def test_anew_collection_uses_default_vectors_config(
+        self, mock_async_qdrant_client, method
+    ):
+        """Test that async collection creation uses the default vectors_config."""
+        vectors_config = VectorParams(size=4, distance=Distance.COSINE)
+        client = QdrantClient(
+            client=mock_async_qdrant_client,
+            embedding_function=Mock(),
+            default_vectors_config=vectors_config,
+        )
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=False)
+        mock_async_qdrant_client.create_collection = AsyncMock()
+        mock_async_qdrant_client.get_collection = AsyncMock()
+
+        await getattr(client, method)(collection_name="test_collection")
+
+        call_args = mock_async_qdrant_client.create_collection.call_args
+        assert call_args.kwargs["vectors_config"] == vectors_config
 
     def test_add_documents(self, client, mock_qdrant_client):
         """Test that add_documents adds documents to collection."""
