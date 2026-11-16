@@ -35,9 +35,6 @@ if TYPE_CHECKING:
     from chromadb.utils.embedding_functions.open_clip_embedding_function import (
         OpenCLIPEmbeddingFunction,
     )
-    from chromadb.utils.embedding_functions.openai_embedding_function import (
-        OpenAIEmbeddingFunction,
-    )
     from chromadb.utils.embedding_functions.roboflow_embedding_function import (
         RoboflowEmbeddingFunction,
     )
@@ -72,6 +69,9 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
     from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
     from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
+    from crewai.rag.embeddings.providers.openai.embedding_callable import (
+        OpenAIEmbeddingFunction,
+    )
     from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
     from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
     from crewai.rag.embeddings.providers.openrouter.types import OpenRouterProviderSpec

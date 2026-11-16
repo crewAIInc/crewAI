@@ -63,7 +63,7 @@ class ConsoleFormatter:
 
         Only displays when verbose mode is enabled and not running in CI/CD.
         """
-        if not self.verbose:
+        if not self.verbose or should_suppress_console_output():
             return
 
         if _disable_version_check.get():

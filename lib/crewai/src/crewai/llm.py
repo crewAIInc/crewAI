@@ -38,11 +38,16 @@ from crewai.llm_overlay import overlay_model_for_model
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
+    EmptyLLMResponseError,
     JsonResponseFormat,
     LLMCallBlockedError,
+    # Unused here since the key check moved to the first call; kept because
+    # `from crewai.llm import MissingAPIKeyError` works in released 1.15.34+.
+    MissingAPIKeyError,  # noqa: F401
     get_current_call_id,
     llm_call_context,
 )
+from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -52,9 +57,11 @@ from crewai.llms.constants import (
 )
 from crewai.llms.context_window import (
     AZURE_OPENAI_CONTEXT_WINDOWS,
+    CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
     OPENAI_CONTEXT_WINDOWS,
+    catalog_context_window,
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
@@ -146,7 +153,6 @@ def _ensure_litellm() -> bool:
             get_supported_openai_params as _get_supported_openai_params,
         )
         from litellm.types.utils import (
-            ChatCompletionDeltaCustomToolCall as _ChatCompletionDeltaCustomToolCall,
             ChatCompletionDeltaToolCall as _ChatCompletionDeltaToolCall,
             Choices as _Choices,
             Delta as _LiteLLMDelta,
@@ -167,11 +173,20 @@ def _ensure_litellm() -> bool:
         ModelResponseStream = _ModelResponseStream  # type: ignore[misc]
         LiteLLMStreamingChoices = _LiteLLMStreamingChoices  # type: ignore[misc]
         get_supported_openai_params = _get_supported_openai_params
-        ChatCompletionDeltaCustomToolCall = _ChatCompletionDeltaCustomToolCall  # type: ignore[misc]
         ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall  # type: ignore[misc]
         Function = _Function  # type: ignore[misc]
         ModelResponse = _ModelResponse  # type: ignore[misc]
         supports_response_schema = _supports_response_schema
+
+        try:
+            # Added in litellm 1.100; only used in a type annotation.
+            from litellm.types.utils import (
+                ChatCompletionDeltaCustomToolCall as _ChatCompletionDeltaCustomToolCall,
+            )
+
+            ChatCompletionDeltaCustomToolCall = _ChatCompletionDeltaCustomToolCall  # type: ignore[misc]
+        except ImportError:
+            pass
 
         _litellm.suppress_debug_info = True
         LITELLM_AVAILABLE = True
@@ -283,7 +298,6 @@ class LLM(BaseLLM):
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
-    context_window_size: int = 0
     is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
@@ -712,6 +726,24 @@ class LLM(BaseLLM):
             self.set_env_callbacks()
         return self
 
+    @model_validator(mode="after")
+    def _drop_cached_context_window(self) -> LLM:
+        # Through 1.15.32, get_context_window_size() wrote its result (85% of
+        # the catalog or default window) back into this field, and checkpoints
+        # carry it. Read as an override it would be scaled by 85% again.
+        # Remove in 2.0.
+        if self.context_window_size is None:
+            return self
+        full = catalog_context_window(
+            self._context_window_model_name(),
+            self._context_window_sizes(),
+            extra_names=(self.model,),
+        )
+        cached = int((full or DEFAULT_CONTEXT_WINDOW_SIZE) * CONTEXT_WINDOW_USAGE_RATIO)
+        if self.context_window_size == cached:
+            self.context_window_size = None
+        return self
+
     @staticmethod
     def _is_anthropic_model(model: str) -> bool:
         """Determine if the model is from Anthropic provider.
@@ -743,6 +775,18 @@ class LLM(BaseLLM):
         """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+        # The cache-breakpoint flag is crewAI-internal; LiteLLM would forward
+        # it to the provider, and strict APIs (e.g. Groq) reject the request.
+        # Copy rather than mutate: the executor reuses its message buffer.
+        cleaned: list[LLMMessage] = []
+        for m in messages:
+            if isinstance(m, dict) and CACHE_BREAKPOINT_KEY in m:
+                copy: dict[str, Any] = dict(m)
+                copy.pop(CACHE_BREAKPOINT_KEY)
+                cleaned.append(cast("LLMMessage", copy))
+            else:
+                cleaned.append(m)
+        messages = cleaned
         if not skip_file_processing:
             messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
@@ -839,7 +883,7 @@ class LLM(BaseLLM):
             str: The complete response text
 
         Raises:
-            Exception: If no content is received from the streaming response
+            EmptyLLMResponseError: If the stream carried no content and no tool calls.
         """
         full_response = ""
         last_chunk = None
@@ -1001,9 +1045,7 @@ class LLM(BaseLLM):
                         )
 
             if not full_response.strip() and len(accumulated_tool_args) == 0:
-                raise Exception(
-                    "No content received from streaming response. Received empty chunks or failed to extract content."
-                )
+                raise EmptyLLMResponseError(self.model)
 
             tool_calls = None
             try:
@@ -1120,7 +1162,7 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except LLMContextLengthExceededError:
+        except (LLMContextLengthExceededError, EmptyLLMResponseError):
             raise
         except Exception as e:
             error_msg = str(e)
@@ -2122,7 +2164,16 @@ class LLM(BaseLLM):
                     )
 
                     if self._effective_stream():
-                        return await self._ahandle_streaming_response(
+                        result = await self._ahandle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+                    else:
+                        result = await self._ahandle_non_streaming_response(
                             params=params,
                             callbacks=callbacks,
                             available_functions=available_functions,
@@ -2131,14 +2182,12 @@ class LLM(BaseLLM):
                             response_model=response_model,
                         )
 
-                    return await self._ahandle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
+                    if isinstance(result, str):
+                        result = self._invoke_after_llm_call_hooks(
+                            messages, result, from_agent
+                        )
+
+                    return result
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
@@ -2595,17 +2644,14 @@ class LLM(BaseLLM):
         return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
-        """Return the context window size, using 85% of the catalog limit."""
-        if self.context_window_size != 0:
-            return self.context_window_size
-
-        self.context_window_size = resolve_context_window_size(
+        """Return 85% of ``context_window_size`` or of the catalog limit."""
+        return resolve_context_window_size(
             self._context_window_model_name(),
             self._context_window_sizes(),
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
             extra_names=(self.model,),
+            configured=self.context_window_size,
         )
-        return self.context_window_size
 
     @staticmethod
     def set_callbacks(callbacks: list[Any]) -> None:
@@ -2820,6 +2866,7 @@ class LLM(BaseLLM):
             "gpt-4-vision",
             "gpt-4.1",
             "gpt-5",
+            "gpt-6",
             # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
             "o1",
             "o3",
