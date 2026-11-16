@@ -4,9 +4,39 @@ from pathlib import Path
 
 import pytest
 
+from crewai_tools.rag.chunkers.base_chunker import RecursiveCharacterTextSplitter
 from crewai_tools.rag.chunkers.structured_chunker import JsonChunker
 from crewai_tools.rag.data_types import DataType, DataTypes
 from crewai_tools.rag.loaders.jsonl_loader import JSONLLoader
+
+
+class TestDataTypeChunkers:
+    @pytest.mark.parametrize(
+        ("data_type", "text"),
+        [
+            (DataType.TEXT, "a\nb"),
+            (DataType.TEXT, "Para one.\n\nPara two."),
+            (DataType.JSONL, '{"a": 1}\n{"b": 2}'),
+        ],
+    )
+    def test_kept_separators_are_not_duplicated(
+        self, data_type: DataType, text: str
+    ) -> None:
+        assert data_type.get_chunker().chunk(text) == [text]
+
+    def test_kept_separators_at_chunk_boundary(self) -> None:
+        splitter = RecursiveCharacterTextSplitter(chunk_size=5, chunk_overlap=0)
+
+        assert splitter.split_text("a\nb\nc\nd") == ["a\nb\nc", "\nc\nd"]
+
+    @pytest.mark.parametrize("separator", ["\n", "\n\n", ", ", " "])
+    def test_removed_separators_are_reinserted(self, separator: str) -> None:
+        splitter = RecursiveCharacterTextSplitter(
+            separators=[separator], keep_separator=False
+        )
+        text = separator.join(["a", "b", "c"])
+
+        assert splitter.split_text(text) == [text]
 
 
 class TestDataTypesFromContentGitHub:
