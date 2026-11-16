@@ -2563,3 +2563,171 @@ def test_openai_no_detail_fields_omitted():
     assert usage["completion_tokens"] == 30
     assert "cached_prompt_tokens" not in usage
     assert "reasoning_tokens" not in usage
+
+
+def _usage(prompt_tokens: int, completion_tokens: int) -> MagicMock:
+    return MagicMock(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=prompt_tokens + completion_tokens,
+        prompt_tokens_details=None,
+        completion_tokens_details=None,
+    )
+
+
+def _stream_chunk(
+    content: str | None,
+    *,
+    usage: Any = None,
+    finish_reason: str | None = None,
+    choices: bool = True,
+    tool_call: tuple[str | None, str | None, str] | None = None,
+) -> MagicMock:
+    """Build a streamed chunk; ``tool_call`` is (id, name, arguments fragment)."""
+    chunk = MagicMock()
+    chunk.id = "chatcmpl-1"
+    chunk.usage = usage
+    if not choices:
+        chunk.choices = []
+        return chunk
+    chunk.choices = [MagicMock()]
+    chunk.choices[0].delta = MagicMock()
+    chunk.choices[0].delta.content = content
+    chunk.choices[0].delta.tool_calls = None
+    chunk.choices[0].finish_reason = finish_reason
+    if tool_call is not None:
+        call = MagicMock()
+        call.index = 0
+        call.id, call.function.name, call.function.arguments = tool_call
+        chunk.choices[0].delta.tool_calls = [call]
+    return chunk
+
+
+def _chunks_that_all_carry_usage(
+    first: str = "Hello", last: str = " world"
+) -> list[MagicMock]:
+    """OpenAI reports usage only on a final chunk with empty choices. A vLLM
+    server asked for ``continuous_usage_stats`` attaches the running totals to
+    every chunk, so a delta must not be dropped for carrying usage."""
+    return [
+        _stream_chunk(first, usage=_usage(10, 2)),
+        _stream_chunk(last, finish_reason="stop", usage=_usage(10, 5)),
+        _stream_chunk(None, usage=_usage(10, 5), choices=False),
+    ]
+
+
+def _async_create(chunks: list[MagicMock]) -> Any:
+    async def mock_create(**kwargs: Any) -> Any:
+        async def stream() -> Any:
+            for chunk in chunks:
+                yield chunk
+
+        return stream()
+
+    return mock_create
+
+
+def test_openai_streaming_keeps_the_delta_of_a_chunk_that_also_carries_usage():
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    with patch.object(
+        llm._client.chat.completions,
+        "create",
+        return_value=iter(_chunks_that_all_carry_usage()),
+    ):
+        result = llm.call(messages=[{"role": "user", "content": "Say hello"}])
+
+    assert result == "Hello world"
+    usage = llm.get_token_usage_summary()
+    assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (
+        10,
+        5,
+        15,
+    )
+
+
+def test_openai_streaming_keeps_a_tool_call_whose_chunks_also_carry_usage():
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+    chunks = [
+        _stream_chunk(
+            None,
+            tool_call=("call_abc123", "calculator", '{"expr'),
+            usage=_usage(10, 2),
+        ),
+        _stream_chunk(
+            None,
+            tool_call=(None, None, 'ession": "1+1"}'),
+            finish_reason="tool_calls",
+            usage=_usage(10, 5),
+        ),
+        _stream_chunk(None, usage=_usage(10, 5), choices=False),
+    ]
+
+    with patch.object(
+        llm._client.chat.completions, "create", return_value=iter(chunks)
+    ):
+        result = llm.call(
+            messages=[{"role": "user", "content": "Calculate 1+1"}],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "calculator",
+                        "description": "Calculate expression",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"expression": {"type": "string"}},
+                        },
+                    },
+                }
+            ],
+            available_functions=None,
+        )
+
+    assert isinstance(result, list)
+    assert [call["id"] for call in result] == ["call_abc123"]
+    assert result[0]["function"]["name"] == "calculator"
+    assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
+    assert llm.get_token_usage_summary().total_tokens == 15
+
+
+@pytest.mark.asyncio
+async def test_openai_async_streaming_keeps_the_delta_of_a_chunk_that_also_carries_usage():
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    with patch.object(
+        llm._async_client.chat.completions,
+        "create",
+        side_effect=_async_create(_chunks_that_all_carry_usage()),
+    ):
+        result = await llm.acall(messages=[{"role": "user", "content": "Say hello"}])
+
+    assert result == "Hello world"
+    usage = llm.get_token_usage_summary()
+    assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (
+        10,
+        5,
+        15,
+    )
+
+
+@pytest.mark.asyncio
+async def test_openai_async_streaming_structured_output_keeps_the_delta_of_a_chunk_that_also_carries_usage():
+    from pydantic import BaseModel
+
+    class Greeting(BaseModel):
+        name: str
+
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+    chunks = _chunks_that_all_carry_usage('{"name": "Wor', 'ld"}')
+
+    with patch.object(
+        llm._async_client.chat.completions, "create", side_effect=_async_create(chunks)
+    ):
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Say hello"}],
+            response_model=Greeting,
+        )
+
+    assert result == Greeting(name="World")
+    assert llm.get_token_usage_summary().total_tokens == 15
