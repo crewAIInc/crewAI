@@ -25,7 +25,7 @@ Design notes:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Hashable, Iterator
 from contextlib import contextmanager
 import contextvars
 from enum import Enum
@@ -129,20 +129,28 @@ def set_error_policy(hook: HookFn, policy: HookErrorPolicy | str) -> None:
 def _policy_candidates(hook: Any) -> Iterator[Any]:
     """The callables a policy for ``hook`` may have been registered under.
 
-    A filtered hook (``@before_tool_call(tools=...)``, ``@on(..., agents=...)``,
-    a ``@CrewBase`` filter) is registered as a wrapper while the caller keeps the
-    original function, so ``set_error_policy`` can be called with either one.
-    ``functools.wraps`` keeps the original on ``__wrapped__``; ``@on`` also stashes
-    the registered wrapper on the original.
+    The object dispatch invokes is rarely the object the caller holds:
+
+    - a filtered hook (``@before_tool_call(tools=...)``, ``@on(..., agents=...)``,
+      a ``@CrewBase`` filter) is registered as a wrapper, which
+      ``functools.wraps`` links back through ``__wrapped__``;
+    - ``@on`` also stashes the registered wrapper on the original, in
+      ``_registered_hook``;
+    - a ``@CrewBase`` method is registered as a bound method, while the decorator
+      returns - and the docs tell callers to pass - the plain function, which a
+      bound method exposes as ``__func__``.
     """
     seen: set[int] = set()
-    candidate: Any = hook
-    while candidate is not None and id(candidate) not in seen:
+    pending = [hook]
+    while pending:
+        candidate = pending.pop(0)
+        if candidate is None or id(candidate) in seen:
+            continue
         seen.add(id(candidate))
         yield candidate
-        candidate = getattr(candidate, "__wrapped__", None) or getattr(
-            candidate, "_registered_hook", None
-        )
+        pending.append(getattr(candidate, "__wrapped__", None))
+        pending.append(getattr(candidate, "_registered_hook", None))
+        pending.append(getattr(candidate, "__func__", None))
 
 
 def _error_policy(hook: HookFn) -> HookErrorPolicy:
@@ -160,7 +168,8 @@ def _error_policy(hook: HookFn) -> HookErrorPolicy:
 def _pop_error_policy(hook: Any) -> None:
     """Drop the policy of ``hook`` and of the functions it wraps or came from."""
     for candidate in _policy_candidates(hook):
-        _error_policies.pop(candidate, None)
+        if isinstance(candidate, Hashable):
+            _error_policies.pop(candidate, None)
 
 
 # (ctx, result) -> modified?  A reducer maps a hook's return value onto the

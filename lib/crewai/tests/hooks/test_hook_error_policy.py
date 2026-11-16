@@ -166,3 +166,45 @@ def test_unregistering_a_filtered_hook_drops_its_policy():
     register_before_tool_call_hook(policy)
 
     assert run_before_tool_call_hooks(_context()) is False
+
+
+class _HookOwner:
+    """Stands in for a ``@CrewBase`` class: the decorator returns the plain function."""
+
+    def guard(self, context: ToolCallHookContext) -> None:
+        raise RuntimeError("policy service unreachable")
+
+
+def test_a_crew_method_keeps_a_policy_set_on_the_class_function():
+    """A ``@CrewBase`` method is registered as a bound method, the caller holds the
+    plain function, so the policy must resolve through ``__func__``."""
+    owner = _HookOwner()
+    register_before_tool_call_hook(owner.guard)
+    set_error_policy(_HookOwner.guard, "abort")
+
+    assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_a_crew_method_keeps_a_policy_set_on_the_bound_method():
+    owner = _HookOwner()
+    register_before_tool_call_hook(owner.guard)
+    set_error_policy(owner.guard, "abort")
+
+    assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_a_filtered_crew_method_keeps_its_policy():
+    """The crew-base filter closures must stay linked to the method they wrap."""
+    from crewai.project.crew_base import _register_crew_hooks
+
+    class Crew:
+        def guard(self, context: ToolCallHookContext) -> None:
+            raise RuntimeError("policy service unreachable")
+
+    Crew.guard.is_before_tool_call_hook = True  # type: ignore[attr-defined]
+    Crew.guard._filter_tools = ["send_email"]  # type: ignore[attr-defined]
+    set_error_policy(Crew.guard, "abort")
+
+    _register_crew_hooks(Crew(), Crew)
+
+    assert run_before_tool_call_hooks(_context()) is True

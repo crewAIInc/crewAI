@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import wraps
 import inspect
 import logging
 from pathlib import Path
@@ -488,6 +489,7 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
                     bound_fn: Callable[[LLMCallHookContext], bool | None],
                     agents_list: list[str],
                 ) -> Callable[[LLMCallHookContext], bool | None]:
+                    @wraps(bound_fn)
                     def filtered(context: LLMCallHookContext) -> bool | None:
                         if context.agent and context.agent.role not in agents_list:
                             return None
@@ -512,6 +514,7 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
                     bound_fn: Callable[[LLMCallHookContext], str | None],
                     agents_list: list[str],
                 ) -> Callable[[LLMCallHookContext], str | None]:
+                    @wraps(bound_fn)
                     def filtered(context: LLMCallHookContext) -> str | None:
                         if context.agent and context.agent.role not in agents_list:
                             return None
@@ -538,6 +541,7 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
                     tools_list: list[str] | None,
                     agents_list: list[str] | None,
                 ) -> Callable[[ToolCallHookContext], bool | None]:
+                    @wraps(bound_fn)
                     def filtered(context: ToolCallHookContext) -> bool | None:
                         if tools_list and context.tool_name not in tools_list:
                             return None
@@ -572,6 +576,7 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
                     tools_list: list[str] | None,
                     agents_list: list[str] | None,
                 ) -> Callable[[ToolCallHookContext], str | None]:
+                    @wraps(bound_fn)
                     def filtered(context: ToolCallHookContext) -> str | None:
                         if tools_list and context.tool_name not in tools_list:
                             return None
