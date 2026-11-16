@@ -250,6 +250,10 @@ class CrewStructuredTool(BaseModel):
     _original_tool: Any = PrivateAttr(default=None)
     _usage_lock: _UsageLock = PrivateAttr(default_factory=_UsageLock)
 
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        """Keep converted callables and usage write-back bound to one copied tool."""
+        return super().__deepcopy__({} if memo is None else memo)
+
     @property
     def formatted_description(self) -> str:
         """LLM-facing composite of name, argument schema, and description.

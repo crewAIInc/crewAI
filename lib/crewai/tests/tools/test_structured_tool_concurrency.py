@@ -190,3 +190,28 @@ def test_usage_claims_on_separate_instances_do_not_contend(
         assert first.result(timeout=5) == 1
 
     assert waiting.current_usage_count == independent.current_usage_count == 1
+
+
+@pytest.mark.parametrize("copy_method", ["deepcopy", "model_copy"])
+def test_copied_converted_tool_executes_with_its_updated_usage_count(
+    copy_method: str,
+) -> None:
+    class CountingTool(BaseTool):
+        name: str = "counting"
+        description: str = "Return this tool's current usage count."
+
+        def _run(self) -> int:
+            return self.current_usage_count
+
+    base = CountingTool(max_usage_count=2)
+    original = base.to_structured_tool()
+    assert original.invoke({}) == 1
+
+    copied = (
+        deepcopy(original)
+        if copy_method == "deepcopy"
+        else original.model_copy(deep=True)
+    )
+    assert copied.invoke({}) == 2
+    assert copied.current_usage_count == 2
+    assert original.current_usage_count == base.current_usage_count == 1
