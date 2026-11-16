@@ -340,9 +340,9 @@ override-dependencies = [
     "certifi>=2026.10.18",
     "python-multipart>=0.0.27,<1",
     "gitpython>=3.2.1,<4",
-    "opentelemetry-api>=1.45.1,<2",
-    "opentelemetry-sdk>=1.45.1,<2",
-    "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
+    "opentelemetry-api>=1.45.2,<2", # GHSA-mf5v-w3w3-f6cg
+    "opentelemetry-sdk>=1.45.2,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.2,<2",
     "pyasn1>=0.6.5",
     "langsmith>=0.8.18,<1",
     "authlib>=1.9.1",
@@ -366,7 +366,7 @@ override-dependencies = [
     "multidict>=6.9.1,<7",
     "pymongo>=4.18.3; python_version >= '3.11'",
     "pymongo>=4.18.2,<4.18.3; python_version < '3.11'",
-    "dnspython>=2.9.0; python_version >= '3.11'",
+    "dnspython>=2.9.2; python_version >= '3.11'", # GHSA-vvf4-9x63-8xvv (2.9.2 needs Python >=3.11; no 3.10 fix)
     "snowflake-connector-python>=4.7.3,<5",
     "snowflake-sqlalchemy>=1.11.0",
     "soupsieve>=4.0; python_full_version >= '3.11.5'",
