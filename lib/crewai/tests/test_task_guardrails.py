@@ -779,3 +779,40 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_receives_populated_output_pydantic():
+    """Verify that task_output.pydantic is populated and accessible inside guardrails."""
+    from pydantic import BaseModel
+
+    class EvaluationResult(BaseModel):
+        score: int
+        summary: str
+
+    captured_pydantic = []
+
+    def guardrail_func(output: TaskOutput):
+        assert output.pydantic is not None, "output.pydantic was None inside guardrail"
+        assert isinstance(output.pydantic, EvaluationResult)
+        assert output.pydantic.score == 95
+        captured_pydantic.append(output.pydantic)
+        return (True, output)
+
+    agent = Mock()
+    agent.role = "eval_agent"
+    agent.execute_task.return_value = '{"score": 95, "summary": "Great job"}'
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Evaluate performance",
+        expected_output="EvaluationResult JSON",
+        output_pydantic=EvaluationResult,
+        guardrail=guardrail_func,
+    )
+
+    result = task.execute_sync(agent=agent)
+    assert len(captured_pydantic) == 1
+    assert result.pydantic is not None
+    assert result.pydantic.score == 95
+    assert result.pydantic.summary == "Great job"
