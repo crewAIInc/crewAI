@@ -82,7 +82,7 @@ class SerplyJobSearchTool(RagTool):
                             f"Link: {job['link']}",
                             f"""Highest: {", ".join([h for h in job["highlights"]])}""",
                             f"Is Remote: {job['is_remote']}",
-                            f"Is Hybrid: {job['is_remote']}",
+                            f"Is Hybrid: {job.get('is_hybrid', False)}",
                             "---",
                         ]
                     )

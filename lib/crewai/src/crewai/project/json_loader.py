@@ -211,7 +211,7 @@ def parse_jsonc(text: str, source: str | Path = "<string>") -> Any:
 def load_jsonc_file(source: str | Path) -> Any:
     """Load a JSON or JSONC file."""
     path = Path(source)
-    return parse_jsonc(path.read_text(encoding="utf-8"), source=path)
+    return parse_jsonc(path.read_text(encoding="utf-8-sig"), source=path)
 
 
 def _instantiate_agent_from_data(
