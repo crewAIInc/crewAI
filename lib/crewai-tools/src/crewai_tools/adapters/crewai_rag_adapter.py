@@ -184,6 +184,8 @@ class CrewAIRagAdapter(Adapter):
             ".txt",
             ".csv",
             ".json",
+            ".jsonl",
+            ".ndjson",
             ".xml",
             ".docx",
             ".mdx",
@@ -319,6 +321,7 @@ class CrewAIRagAdapter(Adapter):
                     DataType.DOCX,
                     DataType.CSV,
                     DataType.JSON,
+                    DataType.JSONL,
                     DataType.XML,
                     DataType.MDX,
                 ]:

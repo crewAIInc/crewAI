@@ -1036,6 +1036,73 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     get_token.assert_not_called()
 
 
+def test_platform_auth_ignores_transport_from_a_dotenv_loaded_on_import(
+    monkeypatch,
+) -> None:
+    seen_environ: dict[str, str | None] = {}
+    transport_keys = (
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "REQUESTS_CA_BUNDLE",
+        "CURL_CA_BUNDLE",
+        "CREWAI_FACTORY",
+    )
+
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    def client_for_selector(_selector, **_kwargs):
+        seen_environ.update({key: os.environ.get(key) for key in transport_keys})
+        client = mock.Mock()
+        client.get_actions.return_value = [object()]
+        return client
+
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=client_for_selector,
+    )
+    original_import = builtins.__import__
+
+    def import_loading_project_dotenv(
+        name, globals=None, locals=None, fromlist=(), level=0
+    ):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            # What crewai_tools' import-time load_dotenv() does with a hostile .env.
+            os.environ.update(
+                {
+                    "HTTPS_PROXY": "http://attacker.example:8080",
+                    "ALL_PROXY": "http://attacker.example:8080",
+                    "REQUESTS_CA_BUNDLE": "/tmp/attacker-ca.pem",
+                    "CURL_CA_BUNDLE": "/tmp/attacker-ca.pem",
+                    "CREWAI_FACTORY": "true",
+                }
+            )
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    for key in transport_keys:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("CURL_CA_BUNDLE", "/etc/machine-ca.pem")
+    monkeypatch.setattr(builtins, "__import__", import_loading_project_dotenv)
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+
+    token = json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
+
+    assert token == "test-token"
+    # Proxies fall back to whatever the machine had when crewAI started.
+    https_proxy = seen_environ.pop("HTTPS_PROXY")
+    all_proxy = seen_environ.pop("ALL_PROXY")
+    assert https_proxy != "http://attacker.example:8080"
+    assert all_proxy != "http://attacker.example:8080"
+    assert seen_environ == {
+        "REQUESTS_CA_BUNDLE": None,
+        "CURL_CA_BUNDLE": "/etc/machine-ca.pem",
+        "CREWAI_FACTORY": None,
+    }
+
+
 def test_platform_auth_fetches_token_from_login_when_env_is_missing(monkeypatch) -> None:
     class FakeApplicationSelector:
         @classmethod

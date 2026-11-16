@@ -227,6 +227,41 @@ def test_agent_function_calling_llm():
     )
 
 
+def test_agent_llm_given_as_a_mapping_in_yaml(tmp_path):
+    agents_yaml = tmp_path / "agents.yaml"
+    agents_yaml.write_text(
+        "researcher:\n"
+        "  role: Researcher\n"
+        "  goal: Find facts\n"
+        "  backstory: Careful\n"
+        "  llm:\n"
+        "    model: openai/gpt-4o-mini\n"
+        "    temperature: 0.2\n"
+        "  function_calling_llm:\n"
+        "    model: openai/gpt-4o-mini\n"
+        "    temperature: 0.1\n",
+        encoding="utf-8",
+    )
+    tasks_yaml = tmp_path / "tasks.yaml"
+    tasks_yaml.write_text("", encoding="utf-8")
+
+    @CrewBase
+    class MappingLLMCrew:
+        agents_config = str(agents_yaml)
+        tasks_config = str(tasks_yaml)
+
+        @agent
+        def researcher(self):
+            return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
+
+    researcher = MappingLLMCrew().researcher()
+
+    assert isinstance(researcher.llm, BaseLLM)
+    assert researcher.llm.temperature == 0.2
+    assert isinstance(researcher.function_calling_llm, BaseLLM)
+    assert researcher.function_calling_llm.temperature == 0.1
+
+
 def test_task_guardrail():
     crew = InternalCrew()
     research_task = crew.research_task()
