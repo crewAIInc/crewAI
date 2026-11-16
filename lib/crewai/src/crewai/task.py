@@ -1476,7 +1476,7 @@ Follow these guidelines:
                     task_output.tool_failures = merge_tool_failures(
                         accumulated_failures, task_output.tool_failures
                     )
-                    if (self.output_pydantic or self.output_json) and not task_output.pydantic and not task_output.json_dict:
+                    if self.output_pydantic or self.output_json:
                         try:
                             pydantic_output, json_output = self._export_output(
                                 task_output.raw
@@ -1606,7 +1606,7 @@ Follow these guidelines:
                     task_output.tool_failures = merge_tool_failures(
                         accumulated_failures, task_output.tool_failures
                     )
-                    if (self.output_pydantic or self.output_json) and not task_output.pydantic and not task_output.json_dict:
+                    if self.output_pydantic or self.output_json:
                         try:
                             pydantic_output, json_output = await self._aexport_output(
                                 task_output.raw
