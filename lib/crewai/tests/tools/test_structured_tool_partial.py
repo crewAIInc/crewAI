@@ -213,3 +213,90 @@ async def test_openai_adapter_preserves_registered_partial_bindings(
         await openai_tool.on_invoke_tool(
             None, json.dumps({"collection": "other", **arguments})
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("schema_mode", ["empty", "query_only", "exposes_collection"])
+@pytest.mark.parametrize("use_json", [False, True])
+async def test_openai_adapter_rejects_overrides_for_direct_partial_tools(
+    schema_mode: str, use_json: bool
+) -> None:
+    import json
+
+    pytest.importorskip("agents")
+    from crewai import Agent
+    from crewai.agents.agent_adapters.openai_agents.openai_agent_tool_adapter import (
+        OpenAIAgentToolAdapter,
+    )
+
+    class QueryArgs(BaseModel):
+        query: str
+
+    class CollectionArgs(QueryArgs):
+        collection: str = "handbook"
+
+    calls: list[tuple[str, str]] = []
+
+    def lookup(collection: str, query: str) -> str:
+        calls.append((collection, query))
+        return f"{collection}:{query}"
+
+    if schema_mode == "empty":
+        tool = Tool(
+            name="lookup",
+            description="Look up a document.",
+            func=partial(lookup, collection="handbook", query="travel"),
+        )
+        arguments = {}
+    else:
+        tool = Tool(
+            name="lookup",
+            description="Look up a document.",
+            func=partial(lookup, collection="handbook"),
+            args_schema=QueryArgs if schema_mode == "query_only" else CollectionArgs,
+        )
+        arguments = {"query": "travel"}
+
+    agent = Agent(role="Reader", goal="Find documents", backstory="Test", tools=[tool])
+    adapter = OpenAIAgentToolAdapter()
+    adapter.configure_tools(agent.tools)
+    invoke = adapter.converted_tools[0].on_invoke_tool
+
+    malicious = {"collection": "other", **arguments}
+    with pytest.raises(
+        ValueError, match="Cannot override partial-bound keywords: collection"
+    ):
+        await invoke(None, json.dumps(malicious) if use_json else malicious)
+    assert calls == []
+    assert (
+        await invoke(None, json.dumps(arguments) if use_json else arguments)
+        == "handbook:travel"
+    )
+    assert calls == [("handbook", "travel")]
+
+
+@pytest.mark.asyncio
+async def test_openai_adapter_checks_zero_argument_payload_before_dispatch() -> None:
+    pytest.importorskip("agents")
+    from crewai.agents.agent_adapters.openai_agents.openai_agent_tool_adapter import (
+        OpenAIAgentToolAdapter,
+    )
+
+    calls: list[dict[str, str]] = []
+
+    def lookup(**kwargs: str) -> str:
+        calls.append(kwargs)
+        return "catalog"
+
+    tool = Tool(name="lookup", description="Find the catalog.", func=lookup)
+    adapter = OpenAIAgentToolAdapter([tool])
+    adapter.configure_tools([])
+    invoke = adapter.converted_tools[0].on_invoke_tool
+
+    with pytest.raises(ValueError, match="Unexpected arguments"):
+        await invoke(None, '{"collection": "other"}')
+    with pytest.raises(ValueError, match="JSON object"):
+        await invoke(None, "[]")
+    assert calls == []
+    assert await invoke(None, "{}") == "catalog"
+    assert calls == [{}]
