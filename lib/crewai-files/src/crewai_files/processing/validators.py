@@ -136,7 +136,7 @@ def _get_video_duration(
     format_hint = _VIDEO_FORMAT_MAP.get(content_type) if content_type else None
 
     try:
-        with av.open(io.BytesIO(content), format=format_hint) as container:  # type: ignore[attr-defined]
+        with av.open(io.BytesIO(content), format=format_hint) as container:
             duration: int | None = container.duration  # type: ignore[union-attr]
             if duration is None:
                 return None
