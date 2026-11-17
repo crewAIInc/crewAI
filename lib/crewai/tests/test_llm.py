@@ -1,6 +1,6 @@
+import importlib.util
 import logging
 import os
-import sys
 from time import sleep
 from unittest.mock import MagicMock, patch
 
@@ -22,12 +22,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
-
-
-requires_litellm_python_311 = pytest.mark.skipif(
-    sys.version_info < (3, 11),
-    reason="LiteLLM's patched releases support these paths only on Python 3.11+.",
-)
 
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
@@ -259,7 +253,6 @@ def test_validate_call_params_supported():
         llm._validate_call_params()
 
 
-@requires_litellm_python_311
 def test_validate_call_params_not_supported():
     class DummyResponse(BaseModel):
         a: int
@@ -999,7 +992,6 @@ def gemini_litellm_llm():
     return LLM(model="gemini/gemini-flash-latest", is_litellm=True)
 
 
-@requires_litellm_python_311
 def test_gemini_litellm_appends_user_message_when_last_is_assistant(gemini_litellm_llm):
     original_messages = [
         {"role": "user", "content": "Hi there"},
@@ -1121,7 +1113,6 @@ def test_prefixed_models_with_non_native_providers_use_litellm():
     assert llm2.provider == "together"
 
 
-@requires_litellm_python_311
 @pytest.mark.parametrize(
     ("model", "expected_provider"),
     [
@@ -1525,3 +1516,15 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_an_installed_litellm_loads() -> None:
+    """crewai treats a LiteLLM that fails to import as not installed, and tells
+    the user to install the extra they already have. litellm 1.100.4 did this on
+    Python 3.10 (it imports ``typing.NotRequired``)."""
+    if importlib.util.find_spec("litellm") is None:
+        pytest.skip("the crewai[litellm] extra is not installed")
+
+    from crewai.llm import _ensure_litellm
+
+    assert _ensure_litellm() is True

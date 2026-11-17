@@ -11,7 +11,6 @@ from pydantic import BaseModel, ValidationError
 
 from crewai.types.callback import (
     SerializableCallable,
-    _is_non_roundtrippable,
     _resolve_dotted_path,
     callable_to_string,
     string_to_callable,
@@ -36,44 +35,23 @@ class _HasMethod:
     def method(self) -> str:
         return "method"
 
+    @classmethod
+    def class_method(cls) -> str:
+        return "class_method"
+
+    @classmethod
+    def owner_name(cls) -> str:
+        return cls.__name__
+
+    class_body_lambda = lambda: None  # noqa: E731 - the lambda itself is under test
+
+
+class _HasMethodSub(_HasMethod):
+    pass
+
 
 class _Model(BaseModel):
     cb: SerializableCallable | None = None
-
-
-
-
-class TestIsNonRoundtrippable:
-    def test_builtin_is_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(print) is False
-        assert _is_non_roundtrippable(len) is False
-
-    def test_class_is_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(dict) is False
-        assert _is_non_roundtrippable(_CallableInstance) is False
-
-    def test_module_level_function_is_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(module_level_function) is False
-
-    def test_lambda_is_non_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(lambda: None) is True
-
-    def test_closure_is_non_roundtrippable(self) -> None:
-        x = 1
-
-        def closure() -> int:
-            return x
-
-        assert _is_non_roundtrippable(closure) is True
-
-    def test_bound_method_is_non_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(_HasMethod().method) is True
-
-    def test_partial_is_non_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(functools.partial(print, "hi")) is True
-
-    def test_callable_instance_is_non_roundtrippable(self) -> None:
-        assert _is_non_roundtrippable(_CallableInstance()) is True
 
 
 
@@ -92,7 +70,7 @@ class TestCallableToString:
         assert result == "builtins.print"
 
     def test_lambda_returns_none(self) -> None:
-        fn = lambda: None  # noqa: E731
+        fn = lambda: None  # noqa: E731 - the lambda itself is under test
         assert callable_to_string(fn) is None
 
     def test_closure_returns_none(self) -> None:
@@ -104,17 +82,39 @@ class TestCallableToString:
 
         assert callable_to_string(outer()) is None
 
-    def test_missing_qualname_raises(self) -> None:
+    def test_lambda_in_class_body_returns_none(self) -> None:
+        assert callable_to_string(_HasMethod.class_body_lambda) is None
+
+    def test_bound_instance_method_returns_none(self) -> None:
+        assert callable_to_string(_HasMethod().method) is None
+
+    def test_classmethod_serializes_to_dotted_path(self) -> None:
+        assert (
+            callable_to_string(_HasMethod.class_method)
+            == f"{__name__}._HasMethod.class_method"
+        )
+
+    def test_inherited_classmethod_is_named_through_its_bound_class(self) -> None:
+        assert (
+            callable_to_string(_HasMethodSub.owner_name)
+            == f"{__name__}._HasMethodSub.owner_name"
+        )
+
+    def test_partial_returns_none(self) -> None:
+        assert callable_to_string(functools.partial(print, "hi")) is None
+
+    def test_callable_instance_returns_none(self) -> None:
+        assert callable_to_string(_CallableInstance()) is None
+
+    def test_missing_qualname_returns_none(self) -> None:
         obj = type("NoQual", (), {"__module__": "test"})()
         obj.__qualname__ = None  # type: ignore[assignment]
-        with pytest.raises(ValueError, match="missing __module__ or __qualname__"):
-            callable_to_string(obj)
+        assert callable_to_string(obj) is None
 
-    def test_missing_module_raises(self) -> None:
+    def test_missing_module_returns_none(self) -> None:
         ns: dict[str, Any] = {"__qualname__": "x", "__module__": None}
         obj = type("NoMod", (), ns)()
-        with pytest.raises(ValueError, match="missing __module__"):
-            callable_to_string(obj)
+        assert callable_to_string(obj) is None
 
 
 
@@ -123,16 +123,71 @@ class TestStringToCallable:
     def test_callable_passthrough(self) -> None:
         assert string_to_callable(print) is print
 
-    def test_roundtrippable_callable_no_warning(self, recwarn: pytest.WarningsChecker) -> None:
-        string_to_callable(module_level_function)
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            print,
+            dict,
+            module_level_function,
+            _HasMethod.class_method,
+            _HasMethodSub.owner_name,
+        ],
+        ids=[
+            "builtin",
+            "class",
+            "module_function",
+            "classmethod",
+            "inherited_classmethod",
+        ],
+    )
+    def test_roundtrippable_callable_no_warning(
+        self, fn: Callable[..., Any], recwarn: pytest.WarningsChecker
+    ) -> None:
+        string_to_callable(fn)
         our_warnings = [
-            w for w in recwarn if "cannot be serialized" in str(w.message)
+            w for w in recwarn if "cannot be saved in a checkpoint" in str(w.message)
         ]
         assert our_warnings == []
 
-    def test_non_roundtrippable_warns(self) -> None:
-        with pytest.warns(UserWarning, match="cannot be serialized"):
+    def test_lambda_warns_it_is_dropped(self) -> None:
+        with pytest.warns(
+            UserWarning,
+            match="A function callback cannot be saved in a checkpoint; "
+            "it is dropped and will not run after a restore",
+        ):
+            string_to_callable(lambda: None)
+
+    def test_closure_warns_it_is_dropped(self) -> None:
+        x = 1
+
+        def closure() -> int:
+            return x
+
+        with pytest.warns(UserWarning, match="dropped and will not run after a restore"):
+            string_to_callable(closure)
+
+    def test_bound_method_warns_it_is_dropped(self) -> None:
+        with pytest.warns(
+            UserWarning,
+            match="A method callback cannot be saved in a checkpoint; "
+            "it is dropped and will not run after a restore",
+        ):
+            string_to_callable(_HasMethod().method)
+
+    def test_partial_warns_it_is_dropped(self) -> None:
+        with pytest.warns(
+            UserWarning,
+            match="A partial callback cannot be saved in a checkpoint; "
+            "it is dropped and will not run after a restore",
+        ):
             string_to_callable(functools.partial(print))
+
+    def test_callable_instance_warns_it_is_dropped(self) -> None:
+        with pytest.warns(
+            UserWarning,
+            match="A _CallableInstance callback cannot be saved in a checkpoint",
+        ):
+            string_to_callable(_CallableInstance())
 
     def test_non_callable_non_string_raises(self) -> None:
         with pytest.raises(ValueError, match="Expected a callable"):
@@ -209,6 +264,41 @@ class TestSerializableCallableRoundTrip:
         json_str = m.model_dump_json()
         restored = _Model.model_validate_json(json_str)
         assert restored.cb is dict
+
+    def test_json_round_trip_classmethod(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        m = _Model(cb=_HasMethod.class_method)
+        restored = _Model.model_validate_json(m.model_dump_json())
+        assert restored.cb is not None
+        assert restored.cb() == "class_method"
+
+    def test_json_round_trip_inherited_classmethod_keeps_its_class(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+        m = _Model(cb=_HasMethodSub.owner_name)
+        restored = _Model.model_validate_json(m.model_dump_json())
+        assert restored.cb is not None
+        assert restored.cb() == "_HasMethodSub"
+
+    @pytest.mark.parametrize(
+        "make_cb",
+        [
+            lambda: _HasMethod().method,
+            lambda: functools.partial(print, "hi"),
+            _CallableInstance,
+        ],
+        ids=["bound_method", "partial", "callable_instance"],
+    )
+    def test_json_dumps_unrestorable_callable_as_null(
+        self, make_cb: Callable[[], Callable[..., Any]]
+    ) -> None:
+        with pytest.warns(UserWarning, match="dropped and will not run"):
+            m = _Model(cb=make_cb())
+        assert m.model_dump(mode="json") == {"cb": None}
+        assert _Model.model_validate_json(m.model_dump_json()).cb is None
 
     def test_python_mode_preserves_callable(self) -> None:
         m = _Model(cb=module_level_function)

@@ -11,6 +11,33 @@ from crewai_cli.constants import (
 )
 
 
+class _FakeClock:
+    """Stands in for ``time`` in the OAuth2 module: sleeping advances ``monotonic``."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture
+def fake_clock():
+    clock = _FakeClock()
+    with patch("crewai_core.auth.oauth2.time", clock):
+        yield clock
+
+
+def _token_response(status_code: int, body: dict[str, str]) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    response.json.return_value = body
+    return response
+
+
 class TestAuthenticationCommand:
     def setup_method(self):
         # Mock Settings so we always use default constants regardless of local config.
@@ -412,22 +439,87 @@ class TestAuthenticationCommand:
 
     @patch("crewai_core.auth.oauth2.httpx.post")
     @patch("crewai_core.auth.oauth2.console.print")
-    def test_poll_for_token_timeout(self, mock_console_print, mock_post):
-        mock_response_pending = MagicMock()
-        mock_response_pending.status_code = 400
-        mock_response_pending.json.return_value = {"error": "authorization_pending"}
-        mock_post.return_value = mock_response_pending
+    def test_poll_for_token_waits_until_the_code_expires_then_exits(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        mock_post.return_value = _token_response(400, {"error": "authorization_pending"})
 
-        device_code_data = {
-            "device_code": "test_device_code",
-            "interval": 0.1,  # Short interval for testing
-        }
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 300}
+            )
 
-        self.auth_command._poll_for_token(device_code_data)
-
+        assert exc_info.value.code == 1
+        assert 300 <= fake_clock.now < 305
         mock_console_print.assert_any_call(
-            "Timeout: Failed to get the token. Please try again.", style="bold red"
+            "Timeout: the login code expired before sign-in finished. "
+            "Please try again.",
+            style="bold red",
         )
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_falls_back_to_ten_minutes_without_expires_in(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        mock_post.return_value = _token_response(400, {"error": "authorization_pending"})
+
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5}
+            )
+
+        assert exc_info.value.code == 1
+        assert 600 <= fake_clock.now < 605
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_treats_the_providers_expired_token_as_the_timeout(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        """The provider can expire the code before our own deadline passes."""
+        mock_post.side_effect = [
+            _token_response(400, {"error": "authorization_pending"}),
+            _token_response(400, {"error": "expired_token"}),
+        ]
+
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 300}
+            )
+
+        assert exc_info.value.code == 1
+        assert fake_clock.now == 5
+        mock_console_print.assert_any_call(
+            "Timeout: the login code expired before sign-in finished. "
+            "Please try again.",
+            style="bold red",
+        )
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_signs_in_after_more_than_ten_pending_polls(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        """A sign-in that takes about a minute used to be cut off at 10 polls."""
+        mock_post.side_effect = [
+            *(
+                _token_response(400, {"error": "authorization_pending"})
+                for _ in range(12)
+            ),
+            _token_response(200, {"access_token": "test_access_token"}),
+        ]
+
+        with (
+            patch.object(self.auth_command, "_validate_and_save_token") as mock_save,
+            patch.object(self.auth_command, "_post_login"),
+        ):
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 900}
+            )
+
+        mock_save.assert_called_once_with({"access_token": "test_access_token"})
+        mock_console_print.assert_any_call("Success!", style="bold green")
 
     @patch("crewai_core.auth.oauth2.httpx.post")
     def test_poll_for_token_error(self, mock_post):

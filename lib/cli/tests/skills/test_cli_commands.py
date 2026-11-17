@@ -26,7 +26,7 @@ class TestSkillGroupIsTopLevel:
     def test_skill_group_registered_at_top_level(self, runner, no_experimental_env):
         result = runner.invoke(crewai, ["skill", "--help"])
         assert result.exit_code == 0, result.output
-        for subcommand in ("create", "install", "publish", "list"):
+        for subcommand in ("create", "install", "publish", "list", "search"):
             assert subcommand in result.output
 
     def test_skill_group_not_gated_by_experimental_env(
@@ -61,3 +61,23 @@ class TestSkillPublishIsOrgScopedOnly:
             )
         assert result.exit_code == 0, result.output
         mock_cmd.return_value.publish.assert_called_once_with(org="acme", force=True)
+
+
+class TestSkillSearchCommand:
+    @pytest.mark.parametrize(
+        ("args", "query"), [(["support triage"], "support triage"), ([], None)]
+    )
+    def test_search_passes_the_optional_query(
+        self, runner, no_experimental_env, args, query
+    ):
+        with mock.patch("crewai_cli.skills.main.SkillCommand") as mock_cmd:
+            result = runner.invoke(crewai, ["skill", "search", *args])
+        assert result.exit_code == 0, result.output
+        mock_cmd.return_value.search.assert_called_once_with(query)
+
+    def test_list_still_shows_installed_skills_only(self, runner, no_experimental_env):
+        with mock.patch("crewai_cli.skills.main.SkillCommand") as mock_cmd:
+            result = runner.invoke(crewai, ["skill", "list"])
+        assert result.exit_code == 0, result.output
+        mock_cmd.return_value.list_cached.assert_called_once_with()
+        mock_cmd.return_value.search.assert_not_called()

@@ -13,6 +13,7 @@ from crewai.tools.base_tool import (
     _TOOL_TYPE_REGISTRY,
     BaseTool,
     _default_cache_function,
+    _never_cache_function,
 )
 
 
@@ -87,3 +88,36 @@ def test_custom_cache_function_requires_opt_in() -> None:
         ValidationError, match="Refusing to resolve callback path 'os.system'"
     ):
         restore_tool(data)
+
+
+def test_null_cache_function_restores_as_never_cache_without_opt_in() -> None:
+    data = _serialized_add_image_tool()
+    data["cache_function"] = None
+
+    tool = restore_tool(data)
+
+    assert tool.cache_function is _never_cache_function
+
+
+def test_never_cache_function_restores_without_opt_in() -> None:
+    """A restored never-cache tool is saved by name; restoring that checkpoint
+    again must not need the opt-in, nor fall back to a default that caches."""
+    data = _serialized_add_image_tool()
+    data["cache_function"] = None
+    resaved = json.loads(restore_tool(data).model_dump_json())
+    assert resaved["cache_function"] == "crewai.tools.base_tool._never_cache_function"
+
+    tool = restore_tool(resaved)
+
+    assert tool.cache_function is _never_cache_function
+    assert tool.cache_function(None, None) is False
+
+
+def test_missing_cache_function_keeps_the_caching_default() -> None:
+    """A tool dict written by hand, as in a JSON project file, may omit it."""
+    data = _serialized_add_image_tool()
+    del data["cache_function"]
+
+    tool = restore_tool(data)
+
+    assert tool.cache_function is _default_cache_function

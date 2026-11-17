@@ -10,12 +10,26 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "Pillow>=12.3.0,<13; python_version < '3.11'",
     "Pillow>=13.0.0; python_version >= '3.11'",
-    "pypdf>=6.21.2,<7",
+    "pypdf>=6.21.4,<7",
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
     "tinytag>=2.3.0,<3",
     "av~=13.0.0",
+]
+
+[project.optional-dependencies]
+# crewai_files.spreadsheets: reading CSV, TSV and .xlsx for agents.
+spreadsheets = [
+    # pandas 3 needs Python 3.11; 2.3 is the last line for 3.10.
+    "pandas>=2.2.3,<2.4; python_version < '3.11'",
+    "pandas>=2.2.3,<4; python_version >= '3.11'",
+    # 0.8.3 is the last release for 3.10. Every release so far bundles calamine
+    # <0.38 (RUSTSEC-2026-0436, its OLE/CFB parser); the reader refuses CFB files
+    # before calamine opens them. Raise both floors once a release bundles >=0.38.
+    "python-calamine==0.8.3; python_version < '3.11'",
+    "python-calamine>=0.9.0,<1; python_version >= '3.11'",
+    "charset-normalizer>=3.4",
 ]
 
 [tool.uv]
