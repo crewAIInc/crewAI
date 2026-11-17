@@ -1852,6 +1852,42 @@ class TestModuleAllowlist:
             sys.modules.update(saved)
             importlib.invalidate_caches()
 
+    def test_editable_install_pins_via_direct_url(self, tmp_path, monkeypatch):
+        """An editable install pins through direct_url.json.
+
+        locate_file resolves installed files relative to the install
+        root, so it never finds direct_url.json inside the dist-info
+        directory; the pin used to return None for every editable
+        install (uv workspace installs in CI), which failed the
+        allowlist closed and broke the planted-tree test there.
+        """
+        import importlib
+        import sys
+
+        site_dir = tmp_path / "site-packages"
+        source = tmp_path / "tools-src"
+        (source / "src" / "crewai_tools" / "tools").mkdir(parents=True)
+        (source / "src" / "crewai_tools" / "__init__.py").write_text("")
+        dist_info = site_dir / "crewai_tools-1.15.33.dist-info"
+        dist_info.mkdir(parents=True)
+        (dist_info / "METADATA").write_text(
+            "Metadata-Version: 2.1\nName: crewai-tools\nVersion: 1.15.33\n"
+        )
+        (dist_info / "direct_url.json").write_text(
+            json.dumps(
+                {"url": f"file://{source}", "dir_info": {"editable": True}}
+            )
+        )
+        monkeypatch.setattr("site.getsitepackages", lambda: [str(site_dir)])
+        monkeypatch.setattr("site.getusersitepackages", lambda: "")
+        monkeypatch.setattr("sysconfig.get_path", lambda *args, **kwargs: "")
+        importlib.invalidate_caches()
+        from crewai.utilities.agent_utils import _pinned_crewai_tools_dir
+
+        assert _pinned_crewai_tools_dir() == os.path.realpath(
+            str(source / "src" / "crewai_tools")
+        )
+
     def test_installed_crewai_tools_submodule_loads_from_pinned_dir(self):
         """A submodule of the installed package loads, and the loaded file
         is the installed one, not a same-named file elsewhere on sys.path."""

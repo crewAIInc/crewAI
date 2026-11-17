@@ -121,6 +121,30 @@ def _is_within_working_directory(path: str) -> bool:
     return _is_within_directory(path, os.path.realpath(os.getcwd()))
 
 
+def _direct_url_source_root(dist: Distribution) -> str | None:
+    """Return the file:// source root from a distribution's direct_url.json.
+
+    Editable installs record their source tree there. Read it with
+    ``read_text``: ``locate_file`` resolves installed files relative to
+    the install root, so for direct_url.json it points at
+    ``<site-packages>/direct_url.json`` instead of the file inside the
+    dist-info directory, and the editable branch silently never fires.
+    """
+    try:
+        text = dist.read_text("direct_url.json")
+    except Exception:
+        return None
+    if not text:
+        return None
+    try:
+        url = json.loads(text).get("url", "")
+    except Exception:
+        return None
+    if isinstance(url, str) and url.startswith("file://"):
+        return url[len("file://") :]
+    return None
+
+
 def _distribution_is_under_working_directory(dist: Distribution) -> bool:
     """True when the ``crewai_tools`` package a distribution resolves to
     lives inside the working directory tree.
@@ -144,22 +168,9 @@ def _distribution_is_under_working_directory(dist: Distribution) -> bool:
         init_path = None
     if init_path is not None and _is_within_working_directory(init_path):
         return True
-    try:
-        direct_url = str(dist.locate_file("direct_url.json"))
-    except Exception:
-        direct_url = None
-    if direct_url is not None and os.path.isfile(direct_url):
-        try:
-            with open(direct_url, encoding="utf-8") as handle:
-                url = json.loads(handle.read()).get("url", "")
-        except Exception:
-            url = ""
-        if (
-            isinstance(url, str)
-            and url.startswith("file://")
-            and _is_within_working_directory(url[len("file://") :])
-        ):
-            return True
+    source_root = _direct_url_source_root(dist)
+    if source_root is not None and _is_within_working_directory(source_root):
+        return True
     return False
 
 
@@ -249,24 +260,14 @@ def _pinned_crewai_tools_dir() -> str | None:
         if init_path is not None and os.path.isfile(init_path):
             return os.path.dirname(os.path.realpath(init_path))
         # Editable install: direct_url.json points at the source tree.
-        try:
-            direct_url = str(dist.locate_file("direct_url.json"))
-        except Exception:
-            direct_url = None
-        if direct_url is not None and os.path.isfile(direct_url):
-            try:
-                with open(direct_url, encoding="utf-8") as handle:
-                    url = json.loads(handle.read()).get("url", "")
-            except Exception:
-                url = ""
-            if isinstance(url, str) and url.startswith("file://"):
-                source_root = url[len("file://") :]
-                for candidate in (
-                    os.path.join(source_root, "crewai_tools", "__init__.py"),
-                    os.path.join(source_root, "src", "crewai_tools", "__init__.py"),
-                ):
-                    if os.path.isfile(candidate):
-                        return os.path.dirname(os.path.realpath(candidate))
+        source_root = _direct_url_source_root(dist)
+        if source_root is not None:
+            for candidate in (
+                os.path.join(source_root, "crewai_tools", "__init__.py"),
+                os.path.join(source_root, "src", "crewai_tools", "__init__.py"),
+            ):
+                if os.path.isfile(candidate):
+                    return os.path.dirname(os.path.realpath(candidate))
     working_directory = os.path.realpath(os.getcwd())
     module = sys.modules.get("crewai_tools")
     origin: str | None = getattr(
