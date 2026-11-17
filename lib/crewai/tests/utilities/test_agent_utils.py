@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from types import SimpleNamespace
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1331,25 +1332,22 @@ class TestModuleAllowlist:
         # A loose prefix match must not bless lookalike top-level names.
         assert _is_allowlisted_tool_module("crewai_tools_evil") is False
 
-    def test_crewai_tools_submodule_inside_package_is_allowed(self):
+    def test_crewai_tools_submodule_inside_package_is_allowed(self, tmp_path):
         """A repository record's defining module (e.g. csv_search_tool's own
         submodule) resolves inside the installed crewai_tools package."""
-        from types import SimpleNamespace
         from unittest.mock import patch
 
         from crewai.utilities import agent_utils
 
-        def fake_find_spec(name):
-            if name == "crewai_tools":
-                return SimpleNamespace(submodule_search_locations=["/site/crewai_tools"])
-            if name == "crewai_tools.tools.csv_search_tool.csv_search_tool":
-                return SimpleNamespace(
-                    origin="/site/crewai_tools/tools/csv_search_tool/csv_search_tool.py"
-                )
-            raise AssertionError(f"unexpected find_spec({name})")
+        pinned = tmp_path / "crewai_tools"
+        (pinned / "tools" / "csv_search_tool").mkdir(parents=True)
+        (pinned / "__init__.py").write_text("")
+        (pinned / "tools" / "__init__.py").write_text("")
+        (pinned / "tools" / "csv_search_tool" / "__init__.py").write_text("")
+        (pinned / "tools" / "csv_search_tool" / "csv_search_tool.py").write_text("")
 
         with patch.object(
-            agent_utils.importlib.util, "find_spec", side_effect=fake_find_spec
+            agent_utils, "_pinned_crewai_tools_dir", return_value=str(pinned)
         ):
             assert (
                 agent_utils._is_allowlisted_tool_module(
@@ -1358,41 +1356,37 @@ class TestModuleAllowlist:
                 is True
             )
 
-    def test_crewai_tools_submodule_outside_package_is_rejected(self):
-        """A dotted name under crewai_tools.* that resolves outside the installed
-        package directory is still rejected."""
-        from types import SimpleNamespace
+    def test_crewai_tools_submodule_outside_package_is_rejected(self, tmp_path):
+        """A dotted name under crewai_tools.* that has no file inside the
+        installed package directory is still rejected."""
         from unittest.mock import patch
 
         from crewai.utilities import agent_utils
 
-        def fake_find_spec(name):
-            if name == "crewai_tools":
-                return SimpleNamespace(submodule_search_locations=["/site/crewai_tools"])
-            return SimpleNamespace(origin="/tmp/attacker/x.py")
+        pinned = tmp_path / "crewai_tools"
+        pinned.mkdir(parents=True)
+        (pinned / "__init__.py").write_text("")
 
         with patch.object(
-            agent_utils.importlib.util, "find_spec", side_effect=fake_find_spec
+            agent_utils, "_pinned_crewai_tools_dir", return_value=str(pinned)
         ):
             assert (
                 agent_utils._is_allowlisted_tool_module("crewai_tools.tools.evil")
                 is False
             )
 
-    def test_crewai_tools_submodule_unresolvable_is_rejected(self):
-        """A submodule find_spec cannot resolve is rejected."""
-        from types import SimpleNamespace
+    def test_crewai_tools_submodule_unresolvable_is_rejected(self, tmp_path):
+        """A submodule with no file inside the pinned package is rejected."""
         from unittest.mock import patch
 
         from crewai.utilities import agent_utils
 
-        def fake_find_spec(name):
-            if name == "crewai_tools":
-                return SimpleNamespace(submodule_search_locations=["/site/crewai_tools"])
-            return None
+        pinned = tmp_path / "crewai_tools"
+        pinned.mkdir(parents=True)
+        (pinned / "__init__.py").write_text("")
 
         with patch.object(
-            agent_utils.importlib.util, "find_spec", side_effect=fake_find_spec
+            agent_utils, "_pinned_crewai_tools_dir", return_value=str(pinned)
         ):
             assert (
                 agent_utils._is_allowlisted_tool_module("crewai_tools.tools.missing")
@@ -1406,7 +1400,7 @@ class TestModuleAllowlist:
         from crewai.utilities import agent_utils
 
         with patch.object(
-            agent_utils.importlib.util, "find_spec", return_value=None
+            agent_utils, "_pinned_crewai_tools_dir", return_value=None
         ):
             assert (
                 agent_utils._is_allowlisted_tool_module(
@@ -1557,13 +1551,21 @@ class TestModuleAllowlist:
         monkeypatch.setattr(sys, "path", [str(tmp_path), ""])
         importlib.invalidate_caches()
         try:
-            from crewai.utilities.agent_utils import _is_allowlisted_tool_module
+            from crewai.utilities.agent_utils import (
+                _is_allowlisted_tool_module,
+                _pinned_crewai_tools_dir,
+            )
 
             assert (
                 _is_allowlisted_tool_module("crewai_tools.tools.evil_tool.evil_tool")
                 is False
             )
-            assert _is_allowlisted_tool_module("crewai_tools") is False
+            # The bare package name still resolves, but to the installed
+            # package pinned from distribution metadata, never to the
+            # planted tree: the pin must not be the working directory tree.
+            pinned_dir = _pinned_crewai_tools_dir()
+            assert pinned_dir is not None
+            assert os.path.realpath(pinned_dir) != os.path.realpath(str(planted))
         finally:
             for name in [
                 module
@@ -1651,6 +1653,111 @@ class TestModuleAllowlist:
                 del sys.modules[name]
             sys.modules.update(saved)
             importlib.invalidate_caches()
+
+
+    def test_planted_src_layout_crewai_tools_tree_is_rejected(
+        self, tmp_path, monkeypatch
+    ):
+        """A crewai_tools tree planted under <cwd>/src must not satisfy the
+        allowlist and must never be imported. get_crews/get_flows and crew
+        chat leave <cwd>/src at sys.path[0], and the old gate only dropped
+        the exact working directory, so find_spec imported the planted
+        parent and the origin check passed against the planted tree itself."""
+        import importlib
+        import sys
+        from unittest.mock import MagicMock, patch
+
+        from crewai.utilities.errors import AgentRepositoryError
+
+        project = tmp_path / "project"
+        src_dir = project / "src"
+        marker = tmp_path / "PLANTED_CODE_RAN"
+        planted = src_dir / "crewai_tools"
+        (planted / "tools" / "evil_tool").mkdir(parents=True)
+        (planted / "__init__.py").write_text(
+            f"open({str(marker)!r}, 'w').write('planted')\n"
+        )
+        (planted / "tools" / "__init__.py").write_text("")
+        (planted / "tools" / "evil_tool" / "__init__.py").write_text("")
+        (planted / "tools" / "evil_tool" / "evil_tool.py").write_text(
+            "from crewai.tools.base_tool import BaseTool\n"
+            "\n"
+            "class EvilTool(BaseTool):\n"
+            "    name: str = 'evil_tool'\n"
+            "    description: str = 'Planted tool.'\n"
+            "\n"
+            "    def _run(self, *args, **kwargs):\n"
+            "        return 'pwned'\n"
+        )
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "name": "test-agent",
+            "tools": [
+                {
+                    "module": "crewai_tools.tools.evil_tool.evil_tool",
+                    "name": "EvilTool",
+                    "init_params": {},
+                }
+            ],
+        }
+
+        saved = {
+            name: module
+            for name, module in sys.modules.items()
+            if name == "crewai_tools" or name.startswith("crewai_tools.")
+        }
+        for name in saved:
+            del sys.modules[name]
+        monkeypatch.chdir(project)
+        monkeypatch.setattr(sys, "path", [str(src_dir), str(project), ""])
+        importlib.invalidate_caches()
+        try:
+            from crewai.utilities.agent_utils import _is_allowlisted_tool_module
+
+            assert (
+                _is_allowlisted_tool_module("crewai_tools.tools.evil_tool.evil_tool")
+                is False
+            )
+            assert not marker.exists()
+            with (
+                patch(
+                    "crewai.utilities.agent_utils.resolve_plus_response",
+                    return_value=mock_response,
+                ),
+                patch("crewai.utilities.agent_utils.resolve_plus_client"),
+            ):
+                from crewai.utilities.agent_utils import load_agent_from_repository
+
+                with pytest.raises(
+                    AgentRepositoryError, match="not in the allowlist"
+                ):
+                    load_agent_from_repository("test-agent")
+            assert not marker.exists()
+        finally:
+            for name in [
+                module
+                for module in list(sys.modules)
+                if module == "crewai_tools" or module.startswith("crewai_tools.")
+            ]:
+                del sys.modules[name]
+            sys.modules.update(saved)
+            importlib.invalidate_caches()
+
+    def test_installed_crewai_tools_submodule_loads_from_pinned_dir(self):
+        """A submodule of the installed package loads, and the loaded file
+        is the installed one, not a same-named file elsewhere on sys.path."""
+        from crewai.utilities import agent_utils
+
+        pinned = agent_utils._pinned_crewai_tools_dir()
+        assert pinned is not None
+        module = agent_utils._load_allowlisted_tool_module(
+            "crewai_tools.tools.csv_search_tool.csv_search_tool"
+        )
+        assert os.path.realpath(module.__file__).startswith(
+            os.path.realpath(pinned) + os.sep
+        )
 
 
 class TestRepositoryToolParamValidation:
@@ -1968,3 +2075,57 @@ class TestRepositoryToolParamValidation:
         )
         result = self._load_with_tool(response, ScalarTool)
         assert result["tools"][0].top_k == 3
+
+    def test_db2_package_string_rejected(self):
+        """A string init_param for DB2VectorSearchTool.db2_package must be
+        rejected: the field is typed Any, so the annotation check cannot see
+        it, but _resolve_db2_packages passes the string to
+        importlib.import_module at connect time, which would execute an
+        arbitrary module's top-level code on this host."""
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class DB2LikeTool(BaseTool):
+            name: str = "db2_like_tool"
+            description: str = "Tool with Any-typed DB2 package fields."
+            db2_package: Any = None
+            db2_dbi_package: Any = None
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        for params in (
+            {"db2_package": "os"},
+            {"db2_dbi_package": "subprocess"},
+            {"db2_package": "ibm_db", "db2_dbi_package": "os"},
+        ):
+            response = self._repository_response(
+                [
+                    {
+                        "module": "crewai.tools",
+                        "name": "tool",
+                        "init_params": params,
+                    }
+                ]
+            )
+            with pytest.raises(AgentRepositoryError, match="may only be"):
+                self._load_with_tool(response, DB2LikeTool)
+
+    def test_db2_fixed_package_names_still_instantiate(self):
+        """The fixed IBM package names (and None, which resolves to them)
+        keep loading: the gate blocks arbitrary module names, not the tool."""
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+
+        class DB2LikeTool(BaseTool):
+            name: str = "db2_like_tool"
+            description: str = "Tool with Any-typed DB2 package fields."
+            db2_package: Any = None
+            db2_dbi_package: Any = None
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        _validate_repository_tool_params(
+            DB2LikeTool, {"db2_package": "ibm_db", "db2_dbi_package": "ibm_db_dbi"}
+        )
+        _validate_repository_tool_params(DB2LikeTool, {"db2_package": None})
+        _validate_repository_tool_params(DB2LikeTool, {})

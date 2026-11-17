@@ -162,13 +162,27 @@ class DB2VectorSearchTool(BaseTool):
 
         Handles both default None values and explicit string inputs
         (e.g. db2_package="ibm_db") so the field always ends up as
-        the real module object before _connect() uses it.
+        the real module object before _connect() uses it. Only the fixed
+        IBM package names may be imported: the fields are typed Any, so a
+        string from any source (a repository record, a deserialized tool)
+        would otherwise reach importlib.import_module verbatim and execute
+        an arbitrary module's top-level code at connect time.
         """
         if self.db2_package is None or isinstance(self.db2_package, str):
             pkg_name = self.db2_package or "ibm_db"
+            if pkg_name != "ibm_db":
+                raise ValueError(
+                    f"Unsupported db2_package: {pkg_name!r}. "
+                    "Only 'ibm_db' may be imported."
+                )
             self.db2_package = importlib.import_module(pkg_name)
         if self.db2_dbi_package is None or isinstance(self.db2_dbi_package, str):
             pkg_name = self.db2_dbi_package or "ibm_db_dbi"
+            if pkg_name != "ibm_db_dbi":
+                raise ValueError(
+                    f"Unsupported db2_dbi_package: {pkg_name!r}. "
+                    "Only 'ibm_db_dbi' may be imported."
+                )
             self.db2_dbi_package = importlib.import_module(pkg_name)
 
     def _connect(self) -> None:
