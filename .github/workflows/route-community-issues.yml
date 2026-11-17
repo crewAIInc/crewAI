@@ -59,9 +59,9 @@ jobs:
             };
 
             // PRs to route: those GitHub links to this issue (closing keyword
-            // or manual link), plus same-repo PRs that mention it and were
-            // opened by the issue's author. Drive-by mentions from other
-            // users are intentionally ignored.
+            // or manual link), plus same-repo PRs opened by the issue's author
+            // where the issue author made the mention. Mentions by anyone else
+            // are ignored so third parties cannot choose which PRs get closed.
             const pullRequestNumbers = new Set();
 
             const timeline = await github.paginate(
@@ -75,7 +75,8 @@ jobs:
                   event.source?.issue?.pull_request &&
                   event.source.issue.repository_url ===
                     `https://api.github.com/repos/${owner}/${repo}` &&
-                  event.source.issue.user?.login === issue.user.login,
+                  event.source.issue.user?.login === issue.user.login &&
+                  event.actor?.login === issue.user.login,
               )
               .forEach((event) =>
                 pullRequestNumbers.add(event.source.issue.number),
