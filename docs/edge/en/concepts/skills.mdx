@@ -440,3 +440,83 @@ Both skills and knowledge modify the agent's prompt, but they serve different pu
     There's a soft warning at 50,000 characters, but no hard limit. Keep skills focused and concise for best results — large prompt injections can dilute the agent's attention.
   </Accordion>
 </AccordionGroup>
+
+---
+
+## Example: one agent with research and reporting skills
+
+For a sequential evidence-to-report workflow, one agent can use two skills instead of handing an intermediate result to another agent. This is an optional design: separate agents remain useful when distinct task boundaries or delegation matter. Skill selection depends on the model and is not guaranteed.
+
+Create these files in the working directory:
+
+```markdown skills/research/SKILL.md
+---
+name: research
+description: Extract supported facts and gaps from supplied evidence.
+---
+
+Extract facts with their evidence identifiers and identify missing information.
+```
+
+```markdown skills/report/SKILL.md
+---
+name: report
+description: Write a concise report grounded in supplied evidence.
+---
+
+Write facts, analysis, and limitations. Cite evidence identifiers and
+distinguish observations from inferences.
+```
+
+Choose either workflow after configuring a supported LLM and its API key. Model calls may incur charges. The two designs use different prompts and task boundaries; this example does not measure quality, cost, or latency.
+
+```python
+from crewai import Agent, Crew, Process, Task
+
+evidence = """[E1] A library trial ran for four weeks with 120 volunteers.
+[E2] 72 volunteers used the reservation system at least once.
+[E3] Of 60 survey respondents, 42 found reservation convenient.
+[E4] There was no control group; the response rate was 50%."""
+report_request = "Write facts, analysis, and limitations; cite evidence IDs."
+
+researcher = Agent(
+    role="Researcher", goal="Extract supported facts and gaps",
+    backstory="You analyze supplied evidence.", allow_delegation=False,
+)
+reporter = Agent(
+    role="Reporter", goal="Write an evidence-grounded report",
+    backstory="You distinguish observations from inferences.",
+    allow_delegation=False,
+)
+research_task = Task(
+    description=f"Extract facts and information gaps from:\n{evidence}",
+    expected_output="Facts with evidence IDs and gaps", agent=researcher,
+)
+report_task = Task(
+    description=report_request, expected_output="An evidence-grounded report",
+    agent=reporter, context=[research_task],
+)
+baseline = Crew(
+    agents=[researcher, reporter], tasks=[research_task, report_task],
+    process=Process.sequential,
+)
+
+assistant = Agent(
+    role="Research and reporting assistant",
+    goal="Extract evidence and write a grounded report",
+    backstory="You analyze evidence and write concise reports.",
+    skills=["./skills"], allow_delegation=False,
+)
+single_task = Task(
+    description=(
+        "Extract facts and gaps, then write a report. Use the relevant "
+        f"research and report skills.\n{evidence}\n{report_request}"
+    ),
+    expected_output="An evidence-grounded report", agent=assistant,
+)
+single_agent = Crew(agents=[assistant], tasks=[single_task])
+
+# Run one workflow:
+print(single_agent.kickoff().raw)
+# To run the baseline instead: print(baseline.kickoff().raw)
+```
