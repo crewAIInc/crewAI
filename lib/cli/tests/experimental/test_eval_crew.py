@@ -4337,6 +4337,23 @@ def test_turning_tracing_on_keeps_an_owner_only_env_and_its_keys(tmp_path, monke
     assert env_file.stat().st_mode & 0o777 == 0o600
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlinks")
+@pytest.mark.usefixtures("tracing_unset")
+def test_turning_tracing_on_writes_through_an_env_symlink(tmp_path, monkeypatch):
+    shared = tmp_path / "shared.env"
+    shared.write_text("OPENAI_API_KEY=sk-test\n")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".env").symlink_to(shared)
+    monkeypatch.chdir(project)
+
+    eval_module.turn_tracing_on()
+
+    env_file = project / ".env"
+    assert env_file.is_symlink()
+    assert shared.read_text() == "OPENAI_API_KEY=sk-test\nCREWAI_TRACING_ENABLED=true\n"
+
+
 def _a_crew_whose_script_fails(
     directory: Path, monkeypatch, *, traced: bool, failure: Exception | None = None
 ) -> None:

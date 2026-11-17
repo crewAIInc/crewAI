@@ -310,8 +310,13 @@ def turn_tracing_on() -> None:
     env_file = Path.cwd() / ".env"
     # The project's `.env` holds its API keys: one created here is owner-only,
     # as `crewai create` writes it. set_key keeps an existing file's mode.
+    # A `.env` symlinked to a file shared with something else stays a symlink:
+    # set_key writes through a new file that it renames into place, which would
+    # replace the link with a copy and cut the project off from the shared
+    # file. Writing the resolved path edits the file the project actually
+    # reads, and leaves the link as it is.
     env_file.touch(mode=0o600, exist_ok=True)
-    set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
+    set_key(str(env_file.resolve()), TRACING_ENV_VAR, "true", quote_mode="never")
     os.environ[TRACING_ENV_VAR] = "true"
 
 
