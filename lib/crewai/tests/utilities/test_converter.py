@@ -1,12 +1,18 @@
+import asyncio
 from enum import Enum
 import json
 import os
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
+from crewai.agent import Agent
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
+from crewai.task import Task
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
+    async_convert_to_model,
     convert_to_model,
     convert_with_instructions,
     create_converter,
@@ -15,7 +21,7 @@ from crewai.utilities.converter import (
     handle_partial_json,
     validate_model,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import pytest
 
 
@@ -1022,3 +1028,324 @@ def test_internal_instructor_does_not_double_prefix_qualified_models() -> None:
         InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
 
         mock_from_provider.assert_called_once_with("groq/llama-3.3-70b")
+
+
+class OpenQuestion(BaseModel):
+    question: str
+    why: str
+
+
+class OpenQuestions(BaseModel):
+    open_questions: list[OpenQuestion]
+
+
+# Valid JSON whose items use `what` where the schema requires `question`.
+OFF_SCHEMA_ANSWER = json.dumps(
+    {"open_questions": [{"what": "Which region?", "ask": "ops", "why": "routing"}]}
+)
+REFIT_ANSWER = json.dumps(
+    {"open_questions": [{"question": "Which region?", "why": "routing"}]}
+)
+
+
+class _ScriptedLLM(BaseLLM):
+    """Offline LLM that replays scripted replies, repeating the last one."""
+
+    def __init__(self, *replies: str) -> None:
+        super().__init__(model="offline")
+        self.replies = replies
+        self.received: list[Any] = []
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def call(self, messages: Any, **kwargs: Any) -> str:
+        self.received.append(messages)
+        return self.replies[min(len(self.received), len(self.replies)) - 1]
+
+    async def acall(self, messages: Any, **kwargs: Any) -> str:
+        return self.call(messages, **kwargs)
+
+
+def _agent(llm: BaseLLM) -> Agent:
+    return Agent(role="Investigator", goal="Answer", backstory="Thorough", llm=llm)
+
+
+def _convert(
+    use_async: bool,
+    result: str,
+    output_pydantic: type[BaseModel] | None,
+    output_json: type[BaseModel] | None,
+    agent: Agent,
+    converter_cls: type[Converter] | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    if use_async:
+        return asyncio.run(
+            async_convert_to_model(
+                result, output_pydantic, output_json, agent, converter_cls
+            )
+        )
+    return convert_to_model(result, output_pydantic, output_json, agent, converter_cls)
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_convert_to_model_refits_json_that_does_not_fit_the_schema(
+    use_async: bool,
+) -> None:
+    llm = _ScriptedLLM(REFIT_ANSWER)
+
+    output = _convert(use_async, OFF_SCHEMA_ANSWER, OpenQuestions, None, _agent(llm))
+
+    assert output == OpenQuestions(
+        open_questions=[OpenQuestion(question="Which region?", why="routing")]
+    )
+    assert len(llm.received) == 1
+    assert llm.received[0][-1] == {"role": "user", "content": OFF_SCHEMA_ANSWER}
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_convert_to_model_refits_off_schema_json_for_output_json(
+    use_async: bool,
+) -> None:
+    llm = _ScriptedLLM(REFIT_ANSWER)
+
+    output = _convert(use_async, OFF_SCHEMA_ANSWER, None, OpenQuestions, _agent(llm))
+
+    assert isinstance(output, str)
+    assert json.loads(output) == json.loads(REFIT_ANSWER)
+    assert llm.received[0][-1] == {"role": "user", "content": OFF_SCHEMA_ANSWER}
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize(
+    "converter_cls", [None, Converter], ids=["default", "converter_cls"]
+)
+@pytest.mark.parametrize("output_json", [False, True], ids=["pydantic", "json"])
+def test_convert_to_model_returns_original_text_when_refit_fails(
+    use_async: bool, converter_cls: type[Converter] | None, output_json: bool
+) -> None:
+    llm = _ScriptedLLM(OFF_SCHEMA_ANSWER)
+    model_kwargs: dict[str, type[BaseModel] | None] = {
+        "output_pydantic": None if output_json else OpenQuestions,
+        "output_json": OpenQuestions if output_json else None,
+    }
+
+    output = _convert(
+        use_async, OFF_SCHEMA_ANSWER, agent=_agent(llm), converter_cls=converter_cls,
+        **model_kwargs,
+    )
+
+    assert output == OFF_SCHEMA_ANSWER
+    assert len(llm.received) == 3
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_convert_to_model_does_not_call_the_llm_when_json_fits(
+    use_async: bool,
+) -> None:
+    llm = _ScriptedLLM(OFF_SCHEMA_ANSWER)
+
+    output = _convert(use_async, REFIT_ANSWER, OpenQuestions, None, _agent(llm))
+
+    assert isinstance(output, OpenQuestions)
+    assert llm.received == []
+
+
+def test_handle_partial_json_without_agent_raises_validation_error() -> None:
+    with pytest.raises(ValidationError, match="open_questions.0.question"):
+        handle_partial_json(OFF_SCHEMA_ANSWER, OpenQuestions, False, None)
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_converter_retries_off_schema_response_as_a_validation_error(
+    use_async: bool,
+) -> None:
+    """Agent/LiteAgent kickoff(response_format=...) validate the LLM's reply with
+    Converter, which has no agent to refit with: an off-schema reply is retried
+    and finally reported as a validation error.
+    """
+    llm = _ScriptedLLM(OFF_SCHEMA_ANSWER)
+    converter = Converter(
+        llm=llm, text="the answer", model=OpenQuestions, instructions="Fit it."
+    )
+
+    with pytest.raises(ConverterError, match="due to validation error"):
+        if use_async:
+            asyncio.run(converter.ato_pydantic())
+        else:
+            converter.to_pydantic()
+    assert len(llm.received) == 3
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_task_refits_final_answer_that_does_not_fit_output_pydantic(
+    use_async: bool,
+) -> None:
+    llm = _ScriptedLLM(
+        f"Thought: I know the answer.\nFinal Answer: {OFF_SCHEMA_ANSWER}",
+        REFIT_ANSWER,
+    )
+    agent = _agent(llm)
+    task = Task(
+        description="List the open questions.",
+        expected_output="The open questions.",
+        output_pydantic=OpenQuestions,
+        agent=agent,
+    )
+
+    output = (
+        asyncio.run(task.aexecute_sync(agent=agent))
+        if use_async
+        else task.execute_sync(agent=agent)
+    )
+
+    assert output.raw == OFF_SCHEMA_ANSWER
+    assert output.pydantic == OpenQuestions(
+        open_questions=[OpenQuestion(question="Which region?", why="routing")]
+    )
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_task_refits_final_answer_that_does_not_fit_output_json(
+    use_async: bool,
+) -> None:
+    llm = _ScriptedLLM(
+        f"Thought: I know the answer.\nFinal Answer: {OFF_SCHEMA_ANSWER}",
+        REFIT_ANSWER,
+    )
+    agent = _agent(llm)
+    task = Task(
+        description="List the open questions.",
+        expected_output="The open questions.",
+        output_json=OpenQuestions,
+        agent=agent,
+    )
+
+    output = (
+        asyncio.run(task.aexecute_sync(agent=agent))
+        if use_async
+        else task.execute_sync(agent=agent)
+    )
+
+    assert output.raw == OFF_SCHEMA_ANSWER
+    assert output.json_dict == json.loads(REFIT_ANSWER)
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("output_json", [False, True], ids=["pydantic", "json"])
+def test_task_keeps_only_the_raw_answer_when_refit_fails(
+    use_async: bool, output_json: bool
+) -> None:
+    llm = _ScriptedLLM(
+        f"Thought: I know the answer.\nFinal Answer: {OFF_SCHEMA_ANSWER}",
+        OFF_SCHEMA_ANSWER,
+    )
+    agent = _agent(llm)
+    model_kwargs: dict[str, type[BaseModel] | None] = {
+        "output_pydantic": None if output_json else OpenQuestions,
+        "output_json": OpenQuestions if output_json else None,
+    }
+    task = Task(
+        description="List the open questions.",
+        expected_output="The open questions.",
+        agent=agent,
+        **model_kwargs,
+    )
+
+    output = (
+        asyncio.run(task.aexecute_sync(agent=agent))
+        if use_async
+        else task.execute_sync(agent=agent)
+    )
+
+    assert output.raw == OFF_SCHEMA_ANSWER
+    assert output.pydantic is None
+    assert output.json_dict is None
+    assert str(output) == OFF_SCHEMA_ANSWER
+    if output_json:
+        assert output.json is None
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize(
+    ("output_json", "cause"),
+    [(False, "ValidationError"), (True, "ConverterError")],
+    ids=["pydantic", "json"],
+)
+def test_convert_to_model_logs_a_failed_refit_without_verbose(
+    use_async: bool,
+    output_json: bool,
+    cause: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    agent = _agent(_ScriptedLLM(OFF_SCHEMA_ANSWER))
+    assert agent.verbose is False
+    model_kwargs: dict[str, type[BaseModel] | None] = {
+        "output_pydantic": None if output_json else OpenQuestions,
+        "output_json": OpenQuestions if output_json else None,
+    }
+
+    with caplog.at_level("WARNING", logger="crewai.utilities.converter"):
+        output = _convert(use_async, OFF_SCHEMA_ANSWER, agent=agent, **model_kwargs)
+
+    assert output == OFF_SCHEMA_ANSWER
+    assert [r.getMessage() for r in caplog.records] == [
+        f"Converter could not convert the output to OpenQuestions ({cause}); "
+        "keeping the raw output."
+    ]
+    assert "Which region?" not in caplog.text
+
+
+class _FunctionCallingLLM(_ScriptedLLM):
+    """Scripted LLM that answers ``response_model`` calls with a validated model."""
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+    def call(self, messages: Any, **kwargs: Any) -> Any:
+        reply = super().call(messages, **kwargs)
+        response_model = kwargs.get("response_model")
+        if response_model is None:
+            return reply
+        return response_model.model_validate_json(reply)
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_convert_to_model_refits_off_schema_json_with_function_calling(
+    use_async: bool,
+) -> None:
+    llm = _FunctionCallingLLM(REFIT_ANSWER)
+
+    output = _convert(use_async, OFF_SCHEMA_ANSWER, OpenQuestions, None, _agent(llm))
+
+    assert output == OpenQuestions(
+        open_questions=[OpenQuestion(question="Which region?", why="routing")]
+    )
+    assert llm.received[0][-1] == {"role": "user", "content": OFF_SCHEMA_ANSWER}
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_convert_to_model_refits_off_schema_json_for_output_json_with_function_calling(
+    use_async: bool,
+) -> None:
+    """With function calling, output_json is refit through Instructor, which
+    reaches the provider client directly instead of ``llm.call``."""
+    requests: list[dict[str, Any]] = []
+
+    def create(**kwargs: Any) -> BaseModel:
+        requests.append(kwargs)
+        return kwargs["response_model"].model_validate_json(REFIT_ANSWER)
+
+    client = MagicMock()
+    client.chat.completions.create.side_effect = create
+    llm = _FunctionCallingLLM(OFF_SCHEMA_ANSWER)
+
+    with patch("instructor.from_provider", return_value=client):
+        output = _convert(
+            use_async, OFF_SCHEMA_ANSWER, None, OpenQuestions, _agent(llm)
+        )
+
+    assert isinstance(output, str)
+    assert json.loads(output) == json.loads(REFIT_ANSWER)
+    assert requests[0]["messages"] == [{"role": "user", "content": OFF_SCHEMA_ANSWER}]
+    assert llm.received == []

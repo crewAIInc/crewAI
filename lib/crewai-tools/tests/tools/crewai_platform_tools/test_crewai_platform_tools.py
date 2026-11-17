@@ -389,3 +389,41 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert tools[0].name == (
             "google_drive_create_file_550e8400_e29b_41d4_a716_446655440000"
         )
+
+
+def _amp_answer(status, body):
+    import json
+
+    import requests
+
+    response = requests.Response()
+    response.status_code = status
+    response._content = json.dumps(body).encode()
+    response.url = "https://platform.example.test/"
+    return response
+
+
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_every_app_amp_cannot_resolve_is_named_once(mock_get):
+    import pytest
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    answers = {
+        "github": _amp_answer(200, {"actions": {"github": []}}),
+        "gmail": _amp_answer(422, {"missing": ["gmail"]}),
+        "gmail/send_email": _amp_answer(422, {"missing": ["gmail"]}),
+        "slack": _amp_answer(409, {"errors": [{"code": "conflict"}]}),
+    }
+
+    def get(url, **kwargs):
+        if "apps" in kwargs.get("params", {}):
+            return answers[kwargs["params"]["apps"]]
+        return answers["slack"]
+
+    mock_get.side_effect = get
+
+    with pytest.raises(PlatformAppsUnavailableError) as raised:
+        CrewaiPlatformTools(apps=["github", "gmail", "gmail/send_email", "slack@private"])
+
+    assert raised.value.missing_apps == ["gmail", "slack"]

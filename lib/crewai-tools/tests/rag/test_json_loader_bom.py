@@ -34,6 +34,6 @@ def test_json_loader_preserves_internal_bom_and_malformed_fallback(
     """Only a leading BOM is removed; content and malformed fallback stay intact."""
     internal = _load(tmp_path, b'{"value":"a\xef\xbb\xbf b"}')
     malformed = _load(tmp_path, b"\xef\xbb\xbf{invalid json}")
-    assert "a\\ufeff b" in internal.content
+    assert "a\ufeff b" in internal.content
     assert "parse_error" in malformed.metadata
     assert malformed.content == "{invalid json}"
