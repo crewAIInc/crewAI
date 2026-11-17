@@ -577,9 +577,7 @@ class PickleHandler:
                 if sig_len == PickleHandler._RECORD_SIG_LEN:
                     stored_sig = record[4 : 4 + PickleHandler._RECORD_SIG_LEN]
                     payload = record[4 + PickleHandler._RECORD_SIG_LEN :]
-                    expected_sig = hmac.new(
-                        self._key, payload, hashlib.sha256
-                    ).digest()
+                    expected_sig = hmac.new(self._key, payload, hashlib.sha256).digest()
                     if not hmac.compare_digest(stored_sig, expected_sig):
                         raise ValueError(
                             f"Integrity check failed for {self.file_path}: "
