@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import warnings
 
 from crewai.agents.parser import AgentFinish
+from crewai.a2a.auth.client_schemes import BearerTokenAuth
+from crewai.a2a.config import A2AClientConfig
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
@@ -136,6 +138,22 @@ def test_agent_copy_does_not_emit_i18n_deprecation_warning():
         "Agent.i18n is deprecated" in str(w.message) for w in caught_warnings
     )
 
+def test_agent_copy_keeps_a2a_auth():
+    """Copying an agent keeps an authenticated A2A config as a real auth scheme."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        a2a=A2AClientConfig(
+            endpoint="http://example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="t"),
+        ),
+    )
+    copied = agent.copy()
+    assert isinstance(copied.a2a.auth, BearerTokenAuth)
+    assert copied.a2a.auth.token == "t"
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
 
 def test_agent_with_only_system_template():
     """Test that an agent with only system_template works without errors."""
