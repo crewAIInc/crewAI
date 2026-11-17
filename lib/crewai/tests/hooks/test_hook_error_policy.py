@@ -43,12 +43,19 @@ def _context() -> ToolCallHookContext:
     )
 
 
-def _failing_hook(context: ToolCallHookContext) -> None:
-    raise RuntimeError("policy service unreachable")
+def _make_failing_hook():
+    """One hook object per test: registering the same callable twice with
+    different policies is exactly what the dispatch policy map keys on."""
+    def failing_hook(context: ToolCallHookContext) -> None:
+        raise RuntimeError("policy service unreachable")
+    return failing_hook
+
+
+_failing_hook = _make_failing_hook()
 
 
 def test_a_failing_before_hook_still_fails_open_by_default() -> None:
-    register_before_tool_call_hook(_failing_hook)
+    register_before_tool_call_hook(_make_failing_hook())
 
     assert run_before_tool_call_hooks(_context()) is False
 
@@ -77,10 +84,11 @@ def test_a_hook_aborted_reason_is_kept() -> None:
 
 
 def test_unregistering_the_hook_drops_its_policy() -> None:
-    register_before_tool_call_hook(_failing_hook, on_error="abort")
-    assert unregister_before_tool_call_hook(_failing_hook) is True
+    hook = _make_failing_hook()
+    register_before_tool_call_hook(hook, on_error="abort")
+    assert unregister_before_tool_call_hook(hook) is True
 
-    register_before_tool_call_hook(_failing_hook)
+    register_before_tool_call_hook(hook)
 
     assert run_before_tool_call_hooks(_context()) is False
 
@@ -156,14 +164,14 @@ def test_an_on_hook_keeps_its_policy():
 def test_unregistering_a_filtered_hook_drops_its_policy():
     from crewai.hooks import before_tool_call, clear_all_tool_call_hooks
 
-    @before_tool_call(tools=["send_email"])
     def policy(context: ToolCallHookContext) -> None:
         raise RuntimeError("policy service unreachable")
 
+    before_tool_call(tools=["send_email"])(policy)
     set_error_policy(policy, "abort")
     clear_all_tool_call_hooks()
 
-    register_before_tool_call_hook(policy)
+    register_before_tool_call_hook(_make_failing_hook())
 
     assert run_before_tool_call_hooks(_context()) is False
 
@@ -224,5 +232,22 @@ def test_an_on_method_keeps_its_policy():
     set_error_policy(Crew.guard, "abort")
 
     _register_crew_hooks(Crew(), Crew)
+
+    assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_a_default_registration_does_not_wipe_a_stored_abort():
+    """Re-registering an equal callable with the default must not delete a
+    policy an earlier registration stored."""
+    register_before_tool_call_hook(_failing_hook, on_error="abort")
+    register_before_tool_call_hook(_failing_hook)
+
+    assert run_before_tool_call_hooks(_context()) is True
+
+
+def test_setting_the_default_before_registering_still_applies():
+    """set_error_policy(abort) before register_* must survive the register."""
+    set_error_policy(_failing_hook, "abort")
+    register_before_tool_call_hook(_failing_hook)
 
     assert run_before_tool_call_hooks(_context()) is True

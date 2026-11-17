@@ -172,6 +172,12 @@ def _pop_error_policy(hook: Any) -> None:
             _error_policies.pop(candidate, None)
 
 
+def clear_error_policy(hook: HookFn) -> None:
+    """Public counterpart of :func:`_pop_error_policy`, for registries that
+    remove a hook without going through :func:`unregister`."""
+    _pop_error_policy(hook)
+
+
 # (ctx, result) -> modified?  A reducer maps a hook's return value onto the
 # context using point-specific semantics. It may raise HookAborted.
 Reducer = Callable[[Any, Any], bool]

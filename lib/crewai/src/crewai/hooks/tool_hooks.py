@@ -8,6 +8,7 @@ from crewai.events.event_listener import event_listener
 from crewai.hooks.dispatch import (
     HookAborted,
     InterceptionPoint,
+    clear_error_policy,
     dispatch,
     get_global_hook_list,
     set_error_policy,
@@ -247,7 +248,8 @@ def register_before_tool_call_hook(
         >>>
         >>> register_before_tool_call_hook(block_dangerous_tools)
     """
-    set_error_policy(hook, on_error)
+    if on_error != "fail_open":
+        set_error_policy(hook, on_error)
     _before_tool_call_hooks.append(hook)
 
 
@@ -286,7 +288,8 @@ def register_after_tool_call_hook(
         >>>
         >>> register_after_tool_call_hook(log_tool_results)
     """
-    set_error_policy(hook, on_error)
+    if on_error != "fail_open":
+        set_error_policy(hook, on_error)
     _after_tool_call_hooks.append(hook)
 
 
@@ -333,6 +336,7 @@ def unregister_before_tool_call_hook(
     """
     try:
         _before_tool_call_hooks.remove(hook)
+        clear_error_policy(hook)
         return True
     except ValueError:
         return False
@@ -359,6 +363,7 @@ def unregister_after_tool_call_hook(
     """
     try:
         _after_tool_call_hooks.remove(hook)
+        clear_error_policy(hook)
         return True
     except ValueError:
         return False
