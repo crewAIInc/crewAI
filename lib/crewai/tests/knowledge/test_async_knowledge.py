@@ -1,12 +1,18 @@
 """Tests for async knowledge operations."""
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from chromadb.config import Settings
+import numpy as np
 import pytest
 
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.rag.chromadb.config import ChromaDBConfig
+from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+from crewai.rag.factory import create_client
 
 
 class TestAsyncKnowledgeStorage:
@@ -16,9 +22,7 @@ class TestAsyncKnowledgeStorage:
     async def test_asearch_returns_results(self):
         """Test that asearch returns search results."""
         mock_client = MagicMock()
-        mock_client.asearch = AsyncMock(
-            return_value=[{"content": "test result", "score": 0.9}]
-        )
+        mock_client.search.return_value = [{"content": "test result", "score": 0.9}]
 
         storage = KnowledgeStorage(collection_name="test_collection")
         storage._client = mock_client
@@ -27,7 +31,7 @@ class TestAsyncKnowledgeStorage:
 
         assert len(results) == 1
         assert results[0]["content"] == "test result"
-        mock_client.asearch.assert_called_once()
+        mock_client.search.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_asearch_empty_query_raises_error(self):
@@ -42,33 +46,91 @@ class TestAsyncKnowledgeStorage:
     async def test_asave_calls_client_methods(self):
         """Test that asave calls the correct client methods."""
         mock_client = MagicMock()
-        mock_client.aget_or_create_collection = AsyncMock()
-        mock_client.aadd_documents = AsyncMock()
 
         storage = KnowledgeStorage(collection_name="test_collection")
         storage._client = mock_client
 
         await storage.asave(["document 1", "document 2"])
 
-        mock_client.aget_or_create_collection.assert_called_once_with(
+        mock_client.get_or_create_collection.assert_called_once_with(
             collection_name="knowledge_test_collection"
         )
-        mock_client.aadd_documents.assert_called_once()
+        mock_client.add_documents.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_areset_calls_client_delete(self):
         """Test that areset calls delete_collection on the client."""
         mock_client = MagicMock()
-        mock_client.adelete_collection = AsyncMock()
 
         storage = KnowledgeStorage(collection_name="test_collection")
         storage._client = mock_client
 
         await storage.areset()
 
-        mock_client.adelete_collection.assert_called_once_with(
+        mock_client.delete_collection.assert_called_once_with(
             collection_name="knowledge_test_collection"
         )
+
+
+class _ConstantEmbedding(ChromaEmbeddingFunctionWrapper):
+    """Deterministic embedding so tests need no model or network."""
+
+    @staticmethod
+    def name() -> str:
+        return "constant-test-embedding"
+
+    def __call__(self, input: list[str]) -> list[np.ndarray]:
+        return [np.array([1.0, 0.0, 0.0], dtype=np.float32) for _ in input]
+
+
+class TestAsyncKnowledgeStorageWithChroma:
+    """Async storage operations against the real client built by create_client."""
+
+    @pytest.fixture
+    def storage(self, tmp_path: Path) -> KnowledgeStorage:
+        config = ChromaDBConfig(
+            settings=Settings(
+                persist_directory=str(tmp_path),
+                allow_reset=True,
+                is_persistent=True,
+                anonymized_telemetry=False,
+            ),
+            embedding_function=_ConstantEmbedding(),
+        )
+        storage = KnowledgeStorage(collection_name="async_chroma")
+        storage._client = create_client(config)
+        return storage
+
+    @pytest.mark.asyncio
+    async def test_asearch_finds_documents_saved_synchronously(
+        self, storage: KnowledgeStorage
+    ) -> None:
+        storage.save(["PERSISTED-KNOWLEDGE-MARKER"])
+
+        results = await storage.asearch(["marker"])
+
+        assert [r["content"] for r in results] == ["PERSISTED-KNOWLEDGE-MARKER"]
+
+    @pytest.mark.asyncio
+    async def test_asave_makes_documents_searchable(
+        self, storage: KnowledgeStorage
+    ) -> None:
+        await storage.asave(["ASYNC-SAVED-DOCUMENT"])
+
+        results = storage.search(["document"])
+
+        assert [r["content"] for r in results] == ["ASYNC-SAVED-DOCUMENT"]
+
+    @pytest.mark.asyncio
+    async def test_areset_removes_saved_documents(
+        self, storage: KnowledgeStorage
+    ) -> None:
+        storage.save(["DOCUMENT-TO-RESET"])
+        assert storage.search(["reset"])
+
+        await storage.areset()
+
+        assert storage.search(["reset"]) == []
 
 
 class TestAsyncKnowledge:

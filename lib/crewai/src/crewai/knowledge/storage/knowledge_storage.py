@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import traceback
 from typing import Any, cast
@@ -165,7 +166,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             query_text = " ".join(query) if len(query) > 1 else query[0]
 
-            return await client.asearch(
+            return await asyncio.to_thread(
+                client.search,
                 collection_name=collection_name,
                 query=query_text,
                 limit=limit,
@@ -194,12 +196,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 if self.collection_name
                 else "knowledge"
             )
-            await client.aget_or_create_collection(collection_name=collection_name)
+            await asyncio.to_thread(
+                client.get_or_create_collection, collection_name=collection_name
+            )
 
             rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
 
-            await client.aadd_documents(
-                collection_name=collection_name, documents=rag_documents
+            await asyncio.to_thread(
+                client.add_documents,
+                collection_name=collection_name,
+                documents=rag_documents,
             )
         except Exception as e:
             if "dimension mismatch" in str(e).lower():
@@ -225,7 +231,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 if self.collection_name
                 else "knowledge"
             )
-            await client.adelete_collection(collection_name=collection_name)
+            await asyncio.to_thread(
+                client.delete_collection, collection_name=collection_name
+            )
         except Exception as e:
             logging.error(
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
