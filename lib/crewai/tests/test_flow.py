@@ -1790,6 +1790,24 @@ def test_flow_copy_state_without_unpickleable_objects():
     flow.state.nested["key"] = "changed_after_copy"
     assert copied_state.nested["key"] == "modified"
 
+def test_flow_initial_dict_state_isolates_nested_values():
+    """Each Flow gets an independent copy of nested dict initial state.
+    Regression test for issue #9383: dict(init_state) only copied the outer
+    dict, so two flows and the caller's original dict shared nested lists.
+    """
+    settings = {"wallet": {"expenses": []}}
+    class DepartmentOrder(Flow):
+        @start()
+        def purchase(self):
+            self.state["wallet"]["expenses"].append(40)
+    marketing = DepartmentOrder(initial_state=settings)
+    engineering = DepartmentOrder(initial_state=settings)
+   
+    marketing.state["wallet"]["expenses"].append(40)
+    assert marketing.state["wallet"]["expenses"] == [40]
+    assert engineering.state["wallet"]["expenses"] == []
+    assert settings["wallet"]["expenses"] == []
+    assert marketing.state["wallet"] is not engineering.state["wallet"]
 
 def test_flow_copy_state_with_dict_state():
     """Test that _copy_state works with dict-based states."""
