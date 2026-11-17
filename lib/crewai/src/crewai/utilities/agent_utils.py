@@ -111,6 +111,58 @@ def _is_within_directory(path: str, directory: str) -> bool:
     return real_path == real_directory or real_path.startswith(real_directory + os.sep)
 
 
+def _is_within_working_directory(path: str) -> bool:
+    """True when ``path`` sits inside the current working directory tree.
+
+    The tree includes ``<cwd>/src``: crew chat and ``get_crews``/
+    ``get_flows`` put it first on ``sys.path``, so a distribution whose
+    files live anywhere under the project directory must never be pinned.
+    """
+    return _is_within_directory(path, os.path.realpath(os.getcwd()))
+
+
+def _distribution_is_under_working_directory(dist: Distribution) -> bool:
+    """True when the ``crewai_tools`` package a distribution resolves to
+    lives inside the working directory tree.
+
+    Checks the ``crewai_tools/__init__.py`` the distribution metadata
+    locates, and the ``direct_url.json`` file:// source root for editable
+    installs. Either signal inside the working directory means the
+    distribution is a workspace tree, not an install. This is applied
+    only to the ``distribution("crewai-tools")`` fallback, which walks
+    ``sys.path``: the site/user/sysconfig scan is trusted on its own,
+    because a distribution whose dist-info sits in a site directory is
+    an install even when the environment itself lives under the working
+    directory (for example a ``.venv`` inside the project checkout).
+    A distribution that cannot be located either way is not treated as
+    under the working directory here; the pin step fails closed on its
+    own when its files do not exist.
+    """
+    try:
+        init_path = str(dist.locate_file("crewai_tools/__init__.py"))
+    except Exception:
+        init_path = None
+    if init_path is not None and _is_within_working_directory(init_path):
+        return True
+    try:
+        direct_url = str(dist.locate_file("direct_url.json"))
+    except Exception:
+        direct_url = None
+    if direct_url is not None and os.path.isfile(direct_url):
+        try:
+            with open(direct_url, encoding="utf-8") as handle:
+                url = json.loads(handle.read()).get("url", "")
+        except Exception:
+            url = ""
+        if (
+            isinstance(url, str)
+            and url.startswith("file://")
+            and _is_within_working_directory(url[len("file://") :])
+        ):
+            return True
+    return False
+
+
 def _crewai_tools_distribution() -> Distribution | None:
     """Find the installed ``crewai-tools`` distribution without trusting
     ``sys.path``.
@@ -119,7 +171,14 @@ def _crewai_tools_distribution() -> Distribution | None:
     cannot trust: crew chat and ``get_crews``/``get_flows`` put ``<cwd>/src``
     first, and callers may restrict ``sys.path`` further. Search the
     interpreter's own site directories explicitly instead, falling back to
-    the default search.
+    the default search. The fallback is filtered: a distribution whose
+    files live inside the working directory tree is ignored, because the
+    fallback would otherwise bind a workspace ``*.dist-info`` planted
+    under ``<cwd>`` or ``<cwd>/src``, and the allowlist stays fail-closed
+    when that is the only candidate. The site scan itself is not
+    filtered: a distribution whose dist-info sits in a site directory is
+    an install, even when the environment lives under the working
+    directory (for example a ``.venv`` inside the project checkout).
     """
     try:
         from importlib.metadata import distributions
@@ -152,9 +211,12 @@ def _crewai_tools_distribution() -> Distribution | None:
     try:
         from importlib.metadata import distribution
 
-        return distribution("crewai-tools")
+        fallback = distribution("crewai-tools")
     except Exception:
         return None
+    if _distribution_is_under_working_directory(fallback):
+        return None
+    return fallback
 
 
 def _pinned_crewai_tools_dir() -> str | None:
@@ -167,7 +229,11 @@ def _pinned_crewai_tools_dir() -> str | None:
     ``find_spec`` would execute the planted parent package before any origin
     could be checked. ``importlib.metadata`` locates the package for regular
     installs; ``direct_url.json`` covers editable installs, whose files live
-    outside site-packages. As a last resort, an already-imported
+    outside site-packages. The distribution search already ignores a
+    ``sys.path`` fallback distribution under the working directory tree,
+    and a distribution found by the site scan is an install by
+    construction, so neither path can pin a workspace tree here.
+    As a last resort, an already-imported
     ``crewai_tools`` counts only when its origin sits outside the working
     directory tree, and a ``sys.path`` entry counts only when it is outside
     that tree and holds the package on disk. Returns ``None`` when no
