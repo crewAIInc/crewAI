@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import io
 from pathlib import Path
 from secrets import token_urlsafe
 from tempfile import TemporaryDirectory
@@ -74,7 +75,7 @@ class ToolResultArtifactStore:
         path = artifact_directory / "result.md"
         path.write_text(content, encoding="utf-8")
         self._artifact_ids.add(artifact_id)
-        preview_lines = content.splitlines(keepends=True)
+        preview_lines = io.StringIO(content, newline=None).readlines()
         line_count = len(preview_lines)
         preview = "".join(preview_lines[:TOOL_RESULT_PREVIEW_LINE_COUNT])
         preview_truncated = len(preview_lines) > TOOL_RESULT_PREVIEW_LINE_COUNT
