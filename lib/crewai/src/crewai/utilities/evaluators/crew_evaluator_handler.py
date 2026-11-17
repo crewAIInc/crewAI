@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.agent.spreadsheet_inputs import no_spreadsheet_urls
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import CrewTestResultEvent
 from crewai.llms.base_llm import BaseLLM
@@ -144,11 +145,14 @@ class CrewEvaluator:
                 f"- {agents[0]}" if agents else "",
             )
 
+            # Continuation and separator rows must pad to the same column count
+            # declared by the header (3 + number of runs), not a hard-coded 6.
+            empty_score_columns = [""] * (len(self.tasks_scores) + 1)
             for agent in agents[1:]:
-                table.add_row("", "", "", "", "", f"- {agent}")
+                table.add_row("", *empty_score_columns, f"- {agent}")
 
             if task_index < len(self.crew.tasks) - 1:
-                table.add_row("", "", "", "", "", "")
+                table.add_row("", *empty_score_columns, "")
 
         crew_scores = [
             sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
@@ -196,7 +200,9 @@ class CrewEvaluator:
             evaluator_agent, current_task, task_output.raw
         )
 
-        evaluation_result = evaluation_task.execute_sync()
+        # The evaluation task holds the crew's outputs, which are model text.
+        with no_spreadsheet_urls():
+            evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
             quality_score = evaluation_result.pydantic.quality

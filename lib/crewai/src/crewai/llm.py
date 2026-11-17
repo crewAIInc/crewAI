@@ -38,11 +38,16 @@ from crewai.llm_overlay import overlay_model_for_model
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
+    EmptyLLMResponseError,
     JsonResponseFormat,
     LLMCallBlockedError,
+    # Unused here since the key check moved to the first call; kept because
+    # `from crewai.llm import MissingAPIKeyError` works in released 1.15.34+.
+    MissingAPIKeyError,  # noqa: F401
     get_current_call_id,
     llm_call_context,
 )
+from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -52,9 +57,11 @@ from crewai.llms.constants import (
 )
 from crewai.llms.context_window import (
     AZURE_OPENAI_CONTEXT_WINDOWS,
+    CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
     OPENAI_CONTEXT_WINDOWS,
+    catalog_context_window,
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
@@ -100,6 +107,7 @@ if TYPE_CHECKING:
         get_supported_openai_params,
     )
     from litellm.types.utils import (
+        ChatCompletionDeltaCustomToolCall,
         ChatCompletionDeltaToolCall,
         Choices,
         Delta as LiteLLMDelta,
@@ -121,6 +129,7 @@ else:
     LiteLLMStreamingChoices = None
     get_supported_openai_params = None
     ChatCompletionDeltaToolCall = None
+    ChatCompletionDeltaCustomToolCall = None
     Function = None
     ModelResponse = None
     supports_response_schema = None
@@ -131,7 +140,7 @@ def _ensure_litellm() -> bool:
     global _litellm_loaded, LITELLM_AVAILABLE
     global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
     global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
-    global ChatCompletionDeltaToolCall, Function
+    global ChatCompletionDeltaCustomToolCall, ChatCompletionDeltaToolCall, Function
     global ModelResponse, supports_response_schema
 
     if _litellm_loaded:
@@ -169,6 +178,16 @@ def _ensure_litellm() -> bool:
         ModelResponse = _ModelResponse  # type: ignore[misc]
         supports_response_schema = _supports_response_schema
 
+        try:
+            # Added in litellm 1.100; only used in a type annotation.
+            from litellm.types.utils import (
+                ChatCompletionDeltaCustomToolCall as _ChatCompletionDeltaCustomToolCall,
+            )
+
+            ChatCompletionDeltaCustomToolCall = _ChatCompletionDeltaCustomToolCall  # type: ignore[misc]
+        except ImportError:
+            pass
+
         _litellm.suppress_debug_info = True
         LITELLM_AVAILABLE = True
     except ImportError:
@@ -197,6 +216,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "deepinfra",
 ]
 
 
@@ -221,6 +241,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "cerebras": "cerebras",
     "dashscope": "dashscope",
     "snowflake": "snowflake",
+    "deepinfra": "deepinfra",
 }
 
 
@@ -277,7 +298,6 @@ class LLM(BaseLLM):
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
-    context_window_size: int = 0
     is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
@@ -444,6 +464,12 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "deepinfra":
+            # DeepInfra ids are exactly org/model, so a full reference is
+            # deepinfra/<org>/<model>: one slash with both parts non-empty.
+            parts = model_lower.split("/")
+            return len(parts) == 2 and all(parts)
+
         if provider == "snowflake":
             return True
 
@@ -458,7 +484,8 @@ class LLM(BaseLLM):
         a ``<prefix>/<model>`` string goes native when the prefix is a native
         provider and the model is one it knows (or, for ``openai/``, when a
         custom endpoint is configured); a bare model name infers its provider.
-        ``native_class`` is ``None`` when the call falls back to LiteLLM.
+        ``native_class`` is ``None`` when the call falls back to LiteLLM; a
+        DeepInfra id that is not ``org/model`` raises instead of falling through.
         ``kwargs`` is read, never mutated.
         """
         custom_openai = bool(kwargs.get("custom_openai", False))
@@ -481,10 +508,16 @@ class LLM(BaseLLM):
             provider = explicit_provider
             use_native = True
             model_string = model
+            if provider == "deepinfra":
+                cls._require_deepinfra_model(model)
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
             canonical_provider = PROVIDER_ALIASES.get(prefix.lower())
+            if canonical_provider == "deepinfra":
+                # Raise here rather than fall through to LiteLLM, where the same
+                # malformed id fails later and differently per environment.
+                cls._require_deepinfra_model(model_part, prefix=f"{prefix}/")
 
             valid_native_model = bool(
                 canonical_provider
@@ -513,6 +546,20 @@ class LLM(BaseLLM):
         if provider not in SUPPORTED_NATIVE_PROVIDERS:
             native_class = None
         return _Route(provider, model_string, native_class, custom_openai_route)
+
+    @classmethod
+    def _require_deepinfra_model(cls, model: str, prefix: str = "") -> None:
+        """Raise unless ``model`` is the ``org/model`` form DeepInfra serves.
+
+        ``prefix`` is the ``deepinfra/`` the caller wrote before ``model``, if
+        any, so the example and the echoed value match what they passed.
+        """
+        if cls._matches_provider_pattern(model, "deepinfra"):
+            return
+        raise ValueError(
+            "DeepInfra model ids are org/model, for example "
+            f"'{prefix}deepseek-ai/DeepSeek-V4-Flash-0731'; got '{prefix}{model}'"
+        )
 
     @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
@@ -650,6 +697,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "deepinfra",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
@@ -676,6 +724,24 @@ class LLM(BaseLLM):
             litellm.drop_params = True
             self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
+        return self
+
+    @model_validator(mode="after")
+    def _drop_cached_context_window(self) -> LLM:
+        # Through 1.15.32, get_context_window_size() wrote its result (85% of
+        # the catalog or default window) back into this field, and checkpoints
+        # carry it. Read as an override it would be scaled by 85% again.
+        # Remove in 2.0.
+        if self.context_window_size is None:
+            return self
+        full = catalog_context_window(
+            self._context_window_model_name(),
+            self._context_window_sizes(),
+            extra_names=(self.model,),
+        )
+        cached = int((full or DEFAULT_CONTEXT_WINDOW_SIZE) * CONTEXT_WINDOW_USAGE_RATIO)
+        if self.context_window_size == cached:
+            self.context_window_size = None
         return self
 
     @staticmethod
@@ -709,6 +775,18 @@ class LLM(BaseLLM):
         """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+        # The cache-breakpoint flag is crewAI-internal; LiteLLM would forward
+        # it to the provider, and strict APIs (e.g. Groq) reject the request.
+        # Copy rather than mutate: the executor reuses its message buffer.
+        cleaned: list[LLMMessage] = []
+        for m in messages:
+            if isinstance(m, dict) and CACHE_BREAKPOINT_KEY in m:
+                copy: dict[str, Any] = dict(m)
+                copy.pop(CACHE_BREAKPOINT_KEY)
+                cleaned.append(cast("LLMMessage", copy))
+            else:
+                cleaned.append(m)
+        messages = cleaned
         if not skip_file_processing:
             messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
@@ -743,6 +821,45 @@ class LLM(BaseLLM):
 
         return {k: v for k, v in params.items() if v is not None}
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate request input tokens with LiteLLM's local tokenizer.
+
+        LiteLLM does not make a provider request for this calculation. Its
+        tokenizer uses the same formatted messages and tools as a completion.
+        """
+        if not _ensure_litellm() or litellm is None:
+            raise ImportError(
+                'LiteLLM is required for token estimation; install it with `uv add "crewai[litellm]"`.'
+            )
+
+        params = self._prepare_completion_params(messages, tools)
+        if response_model is not None:
+            from instructor import Mode, handle_response_model
+
+            _, structured_output_params = handle_response_model(
+                response_model,
+                mode=Mode.TOOLS,
+                tools=params.get("tools"),
+            )
+            params["tools"] = structured_output_params["tools"]
+            params["tool_choice"] = structured_output_params["tool_choice"]
+        try:
+            return int(
+                litellm.token_counter(
+                    model=params["model"],
+                    messages=params["messages"],
+                    tools=params.get("tools"),
+                    tool_choice=params.get("tool_choice"),
+                )
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+
     def _handle_streaming_response(
         self,
         params: dict[str, Any],
@@ -766,7 +883,7 @@ class LLM(BaseLLM):
             str: The complete response text
 
         Raises:
-            Exception: If no content is received from the streaming response
+            EmptyLLMResponseError: If the stream carried no content and no tool calls.
         """
         full_response = ""
         last_chunk = None
@@ -928,9 +1045,7 @@ class LLM(BaseLLM):
                         )
 
             if not full_response.strip() and len(accumulated_tool_args) == 0:
-                raise Exception(
-                    "No content received from streaming response. Received empty chunks or failed to extract content."
-                )
+                raise EmptyLLMResponseError(self.model)
 
             tool_calls = None
             try:
@@ -975,6 +1090,16 @@ class LLM(BaseLLM):
                     if tool_arg.function.name
                 ]
                 if tool_calls_list:
+                    self._handle_emit_call_events(
+                        response=tool_calls_list,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=self._usage_to_dict(usage_info),
+                        finish_reason=stream_finish_reason,
+                        response_id=stream_response_id,
+                    )
                     return tool_calls_list
 
             finish_reason, response_id_last = (
@@ -1037,7 +1162,7 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except LLMContextLengthExceededError:
+        except (LLMContextLengthExceededError, EmptyLLMResponseError):
             raise
         except Exception as e:
             error_msg = str(e)
@@ -1063,16 +1188,9 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallFailedEvent(
-                    error=str(e),
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    call_id=get_current_call_id(),
-                ),
-            )
-            raise Exception(f"Failed to get streaming response: {e!s}") from e
+            # call() emits LLMCallFailedEvent for this error; re-raise the
+            # provider's exception so its type reaches callers and telemetry.
+            raise
 
     def _handle_streaming_tool_calls(
         self,
@@ -1190,8 +1308,8 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
+            from crewai.utilities.message_utils import message_content_text
 
             messages = params.get("messages", [])
             if not messages:
@@ -1208,22 +1326,30 @@ class LLM(BaseLLM):
                 llm=self,
             )
             with model_call_hooks_dispatched():
-                result = instructor_instance.to_pydantic()
+                result, completion = instructor_instance.to_pydantic_with_completion()
             structured_response = result.model_dump_json()
+            usage_info = self._completion_usage(completion)
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+            finish_reason, response_id = self._extract_finish_reason_and_response_id(
+                completion
+            )
             self._handle_emit_call_events(
                 response=structured_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
-                usage=None,
+                usage=self._usage_to_dict(usage_info),
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return structured_response
 
         try:
             # Attempt to make the completion call, but catch context window errors
             # and convert them to our own exception type for consistent handling
-            # across the codebase. This allows CrewAgentExecutor to handle context
+            # across the codebase. This allows AgentExecutor to handle context
             # length issues appropriately.
             if response_model:
                 params["response_model"] = response_model
@@ -1291,6 +1417,16 @@ class LLM(BaseLLM):
         tool_calls = response_message.tool_calls or []
 
         if tool_calls and not available_functions:
+            self._handle_emit_call_events(
+                response=tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
             return tool_calls
 
         if not tool_calls and text_response:
@@ -1349,8 +1485,8 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
+            from crewai.utilities.message_utils import message_content_text
 
             messages = params.get("messages", [])
             if not messages:
@@ -1367,15 +1503,23 @@ class LLM(BaseLLM):
                 llm=self,
             )
             with model_call_hooks_dispatched():
-                result = instructor_instance.to_pydantic()
+                result, completion = instructor_instance.to_pydantic_with_completion()
             structured_response = result.model_dump_json()
+            usage_info = self._completion_usage(completion)
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+            finish_reason, response_id = self._extract_finish_reason_and_response_id(
+                completion
+            )
             self._handle_emit_call_events(
                 response=structured_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
-                usage=None,
+                usage=self._usage_to_dict(usage_info),
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return structured_response
 
@@ -1447,6 +1591,16 @@ class LLM(BaseLLM):
         tool_calls = response_message.tool_calls or []
 
         if tool_calls and not available_functions:
+            self._handle_emit_call_events(
+                response=tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
             return tool_calls
 
         if not tool_calls and text_response:
@@ -1566,7 +1720,13 @@ class LLM(BaseLLM):
                             elif isinstance(delta, LiteLLMDelta):
                                 chunk_content = delta.content
 
-                            tool_calls: list[ChatCompletionDeltaToolCall] | None = None
+                            tool_calls: (
+                                list[
+                                    ChatCompletionDeltaToolCall
+                                    | ChatCompletionDeltaCustomToolCall
+                                ]
+                                | None
+                            ) = None
                             if isinstance(delta, dict):
                                 tool_calls = delta.get("tool_calls")
                             elif isinstance(delta, LiteLLMDelta):
@@ -1574,6 +1734,10 @@ class LLM(BaseLLM):
 
                             if tool_calls:
                                 for tool_call in tool_calls:
+                                    if not isinstance(
+                                        tool_call, ChatCompletionDeltaToolCall
+                                    ):
+                                        continue
                                     idx = tool_call.index
                                     if tool_call.function:
                                         if tool_call.function.name:
@@ -1642,6 +1806,16 @@ class LLM(BaseLLM):
                         if result is not None:
                             return result
                     else:
+                        self._handle_emit_call_events(
+                            response=tool_calls_list,
+                            call_type=LLMCallType.TOOL_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params.get("messages"),
+                            usage=self._usage_to_dict(usage_info),
+                            finish_reason=stream_finish_reason,
+                            response_id=stream_response_id,
+                        )
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
@@ -1868,7 +2042,7 @@ class LLM(BaseLLM):
                     return result
                 except LLMContextLengthExceededError:
                     # Re-raise LLMContextLengthExceededError as it should be handled
-                    # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                    # by AgentExecutor, which can then decide
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
@@ -1990,7 +2164,16 @@ class LLM(BaseLLM):
                     )
 
                     if self._effective_stream():
-                        return await self._ahandle_streaming_response(
+                        result = await self._ahandle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+                    else:
+                        result = await self._ahandle_non_streaming_response(
                             params=params,
                             callbacks=callbacks,
                             available_functions=available_functions,
@@ -1999,14 +2182,12 @@ class LLM(BaseLLM):
                             response_model=response_model,
                         )
 
-                    return await self._ahandle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
+                    if isinstance(result, str):
+                        result = self._invoke_after_llm_call_hooks(
+                            messages, result, from_agent
+                        )
+
+                    return result
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
@@ -2053,6 +2234,17 @@ class LLM(BaseLLM):
                         ),
                     )
                     raise
+
+    @staticmethod
+    def _completion_usage(completion: Any) -> Any:
+        """Usage from a raw LiteLLM completion, read from ``model_extra``.
+
+        Avoids ``isinstance(..., ModelResponseBase)``: that name stays None
+        until ``_ensure_litellm()`` runs, which an LLM built without
+        ``__init__`` (e.g. restored) may not have done yet.
+        """
+        extra = getattr(completion, "model_extra", None)
+        return extra.get("usage") if isinstance(extra, dict) else None
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
@@ -2167,7 +2359,9 @@ class LLM(BaseLLM):
         """
         return extract_choices_finish_reason_and_id(response_or_chunk)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
 
         For each message with a `files` field, formats the files into
@@ -2450,23 +2644,14 @@ class LLM(BaseLLM):
         return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
-        """
-        Returns the context window size, using 75% of the maximum to avoid
-        cutting off messages mid-thread.
-
-        Raises:
-            ValueError: If a model's context window size is outside valid bounds (1024-2097152)
-        """
-        if self.context_window_size != 0:
-            return self.context_window_size
-
-        self.context_window_size = resolve_context_window_size(
+        """Return 85% of ``context_window_size`` or of the catalog limit."""
+        return resolve_context_window_size(
             self._context_window_model_name(),
             self._context_window_sizes(),
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
             extra_names=(self.model,),
+            configured=self.context_window_size,
         )
-        return self.context_window_size
 
     @staticmethod
     def set_callbacks(callbacks: list[Any]) -> None:
@@ -2681,6 +2866,7 @@ class LLM(BaseLLM):
             "gpt-4-vision",
             "gpt-4.1",
             "gpt-5",
+            "gpt-6",
             # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
             "o1",
             "o3",

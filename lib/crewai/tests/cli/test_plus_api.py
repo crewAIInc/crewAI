@@ -252,6 +252,8 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
+    @patch.dict("crewai_core.plus_api._MACHINE_TRANSPORT_ENV", clear=True)
+    @patch("crewai_core.plus_api._os_proxies", dict)
     @patch("crewai_core.plus_api.httpx.Client")
     def test_make_request(self, mock_client_class):
         mock_client_instance = MagicMock()
@@ -261,7 +263,9 @@ class TestPlusAPI(unittest.TestCase):
 
         response = self.api._make_request("GET", "test_endpoint")
 
-        mock_client_class.assert_called_once_with(trust_env=False, verify=True)
+        mock_client_class.assert_called_once_with(
+            verify=True, trust_env=False, mounts={}
+        )
         mock_client_instance.request.assert_called_once_with(
             "GET", f"{self.api.base_url}/test_endpoint", headers=self.api.headers
         )

@@ -44,6 +44,7 @@ Pick the simplest action that does the job.
 {% endif %}
 {% if include_tool_action %}
 - Use `call: tool` for packaged deterministic work: API calls, searches, lookups, scoring, file work, or custom CrewAI tools.
+- An integration app action can run as `call: tool` with `ref: <app>/<action>[@<connection>]`, the same selector an agent lists in `apps`. Use it when the inputs are flat values from state. Use an agent when the input must be built or decided.
 {% endif %}
 - Use `call: agent` for one AI worker that classifies, decides, summarizes, writes, or drafts. Put `role`, `goal`, `backstory`, and `input` under `with`. Do not add an action-level `inputs` map to an agent.
 - Repository-backed agents may set `from_repository` and omit inline `role`, `goal`, and `backstory`. Explicitly provided fields override repository values.

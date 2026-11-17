@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import field
+import os
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from crewai_core.paths import db_storage_path
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.config.base import BaseRagConfig
-from crewai.rag.qdrant.constants import DEFAULT_EMBEDDING_MODEL, DEFAULT_STORAGE_PATH
+from crewai.rag.qdrant.constants import DEFAULT_EMBEDDING_MODEL
 from crewai.rag.qdrant.types import QdrantClientParams, QdrantEmbeddingFunctionWrapper
 
 
@@ -22,9 +24,10 @@ def _default_options() -> QdrantClientParams:
     """Create default Qdrant client options.
 
     Returns:
-        Default options with file-based storage.
+        Default options with file-based storage. The path is resolved when the
+        config is created, so it follows ``CREWAI_STORAGE_DIR``.
     """
-    return QdrantClientParams(path=DEFAULT_STORAGE_PATH)
+    return QdrantClientParams(path=os.path.join(db_storage_path(), "qdrant"))
 
 
 def _default_embedding_function() -> QdrantEmbeddingFunctionWrapper:
@@ -32,8 +35,18 @@ def _default_embedding_function() -> QdrantEmbeddingFunctionWrapper:
 
     Returns:
         Default embedding function using fastembed with all-MiniLM-L6-v2.
+
+    Raises:
+        ImportError: If fastembed is not installed.
     """
-    from fastembed import TextEmbedding
+    try:
+        from fastembed import TextEmbedding
+    except ImportError as e:
+        raise ImportError(
+            "The default Qdrant embedder requires fastembed. "
+            "Install it with: pip install crewai[qdrant], "
+            "or pass your own embedding_function."
+        ) from e
 
     model = TextEmbedding(model_name=DEFAULT_EMBEDDING_MODEL)
 

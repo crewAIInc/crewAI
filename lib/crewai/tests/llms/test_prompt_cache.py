@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from crewai.llm import LLM
 from crewai.llms.cache import (
     CACHE_BREAKPOINT_KEY,
     mark_cache_breakpoint,
@@ -189,3 +190,31 @@ class TestNonAnthropicStripsMarker:
         formatted = llm._format_messages(messages)
         for m in formatted:
             assert CACHE_BREAKPOINT_KEY not in m
+
+
+class TestLiteLLMStripsMarker:
+    """The LiteLLM fallback forwards messages verbatim, so a leaked marker
+    reaches strict providers (e.g. Groq) and fails the whole request.
+    """
+
+    def test_prepare_completion_params_strips_marker(self) -> None:
+        llm = LLM(model="groq/openai/gpt-oss-20b", is_litellm=True)
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable system"}),
+            mark_cache_breakpoint({"role": "user", "content": "stable user"}),
+            {"role": "user", "content": "unmarked"},
+        ]
+        params = llm._prepare_completion_params(messages)
+        assert len(params["messages"]) == 3
+        assert all(CACHE_BREAKPOINT_KEY not in m for m in params["messages"])
+
+    def test_prepare_completion_params_preserves_markers_in_input(self) -> None:
+        llm = LLM(model="groq/openai/gpt-oss-20b", is_litellm=True)
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable system"}),
+            mark_cache_breakpoint({"role": "user", "content": "stable user"}),
+        ]
+        for _ in range(2):
+            llm._prepare_completion_params(messages)
+            assert messages[0][CACHE_BREAKPOINT_KEY] is True
+            assert messages[1][CACHE_BREAKPOINT_KEY] is True

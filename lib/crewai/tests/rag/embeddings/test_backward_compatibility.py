@@ -360,6 +360,18 @@ class TestDocumentationCodeSnippets:
         assert provider.model_name == "jina-embeddings-v3"
 
     @pytest.mark.parametrize("device", ["cpu", "cuda", "mps", "xpu"])
+    def test_ragtool_openclip_config(self, device: str):
+        """Test documented OpenCLIP device strings are preserved."""
+        provider = OpenCLIPProvider(
+            model_name="ViT-B-32",
+            checkpoint="laion2b_s34b_b79k",
+            device=device,
+        )
+        assert provider.model_name == "ViT-B-32"
+        assert provider.checkpoint == "laion2b_s34b_b79k"
+        assert provider.device == device
+
+    @pytest.mark.parametrize("device", ["cpu", "cuda", "mps", "xpu"])
     def test_ragtool_sentence_transformer_config(self, device: str):
         """Test RagTool SentenceTransformer config from ragtool.mdx.
 

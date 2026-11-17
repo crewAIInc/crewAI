@@ -9,10 +9,14 @@ mode: "wide"
 
 ## الوصف
 
-تنفيذ استعلامات التشابه المتجهي على مجموعات MongoDB Atlas. تدعم أدوات مساعدة لإنشاء الفهارس وإدراج النصوص المضمنة بكميات كبيرة.
+تُمكّن `MongoDBVectorSearchTool` من إجراء استعلامات التشابه المتجهي على مجموعات MongoDB Atlas. يدعم
+MongoDB Atlas البحث المتجهي الأصلي. كما تدعم الأداة أدوات مساعدة لإنشاء الفهارس وإدراج النصوص المضمنة بكميات كبيرة.
 
-يدعم MongoDB Atlas البحث المتجهي الأصلي. اعرف المزيد:
-https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/
+يُعد البحث المتجهي في MongoDB مفيدًا للتطبيقات التي تريد استخدام قاعدة بيانات بحث متجهي للاستعلام عن البيانات
+باستخدام البحث الدلالي، أو تصفية الاستعلامات حسب حقول أخرى في مجموعتك، أو تشغيل تطبيقات الذكاء الاصطناعي
+وأنظمة الوكلاء الخاصة بك من خلال تنفيذ التوليد المعزز بالاسترجاع (RAG).
+
+اعرف المزيد: https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/
 
 ## التثبيت
 
@@ -28,23 +32,30 @@ pip install crewai-tools[mongodb]
 uv add crewai-tools --extra mongodb
 ```
 
-## المعاملات
+## معاملات التهيئة
 
-### التهيئة
+- `connection_string` (str): مطلوب. بيانات اعتماد سلسلة الاتصال بـ MongoDB Atlas للاتصال بمجموعتك (cluster).
+- `database_name` (str): مطلوب. اسم قاعدة بيانات MongoDB المراد استخدامها.
+- `collection_name` (str): مطلوب. المجموعة ضمن قاعدة البيانات حيث تُخزَّن المستندات والتضمينات (embeddings).
+- `vector_index_name` (str، الافتراضي: `vector_index`): اختياري. اسم فهرس البحث المتجهي في MongoDB المراد
+  الاستعلام عنه (يجب أن يطابق الفهرس الذي تم إنشاؤه في Atlas).
+- `text_key` (str، الافتراضي: `text`): اختياري. اسم حقل المستند الذي يُخزَّن فيه النص الخام.
+- `embedding_key` (str، الافتراضي: `embedding`): اختياري. اسم حقل المستند الذي يُخزَّن فيه التضمين المتجهي.
+- `dimensions` (int، الافتراضي: `1536`): اختياري. عدد أبعاد نموذج التضمين (يجب أن يطابق نموذجك).
+- `query_config` (MongoDBVectorSearchConfig): اختياري. كائن `MongoDBVectorSearchConfig` لإعدادات الاستعلام
+  المتقدمة، مثل `limit` و `oversampling_factor`.
 
-- `connection_string` (str, مطلوب)
-- `database_name` (str, مطلوب)
-- `collection_name` (str, مطلوب)
-- `vector_index_name` (str, الافتراضي `vector_index`)
-- `text_key` (str, الافتراضي `text`)
-- `embedding_key` (str, الافتراضي `embedding`)
-- `dimensions` (int, الافتراضي `1536`)
+## طرق MongoDBVectorSearchTool
 
-### معاملات التشغيل
-
-- `query` (str, مطلوب): استعلام بلغة طبيعية لتضمينه والبحث عنه.
+- `run(query=...)`: يُضمّن استعلامًا وينفّذ بحث تشابه متجهي، ويُعيد المستندات المطابقة. يأخذ معامل
+  `query` (`str`) بلغة طبيعية لتضمينه والبحث عنه.
+- `add_texts(list of strings)`: يأخذ قائمة من النصوص لتضمينها وإدراجها كمستندات في قاعدة بيانات MongoDB Atlas الخاصة بك.
+- `create_vector_search_index(dimensions=...)`: يُنشئ فهرس بحث متجهي في MongoDB بالأبعاد والتشابه الصحيحين.
+  يأخذ معامل `dimensions` (int).
 
 ## بداية سريعة
+
+يوضح المثال التالي كيفية تهيئة الأداة وتنفيذ بحث تشابه متجهي على مجموعة MongoDB Atlas المحددة:
 
 ```python Code
 from crewai_tools import MongoDBVectorSearchTool
@@ -58,31 +69,48 @@ tool = MongoDBVectorSearchTool(
 print(tool.run(query="how to create vector index"))
 ```
 
-## أدوات مساعدة لإنشاء الفهارس
-
-استخدم `create_vector_search_index(...)` لإنشاء فهرس بحث متجهي في Atlas بالأبعاد والتشابه الصحيحين.
-
 ## المشكلات الشائعة
 
 - فشل المصادقة: تأكد من أن قائمة الوصول إلى عناوين IP في Atlas تسمح بخادمك وأن سلسلة الاتصال تتضمن بيانات الاعتماد.
 - الفهرس غير موجود: أنشئ الفهرس المتجهي أولاً؛ يجب أن يتطابق الاسم مع `vector_index_name`.
 - عدم تطابق الأبعاد: قم بمحاذاة أبعاد نموذج التضمين مع `dimensions`.
 
-## أمثلة إضافية
+## أمثلة
 
-### التهيئة الأساسية
+### تحميل قاعدة البيانات مسبقًا وإنشاء الفهرس
+
+يوضح المثال التالي كيفية تحميل قاعدة بيانات MongoDB Atlas الخاصة بك مسبقًا بالمستندات
+وإنشاء فهرس بحث متجهي في MongoDB للاستعلام عن مجموعتك:
 
 ```python Code
+import os
 from crewai_tools import MongoDBVectorSearchTool
 
 tool = MongoDBVectorSearchTool(
     database_name="example_database",
     collection_name="example_collection",
     connection_string="<your_mongodb_connection_string>",
+    dimensions=3072,
 )
+
+# Load text content from a local folder and add to your MongoDB collection
+texts = []
+for fname in os.listdir("knowledge"):
+    path = os.path.join("knowledge", fname)
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as f:
+            texts.append(f.read())
+
+tool.add_texts(texts)
+
+# Create the MongoDB Vector Search index (e.g., 3072 dims for text-embedding-3-large)
+tool.create_vector_search_index(dimensions=3072)
 ```
 
-### تكوين استعلام مخصص
+### تكوين استعلام مخصص وتكامل مع الوكيل
+
+يوضح المثال التالي كيفية توفير تكوين استعلام مخصص لـ `MongoDBVectorSearchTool`
+ودمجها مع وكيل CrewAI:
 
 ```python Code
 from crewai_tools import MongoDBVectorSearchConfig, MongoDBVectorSearchTool
@@ -105,33 +133,10 @@ rag_agent = Agent(
 )
 ```
 
-### تحميل قاعدة البيانات مسبقاً وإنشاء الفهرس
+### تشغيل سير عمل CrewAI
 
-```python Code
-import os
-from crewai_tools import MongoDBVectorSearchTool
-
-tool = MongoDBVectorSearchTool(
-    database_name="example_database",
-    collection_name="example_collection",
-    connection_string="<your_mongodb_connection_string>",
-)
-
-# Load text content from a local folder and add to MongoDB
-texts = []
-for fname in os.listdir("knowledge"):
-    path = os.path.join("knowledge", fname)
-    if os.path.isfile(path):
-        with open(path, "r", encoding="utf-8") as f:
-            texts.append(f.read())
-
-tool.add_texts(texts)
-
-# Create the Atlas Vector Search index (e.g., 3072 dims for text-embedding-3-large)
-tool.create_vector_search_index(dimensions=3072)
-```
-
-## مثال
+يوضح المثال التالي كيفية دمج `MongoDBVectorSearchTool` مع Agent و Task و Crew
+لإنشاء وتشغيل سير عمل RAG قائم على الوكلاء في CrewAI:
 
 ```python Code
 from crewai import Agent, Task, Crew
@@ -165,3 +170,9 @@ crew = Crew(
 
 result = crew.kickoff()
 ```
+
+## لمعرفة المزيد
+
+لمعرفة المزيد حول تكاملات CrewAI مع MongoDB، راجع أدلة MongoDB التالية:
+- [دمج MongoDB مع CrewAI](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/)
+- [بناء تطبيق RAG قائم على الوكلاء باستخدام CrewAI و MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/build-agents/)
