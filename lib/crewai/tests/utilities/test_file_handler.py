@@ -296,6 +296,30 @@ class TestPickleHandler(unittest.TestCase):
         finally:
             shutil.rmtree(fresh_home, ignore_errors=True)
 
+    def test_key_creation_rejects_dangling_symlinked_key_file(self):
+        """A dangling symlink at the key path must be rejected, not followed.
+
+        Pre-fix the symlink was treated as absent (os.path.exists is False
+        for dangling links), os.link failed with FileExistsError, and the
+        handler then open()ed the path, following the link and crashing
+        first-time key creation (or adopting an attacker-chosen key if the
+        target appeared in the race window).
+        """
+        if os.name != "posix":
+            self.skipTest("POSIX-only symlink behavior")
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            key_dir = os.path.join(fresh_home, ".crewai")
+            os.makedirs(key_dir, mode=0o700)
+            os.symlink(os.path.join(key_dir, "does_not_exist"), os.path.join(key_dir, ".hmac_key"))
+            with patch("os.path.expanduser", return_value=fresh_home):
+                with self.assertRaisesRegex(
+                    PermissionError, "key file must not be a symlink"
+                ):
+                    PickleHandler("dangling_key_check.pkl")
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
     def test_save_serializes_payload_exactly_once(self):
         """save() must serialize into a single buffer that the HMAC then covers."""
         import pickle as pickle_mod
@@ -401,10 +425,31 @@ class TestPickleHandler(unittest.TestCase):
             return file_stat
 
         with patch("crewai.utilities.file_handler.os.lstat", side_effect=fake_lstat), patch(
-            "crewai.utilities.file_handler.os.path.exists", return_value=True
+            "crewai.utilities.file_handler.os.path.lexists", return_value=True
         ):
             with self.assertRaisesRegex(PermissionError, "key file must not be a symlink"):
                 PickleHandler._validate_key_storage(key_dir, key_path)
+
+    def test_validate_key_storage_rejects_dangling_symlinked_key_file(self):
+        """A dangling symlink at the key path must be rejected, not treated as absent.
+
+        os.path.exists() is False for a dangling symlink, so an exists() gate
+        would skip the lstat rejection and key creation would later follow
+        the link (FileExistsError from os.link, then open() on the target).
+        """
+        if os.name != "posix":
+            self.skipTest("POSIX-only symlink behavior")
+        key_dir = tempfile.mkdtemp(prefix="crewai_key_")
+        try:
+            os.chmod(key_dir, 0o700)
+            key_path = os.path.join(key_dir, ".hmac_key")
+            os.symlink(os.path.join(key_dir, "does_not_exist"), key_path)
+            with self.assertRaisesRegex(
+                PermissionError, "key file must not be a symlink"
+            ):
+                PickleHandler._validate_key_storage(key_dir, key_path)
+        finally:
+            shutil.rmtree(key_dir, ignore_errors=True)
 
 @pytest.mark.parametrize("kind", ["unsupported", "circular"])
 @pytest.mark.parametrize("existing", [False, True])

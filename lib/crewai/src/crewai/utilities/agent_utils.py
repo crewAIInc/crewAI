@@ -13,7 +13,8 @@ import json
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, cast, get_args
+import sys
+from typing import TYPE_CHECKING, Any, Final, get_args
 import warnings
 
 from crewai_core.printer import ColoredText, Printer
@@ -99,6 +100,28 @@ _ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
 )
 
 
+@contextlib.contextmanager
+def _sys_path_without_working_directory() -> Iterator[None]:
+    """Temporarily drop the working directory from ``sys.path``.
+
+    Repository tool modules must resolve against the installed packages. A
+    ``crewai_tools`` tree planted in the working directory would otherwise
+    shadow the install: ``find_spec`` imports the planted parent package
+    before any origin is verified, and the origin check then passes against
+    the planted tree itself. Removing the working directory while resolving
+    and importing pins both steps to the installed package.
+    """
+    working_directory = os.path.realpath(os.getcwd())
+    original = list(sys.path)
+    sys.path[:] = [
+        entry for entry in sys.path if os.path.realpath(entry) != working_directory
+    ]
+    try:
+        yield
+    finally:
+        sys.path[:] = original
+
+
 def _is_allowlisted_tool_module(module_name: str) -> bool:
     """Check whether a repository tool record's module may be imported.
 
@@ -109,14 +132,23 @@ def _is_allowlisted_tool_module(module_name: str) -> bool:
     resolve inside the installed ``crewai_tools`` package directory, so the
     check remains a pinned-package membership test rather than a loose prefix
     match that would bless any dotted name starting with the package name.
+
+    Every ``crewai_tools`` name, including the bare package, is resolved with
+    the working directory off ``sys.path`` and verified against the installed
+    package location, so a planted tree can neither be imported by
+    ``find_spec`` nor satisfy the origin check against itself. Names under
+    the ``crewai`` package itself are exact members that resolve inside the
+    already-imported crewai package, so the working directory cannot shadow
+    them and exact membership is the whole check for those.
     """
-    if module_name in _ALLOWED_TOOL_MODULES:
+    if module_name in _ALLOWED_TOOL_MODULES and module_name.startswith("crewai."):
         return True
     if module_name != "crewai_tools" and not module_name.startswith("crewai_tools."):
         return False
     try:
-        spec = importlib.util.find_spec(module_name)
-        package_spec = importlib.util.find_spec("crewai_tools")
+        with _sys_path_without_working_directory():
+            spec = importlib.util.find_spec(module_name)
+            package_spec = importlib.util.find_spec("crewai_tools")
     except Exception:
         # Fail closed: any resolution failure means "not allowlisted".
         # find_spec imports the parent package, which can raise beyond
@@ -1455,7 +1487,11 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                                 f"Tool module {tool['module']!r} is not in the allowlist. "
                                 f"Allowed modules: {', '.join(sorted(_ALLOWED_TOOL_MODULES))}"
                             )
-                        module = importlib.import_module(tool["module"])
+                        # Import with the working directory off sys.path so
+                        # the module loaded is the one the allowlist just
+                        # verified, not a planted tree shadowing the install.
+                        with _sys_path_without_working_directory():
+                            module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
                         if not (
                             inspect.isclass(tool_class)

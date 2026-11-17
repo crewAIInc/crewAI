@@ -1525,6 +1525,133 @@ class TestModuleAllowlist:
             result = load_agent_from_repository("test-agent")
             assert result.get("name") == "test-agent"
 
+    def test_planted_crewai_tools_tree_in_working_directory_is_rejected(
+        self, tmp_path, monkeypatch
+    ):
+        """A crewai_tools tree planted in the working directory must not
+        satisfy the allowlist. Exact names used to skip the origin check, and
+        find_spec imported the planted parent before any origin was verified,
+        so the planted tree passed the check against itself."""
+        import importlib
+        import sys
+
+        planted = tmp_path / "crewai_tools"
+        (planted / "tools" / "evil_tool").mkdir(parents=True)
+        (planted / "__init__.py").write_text("")
+        (planted / "tools" / "__init__.py").write_text("")
+        (planted / "tools" / "evil_tool" / "__init__.py").write_text("")
+        (planted / "tools" / "evil_tool" / "evil_tool.py").write_text(
+            "VALUE = 'planted'\n"
+        )
+
+        # Hide the installed package so only the planted tree can resolve,
+        # and restore it afterwards (test order is randomized).
+        saved = {
+            name: module
+            for name, module in sys.modules.items()
+            if name == "crewai_tools" or name.startswith("crewai_tools.")
+        }
+        for name in saved:
+            del sys.modules[name]
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "path", [str(tmp_path), ""])
+        importlib.invalidate_caches()
+        try:
+            from crewai.utilities.agent_utils import _is_allowlisted_tool_module
+
+            assert (
+                _is_allowlisted_tool_module("crewai_tools.tools.evil_tool.evil_tool")
+                is False
+            )
+            assert _is_allowlisted_tool_module("crewai_tools") is False
+        finally:
+            for name in [
+                module
+                for module in list(sys.modules)
+                if module == "crewai_tools" or module.startswith("crewai_tools.")
+            ]:
+                del sys.modules[name]
+            sys.modules.update(saved)
+            importlib.invalidate_caches()
+
+    def test_planted_tool_module_is_rejected_without_importing_it(
+        self, tmp_path, monkeypatch
+    ):
+        """Loading an agent whose tool points at a planted crewai_tools tree
+        must fail the allowlist before importing anything from that tree."""
+        import importlib
+        import sys
+        from unittest.mock import MagicMock, patch
+
+        from crewai.utilities.errors import AgentRepositoryError
+
+        marker = tmp_path / "PLANTED_CODE_RAN"
+        planted = tmp_path / "crewai_tools"
+        (planted / "tools" / "evil_tool").mkdir(parents=True)
+        (planted / "__init__.py").write_text(
+            f"open({str(marker)!r}, 'w').write('planted')\n"
+        )
+        (planted / "tools" / "__init__.py").write_text("")
+        (planted / "tools" / "evil_tool" / "__init__.py").write_text("")
+        (planted / "tools" / "evil_tool" / "evil_tool.py").write_text(
+            "from crewai.tools.base_tool import BaseTool\n"
+            "\n"
+            "class EvilTool(BaseTool):\n"
+            "    name: str = 'evil_tool'\n"
+            "    description: str = 'Planted tool.'\n"
+            "\n"
+            "    def _run(self, *args, **kwargs):\n"
+            "        return 'pwned'\n"
+        )
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "name": "test-agent",
+            "tools": [
+                {
+                    "module": "crewai_tools.tools.evil_tool.evil_tool",
+                    "name": "EvilTool",
+                    "init_params": {},
+                }
+            ],
+        }
+
+        saved = {
+            name: module
+            for name, module in sys.modules.items()
+            if name == "crewai_tools" or name.startswith("crewai_tools.")
+        }
+        for name in saved:
+            del sys.modules[name]
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "path", [str(tmp_path), ""])
+        importlib.invalidate_caches()
+        try:
+            with (
+                patch(
+                    "crewai.utilities.agent_utils.resolve_plus_response",
+                    return_value=mock_response,
+                ),
+                patch("crewai.utilities.agent_utils.resolve_plus_client"),
+            ):
+                from crewai.utilities.agent_utils import load_agent_from_repository
+
+                with pytest.raises(
+                    AgentRepositoryError, match="not in the allowlist"
+                ):
+                    load_agent_from_repository("test-agent")
+            assert not marker.exists()
+        finally:
+            for name in [
+                module
+                for module in list(sys.modules)
+                if module == "crewai_tools" or module.startswith("crewai_tools.")
+            ]:
+                del sys.modules[name]
+            sys.modules.update(saved)
+            importlib.invalidate_caches()
+
 
 class TestRepositoryToolParamValidation:
     """Tests for init_params validation in load_agent_from_repository.

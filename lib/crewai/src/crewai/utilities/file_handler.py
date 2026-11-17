@@ -428,8 +428,11 @@ class PickleHandler:
                         f"{oct(dir_mode)}; expected 0700"
                     )
 
-        # Validate key file only if it exists (it may not during first creation).
-        if os.path.exists(key_path):
+        # Validate key file if the name is taken at all (it may not exist yet
+        # during first creation). lexists, not exists: a dangling symlink
+        # reports False for exists(), so an exists() gate would skip the
+        # lstat rejection below and later code would follow the link.
+        if os.path.lexists(key_path):
             file_stat = os.lstat(key_path)
             if stat.S_ISLNK(file_stat.st_mode):
                 raise PermissionError("HMAC key file must not be a symlink")
