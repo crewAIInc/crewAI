@@ -1332,6 +1332,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
+        instance._method_outputs = list(pending_context.method_outputs or [])
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1643,6 +1644,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
+                e.context.method_outputs = list(self._method_outputs)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -2521,6 +2523,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
+                    e.context.method_outputs = list(self._method_outputs)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
