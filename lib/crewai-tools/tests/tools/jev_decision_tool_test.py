@@ -85,6 +85,7 @@ def test_run_returns_choice_probabilities_and_confidence(
     }
     client.system_one.assert_called_once()
     assert client.system_one.call_args.kwargs["state"] == "I was charged twice."
+    assert "model" not in client.system_one.call_args.kwargs
     question = client.system_one.call_args.kwargs["questions"]["decision"]
     assert isinstance(question, FakeChoice)
     assert question.instructions == "Which team should handle this?"
@@ -216,7 +217,7 @@ async def test_arun_matches_sync_and_awaits_request(
     async_client.system_one.assert_awaited_once()
     request = async_client.system_one.call_args.kwargs
     assert request["state"] == decision_input["state"]
-    assert request["model"] == "jev-test"
+    assert "model" not in request
     choice = request["questions"]["decision"]
     assert isinstance(choice, FakeChoice)
     assert choice.instructions == decision_input["question"]

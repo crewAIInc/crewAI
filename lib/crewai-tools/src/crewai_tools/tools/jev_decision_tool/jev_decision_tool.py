@@ -47,8 +47,9 @@ class JevDecisionTool(BaseTool):
     async execution. Pass ``async_client=`` to reuse a caller-owned SDK client;
     ``client=`` is used only for synchronous calls. Injected clients are never
     closed by this tool. Otherwise, each async call creates and closes its own
-    client, including on failure or cancellation. SDK configuration and retries
-    remain controlled by the SDK or the injected client.
+    client, including on failure or cancellation. The ``model`` argument applies
+    only to clients created by the tool; configure injected clients directly.
+    SDK configuration and retries remain controlled by the SDK or injected client.
     """
 
     name: str = "Jev Decision Tool"
@@ -204,7 +205,6 @@ class JevDecisionTool(BaseTool):
                 response = client.system_one(
                     state=validated.state,
                     questions={"decision": choice_question},
-                    model=self.model,
                 )
             finally:
                 if created_client and hasattr(client, "close"):
@@ -232,7 +232,6 @@ class JevDecisionTool(BaseTool):
                 response = await client.system_one(
                     state=validated.state,
                     questions={"decision": choice_question},
-                    model=self.model,
                 )
             finally:
                 if self._async_client is None:
