@@ -453,7 +453,7 @@ def test_inject_date_custom_format():
         process=Process.sequential,
     )
     result = crew.kickoff()
-    assert "May 21, 2025" in result.raw
+    assert "November 17, 2026" in result.raw
 
 
 @pytest.mark.vcr()
