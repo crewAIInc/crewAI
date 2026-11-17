@@ -434,21 +434,38 @@ class MCPClient:
         return tools
 
     async def _list_tools_impl(self) -> list[dict[str, Any]]:
-        """Internal implementation of list_tools."""
-        tools_result = await asyncio.wait_for(
-            self.session.list_tools(),
-            timeout=self.discovery_timeout,
-        )
+        """Internal implementation of list_tools with pagination support."""
+        from mcp.types import PaginatedRequestParams
 
-        return [
-            {
-                "name": sanitize_tool_name(tool.name),
-                "original_name": tool.name,
-                "description": getattr(tool, "description", ""),
-                "inputSchema": getattr(tool, "inputSchema", {}),
-            }
-            for tool in tools_result.tools
-        ]
+        tools: list[dict[str, Any]] = []
+        cursor = None
+        seen_cursors: set[str] = set()
+
+        while True:
+            params = PaginatedRequestParams(cursor=cursor) if cursor else None
+            tools_result = await asyncio.wait_for(
+                self.session.list_tools(params=params),
+                timeout=self.discovery_timeout,
+            )
+
+            for tool in tools_result.tools:
+                tools.append(
+                    {
+                        "name": sanitize_tool_name(tool.name),
+                        "original_name": tool.name,
+                        "description": getattr(tool, "description", ""),
+                        "inputSchema": getattr(tool, "inputSchema", {}),
+                    }
+                )
+
+            cursor = getattr(tools_result, "next_cursor", None) or getattr(tools_result, "nextCursor", None)
+            if not cursor:
+                break
+            if cursor in seen_cursors:
+                raise RuntimeError(f"Repeated pagination cursor in list_tools: {cursor}")
+            seen_cursors.add(cursor)
+
+        return tools
 
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
@@ -641,20 +658,37 @@ class MCPClient:
         )
 
     async def _list_prompts_impl(self) -> list[dict[str, Any]]:
-        """Internal implementation of list_prompts."""
-        prompts_result = await asyncio.wait_for(
-            self.session.list_prompts(),
-            timeout=self.discovery_timeout,
-        )
+        """Internal implementation of list_prompts with pagination support."""
+        from mcp.types import PaginatedRequestParams
 
-        return [
-            {
-                "name": prompt.name,
-                "description": getattr(prompt, "description", ""),
-                "arguments": getattr(prompt, "arguments", []),
-            }
-            for prompt in prompts_result.prompts
-        ]
+        prompts: list[dict[str, Any]] = []
+        cursor = None
+        seen_cursors: set[str] = set()
+
+        while True:
+            params = PaginatedRequestParams(cursor=cursor) if cursor else None
+            prompts_result = await asyncio.wait_for(
+                self.session.list_prompts(params=params),
+                timeout=self.discovery_timeout,
+            )
+
+            for prompt in prompts_result.prompts:
+                prompts.append(
+                    {
+                        "name": prompt.name,
+                        "description": getattr(prompt, "description", ""),
+                        "arguments": getattr(prompt, "arguments", []),
+                    }
+                )
+
+            cursor = getattr(prompts_result, "next_cursor", None) or getattr(prompts_result, "nextCursor", None)
+            if not cursor:
+                break
+            if cursor in seen_cursors:
+                raise RuntimeError(f"Repeated pagination cursor in list_prompts: {cursor}")
+            seen_cursors.add(cursor)
+
+        return prompts
 
     async def get_prompt(
         self, prompt_name: str, arguments: dict[str, Any] | None = None
