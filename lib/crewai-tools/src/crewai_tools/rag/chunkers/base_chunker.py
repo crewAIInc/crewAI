@@ -110,18 +110,15 @@ class RecursiveCharacterTextSplitter:
         docs: list[str] = []
         current_doc: list[str] = []
         total = 0
+        # With `keep_separator` the split step already attached the separator to each piece,
+        # so joining with it again would duplicate every newline/paragraph break.
+        join_with = "" if separator == "" or self._keep_separator else separator
 
         for split in splits:
             split_len = len(split)
 
             if total + split_len > self._chunk_size and current_doc:
-                if separator == "":
-                    doc = "".join(current_doc)
-                else:
-                    if self._keep_separator and separator == " ":
-                        doc = "".join(current_doc)
-                    else:
-                        doc = separator.join(current_doc)
+                doc = join_with.join(current_doc)
 
                 if doc:
                     docs.append(doc)
@@ -130,22 +127,16 @@ class RecursiveCharacterTextSplitter:
                 while total > self._chunk_overlap and len(current_doc) > 1:
                     removed = current_doc.pop(0)
                     total -= len(removed)
-                    if separator != "":
-                        total -= len(separator)
+                    if join_with:
+                        total -= len(join_with)
 
             current_doc.append(split)
             total += split_len
-            if separator != "" and len(current_doc) > 1:
-                total += len(separator)
+            if join_with and len(current_doc) > 1:
+                total += len(join_with)
 
         if current_doc:
-            if separator == "":
-                doc = "".join(current_doc)
-            else:
-                if self._keep_separator and separator == " ":
-                    doc = "".join(current_doc)
-                else:
-                    doc = separator.join(current_doc)
+            doc = join_with.join(current_doc)
 
             if doc:
                 docs.append(doc)
