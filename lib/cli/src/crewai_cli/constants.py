@@ -347,7 +347,7 @@ MODELS: dict[str, list[str]] = {
     ],
 }
 
-DEFAULT_LLM_MODEL = "gpt-4.1-mini"
+DEFAULT_LLM_MODEL = "gpt-6-luna"
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 

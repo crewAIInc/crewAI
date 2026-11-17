@@ -36,6 +36,7 @@ from openai import BadRequestError
 from crewai import Agent, Crew, Task
 from crewai.llms.providers.openai.completion import (
     _LEARNED_RESPONSES_ONLY_MODELS,
+    _LEARNED_TOOLS_WITHOUT_REASONING_MODELS,
     OpenAICompletion,
 )
 from crewai.tools import tool
@@ -130,10 +131,12 @@ def responses_only_tools_error() -> BadRequestError:
 
 @pytest.fixture(autouse=True)
 def _clear_learned_models():
-    """Keep the process-wide learned set from leaking between tests."""
+    """Keep the process-wide learned sets from leaking between tests."""
     _LEARNED_RESPONSES_ONLY_MODELS.clear()
+    _LEARNED_TOOLS_WITHOUT_REASONING_MODELS.clear()
     yield
     _LEARNED_RESPONSES_ONLY_MODELS.clear()
+    _LEARNED_TOOLS_WITHOUT_REASONING_MODELS.clear()
 
 
 class TestErrorDetection:
@@ -322,6 +325,86 @@ class TestRetryBehaviour:
 
         assert await llm._acall_completions(MESSAGES, tools=TOOLS) == "ok"
         assert seen[1]["reasoning_effort"] == "none"
+
+
+def _accepts_tools_only_without_reasoning(params: dict, **kwargs):
+    """Chat completions as GPT-6 Luna serves it: tools need reasoning_effort="none"."""
+    if params.get("tools") and params.get("reasoning_effort") != "none":
+        raise tools_effort_error("gpt-6-luna")
+    return "ok"
+
+
+class TestToolsWithoutReasoningAreRemembered:
+    """The rejected round trip is paid once per model and endpoint, not per call."""
+
+    def test_the_next_tool_call_sends_none_up_front(self, monkeypatch):
+        seen: list[dict] = []
+
+        def handle(params, **kwargs):
+            seen.append(params)
+            return _accepts_tools_only_without_reasoning(params)
+
+        for _ in range(2):
+            llm = build("gpt-6-luna")
+            monkeypatch.setattr(llm, "_handle_completion", handle)
+            assert llm._call_completions(MESSAGES, tools=TOOLS) == "ok"
+
+        assert [p.get("reasoning_effort") for p in seen] == [None, "none", "none"]
+
+    def test_a_streamed_tool_call_learns_it_too(self, monkeypatch):
+        seen: list[dict] = []
+
+        def handle(params, **kwargs):
+            seen.append(params)
+            return _accepts_tools_only_without_reasoning(params)
+
+        for _ in range(2):
+            llm = build("gpt-6-luna", stream=True)
+            monkeypatch.setattr(llm, "_handle_streaming_completion", handle)
+            assert llm._call_completions(MESSAGES, tools=TOOLS) == "ok"
+
+        assert [p.get("reasoning_effort") for p in seen] == [None, "none", "none"]
+
+    @pytest.mark.asyncio
+    async def test_the_async_path_learns_it_too(self, monkeypatch):
+        seen: list[dict] = []
+
+        async def handle(params, **kwargs):
+            seen.append(params)
+            return _accepts_tools_only_without_reasoning(params)
+
+        for _ in range(2):
+            llm = build("gpt-6-luna")
+            monkeypatch.setattr(llm, "_ahandle_completion", handle)
+            assert await llm._acall_completions(MESSAGES, tools=TOOLS) == "ok"
+
+        assert [p.get("reasoning_effort") for p in seen] == [None, "none", "none"]
+
+    def test_a_call_without_tools_keeps_its_reasoning(self, monkeypatch):
+        llm = build("gpt-6-luna")
+        monkeypatch.setattr(llm, "_handle_completion", _accepts_tools_only_without_reasoning)
+        llm._call_completions(MESSAGES, tools=TOOLS)
+
+        params = build("gpt-6-luna")._prepare_completion_params(MESSAGES)
+
+        assert "reasoning_effort" not in params
+
+    def test_a_lesson_from_one_endpoint_stays_there(self, monkeypatch):
+        llm = build("gpt-6-luna", base_url="https://gateway.example/v1")
+        monkeypatch.setattr(llm, "_handle_completion", _accepts_tools_only_without_reasoning)
+        llm._call_completions(MESSAGES, tools=TOOLS)
+
+        params = build("gpt-6-luna")._prepare_completion_params(MESSAGES, tools=TOOLS)
+
+        assert "reasoning_effort" not in params
+
+    def test_a_model_that_refuses_none_is_not_recorded(self, monkeypatch):
+        llm = build("gpt-6.1-sol")
+        monkeypatch.setattr(llm, "_handle_completion", _rejects_tools_like_gpt_6_1_sol)
+        monkeypatch.setattr(llm, "_call_responses", lambda **kwargs: "via responses")
+
+        assert llm._call_completions(MESSAGES, tools=TOOLS) == "via responses"
+        assert not _LEARNED_TOOLS_WITHOUT_REASONING_MODELS
 
 
 def _rejects_tools_like_gpt_6_1_sol(params: dict, **kwargs):
