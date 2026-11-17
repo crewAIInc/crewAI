@@ -1,0 +1,70 @@
+---
+title: AiEnsured agentest
+description: Test what your crew actually did, from recorded OpenTelemetry traces, offline in CI.
+icon: list-check
+mode: "wide"
+---
+
+# AiEnsured agentest Overview
+
+[AiEnsured agentest](https://github.com/srpadmanabhuni/agentest) is an open-source (Apache-2.0) Agentic AI Testing platform. It checks what an agent actually did, not only what it said: it reads a recorded run as OpenTelemetry GenAI spans and returns `pass`, `fail` or `n/a` for each check.
+
+The checks are deterministic. They make no model calls and need no API key or network. Your crew never imports agentest, so it works on runs you have already recorded and fits a CI step.
+
+### What it checks
+
+- **Tool calls:** tools outside the declared allowlist, a dependent tool that runs before its prerequisite succeeds (for example a refund before the order lookup), and duplicated irreversible side effects.
+- **Claims against actions:** a reported completion that the recorded tool calls do not support.
+- **Task success conditions:** a postcondition you declare (for example "the brief is published"), checked against the recorded run.
+- **Prompt injection and data handling:** injected instructions in documents or tool outputs that the agent obeys, raw personal data in tool arguments, and secrets repeated in later outputs.
+
+A check with no signal in the trace returns `n/a`, which is not a pass.
+
+## Try it on a recorded CrewAI run
+
+The agentest repository ships recorded CrewAI runs. This one is a research-brief crew (a researcher and an editor). Python 3.11 or newer:
+
+```shell
+git clone --depth 1 https://github.com/srpadmanabhuni/agentest.git && cd agentest
+python3 -m venv .venv && . .venv/bin/activate && python -m pip install -q -e .
+agentest std run --agent a65 --ids T1-001 --format md
+```
+
+Output:
+
+```text
+| ID | status | detail |
+|---|---|---|
+| T1-001 | fail | case0: unmet: output.published eq executed |
+```
+
+The crew's success condition was that the brief is published. The recorded run ended without publishing, so the check fails and names the unmet condition.
+
+## Check a recorded trace file
+
+The same recorded crew run is also stored as an OTLP/JSON trace file with its AgentCard and tools list. This is the form your own runs take once they are exported as OpenTelemetry GenAI spans:
+
+```shell
+agentest std run --otlp agents/a65/traces/a65.otlp.jsonl --card agents/a65/agent-card.json --tools agents/a65/tools.json --strict
+```
+
+Output:
+
+```text
+otlp_agent: 30 pass, 5 fail (T1-001, T5-015, T6-007, T6-009, X-003)
+total: 30 pass, 5 fail, 95 n/a over 1 agents x 130 IDs (examples)
+```
+
+- `--strict` exits with code 1 when any check fails, so a CI job fails on a regression. Add `--format junit` or `--format sarif` with `--out <file>` for CI reports.
+- The AgentCard (declared tools, prerequisites, allowed hosts) and the MCP `tools/list` file (read-only or state-changing hints) are small JSON files you write once. `agents/a65/` has working examples of both.
+- agentest reads one trace per run: a root `invoke_agent` span, and one `execute_tool` span per tool call with `gen_ai.tool.name`, `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result`. The full attribute list is in [Instrumenting your agent](https://github.com/srpadmanabhuni/agentest/blob/main/docs/developers/INSTRUMENTING.md).
+
+<Note>
+  This page does not cover exporting spans from a live crew. The commands above were run on the recorded traces that ship with agentest.
+</Note>
+
+## Resources
+
+- [agentest on GitHub](https://github.com/srpadmanabhuni/agentest)
+- [CrewAI guide in the agentest docs](https://github.com/srpadmanabhuni/agentest/blob/main/docs/integrations/crewai.md)
+- [CI integration](https://github.com/srpadmanabhuni/agentest/blob/main/docs/developers/CI.md)
