@@ -89,7 +89,7 @@ jobs:
                   repository(owner: $owner, name: $repo) {
                     issue(number: $issueNumber) {
                       closedByPullRequestsReferences(first: 100, after: $cursor) {
-                        nodes { number }
+                        nodes { number repository { nameWithOwner } }
                         pageInfo { hasNextPage endCursor }
                       }
                     }
@@ -99,9 +99,11 @@ jobs:
               );
               const references =
                 result.repository.issue.closedByPullRequestsReferences;
-              references.nodes.forEach((pull) =>
-                pullRequestNumbers.add(pull.number),
-              );
+              // Ignore PRs from other repositories: their numbers could
+              // collide with unrelated PRs in this repository.
+              references.nodes
+                .filter((pull) => pull.repository.nameWithOwner === `${owner}/${repo}`)
+                .forEach((pull) => pullRequestNumbers.add(pull.number));
               cursor = references.pageInfo.hasNextPage
                 ? references.pageInfo.endCursor
                 : null;
