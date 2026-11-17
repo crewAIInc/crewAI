@@ -76,12 +76,12 @@ from crewai.utilities.types import LLMMessage
 try:
     from pydantic import ImportString as _ImportString
 except ImportError:  # pragma: no cover - crewai requires pydantic v2
-    _ImportString = None  # type: ignore[assignment]
+    _ImportString = None  # type: ignore[misc]
 
 try:
     from pydantic import BeforeValidator as _BeforeValidator
 except ImportError:  # pragma: no cover - crewai requires pydantic v2
-    _BeforeValidator = None  # type: ignore[assignment]
+    _BeforeValidator = None  # type: ignore[assignment, misc]
 
 try:
     from crewai.types.callback import string_to_callable as _string_to_callable
@@ -111,7 +111,7 @@ def _is_within_directory(path: str, directory: str) -> bool:
     return real_path == real_directory or real_path.startswith(real_directory + os.sep)
 
 
-def _crewai_tools_distribution() -> Any | None:
+def _crewai_tools_distribution() -> Distribution | None:
     """Find the installed ``crewai-tools`` distribution without trusting
     ``sys.path``.
 
@@ -176,14 +176,15 @@ def _pinned_crewai_tools_dir() -> str | None:
     dist = _crewai_tools_distribution()
     if dist is not None:
         try:
-            init_path = dist.locate_file("crewai_tools/__init__.py")
+            # locate_file returns SimplePath, not a concrete path type.
+            init_path = str(dist.locate_file("crewai_tools/__init__.py"))
         except Exception:
             init_path = None
         if init_path is not None and os.path.isfile(init_path):
             return os.path.dirname(os.path.realpath(init_path))
         # Editable install: direct_url.json points at the source tree.
         try:
-            direct_url = dist.locate_file("direct_url.json")
+            direct_url = str(dist.locate_file("direct_url.json"))
         except Exception:
             direct_url = None
         if direct_url is not None and os.path.isfile(direct_url):
@@ -202,9 +203,9 @@ def _pinned_crewai_tools_dir() -> str | None:
                         return os.path.dirname(os.path.realpath(candidate))
     working_directory = os.path.realpath(os.getcwd())
     module = sys.modules.get("crewai_tools")
-    origin = getattr(getattr(module, "__spec__", None), "origin", None) or getattr(
-        module, "__file__", None
-    )
+    origin: str | None = getattr(
+        getattr(module, "__spec__", None), "origin", None
+    ) or getattr(module, "__file__", None)
     if origin and not _is_within_directory(origin, working_directory):
         return os.path.dirname(os.path.realpath(origin))
     for entry in sys.path:
@@ -231,6 +232,7 @@ def _crewai_tools_module_origin(module_name: str, pinned_dir: str) -> str | None
     if not all(part.isidentifier() for part in parts):
         return None
     relative = os.path.join(*parts[1:]) if len(parts) > 1 else ""
+    candidates: tuple[str, ...]
     if relative:
         candidates = (
             os.path.join(pinned_dir, relative + ".py"),
@@ -359,7 +361,10 @@ def _is_import_string(tp: Any) -> bool:
     are matched too; anything unrecognized fails closed by name.
     """
     if _ImportString is not None and (
-        tp is _ImportString or isinstance(tp, _ImportString)
+        # No isinstance: ImportString is a parameterized generic, which
+        # mypy forbids in class/instance checks. An MRO membership test
+        # is equivalent here (ImportString defines no __instancecheck__).
+        tp is _ImportString or _ImportString in type(tp).__mro__
     ):
         return True
     return (
@@ -568,6 +573,8 @@ def _validate_repository_tool_params(
 
 
 if TYPE_CHECKING:
+    from importlib.metadata import Distribution
+
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
