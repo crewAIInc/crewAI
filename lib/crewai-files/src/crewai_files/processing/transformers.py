@@ -255,7 +255,15 @@ def chunk_text(
 
     Yields:
         TextFile objects, one per chunk.
+
+    Raises:
+        ValueError: If ``max_chars`` is not positive or ``overlap_chars`` is negative.
     """
+    if max_chars <= 0:
+        raise ValueError("max_chars must be greater than 0.")
+    if overlap_chars < 0:
+        raise ValueError("overlap_chars must be non-negative.")
+
     content = file.read()
     text = content.decode(errors="replace")
     total_chars = len(text)
