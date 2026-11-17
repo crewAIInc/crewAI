@@ -30,26 +30,56 @@ jobs:
             const message = [
               marker,
               "",
-              "Thanks for the contribution! This request is a better fit for the [CrewAI Community Tools repository](https://github.com/crewAIInc/crewai-community-tools).",
+              "Thanks for reaching out! This request is a better fit for the [CrewAI Community Tools repository](https://github.com/crewAIInc/crewai-community-tools).",
               "",
-              "Please open an issue there and submit the corresponding pull request there as well.",
+              "Please open an issue there and submit any corresponding pull request there as well.",
             ].join("\n");
+
+            // Post the routing message once per issue/PR, identified by the marker.
+            const commentOnce = async (issue_number) => {
+              const comments = await github.paginate(
+                github.rest.issues.listComments,
+                { owner, repo, issue_number, per_page: 100 },
+              );
+              if (
+                comments.some(
+                  (comment) =>
+                    comment.user?.login === "github-actions[bot]" &&
+                    comment.body?.includes(marker),
+                )
+              ) {
+                return;
+              }
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: message,
+              });
+            };
+
+            // PRs to route: those GitHub links to this issue (closing keyword
+            // or manual link), plus same-repo PRs that mention it and were
+            // opened by the issue's author. Drive-by mentions from other
+            // users are intentionally ignored.
+            const pullRequestNumbers = new Set();
 
             const timeline = await github.paginate(
               github.rest.issues.listEventsForTimeline,
               { owner, repo, issue_number: issue.number, per_page: 100 },
             );
-            const pullRequestNumbers = new Set(
-              timeline
-                .filter(
-                  (event) =>
-                    event.event === "cross-referenced" &&
-                    event.source?.issue?.pull_request &&
-                    event.source.issue.repository_url ===
-                      `https://api.github.com/repos/${owner}/${repo}`,
-                )
-                .map((event) => event.source.issue.number),
-            );
+            timeline
+              .filter(
+                (event) =>
+                  event.event === "cross-referenced" &&
+                  event.source?.issue?.pull_request &&
+                  event.source.issue.repository_url ===
+                    `https://api.github.com/repos/${owner}/${repo}` &&
+                  event.source.issue.user?.login === issue.user.login,
+              )
+              .forEach((event) =>
+                pullRequestNumbers.add(event.source.issue.number),
+              );
 
             let cursor = null;
             do {
@@ -76,38 +106,22 @@ jobs:
                 : null;
             } while (cursor);
 
+            // Explain first, so a failure later never leaves a silent close.
+            await commentOnce(issue.number);
+
             for (const pull_number of pullRequestNumbers) {
               const { data: pull } = await github.rest.pulls.get({
                 owner,
                 repo,
                 pull_number,
               });
-              if (pull.state === "open") {
-                await github.rest.pulls.update({
-                  owner,
-                  repo,
-                  pull_number,
-                  state: "closed",
-                });
-              }
-            }
-
-            const comments = await github.paginate(
-              github.rest.issues.listComments,
-              { owner, repo, issue_number: issue.number, per_page: 100 },
-            );
-            if (
-              !comments.some(
-                (comment) =>
-                  comment.user?.login === "github-actions[bot]" &&
-                  comment.body?.includes(marker),
-              )
-            ) {
-              await github.rest.issues.createComment({
+              if (pull.state !== "open") continue;
+              await commentOnce(pull_number);
+              await github.rest.pulls.update({
                 owner,
                 repo,
-                issue_number: issue.number,
-                body: message,
+                pull_number,
+                state: "closed",
               });
             }
 
@@ -117,5 +131,6 @@ jobs:
                 repo,
                 issue_number: issue.number,
                 state: "closed",
+                state_reason: "not_planned",
               });
             }
