@@ -1103,7 +1103,8 @@ class Agent(BaseAgent):
             RuntimeError: If execution fails for other reasons.
         """
         ctx = contextvars.copy_context()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor = concurrent.futures.ThreadPoolExecutor()
+        try:
             future = executor.submit(
                 ctx.run,
                 self._execute_without_timeout,
@@ -1126,6 +1127,11 @@ class Agent(BaseAgent):
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
+        finally:
+            # A context manager would call shutdown(wait=True), which blocks
+            # until a timed-out worker returns and makes max_execution_time
+            # report the timeout only after the work has already finished.
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
@@ -1443,22 +1449,26 @@ class Agent(BaseAgent):
 
         Returns:
             The resolved tools, or an empty list when none resolve or resolution
-            fails. A non-empty ``apps`` that resolves to no tools emits an
-            ``UnresolvedPlatformAppsWarning`` naming the agent, its apps, and
-            the apps CrewAI AMP said it could not resolve.
+            fails for another reason, such as a missing token. A non-empty
+            ``apps`` that resolves to no tools emits an
+            ``UnresolvedPlatformAppsWarning`` naming the agent and its apps.
+
+        Raises:
+            PlatformAppsUnavailableError: CrewAI AMP named apps it cannot
+                resolve, because they are not connected or it does not know
+                them. Running without them would let the agent invent what
+                they would have returned.
         """
         platform_tools: list[BaseTool] = []
         cause = ""
-        missing_apps: list[str] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
             platform_tools = CrewaiPlatformTools(apps=apps)
-        except PlatformAppsUnavailableError as e:
-            self._logger.log("error", f"Error getting platform tools: {e!s}")
-            missing_apps = e.missing_apps
+        except PlatformAppsUnavailableError:
+            raise
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
             cause = f" Cause: {e!s}"
@@ -1468,7 +1478,11 @@ class Agent(BaseAgent):
             # entry only shows up later as a task the agent couldn't do.
             warnings.warn(
                 UnresolvedPlatformAppsWarning(
-                    self.role, [str(app) for app in apps], missing_apps, cause
+                    # A role YAML folds (`role: >`) ends in a newline.
+                    self.role.strip(),
+                    [str(app) for app in apps],
+                    [],
+                    cause,
                 ),
                 stacklevel=2,
             )
