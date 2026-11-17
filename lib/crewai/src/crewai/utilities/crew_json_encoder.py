@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
+from pydantic_core import PydanticSerializationError, to_jsonable_python
 
 
 class CrewJSONEncoder(json.JSONEncoder):
@@ -34,7 +35,10 @@ class CrewJSONEncoder(json.JSONEncoder):
         if isinstance(obj, bytes):
             return base64.b64encode(obj).decode("utf-8")
 
-        return super().default(obj)
+        try:
+            return to_jsonable_python(obj)
+        except PydanticSerializationError:
+            return super().default(obj)
 
     @staticmethod
     def _handle_pydantic_model(obj: BaseModel) -> str | Any:

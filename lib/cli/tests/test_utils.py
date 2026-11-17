@@ -215,3 +215,60 @@ def test_write_env_file_never_writes_keys_through_a_symlink(tmp_path):
         utils.write_env_file(project, {"OPENAI_API_KEY": "sk-test"})
 
     assert target.read_text() == "untouched\n"
+
+
+@pytest.fixture
+def ascii_default_encoding(monkeypatch):
+    """Make text files default to ASCII, as on a Windows or C-locale machine.
+
+    The platform default decides how ``open()`` and ``os.fdopen()`` treat a text
+    file when no encoding is given. Python reads it from the OS, so the tests
+    stand in for it by filling it in when a caller leaves it out.
+    """
+    real_open = open
+    real_fdopen = os.fdopen
+
+    def default_ascii(real):
+        def wrapper(*args, **kwargs):
+            mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
+            if "b" not in mode:
+                kwargs.setdefault("encoding", "ascii")
+            return real(*args, **kwargs)
+
+        return wrapper
+
+    monkeypatch.setattr("builtins.open", default_ascii(real_open))
+    monkeypatch.setattr(os, "fdopen", default_ascii(real_fdopen))
+
+
+def test_load_env_vars_reads_a_utf8_env_file(tmp_path, ascii_default_encoding):
+    (tmp_path / ".env").write_bytes(
+        "# 项目配置\nOPENAI_API_KEY=sk-test\nNOTE=café\n".encode()
+    )
+
+    assert utils.load_env_vars(tmp_path) == {
+        "OPENAI_API_KEY": "sk-test",
+        "NOTE": "café",
+    }
+
+
+def test_fetch_and_json_env_file_reads_a_utf8_env_file(tmp_path, ascii_default_encoding):
+    env_file = tmp_path / ".env"
+    env_file.write_bytes("# 项目配置\nOPENAI_API_KEY=sk-test\nNOTE=café\n".encode())
+
+    assert utils.fetch_and_json_env_file(str(env_file)) == {
+        "OPENAI_API_KEY": "sk-test",
+        "NOTE": "café",
+    }
+
+
+def test_write_env_file_writes_utf8(tmp_path, ascii_default_encoding):
+    utils.write_env_file(tmp_path, {"note": "café"})
+
+    assert (tmp_path / ".env").read_bytes() == "NOTE=café\n".encode()
+
+
+def test_env_file_round_trips_non_ascii_values(tmp_path, ascii_default_encoding):
+    utils.write_env_file(tmp_path, {"note": "项目"})
+
+    assert utils.load_env_vars(tmp_path) == {"NOTE": "项目"}
