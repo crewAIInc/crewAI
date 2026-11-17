@@ -367,6 +367,16 @@ class TestLoadAgent:
         agent = load_agent(agent_file)
         assert agent.role == "Writer"
 
+    def test_load_agent_from_jsonc_with_a_utf8_bom(self, tmp_path: Path):
+        agent_file = tmp_path / "agent.jsonc"
+        agent_file.write_bytes(
+            b'\xef\xbb\xbf{"role": "Writer", "goal": "Write articles", '
+            b'"backstory": "Expert writer."}'
+        )
+
+        agent = load_agent(agent_file)
+        assert agent.role == "Writer"
+
     def test_load_agent_missing_required_fields(self, tmp_path: Path):
         agent_def = {"role": "Incomplete"}
         agent_file = tmp_path / "agent.json"
