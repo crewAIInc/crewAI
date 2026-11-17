@@ -3,6 +3,7 @@
 import ast
 import json
 import os
+import threading
 import time
 from functools import partial
 from hashlib import md5
@@ -1724,15 +1725,18 @@ def test_task_with_max_execution_time():
 
 
 @pytest.mark.vcr()
-def test_task_with_max_execution_time_exceeded():
+def test_task_with_max_execution_time_exceeded(monkeypatch):
     from crewai.tools import tool
 
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
+    release = threading.Event()
+    workers: list[threading.Thread] = []
 
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
         "My tool"
-        time.sleep(10)
+        workers.append(threading.current_thread())
+        release.wait(10)
         return "okay"
 
     researcher = Agent(
@@ -1752,9 +1756,20 @@ def test_task_with_max_execution_time_exceeded():
         expected_output="Bullet point list of 5 interesting ideas.",
         agent=researcher,
     )
+    # The cassette predates the token-count preflight; unrecorded, its retries
+    # outlast the 1s limit, so the timeout would fire before the tool runs.
+    monkeypatch.setattr(type(researcher.llm), "get_input_tokens_count", lambda *_a, **_k: 0)
 
     with pytest.raises(TimeoutError):
         task.execute_sync(agent=researcher)
+
+    # The timeout no longer waits for the worker (#9324), so let it finish here:
+    # left running, it outlives this test and spends the next test's cassette.
+    release.set()
+    assert workers, "the timeout fired before the slow tool ran"
+    for worker in workers:
+        worker.join(timeout=10)
+    assert not any(worker.is_alive() for worker in workers)
 
 
 @pytest.mark.vcr()
