@@ -30,6 +30,7 @@ from urllib3.util.connection import (
 from crewai_tools.security.safe_path import (
     _BYPASS_HINT,
     _is_escape_hatch_enabled,
+    allows_private_host,
     is_blocked_ip,
 )
 
@@ -56,7 +57,7 @@ def _blocked_ip_error(ip_str: str) -> ValueError:
     )
 
 
-def _assert_safe_peer(sock: socket.socket) -> None:
+def _assert_safe_peer(sock: socket.socket, hostname: str = "") -> None:
     """Raise if a connected socket's peer is a private/reserved address."""
     if _is_escape_hatch_enabled():
         return
@@ -68,7 +69,7 @@ def _assert_safe_peer(sock: socket.socket) -> None:
             f"request to prevent SSRF. {_BYPASS_HINT}"
         ) from exc
     ip_str = str(peer[0])
-    if is_blocked_ip(ip_str):
+    if is_blocked_ip(ip_str) and not allows_private_host(hostname):
         raise _blocked_ip_error(ip_str)
 
 
@@ -106,7 +107,7 @@ def create_validated_connection(
 
     for _family, _socktype, _proto, _canonname, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
-        if is_blocked_ip(ip_str):
+        if is_blocked_ip(ip_str) and not allows_private_host(host):
             raise _blocked_ip_error(ip_str)
 
     timeout = _connect_timeout(timeout)
@@ -122,7 +123,7 @@ def create_validated_connection(
             sock.connect(sockaddr)
             peer_validated = False
             try:
-                _assert_safe_peer(sock)
+                _assert_safe_peer(sock, host)
                 peer_validated = True
             finally:
                 if not peer_validated:
