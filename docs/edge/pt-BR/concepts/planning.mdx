@@ -368,7 +368,7 @@ Um relatório completo com os principais tópicos, cada um com uma seção cheia
 
 ### LLM de planejamento
 
-O planejamento da crew usa `gpt-5.4-mini` por padrão. Defina `planning_llm` com o nome de um modelo ou uma instância de `LLM` para usar outro modelo, por exemplo `Crew(..., planning=True, planning_llm="gpt-5")`.
+O planejamento da crew usa `gpt-6-luna` por padrão. Defina `planning_llm` com o nome de um modelo ou uma instância de `LLM` para usar outro modelo, por exemplo `Crew(..., planning=True, planning_llm="gpt-5")`.
 
 <Warning>
 Com o LLM de planejamento padrão, o planejamento da crew precisa de uma chave de API da OpenAI válida, mesmo que seus agentes usem outros provedores. Se você não tiver uma chave de API da OpenAI configurada, defina `planning_llm` com um modelo ao qual você tenha acesso.
