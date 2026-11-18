@@ -61,6 +61,9 @@ crew = Crew(
 | **콜백** _(선택 사항)_            | `callback`            | `Optional[Any]`                  | 태스크 완료 후 실행할 함수/객체입니다.                                                                         |
 | **가드레일** _(선택 사항)_        | `guardrail`           | `Optional[Callable]`                | 다음 태스크로 진행하기 전에 태스크 출력을 검증하는 함수입니다.                                               |
 | **가드레일 최대 재시도** _(선택 사항)_ | `guardrail_max_retries` | `Optional[int]`          | 가드레일 검증 실패 시 최대 재시도 횟수입니다. 기본값은 3입니다.                                                |
+| **사전 태스크 콜백** _(선택 사항)_ | `pre_task_callback`     | `Optional[Callable]`             | 태스크 실행 전 검증 및 증명을 위해 실행되는 가드 훅입니다. 기본값은 None입니다.                                |
+| **최대 실행 예산 USD** _(선택 사항)_ | `max_execution_budget_usd` | `Optional[float]`        | 태스크 실행의 최대 달러 예산입니다. 도달 시 SpendLimitExceeded를 발생시킵니다.                                   |
+| **최대 태스크 반복 횟수** _(선택 사항)_ | `max_task_iterations`   | `Optional[int]`          | 태스크 실행에 허용되는 최대 반복 횟수입니다. 도달 시 IterationLimitExceeded를 발생시킵니다.                      |
 
 ## 작업 생성하기
 

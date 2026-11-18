@@ -126,6 +126,11 @@ from crewai.utilities.constants import (
 )
 from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
+from crewai.utilities.exceptions.task_security_exceptions import (
+    IterationLimitExceeded,
+    PreTaskAttestationError,
+    SpendLimitExceeded,
+)
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -162,6 +167,9 @@ if TYPE_CHECKING:
 _passthrough_exceptions: tuple[type[Exception], ...] = (
     ToolExecutionFailedError,
     HookAborted,
+    SpendLimitExceeded,
+    IterationLimitExceeded,
+    PreTaskAttestationError,
 )
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {

@@ -24,6 +24,11 @@ from crewai.state.checkpoint_config import CheckpointConfig  # noqa: F401
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.exceptions.task_security_exceptions import (
+    IterationLimitExceeded,
+    PreTaskAttestationError,
+    SpendLimitExceeded,
+)
 
 
 if TYPE_CHECKING:
@@ -201,12 +206,15 @@ __all__ = [
     "Entity",
     "ExecutionContext",
     "Flow",
+    "IterationLimitExceeded",
     "Knowledge",
     "LLMGuardrail",
     "Memory",
     "PlanningConfig",
+    "PreTaskAttestationError",
     "Process",
     "RuntimeState",
+    "SpendLimitExceeded",
     "Task",
     "TaskOutput",
     "__version__",

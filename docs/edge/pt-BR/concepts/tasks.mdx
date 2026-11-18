@@ -64,6 +64,9 @@ crew = Crew(
 | **Callback** _(opcional)_                 | `callback`              | `Optional[Any]`             | Função/objeto a ser executado após a conclusão da tarefa.                                               |
 | **Guardrail** _(opcional)_                | `guardrail`             | `Optional[Callable]`        | Função para validar a saída da tarefa antes de prosseguir para a próxima tarefa.                        |
 | **Max Tentativas Guardrail** _(opcional)_ | `guardrail_max_retries` | `Optional[int]`             | Número máximo de tentativas quando a validação do guardrail falha. Padrão é 3.                          |
+| **Callback Pré-Tarefa** _(opcional)_      | `pre_task_callback`     | `Optional[Callable]`        | Hook de validação executado antes da execução da tarefa para atestação. Padrão é None.                   |
+| **Orçamento Máximo USD** _(opcional)_     | `max_execution_budget_usd` | `Optional[float]`       | Orçamento máximo em dólares para a execução da tarefa. Gera SpendLimitExceeded se atingido.              |
+| **Máximo de Iterações** _(opcional)_      | `max_task_iterations`   | `Optional[int]`             | Limite máximo de iterações permitidas para a tarefa. Gera IterationLimitExceeded se atingido.            |
 
 ## Criando Tarefas
 
