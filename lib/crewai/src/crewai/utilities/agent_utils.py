@@ -1096,7 +1096,7 @@ def show_agent_logs(
                 indent=2,
                 ensure_ascii=False,
             )
-            if thought and thought != "":
+            if thought:
                 printer.print(
                     content=[
                         ColoredText("## Thought: ", "purple"),
