@@ -751,12 +751,12 @@ class Task(BaseModel):
                 else:
                     pydantic_output = None
                     json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = await self._aexport_output(result)
             else:
                 raw = result
-                pydantic_output, json_output = None, None
+                try:
+                    pydantic_output, json_output = await self._aexport_output(result)
+                except Exception:
+                    pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -910,12 +910,12 @@ class Task(BaseModel):
                 else:
                     pydantic_output = None
                     json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
             else:
                 raw = result
-                pydantic_output, json_output = None, None
+                try:
+                    pydantic_output, json_output = self._export_output(result)
+                except Exception:
+                    pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -1342,7 +1342,9 @@ Follow these guidelines:
                 return None, None
         if isinstance(model_output, BaseModel):
             return model_output, None
-        return None, model_output
+        if isinstance(model_output, dict):
+            return None, model_output
+        return None, None
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
@@ -1474,6 +1476,15 @@ Follow these guidelines:
                     task_output.tool_failures = merge_tool_failures(
                         accumulated_failures, task_output.tool_failures
                     )
+                    if self.output_pydantic or self.output_json:
+                        try:
+                            pydantic_output, json_output = self._export_output(
+                                task_output.raw
+                            )
+                            task_output.pydantic = pydantic_output
+                            task_output.json_dict = json_output
+                        except Exception:
+                            pass
 
                 return task_output
 
@@ -1595,6 +1606,15 @@ Follow these guidelines:
                     task_output.tool_failures = merge_tool_failures(
                         accumulated_failures, task_output.tool_failures
                     )
+                    if self.output_pydantic or self.output_json:
+                        try:
+                            pydantic_output, json_output = await self._aexport_output(
+                                task_output.raw
+                            )
+                            task_output.pydantic = pydantic_output
+                            task_output.json_dict = json_output
+                        except Exception:
+                            pass
 
                 return task_output
 
