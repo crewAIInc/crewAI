@@ -10,7 +10,6 @@ import json
 import mimetypes
 from pathlib import Path
 import re
-import tempfile
 from typing import Any, Literal
 import uuid
 
@@ -241,14 +240,10 @@ def get_artifact_store() -> ArtifactStore:
 
 
 def _check_readable(file_path: str) -> Path:
-    """Resolve ``file_path`` and refuse anything outside cwd or the temp dir."""
-
+    """Resolve ``file_path`` and refuse anything outside the working directory."""
     path = Path(file_path).expanduser().resolve()
-    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
-    if not any(path.is_relative_to(root) for root in allowed):
-        raise ValueError(
-            f"file_path must be inside the working directory or temp dir: {file_path}"
-        )
+    if not path.is_relative_to(Path.cwd().resolve()):
+        raise ValueError(f"file_path must be inside the working directory: {file_path}")
     if not path.is_file():
         raise ValueError(f"file_path is not a file: {file_path}")
     return path

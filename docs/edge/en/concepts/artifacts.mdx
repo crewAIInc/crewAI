@@ -100,7 +100,7 @@ chart = Task(
 
 - Tell the agent where to write the file, for example in the task description.
 - On a task, `{placeholders}` in `file_path` are filled from the kickoff inputs, like `output_file`. In a flow declaration, use `${...}` expressions, such as `output/${state.quarter}.png`.
-- The file must be inside the working directory or the system temp directory.
+- The file must be inside the working directory. Paths outside it are refused, so write charts and PDFs into the project directory.
 
 ### Use the saved artifact
 

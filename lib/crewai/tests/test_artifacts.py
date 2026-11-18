@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import uuid
 from typing import Any
 from unittest.mock import patch
@@ -593,7 +594,7 @@ def test_standalone_task_gives_artifacts_agent_the_tool(store):
     seen = {}
 
     def spy(self, task, context=None, tools=None):
-        executor_tools = self.create_agent_executor(tools=tools, task=task)
+        self.create_agent_executor(tools=tools, task=task)
         seen["tools"] = [t.name for t in self.agent_executor.tools]
         return "ok"
 
@@ -865,3 +866,18 @@ def test_markdown_with_code_blocks_is_left_alone(store, tmp_path):
 
     assert result.artifact.kind == "markdown"
     assert (tmp_path / "artifacts" / "exec-1" / "writer" / "v1.md").read_text() == doc
+
+
+def test_tool_refuses_files_in_the_shared_temp_dir(store):
+    import tempfile
+
+    # A sibling temp folder: outside the working directory, inside the system temp.
+    other_run = Path(tempfile.mkdtemp()) / "secret.txt"
+    other_run.write_text("someone else's data")
+
+    result = SaveArtifactTool().run(
+        identifier="leak", title="x", kind="text", file_path=str(other_run)
+    )
+
+    assert result.startswith("Error saving artifact")
+    assert not (store.root / "exec-1" / "leak").exists()
