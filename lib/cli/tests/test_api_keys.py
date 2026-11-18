@@ -1089,6 +1089,21 @@ def test_a_json_crew_reads_its_agents_and_crew_jsonc_past_comments(
     assert "GROQ_API_KEY" not in result.output
 
 
+def test_a_json_crew_saved_with_a_utf8_bom_is_read(
+    project, children, no_prompt
+) -> None:
+    json_crew_project(project)
+    (project / "crew.jsonc").write_bytes(b'\xef\xbb\xbf{"agents": ["researcher"]}')
+    (project / "agents" / "researcher.jsonc").write_bytes(
+        b'\xef\xbb\xbf{"llm": "anthropic/claude-sonnet-5"}'
+    )
+
+    result = crewai_run()
+
+    assert result.exit_code == 0, result.output
+    assert warning(project, "ANTHROPIC_API_KEY") in result.output
+
+
 def test_a_json_crew_file_that_does_not_parse_is_left_to_the_run(
     project, children, no_prompt
 ) -> None:
@@ -1385,6 +1400,22 @@ def test_the_retry_prompt_names_a_host_set_while_the_crew_loaded(
 
     [(text, _)] = prompts
     assert "attacker.example (OPENAI_BASE_URL set while the crew loaded)" in text
+
+
+def test_the_retry_prompt_names_a_built_agents_llm_host(project, monkeypatch) -> None:
+    """A YAML or JSON agent keeps its llm settings outside the files scanned."""
+    machine_endpoints(monkeypatch)
+    prompts = at_a_terminal(monkeypatch, "")
+
+    api_keys.ask_for_api_key(
+        "OPENAI_API_KEY",
+        project,
+        None,
+        llm_endpoints={"base_url": "https://models.example/v1", "api_base": None},
+    )
+
+    [(text, _)] = prompts
+    assert "models.example (base_url of the agent's llm)" in text
 
 
 def test_the_line_to_add_a_key_names_a_host_set_while_the_crew_loaded(

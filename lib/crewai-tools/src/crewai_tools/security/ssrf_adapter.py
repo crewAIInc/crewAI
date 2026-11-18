@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 import socket
 import sys
+import threading
+import time
 from typing import Any
 
 import requests
@@ -25,6 +30,7 @@ from urllib3.util.connection import (
 from crewai_tools.security.safe_path import (
     _BYPASS_HINT,
     _is_escape_hatch_enabled,
+    allows_private_host,
     is_blocked_ip,
 )
 
@@ -51,7 +57,7 @@ def _blocked_ip_error(ip_str: str) -> ValueError:
     )
 
 
-def _assert_safe_peer(sock: socket.socket) -> None:
+def _assert_safe_peer(sock: socket.socket, hostname: str = "") -> None:
     """Raise if a connected socket's peer is a private/reserved address."""
     if _is_escape_hatch_enabled():
         return
@@ -63,7 +69,7 @@ def _assert_safe_peer(sock: socket.socket) -> None:
             f"request to prevent SSRF. {_BYPASS_HINT}"
         ) from exc
     ip_str = str(peer[0])
-    if is_blocked_ip(ip_str):
+    if is_blocked_ip(ip_str) and not allows_private_host(hostname):
         raise _blocked_ip_error(ip_str)
 
 
@@ -101,7 +107,7 @@ def create_validated_connection(
 
     for _family, _socktype, _proto, _canonname, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
-        if is_blocked_ip(ip_str):
+        if is_blocked_ip(ip_str) and not allows_private_host(host):
             raise _blocked_ip_error(ip_str)
 
     timeout = _connect_timeout(timeout)
@@ -117,7 +123,7 @@ def create_validated_connection(
             sock.connect(sockaddr)
             peer_validated = False
             try:
-                _assert_safe_peer(sock)
+                _assert_safe_peer(sock, host)
                 peer_validated = True
             finally:
                 if not peer_validated:
@@ -131,6 +137,73 @@ def create_validated_connection(
     if err is not None:
         raise err
     raise OSError("getaddrinfo returns an empty list")
+
+
+# Duplicates of the sockets connected inside cut_connections_at(), and whether
+# its deadline has passed; None outside one.
+_watched_sockets: ContextVar[tuple[list[socket.socket], threading.Event] | None] = (
+    ContextVar("crewai_tools_watched_sockets", default=None)
+)
+
+
+@contextmanager
+def cut_connections_at(deadline: float | None) -> Iterator[threading.Event]:
+    """Shut down every connection opened inside the block once *deadline* (a
+    :func:`time.monotonic` value) passes; the event yielded is set if it did.
+
+    A socket timeout bounds each wait for data, not the total, so a server that
+    trickles bytes keeps a read going for as long as it likes. Shutting the
+    socket down from another thread ends that read wherever it is blocked: the
+    TLS handshake, the headers, the body, or any redirect hop.
+    """
+    cut = threading.Event()
+    if deadline is None:
+        yield cut
+        return
+    sockets: list[socket.socket] = []
+
+    def cut_all() -> None:
+        cut.set()
+        for sock in sockets:
+            _shut(sock)
+
+    timer = threading.Timer(max(0.0, deadline - time.monotonic()), cut_all)
+    timer.daemon = True
+    token = _watched_sockets.set((sockets, cut))
+    timer.start()
+    try:
+        yield cut
+    finally:
+        timer.cancel()
+        timer.join()
+        _watched_sockets.reset(token)
+        for sock in sockets:
+            sock.close()
+
+
+def _watch(sock: socket.socket) -> None:
+    watched = _watched_sockets.get()
+    if watched is None:
+        return
+    sockets, cut = watched
+    # A duplicate of its descriptor, held until the block ends: the socket is
+    # detached into a TLS socket for the handshake, and http.client lets go of
+    # it once a response without a length owns it, but shutting the duplicate
+    # down ends a read on any of them. Holding it also keeps the descriptor
+    # number from going to another socket before the timer runs.
+    sock = sock.dup()
+    sockets.append(sock)
+    # Connected after the deadline passed, as the next redirect hop can be: the
+    # timer has gone through the list already. Appending first means the timer
+    # or this check sees the socket, whichever runs last.
+    if cut.is_set():
+        _shut(sock)
+
+
+def _shut(sock: socket.socket) -> None:
+    # OSError: closed already, as the socket of a finished redirect hop is.
+    with suppress(OSError):
+        sock.shutdown(socket.SHUT_RDWR)
 
 
 def _open_validated_socket(conn: HTTPConnection) -> socket.socket:
@@ -158,6 +231,7 @@ def _open_validated_socket(conn: HTTPConnection) -> socket.socket:
         ) from exc
 
     sys.audit("http.client.connect", conn, conn.host, conn.port)
+    _watch(sock)
     return sock
 
 
