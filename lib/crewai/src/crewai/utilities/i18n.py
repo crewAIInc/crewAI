@@ -125,7 +125,7 @@ class I18N(BaseModel):
         try:
             return self._prompts[kind][key]
         except Exception as e:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.") from e
+            raise Exception(f"Prompt for '{kind}':'{key}' not found.") from e
 
 
 @lru_cache(maxsize=None)
