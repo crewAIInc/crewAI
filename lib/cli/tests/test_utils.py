@@ -3,6 +3,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import click
 import pytest
 from crewai_cli import utils
 
@@ -130,3 +131,144 @@ def test_project_id_lookups_default_to_the_cwd_pyproject(tmp_path, monkeypatch):
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.
+
+
+@pytest.mark.usefixtures("no_provider_keys")
+@pytest.mark.parametrize(
+    ("provider", "env_vars", "expected"),
+    [
+        ("openai", {}, ["OPENAI_API_KEY"]),
+        ("openai", {"OPENAI_API_KEY": ""}, ["OPENAI_API_KEY"]),
+        ("openai", {"OPENAI_API_KEY": "sk-test"}, []),
+        ("bedrock", {"aws_access_key_id": "AKIATEST"}, ["AWS_SECRET_ACCESS_KEY"]),
+        ("azure", {}, ["AZURE_API_KEY", "AZURE_API_BASE"]),
+        ("watson", {}, ["WATSONX_URL", "WATSONX_APIKEY", "WATSONX_PROJECT_ID"]),
+        ("ollama", {}, []),
+        ("deepseek", {}, ["DEEPSEEK_API_KEY"]),
+        ("deepseek", {"DEEPSEEK_API_KEY": "sk-test"}, []),
+        ("mistral", {}, []),
+    ],
+)
+def test_missing_provider_keys_names_each_required_value_left_unset(
+    provider, env_vars, expected
+):
+    assert utils.missing_provider_keys(provider, env_vars) == expected
+
+
+@pytest.mark.usefixtures("no_provider_keys")
+def test_missing_provider_keys_skips_a_key_set_in_the_environment(monkeypatch):
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-from-shell")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "")
+
+    assert utils.missing_provider_keys("bedrock", {}) == ["AWS_SECRET_ACCESS_KEY"]
+
+
+owner_only_files = pytest.mark.skipif(
+    os.name == "nt", reason="POSIX permission bits"
+)
+
+
+@owner_only_files
+def test_write_env_file_creates_an_env_only_its_owner_can_read(tmp_path):
+    old_umask = os.umask(0o022)
+    try:
+        utils.write_env_file(tmp_path, {"openai_api_key": "sk-test"})
+    finally:
+        os.umask(old_umask)
+
+    env_file = tmp_path / ".env"
+    assert env_file.read_text() == "OPENAI_API_KEY=sk-test\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
+@owner_only_files
+def test_write_env_file_makes_an_existing_readable_env_owner_only(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("OLD=1\n")
+    env_file.chmod(0o644)
+
+    utils.write_env_file(tmp_path, {"MODEL": "openai/gpt-6-luna"})
+
+    assert env_file.read_text() == "MODEL=openai/gpt-6-luna\n"
+    assert env_file.stat().st_mode & 0o777 == 0o600
+
+
+def test_write_env_file_on_windows_writes_without_posix_modes(tmp_path, monkeypatch):
+    """Windows has no fchmod and no owner-only bits to set: the keys are still
+    written, without a crash."""
+    monkeypatch.setattr(utils.sys, "platform", "win32")
+    monkeypatch.delattr(utils.os, "fchmod", raising=False)
+
+    utils.write_env_file(tmp_path, {"openai_api_key": "sk-test"})
+
+    assert (tmp_path / ".env").read_text() == "OPENAI_API_KEY=sk-test\n"
+
+
+def test_write_env_file_never_writes_keys_through_a_symlink(tmp_path):
+    target = tmp_path / "elsewhere"
+    target.write_text("untouched\n")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".env").symlink_to(target)
+
+    with pytest.raises(click.ClickException, match="it is a symlink"):
+        utils.write_env_file(project, {"OPENAI_API_KEY": "sk-test"})
+
+    assert target.read_text() == "untouched\n"
+
+
+@pytest.fixture
+def ascii_default_encoding(monkeypatch):
+    """Make text files default to ASCII, as on a Windows or C-locale machine.
+
+    The platform default decides how ``open()`` and ``os.fdopen()`` treat a text
+    file when no encoding is given. Python reads it from the OS, so the tests
+    stand in for it by filling it in when a caller leaves it out.
+    """
+    real_open = open
+    real_fdopen = os.fdopen
+
+    def default_ascii(real):
+        def wrapper(*args, **kwargs):
+            mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
+            if "b" not in mode:
+                kwargs.setdefault("encoding", "ascii")
+            return real(*args, **kwargs)
+
+        return wrapper
+
+    monkeypatch.setattr("builtins.open", default_ascii(real_open))
+    monkeypatch.setattr(os, "fdopen", default_ascii(real_fdopen))
+
+
+def test_load_env_vars_reads_a_utf8_env_file(tmp_path, ascii_default_encoding):
+    (tmp_path / ".env").write_bytes(
+        "# 项目配置\nOPENAI_API_KEY=sk-test\nNOTE=café\n".encode()
+    )
+
+    assert utils.load_env_vars(tmp_path) == {
+        "OPENAI_API_KEY": "sk-test",
+        "NOTE": "café",
+    }
+
+
+def test_fetch_and_json_env_file_reads_a_utf8_env_file(tmp_path, ascii_default_encoding):
+    env_file = tmp_path / ".env"
+    env_file.write_bytes("# 项目配置\nOPENAI_API_KEY=sk-test\nNOTE=café\n".encode())
+
+    assert utils.fetch_and_json_env_file(str(env_file)) == {
+        "OPENAI_API_KEY": "sk-test",
+        "NOTE": "café",
+    }
+
+
+def test_write_env_file_writes_utf8(tmp_path, ascii_default_encoding):
+    utils.write_env_file(tmp_path, {"note": "café"})
+
+    assert (tmp_path / ".env").read_bytes() == "NOTE=café\n".encode()
+
+
+def test_env_file_round_trips_non_ascii_values(tmp_path, ascii_default_encoding):
+    utils.write_env_file(tmp_path, {"note": "项目"})
+
+    assert utils.load_env_vars(tmp_path) == {"NOTE": "项目"}
