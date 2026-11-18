@@ -490,6 +490,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         return model_class
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        """Allow an extension to record output before execution tracing closes."""
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
         return False
@@ -1321,6 +1324,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance._fired_or_listeners = {
             FlowMethodName(name) for name in pending_context.fired_or_listeners
         }
+        instance._method_outputs = list(pending_context.method_outputs or [])
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1633,6 +1637,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
                 self._capture_pending_listener_state(e.context)
+                e.context.method_outputs = list(self._method_outputs)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -1775,7 +1780,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             model = init_state
             if hasattr(model, "id"):
                 state_dict = model.model_dump()
-                if not state_dict.get("id"):
+                id_field = type(model).model_fields.get("id")
+                if (
+                    id_field is not None
+                    and id_field.default_factory is not None
+                    and "initial_state" not in self.model_fields_set
+                    and "id" not in model.model_fields_set
+                ):
+                    # A class-level instance is shared by every Flow, and its
+                    # default_factory id was generated once, so give each Flow its own.
+                    state_dict["id"] = id_field.get_default(
+                        call_default_factory=True, validated_data=state_dict
+                    )
+                elif not state_dict.get("id"):
                     state_dict["id"] = str(uuid4())
                 model_class = type(model)
                 return cast(T, model_class(**state_dict))
@@ -2498,6 +2515,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
                     self._capture_pending_listener_state(e.context)
+                    e.context.method_outputs = list(self._method_outputs)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
@@ -2538,6 +2556,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
+            self._record_kickoff_output(final_output)
 
             if self._event_futures:
                 await asyncio.gather(

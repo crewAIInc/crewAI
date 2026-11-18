@@ -13,7 +13,6 @@ from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.task import Task
-from crewai.utilities.agent_utils import summarize_messages
 
 
 def _build_conversation_messages(
@@ -94,12 +93,7 @@ class TestSummarizeDirectOpenAI:
 
         original_system_content = messages[0]["content"]
 
-        summarize_messages(
-            messages=messages,
-            llm=llm,
-            callbacks=[],
-
-        )
+        llm.summarize_messages(messages, callbacks=[])
 
         # System message should be preserved
         assert len(messages) >= 2
@@ -124,12 +118,7 @@ class TestSummarizeDirectAnthropic:
 
         messages = _build_conversation_messages(include_system=True)
 
-        summarize_messages(
-            messages=messages,
-            llm=llm,
-            callbacks=[],
-
-        )
+        llm.summarize_messages(messages, callbacks=[])
 
         assert len(messages) >= 2
         assert messages[0]["role"] == "system"
@@ -150,12 +139,7 @@ class TestSummarizeDirectGemini:
 
         messages = _build_conversation_messages(include_system=True)
 
-        summarize_messages(
-            messages=messages,
-            llm=llm,
-            callbacks=[],
-
-        )
+        llm.summarize_messages(messages, callbacks=[])
 
         assert len(messages) >= 2
         assert messages[0]["role"] == "system"
@@ -176,12 +160,7 @@ class TestSummarizeDirectAzure:
 
         messages = _build_conversation_messages(include_system=True)
 
-        summarize_messages(
-            messages=messages,
-            llm=llm,
-            callbacks=[],
-
-        )
+        llm.summarize_messages(messages, callbacks=[])
 
         assert len(messages) >= 2
         assert messages[0]["role"] == "system"
@@ -263,12 +242,7 @@ class TestSummarizePreservesFiles:
             include_system=True, include_files=True
         )
 
-        summarize_messages(
-            messages=messages,
-            llm=llm,
-            callbacks=[],
-
-        )
+        llm.summarize_messages(messages, callbacks=[])
 
         # System message preserved
         assert messages[0]["role"] == "system"

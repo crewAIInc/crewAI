@@ -20,6 +20,10 @@ uv add 'crewai[file-processing]'
 The file processing API is currently in early access.
 </Note>
 
+<Tip>
+To have an agent work on a spreadsheet it gets as a URL, see [Spreadsheets](/en/concepts/agents#spreadsheets).
+</Tip>
+
 ## File Types
 
 CrewAI supports five specific file types plus a generic `File` class that auto-detects the type:
@@ -243,8 +247,8 @@ Each provider has specific limits for file sizes and dimensions:
 - **Video**: Max 2 GB, up to 1 hour
 
 ### AWS Bedrock
-- **Images**: Max 4.5 MB, max 8000x8000 pixels
-- **PDFs**: Max 3.75 MB, up to 100 pages
+- **Images**: Max 3.75 MB, max 8000x8000 pixels
+- **PDFs**: Max 4.5 MB, up to 100 pages
 
 ## Referencing Files in Prompts
 

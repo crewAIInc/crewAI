@@ -17,7 +17,7 @@ deployment-failure logs:
 4. standard crew files: ``crew.py``, ``config/agents.yaml``, ``config/tasks.yaml``
 5. flow entrypoint: ``main.py`` with a Flow subclass
 6. hatch wheel target resolves (packages = [...] or default dir matches name)
-7. crew/flow module imports cleanly (catches ``@CrewBase not found``,
+7. crew/flow/agent module imports cleanly (catches ``@CrewBase not found``,
    ``No Flow subclass found``, provider import errors)
 8. environment variables referenced in code vs ``.env`` / deployment env
 9. installed crewai vs lockfile pin (catches missing-attribute failures from
@@ -44,6 +44,7 @@ from crewai_core.project import (
     get_crewai_project_config,
     get_crewai_project_type,
     read_toml,
+    resolve_agent_project_entrypoint,
 )
 from rich.console import Console
 from rich.markup import escape
@@ -256,6 +257,7 @@ class DeployValidator:
         self._package_name: str | None = None
         self._package_dir: Path | None = None
         self._is_flow: bool = False
+        self._is_agent: bool = False
 
     def _add(
         self,
@@ -310,6 +312,18 @@ class DeployValidator:
             return self.results
 
         self._check_lockfile()
+
+        if self._is_agent:
+            if not self._check_agent_entrypoint():
+                return self.results
+            package_dir = self.project_root / "src" / (self._package_name or "")
+            if package_dir.is_dir():
+                self._package_dir = package_dir
+            self._check_hatch_wheel_target()
+            self._check_module_imports()
+            self._check_env_vars()
+            self._check_version_vs_lockfile()
+            return self.results
 
         if not self._check_package_dir():
             self._check_hatch_wheel_target()
@@ -525,7 +539,9 @@ class DeployValidator:
 
         self._project_name = name
         self._package_name = normalize_package_name(name)
-        self._is_flow = get_crewai_project_type(self._pyproject) == "flow"
+        project_type = get_crewai_project_type(self._pyproject)
+        self._is_flow = project_type == "flow"
+        self._is_agent = project_type == "agent"
         return True
 
     def _check_lockfile(self) -> None:
@@ -627,7 +643,7 @@ class DeployValidator:
                 "Missing src/ directory",
                 detail=(
                     "CrewAI deployments expect a src-layout project: "
-                    f"src/{self._package_name}/crew.py (or main.py for flows)."
+                    f"src/{self._package_name}/crew.py, main.py for flows, or agent.py for agents."
                 ),
                 hint="Run `crewai create crew <name>` to see the expected layout.",
             )
@@ -684,6 +700,23 @@ class DeployValidator:
                 )
 
         self._package_dir = package_dir
+        return True
+
+    def _check_agent_entrypoint(self) -> bool:
+        try:
+            resolve_agent_project_entrypoint(self.project_root)
+        except (ProjectDefinitionError, OSError) as exc:
+            self._add(
+                Severity.ERROR,
+                "invalid_agent_definition",
+                "Cannot resolve the standalone agent definition",
+                detail=str(exc),
+                hint=(
+                    "Set [tool.crewai] definition to one project-local .py, "
+                    ".json, .yml, or .yaml file."
+                ),
+            )
+            return False
         return True
 
     def _check_crew_entrypoint(self) -> None:
@@ -786,21 +819,34 @@ class DeployValidator:
         )
 
     def _check_module_imports(self) -> None:
-        """Import the user's crew/flow via `uv run` so the check sees the same
+        """Import the user's crew/flow/agent via `uv run` so the check sees the same
         package versions as `crewai run` would. Result is reported as JSON on
         the subprocess's stdout."""
         script = (
             "import json, sys, traceback, os\n"
             "os.chdir(sys.argv[1])\n"
             "try:\n"
-            "    from crewai.utilities.project_utils import get_crews, get_flows\n"
-            "    is_flow = sys.argv[2] == 'flow'\n"
-            "    if is_flow:\n"
-            "        instances = get_flows()\n"
-            "        kind = 'flow'\n"
+            "    kind = sys.argv[2]\n"
+            "    if kind == 'agent':\n"
+            "        from pathlib import Path\n"
+            "        search_path = sys.path[:]\n"
+            "        sys.path[:] = [e for e in sys.path if e not in ('', os.getcwd())]\n"
+            "        try:\n"
+            "            module.load_project_env(Path(sys.argv[1]) / '.env')\n"
+            "            from crewai.project import load_agent_project\n"
+            "            from crewai.project.json_loader import validate_agent_definition\n"
+            "            from crewai_core.project import resolve_agent_project_entrypoint\n"
+            "        finally:\n"
+            "            sys.path[:] = search_path\n"
+            "        entrypoint = resolve_agent_project_entrypoint(sys.argv[1])\n"
+            "        if entrypoint.suffix.lower() == '.py':\n"
+            "            instances = [load_agent_project(sys.argv[1])]\n"
+            "        else:\n"
+            "            validate_agent_definition(entrypoint, project_root=sys.argv[1])\n"
+            "            instances = [None]\n"
             "    else:\n"
-            "        instances = get_crews()\n"
-            "        kind = 'crew'\n"
+            "        from crewai.utilities.project_utils import get_crews, get_flows\n"
+            "        instances = get_flows() if kind == 'flow' else get_crews()\n"
             "    print(json.dumps({'ok': True, 'kind': kind, 'count': len(instances)}))\n"
             "except BaseException as e:\n"
             "    print(json.dumps({\n"
@@ -821,18 +867,38 @@ class DeployValidator:
             )
             return
 
+        env = None
+        if self._is_agent:
+            from crewai_cli.run_crew import (
+                _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV,
+                _CREWAI_RUNNER_SOURCE_DIR_ENV,
+                _find_local_crewai_source_dir,
+                _project_runner_code,
+            )
+
+            # Pin AMP transport before .env and load the CLI from its trusted path.
+            script = _project_runner_code("run_crew", script)
+            env = os.environ.copy()
+            env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
+                Path(__file__).resolve().parents[1]
+            )
+            if source_dir := _find_local_crewai_source_dir():
+                env[_CREWAI_RUNNER_SOURCE_DIR_ENV] = str(source_dir)
+
         try:
             proc = subprocess.run(  # noqa: S603 - args constructed from trusted inputs
                 [
                     uv_path,
                     "run",
+                    *(["--no-sync"] if self._is_agent else []),
                     "python",
                     "-c",
                     script,
                     str(self.project_root),
-                    "flow" if self._is_flow else "crew",
+                    "agent" if self._is_agent else "flow" if self._is_flow else "crew",
                 ],
                 cwd=self.project_root,
+                env=env,
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -842,7 +908,7 @@ class DeployValidator:
             self._add(
                 Severity.ERROR,
                 "import_timeout",
-                "Importing your crew/flow module timed out after 120s",
+                "Importing your crew/flow/agent module timed out after 120s",
                 detail=(
                     "User code may be making network calls or doing heavy work "
                     "at import time. Move that work into agent methods."
@@ -866,7 +932,7 @@ class DeployValidator:
             self._add(
                 Severity.ERROR,
                 "import_failed",
-                "Could not import your crew/flow module",
+                "Could not import your crew/flow/agent module",
                 detail=(proc.stderr or proc.stdout or "").strip()[:1500],
                 hint="Run `crewai run` locally first to reproduce the error.",
             )
@@ -923,8 +989,20 @@ class DeployValidator:
             return
 
         # crewai.llm.LLM.__new__ wraps provider init errors as
-        # ImportError("Error importing native provider: ...").
-        if "Error importing native provider" in err_msg or "native provider" in err_msg:
+        # ImportError("Error importing native provider: ..."). The project's own
+        # crewai runs this import: 1.15.34 to 1.15.37 raise an OpenAI-compatible
+        # provider's missing key as MissingAPIKeyError at construction, which
+        # Agent(llm="<model>") wraps again in a pydantic ValidationError; later
+        # versions check it on the first call, as the native providers do.
+        if (
+            err_type == "MissingAPIKeyError"
+            or (
+                err_type == "ValidationError"
+                and self._extract_missing_api_key(err_msg) is not None
+            )
+            or "Error importing native provider" in err_msg
+            or "native provider" in err_msg
+        ):
             missing_key = self._extract_missing_api_key(err_msg)
             if missing_key:
                 provider = _KNOWN_API_KEY_HINTS.get(missing_key, missing_key)
