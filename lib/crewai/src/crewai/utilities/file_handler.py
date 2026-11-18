@@ -48,7 +48,7 @@ class FileHandler:
             file_path: Path to the log file or boolean flag.
 
         Raises:
-            ValueError: If file_path is neither a string nor a boolean.
+            ValueError: If file_path is neither a string nor True.
         """
         if file_path is True:
             self._path = os.path.join(os.curdir, "logs.txt")
@@ -60,7 +60,7 @@ class FileHandler:
                 self._path = file_path + ".txt"
 
         else:
-            raise ValueError("file_path must be a string or boolean.")
+            raise ValueError("file_path must be a string or True.")
 
     def log(self, **kwargs: Unpack[LogEntry]) -> None:
         """Log data with structured fields.
