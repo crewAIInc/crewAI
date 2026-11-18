@@ -60,7 +60,37 @@ def guess_kind(content: str) -> ArtifactKind:
     return "markdown"
 
 
-def resolve_artifact(artifact: Artifact | bool, name: str, content: str) -> Artifact:
+_OUTER_FENCE = re.compile(r"\s*```([\w+-]*)[^\n]*\n(.*?)\n?```\s*", re.DOTALL)
+
+_FENCE_KINDS: dict[str, ArtifactKind] = {
+    "html": "html",
+    "svg": "svg",
+    "json": "json",
+    "csv": "csv",
+    "markdown": "markdown",
+    "md": "markdown",
+    "text": "text",
+    "txt": "text",
+}
+
+
+def unwrap_fence(content: str) -> tuple[str, str | None]:
+    """Strip one code fence wrapping the whole reply; return (body, language).
+
+    Content that only contains code blocks, like a markdown doc, is unchanged.
+    """
+    match = _OUTER_FENCE.fullmatch(content)
+    if match is None or "```" in match.group(2):
+        return content, None
+    return match.group(2), match.group(1).lower() or None
+
+
+def resolve_artifact(
+    artifact: Artifact | bool,
+    name: str,
+    content: str,
+    language: str | None = None,
+) -> Artifact:
     """Turn the ``artifact=True`` shorthand into a full :class:`Artifact`.
 
     ``name`` must be stable across reruns (a task name, a flow method name,
@@ -73,7 +103,7 @@ def resolve_artifact(artifact: Artifact | bool, name: str, content: str) -> Arti
     return Artifact(
         identifier=identifier.rstrip("-.") or "output",
         title=(title[:1].upper() + title[1:]) or "Output",
-        kind=guess_kind(content),
+        kind=_FENCE_KINDS.get(language or "") or guess_kind(content),
     )
 
 
@@ -96,7 +126,8 @@ def save_output_artifact(
     from_task: Any = None,
 ) -> SavedArtifact:
     """Save a run's output as ``artifact``: its ``file_path`` if set, else ``content``."""
-    resolved = resolve_artifact(artifact, name, content)
+    content, language = unwrap_fence(content)
+    resolved = resolve_artifact(artifact, name, content, language)
     if resolved.file_path is None:
         return save_artifact(
             resolved, content=content, from_agent=from_agent, from_task=from_task

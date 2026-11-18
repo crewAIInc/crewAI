@@ -814,3 +814,54 @@ def test_bytes_from_code_for_every_file_kind(store, kind, data, content_type, su
 def test_unknown_image_bytes_are_refused(store):
     with pytest.raises(ValueError, match="image"):
         save_artifact(Artifact(identifier="b", title="B", kind="image"), content=b"not an image")
+
+
+FENCED_HTML = '```html\n<!doctype html>\n<html lang="en">\n<body>Q3</body>\n</html>\n```'
+
+
+def test_artifact_true_unwraps_a_fenced_reply(store, tmp_path):
+    sync_patch, _ = _kickoff_patches(FENCED_HTML)
+
+    with sync_patch:
+        result = _agent().kickoff("Write it", artifact=True)
+
+    saved = result.artifact
+    assert saved.kind == "html"
+    path = tmp_path / "artifacts" / "exec-1" / "writer" / "v1.html"
+    assert path.read_text().startswith("<!doctype html>")
+    assert "```" not in path.read_text()
+    # The agent's own output is left as the model wrote it.
+    assert result.raw == FENCED_HTML
+
+
+def test_explicit_kind_unwraps_a_fenced_reply(store, tmp_path):
+    sync_patch, _ = _kickoff_patches(FENCED_HTML)
+
+    with sync_patch:
+        _agent().kickoff(
+            "Write it", artifact=Artifact(identifier="r", title="R", kind="html")
+        )
+
+    assert (tmp_path / "artifacts" / "exec-1" / "r" / "v1.html").read_text().startswith(
+        "<!doctype html>"
+    )
+
+
+def test_fence_language_picks_the_kind(store):
+    sync_patch, _ = _kickoff_patches("```csv\nid,score\n1,9\n```")
+
+    with sync_patch:
+        result = _agent().kickoff("Write it", artifact=True)
+
+    assert result.artifact.kind == "csv"
+
+
+def test_markdown_with_code_blocks_is_left_alone(store, tmp_path):
+    doc = "# Setup\n\n```bash\npip install crewai\n```\n\nThen run it.\n\n```python\nprint(1)\n```"
+    sync_patch, _ = _kickoff_patches(doc)
+
+    with sync_patch:
+        result = _agent().kickoff("Write it", artifact=True)
+
+    assert result.artifact.kind == "markdown"
+    assert (tmp_path / "artifacts" / "exec-1" / "writer" / "v1.md").read_text() == doc
