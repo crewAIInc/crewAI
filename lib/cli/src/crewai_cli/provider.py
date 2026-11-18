@@ -159,7 +159,8 @@ def fetch_provider_data(cache_file: Path) -> dict[str, Any] | None:
     Returns:
         The fetched provider data or None if the operation fails.
     """
-    ssl_config = os.environ["SSL_CERT_FILE"] = certifi.where()
+    ssl_config = os.environ.get("SSL_CERT_FILE") or certifi.where()
+    os.environ.setdefault("SSL_CERT_FILE", ssl_config)
 
     try:
         with httpx.stream("GET", JSON_URL, timeout=60, verify=ssl_config) as response:
