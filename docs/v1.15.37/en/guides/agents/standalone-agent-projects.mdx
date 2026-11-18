@@ -1,0 +1,262 @@
+---
+title: "Standalone Agent Projects (Experimental)"
+description: "Create and run a standalone Agent project using YAML, JSON, or Python."
+---
+
+<Warning>
+Standalone Agent projects are experimental. The project schema and loading API may change. This preview requires matching CLI and SDK builds that include this feature; managed deployments also require a compatible Enterprise runtime. The examples do not imply support in an older installed release.
+</Warning>
+
+A standalone Agent project defines one Agent and receives its messages at kickoff time. YAML is the default scaffold. JSON and Python are explicit alternatives. You do not need a `main.py`, a Crew, a Flow, or a factory function.
+
+## Create a project
+
+```shell Terminal
+crewai create agent support_agent
+cd support_agent
+cp .env.example .env
+```
+
+Set `OPENAI_API_KEY` in `.env` for the default `openai/gpt-6.1-sol` model, then install and run:
+
+The scaffold selects the Responses API (`api: responses`) for tool calling with this model. In YAML/JSON projects, edit `llm.model` and `llm.api` in the definition; the Python template reads `MODEL` from `.env` and selects the Responses API.
+
+```shell Terminal
+crewai install
+crewai run
+crewai run --inputs '{"messages":"What are the support hours?"}'
+```
+
+`crewai install` creates `uv.lock`. Commit it with the project. Keep `.env` local and use the deployment's environment settings for provider credentials.
+
+## Local conversations
+
+The scaffold sets `conversational: true`, or `Agent(conversational=True)` in Python. In a terminal, `crewai run` opens the existing conversational chat interface. Each submitted message uses the configured Agent and tools with the session history. Set the flag to false to use independent kickoffs only.
+
+```shell Terminal
+crewai run
+```
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+The experimental SDK exposes the same session through `agent.handle_turn(...)` and `agent.as_flow()`. History stays in memory by default; configure Flow persistence explicitly for recovery across processes. Use a separate Agent instance for each independent conversation. The `session_id` option identifies/restores a Flow session; it does not turn one Agent into a concurrent multi-session server.
+
+## Project structure
+
+```text
+support_agent/
+├── agent.yaml
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── .gitignore
+├── README.md
+├── tools/
+│   ├── __init__.py
+│   ├── support_hours.py
+│   ├── lookup_plan.py
+│   └── support_checklist.py
+└── skills/
+    └── .gitkeep
+```
+
+The configuration project has no source package. The scaffold includes three local tools for a fictional support service and an empty skills directory; no extra services or credentials are needed beyond the model provider key.
+
+The generated `pyproject.toml` selects the Agent definition and packages the configuration and any local tools:
+
+```toml
+[tool.crewai]
+type = "agent"
+definition = "agent.yaml"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["agent.yaml", "tools", "skills"]
+```
+
+## Define the Agent
+
+The default identity is a general-purpose CrewAI Agent. Edit `role`, `goal`, and `backstory` to specialize it. The included support tools are examples used only when relevant; replace or remove them for other use cases. No skills are installed by default.
+
+Edit `agent.yaml`:
+
+```yaml
+conversational: true
+role: General-purpose AI agent
+goal: Help users accomplish tasks accurately using the available tools and skills.
+backstory: |-
+  # Identity
+  You are a general-purpose AI agent powered by CrewAI.
+
+  # Customization
+  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
+llm:
+  model: openai/gpt-6.1-sol
+  api: responses
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+max_iter: 8
+```
+
+These are Agent constructor fields. Supply the request through `messages` at runtime; do not add a fixed `input` field to the definition.
+
+### Choose JSON or Python
+
+```shell Terminal
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+The JSON scaffold creates `agent.json` with the same fields:
+
+```json
+{
+  "conversational": true,
+  "role": "General-purpose AI agent",
+  "goal": "Help users accomplish tasks accurately using the available tools and skills.",
+  "backstory": "# Identity\nYou are a general-purpose AI agent powered by CrewAI.\n\n# Customization\nYour behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.",
+  "llm": {
+    "model": "openai/gpt-6.1-sol",
+    "api": "responses"
+  },
+  "tools": [
+    "custom:support_hours",
+    "custom:lookup_plan",
+    "custom:support_checklist"
+  ],
+  "skills": [
+    "./skills"
+  ],
+  "max_iter": 8
+}
+```
+
+The Python scaffold exports `agent = Agent(...)` from `src/python_support/agent.py`. Use it when defining the Agent requires Python logic.
+
+Both `.yml` and `.yaml` are supported. When renaming or moving a configuration, update `definition` and the wheel's `only-include` list together. Definition paths must stay inside the project root.
+
+Without an explicit `definition`, discovery accepts a single root `agent.py`, `agent.json`, `agent.yml`, or `agent.yaml`, or the conventional `src/<package>/agent.py`. Multiple discovered files produce an error; set `definition` to choose one.
+
+## Add a custom tool
+
+Use the included `tools/support_hours.py` as a starting point for another tool:
+
+```python
+from crewai.tools import BaseTool
+
+
+class SupportHoursTool(BaseTool):
+    name: str = "support_hours"
+    description: str = "Return the fictional service's published support hours."
+
+    def _run(self) -> str:
+        return "Support is available Monday to Friday, 09:00-17:00 UTC."
+```
+
+The generated definition explicitly registers the tools and skill directory; JSON uses the same string lists:
+
+```yaml
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+```
+
+`custom:support_hours` loads a `BaseTool` subclass from `tools/support_hours.py`. Add any tool dependencies to `pyproject.toml` and refresh the lockfile with `crewai install`. Only load trusted project code: custom tools and Python references execute Python during loading.
+
+## Reference tools and skills
+
+The generated examples use local, fictional data. They do not inspect accounts, reset passwords, issue refunds, or create tickets.
+
+| Tool | Input | Result |
+| --- | --- | --- |
+| `support_hours` | None | Published hours in UTC |
+| `lookup_plan` | `plan`: `starter` or `pro` | Seat allowance and support channel |
+| `support_checklist` | `topic`: `sign-in` or `billing` | Troubleshooting steps |
+
+The `skills/` directory starts empty, with only `.gitkeep` to preserve it in Git and packaged builds. Add `skills/<name>/SKILL.md` with `name` and `description` frontmatter to create a skill. Added skills are discovered as metadata; the Agent can use `load_skill` to load relevant instructions on demand.
+
+Local skill paths in YAML/JSON resolve against the project root, including when `load_agent_project(path)` is called from another directory. The Python scaffold keeps both `tools/` and `skills/` inside `src/<package>/` and anchors skills to `agent.py`. The wheel and deployment archive include these files.
+
+Try a request that combines the example capabilities:
+
+```shell Terminal
+crewai run --inputs '{"messages":"I use the Pro plan and cannot sign in. Use the available tools to explain what I should try and when support is available. Write a short customer reply."}'
+```
+
+## Pass a message history
+
+`messages` also accepts a non-empty list of role/content messages:
+
+```shell Terminal
+crewai run --inputs '{"messages":[{"role":"user","content":"Use support_hours to verify the published support hours."}]}'
+```
+
+Each kickoff creates a fresh Agent and ordinary local custom-tool instances. These projects do not automatically retain conversation history between kickoffs. Existing arbitrary Python references can resolve module-level singleton objects; their mutable state is not isolated by the loader.
+
+For programmatic use, the experimental SDK loader follows the same project selection rules:
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+result = agent.kickoff("What are the support hours?")
+print(result.raw)
+```
+
+## Validate and deploy the preview
+
+```shell Terminal
+crewai deploy validate
+```
+
+YAML/JSON validation checks fields, Python-reference syntax, and tool declarations without executing project Python or constructing Agents, tools, or provider clients. Python entrypoints are imported and can execute project code. Validation does not run a kickoff. The normal archive pipeline includes the definition, tools, skills, and lockfile while excluding `.env` and `.venv`.
+
+For a deployment with a compatible preview Enterprise runtime, use the existing deployment workflow described in the [CLI reference](/edge/en/concepts/cli). The managed API accepts the same input:
+
+```json
+{"inputs": {"messages": "What are the support hours?"}}
+```
+
+## Conversational managed deployments
+
+With the compatible experimental Enterprise runtime, the internal Agent adapter sets `conversational = True`. Chat uses the configured Agent and its tools for every turn. Start a session, then reuse its `session_id` for subsequent messages:
+
+```http
+POST /chat/start
+Authorization: Bearer <deployment-token>
+Content-Type: application/json
+
+{}
+```
+
+```http
+POST /chat/<session_id>/message
+Authorization: Bearer <deployment-token>
+Content-Type: application/json
+
+{"message": "Remember that my project is Cedar Finch.", "stream": false}
+```
+
+```http
+GET /chat/<session_id>/history
+Authorization: Bearer <deployment-token>
+```
+
+Each message returns a distinct `kickoff_id`; poll `/status/<kickoff_id>` until the turn completes before sending another message. The session retains user/assistant history and passes it to a fresh Agent each turn. Its transcript contains the public answer, while execution results retain structured Agent output and usage. Session lifetime and persistence depend on the deployed runtime's storage configuration. Separate sessions have separate histories.
+
+`POST /kickoff` remains available for independent executions. Local `crewai run` opens chat, while `crewai run --inputs` remains a single kickoff. The scaffold enables the conversational flag in the Agent definition; you do not need to write a Flow or `main.py`.
+
+This preview has been exercised with a native API and Celery worker. Token streaming, restore/checkpoint support, first-class Agent provisioning, and production container/release compatibility remain outside its verified scope.
