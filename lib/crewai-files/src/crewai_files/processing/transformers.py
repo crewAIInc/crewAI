@@ -8,7 +8,7 @@ from crewai_files.core.sources import FileBytes
 from crewai_files.core.types import ImageFile, PDFFile, TextFile
 from crewai_files.processing.exceptions import (
     ProcessingDependencyError,
-    UnsupportedFileTypeError,
+    UnsupportedImageFormatError,
 )
 from crewai_files.processing.images import open_image
 
@@ -324,7 +324,7 @@ def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:
         ) as img:
             width, height = img.size
             return width, height
-    except UnsupportedFileTypeError:
+    except UnsupportedImageFormatError:
         raise
     except Exception as e:
         logger.warning(f"Failed to get image dimensions: {e}")

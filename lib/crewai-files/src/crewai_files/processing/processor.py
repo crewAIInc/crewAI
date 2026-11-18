@@ -298,7 +298,7 @@ class FileProcessor:
                         processed = resize_image(file, max_w, max_h)
                         content = processed.read()
                         current_size = len(content)
-                    except UnsupportedFileTypeError:
+                    except UnsupportedImageFormatError:
                         raise
                     except Exception as e:
                         logger.warning(f"Failed to resize image: {e}")
@@ -306,7 +306,7 @@ class FileProcessor:
         if current_size > image_constraints.max_size_bytes:
             try:
                 processed = optimize_image(processed, image_constraints.max_size_bytes)
-            except UnsupportedFileTypeError:
+            except UnsupportedImageFormatError:
                 raise
             except Exception as e:
                 logger.warning(f"Failed to optimize image: {e}")

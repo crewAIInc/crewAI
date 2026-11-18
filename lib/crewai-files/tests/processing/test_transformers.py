@@ -7,7 +7,7 @@ from crewai_files import ImageFile, PDFFile, TextFile
 from crewai_files.core.sources import FileBytes
 from crewai_files.processing.exceptions import (
     ProcessingDependencyError,
-    UnsupportedFileTypeError,
+    UnsupportedImageFormatError,
 )
 from crewai_files.processing.transformers import (
     chunk_pdf,
@@ -320,7 +320,7 @@ class TestGetImageDimensions:
         """Test that bytes Pillow can't open as a supported format are refused."""
         img = ImageFile(source=FileBytes(data=b"not an image", filename="bad.png"))
 
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             get_image_dimensions(img)
 
     def test_returns_none_without_pillow(self) -> None:

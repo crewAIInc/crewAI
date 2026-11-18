@@ -81,12 +81,12 @@ class TestOpenImage:
         not features.check("jpg_2000"), reason="Pillow built without OpenJPEG"
     )
     def test_rejects_jpeg_2000(self) -> None:
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             with open_image(_encode("JPEG2000")):
                 pass
 
     def test_rejects_bytes_that_are_not_an_image(self) -> None:
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             with open_image(b"not an image"):
                 pass
 
@@ -102,19 +102,19 @@ class TestEveryPillowOpenIsRestricted:
             supported_formats=("image/png",),
         )
 
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             validate_image(_image_file(_psd()), constraints, raise_on_error=False)
 
     def test_get_image_dimensions(self) -> None:
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             get_image_dimensions(_image_file(_psd()))
 
     def test_resize_image(self) -> None:
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             resize_image(_image_file(_psd()), 8000, 8000)
 
     def test_optimize_image(self) -> None:
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             optimize_image(_image_file(_psd()), target_size_bytes=10)
 
 
@@ -122,7 +122,7 @@ class TestProcessorAutoMode:
     def test_rejects_psd_for_a_provider_with_dimension_limits(self) -> None:
         processor = FileProcessor(constraints=ANTHROPIC_CONSTRAINTS)
 
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             processor.process(_image_file(_psd()))
 
     def test_rejects_psd_that_would_be_optimized(self) -> None:
@@ -132,7 +132,7 @@ class TestProcessorAutoMode:
         )
         processor = FileProcessor(constraints=constraints)
 
-        with pytest.raises(UnsupportedFileTypeError):
+        with pytest.raises(UnsupportedImageFormatError):
             processor.process(_image_file(_psd()))
 
     def test_still_resizes_a_supported_image(self) -> None:
