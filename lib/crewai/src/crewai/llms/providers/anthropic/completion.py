@@ -278,7 +278,7 @@ class AnthropicCompletion(BaseLLM):
     response_format: JsonResponseFormat | type[BaseModel] | None = None
     tool_search: AnthropicToolSearchConfig | None = None
     is_claude_3: bool = False
-    supports_tools: bool = True
+    supports_tools: bool | None = True
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
@@ -661,7 +661,7 @@ class AnthropicCompletion(BaseLLM):
         if self.stop_sequences:
             params["stop_sequences"] = self.stop_sequences
 
-        if tools and self.supports_tools:
+        if tools and self.supports_function_calling():
             converted_tools = self._convert_tools_for_interference(tools)
 
             # When tool_search is enabled and there are 2+ regular tools,
@@ -2087,7 +2087,7 @@ class AnthropicCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
-        return self.supports_tools
+        return self._resolve_supports_function_calling(default=True)
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""

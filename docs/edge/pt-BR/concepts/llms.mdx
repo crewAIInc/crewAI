@@ -91,6 +91,7 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
       - `timeout`: Tempo máximo de espera pela resposta
       - `max_tokens`: Limita o comprimento da resposta
       - `response_format`: Especifica formato de saída
+      - `supports_tools`: Ativa ou desativa explicitamente o uso de ferramentas. Quando não definido, a entrada do modelo no catálogo do LiteLLM decide, com fallback para o padrão do provider
 
       Controles de amostragem como `temperature` e `top_p`, parâmetros de penalidade, nomes de limites de tokens e controles de raciocínio são específicos de cada modelo. Adicione-os somente quando o provedor e o modelo escolhidos oferecerem suporte. Consulte os exemplos de provedores abaixo e a documentação do modelo do provedor.
     </Info>
