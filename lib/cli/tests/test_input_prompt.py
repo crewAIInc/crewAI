@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+import sys
+
+import click
 import pytest
 
 from crewai_cli.input_prompt import (
@@ -36,7 +42,9 @@ def test_parse_inputs_json_rejects_non_object(capsys):
 
 
 def test_closest_name_suggests_near_miss():
-    assert closest_name("prospect_emai", ["prospect_email", "topic"]) == "prospect_email"
+    assert (
+        closest_name("prospect_emai", ["prospect_email", "topic"]) == "prospect_email"
+    )
 
 
 def test_closest_name_returns_none_when_nothing_close():
@@ -80,3 +88,54 @@ def test_prompt_for_inputs_keeps_raw_string_without_coerce(monkeypatch):
     )
 
     assert result == {"topic": "AI"}
+
+
+@pytest.mark.parametrize(
+    ("names", "input_text", "expected"),
+    [
+        (["topic"], "AI\n", {"topic": "AI"}),
+        (["count", "topic"], "42\n研究\n", {"count": 42, "topic": "研究"}),
+        (["topic"], "", None),
+    ],
+    ids=["single-input", "multiple-inputs", "abort"],
+)
+def test_prompt_for_inputs_keeps_prompt_chrome_on_stderr(
+    names: list[str], input_text: str, expected: dict[str, str | int] | None
+) -> None:
+    """Real Click prompts must leave stdout available for serialized results."""
+    script = (
+        "import json\n"
+        "import click\n"
+        "from crewai_cli.input_prompt import prompt_for_inputs\n"
+        f"names = {names!r}\n"
+        "try:\n"
+        "    result = prompt_for_inputs(\n"
+        "        names, title='Runtime inputs', subtitle='Required values',\n"
+        "        describe=lambda name: f'Value for {name}',\n"
+        "        coerce=lambda name, raw: int(raw) if name == 'count' else raw,\n"
+        "    )\n"
+        "except click.Abort:\n"
+        "    result = None\n"
+        "print(json.dumps(result, ensure_ascii=False))\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        input=input_text,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == json.dumps(expected, ensure_ascii=False) + "\n"
+    # Click passes styled prompt text to input() unstripped, so escape codes reach a
+    # piped stderr. Unstyle until the prompts stop emitting them off a terminal.
+    stderr = click.unstyle(result.stderr)
+    assert "Runtime inputs" in stderr
+    assert "Required values" in stderr
+    for name in names:
+        assert f"Value for {name}" in stderr
+        assert f"{name} > " in stderr

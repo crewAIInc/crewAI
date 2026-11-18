@@ -84,8 +84,7 @@ def log_tool_result(context):
 Aplica hooks apenas a instâncias específicas de crew:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
+from crewai.project import CrewBase, crew
 from crewai.hooks import before_llm_call_crew, after_tool_call_crew
 
 @CrewBase
@@ -173,7 +172,7 @@ Fornece acesso ao estado de execução do LLM:
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor  # Acesso completo ao executor
+    executor: AgentExecutor  # Acesso completo ao executor
     messages: list               # Lista de mensagens mutável
     agent: Agent                 # Agente atual
     task: Task                   # Tarefa atual

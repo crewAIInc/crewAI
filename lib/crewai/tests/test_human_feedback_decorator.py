@@ -12,6 +12,14 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    SecretStr,
+    ValidationError,
+)
 
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.flow import Flow, human_feedback, listen, persist, start
@@ -878,6 +886,274 @@ class TestHumanFeedbackLearn:
         config = test_method.__human_feedback_config__
         assert config is not None
         assert config.learn_strict is True
+
+
+class _Draft(BaseModel):
+    title: str
+    body: str
+
+
+def _lesson(content: str) -> Any:
+    from crewai.memory.types import MemoryMatch, MemoryRecord
+
+    return MemoryMatch(
+        record=MemoryRecord(content=content, embedding=[]),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+
+
+def _review_llm(*responses: Any, function_calling: bool = True) -> MagicMock:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = function_calling
+    llm.call.side_effect = list(responses)
+    return llm
+
+
+def _run_learning_flow(
+    output: Any, llm: MagicMock, feedback: str = "", *, learn_strict: bool = False
+) -> tuple[Flow, dict[str, Any]]:
+    """Kick off a one-step learn=True flow whose method returns ``output``."""
+
+    class LearningFlow(Flow):
+        @start()
+        @human_feedback(
+            message="Review:", llm="gpt-4o-mini", learn=True, learn_strict=learn_strict
+        )
+        def draft(self):
+            return output
+
+    flow = LearningFlow()
+    flow.memory = MagicMock()
+    flow.memory.recall.return_value = [_lesson("Titles use sentence case")]
+    seen: dict[str, Any] = {}
+
+    def show(message, output, metadata=None, emit=None, method_name=""):
+        seen["shown"] = output
+        return feedback
+
+    with (
+        patch.object(flow, "_request_human_feedback", side_effect=show),
+        patch("crewai.llm.LLM", return_value=llm),
+    ):
+        flow.kickoff()
+    return flow, seen
+
+
+class TestPreReviewKeepsOutputType:
+    """learn=True pre-review must not change the type of what the human approves."""
+
+    def test_pydantic_output_is_rewritten_into_the_same_model(self):
+        llm = _review_llm(_Draft(title="Launch day", body="We shipped."))
+
+        flow, seen = _run_learning_flow(_Draft(title="Launch Day", body="We shipped."), llm)
+
+        assert seen["shown"] == _Draft(title="Launch day", body="We shipped.")
+        assert flow.last_human_feedback.output == seen["shown"]
+        assert llm.call.call_args.kwargs["response_model"] is _Draft
+        assert '"title":"Launch Day"' in llm.call.call_args.args[0][1]["content"]
+
+    def test_pydantic_output_parses_a_json_string_response(self):
+        # LiteLLM-routed models return structured output as a JSON string.
+        llm = _review_llm('{"title": "Launch day", "body": "We shipped."}')
+
+        _, seen = _run_learning_flow(_Draft(title="Launch Day", body="We shipped."), llm)
+
+        assert seen["shown"] == _Draft(title="Launch day", body="We shipped.")
+
+    def test_dict_output_reaches_the_reviewer_unchanged(self):
+        output = {"title": "Launch Day", "body": "We shipped."}
+        llm = _review_llm()
+
+        flow, seen = _run_learning_flow(output, llm)
+
+        assert seen["shown"] is output
+        assert flow.last_human_feedback.output is output
+        flow.memory.recall.assert_not_called()
+        llm.call.assert_not_called()
+
+    def test_text_output_parses_a_json_string_response(self):
+        llm = _review_llm('{"improved_output": "Launch day"}')
+
+        _, seen = _run_learning_flow("Launch Day", llm)
+
+        assert seen["shown"] == "Launch day"
+
+    def test_invalid_structured_result_falls_back_to_the_original(self):
+        original = _Draft(title="Launch Day", body="We shipped.")
+        llm = _review_llm('{"title": "Launch day"}')
+
+        _, seen = _run_learning_flow(original, llm)
+
+        assert seen["shown"] is original
+
+    def test_invalid_structured_result_raises_when_strict(self):
+        llm = _review_llm('{"title": "Launch day"}')
+
+        with pytest.raises(ValidationError, match="body"):
+            _run_learning_flow(
+                _Draft(title="Launch Day", body="We shipped."), llm, learn_strict=True
+            )
+
+
+class _Handle:
+    """An object pydantic cannot serialize to JSON."""
+
+
+class _WithHandle(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    title: str
+    handle: _Handle
+
+
+class _Account(BaseModel):
+    name: str
+    token: SecretStr
+
+
+class _Tagged(BaseModel):
+    title: str
+    row_id: str = Field(default="", exclude=True)
+
+
+class _Report(BaseModel):
+    title: str
+    owner: _Account | None = None
+    accounts: list[_Account] = []
+    by_name: dict[str, _Account] = {}
+    tagged: list[_Tagged] = []
+
+
+class _Aliased(BaseModel):
+    model_config = ConfigDict(serialize_by_alias=True, validate_by_name=True)
+
+    title: str = Field(alias="headline")
+    body: str
+
+
+_ACCOUNT = _Account(name="ana", token=SecretStr("tok-123"))
+
+
+class _Session(BaseModel):
+    title: str
+    _token: str = PrivateAttr(default="")
+
+
+class _Workspace(BaseModel):
+    title: str
+    owner: _Session | None = None
+    sessions: list[_Session] = []
+    by_name: dict[str, _Session] = {}
+
+
+def _session(token: str = "tok-live") -> _Session:
+    session = _Session(title="Launch Day")
+    session._token = token
+    return session
+
+
+class TestPreReviewKeepsWhatItCannotSee:
+    def test_unserializable_output_falls_back_to_the_original(self):
+        original = _WithHandle(title="Launch Day", handle=_Handle())
+        llm = _review_llm()
+
+        _, seen = _run_learning_flow(original, llm)
+
+        assert seen["shown"] is original
+        llm.call.assert_not_called()
+
+    def test_unserializable_output_raises_when_strict(self):
+        from pydantic_core import PydanticSerializationError
+
+        with pytest.raises(PydanticSerializationError, match="Unable to serialize"):
+            _run_learning_flow(
+                _WithHandle(title="Launch Day", handle=_Handle()),
+                _review_llm(),
+                learn_strict=True,
+            )
+
+    @pytest.mark.parametrize(
+        "original",
+        [
+            _Account(name="ana", token=SecretStr("tok-123")),
+            _Tagged(title="Launch Day", row_id="r1"),
+            _Report(title="Q3", owner=_ACCOUNT),
+            _Report(title="Q3", accounts=[_ACCOUNT]),
+            _Report(title="Q3", by_name={"ana": _ACCOUNT}),
+            _Report(title="Q3", tagged=[_Tagged(title="t", row_id="r1")]),
+            _session(),
+            _Workspace(title="Q3", owner=_session()),
+            _Workspace(title="Q3", sessions=[_session()]),
+            _Workspace(title="Q3", by_name={"ana": _session()}),
+        ],
+        ids=[
+            "secret",
+            "excluded",
+            "nested",
+            "list",
+            "dict",
+            "list-excluded",
+            "private",
+            "nested-private",
+            "list-private",
+            "dict-private",
+        ],
+    )
+    def test_model_with_hidden_values_reaches_the_reviewer_unchanged(self, original):
+        # The LLM would see secrets masked and excluded fields not at all, so a
+        # model rebuilt from its review would lose them.
+        llm = _review_llm()
+
+        flow, seen = _run_learning_flow(original, llm)
+
+        assert seen["shown"] is original
+        assert flow.last_human_feedback.output is original
+        flow.memory.recall.assert_not_called()
+        llm.call.assert_not_called()
+
+    def test_model_without_hidden_values_is_still_reviewed(self):
+        llm = _review_llm('{"title": "Q3 report", "owner": null}')
+
+        _, seen = _run_learning_flow(_Report(title="Q3"), llm)
+
+        assert seen["shown"] == _Report(title="Q3 report")
+
+    def test_private_attribute_left_at_its_default_is_still_reviewed(self):
+        # A rebuilt model resets private attributes to their defaults, which only
+        # loses data when the value had changed.
+        llm = _review_llm('{"title": "Launch day"}')
+
+        _, seen = _run_learning_flow(_Session(title="Launch Day"), llm)
+
+        assert seen["shown"] == _Session(title="Launch day")
+        llm.call.assert_called_once()
+
+    def test_edits_to_aliased_fields_are_kept(self):
+        llm = _review_llm('{"headline": "Launch day", "body": "We shipped."}')
+
+        _, seen = _run_learning_flow(
+            _Aliased(title="Launch Day", body="We shipped."), llm
+        )
+
+        assert seen["shown"].title == "Launch day"
+        assert '"headline":"Launch Day"' in llm.call.call_args.args[0][1]["content"]
+
+
+class TestDistillationParsesJsonStrings:
+    def test_lessons_returned_as_a_json_string_are_stored(self):
+        from crewai.flow.human_feedback import PreReviewResult
+
+        llm = _review_llm(
+            PreReviewResult(improved_output="Launch day"),
+            '{"lessons": ["Titles use sentence case"]}',
+        )
+
+        flow, _ = _run_learning_flow("Launch Day", llm, feedback="Sentence case, please")
+
+        flow.memory.remember_many.assert_called_once_with(
+            ["Titles use sentence case"], source="hitl"
+        )
 
 
 class TestHumanFeedbackFinalOutputPreservation:

@@ -16,6 +16,7 @@ class _FakeOpenAICompletion:
     def __init__(self) -> None:
         self.call = MagicMock(return_value="responses-result")
         self.acall = AsyncMock(return_value="async-responses-result")
+        self.get_input_tokens_count = MagicMock(return_value=42)
         self.last_response_id = "resp_abc123"
         self.last_reasoning_items = [{"type": "reasoning"}]
         self.reset_chain = MagicMock()
@@ -240,6 +241,12 @@ class TestAzureResponsesCall:
 
         assert isinstance(result, str)
         assert len(result) > 0
+
+    def test_input_token_count_uses_character_fallback_for_responses(self, mock_openai_completion):
+        _mock_cls, _instance = mock_openai_completion
+        comp = _create_azure_responses()
+
+        assert comp.get_input_tokens_count("12345") == 2
 
 
 # Delegated property & method tests

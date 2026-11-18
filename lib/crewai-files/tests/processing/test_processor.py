@@ -1,8 +1,13 @@
 """Tests for FileProcessor class."""
 
-from crewai_files import FileBytes, ImageFile
+import io
+import os
+
+from PIL import Image
+from crewai_files import FileBytes, ImageFile, PDFFile
 from crewai_files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
+    BEDROCK_CONSTRAINTS,
     ImageConstraints,
     ProviderConstraints,
 )
@@ -11,6 +16,7 @@ from crewai_files.processing.exceptions import (
     FileTooLargeError,
 )
 from crewai_files.processing.processor import FileProcessor
+from pypdf import PdfWriter
 import pytest
 
 
@@ -298,3 +304,43 @@ class TestFileProcessorPerFileMode:
         )
         result = processor.process(warn_file)
         assert result == warn_file
+
+
+class TestFileProcessorBedrockLimits:
+    """Tests that Bedrock files are checked against the Converse API limits.
+
+    Images are capped at 3.75 MB and documents at 4.5 MB:
+    https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Message.html
+    """
+
+    def test_auto_mode_optimizes_image_over_image_limit(self):
+        """Test an image over 3.75 MB is optimized instead of sent as-is."""
+        side = 1160
+        pixels = os.urandom(side * side * 3)
+        buffer = io.BytesIO()
+        Image.frombytes("RGB", (side, side), pixels).save(buffer, format="PNG")
+        data = buffer.getvalue()
+        assert 3_932_160 < len(data) < 4_500_000  # over 3.75 MiB, under 4.5 MB
+
+        file = ImageFile(source=FileBytes(data=data, filename="photo.png"))
+        result = FileProcessor(constraints="bedrock").process(file)
+        result_size = len(result.read())
+
+        assert result_size < len(data)
+        assert result_size <= BEDROCK_CONSTRAINTS.image.max_size_bytes
+
+    def test_strict_mode_accepts_pdf_under_document_limit(self):
+        """Test a PDF under 4.5 MB is not rejected as too large."""
+        writer = PdfWriter()
+        writer.add_blank_page(width=612, height=792)
+        writer.add_attachment("padding.bin", os.urandom(4_000_000))
+        buffer = io.BytesIO()
+        writer.write(buffer)
+        data = buffer.getvalue()
+        assert 3_932_160 < len(data) < 4_500_000  # over 3.75 MiB, under 4.5 MB
+
+        file = PDFFile(
+            source=FileBytes(data=data, filename="report.pdf"), mode="strict"
+        )
+
+        assert FileProcessor(constraints="bedrock").process(file) is file

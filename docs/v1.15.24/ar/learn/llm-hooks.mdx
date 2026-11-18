@@ -1,0 +1,427 @@
+---
+title: خطافات استدعاء LLM
+description: تعلم كيفية استخدام خطافات استدعاء LLM لاعتراض وتعديل والتحكم في تفاعلات نماذج اللغة في CrewAI
+mode: "wide"
+---
+
+توفر خطافات استدعاء LLM تحكماً دقيقاً في تفاعلات نماذج اللغة أثناء تنفيذ الوكيل. تتيح لك هذه الخطافات اعتراض استدعاءات LLM وتعديل المطالبات وتحويل الاستجابات وتنفيذ بوابات الموافقة وإضافة تسجيل أو مراقبة مخصصة.
+
+## نظرة عامة
+
+تُنفذ خطافات LLM في نقطتين حرجتين:
+- **قبل استدعاء LLM**: تعديل الرسائل، التحقق من المدخلات، أو حظر التنفيذ
+- **بعد استدعاء LLM**: تحويل الاستجابات، تنقية المخرجات، أو تعديل سجل المحادثة
+
+## أنواع الخطافات
+
+### خطافات ما قبل استدعاء LLM
+
+تُنفذ قبل كل استدعاء LLM، ويمكن لهذه الخطافات:
+- فحص وتعديل الرسائل المرسلة إلى LLM
+- حظر تنفيذ LLM بناءً على شروط
+- تنفيذ تحديد معدل أو بوابات موافقة
+- إضافة سياق أو رسائل نظام
+- تسجيل تفاصيل الطلب
+
+**التوقيع:**
+```python
+def before_hook(context: LLMCallHookContext) -> bool | None:
+    # Return False to block execution
+    # Return True or None to allow execution
+    ...
+```
+
+### خطافات ما بعد استدعاء LLM
+
+تُنفذ بعد كل استدعاء LLM، ويمكن لهذه الخطافات:
+- تعديل أو تنقية استجابات LLM
+- إضافة بيانات وصفية أو تنسيق
+- تسجيل تفاصيل الاستجابة
+- تحديث سجل المحادثة
+- تنفيذ تصفية المحتوى
+
+**التوقيع:**
+```python
+def after_hook(context: LLMCallHookContext) -> str | None:
+    # Return modified response string
+    # Return None to keep original response
+    ...
+```
+
+## سياق خطاف LLM
+
+يوفر كائن `LLMCallHookContext` وصولاً شاملاً لحالة التنفيذ:
+
+```python
+class LLMCallHookContext:
+    executor: CrewAgentExecutor  # Full executor reference
+    messages: list               # Mutable message list
+    agent: Agent                 # Current agent
+    task: Task                   # Current task
+    crew: Crew                   # Crew instance
+    llm: BaseLLM                 # LLM instance
+    iterations: int              # Current iteration count
+    response: str | None         # LLM response (after hooks only)
+```
+
+### تعديل الرسائل
+
+**مهم:** قم دائماً بتعديل الرسائل في مكانها:
+
+```python
+# ✅ Correct - modify in-place
+def add_context(context: LLMCallHookContext) -> None:
+    context.messages.append({"role": "system", "content": "Be concise"})
+
+# ❌ Wrong - replaces list reference
+def wrong_approach(context: LLMCallHookContext) -> None:
+    context.messages = [{"role": "system", "content": "Be concise"}]
+```
+
+## طرق التسجيل
+
+### 1. تسجيل الخطافات العامة
+
+تسجيل خطافات تنطبق على جميع استدعاءات LLM عبر جميع الأطقم:
+
+```python
+from crewai.hooks import register_before_llm_call_hook, register_after_llm_call_hook
+
+def log_llm_call(context):
+    print(f"LLM call by {context.agent.role} at iteration {context.iterations}")
+    return None  # Allow execution
+
+register_before_llm_call_hook(log_llm_call)
+```
+
+### 2. التسجيل باستخدام المزخرفات
+
+استخدم المزخرفات لصياغة أنظف:
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call
+
+@before_llm_call
+def validate_iteration_count(context):
+    if context.iterations > 10:
+        print("⚠️ Exceeded maximum iterations")
+        return False  # Block execution
+    return None
+
+@after_llm_call
+def sanitize_response(context):
+    if context.response and "API_KEY" in context.response:
+        return context.response.replace("API_KEY", "[REDACTED]")
+    return None
+```
+
+### 3. خطافات نطاق الطاقم
+
+تسجيل خطافات لمثيل طاقم محدد:
+
+```python
+@CrewBase
+class MyProjCrew:
+    @before_llm_call_crew
+    def validate_inputs(self, context):
+        # Only applies to this crew
+        if context.iterations == 0:
+            print(f"Starting task: {context.task.description}")
+        return None
+
+    @after_llm_call_crew
+    def log_responses(self, context):
+        # Crew-specific response logging
+        print(f"Response length: {len(context.response)}")
+        return None
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+## حالات الاستخدام الشائعة
+
+### 1. تحديد التكرارات
+
+```python
+@before_llm_call
+def limit_iterations(context: LLMCallHookContext) -> bool | None:
+    max_iterations = 15
+    if context.iterations > max_iterations:
+        print(f"⛔ Blocked: Exceeded {max_iterations} iterations")
+        return False  # Block execution
+    return None
+```
+
+### 2. بوابة الموافقة البشرية
+
+```python
+@before_llm_call
+def require_approval(context: LLMCallHookContext) -> bool | None:
+    if context.iterations > 5:
+        response = context.request_human_input(
+            prompt=f"Iteration {context.iterations}: Approve LLM call?",
+            default_message="Press Enter to approve, or type 'no' to block:"
+        )
+        if response.lower() == "no":
+            print("🚫 LLM call blocked by user")
+            return False
+    return None
+```
+
+### 3. إضافة سياق النظام
+
+```python
+@before_llm_call
+def add_guardrails(context: LLMCallHookContext) -> None:
+    # Add safety guidelines to every LLM call
+    context.messages.append({
+        "role": "system",
+        "content": "Ensure responses are factual and cite sources when possible."
+    })
+    return None
+```
+
+### 4. تنقية الاستجابات
+
+```python
+@after_llm_call
+def sanitize_sensitive_data(context: LLMCallHookContext) -> str | None:
+    if not context.response:
+        return None
+
+    # Remove sensitive patterns
+    import re
+    sanitized = context.response
+    sanitized = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN-REDACTED]', sanitized)
+    sanitized = re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[CARD-REDACTED]', sanitized)
+
+    return sanitized
+```
+
+### 5. تتبع التكاليف
+
+```python
+import tiktoken
+
+@before_llm_call
+def track_token_usage(context: LLMCallHookContext) -> None:
+    encoding = tiktoken.get_encoding("cl100k_base")
+    total_tokens = sum(
+        len(encoding.encode(msg.get("content", "")))
+        for msg in context.messages
+    )
+    print(f"📊 Input tokens: ~{total_tokens}")
+    return None
+
+@after_llm_call
+def track_response_tokens(context: LLMCallHookContext) -> None:
+    if context.response:
+        encoding = tiktoken.get_encoding("cl100k_base")
+        tokens = len(encoding.encode(context.response))
+        print(f"📊 Response tokens: ~{tokens}")
+    return None
+```
+
+### 6. تسجيل التصحيح
+
+```python
+@before_llm_call
+def debug_request(context: LLMCallHookContext) -> None:
+    print(f"""
+    🔍 LLM Call Debug:
+    - Agent: {context.agent.role}
+    - Task: {context.task.description[:50]}...
+    - Iteration: {context.iterations}
+    - Message Count: {len(context.messages)}
+    - Last Message: {context.messages[-1] if context.messages else 'None'}
+    """)
+    return None
+
+@after_llm_call
+def debug_response(context: LLMCallHookContext) -> None:
+    if context.response:
+        print(f"✅ Response Preview: {context.response[:100]}...")
+    return None
+```
+
+## إدارة الخطافات
+
+### إلغاء تسجيل الخطافات
+
+```python
+from crewai.hooks import (
+    unregister_before_llm_call_hook,
+    unregister_after_llm_call_hook
+)
+
+# Unregister specific hook
+def my_hook(context):
+    ...
+
+register_before_llm_call_hook(my_hook)
+# Later...
+unregister_before_llm_call_hook(my_hook)  # Returns True if found
+```
+
+### مسح الخطافات
+
+```python
+from crewai.hooks import (
+    clear_before_llm_call_hooks,
+    clear_after_llm_call_hooks,
+    clear_all_llm_call_hooks
+)
+
+# Clear specific hook type
+count = clear_before_llm_call_hooks()
+print(f"Cleared {count} before hooks")
+
+# Clear all LLM hooks
+before_count, after_count = clear_all_llm_call_hooks()
+print(f"Cleared {before_count} before and {after_count} after hooks")
+```
+
+### عرض الخطافات المسجلة
+
+```python
+from crewai.hooks import (
+    get_before_llm_call_hooks,
+    get_after_llm_call_hooks
+)
+
+# Get current hooks
+before_hooks = get_before_llm_call_hooks()
+after_hooks = get_after_llm_call_hooks()
+
+print(f"Registered: {len(before_hooks)} before, {len(after_hooks)} after")
+```
+
+## أنماط متقدمة
+
+### تنفيذ خطاف مشروط
+
+```python
+@before_llm_call
+def conditional_blocking(context: LLMCallHookContext) -> bool | None:
+    # Only block for specific agents
+    if context.agent.role == "researcher" and context.iterations > 10:
+        return False
+
+    # Only block for specific tasks
+    if "sensitive" in context.task.description.lower() and context.iterations > 5:
+        return False
+
+    return None
+```
+
+### تعديلات واعية بالسياق
+
+```python
+@before_llm_call
+def adaptive_prompting(context: LLMCallHookContext) -> None:
+    # Add different context based on iteration
+    if context.iterations == 0:
+        context.messages.append({
+            "role": "system",
+            "content": "Start with a high-level overview."
+        })
+    elif context.iterations > 3:
+        context.messages.append({
+            "role": "system",
+            "content": "Focus on specific details and provide examples."
+        })
+    return None
+```
+
+### ربط الخطافات
+
+```python
+# Multiple hooks execute in registration order
+
+@before_llm_call
+def first_hook(context):
+    print("1. First hook executed")
+    return None
+
+@before_llm_call
+def second_hook(context):
+    print("2. Second hook executed")
+    return None
+
+@before_llm_call
+def blocking_hook(context):
+    if context.iterations > 10:
+        print("3. Blocking hook - execution stopped")
+        return False  # Subsequent hooks won't execute
+    print("3. Blocking hook - execution allowed")
+    return None
+```
+
+## أفضل الممارسات
+
+1. **اجعل الخطافات مركزة**: يجب أن يكون لكل خطاف مسؤولية واحدة
+2. **تجنب الحسابات الثقيلة**: تُنفذ الخطافات في كل استدعاء LLM
+3. **تعامل مع الأخطاء بأناقة**: استخدم try-except لمنع فشل الخطافات من كسر التنفيذ
+4. **استخدم تلميحات الأنواع**: استفد من `LLMCallHookContext` لدعم أفضل في بيئة التطوير
+5. **وثّق سلوك الخطاف**: خاصة لشروط الحظر
+6. **اختبر الخطافات بشكل مستقل**: اختبر الخطافات وحدوياً قبل الاستخدام في الإنتاج
+7. **امسح الخطافات في الاختبارات**: استخدم `clear_all_llm_call_hooks()` بين تشغيلات الاختبار
+8. **عدّل في المكان**: قم دائماً بتعديل `context.messages` في مكانها، ولا تستبدلها
+
+## معالجة الأخطاء
+
+```python
+@before_llm_call
+def safe_hook(context: LLMCallHookContext) -> bool | None:
+    try:
+        # Your hook logic
+        if some_condition:
+            return False
+    except Exception as e:
+        print(f"⚠️ Hook error: {e}")
+        # Decide: allow or block on error
+        return None  # Allow execution despite error
+```
+
+## أمان الأنواع
+
+```python
+from crewai.hooks import LLMCallHookContext, BeforeLLMCallHookType, AfterLLMCallHookType
+
+# Explicit type annotations
+def my_before_hook(context: LLMCallHookContext) -> bool | None:
+    return None
+
+def my_after_hook(context: LLMCallHookContext) -> str | None:
+    return None
+
+# Type-safe registration
+register_before_llm_call_hook(my_before_hook)
+register_after_llm_call_hook(my_after_hook)
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### الخطاف لا يُنفذ
+- تحقق من أن الخطاف مسجل قبل تنفيذ الطاقم
+- تحقق مما إذا كان خطاف سابق أرجع `False` (يحظر الخطافات اللاحقة)
+- تأكد من أن توقيع الخطاف يطابق النوع المتوقع
+
+### تعديلات الرسائل لا تستمر
+- استخدم التعديلات في المكان: `context.messages.append()`
+- لا تستبدل القائمة: `context.messages = []`
+
+### تعديلات الاستجابة لا تعمل
+- أرجع السلسلة النصية المعدلة من خطافات ما بعد
+- إرجاع `None` يحتفظ بالاستجابة الأصلية
+
+## الخاتمة
+
+توفر خطافات استدعاء LLM إمكانيات قوية للتحكم في تفاعلات نماذج اللغة ومراقبتها في CrewAI. استخدمها لتنفيذ حواجز الأمان وبوابات الموافقة والتسجيل وتتبع التكاليف وتنقية الاستجابات. مع معالجة الأخطاء المناسبة وأمان الأنواع، تُمكّن الخطافات أنظمة وكلاء قوية وجاهزة للإنتاج.

@@ -86,8 +86,8 @@ class TestTraceListenerSetup:
         transport = SimpleNamespace(grants=[], exporter=InMemorySpanExporter())
         monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
         monkeypatch.setattr(
-            "crewai.telemetry.tracing.grants.tracing_credential",
-            lambda: "synthetic-login",
+            "crewai.telemetry.tracing.grants.resolve_tracing_credential",
+            lambda: ("login", "synthetic-login"),
         )
 
         def grant(client, execution_uuid):
@@ -441,7 +441,7 @@ class TestTraceListenerSetup:
     def test_trace_listener_ephemeral_batch(self, trace_transport, monkeypatch):
         """Unauthenticated kickoff uploads buffered spans only after consent."""
         monkeypatch.setattr(
-            "crewai.telemetry.tracing.grants.tracing_credential", lambda: None
+            "crewai.telemetry.tracing.grants.resolve_tracing_credential", lambda: None
         )
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
 
