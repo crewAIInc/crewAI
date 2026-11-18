@@ -184,6 +184,46 @@ def test_safe_get_follows_safe_relative_redirect(
     assert len(response.history) == 1
 
 
+@pytest.mark.parametrize(
+    "body_kwargs",
+    [{"data": b"secret body"}, {"json": {"secret": "body"}}],
+    ids=["data", "json"],
+)
+def test_safe_get_drops_credentials_on_cross_origin_redirect(
+    monkeypatch: pytest.MonkeyPatch,
+    public_dns: None,
+    body_kwargs: dict[str, Any],
+) -> None:
+    """A redirect must not replay auth, certificates, query or body credentials."""
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        calls.append((url, kwargs))
+        if url == "http://public.example/start":
+            return _response(url, 302, location="https://public.example/next")
+        return _response(url, 200)
+
+    _mock_get(monkeypatch, fake_get)
+
+    response = safe_get(
+        "http://public.example/start",
+        auth=("user", "password"),
+        cert=("client.pem", "key.pem"),
+        params={"token": "secret"},
+        timeout=15,
+        **body_kwargs,
+    )
+
+    assert response.status_code == 200
+    assert calls[0][1]["auth"] == ("user", "password")
+    assert calls[0][1]["cert"] == ("client.pem", "key.pem")
+    assert calls[0][1]["params"] == {"token": "secret"}
+    for key, value in body_kwargs.items():
+        assert calls[0][1][key] == value
+    for key in ("auth", "cert", "params", *body_kwargs):
+        assert key not in calls[1][1]
+
+
 def test_safe_get_fails_closed_after_too_many_redirects(
     monkeypatch: pytest.MonkeyPatch, public_dns: None
 ) -> None:
