@@ -1791,6 +1791,30 @@ def test_flow_copy_state_without_unpickleable_objects():
     assert copied_state.nested["key"] == "modified"
 
 
+def test_flow_instances_own_nested_initial_state() -> None:
+    initial = {"wallet": {"expenses": []}}
+    marketing = Flow(initial_state=initial)
+    engineering = Flow(initial_state=initial)
+
+    marketing.state["wallet"]["expenses"].append(40)
+
+    assert engineering.state["wallet"]["expenses"] == []
+    assert initial == {"wallet": {"expenses": []}}
+    assert marketing.state["id"] != engineering.state["id"]
+
+
+def test_flow_initial_state_accepts_uncopyable_values() -> None:
+    lock = threading.RLock()
+    initial = {"id": "existing-flow", "lock": lock}
+
+    flow = Flow(initial_state=initial)
+    flow.state["new"] = "value"
+
+    assert flow.state["id"] == "existing-flow"
+    assert flow.state["lock"] is lock
+    assert "new" not in initial
+
+
 def test_flow_copy_state_with_dict_state():
     """Test that _copy_state works with dict-based states."""
 
