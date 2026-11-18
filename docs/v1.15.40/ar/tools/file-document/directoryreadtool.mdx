@@ -1,0 +1,52 @@
+---
+title: قراءة المجلدات
+description: أداة `DirectoryReadTool` هي أداة مساعدة قوية مصممة لتوفير قائمة شاملة بمحتويات المجلد.
+icon: folder-tree
+mode: "wide"
+---
+
+# `DirectoryReadTool`
+
+<Note>
+    لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+أداة DirectoryReadTool هي أداة مساعدة قوية مصممة لتوفير قائمة شاملة بمحتويات المجلد. يمكنها التنقل بشكل متكرر عبر المجلد المحدد، مما يوفر للمستخدمين تعداداً مفصلاً لجميع الملفات، بما في ذلك تلك الموجودة داخل المجلدات الفرعية. هذه الأداة ضرورية للمهام التي تتطلب جرداً شاملاً لهياكل المجلدات أو للتحقق من تنظيم الملفات داخل المجلدات.
+
+## التثبيت
+
+لاستخدام DirectoryReadTool في مشروعك، قم بتثبيت حزمة `crewai_tools`. إذا لم تكن هذه الحزمة جزءاً من بيئتك بعد، يمكنك تثبيتها باستخدام pip بالأمر التالي:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+يُثبّت هذا الأمر أحدث إصدار من حزمة `crewai_tools`، مما يمنح الوصول إلى DirectoryReadTool بالإضافة إلى أدوات مساعدة أخرى.
+
+## مثال
+
+استخدام DirectoryReadTool بسيط ومباشر. يوضح مقتطف الكود التالي كيفية إعدادها واستخدام الأداة لعرض محتويات مجلد محدد:
+
+```python Code
+from crewai_tools import DirectoryReadTool
+
+# Initialize the tool so the agent can read any directory's content
+# it learns about during execution
+tool = DirectoryReadTool()
+
+# OR
+
+# Initialize the tool with a specific directory,
+# so the agent can only read the content of the specified directory
+tool = DirectoryReadTool(directory='/path/to/your/directory')
+```
+
+## المعاملات
+
+يمكن استخدام المعاملات التالية لتخصيص سلوك `DirectoryReadTool`:
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **directory**  | `string` | _اختياري_. معامل يحدد المسار إلى المجلد الذي ترغب في عرض محتوياته. يقبل كلاً من المسارات المطلقة والنسبية، ويوجه الأداة إلى المجلد المطلوب لعرض المحتوى. |
