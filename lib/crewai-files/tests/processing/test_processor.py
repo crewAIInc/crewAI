@@ -1,5 +1,6 @@
 """Tests for FileProcessor class."""
 
+import asyncio
 import io
 import os
 
@@ -344,3 +345,36 @@ class TestFileProcessorBedrockLimits:
         )
 
         assert FileProcessor(constraints="bedrock").process(file) is file
+
+class TestFileProcessorAsyncParity:
+    """aprocess_files must report failures the same way process_files does."""
+
+    def test_strict_failure_is_raised_instead_of_dropped(self):
+        constraints = ProviderConstraints(
+            name="test", image=ImageConstraints(max_size_bytes=10)
+        )
+        processor = FileProcessor(constraints=constraints)
+        image = ImageFile(
+            source=FileBytes(data=MINIMAL_PNG, filename="photo.png"),
+            mode="strict",
+        )
+
+        with pytest.raises(FileTooLargeError):
+            processor.process_files({"image": image})
+
+        with pytest.raises(FileTooLargeError):
+            asyncio.run(processor.aprocess_files({"image": image}))
+
+    def test_successful_files_are_still_returned(self):
+        constraints = ProviderConstraints(
+            name="test", image=ImageConstraints(max_size_bytes=1_000_000)
+        )
+        processor = FileProcessor(constraints=constraints)
+        image = ImageFile(
+            source=FileBytes(data=MINIMAL_PNG, filename="photo.png"),
+            mode="strict",
+        )
+
+        result = asyncio.run(processor.aprocess_files({"image": image}))
+
+        assert result == {"image": image}

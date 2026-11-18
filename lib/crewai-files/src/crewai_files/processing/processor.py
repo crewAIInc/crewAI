@@ -211,14 +211,13 @@ class FileProcessor:
                 return key, result
 
         tasks = [process_single(n, f) for n, f in files.items()]
-        gather_results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Let the first failure propagate exactly as process_files() does. With
+        # return_exceptions=True a strict-mode failure was only logged and the
+        # caller received a partial (or empty) dict with no indication of it.
+        gather_results = await asyncio.gather(*tasks)
 
         output: dict[str, FileInput] = {}
-        for item in gather_results:
-            if isinstance(item, BaseException):
-                logger.error(f"Processing failed: {item}")
-                continue
-            entry_name, processed = item
+        for entry_name, processed in gather_results:
             if isinstance(processed, Sequence) and not isinstance(
                 processed, (str, bytes)
             ):
