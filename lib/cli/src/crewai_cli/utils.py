@@ -204,6 +204,12 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
         env_dict = {}
         for line in env_content.splitlines():
             if line.strip() and not line.strip().startswith("#"):
+                if "=" not in line:
+                    console.print(
+                        f"Skipping malformed line in {env_file_path}: {line!r}",
+                        style="yellow",
+                    )
+                    continue
                 key, value = line.split("=", 1)
                 env_dict[key.strip()] = value.strip()
 

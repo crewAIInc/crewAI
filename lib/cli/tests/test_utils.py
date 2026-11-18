@@ -262,6 +262,17 @@ def test_fetch_and_json_env_file_reads_a_utf8_env_file(tmp_path, ascii_default_e
     }
 
 
+def test_fetch_and_json_env_file_keeps_valid_lines_after_a_malformed_line(
+    tmp_path,
+):
+    env_file = tmp_path / ".env"
+    env_file.write_text("NOTE\nOPENAI_API_KEY=sk-test\n", encoding="utf-8")
+
+    assert utils.fetch_and_json_env_file(str(env_file)) == {
+        "OPENAI_API_KEY": "sk-test",
+    }
+
+
 def test_write_env_file_writes_utf8(tmp_path, ascii_default_encoding):
     utils.write_env_file(tmp_path, {"note": "café"})
 
