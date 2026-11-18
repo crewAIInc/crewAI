@@ -211,14 +211,10 @@ class FileProcessor:
                 return key, result
 
         tasks = [process_single(n, f) for n, f in files.items()]
-        gather_results = await asyncio.gather(*tasks, return_exceptions=True)
+        gather_results = await asyncio.gather(*tasks)
 
         output: dict[str, FileInput] = {}
-        for item in gather_results:
-            if isinstance(item, BaseException):
-                logger.error(f"Processing failed: {item}")
-                continue
-            entry_name, processed = item
+        for entry_name, processed in gather_results:
             if isinstance(processed, Sequence) and not isinstance(
                 processed, (str, bytes)
             ):

@@ -227,6 +227,25 @@ class TestFileProcessorProcess:
         assert result == file
 
 
+class _FailingProcessor(FileProcessor):
+    """Processor whose per-file processing always fails."""
+
+    def process(self, file):
+        raise FileTooLargeError("file too large", file_name="test.png")
+
+
+class TestFileProcessorAprocessFiles:
+    """Tests for FileProcessor.aprocess_files method."""
+
+    @pytest.mark.asyncio
+    async def test_aprocess_files_propagates_errors(self):
+        """A failure must surface, as it does in the sync API."""
+        processor = _FailingProcessor(constraints=ANTHROPIC_CONSTRAINTS)
+
+        with pytest.raises(FileTooLargeError):
+            await processor.aprocess_files({"image": object()})
+
+
 class TestFileProcessorProcessFiles:
     """Tests for FileProcessor.process_files method."""
 
