@@ -289,7 +289,7 @@ def convert_to_model(
 
     if isinstance(result, BaseModel):
         if isinstance(result, model):
-            return result.model_dump() if output_json else result
+            return result.model_dump(mode="json") if output_json else result
         result = result.model_dump_json()
 
     if converter_cls:
@@ -348,7 +348,7 @@ def validate_model(
     """
     exported_result = model.model_validate_json(result)
     if is_json_output:
-        return exported_result.model_dump()
+        return exported_result.model_dump(mode="json")
     return exported_result
 
 
@@ -376,7 +376,7 @@ def handle_partial_json(
         try:
             exported_result = model.model_validate(parsed)
             if is_json_output:
-                return exported_result.model_dump()
+                return exported_result.model_dump(mode="json")
             return exported_result
         except ValidationError:
             # With no agent there is no LLM to refit with; Converter relies on
@@ -492,7 +492,7 @@ async def async_convert_to_model(
 
     if isinstance(result, BaseModel):
         if isinstance(result, model):
-            return result.model_dump() if output_json else result
+            return result.model_dump(mode="json") if output_json else result
         result = result.model_dump_json()
 
     if converter_cls:
@@ -539,7 +539,7 @@ async def async_handle_partial_json(
         try:
             exported_result = model.model_validate(parsed)
             if is_json_output:
-                return exported_result.model_dump()
+                return exported_result.model_dump(mode="json")
             return exported_result
         except ValidationError:
             # With no agent there is no LLM to refit with; Converter relies on
