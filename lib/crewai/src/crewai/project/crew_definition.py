@@ -8,6 +8,7 @@ from typing import Any, TypeAlias
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from crewai.agent.planning_config import PlanningConfig
+from crewai.artifacts import Artifact
 
 
 __all__ = [
@@ -238,6 +239,14 @@ class AgentDefinition(CrewAgentDefinition):
         default=None,
         description="Optional Python reference to a Pydantic response format.",
         examples=[{"python": "my_project.schemas.SupportReply"}],
+    )
+    artifact: Artifact | bool | None = Field(
+        default=None,
+        description=(
+            "Save the agent's final output as an artifact. True names it after "
+            "the flow method and picks the kind from the output."
+        ),
+        examples=[True, {"identifier": "report", "title": "Report", "kind": "html"}],
     )
 
     @field_validator("input", mode="before")

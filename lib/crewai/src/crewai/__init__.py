@@ -12,6 +12,7 @@ from pydantic import Field, PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.artifacts import Artifact, save_artifact
 from crewai.context import ExecutionContext
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -194,6 +195,7 @@ except (ImportError, PydanticUserError):
 __all__ = [
     "LLM",
     "Agent",
+    "Artifact",
     "BaseLLM",
     "Crew",
     "CrewBase",
@@ -210,4 +212,5 @@ __all__ = [
     "Task",
     "TaskOutput",
     "__version__",
+    "save_artifact",
 ]

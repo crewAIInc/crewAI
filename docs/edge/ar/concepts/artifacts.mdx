@@ -1,0 +1,245 @@
+---
+title: المخرجات المحفوظة
+description: احفظ التقارير والرسوم البيانية وملفات PDF وغيرها من ملفات التشغيل ليتمكن الآخرون من معاينتها وتنزيلها ومشاركتها.
+icon: box-archive
+---
+
+## نظرة عامة
+
+المخرَج المحفوظ (artifact) هو ملف له اسم ينتجه Crew أو Agent أو Flow: تقرير HTML أو مستند markdown أو رسم بياني أو ملف PDF أو CSV. لكل مخرَج `identifier`. وعند الحفظ بنفس الـ identifier مرة أخرى في التشغيل نفسه تُنشأ نسخة جديدة (v1، v2، ...).
+
+محليًا، تُكتب المخرجات على القرص. وعلى CrewAI AMP تظهر بجانب التشغيل، حيث يمكن للآخرين معاينتها وتنزيلها ومشاركتها.
+
+هذه الميزة اختيارية. يمكنك حفظ ناتج Task أو Agent، أو السماح للـ Agents بحفظ الملفات عبر أداة، أو الحفظ من كودك.
+
+## حفظ مخرَج Task أو Agent
+
+اضبط `artifact` على الـ Task. عند انتهاء الـ Task يُحفظ ناتجها النهائي كمخرَج. لا يوجد استدعاء أداة ولا رموز إضافية، لذلك لا يمكن للنموذج أن ينسى الحفظ.
+
+```python
+from crewai import Artifact, Task
+
+report = Task(
+    description="Write the Q3 report as HTML",
+    expected_output="A full HTML page",
+    agent=analyst,
+    artifact=Artifact(identifier="q3-report", title="Q3 report", kind="html"),
+)
+```
+
+في Crew بصيغة JSON، أضفه إلى الـ Task في `crew.jsonc`:
+
+```jsonc
+"artifact": {"identifier": "q3-report", "title": "Q3 report", "kind": "html"}
+```
+
+### دع CrewAI يختار الاسم
+
+مرّر `artifact=True` لتتجاوز التفاصيل. يملؤها CrewAI كما يلي:
+
+- يأتي `identifier` و`title` من اسم الـ Task (أو وصفها). داخل Flow يأتيان من اسم دالة الـ Flow. وفي غير ذلك يأتيان من role الـ Agent.
+- يأتي `kind` من الناتج: `html` إذا بدأ بـ `<!doctype html` أو `<html`، و`svg` إذا بدأ بـ `<svg`، و`json` إذا كان كائن JSON أو قائمة، و`markdown` لأي شيء آخر.
+
+```python
+report = Task(name="Q3 report", description="...", expected_output="...", artifact=True)
+# saved as identifier "q3-report", title "Q3 report"
+```
+
+يبقى الاسم نفسه عند تشغيل الـ Task نفسها أو دالة الـ Flow نفسها مرة أخرى، لذلك تنشئ إعادة التشغيل النسخة التالية وليس مخرَجًا جديدًا.
+
+### Agent منفرد
+
+يقبل `Agent.kickoff` الوسيط `artifact` نفسه، على شكل `Artifact` أو `True`:
+
+```python
+result = analyst.kickoff(
+    "Write the Q3 report as HTML",
+    artifact=Artifact(identifier="q3-report", title="Q3 report", kind="html"),
+)
+```
+
+ويقبله أيضًا `kickoff_async` و`akickoff`.
+
+### الـ Flows التصريحية
+
+في تعريف Flow، اضبط `artifact` تحت `with` في خطوة `call: agent`:
+
+```yaml
+methods:
+  write_report:
+    start: true
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Write the weekly report as a full HTML page
+        backstory: Writes clear reports for executives.
+        input: "Weekly report on ${state.topic}"
+        artifact: true
+```
+
+يسمّي `artifact: true` المخرَج باسم الدالة، وهنا يكون `write-report`. استخدم كائنًا مثل `{identifier: weekly-report, title: Weekly report, kind: html}` لتحدد التفاصيل بنفسك.
+
+### حفظ ملف يكتبه الـ Agent
+
+لرسم بياني أو ملف PDF أو أي ملف آخر تكتبه أدوات الـ Agent على القرص، اضبط `file_path` على مكان الملف. يحفظ CrewAI ذلك الملف بدلًا من الناتج النصي. تتطلب الأنواع `image` و`pdf` و`file` وجود `file_path`.
+
+```python
+chart = Task(
+    description="Draw the {quarter} sales chart and save it to output/{quarter}.png",
+    expected_output="A short summary of the chart",
+    agent=designer,
+    artifact=Artifact(
+        identifier="sales-chart",
+        title="Sales chart",
+        kind="image",
+        file_path="output/{quarter}.png",
+    ),
+)
+```
+
+- أخبر الـ Agent أين يكتب الملف، مثلًا في وصف الـ Task.
+- في الـ Task تُملأ `{placeholders}` في `file_path` من مدخلات الـ kickoff، كما في `output_file`. وفي تعريف Flow استخدم تعبيرات `${...}` مثل `output/${state.quarter}.png`.
+- يجب أن يكون الملف داخل مجلد العمل أو مجلد الملفات المؤقتة في النظام.
+
+### استخدام المخرَج المحفوظ
+
+النسخة المحفوظة موجودة في `artifact` على الناتج، لذلك يمكن لدالة callback أو خطوة لاحقة في الـ Flow أو كودك أن يرسل الرابط:
+
+```python
+output = report.execute_sync()
+print(output.artifact.url)
+
+result = analyst.kickoff("...", artifact=True)
+print(result.artifact.url)
+```
+
+في تعريف Flow، اقرأه باستخدام `${outputs.write_report.artifact.url}`.
+
+## السماح للـ Agents بحفظ المخرجات
+
+اضبط `artifacts=True` على الـ Crew لمنح كل Agent أداة `save_artifact`، أو على Agent واحد لمنحه الأداة وحده.
+
+```python
+from crewai import Agent, Crew
+
+crew = Crew(agents=[analyst, writer], tasks=[...], artifacts=True)
+# or
+analyst = Agent(role="Analyst", goal="...", backstory="...", artifacts=True)
+```
+
+تأخذ الأداة `identifier` و`title` و`kind`، ومعها إما `content` (نص) أو `file_path` (ملف أنشأه الـ Agent، مثل صورة PNG لرسم بياني). وتُرجع JSON:
+
+```json
+{"id": "0b9e6c1e-...", "identifier": "q3-report", "version": 1, "url": "file:///.../v1.html", "share_url": null}
+```
+
+يمكن لـ Task لاحقة استخدام الـ `url`، مثلًا لنشره في Slack أو إرفاقه برسالة بريد إلكتروني.
+
+## الحفظ من الكود
+
+استدعِ `save_artifact` من أي كود Python، مثل خطوة في Flow. لا حاجة إلى Agent.
+
+```python
+from crewai import Artifact, save_artifact
+from crewai.flow import Flow, listen, start
+
+class ReportFlow(Flow):
+    @start()
+    def write(self):
+        return "# Weekly report\n..."
+
+    @listen(write)
+    def publish(self, report: str):
+        saved = save_artifact(
+            Artifact(identifier="weekly-report", title="Weekly report", kind="markdown"),
+            content=report,
+        )
+        return saved.url
+```
+
+مرّر `content` (من نوع `str` أو `bytes`) أو `file_path`، وليس الاثنين معًا. تُرجع الدالة `SavedArtifact` يحتوي على `id` و`identifier` و`title` و`kind` و`version` و`content_type` و`size` و`url` و`share_url`.
+
+## المعرّفات والنسخ
+
+- يجب أن يطابق `identifier` النمط `[a-z0-9][a-z0-9_.-]{0,63}`، مثل `q3-report`.
+- ينتمي المخرَج إلى تشغيل واحد. الـ Crews داخل Flow تشترك في تشغيل الـ Flow، لذلك تُجمع كل مخرجاتها معًا.
+- الحفظ بنفس الـ identifier مرة أخرى في التشغيل ينشئ النسخة التالية. وهذا يناسب الـ Flows التي يشارك فيها إنسان وتعيد إنشاء التقرير بعد الملاحظات.
+
+## الأنواع
+
+| Kind | يُحفظ بصيغة | ملاحظات |
+|:-----|:-----------|:--------|
+| `markdown` | `.md` | |
+| `html` | `.html` | يُعرض داخل sandbox على AMP |
+| `svg` | `.svg` | |
+| `json` | `.json` | |
+| `a2ui` | `.json` | حمولة A2UI |
+| `text` | `.txt` | |
+| `csv` | `.csv` | |
+| `image` | امتداد الملف | يتطلب `file_path`. يقبل AMP صيغ PNG وJPEG وGIF وWebP |
+| `pdf` | `.pdf` | يتطلب `file_path` في Task أو Agent |
+| `file` | امتداد الملف | يتطلب `file_path`. للتنزيل فقط |
+
+## مكان تخزين المخرجات
+
+محليًا، تُحفظ المخرجات في:
+
+```
+./artifacts/<run id>/<identifier>/v<N>.<ext>
+```
+
+يكون `url` عنوانًا من نوع `file://` ويكون `share_url` فارغًا.
+
+على CrewAI AMP، تسجّل المنصة الـ store الخاص بها عند بدء التشغيل، فيرفع الكود نفسه المخرجات إلى التشغيل. لا يتغير شيء في الـ Crew.
+
+## حالات الفشل
+
+فشل حفظ المخرَج لا يُفشل التشغيل أبدًا:
+
+- تُرجع أداة `save_artifact` نص الخطأ إلى الـ Agent.
+- تسجّل `Task(artifact=...)` و`kickoff(artifact=...)` تحذيرًا، ويكتمل التشغيل رغم ذلك. ويشمل هذا `file_path` غير موجود.
+- استدعاء `save_artifact` من كودك يرفع الخطأ، لتقرر أنت ما تفعله.
+
+## الأحداث
+
+كل عملية حفظ تُطلق `ArtifactCreatedEvent` على event bus، ويحتوي على `id` و`identifier` و`version` و`title` و`kind` و`content_type` و`size` و`url`.
+
+```python
+from crewai.events import ArtifactCreatedEvent, BaseEventListener
+
+class ArtifactLogger(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(ArtifactCreatedEvent)
+        def on_artifact(source, event):
+            print(f"Saved {event.identifier} v{event.version}: {event.url}")
+
+ArtifactLogger()
+```
+
+راجع [مستمعو الأحداث](/ar/concepts/event-listener).
+
+## مخازن مخصصة
+
+لإرسال المخرجات إلى مكان آخر، أنشئ صنفًا فرعيًا من `ArtifactStore` وسجّله قبل الـ kickoff:
+
+```python
+from crewai.artifacts import ArtifactStore, SavedArtifact, set_artifact_store
+
+class S3ArtifactStore(ArtifactStore):
+    def save(self, artifact_id, execution_id, artifact, data, extension, content_type):
+        key = f"{execution_id}/{artifact.identifier}/{artifact_id}.{extension}"
+        url = upload_to_s3(key, data, content_type)  # your code
+        return SavedArtifact(
+            **artifact.model_dump(),
+            id=artifact_id,
+            version=next_version(execution_id, artifact.identifier),  # your code
+            content_type=content_type,
+            size=len(data),
+            url=url,
+        )
+
+set_artifact_store(S3ArtifactStore())
+```
+
+إذا كان الـ store يعيد محاولة الرفع، فأرسل نفس `artifact_id` في كل مرة حتى يتمكن الطرف المستقبِل من تجاهل النسخ المكررة.

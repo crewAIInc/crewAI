@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from crewai.artifacts import Artifact
 from crewai.flow.expressions import Expression, ExpressionData
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
@@ -246,6 +247,19 @@ class AgentAction:
             local_context=local_context,
         ).render_template()
         agent_input = _normalize_agent_input(rendered_input)
+        artifact = self.definition.with_.artifact
+        if isinstance(artifact, Artifact) and artifact.file_path:
+            file_path = Expression.from_flow(
+                cast(ExpressionData, artifact.file_path),
+                self.flow,
+                local_context=local_context,
+            ).render_template()
+            from crewai.task import validate_interpolated_path
+
+            file_path = validate_interpolated_path(
+                str(file_path), artifact.file_path, "artifact.file_path"
+            )
+            artifact = artifact.model_copy(update={"file_path": file_path})
 
         agent, response_format = await asyncio.to_thread(
             load_agent_from_definition,
@@ -255,6 +269,7 @@ class AgentAction:
         return await agent.kickoff_async(
             agent_input,
             response_format=response_format,
+            artifact=artifact,
         )
 
 
