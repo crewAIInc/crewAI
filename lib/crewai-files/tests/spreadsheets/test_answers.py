@@ -677,3 +677,38 @@ def test_the_query_schema_has_no_union_parameters():
     schema = json.dumps(Query.model_json_schema())
     assert "anyOf" not in schema
     assert '"null"' not in schema
+
+
+class TestTotalRowNeedsNoDataLabel:
+    """A row with its own label is data, however neatly its numbers add up."""
+
+    @pytest.mark.parametrize(
+        "amounts",
+        [(1, 2, 3), (2, 4, 6), (10, 20, 30)],
+    )
+    def test_an_ascending_sequence_is_not_a_total_row(self, amounts):
+        rows = [["Item", "Amount"]] + [
+            [f"row{i}", value] for i, value in enumerate(amounts)
+        ]
+        book = parse(xlsx(("S", rows)), "w.xlsx")
+
+        assert "looks like a total" not in answers.overview(book, "w.xlsx")
+        result = ask(book, "w.xlsx", operation="describe")
+        assert "total row" not in result
+        assert body(result).startswith(f"S: {len(amounts)} rows.")
+
+    def test_a_labelled_total_row_is_still_detected(self):
+        rows = [["Item", "Amount"], ["a", 10], ["b", 20], ["Total", 30]]
+        book = parse(xlsx(("S", rows)), "w.xlsx")
+
+        assert 'Its last row (row 4) looks like a total.' in answers.overview(
+            book, "w.xlsx"
+        )
+
+    def test_an_unlabelled_total_row_is_still_detected(self):
+        rows = [["Item", "Amount"], ["a", 10], ["b", 20], [None, 30]]
+        book = parse(xlsx(("S", rows)), "w.xlsx")
+
+        assert 'Its last row (row 4) looks like a total.' in answers.overview(
+            book, "w.xlsx"
+        )

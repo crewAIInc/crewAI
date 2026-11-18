@@ -157,7 +157,13 @@ def total_row(table: Table) -> int | None:
         and math.isclose(float(last[n]), float(frame[n].iloc[:-1].sum()), rel_tol=0.005)
         for n in numeric
     )
-    if (labels and _TOTAL_LABEL.match(labels[0])) or adds_up:
+    # A row that carries its own label is ordinary data however neatly its
+    # numbers add up: 1/2/3, 2/4/6 and 10/20/30 are sequences, not totals, and
+    # treating them as totals hid the last row from every aggregate. A real
+    # total row has no row label, or one of the labels above.
+    first_cell = text_of(table.last_raw[0]) if table.last_raw else ""
+    labelled_data = bool(first_cell) and not _TOTAL_LABEL.match(first_cell)
+    if (labels and _TOTAL_LABEL.match(labels[0])) or (adds_up and not labelled_data):
         return int(frame.index[-1])
     return None
 
