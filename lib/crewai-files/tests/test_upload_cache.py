@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from crewai_files import FileBytes, ImageFile
 from crewai_files.cache.upload_cache import CachedUpload, UploadCache
+import pytest
 
 
 # Minimal valid PNG
@@ -186,6 +187,46 @@ class TestUploadCache:
 
         assert cleared == 2
         assert len(cache) == 0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("max_entries", "new_entries"), [(1, 2), (2, 3), (10, 40)])
+    async def test_clear_resets_eviction_order(
+        self, max_entries: int, new_entries: int
+    ) -> None:
+        """Reusing a cleared cache must evict live entries, not stale keys."""
+        cache = UploadCache(max_entries=max_entries)
+        try:
+            for index in range(max_entries):
+                await cache.aset_by_hash(
+                    file_hash=f"old-{index}",
+                    content_type="image/png",
+                    provider="gemini",
+                    file_id=f"old-file-{index}",
+                )
+
+            assert await cache.aclear() == max_entries
+            assert len(cache) == 0
+
+            peak_entries = 0
+            for index in range(new_entries):
+                await cache.aset_by_hash(
+                    file_hash=f"new-{index}",
+                    content_type="image/png",
+                    provider="gemini",
+                    file_id=f"new-file-{index}",
+                )
+                peak_entries = max(peak_entries, len(cache))
+
+            assert len(cache) == max_entries
+            assert peak_entries == max_entries
+            for index in range(new_entries - max_entries):
+                assert await cache.aget_by_hash(f"new-{index}", "gemini") is None
+            for index in range(new_entries - max_entries, new_entries):
+                cached = await cache.aget_by_hash(f"new-{index}", "gemini")
+                assert cached is not None
+                assert cached.file_id == f"new-file-{index}"
+        finally:
+            await cache.aclear()
 
     def test_get_all_for_provider(self):
         """Test getting all cached uploads for a provider."""
