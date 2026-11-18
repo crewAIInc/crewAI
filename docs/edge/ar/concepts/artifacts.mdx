@@ -80,6 +80,26 @@ methods:
 
 يسمّي `artifact: true` المخرَج باسم الدالة، وهنا يكون `write-report`. استخدم كائنًا مثل `{identifier: weekly-report, title: Weekly report, kind: html}` لتحدد التفاصيل بنفسك.
 
+لتعطي الـ Agent مخرَجًا حفظه التشغيل سابقًا، أدرجه تحت `input_files`. كل عنصر هو مرجع يُحمَّل عند تشغيل الخطوة:
+
+```yaml
+revise_report:
+  listen: needs_changes
+  do:
+    call: agent
+    with:
+      role: Analyst
+      goal: Revise the weekly report from the reviewer's feedback
+      backstory: Writes clear reports for executives.
+      input: Apply the reviewer's feedback to the attached report.
+      input_files:
+        current_report: {artifact: write-report}
+        first_draft: {artifact: write-report, version: 1}
+      artifact: true
+```
+
+بدون `version` تُستخدم أحدث نسخة. إذا لم يكن المخرَج موجودًا تفشل الخطوة قبل تشغيل الـ Agent. تتطلب ملفات الإدخال `crewai[file-processing]`.
+
 ### حفظ ملف يكتبه الـ Agent
 
 لرسم بياني أو ملف PDF أو أي ملف آخر تكتبه أدوات الـ Agent على القرص، اضبط `file_path` على مكان الملف. يحفظ CrewAI ذلك الملف بدلًا من الناتج النصي. تتطلب الأنواع `image` و`pdf` و`file` وجود `file_path`.
@@ -160,6 +180,26 @@ class ReportFlow(Flow):
 
 مرّر `content` (من نوع `str` أو `bytes`) أو `file_path`، وليس الاثنين معًا. تُرجع الدالة `SavedArtifact` يحتوي على `id` و`identifier` و`title` و`kind` و`version` و`content_type` و`size` و`url` و`share_url`.
 
+## قراءة مخرَج محفوظ
+
+استدعِ `load_artifact` لقراءة مخرَج حفظه التشغيل. تُرجع الدالة بايتات أحدث نسخة، أو النسخة التي تطلبها:
+
+```python
+from crewai import Artifact, load_artifact, save_artifact
+
+report = Artifact(identifier="board-report", title="Board report", kind="html")
+save_artifact(report, content="<h1>Draft</h1>")
+save_artifact(report, content="<h1>Revised</h1>")
+
+latest = load_artifact("board-report")              # b"<h1>Revised</h1>"
+first = load_artifact("board-report", version=1)    # b"<h1>Draft</h1>"
+```
+
+يهم هذا أكثر ما يهم في Flow يتوقف لانتظار ملاحظات بشرية. قد يُستأنف الـ Flow لاحقًا على جهاز آخر، حيث لم تعد الملفات المكتوبة قبل التوقف موجودة، لكن مخرجاته تبقى محفوظة. يقرأ التشغيل المستأنف التقرير مرة أخرى، ويراجعه، ثم يحفظ النسخة التالية.
+
+- تقرأ `load_artifact` من التشغيل الحالي، وهو نفس التشغيل الذي يكمله الـ Flow المستأنف.
+- إذا لم يطابق أي مخرَج أو نسخة، تُطلق `ArtifactNotFoundError`.
+
 ## المعرّفات والنسخ
 
 - يجب أن يطابق `identifier` النمط `[a-z0-9][a-z0-9_.-]{0,63}`، مثل `q3-report`.
@@ -239,7 +279,10 @@ class S3ArtifactStore(ArtifactStore):
             url=url,
         )
 
+    def load(self, execution_id, identifier, version=None):
+        return download_from_s3(execution_id, identifier, version)  # your code
+
 set_artifact_store(S3ArtifactStore())
 ```
 
-إذا كان الـ store يعيد محاولة الرفع، فأرسل نفس `artifact_id` في كل مرة حتى يتمكن الطرف المستقبِل من تجاهل النسخ المكررة.
+إذا كان الـ store يعيد محاولة الرفع، فأرسل نفس `artifact_id` في كل مرة حتى يتمكن الطرف المستقبِل من تجاهل النسخ المكررة. الدالة `load` اختيارية: بدونها تُطلق `load_artifact` الخطأ `NotImplementedError`.

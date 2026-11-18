@@ -881,3 +881,109 @@ def test_tool_refuses_files_in_the_shared_temp_dir(store):
 
     assert result.startswith("Error saving artifact")
     assert not (store.root / "exec-1" / "leak").exists()
+
+
+def test_load_artifact_reads_back_the_latest_or_a_given_version(store):
+    from crewai import load_artifact
+
+    report = Artifact(identifier="report", title="Report", kind="html")
+    save_artifact(report, content="<p>v1</p>")
+    save_artifact(report, content="<p>v2</p>")
+
+    assert load_artifact("report") == b"<p>v2</p>"
+    assert load_artifact("report", version=1) == b"<p>v1</p>"
+
+
+def test_load_artifact_picks_the_highest_version_number(store):
+    from crewai import load_artifact
+
+    directory = store.root / "exec-1" / "report"
+    directory.mkdir(parents=True)
+    (directory / "v9.md").write_text("nine")
+    (directory / "v10.md").write_text("ten")
+
+    assert load_artifact("report") == b"ten"
+
+
+def test_load_artifact_raises_when_missing(store):
+    from crewai import load_artifact
+    from crewai.artifacts import ArtifactNotFoundError
+
+    save_artifact(Artifact(identifier="report", title="R", kind="html"), content="x")
+
+    with pytest.raises(ArtifactNotFoundError):
+        load_artifact("missing")
+    with pytest.raises(ArtifactNotFoundError):
+        load_artifact("report", version=5)
+
+
+def test_a_save_only_store_says_it_cannot_load():
+    from crewai.artifacts import ArtifactStore
+
+    class SaveOnly(ArtifactStore):
+        def save(self, *args, **kwargs):
+            raise AssertionError("not called")
+
+    with pytest.raises(NotImplementedError, match="SaveOnly"):
+        SaveOnly().load("exec-1", "report")
+
+
+@pytest.mark.parametrize("identifier", ["../secret", "report/../../x", "Report"])
+def test_load_artifact_refuses_identifiers_that_are_not_valid(store, identifier):
+    from crewai import load_artifact
+
+    with pytest.raises(ValueError, match="invalid artifact identifier"):
+        load_artifact(identifier)
+
+
+ARTIFACT_INPUT_FLOW = """
+schema: crewai.flow/v1
+name: ReviseFlow
+methods:
+  revise:
+    start: true
+    do:
+      call: agent
+      with:
+        role: Editor
+        goal: Revise reports
+        backstory: Careful editor.
+        input: Revise the report
+        input_files:
+          current_report: {artifact: board-report}
+          first_draft: {artifact: board-report, version: 1}
+"""
+
+
+def test_declarative_agent_reads_artifacts_as_input_files(store):
+    report = Artifact(identifier="board-report", title="Board report", kind="html")
+    save_artifact(report, content="<p>v1</p>")
+    save_artifact(report, content="<p>v2</p>")
+    seen = {}
+
+    async def kickoff_async(self, messages, **kwargs):
+        seen.update(kwargs["input_files"])
+        return "done"
+
+    with patch.object(Agent, "kickoff_async", kickoff_async):
+        Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW).kickoff()
+
+    assert seen["current_report"].read() == b"<p>v2</p>"
+    assert seen["first_draft"].read() == b"<p>v1</p>"
+
+
+def test_declarative_artifact_input_that_is_missing_fails_the_step(store):
+    async def kickoff_async(self, messages, **kwargs):
+        raise AssertionError("must not run without its input")
+
+    with patch.object(Agent, "kickoff_async", kickoff_async), pytest.raises(Exception, match="board-report"):
+        Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW).kickoff()
+
+
+@pytest.mark.parametrize(
+    "reference",
+    ["{artifact: Bad Id}", "{artifact: board-report, version: 0}", "{artifact: board-report, path: x}", "{file: x}"],
+)
+def test_declarative_artifact_input_is_validated_when_loaded(reference):
+    with pytest.raises(Exception, match="input_files"):
+        Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW.replace("{artifact: board-report}", reference))

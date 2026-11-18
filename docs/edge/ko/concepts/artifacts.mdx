@@ -80,6 +80,26 @@ methods:
 
 `artifact: true`는 메서드 이름을 사용하며, 여기서는 `write-report`가 됩니다. 세부 정보를 직접 정하려면 `{identifier: weekly-report, title: Weekly report, kind: html}` 같은 객체를 사용합니다.
 
+실행이 앞서 저장한 아티팩트를 Agent에게 주려면 `input_files` 아래에 나열합니다. 각 항목은 참조이며, 단계가 실행될 때 불러옵니다.
+
+```yaml
+revise_report:
+  listen: needs_changes
+  do:
+    call: agent
+    with:
+      role: Analyst
+      goal: Revise the weekly report from the reviewer's feedback
+      backstory: Writes clear reports for executives.
+      input: Apply the reviewer's feedback to the attached report.
+      input_files:
+        current_report: {artifact: write-report}
+        first_draft: {artifact: write-report, version: 1}
+      artifact: true
+```
+
+`version`이 없으면 최신 버전을 사용합니다. 아티팩트가 없으면 Agent가 실행되기 전에 단계가 실패합니다. 입력 파일에는 `crewai[file-processing]`이 필요합니다.
+
 ### Agent가 쓰는 파일 저장
 
 차트, PDF 등 Agent의 도구가 디스크에 쓰는 파일은 `file_path`에 파일 위치를 설정합니다. CrewAI는 텍스트 출력 대신 그 파일을 저장합니다. `image`, `pdf`, `file` 종류에는 `file_path`가 필요합니다.
@@ -160,6 +180,26 @@ class ReportFlow(Flow):
 
 `content`(`str` 또는 `bytes`)나 `file_path` 중 하나만 전달합니다. 반환값은 `id`, `identifier`, `title`, `kind`, `version`, `content_type`, `size`, `url`, `share_url`을 가진 `SavedArtifact`입니다.
 
+## 저장된 아티팩트 읽기
+
+실행이 저장한 아티팩트를 다시 읽으려면 `load_artifact`를 호출합니다. 최신 버전의 바이트를 반환하며, 버전을 지정하면 그 버전의 바이트를 반환합니다.
+
+```python
+from crewai import Artifact, load_artifact, save_artifact
+
+report = Artifact(identifier="board-report", title="Board report", kind="html")
+save_artifact(report, content="<h1>Draft</h1>")
+save_artifact(report, content="<h1>Revised</h1>")
+
+latest = load_artifact("board-report")              # b"<h1>Revised</h1>"
+first = load_artifact("board-report", version=1)    # b"<h1>Draft</h1>"
+```
+
+이 기능은 사람의 피드백을 기다리며 멈추는 Flow에서 가장 중요합니다. Flow는 나중에 다른 머신에서 재개될 수 있고, 그곳에는 멈추기 전에 쓴 파일이 없지만 아티팩트는 남아 있습니다. 재개된 실행은 보고서를 다시 읽고 수정한 뒤 다음 버전으로 저장합니다.
+
+- `load_artifact`는 현재 실행에서 읽습니다. 재개된 Flow가 이어 가는 바로 그 실행입니다.
+- 일치하는 아티팩트나 버전이 없으면 `ArtifactNotFoundError`가 발생합니다.
+
 ## Identifier와 버전
 
 - `identifier`는 `[a-z0-9][a-z0-9_.-]{0,63}` 형식이어야 합니다. 예: `q3-report`.
@@ -239,7 +279,10 @@ class S3ArtifactStore(ArtifactStore):
             url=url,
         )
 
+    def load(self, execution_id, identifier, version=None):
+        return download_from_s3(execution_id, identifier, version)  # your code
+
 set_artifact_store(S3ArtifactStore())
 ```
 
-store가 업로드를 재시도한다면 매번 같은 `artifact_id`를 보내야 받는 쪽에서 중복을 걸러낼 수 있습니다.
+store가 업로드를 재시도한다면 매번 같은 `artifact_id`를 보내야 받는 쪽에서 중복을 걸러낼 수 있습니다. `load`는 선택 사항입니다. 없으면 `load_artifact`가 `NotImplementedError`를 발생시킵니다.

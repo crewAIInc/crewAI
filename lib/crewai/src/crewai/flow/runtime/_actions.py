@@ -266,9 +266,14 @@ class AgentAction:
             self.definition.with_,
             source="agent action",
         )
+        input_files = {
+            name: await asyncio.to_thread(reference.load_file)
+            for name, reference in (self.definition.with_.input_files or {}).items()
+        }
         return await agent.kickoff_async(
             agent_input,
             response_format=response_format,
+            input_files=input_files or None,
             artifact=artifact,
         )
 

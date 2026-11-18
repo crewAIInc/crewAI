@@ -314,6 +314,7 @@ def load_agent_from_definition(
     response_format_ref = definition_data.pop("response_format", None)
     definition_data.pop("input", None)
     definition_data.pop("artifact", None)
+    definition_data.pop("input_files", None)
 
     agent = _instantiate_agent_from_data(definition_data, source_label, root)
 

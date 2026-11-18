@@ -13,7 +13,7 @@ import re
 from typing import Any, Literal
 import uuid
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.artifact_events import ArtifactCreatedEvent
@@ -139,11 +139,14 @@ def save_output_artifact(
     )
 
 
+IDENTIFIER_PATTERN = r"^[a-z0-9][a-z0-9_.-]{0,63}$"
+
+
 class Artifact(BaseModel):
     """What to save: identity and kind of an artifact."""
 
     identifier: str = Field(
-        pattern=r"^[a-z0-9][a-z0-9_.-]{0,63}$",
+        pattern=IDENTIFIER_PATTERN,
         description="Stable id within the execution. Saving it again creates a new version.",
     )
     title: str = Field(description="Human-readable title.")
@@ -168,6 +171,10 @@ class SavedArtifact(Artifact):
     share_url: str | None = None
 
 
+class ArtifactNotFoundError(LookupError):
+    """No saved artifact matches the identifier (and version) asked for."""
+
+
 class ArtifactStore(ABC):
     """Where artifact bytes go. Swap with :func:`set_artifact_store`."""
 
@@ -187,6 +194,16 @@ class ArtifactStore(ABC):
         retries must send the same ``artifact_id`` so the server can drop the
         duplicate instead of creating another version.
         """
+
+    def load(
+        self, execution_id: str, identifier: str, version: int | None = None
+    ) -> bytes:
+        """Return a saved version's bytes: ``version``, or the latest one.
+
+        Lets a run read back what it saved, such as a flow resumed after human
+        feedback. Raise :class:`ArtifactNotFoundError` when nothing matches.
+        """
+        raise NotImplementedError(f"{type(self).__name__} cannot load artifacts")
 
 
 class LocalArtifactStore(ArtifactStore):
@@ -223,6 +240,22 @@ class LocalArtifactStore(ArtifactStore):
             size=len(data),
             url=path.resolve().as_uri(),
         )
+
+    def load(
+        self, execution_id: str, identifier: str, version: int | None = None
+    ) -> bytes:
+        directory = self.root / execution_id / identifier
+        versions = {
+            int(path.stem[1:]): path
+            for path in directory.glob("v*.*")
+            if path.stem[1:].isdigit()
+        }
+        number = max(versions, default=None) if version is None else version
+        if number not in versions:
+            raise ArtifactNotFoundError(
+                f"no artifact {identifier!r} version {version or 'latest'} in this run"
+            )
+        return versions[number].read_bytes()
 
 
 _store: ArtifactStore = LocalArtifactStore()
@@ -331,6 +364,39 @@ def save_artifact(
         ),
     )
     return saved
+
+
+def load_artifact(identifier: str, version: int | None = None) -> bytes:
+    """Read back an artifact this run saved: ``version``, or the latest one."""
+    if re.match(IDENTIFIER_PATTERN, identifier) is None:
+        raise ValueError(f"invalid artifact identifier: {identifier!r}")
+    return get_artifact_store().load(
+        get_execution_uuid() or "local", identifier, version
+    )
+
+
+class ArtifactReference(BaseModel):
+    """Points at an artifact this run saved, so a step can take it as an input file."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    artifact: str = Field(
+        pattern=IDENTIFIER_PATTERN, description="Artifact identifier."
+    )
+    version: int | None = Field(
+        default=None, ge=1, description="Version to read; the latest when omitted."
+    )
+
+    def load_file(self) -> Any:
+        """Load the artifact as a ``crewai_files`` File for an agent's input_files."""
+        try:
+            from crewai_files import File, FileBytes
+        except ImportError as e:
+            raise ImportError(
+                "Artifact input files need crewai-files: uv add 'crewai[file-processing]'"
+            ) from e
+        data = load_artifact(self.artifact, self.version)
+        return File(source=FileBytes(data=data, filename=self.artifact))
 
 
 class SaveArtifactSchema(Artifact):

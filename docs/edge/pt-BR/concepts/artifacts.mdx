@@ -80,6 +80,26 @@ methods:
 
 `artifact: true` dá ao artefato o nome do método, aqui `write-report`. Use um objeto, como `{identifier: weekly-report, title: Weekly report, kind: html}`, para definir os detalhes você mesmo.
 
+Para entregar ao agent um artefato que a execução salvou antes, liste-o em `input_files`. Cada entrada é uma referência, carregada quando o passo é executado:
+
+```yaml
+revise_report:
+  listen: needs_changes
+  do:
+    call: agent
+    with:
+      role: Analyst
+      goal: Revise the weekly report from the reviewer's feedback
+      backstory: Writes clear reports for executives.
+      input: Apply the reviewer's feedback to the attached report.
+      input_files:
+        current_report: {artifact: write-report}
+        first_draft: {artifact: write-report, version: 1}
+      artifact: true
+```
+
+Sem `version`, a versão mais recente é usada. Se o artefato não existir, o passo falha antes de o agent ser executado. Arquivos de entrada exigem `crewai[file-processing]`.
+
 ### Salvar um arquivo que o agent grava
 
 Para um gráfico, um PDF ou qualquer outro arquivo que as tools do agent gravam em disco, defina `file_path` com o local onde o arquivo vai ficar. O CrewAI salva esse arquivo no lugar da saída em texto. Os tipos `image`, `pdf` e `file` exigem `file_path`.
@@ -160,6 +180,26 @@ class ReportFlow(Flow):
 
 Passe `content` (um `str` ou `bytes`) ou `file_path`, não ambos. A função retorna um `SavedArtifact` com `id`, `identifier`, `title`, `kind`, `version`, `content_type`, `size`, `url` e `share_url`.
 
+## Ler um artefato salvo
+
+Chame `load_artifact` para ler de volta um artefato que a execução salvou. A função retorna os bytes da versão mais recente, ou da versão que você pedir:
+
+```python
+from crewai import Artifact, load_artifact, save_artifact
+
+report = Artifact(identifier="board-report", title="Board report", kind="html")
+save_artifact(report, content="<h1>Draft</h1>")
+save_artifact(report, content="<h1>Revised</h1>")
+
+latest = load_artifact("board-report")              # b"<h1>Revised</h1>"
+first = load_artifact("board-report", version=1)    # b"<h1>Draft</h1>"
+```
+
+Isso é mais importante em um flow que pausa para feedback humano. O flow pode ser retomado depois em outra máquina, onde os arquivos gravados antes da pausa não existem mais, mas seus artefatos são mantidos. A execução retomada lê o relatório de volta, revisa e salva a próxima versão.
+
+- `load_artifact` lê da execução atual, a mesma que um flow retomado continua.
+- Se nenhum artefato ou versão corresponder, a função lança `ArtifactNotFoundError`.
+
 ## Identifiers e versões
 
 - `identifier` deve corresponder a `[a-z0-9][a-z0-9_.-]{0,63}`, por exemplo `q3-report`.
@@ -239,7 +279,10 @@ class S3ArtifactStore(ArtifactStore):
             url=url,
         )
 
+    def load(self, execution_id, identifier, version=None):
+        return download_from_s3(execution_id, identifier, version)  # your code
+
 set_artifact_store(S3ArtifactStore())
 ```
 
-Se o seu store repete uploads, envie o mesmo `artifact_id` em cada tentativa para que o destino possa descartar duplicatas.
+Se o seu store repete uploads, envie o mesmo `artifact_id` em cada tentativa para que o destino possa descartar duplicatas. `load` é opcional: sem ele, `load_artifact` lança `NotImplementedError`.
