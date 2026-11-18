@@ -1,11 +1,15 @@
 """Test Agent creation and execution basic functionality."""
 
 import ast
+from datetime import date, datetime
+from decimal import Decimal
 import json
 import os
+import threading
 import time
 from functools import partial
 from hashlib import md5
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -709,6 +713,59 @@ def test_save_task_json_output():
             if isinstance(saved_content, str):
                 data = json.loads(saved_content)
                 assert "score" in data
+
+
+class _Article(BaseModel):
+    title: str
+    published: date
+    updated: datetime
+    price: Decimal
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        '{"title": "AI agents", "published": "2026-11-13", "updated": "2026-11-13T09:30:00", "price": "9.99"}',
+        _Article(
+            title="AI agents",
+            published=date(2026, 11, 13),
+            updated=datetime(2026, 11, 13, 9, 30),
+            price=Decimal("9.99"),
+        ),
+    ],
+    ids=["json_text", "model"],
+)
+def test_output_json_with_a_date_field_is_saved_as_json(tmp_path, monkeypatch, answer):
+    monkeypatch.chdir(tmp_path)
+    writer = Agent(
+        role="Writer",
+        goal="Write articles",
+        backstory="You write articles.",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Write an article about AI agents",
+        expected_output="An article",
+        agent=writer,
+        output_json=_Article,
+        output_file="article.json",
+    )
+    crew = Crew(agents=[writer], tasks=[task])
+
+    with patch.object(Agent, "execute_task", return_value=answer):
+        result = crew.kickoff()
+
+    expected = {
+        "title": "AI agents",
+        "published": "2026-11-13",
+        "updated": "2026-11-13T09:30:00",
+        "price": "9.99",
+    }
+    assert result.json_dict == expected
+    assert json.loads(result.json) == expected
+    assert json.loads(result.tasks_output[0].json) == expected
+    saved = (tmp_path / "article.json").read_text(encoding="utf-8")
+    assert json.loads(saved) == expected
 
 
 @pytest.mark.vcr()
@@ -1724,15 +1781,29 @@ def test_task_with_max_execution_time():
 
 
 @pytest.mark.vcr()
-def test_task_with_max_execution_time_exceeded():
+def test_task_with_max_execution_time_exceeded(monkeypatch: pytest.MonkeyPatch):
     from crewai.tools import tool
 
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
+    # The timed-out worker is not waited for, so it would otherwise outlive this
+    # test and replay requests against the next test's VCR cassette.
+    release = threading.Event()
+    worker_done = threading.Event()
+    run_without_timeout = Agent._execute_without_timeout
+
+    def tracked_run(self: Agent, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return run_without_timeout(self, *args, **kwargs)
+        finally:
+            worker_done.set()
+
+    monkeypatch.setattr(Agent, "_execute_without_timeout", tracked_run)
+
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
         "My tool"
-        time.sleep(10)
+        release.wait(10)
         return "okay"
 
     researcher = Agent(
@@ -1753,8 +1824,12 @@ def test_task_with_max_execution_time_exceeded():
         agent=researcher,
     )
 
-    with pytest.raises(TimeoutError):
-        task.execute_sync(agent=researcher)
+    try:
+        with pytest.raises(TimeoutError):
+            task.execute_sync(agent=researcher)
+    finally:
+        release.set()
+        assert worker_done.wait(10), "timed-out worker did not finish"
 
 
 @pytest.mark.vcr()
