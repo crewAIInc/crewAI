@@ -1650,7 +1650,7 @@ def execute_single_native_tool_call(
         and tools_handler.cache
         and output_tool is not None
     ):
-        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
+        cached_result = tools_handler.cache.read(tool=func_name, tool_input=input_str)
         if cached_result is not None:
             raw_tool_result = cached_result
             result = format_native_tool_output_for_agent(output_tool, cached_result)
@@ -1677,7 +1677,7 @@ def execute_single_native_tool_call(
                         )
                     if should_cache:
                         tools_handler.cache.add(
-                            tool=func_name, input=input_str, output=raw_result
+                            tool=func_name, tool_input=input_str, output=raw_result
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
