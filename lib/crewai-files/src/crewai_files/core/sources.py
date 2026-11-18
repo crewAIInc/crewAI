@@ -227,8 +227,19 @@ class FilePath(BaseModel):
         if self.path.is_symlink():
             resolved = self.path.resolve()
             cwd = Path.cwd().resolve()
-            if not str(resolved).startswith(str(cwd)):
-                raise ValueError(f"Symlink escapes allowed directory: {self.path}")
+            # Containment must compare whole path components: a bare
+            # string-prefix check admits sibling directories whose name
+            # merely starts with the cwd's (e.g. cwd ".../app" vs.
+            # target ".../app-data"), which is an escape. relative_to()
+            # raises unless every component of cwd matches; the cwd
+            # itself is accepted here and rejected by the is_file check
+            # below, matching the previous behavior.
+            try:
+                resolved.relative_to(cwd)
+            except ValueError:
+                raise ValueError(
+                    f"Symlink escapes allowed directory: {self.path}"
+                ) from None
 
         if not self.path.exists():
             raise ValueError(f"File not found: {self.path}")
