@@ -17,6 +17,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.flow_definition import FlowDefinition
 
 
 def test_simple_sequential_flow():
@@ -1789,6 +1790,37 @@ def test_flow_copy_state_without_unpickleable_objects():
 
     flow.state.nested["key"] = "changed_after_copy"
     assert copied_state.nested["key"] == "modified"
+
+
+def test_flow_declaration_default_isolates_nested_values():
+    """Flows built from one declaration must not share nested defaults."""
+    declaration = """
+schema: crewai.flow/v1
+name: WalletFlow
+state:
+  type: dict
+  default:
+    wallet:
+      expenses: []
+methods:
+  buy:
+    start: true
+    do:
+      call: expression
+      expr: "1"
+"""
+    definition = FlowDefinition.from_declaration(contents=declaration)
+    marketing = Flow.from_declaration(contents=definition)
+    engineering = Flow.from_declaration(contents=definition)
+
+    marketing.state["wallet"]["expenses"].append(40)
+
+    assert engineering.state["wallet"]["expenses"] == []
+    assert definition.state.default["wallet"]["expenses"] == []
+    assert (
+        marketing.state["wallet"]["expenses"]
+        is not engineering.state["wallet"]["expenses"]
+    )
 
 
 def test_flow_copy_state_with_dict_state():

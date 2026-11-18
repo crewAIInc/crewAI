@@ -1825,7 +1825,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "Flow %r declares state of unknown type; falling back to dict state",
                 self._definition.name,
             )
-        dict_state: dict[str, Any] = dict(state_definition.default or {})
+        # Isolate nested values. A shallow dict() copy leaves inner
+        # containers shared across flows built from the same declaration.
+        try:
+            dict_state: dict[str, Any] = copy.deepcopy(state_definition.default or {})
+        except (TypeError, AttributeError):
+            dict_state = dict(state_definition.default or {})
         if "id" not in dict_state:
             dict_state["id"] = str(uuid4())
         return dict_state
