@@ -3,9 +3,11 @@
 import ast
 import json
 import os
+import threading
 import time
 from functools import partial
 from hashlib import md5
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1724,15 +1726,29 @@ def test_task_with_max_execution_time():
 
 
 @pytest.mark.vcr()
-def test_task_with_max_execution_time_exceeded():
+def test_task_with_max_execution_time_exceeded(monkeypatch: pytest.MonkeyPatch):
     from crewai.tools import tool
 
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
+    # The timed-out worker is not waited for, so it would otherwise outlive this
+    # test and replay requests against the next test's VCR cassette.
+    release = threading.Event()
+    worker_done = threading.Event()
+    run_without_timeout = Agent._execute_without_timeout
+
+    def tracked_run(self: Agent, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return run_without_timeout(self, *args, **kwargs)
+        finally:
+            worker_done.set()
+
+    monkeypatch.setattr(Agent, "_execute_without_timeout", tracked_run)
+
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
         "My tool"
-        time.sleep(10)
+        release.wait(10)
         return "okay"
 
     researcher = Agent(
@@ -1753,8 +1769,12 @@ def test_task_with_max_execution_time_exceeded():
         agent=researcher,
     )
 
-    with pytest.raises(TimeoutError):
-        task.execute_sync(agent=researcher)
+    try:
+        with pytest.raises(TimeoutError):
+            task.execute_sync(agent=researcher)
+    finally:
+        release.set()
+        assert worker_done.wait(10), "timed-out worker did not finish"
 
 
 @pytest.mark.vcr()
