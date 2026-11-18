@@ -228,7 +228,7 @@ pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
 
 <Note type="warning" title="Supported Image Formats">
-When CrewAI needs to read an image's dimensions, resize it, or compress it, it only opens PNG, JPEG, GIF, and WEBP images. The format is detected from the file contents, not the declared content type. Any other image raises `UnsupportedFileTypeError` in every mode, including `warn` and `auto`. When several files are sent together, only that image is left out and an error is logged.
+When CrewAI needs to read an image's dimensions, resize it, or compress it, it only opens PNG, JPEG, GIF, and WEBP images. The format is detected from the file contents, not the declared content type. Any other image raises `UnsupportedImageFormatError` (a subclass of `UnsupportedFileTypeError`) in every mode, including `warn` and `auto`. When several files are sent together, only that image is left out and an error is logged.
 </Note>
 
 ## Provider Constraints
