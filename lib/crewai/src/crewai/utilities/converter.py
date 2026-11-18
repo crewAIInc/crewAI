@@ -589,7 +589,8 @@ def get_conversion_instructions(
         llm: The language model instance.
 
     Returns:
-
+        A string containing the conversion instructions for the LLM,
+        including the model's JSON schema formatted with task instructions.
     """
     instructions = ""
     if (
