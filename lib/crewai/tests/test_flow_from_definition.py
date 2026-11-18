@@ -4265,6 +4265,60 @@ def test_start_step_listening_to_its_own_outcome_reruns_after_resume():
     assert result == "published:ship it"
 
 
+PENDING_REVIEW_READS_EARLIER_STEP_YAML = f"""
+schema: crewai.flow/v1
+name: PendingReviewReadsEarlierStepFlow
+methods:
+  compare_versions:
+    do:
+      call: expression
+      expr: "'diff-1'"
+    start: true
+  draft_change_report:
+    do:
+      call: expression
+      expr: "'report:' + outputs.compare_versions"
+    listen:
+      or: [compare_versions, rejected]
+    human_feedback:
+      message: "Review:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  publish:
+    do:
+      call: expression
+      expr: "'published:' + outputs.compare_versions"
+    listen: approved
+"""
+
+
+def test_rejected_review_rerun_reads_outputs_of_steps_before_the_pause(tmp_path):
+    # A step that ran before the pause lives only in _method_outputs, so the
+    # pending context must carry it through the persistence round trip.
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    definition = FlowDefinition.from_declaration(
+        contents=PENDING_REVIEW_READS_EARLIER_STEP_YAML
+    )
+    backend = SQLiteFlowPersistence(str(tmp_path / "flow_states.db"))
+    pending = Flow.from_declaration(contents=definition, persistence=backend).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    rejecting = Flow.from_pending(pending.context.flow_id, backend, definition=definition)
+    with patch.object(rejecting, "_collapse_to_outcome", return_value="rejected"):
+        repaused = rejecting.resume("needs more detail")
+
+    assert isinstance(repaused, HumanFeedbackPending)
+    assert repaused.context.method_output == "report:diff-1"
+
+    approving = Flow.from_pending(repaused.context.flow_id, backend, definition=definition)
+    with patch.object(approving, "_collapse_to_outcome", return_value="approved"):
+        result = approving.resume("ship it")
+
+    assert result == "published:diff-1"
+
+
 @pytest.mark.parametrize("router", [False, True])
 def test_conditional_start_that_also_listens_runs_once_per_event(router):
     handler_routing = "router: true\n    emit: [done]" if router else ""
