@@ -179,3 +179,122 @@ def test_blocked_hook_does_not_return_a_cached_result(backend):
     assert from_cache is False
     assert tool.calls == []
     assert cache.read("lookup", key) == "cached:original"
+
+
+class AnswerTool(BaseTool):
+    name: str = "final_lookup"
+    description: str = "Returns the final answer."
+    result_as_answer: bool = True
+    calls: list[str] = []
+
+    def _run(self, term: str = "x") -> str:
+        self.calls.append(term)
+        return f"answer:{term}"
+
+
+class ToolThenAnswerLLM(BaseLLM):
+    """Asks for the tool once, then answers without any tool call."""
+
+    def __init__(self) -> None:
+        super().__init__(model="offline")
+        self.calls = 0
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+    def call(self, messages: Any, **kwargs: Any) -> Any:
+        self.calls += 1
+        if self.calls == 1:
+            return [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {
+                        "name": "final_lookup",
+                        "arguments": json.dumps({"term": "q"}),
+                    },
+                }
+            ]
+        return "final answer after the block"
+
+    async def acall(self, messages: Any, **kwargs: Any) -> Any:
+        return self.call(messages, **kwargs)
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+def test_blocked_result_as_answer_tool_does_not_become_final_answer(async_entry):
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def block(_context):
+        return False
+
+    llm = ToolThenAnswerLLM()
+    tool = AnswerTool()
+    agent = Agent(
+        role="Tester",
+        goal="Look up values",
+        backstory="Test hooks",
+        llm=llm,
+        tools=[tool],
+        max_retry_limit=0,
+        verbose=False,
+    )
+
+    if async_entry:
+        output = asyncio.run(agent.kickoff_async("Look up values"))
+    else:
+        output = agent.kickoff("Look up values")
+
+    # The block notice must reach the model as tool context, not end the run.
+    assert "blocked by hook" not in str(output)
+    assert "final answer after the block" in str(output)
+    assert llm.calls == 2
+    assert tool.calls == []
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+def test_result_as_answer_tool_still_short_circuits_when_not_blocked(async_entry):
+    llm = ToolThenAnswerLLM()
+    tool = AnswerTool()
+    agent = Agent(
+        role="Tester",
+        goal="Look up values",
+        backstory="Test hooks",
+        llm=llm,
+        tools=[tool],
+        max_retry_limit=0,
+        verbose=False,
+    )
+
+    if async_entry:
+        output = asyncio.run(agent.kickoff_async("Look up values"))
+    else:
+        output = agent.kickoff("Look up values")
+
+    assert str(output) == "answer:q"
+    assert llm.calls == 1
+    assert tool.calls == ["q"]
+
+
+def test_blocked_native_call_reports_hook_blocked_flag():
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def block(_context):
+        return False
+
+    tool = AnswerTool()
+    executor = AgentExecutor(
+        tools=to_langchain([tool]),
+        original_tools=[tool],
+        tools_handler=ToolsHandler(cache=CacheHandler()),
+    )
+    executor._setup_native_tools()
+    call = {
+        "id": "call_1",
+        "type": "function",
+        "function": {"name": "final_lookup", "arguments": json.dumps({"term": "q"})},
+    }
+
+    result = executor._execute_single_native_tool_call(call)
+
+    assert result["result"] == "Tool execution blocked by hook. Tool: final_lookup"
+    assert result["hook_blocked"] is True
+    assert result["tool_failure"] is None
