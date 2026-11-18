@@ -1823,6 +1823,42 @@ methods:
     )
 
 
+def test_flow_json_schema_declaration_default_isolates_nested_values():
+    """JSON Schema state defaults must not share nested containers."""
+    declaration = """
+schema: crewai.flow/v1
+name: WalletFlow
+state:
+  type: json_schema
+  default:
+    wallet:
+      expenses: []
+  json_schema:
+    type: object
+    properties:
+      wallet:
+        type: object
+methods:
+  buy:
+    start: true
+    do:
+      call: expression
+      expr: "1"
+"""
+    definition = FlowDefinition.from_declaration(contents=declaration)
+    marketing = Flow.from_declaration(contents=definition)
+    engineering = Flow.from_declaration(contents=definition)
+
+    marketing.state.wallet["expenses"].append(40)
+
+    assert engineering.state.wallet["expenses"] == []
+    assert definition.state.default["wallet"]["expenses"] == []
+    assert (
+        marketing.state.wallet["expenses"]
+        is not engineering.state.wallet["expenses"]
+    )
+
+
 def test_flow_copy_state_with_dict_state():
     """Test that _copy_state works with dict-based states."""
 

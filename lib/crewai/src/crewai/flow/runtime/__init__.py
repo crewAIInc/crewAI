@@ -193,7 +193,12 @@ def _build_definition_state_model(
     state_definition: FlowStateDefinition,
     compose: Callable[[type[BaseModel]], type[BaseModel]] | None = None,
 ) -> BaseModel | None:
-    kwargs = dict(state_definition.default or {})
+    # Isolate nested values. A shallow dict() copy leaves inner
+    # containers shared across flows built from the same declaration.
+    try:
+        kwargs: dict[str, Any] = copy.deepcopy(state_definition.default or {})
+    except (TypeError, AttributeError):
+        kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
     state_ref = getattr(state_definition, "ref", None)
