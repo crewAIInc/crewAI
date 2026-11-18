@@ -5,8 +5,16 @@ These tests ensure that:
 2. Cyclic flows can re-execute methods on each iteration
 """
 
+import asyncio
+import glob
+from pathlib import Path
+
+import pytest
 from typing import Dict
 
+from pydantic import BaseModel
+
+from crewai.state import CheckpointConfig
 from crewai.flow.flow import Flow, listen, router, start
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
@@ -176,3 +184,52 @@ def test_cyclic_flow_with_conditional_start():
     ]
 
     assert execution_log == expected
+
+
+def test_checkpoint_restore_revives_pydantic_listener_inputs(tmp_path):
+    """A method's Pydantic return value must survive the checkpoint JSON
+    roundtrip: the listener reads model attributes, and before the revive it
+    received a dict after a restore (#8974)."""
+
+    class Quote(BaseModel):
+        amount: int
+
+    failures = [1]
+    received: list[str] = []
+
+    class OrderFlow(Flow):
+        @start()
+        def price(self) -> Quote:
+            return Quote(amount=42)
+
+        @listen(price)
+        def charge(self, quote):
+            received.append(type(quote).__name__)
+            if failures[0]:
+                failures[0] -= 1
+                raise RuntimeError("charge failed")
+            self.state["charged"] = quote.amount
+
+    location = str(tmp_path / "checkpoints")
+    flow = OrderFlow(
+        state={"id": "abc", "charged": None},
+        checkpoint=CheckpointConfig(
+            location=location, on_events=["method_execution_finished"]
+        ),
+    )
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(flow.kickoff_async())
+
+    checkpoints = sorted(
+        Path(p) for p in glob.glob(str(Path(location) / "**" / "*.json"), recursive=True)
+        if Path(p).is_file()
+    )
+    assert checkpoints, "no checkpoint was written"
+
+    restored = OrderFlow.from_checkpoint(
+        CheckpointConfig(restore_from=str(checkpoints[-1]))
+    )
+    asyncio.run(restored.kickoff_async())
+
+    assert received == ["Quote", "Quote"], received
