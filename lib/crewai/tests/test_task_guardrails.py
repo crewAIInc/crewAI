@@ -839,6 +839,22 @@ def test_passing_guardrail_result_fills_output_json(make_result, expected):
     assert json.loads(result.raw) == expected
 
 
+def test_passing_guardrail_task_output_fills_the_configured_field():
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_json=Score,
+        guardrail=lambda output: (
+            True,
+            output.model_copy(update={"pydantic": Score(name="x", score=3)}),
+        ),
+    )
+
+    result = task.execute_sync(agent=_structured_output_agent())
+
+    assert result.json_dict == {"name": "x", "score": 3}
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("make_result,expected", PASSING_GUARDRAIL_RESULTS)
 async def test_passing_guardrail_result_fills_output_pydantic_async(

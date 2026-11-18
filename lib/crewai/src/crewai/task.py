@@ -1440,9 +1440,9 @@ Follow these guidelines:
                 accumulated_failures, result.tool_failures
             )
             # Outputs are left unexported while guardrails run, so one passed
-            # straight through still needs its structured fields.
-            needs_export = (self.output_pydantic or self.output_json) and (
-                result.pydantic is None and result.json_dict is None
+            # straight through may still lack the configured structured field.
+            needs_export = (self.output_pydantic and result.pydantic is None) or (
+                self.output_json and result.json_dict is None
             )
             return result, result.raw if needs_export else None
         if isinstance(result, BaseModel):
