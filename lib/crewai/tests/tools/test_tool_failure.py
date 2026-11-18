@@ -1064,10 +1064,10 @@ class TestHookBlockDoesNotInheritCachedFailure:
         class FailureReplayingCache:
             """Stands in for a custom cache that does retain failures."""
 
-            def read(self, tool: str, input: str) -> Any:
+            def read(self, tool: str, tool_input: str) -> Any:
                 return ToolFailure(message="stale cached failure", code="cached")
 
-            def add(self, tool: str, input: str, output: Any) -> None:
+            def add(self, tool: str, tool_input: str, output: Any) -> None:
                 pass
 
         agent = Agent(role="r", goal="g", backstory="b")
