@@ -1795,7 +1795,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             model = init_state
             if hasattr(model, "id"):
                 state_dict = model.model_dump()
-                if not state_dict.get("id"):
+                id_field = type(model).model_fields.get("id")
+                if (
+                    id_field is not None
+                    and id_field.default_factory is not None
+                    and "initial_state" not in self.model_fields_set
+                    and "id" not in model.model_fields_set
+                ):
+                    # A class-level instance is shared by every Flow, and its
+                    # default_factory id was generated once, so give each Flow its own.
+                    state_dict["id"] = id_field.get_default(
+                        call_default_factory=True, validated_data=state_dict
+                    )
+                elif not state_dict.get("id"):
                     state_dict["id"] = str(uuid4())
                 model_class = type(model)
                 return cast(T, model_class(**state_dict))

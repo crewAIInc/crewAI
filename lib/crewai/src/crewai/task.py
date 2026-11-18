@@ -747,7 +747,7 @@ class Task(BaseModel):
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -906,7 +906,7 @@ class Task(BaseModel):
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -1518,7 +1518,7 @@ Follow these guidelines:
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -1639,7 +1639,7 @@ Follow these guidelines:
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
