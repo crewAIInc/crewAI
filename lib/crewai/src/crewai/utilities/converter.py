@@ -254,7 +254,7 @@ def convert_to_model(
         return validate_model(
             result=escaped_result, model=model, is_json_output=bool(output_json)
         )
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValidationError):
         return handle_partial_json(
             result=result,
             model=model,
@@ -262,16 +262,6 @@ def convert_to_model(
             agent=agent,
             converter_cls=converter_cls,
         )
-
-    except ValidationError:
-        return handle_partial_json(
-            result=result,
-            model=model,
-            is_json_output=bool(output_json),
-            agent=agent,
-            converter_cls=converter_cls,
-        )
-
     except Exception as e:
         if agent and getattr(agent, "verbose", True):
             PRINTER.print(
