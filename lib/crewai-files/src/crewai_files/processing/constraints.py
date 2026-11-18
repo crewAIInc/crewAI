@@ -354,6 +354,7 @@ def uses_openai_responses_api(provider: str, api: str | None = None) -> bool:
     provider_lower = provider.lower()
     return (
         "openai" in provider_lower
+        or provider_lower == "azure"
         or provider_lower == "gpt"
         or provider_lower.startswith("gpt-")
         or "/gpt-" in provider_lower
