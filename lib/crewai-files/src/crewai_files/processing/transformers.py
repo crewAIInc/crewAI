@@ -36,7 +36,8 @@ def resize_image(
 
     Raises:
         ProcessingDependencyError: If Pillow is not installed.
-        UnsupportedFileTypeError: If the file is not a PNG, JPEG, GIF or WEBP image.
+        UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
+            image.
     """
     try:
         from PIL import Image
@@ -109,7 +110,8 @@ def optimize_image(
 
     Raises:
         ProcessingDependencyError: If Pillow is not installed.
-        UnsupportedFileTypeError: If the file is not a PNG, JPEG, GIF or WEBP image.
+        UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
+            image.
     """
     try:
         import PIL  # noqa: F401 - only checks that Pillow is installed
@@ -305,7 +307,8 @@ def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:
         Tuple of (width, height) in pixels, or None if dimensions cannot be determined.
 
     Raises:
-        UnsupportedFileTypeError: If the file is not a PNG, JPEG, GIF or WEBP image.
+        UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
+            image.
     """
     try:
         import PIL  # noqa: F401 - only checks that Pillow is installed
