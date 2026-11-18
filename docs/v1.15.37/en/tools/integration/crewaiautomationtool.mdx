@@ -1,0 +1,276 @@
+---
+title: CrewAI Run Automation Tool
+description: Enables CrewAI agents to invoke CrewAI Platform automations and leverage external crew services within your workflows.
+icon: robot
+---
+
+# `InvokeCrewAIAutomationTool`
+
+The `InvokeCrewAIAutomationTool` provides CrewAI Platform API integration with external crew services. This tool allows you to invoke and interact with CrewAI Platform automations from within your CrewAI agents, enabling seamless integration between different crew workflows.
+
+## Installation
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## Requirements
+
+- CrewAI Platform API access
+- Valid bearer token for authentication
+- Network access to CrewAI Platform automation endpoints
+
+## Usage
+
+Here's how to use the tool with a CrewAI agent:
+
+```python {2, 4-9}
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+
+# Initialize the tool
+automation_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://data-analysis-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Data Analysis Crew",
+    crew_description="Analyzes data and generates insights"
+)
+
+# Create a CrewAI agent that uses the tool
+automation_coordinator = Agent(
+    role='Automation Coordinator',
+    goal='Coordinate and execute automated crew tasks',
+    backstory='I am an expert at leveraging automation tools to execute complex workflows.',
+    tools=[automation_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+analysis_task = Task(
+    description="Execute data analysis automation and provide insights",
+    agent=automation_coordinator,
+    expected_output="Comprehensive data analysis report"
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[automation_coordinator],
+    tasks=[analysis_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## Tool Arguments
+
+| Argument | Type | Required | Default | Description |
+|:---------|:-----|:---------|:--------|:------------|
+| **crew_api_url** | `str` | Yes | None | Base URL of the CrewAI Platform automation API |
+| **crew_bearer_token** | `str` | Yes | None | Bearer token for API authentication |
+| **crew_name** | `str` | Yes | None | Name of the crew automation |
+| **crew_description** | `str` | Yes | None | Description of what the crew automation does |
+| **max_polling_time** | `int` | No | 600 | Maximum time in seconds to wait for task completion |
+| **crew_inputs** | `dict` | No | None | Dictionary defining custom input schema fields |
+
+## Environment Variables
+
+```bash
+CREWAI_API_URL=https://your-crew-automation.crewai.com  # Alternative to passing crew_api_url
+CREWAI_BEARER_TOKEN=your_bearer_token_here              # Alternative to passing crew_bearer_token
+```
+
+## Advanced Usage
+
+### Custom Input Schema with Dynamic Parameters
+
+```python {2, 4-15}
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+from pydantic import Field
+
+# Define custom input schema
+custom_inputs = {
+    "year": Field(..., description="Year to retrieve the report for (integer)"),
+    "region": Field(default="global", description="Geographic region for analysis"),
+    "format": Field(default="summary", description="Report format (summary, detailed, raw)")
+}
+
+# Create tool with custom inputs
+market_research_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://state-of-ai-report-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="State of AI Report",
+    crew_description="Retrieves a comprehensive report on state of AI for a given year and region",
+    crew_inputs=custom_inputs,
+    max_polling_time=15 * 60  # 15 minutes timeout
+)
+
+# Create an agent with the tool
+research_agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate and execute market research tasks",
+    backstory="You are an expert at coordinating research tasks and leveraging automation tools.",
+    tools=[market_research_tool],
+    verbose=True
+)
+
+# Create and execute a task with custom parameters
+research_task = Task(
+    description="Conduct market research on AI tools market for 2024 in North America with detailed format",
+    agent=research_agent,
+    expected_output="Comprehensive market research report"
+)
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[research_task]
+)
+
+result = crew.kickoff()
+```
+
+### Multi-Stage Automation Workflow
+
+```python {2, 4-35}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import InvokeCrewAIAutomationTool
+
+# Initialize different automation tools
+data_collection_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://data-collection-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Data Collection Automation",
+    crew_description="Collects and preprocesses raw data"
+)
+
+analysis_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://analysis-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Analysis Automation",
+    crew_description="Performs advanced data analysis and modeling"
+)
+
+reporting_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://reporting-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Reporting Automation",
+    crew_description="Generates comprehensive reports and visualizations"
+)
+
+# Create specialized agents
+data_collector = Agent(
+    role='Data Collection Specialist',
+    goal='Gather and preprocess data from various sources',
+    backstory='I specialize in collecting and cleaning data from multiple sources.',
+    tools=[data_collection_tool]
+)
+
+data_analyst = Agent(
+    role='Data Analysis Expert',
+    goal='Perform advanced analysis on collected data',
+    backstory='I am an expert in statistical analysis and machine learning.',
+    tools=[analysis_tool]
+)
+
+report_generator = Agent(
+    role='Report Generation Specialist',
+    goal='Create comprehensive reports and visualizations',
+    backstory='I excel at creating clear, actionable reports from complex data.',
+    tools=[reporting_tool]
+)
+
+# Create sequential tasks
+collection_task = Task(
+    description="Collect market data for Q4 2024 analysis",
+    agent=data_collector
+)
+
+analysis_task = Task(
+    description="Analyze collected data to identify trends and patterns",
+    agent=data_analyst
+)
+
+reporting_task = Task(
+    description="Generate executive summary report with key insights and recommendations",
+    agent=report_generator
+)
+
+# Create a crew with sequential processing
+crew = Crew(
+    agents=[data_collector, data_analyst, report_generator],
+    tasks=[collection_task, analysis_task, reporting_task],
+    process=Process.sequential,
+    verbose=2
+)
+
+result = crew.kickoff()
+```
+
+## Use Cases
+
+### Distributed Crew Orchestration
+- Coordinate multiple specialized crew automations to handle complex, multi-stage workflows
+- Enable seamless handoffs between different automation services for comprehensive task execution
+- Scale processing by distributing workloads across multiple CrewAI Platform automations
+
+### Cross-Platform Integration
+- Bridge CrewAI agents with CrewAI Platform automations for hybrid local-cloud workflows
+- Leverage specialized automations while maintaining local control and orchestration
+- Enable secure collaboration between local agents and cloud-based automation services
+
+### Enterprise Automation Pipelines
+- Create enterprise-grade automation pipelines that combine local intelligence with cloud processing power
+- Implement complex business workflows that span multiple automation services
+- Enable scalable, repeatable processes for data analysis, reporting, and decision-making
+
+### Dynamic Workflow Composition
+- Dynamically compose workflows by chaining different automation services based on task requirements
+- Enable adaptive processing where the choice of automation depends on data characteristics or business rules
+- Create flexible, reusable automation components that can be combined in various ways
+
+### Specialized Domain Processing
+- Access domain-specific automations (financial analysis, legal research, technical documentation) from general-purpose agents
+- Leverage pre-built, specialized crew automations without rebuilding complex domain logic
+- Enable agents to access expert-level capabilities through targeted automation services
+
+## Custom Input Schema
+
+When defining `crew_inputs`, use Pydantic Field objects to specify the input parameters:
+
+```python
+from pydantic import Field
+
+crew_inputs = {
+    "required_param": Field(..., description="This parameter is required"),
+    "optional_param": Field(default="default_value", description="This parameter is optional"),
+    "typed_param": Field(..., description="Integer parameter", ge=1, le=100)  # With validation
+}
+```
+
+## Error Handling
+
+The tool provides comprehensive error handling for common scenarios:
+
+- **API Connection Errors**: Network connectivity issues with CrewAI Platform
+- **Authentication Errors**: Invalid or expired bearer tokens
+- **Timeout Errors**: Tasks that exceed the maximum polling time
+- **Task Failures**: Crew automations that fail during execution
+- **Input Validation Errors**: Invalid parameters passed to automation endpoints
+
+## API Endpoints
+
+The tool interacts with two main API endpoints:
+
+- `POST {crew_api_url}/kickoff`: Starts a new crew automation task
+- `GET {crew_api_url}/status/{crew_id}`: Checks the status of a running task
+
+## Notes
+
+- The tool automatically polls the status endpoint every second until completion or timeout
+- Successful tasks return the result directly, while failed tasks return error information
+- Bearer tokens should be kept secure and not hardcoded in production environments
+- Consider using environment variables for sensitive configuration like bearer tokens
+- Custom input schemas must be compatible with the target crew automation's expected parameters

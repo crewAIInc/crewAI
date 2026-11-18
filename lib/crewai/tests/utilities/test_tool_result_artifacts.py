@@ -9,6 +9,16 @@ from crewai.tools.agent_tools.deferred_tool_result_reader import (
 from crewai.utilities.tool_result_artifacts import ToolResultArtifactStore
 
 
+def test_store_defaults_to_tmp() -> None:
+    store = ToolResultArtifactStore()
+
+    try:
+        if Path("/tmp").is_dir():
+            assert store.directory.parent == Path("/tmp")
+    finally:
+        store.cleanup()
+
+
 def test_store_returns_opaque_identifier_and_preserves_content(tmp_path: Path) -> None:
     store = ToolResultArtifactStore(base_dir=tmp_path)
 

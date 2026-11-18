@@ -261,6 +261,25 @@ records a version alongside each skill it assigns, and the runtime applies those
 pins when it loads the agent.
 </Note>
 
+### Search
+
+List the skills published to your organization on AMP, optionally filtered by a
+term matched against each skill's handle and description:
+
+```shell Terminal
+crewai skill search
+crewai skill search "code review"
+```
+
+Each line starts with the latest version's security scan status (`passed`,
+`pending` or `failed`; only a `passed` version installs), followed by
+`<handle>@<latest-version>` and the description. A handle or version with
+characters a reference cannot contain is shown in quotes. A line above the skills gives the current organization's UUID
+in the reference an agent's `skills` takes, `@<org-uuid>/<handle>@<version>`;
+`crewai skill install` takes `@<org-uuid>/<handle>`. Set the organization first
+with `crewai org switch <org-uuid>`. A skill marked `(public)` may belong to
+another organization, whose UUID its reference needs; the list does not show it.
+
 ### List
 
 ```shell Terminal
@@ -389,7 +408,7 @@ Both skills and knowledge modify the agent's prompt, but they serve different pu
 | Aspect | Skills | Knowledge |
 | :--- | :--- | :--- |
 | **What it provides** | Instructions, procedures, guidelines | Facts, data, information |
-| **How it's stored** | Markdown files (SKILL.md) | Embedded in vector store (ChromaDB) |
+| **How it's stored** | Markdown files (SKILL.md) | Embedded in vector store (Qdrant by default) |
 | **How it's retrieved** | Entire body injected into prompt | Semantic search finds relevant chunks |
 | **Best for** | Methodology, checklists, style guides | Company docs, product info, reference data |
 | **Set via** | `skills=["./skills"]` | `knowledge_sources=[source]` |
