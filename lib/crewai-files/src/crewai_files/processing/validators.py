@@ -24,24 +24,31 @@ from crewai_files.processing.exceptions import (
     FileValidationError,
     UnsupportedFileTypeError,
 )
+from crewai_files.processing.images import open_image
 
 
 logger = logging.getLogger(__name__)
 
 
-def _get_image_dimensions(content: bytes) -> tuple[int, int] | None:
+def _get_image_dimensions(
+    content: bytes, filename: str | None = None, content_type: str | None = None
+) -> tuple[int, int] | None:
     """Get image dimensions using Pillow if available.
 
     Args:
         content: Raw image bytes.
+        filename: Name of the file, for the error message.
+        content_type: Declared content type, carried on the error.
 
     Returns:
         Tuple of (width, height) or None if Pillow unavailable.
+
+    Raises:
+        UnsupportedFileTypeError: If the bytes are not a PNG, JPEG, GIF or WEBP
+            image.
     """
     try:
-        from PIL import Image
-
-        with Image.open(io.BytesIO(content)) as img:
+        with open_image(content, filename=filename, content_type=content_type) as img:
             width, height = img.size
             return int(width), int(height)
     except ImportError:
@@ -240,7 +247,9 @@ def validate_image(
     Raises:
         FileTooLargeError: If the file exceeds size limits.
         FileValidationError: If the file exceeds dimension limits.
-        UnsupportedFileTypeError: If the format is not supported.
+        UnsupportedFileTypeError: If the format is not supported, or, when
+            dimensions are checked, if the bytes are not a PNG, JPEG, GIF or
+            WEBP image (raised even when raise_on_error is False).
     """
     errors: list[str] = []
     content = file.read()
@@ -260,7 +269,9 @@ def validate_image(
     )
 
     if constraints.max_width is not None or constraints.max_height is not None:
-        dimensions = _get_image_dimensions(content)
+        # Raises UnsupportedFileTypeError whatever raise_on_error says: the
+        # bytes are not an image we can process, so there is nothing to return.
+        dimensions = _get_image_dimensions(content, filename, file.content_type)
         if dimensions is not None:
             width, height = dimensions
 

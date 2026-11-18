@@ -227,6 +227,10 @@ image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
 
+<Note type="warning" title="지원되는 이미지 형식">
+CrewAI가 이미지의 크기를 읽거나, 크기를 조정하거나, 압축해야 할 때는 PNG, JPEG, GIF, WEBP 이미지만 엽니다. 형식은 선언된 콘텐츠 유형이 아니라 파일 내용으로 판별됩니다. 그 외의 이미지는 `warn`과 `auto`를 포함한 모든 모드에서 `UnsupportedFileTypeError`를 발생시킵니다. 여러 파일을 함께 보내는 경우 해당 이미지만 제외되고 오류가 기록됩니다.
+</Note>
+
 ## 프로바이더 제약사항
 
 각 프로바이더는 파일 크기와 규격에 대한 특정 제한이 있습니다:

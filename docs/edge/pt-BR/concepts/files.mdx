@@ -227,6 +227,10 @@ image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
 
+<Note type="warning" title="Formatos de Imagem Suportados">
+Quando o CrewAI precisa ler as dimensões de uma imagem, redimensioná-la ou comprimi-la, ele abre apenas imagens PNG, JPEG, GIF e WEBP. O formato é identificado pelo conteúdo do arquivo, não pelo tipo de conteúdo declarado. Qualquer outra imagem gera `UnsupportedFileTypeError` em todos os modos, incluindo `warn` e `auto`. Quando vários arquivos são enviados juntos, apenas essa imagem é deixada de fora e um erro é registrado.
+</Note>
+
 ## Restrições por Provedor
 
 Cada provedor tem limites específicos para tamanhos e dimensões de arquivo:
