@@ -12,6 +12,7 @@ from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.converter import ConverterError
 
 
 def create_smart_task(**kwargs):
@@ -664,6 +665,16 @@ def test_multiple_guardrails_with_pydantic_output():
     agent.execute_task.return_value = "test content"
     agent.crew = None
     agent.last_messages = []
+    # The export now runs before the guardrails, so the converter sees the mock
+    # agent. Its converter is a Mock; to_pydantic() raises ConverterError, so
+    # convert_with_instructions returns the raw string and the guardrails
+    # transform it afterwards.
+    agent.llm = Mock(spec=LLM)
+    agent.function_calling_llm = None
+    agent.get_output_converter.return_value.to_pydantic.side_effect = ConverterError(
+        "mock cannot convert"
+    )
+    agent.verbose = False
 
     task = create_smart_task(
         description="Test guardrails with Pydantic",
