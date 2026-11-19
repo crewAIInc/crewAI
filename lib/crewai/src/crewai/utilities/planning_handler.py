@@ -5,6 +5,7 @@ import logging
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
+from crewai.agent.spreadsheet_inputs import no_spreadsheet_urls
 from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
 
@@ -52,7 +53,7 @@ class CrewPlanner:
             planning_agent_llm: Optional LLM model for the planning agent. Defaults to None.
         """
         self.tasks = tasks
-        self.planning_agent_llm = planning_agent_llm or "gpt-5.4-mini"
+        self.planning_agent_llm = planning_agent_llm or "gpt-6-luna"
 
     def _handle_crew_planning(self) -> PlannerTaskPydanticOutput:
         """Handles the Crew planning by creating detailed step-by-step plans for each task.
@@ -70,7 +71,9 @@ class CrewPlanner:
             planning_agent=planning_agent, tasks_summary=tasks_summary
         )
 
-        result = planner_task.execute_sync()
+        # The planner only plans; it reads none of the tasks' spreadsheets.
+        with no_spreadsheet_urls():
+            result = planner_task.execute_sync()
 
         if isinstance(result.pydantic, PlannerTaskPydanticOutput):
             return result.pydantic

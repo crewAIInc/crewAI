@@ -203,8 +203,6 @@ If you encounter a `PATH` warning, run:
 uv tool update-shell
 ```
 
-If you encounter the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*.
-
 Verify the install:
 
 ```shell
@@ -632,9 +630,9 @@ CrewAI is released under the [MIT License](https://github.com/crewAIInc/crewAI/b
 
 ### Enterprise Features
 
-- [What additional features does CrewAI AMP offer?](#q-what-additional-features-does-crewai-enterprise-offer)
-- [Is CrewAI AMP available for cloud and on-premise deployments?](#q-is-crewai-enterprise-available-for-cloud-and-on-premise-deployments)
-- [Can I try CrewAI AMP for free?](#q-can-i-try-crewai-enterprise-for-free)
+- [What additional features does CrewAI AMP offer?](#q-what-additional-features-does-crewai-amp-offer)
+- [Is CrewAI AMP available for cloud and on-premise deployments?](#q-is-crewai-amp-available-for-cloud-and-on-premise-deployments)
+- [Can I try CrewAI AMP for free?](#q-can-i-try-crewai-amp-for-free)
 
 ### Q: What exactly is CrewAI?
 
