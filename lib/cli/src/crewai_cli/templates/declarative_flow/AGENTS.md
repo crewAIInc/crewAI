@@ -33,6 +33,8 @@ Pick the simplest action that does the job.
 - Use `call: expression` for simple reads, filters, computed values, and deterministic routing.
 - Use `call: agent` for one AI worker that classifies, decides, summarizes, writes, or drafts. Put `role`, `goal`, `backstory`, and `input` under `with`. Do not add an action-level `inputs` map to an agent.
 - Use `call: crew` for coordinated AI work with multiple agents or tasks. Define the crew under `with`. Pass runtime values with the action-level `inputs` map.
+- Save an agent's output as an artifact when people should open, download or share it (a report, a chart, a CSV). Set `artifact: true` under `with` to name it after the method and pick the kind from the output, or `artifact: {identifier: weekly-report, title: Weekly report, kind: html}` to set them. For a file the agent's tools write, add `file_path`; `image`, `pdf` and `file` kinds need it. Read its link later as `${outputs.method_name.artifact.url}`.
+- Give an agent an artifact the run saved earlier with `input_files: {current_report: {artifact: <identifier>}}` under `with`, adding `version` for an older one. Use it when a resumed flow revises what it saved before a human review.
 
 ## Wire Methods Explicitly
 
@@ -315,6 +317,8 @@ Fields:
 - `apps` (optional): list[string] | null; default `null`. Platform apps available to this agent. Can contain app names such as `gmail` or app/action refs such as `gmail/send_email`. Example: `["gmail", "slack/send_message"]`
 - `mcps` (optional): list[string | map of string to any] | null; default `null`. MCP server refs or serialized MCP server configs available to this agent. String refs can use HTTPS URLs, connected MCP integration slugs, or refs with a `#tool_name` suffix for specific tools. Example: `["https://api.weather.com/mcp#get_current_weather", "snowflake", "stripe#list_invoices", {"cache_tools_list": true, "headers": {"Authorization": "Bearer your_token"}, "streamable": true, "url": "https://api.example.com/mcp"}]`
 - `input` (required): string. Agent prompt template. Insert Flow values with `${...}`, for example `Ticket: ${state.ticket_id}`. Example: `${state.ticket.body}`
+- `input_files` (optional): map of string to object | null; default `null`. Files passed to the agent's kickoff, by name. Each points at an artifact this run saved, loaded when the step runs. Example: `{"current_report": {"artifact": "board-report"}}`
+- `artifact` (optional): object | boolean | null; default `null`. Save the agent's final output as an artifact. True names it after the flow method and picks the kind from the output. Examples: `true`, `{"identifier": "report", "kind": "html", "title": "Report"}`
 
 #### LLM Definition
 
