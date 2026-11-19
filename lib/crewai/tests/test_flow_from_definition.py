@@ -3295,6 +3295,24 @@ def test_tool_action_platform_ref_with_no_tools_names_ref():
             Flow.from_declaration(contents=definition)
 
 
+def test_a_platform_ref_amp_cannot_resolve_names_the_app():
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    from crewai.project.json_loader import JSONProjectError, _resolve_platform_tools
+
+    def unavailable(apps):
+        raise PlatformAppsUnavailableError(["google_gmail"])
+
+    with patch("crewai_tools.CrewaiPlatformTools", unavailable):
+        with pytest.raises(
+            JSONProjectError,
+            match=r"^Failed to initialize platform tool "
+            r"'platform:google_gmail/send_email': CrewAI AMP could not resolve "
+            r"these apps: google_gmail$",
+        ):
+            _resolve_platform_tools("google_gmail/send_email")
+
+
 def test_tool_action_raises_when_tool_reports_failure():
     definition = _tool_flow_definition(
         f"{__name__}:FailingTool", {"to": "${state.email}"}
@@ -4245,6 +4263,60 @@ def test_start_step_listening_to_its_own_outcome_reruns_after_resume():
         result = approving.resume("ship it")
 
     assert result == "published:ship it"
+
+
+PENDING_REVIEW_READS_EARLIER_STEP_YAML = f"""
+schema: crewai.flow/v1
+name: PendingReviewReadsEarlierStepFlow
+methods:
+  compare_versions:
+    do:
+      call: expression
+      expr: "'diff-1'"
+    start: true
+  draft_change_report:
+    do:
+      call: expression
+      expr: "'report:' + outputs.compare_versions"
+    listen:
+      or: [compare_versions, rejected]
+    human_feedback:
+      message: "Review:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  publish:
+    do:
+      call: expression
+      expr: "'published:' + outputs.compare_versions"
+    listen: approved
+"""
+
+
+def test_rejected_review_rerun_reads_outputs_of_steps_before_the_pause(tmp_path):
+    # A step that ran before the pause lives only in _method_outputs, so the
+    # pending context must carry it through the persistence round trip.
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    definition = FlowDefinition.from_declaration(
+        contents=PENDING_REVIEW_READS_EARLIER_STEP_YAML
+    )
+    backend = SQLiteFlowPersistence(str(tmp_path / "flow_states.db"))
+    pending = Flow.from_declaration(contents=definition, persistence=backend).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    rejecting = Flow.from_pending(pending.context.flow_id, backend, definition=definition)
+    with patch.object(rejecting, "_collapse_to_outcome", return_value="rejected"):
+        repaused = rejecting.resume("needs more detail")
+
+    assert isinstance(repaused, HumanFeedbackPending)
+    assert repaused.context.method_output == "report:diff-1"
+
+    approving = Flow.from_pending(repaused.context.flow_id, backend, definition=definition)
+    with patch.object(approving, "_collapse_to_outcome", return_value="approved"):
+        result = approving.resume("ship it")
+
+    assert result == "published:diff-1"
 
 
 @pytest.mark.parametrize("router", [False, True])
