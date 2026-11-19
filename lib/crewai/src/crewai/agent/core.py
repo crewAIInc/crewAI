@@ -2023,7 +2023,12 @@ class Agent(BaseAgent):
 
         Note:
             For explicit async usage outside of Flow, use kickoff_async() directly.
+
+        Raises:
+            ValueError: If ``max_execution_time`` is set to a non-positive value.
+            TimeoutError: If execution exceeds ``max_execution_time``.
         """
+        validate_max_execution_time(self.max_execution_time)
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(  # type: ignore[no-any-return]
@@ -2062,9 +2067,14 @@ class Agent(BaseAgent):
                     self._kickoff_event_id = started_event.event_id
 
                 usage_baseline = self._current_usage_summary()
-                output = self._execute_and_build_output(
-                    executor, inputs, response_format, usage_baseline
-                )
+                if self.max_execution_time is not None:
+                    output = self._execute_kickoff_with_timeout(
+                        executor, inputs, response_format, usage_baseline
+                    )
+                else:
+                    output = self._execute_and_build_output(
+                        executor, inputs, response_format, usage_baseline
+                    )
                 return self._finalize_kickoff(
                     output,
                     executor,
@@ -2362,6 +2372,69 @@ class Agent(BaseAgent):
             result, executor, response_format, usage_baseline, kickoff_failures
         )
 
+    def _execute_kickoff_with_timeout(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
+    ) -> LiteAgentOutput:
+        """Run a standalone kickoff under ``max_execution_time``.
+
+        Mirrors ``_execute_with_timeout``: the caller has already validated the limit, the
+        work runs in a worker thread so the caller can stop waiting at the deadline, and
+        the pool is shut down without waiting so a runaway worker cannot delay the raise.
+
+        Raises:
+            TimeoutError: If execution exceeds ``max_execution_time``.
+        """
+        ctx = contextvars.copy_context()
+        pool = concurrent.futures.ThreadPoolExecutor()
+        try:
+            future = pool.submit(
+                ctx.run,
+                self._execute_and_build_output,
+                executor,
+                inputs,
+                response_format,
+                usage_baseline,
+            )
+            try:
+                return future.result(timeout=self.max_execution_time)
+            except concurrent.futures.TimeoutError as e:
+                future.cancel()
+                raise TimeoutError(
+                    f"Agent kickoff timed out after {self.max_execution_time} seconds. "
+                    "Consider increasing max_execution_time."
+                ) from e
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+
+    async def _execute_kickoff_with_timeout_async(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
+    ) -> LiteAgentOutput:
+        """Async counterpart of :meth:`_execute_kickoff_with_timeout`.
+
+        Raises:
+            TimeoutError: If execution exceeds ``max_execution_time``.
+        """
+        try:
+            return await asyncio.wait_for(
+                self._execute_and_build_output_async(
+                    executor, inputs, response_format, usage_baseline
+                ),
+                timeout=self.max_execution_time,
+            )
+        except asyncio.TimeoutError as e:
+            raise TimeoutError(
+                f"Agent kickoff timed out after {self.max_execution_time} seconds. "
+                "Consider increasing max_execution_time."
+            ) from e
+
     def _process_kickoff_guardrail(
         self,
         output: LiteAgentOutput,
@@ -2480,7 +2553,12 @@ class Agent(BaseAgent):
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
+
+        Raises:
+            ValueError: If ``max_execution_time`` is set to a non-positive value.
+            TimeoutError: If execution exceeds ``max_execution_time``.
         """
+        validate_max_execution_time(self.max_execution_time)
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(  # type: ignore[no-any-return]
@@ -2518,9 +2596,14 @@ class Agent(BaseAgent):
                     self._kickoff_event_id = started_event.event_id
 
                 usage_baseline = self._current_usage_summary()
-                output = await self._execute_and_build_output_async(
-                    executor, inputs, response_format, usage_baseline
-                )
+                if self.max_execution_time is not None:
+                    output = await self._execute_kickoff_with_timeout_async(
+                        executor, inputs, response_format, usage_baseline
+                    )
+                else:
+                    output = await self._execute_and_build_output_async(
+                        executor, inputs, response_format, usage_baseline
+                    )
                 return await self._afinalize_kickoff(
                     output,
                     executor,
