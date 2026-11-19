@@ -238,6 +238,62 @@ def test_persistence_with_base_model(tmp_path):
     assert isinstance(flow.state, State)
 
 
+def test_state_instance_gives_each_flow_its_own_id(tmp_path):
+    """Regression for #9498: an initial_state instance must not share its id."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    @persist(persistence)
+    class InstanceStateFlow(Flow[TestState]):
+        initial_state = TestState(message="start")
+
+        @start()
+        def step(self):
+            self.state.counter += 1
+
+    first = InstanceStateFlow(persistence=persistence)
+    first.kickoff()
+    second = InstanceStateFlow(persistence=persistence)
+    second.kickoff()
+
+    assert first.state.id != second.state.id
+    assert first.state.message == second.state.message == "start"
+    with closing(sqlite3.connect(db_path)) as conn:
+        flow_uuids = {row[0] for row in conn.execute("SELECT flow_uuid FROM flow_states")}
+    assert flow_uuids == {first.state.id, second.state.id}
+
+
+def test_state_instance_keeps_explicit_id():
+    """An id the user set on the initial_state instance is kept (#9498)."""
+
+    class PinnedStateFlow(Flow[TestState]):
+        initial_state = TestState(id="pinned-id")
+
+        @start()
+        def step(self):
+            pass
+
+    assert PinnedStateFlow().state.id == "pinned-id"
+    assert PinnedStateFlow().state.id == "pinned-id"
+
+
+def test_passed_initial_state_instance_keeps_its_id():
+    """A state passed to one Flow keeps its id, e.g. to continue a run (#9498)."""
+
+    class ContinueFlow(Flow[TestState]):
+        initial_state = TestState()
+
+        @start()
+        def step(self):
+            pass
+
+    previous = TestState(counter=3)
+    flow = ContinueFlow(initial_state=previous)
+
+    assert flow.state.id == previous.id
+    assert flow.state.counter == 3
+
+
 def test_fork_with_restore_from_state_id(tmp_path):
     """Fork: restore_from_state_id hydrates state from source flow_uuid; new run gets a
     fresh state.id; source's history is preserved (the fork's @persist writes go under
