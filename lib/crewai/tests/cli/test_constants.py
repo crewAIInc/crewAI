@@ -18,3 +18,11 @@ def test_huggingface_models():
     """Test that Huggingface models are properly configured."""
     assert "huggingface" in MODELS
     assert len(MODELS["huggingface"]) > 0
+
+
+def test_the_cli_asks_for_the_key_of_the_model_crewai_runs_by_default():
+    """The CLI keeps its own copy of the default, to pick the API key to ask for."""
+    from crewai.constants import DEFAULT_LLM_MODEL
+    from crewai_cli.constants import DEFAULT_LLM_MODEL as CLI_DEFAULT_LLM_MODEL
+
+    assert CLI_DEFAULT_LLM_MODEL == DEFAULT_LLM_MODEL
