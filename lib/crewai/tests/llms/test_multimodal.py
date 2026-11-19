@@ -353,6 +353,46 @@ class TestBedrockMultimodal:
         llm = LLM(model="bedrock/openai.gpt-oss-120b-1:0")
         assert llm.supports_multimodal() is False
 
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/anthropic.claude-sonnet-5-5",
+            "bedrock/anthropic.claude-opus-5-5",
+            "bedrock/anthropic.claude-haiku-5-5",
+            "bedrock/anthropic.claude-fable-5-1",
+            "bedrock/us.anthropic.claude-sonnet-5-5",
+            "bedrock/global.anthropic.claude-opus-5-5",
+            "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/jp.anthropic.claude-sonnet-4-6",
+            "bedrock/au.anthropic.claude-opus-4-8",
+            "bedrock/in.anthropic.claude-sonnet-5",
+            "bedrock/us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "bedrock/eu.amazon.nova-pro-v1:0",
+            "bedrock/ca.amazon.nova-lite-v1:0",
+            "bedrock/amazon.nova-2-lite-v1:0",
+            "bedrock/jp.amazon.nova-2-lite-v1:0",
+        ],
+    )
+    def test_supports_multimodal_any_claude3_plus_and_geo_profile(
+        self, model: str
+    ) -> None:
+        assert LLM(model=model).supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/anthropic.claude-instant-v1",
+            "bedrock/anthropic.claude-v2:1",
+            "bedrock/us.anthropic.claude-v2",
+            "bedrock/eu.amazon.nova-micro-v1:0",
+            "bedrock/global.openai.gpt-oss-120b-1:0",
+            "bedrock/meta.llama3-70b-instruct-v1:0",
+        ],
+    )
+    def test_does_not_support_text_only_models(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")

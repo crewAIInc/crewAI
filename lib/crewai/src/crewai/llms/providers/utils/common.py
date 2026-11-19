@@ -1,9 +1,23 @@
 import logging
 import re
-from typing import Any
+from typing import Any, Final
 
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
+
+
+_CLAUDE_MAJOR_VERSION: Final[re.Pattern[str]] = re.compile(r"claude-(?:[a-z]+-)?(\d+)")
+
+
+def claude_supports_vision(model: str) -> bool:
+    """Return whether a Claude model ID names Claude 3 or later.
+
+    Reads the major version from ``claude-<n>`` or ``claude-<family>-<n>``,
+    so ``claude-sonnet-5-5`` and ``claude-3-5-sonnet-20241022`` match and
+    ``claude-2.1``, ``claude-instant-1.2`` and ``claude-v2`` do not.
+    """
+    match = _CLAUDE_MAJOR_VERSION.search(model.lower())
+    return match is not None and int(match.group(1)) >= 3
 
 
 def validate_function_name(name: str, provider: str = "LLM") -> str:

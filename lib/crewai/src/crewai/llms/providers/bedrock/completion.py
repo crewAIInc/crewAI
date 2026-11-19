@@ -14,7 +14,10 @@ from typing_extensions import Required
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -2254,32 +2257,29 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+, Nova Lite/Pro/Premier and OpenAI GPT-6 (Sol, Luna, Astra)
-        on Bedrock support vision.
+        Claude 3+, Nova Lite/Pro/Premier/2 Lite and OpenAI GPT-6 (Sol, Luna,
+        Astra) on Bedrock support vision, also behind a geo inference profile
+        prefix (``us.``, ``eu.``, ``global.``, ...).
 
         Returns:
             True if the model supports images.
         """
+        from crewai.llms.context_window import _REGION_PREFIXES
+
         model_lower = self.model.lower()
-        vision_models = (
-            "anthropic.claude-3",
-            "anthropic.claude-sonnet-4",
-            "anthropic.claude-opus-4",
-            "anthropic.claude-haiku-4",
-            "openai.gpt-6",
-            "us.openai.gpt-6",
-            "global.openai.gpt-6",
-            "amazon.nova-lite",
-            "amazon.nova-pro",
-            "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
+        if model_lower.startswith(_REGION_PREFIXES):
+            model_lower = model_lower.split(".", 1)[1]
+        if model_lower.startswith("anthropic."):
+            return claude_supports_vision(model_lower)
+        return model_lower.startswith(
+            (
+                "openai.gpt-6",
+                "amazon.nova-lite",
+                "amazon.nova-pro",
+                "amazon.nova-premier",
+                "amazon.nova-2-lite",
+            )
         )
-        return any(model_lower.startswith(m) for m in vision_models)
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.
