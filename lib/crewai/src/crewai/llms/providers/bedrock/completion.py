@@ -6,7 +6,8 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+import re
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -225,6 +226,13 @@ class BedrockConverseStreamRequestBody(TypedDict, total=False):
     guardrailConfig: GuardrailStreamConfigurationTypeDef
     additionalModelRequestFields: dict[str, Any]
     additionalModelResponseFieldPaths: list[str]
+
+
+# GPT-6 IDs include point releases (``openai.gpt-6.1-*``), so the family ends at
+# ``.`` or ``-``; Nova IDs carry a ``-v<n>`` version.
+_BEDROCK_VISION_MODEL: Final[re.Pattern[str]] = re.compile(
+    r"openai\.gpt-6[.-]|amazon\.nova-(?:lite|pro|premier|2-lite)-v\d"
+)
 
 
 class BedrockCompletion(BaseLLM):
@@ -2270,16 +2278,8 @@ class BedrockCompletion(BaseLLM):
         if model_lower.startswith(_REGION_PREFIXES):
             model_lower = model_lower.split(".", 1)[1]
         if model_lower.startswith("anthropic."):
-            return claude_supports_vision(model_lower)
-        return model_lower.startswith(
-            (
-                "openai.gpt-6",
-                "amazon.nova-lite",
-                "amazon.nova-pro",
-                "amazon.nova-premier",
-                "amazon.nova-2-lite",
-            )
-        )
+            return claude_supports_vision(model_lower.removeprefix("anthropic."))
+        return _BEDROCK_VISION_MODEL.match(model_lower) is not None
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.

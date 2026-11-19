@@ -12,11 +12,12 @@ _CLAUDE_MAJOR_VERSION: Final[re.Pattern[str]] = re.compile(r"claude-(?:[a-z]+-)?
 def claude_supports_vision(model: str) -> bool:
     """Return whether a Claude model ID names Claude 3 or later.
 
-    Reads the major version from ``claude-<n>`` or ``claude-<family>-<n>``,
-    so ``claude-sonnet-5-5`` and ``claude-3-5-sonnet-20241022`` match and
-    ``claude-2.1``, ``claude-instant-1.2`` and ``claude-v2`` do not.
+    The ID must start with ``claude-<n>`` or ``claude-<family>-<n>``, so
+    ``claude-sonnet-5-5`` and ``claude-3-5-sonnet-20241022`` match and
+    ``claude-2.1``, ``claude-instant-1.2``, ``claude-v2`` and
+    ``not-claude-sonnet-5`` do not.
     """
-    match = _CLAUDE_MAJOR_VERSION.search(model.lower())
+    match = _CLAUDE_MAJOR_VERSION.match(model.lower())
     return match is not None and int(match.group(1)) >= 3
 
 

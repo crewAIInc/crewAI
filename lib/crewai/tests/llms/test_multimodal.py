@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.providers.utils.common import claude_supports_vision
 from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
 
 try:
@@ -182,6 +183,23 @@ class TestAnthropicMultimodal:
         assert result[0]["source"]["type"] == "base64"
         assert result[0]["source"]["media_type"] == "application/pdf"
 
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("claude-sonnet-5-5", True),
+        ("claude-3-5-sonnet-20241022", True),
+        ("claude-opus-4.8", True),
+        ("claude-2.1", False),
+        ("claude-v2", False),
+        ("not-claude-sonnet-5", False),
+        ("anthropic.claude-sonnet-5-5", False),
+    ],
+)
+def test_claude_supports_vision_reads_a_leading_claude_id(
+    model: str, expected: bool
+) -> None:
+    assert claude_supports_vision(model) is expected
 
 class TestOpenAIMultimodal:
     """Tests for OpenAI provider multimodal functionality."""
@@ -372,6 +390,9 @@ class TestBedrockMultimodal:
             "bedrock/ca.amazon.nova-lite-v1:0",
             "bedrock/amazon.nova-2-lite-v1:0",
             "bedrock/jp.amazon.nova-2-lite-v1:0",
+            "bedrock/us.amazon.nova-premier-v1:0",
+            "bedrock/openai.gpt-6.1-sol",
+            "bedrock/global.openai.gpt-6.2-luna",
         ],
     )
     def test_supports_multimodal_any_claude3_plus_and_geo_profile(
@@ -388,6 +409,9 @@ class TestBedrockMultimodal:
             "bedrock/eu.amazon.nova-micro-v1:0",
             "bedrock/global.openai.gpt-oss-120b-1:0",
             "bedrock/meta.llama3-70b-instruct-v1:0",
+            "bedrock/anthropic.not-claude-sonnet-5",
+            "bedrock/amazon.nova-lite-text-only",
+            "bedrock/openai.gpt-60",
         ],
     )
     def test_does_not_support_text_only_models(self, model: str) -> None:
