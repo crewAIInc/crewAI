@@ -37,6 +37,33 @@ class TestDataTypesFromContentGitHub:
             == DataType.WEBSITE
         )
 
+    def test_repository_named_docs_is_github(self) -> None:
+        # A "docs" path segment on github.com is a repository name, not a DocsSite.
+        assert (
+            DataTypes.from_content("https://github.com/crewAIInc/docs")
+            == DataType.GITHUB
+        )
+
+    def test_github_docs_host_is_still_a_docs_site(self) -> None:
+        assert (
+            DataTypes.from_content("https://docs.github.com/en/rest")
+            == DataType.DOCS_SITE
+        )
+
+
+class TestDataTypesDocsSite:
+    """Docs detection keeps working for non-GitHub hosts."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://example.com/docs/intro",
+            "https://docs.example.com/guide",
+        ],
+    )
+    def test_docs_urls_are_docs_sites(self, url: str) -> None:
+        assert DataTypes.from_content(url) == DataType.DOCS_SITE
+
 
 class TestDataTypesJSONL:
     """JSONL uses the existing registry for explicit selection and discovery."""
