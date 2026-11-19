@@ -4,6 +4,69 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="18 nov 2026">
+  ## v1.15.43
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.43)
+
+  ## O Que Mudou
+
+  ### Correções de Bugs
+  - Corrigir a detecção de suporte multimodal para Claude 5.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.42.
+
+  ## Contributors
+
+  @Vidit-Ostwal, @anubhavlal07, @joaomdmoura
+
+</Update>
+
+<Update label="18 nov 2026">
+  ## v1.15.42
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.42)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Tornar o ChromaDB um extra opcional
+  - Definir o conhecimento como Qdrant local e desacoplar o armazenamento do ChromaDB
+  - Escolher ferramentas para agentes autônomos e adicioná-las depois
+
+  ### Correções de Bugs
+  - Armazenar valores output_json como JSON para evitar problemas de data em .json e output_file
+  - Dar a cada Flow seu próprio ID a partir de uma instância initial_state
+  - Respeitar max_execution_time sem esperar pelo trabalhador
+  - Salvar saídas de tarefas que contêm URLs e outros tipos Pydantic
+  - Ler a linha de base do experimento como UTF-8
+  - Prefixar nomes de ferramentas sanitizados que começam com um dígito
+  - Contar registros scoped LanceDB exatamente acima de 50.000 linhas
+  - Relatar a flag híbrida do Serply a partir de seu próprio campo
+  - Permitir que os padrões configurados do TavilyResearchTool se apliquem
+  - Normalizar filtros de metadados Chroma planos
+  - Lidar com quebras de linha em registros CSV sem traduzir valores de células
+  - Carregar arquivos de equipe e agente JSON salvos com um BOM UTF-8
+  - Preservar a saída do conversor validado no formato configurado
+  - Ler e escrever .env como UTF-8
+  - Manter um delta transmitido quando seu chunk também transporta uso
+  - Respeitar cabeçalhos Weaviate fornecidos pelo chamador
+  - Sair com o status UV quando a instalação do crewai falhar
+  - Ler pyproject.toml como UTF-8 nos auxiliares de projeto
+  - Aceitar um mapeamento LLM em agents.yaml
+  - Elevar o piso do soupsieve para 4.0 para CVE-2026-126190
+
+  ### Documentação
+  - Alinhar o caminho do endpoint da equipe com o exemplo de runtime
+  - Atualizar links de FAQ para cabeçalhos AMP
+
+  ## Contribuidores
+
+  @HhH666-ux, @Kiko0301, @Pranav-Singh-Devloper, @TejasLamba2006, @Varshith-Kali, @Vidit-Ostwal, @adityajai119, @ats3v, @bballhaus, @github-actions[bot], @iris-clawd, @jjhong011001, @lakers-abing, @lorenzejay, @lxcxjxhx, @xu-song
+
+</Update>
+
 <Update label="13 nov 2026">
   ## v1.15.41
 
