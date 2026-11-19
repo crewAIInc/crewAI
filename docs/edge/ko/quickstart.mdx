@@ -36,6 +36,8 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
       ```
     </CodeGroup>
 
+  `crewai create`가 `Run it now?`라고 물으면 `n`으로 답하세요. 이 가이드에서는 Flow를 실행하기 전에 먼저 수정합니다.
+
   이렇게 하면 `src/latest_ai_flow/` 아래에 Flow 앱이 만들어지고, 다음 단계에서 **단일 에이전트** 연구 crew로 바꿀 시작용 crew가 `crews/content_crew/`에 포함됩니다.
   </Step>
 
@@ -155,7 +157,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
   프로젝트 루트의 `.env`에 다음을 설정합니다.
 
     - `SERPER_API_KEY` — [Serper.dev](https://serper.dev/)에서 발급
-    - 모델 제공자 키 — [LLM 설정](/ko/concepts/llms#llm-설정하기) 참고
+    - 모델 제공자 API 키 — `crewai create flow`가 물었을 때 입력하지 않았다면 추가하세요. [LLM 설정](/ko/concepts/llms#llm-설정하기) 참고
   </Step>
 
   <Step title="설치 및 실행">
