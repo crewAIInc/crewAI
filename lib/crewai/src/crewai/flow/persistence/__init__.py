@@ -11,10 +11,7 @@ from crewai.flow.persistence.base import (
     FlowStateHistoryRecord,
 )
 from crewai.flow.persistence.decorators import persist
-from crewai.flow.persistence.sqlite import (
-    SQLiteFlowPersistence,
-    read_flow_state_history,
-)
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 
 __all__ = [
@@ -24,5 +21,4 @@ __all__ = [
     "FlowStateHistoryRecord",
     "SQLiteFlowPersistence",
     "persist",
-    "read_flow_state_history",
 ]

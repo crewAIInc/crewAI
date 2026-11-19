@@ -6,7 +6,6 @@ from contextlib import closing
 from datetime import datetime, timezone
 import os
 from pathlib import Path
-import shutil
 import sqlite3
 import stat
 import sys
@@ -19,7 +18,6 @@ from crewai.flow.persistence import (
     FlowPersistence,
     FlowStateHistoryRecord,
     SQLiteFlowPersistence,
-    read_flow_state_history,
 )
 from crewai.flow.persistence import sqlite as sqlite_module
 
@@ -77,13 +75,13 @@ def test_empty_history_for_unknown_flow(persistence: SQLiteFlowPersistence) -> N
 def test_empty_history_when_database_does_not_exist(tmp_path: Path) -> None:
     missing = tmp_path / "nope.db"
 
-    assert read_flow_state_history(missing, "flow") == []
+    assert SQLiteFlowPersistence.read_history(missing, "flow") == []
     assert not missing.exists()
 
 
 def test_directory_path_is_not_treated_as_empty_history(tmp_path: Path) -> None:
     with pytest.raises(sqlite3.OperationalError):
-        read_flow_state_history(tmp_path, "flow")
+        SQLiteFlowPersistence.read_history(tmp_path, "flow")
 
 
 def test_empty_history_when_table_does_not_exist(tmp_path: Path) -> None:
@@ -92,7 +90,7 @@ def test_empty_history_when_table_does_not_exist(tmp_path: Path) -> None:
         conn.execute("CREATE TABLE unrelated (x INTEGER)")
         conn.commit()
 
-    assert read_flow_state_history(path, "flow") == []
+    assert SQLiteFlowPersistence.read_history(path, "flow") == []
     with closing(sqlite3.connect(path)) as conn:
         tables = {
             row[0]
@@ -163,84 +161,21 @@ def test_naive_timestamps_are_normalised_to_utc(
     sorted(history, key=lambda r: r.timestamp)
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0),
-    reason="POSIX file permissions are not enforced",
-)
-def test_reader_raises_instead_of_truncating_when_wal_is_unreadable(
-    tmp_path: Path,
+def test_reader_includes_rows_not_yet_checkpointed_from_wal(
+    persistence: SQLiteFlowPersistence, db_path: str
 ) -> None:
-    src = tmp_path / "src" / "flows.db"
-    src.parent.mkdir()
-    persistence = SQLiteFlowPersistence(str(src))
-    persistence.save_state("flow", "step", {})
-    # An open read transaction keeps committed rows in the WAL instead of
-    # letting the writer checkpoint and delete it on close.
-    holder = sqlite3.connect(src)
-    holder.execute("BEGIN")
-    holder.execute("SELECT COUNT(*) FROM flow_states").fetchone()
-    persistence.save_state("flow", "in-wal", {})
-    # Copy db + WAL (but no -shm) somewhere the reader cannot create a -shm.
-    ro_dir = tmp_path / "ro"
-    ro_dir.mkdir()
-    shutil.copy(src, ro_dir / "flows.db")
-    shutil.copy(src.with_suffix(".db-wal"), ro_dir / "flows.db-wal")
-    holder.close()
-    link = tmp_path / "link.db"
-    link.symlink_to(ro_dir / "flows.db")
-    dir_mode = ro_dir.stat().st_mode
-    ro_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
-    try:
-        with pytest.raises(sqlite3.OperationalError):
-            read_flow_state_history(ro_dir / "flows.db", "flow")
-        # The -wal check must follow symlinks to the real database.
-        with pytest.raises(sqlite3.OperationalError):
-            read_flow_state_history(link, "flow")
-    finally:
-        ro_dir.chmod(dir_mode)
+    persistence.save_state("flow", "checkpointed", {})
+    # An open read transaction stops the writer from checkpointing, so the
+    # next row is committed only in the -wal file.
+    with closing(sqlite3.connect(db_path)) as holder:
+        holder.execute("BEGIN")
+        holder.execute("SELECT COUNT(*) FROM flow_states").fetchone()
+        persistence.save_state("flow", "in-wal", {})
+        assert Path(f"{db_path}-wal").stat().st_size > 0
 
+        history = SQLiteFlowPersistence.read_history(db_path, "flow")
 
-@pytest.mark.skipif(
-    sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0),
-    reason="POSIX file permissions are not enforced",
-)
-def test_reader_raises_instead_of_returning_uncommitted_rows_from_hot_journal(
-    tmp_path: Path,
-) -> None:
-    src = tmp_path / "src" / "flows.db"
-    src.parent.mkdir()
-    conn = sqlite3.connect(src, isolation_level=None)
-    conn.execute("PRAGMA journal_mode=DELETE")
-    conn.execute("PRAGMA cache_size=1")  # spill dirty pages to the main file
-    conn.execute(
-        "CREATE TABLE flow_states (id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        " flow_uuid TEXT NOT NULL, method_name TEXT NOT NULL,"
-        " timestamp DATETIME NOT NULL, state_json TEXT NOT NULL)"
-    )
-    conn.execute(
-        "INSERT INTO flow_states (flow_uuid, method_name, timestamp, state_json)"
-        " VALUES ('flow', 'committed', '2026-01-01T00:00:00+00:00', '{}')"
-    )
-    conn.execute("BEGIN")
-    conn.executemany(
-        "INSERT INTO flow_states (flow_uuid, method_name, timestamp, state_json)"
-        " VALUES ('flow', 'UNCOMMITTED', '2026-01-01T00:00:00+00:00', ?)",
-        [("x" * 2000,)] * 2000,
-    )
-    # Copy db + hot rollback journal mid-transaction to simulate a crash.
-    ro_dir = tmp_path / "ro"
-    ro_dir.mkdir()
-    shutil.copy(src, ro_dir / "flows.db")
-    shutil.copy(src.with_suffix(".db-journal"), ro_dir / "flows.db-journal")
-    conn.rollback()
-    conn.close()
-    dir_mode = ro_dir.stat().st_mode
-    ro_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
-    try:
-        with pytest.raises(sqlite3.OperationalError):
-            read_flow_state_history(ro_dir / "flows.db", "flow")
-    finally:
-        ro_dir.chmod(dir_mode)
+    assert _methods(history) == ["checkpointed", "in-wal"]
 
 
 def test_history_does_not_read_state_payloads(
@@ -259,7 +194,7 @@ def test_history_does_not_read_state_payloads(
 
     monkeypatch.setattr(sqlite3, "connect", tracing_connect)
 
-    read_flow_state_history(db_path, "flow")
+    SQLiteFlowPersistence.read_history(db_path, "flow")
 
     assert statements
     assert not any("state_json" in sql for sql in statements)
@@ -317,7 +252,7 @@ def test_reader_does_not_initialize_or_modify_database(tmp_path: Path) -> None:
         conn.commit()
     before = path.read_bytes()
 
-    history = read_flow_state_history(path, "flow")
+    history = SQLiteFlowPersistence.read_history(path, "flow")
 
     assert _methods(history) == ["step"]
     assert path.read_bytes() == before
@@ -342,7 +277,7 @@ def test_reader_works_on_read_only_file(
     mode = os.stat(db_path).st_mode
     os.chmod(db_path, stat.S_IRUSR)
     try:
-        assert _methods(read_flow_state_history(db_path, "flow")) == ["step"]
+        assert _methods(SQLiteFlowPersistence.read_history(db_path, "flow")) == ["step"]
     finally:
         os.chmod(db_path, mode)
 
@@ -351,22 +286,16 @@ def test_reader_works_on_read_only_file(
     sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0),
     reason="POSIX file permissions are not enforced",
 )
-def test_reader_works_when_directory_is_not_writable(tmp_path: Path) -> None:
+def test_reader_raises_when_wal_sidecars_cannot_be_created(tmp_path: Path) -> None:
     db_dir = tmp_path / "ro"
     db_dir.mkdir()
     path = db_dir / "flows.db"
-    persistence = SQLiteFlowPersistence(str(path))
-    persistence.save_state("flow", "step", {})
-    # Make sure the WAL was checkpointed so only the main file remains.
-    with closing(sqlite3.connect(path)) as conn:
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-    for sidecar in (path.with_suffix(".db-wal"), path.with_suffix(".db-shm")):
-        sidecar.unlink(missing_ok=True)
+    SQLiteFlowPersistence(str(path)).save_state("flow", "step", {})
     dir_mode = db_dir.stat().st_mode
     db_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
     try:
-        assert _methods(read_flow_state_history(path, "flow")) == ["step"]
-        assert sorted(p.name for p in db_dir.iterdir()) == ["flows.db"]
+        with pytest.raises(sqlite3.OperationalError):
+            SQLiteFlowPersistence.read_history(path, "flow")
     finally:
         db_dir.chmod(dir_mode)
 
