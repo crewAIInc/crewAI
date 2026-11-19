@@ -124,6 +124,33 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    # OpenAI-compatible providers crewAI runs natively; not offered by the
+    # classic `crewai create` picker (PROVIDERS), but their keys are asked for
+    # and checked like any other when a project's model uses them.
+    "deepseek": [
+        {
+            "prompt": "Enter your DEEPSEEK API key (press Enter to skip)",
+            "key_name": "DEEPSEEK_API_KEY",
+        }
+    ],
+    "openrouter": [
+        {
+            "prompt": "Enter your OPENROUTER API key (press Enter to skip)",
+            "key_name": "OPENROUTER_API_KEY",
+        }
+    ],
+    "dashscope": [
+        {
+            "prompt": "Enter your DASHSCOPE API key (press Enter to skip)",
+            "key_name": "DASHSCOPE_API_KEY",
+        }
+    ],
+    "deepinfra": [
+        {
+            "prompt": "Enter your DEEPINFRA API key (press Enter to skip)",
+            "key_name": "DEEPINFRA_API_KEY",
+        }
+    ],
 }
 
 
@@ -191,6 +218,20 @@ def provider_for_model(model: str) -> str | None:
     if prefix.startswith(_NATIVE_MODEL_PREFIXES["gemini"]):
         return "gemini"
     return None
+
+
+def required_key_names(provider: str) -> list[str]:
+    """Return the upper-cased ``ENV_VARS`` names ``provider`` needs set to run.
+
+    Entries with a runtime default are left out, and so is azure's and
+    cerebras's ``model`` entry, which fills ``MODEL`` and is not a credential.
+    """
+    names = [
+        str(details["key_name"]).upper()
+        for details in ENV_VARS.get(provider, [])
+        if "key_name" in details and not details.get("optional", False)
+    ]
+    return [name for name in names if name != "MODEL"]
 
 
 # The model names each native provider takes after its prefix, copied from
@@ -306,7 +347,7 @@ MODELS: dict[str, list[str]] = {
     ],
 }
 
-DEFAULT_LLM_MODEL = "gpt-4.1-mini"
+DEFAULT_LLM_MODEL = "gpt-6-luna"
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 
