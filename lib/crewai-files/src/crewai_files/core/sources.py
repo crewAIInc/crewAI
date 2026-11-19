@@ -224,11 +224,10 @@ class FilePath(BaseModel):
         if ".." in path_str:
             raise ValueError(f"Path traversal not allowed: {self.path}")
 
-        if self.path.is_symlink():
-            resolved = self.path.resolve()
-            cwd = Path.cwd().resolve()
-            if not str(resolved).startswith(str(cwd)):
-                raise ValueError(f"Symlink escapes allowed directory: {self.path}")
+        resolved = self.path.resolve()
+        cwd = Path.cwd().resolve()
+        if not resolved.is_relative_to(cwd):
+            raise ValueError(f"Path escapes allowed directory: {self.path}")
 
         if not self.path.exists():
             raise ValueError(f"File not found: {self.path}")
