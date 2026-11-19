@@ -22,7 +22,7 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.constants import required_key_names
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -198,7 +198,7 @@ def render_template(src: Path, replacements: Mapping[str, str]) -> str:
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
-        with open(env_file_path, "r") as f:
+        with open(env_file_path, "r", encoding="utf-8") as f:
             env_content = f.read()
 
         env_dict = {}
@@ -259,7 +259,7 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
     env_file_path = folder_path / ".env"
     env_vars = {}
     if env_file_path.exists():
-        with open(env_file_path, "r") as file:
+        with open(env_file_path, "r", encoding="utf-8") as file:
             for line in file:
                 key, _, value = line.strip().partition("=")
                 if key and value:
@@ -282,7 +282,7 @@ def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
             f"Not writing API keys to {env_file_path}: it is a symlink."
         )
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
-    with os.fdopen(os.open(env_file_path, flags, 0o600), "w") as file:
+    with os.fdopen(os.open(env_file_path, flags, 0o600), "w", encoding="utf-8") as file:
         if sys.platform != "win32":
             # os.open's mode applies only when it creates the file.
             os.fchmod(file.fileno(), 0o600)
@@ -295,17 +295,10 @@ def missing_provider_keys(provider: str, env_vars: Mapping[str, object]) -> list
     """Return the names ``provider`` needs that neither ``env_vars`` nor the
     environment sets. Entries with a runtime default are not needed."""
     saved = {key.upper() for key, value in env_vars.items() if value}
-    names = [
-        str(details["key_name"]).upper()
-        for details in ENV_VARS.get(provider, [])
-        if "key_name" in details and not details.get("optional", False)
-    ]
-    # azure and cerebras also prompt for the model under key_name "model"; that
-    # fills MODEL, which is not a credential.
     return [
         name
-        for name in names
-        if name != "MODEL" and name not in saved and not os.environ.get(name)
+        for name in required_key_names(provider)
+        if name not in saved and not os.environ.get(name)
     ]
 
 

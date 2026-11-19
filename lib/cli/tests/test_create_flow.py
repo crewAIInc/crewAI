@@ -87,6 +87,34 @@ def test_create_flow_depends_on_crewai_with_tools_only(
     )
 
 
+@pytest.mark.parametrize("declarative", [False, True])
+def test_create_flow_returns_the_folder_it_created(
+    tmp_path: Path, monkeypatch: MonkeyPatch, declarative: bool
+):
+    monkeypatch.chdir(tmp_path)
+
+    project = create_flow("News v2.0", declarative=declarative)
+
+    # A flow folder keeps the ".", which a crew folder would drop.
+    assert project == Path("news_v2.0")
+    assert (tmp_path / "news_v2.0" / "pyproject.toml").is_file()
+
+
+@pytest.mark.parametrize("declarative", [False, True])
+def test_create_flow_returns_none_when_the_folder_already_exists(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    declarative: bool,
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "research_flow").mkdir()
+
+    assert create_flow("Research Flow", declarative=declarative) is None
+    assert "Error: Folder research_flow already exists." in capsys.readouterr().out
+    assert list((tmp_path / "research_flow").iterdir()) == []
+
+
 SONNET = "anthropic/claude-sonnet-5-5"
 LUNA = "openai/gpt-6-luna"
 
