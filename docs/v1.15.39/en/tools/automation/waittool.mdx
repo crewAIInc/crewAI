@@ -1,0 +1,124 @@
+---
+title: Wait Tool
+description: The `WaitTool` lets an agent pause before checking a long-running job again.
+icon: hourglass-half
+mode: "wide"
+---
+
+## Overview
+
+The `WaitTool` pauses execution for a given number of seconds. It exists because agents that
+kick off long-running work — a sandbox build, a deployment, a batch import, an async API job —
+otherwise have no way to let time pass. Without it, an agent either polls in a tight loop or
+gives up before the work finishes.
+
+The tool takes no API key and has no dependencies beyond the standard library.
+
+## When to Use It
+
+The tool's description tells the model to reach for it when out-of-band work needs real time
+to progress:
+
+- A sandbox build, test run, or script that is still executing
+- A deployment or provisioning step that is still rolling out
+- A batch import, export, or training job
+- An async API that returned a job id to poll later
+- A rate limit or backoff that has to cool down before retrying
+
+The pattern the model is steered toward is: start the job, wait, check status, wait again if it
+is still running. The description also tells it *not* to wait to pace a conversation or when the
+information it needs is already available — waiting only lets clock time pass, it does not
+advance or check the job.
+
+## Installation
+
+The tool ships with `crewai-tools`:
+
+```shell
+uv add crewai-tools
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai.tools import tool
+from crewai_tools import WaitTool
+
+wait_tool = WaitTool()
+
+
+@tool("Check build status")
+def check_build_status_tool(build_id: str) -> str:
+    """Return the current status of a build: queued, running, passed, or failed."""
+    # Replace this with a call to your own build system.
+    return my_ci_client.get_build(build_id).status
+
+
+build_agent = Agent(
+    role="Build Monitor",
+    goal="Start the build and report its final status",
+    backstory="An engineer who knows that builds take time.",
+    tools=[wait_tool, check_build_status_tool],
+    verbose=True,
+)
+
+monitor_task = Task(
+    description=(
+        "Start the build, then wait and re-check its status until it finishes."
+    ),
+    expected_output="The final build status.",
+    agent=build_agent,
+)
+
+crew = Crew(agents=[build_agent], tasks=[monitor_task])
+result = crew.kickoff()
+```
+
+## Arguments
+
+| Argument  | Type    | Required | Description                                                                    |
+| :-------- | :------ | :------- | :----------------------------------------------------------------------------- |
+| `seconds` | `float` | ✅        | How many seconds to wait. Must be zero or greater.                             |
+| `reason`  | `str`   | ❌        | Optional note on what is being waited for. Echoed back in the tool's result.   |
+
+## Initialization Parameters
+
+| Parameter     | Type    | Default | Description                                                                          |
+| :------------ | :------ | :------ | :----------------------------------------------------------------------------------- |
+| `max_seconds` | `float` | `300`   | Upper bound for a single wait. Longer requests are capped to this value, not rejected. |
+
+## Capping Long Waits
+
+A single call waits at most `max_seconds`. If an agent asks for more, the tool waits the
+maximum and says so in its result, so the agent can call it again rather than fail:
+
+```python Code
+wait_tool = WaitTool()
+wait_tool.run(seconds=3600)
+# 'Waited 300 seconds. Requested 3600 seconds, capped at 300 seconds per call -
+#  call this tool again if more waiting is needed.'
+```
+
+Raise the cap when a workflow genuinely needs longer single pauses:
+
+```python Code
+wait_tool = WaitTool(max_seconds=1800)
+```
+
+## Async Support
+
+The tool implements both sync and async execution, so it does not block the event loop when
+awaited:
+
+```python Code
+import asyncio
+
+
+async def main():
+    result = await wait_tool.arun(seconds=30, reason="waiting for the sandbox build")
+    print(result)
+
+
+asyncio.run(main())
+```

@@ -1,0 +1,86 @@
+---
+title: بحث Github
+description: أداة `GithubSearchTool` مصممة للبحث في المواقع وتحويلها إلى markdown نظيف أو بيانات منظمة.
+icon: github
+mode: "wide"
+---
+
+# `GithubSearchTool`
+
+<Note>
+    لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+أداة GithubSearchTool هي أداة التوليد المعزز بالاسترجاع (RAG) مصممة خصيصاً لإجراء عمليات بحث دلالية داخل مستودعات GitHub. باستخدام قدرات البحث الدلالي المتقدمة، تقوم بتصفية الكود وطلبات السحب والمشكلات والمستودعات، مما يجعلها أداة أساسية للمطورين والباحثين أو أي شخص يحتاج إلى معلومات دقيقة من GitHub.
+
+## التثبيت
+
+لاستخدام GithubSearchTool، تأكد أولاً من تثبيت حزمة crewai_tools في بيئة Python الخاصة بك:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+يثبّت هذا الأمر الحزمة اللازمة لتشغيل GithubSearchTool مع أي أدوات أخرى مضمنة في حزمة crewai_tools.
+
+احصل على رمز وصول شخصي من GitHub على https://github.com/settings/tokens (إعدادات المطور ← الرموز الدقيقة أو الرموز الكلاسيكية).
+
+## مثال
+
+إليك كيفية استخدام GithubSearchTool لإجراء عمليات بحث دلالية داخل مستودع GitHub:
+
+```python Code
+from crewai_tools import GithubSearchTool
+
+# Initialize the tool for semantic searches within a specific GitHub repository
+tool = GithubSearchTool(
+	github_repo='https://github.com/example/repo',
+	gh_token='your_github_personal_access_token',
+	content_types=['code', 'issue'] # Options: code, repo, pr, issue
+)
+
+# OR
+
+# Initialize the tool for semantic searches within a specific GitHub repository, so the agent can search any repository if it learns about during its execution
+tool = GithubSearchTool(
+	gh_token='your_github_personal_access_token',
+	content_types=['code', 'issue'] # Options: code, repo, pr, issue
+)
+```
+
+## المعاملات
+
+- `github_repo`: عنوان URL لمستودع GitHub حيث سيتم إجراء البحث. هذا حقل إلزامي ويحدد المستودع المستهدف لبحثك.
+- `gh_token`: رمز الوصول الشخصي من GitHub (PAT) المطلوب للمصادقة. يمكنك إنشاء واحد في إعدادات حساب GitHub الخاص بك ضمن إعدادات المطور > رموز الوصول الشخصية.
+- `content_types`: يحدد أنواع المحتوى المراد تضمينها في بحثك. يجب تقديم قائمة بأنواع المحتوى من الخيارات التالية: `code` للبحث داخل الكود،
+`repo` للبحث في المعلومات العامة للمستودع، `pr` للبحث داخل طلبات السحب، و `issue` للبحث داخل المشكلات.
+هذا الحقل إلزامي ويسمح بتخصيص البحث لأنواع محتوى محددة داخل مستودع GitHub.
+
+## النموذج المخصص والتضمينات
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+```python Code
+tool = GithubSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google-generativeai", # or openai, ollama, ...
+            config=dict(
+                model_name="gemini-embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import socket
 
 import pytest
 
@@ -156,6 +157,96 @@ class TestValidateUrl:
             validate_url("http://169.254.169.254/latest/meta-data/")
 
     def test_blocks_private_10_range(self):
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("http://10.0.0.1/internal")
+
+    def test_allows_private_address_for_exact_configured_hostname(self, monkeypatch):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "FACTORY.EXAMPLE.")
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        assert validate_url(
+            "https://factory.example/internal",
+        ) == "https://factory.example/internal"
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            "factory.example",
+            "https://factory.example",
+            "https://factory.example/some/path",
+            "factory.example:443",
+            "https://FACTORY.example:8443/",
+            "  factory.example  ",
+        ],
+    )
+    def test_allows_entry_in_any_common_host_format(self, monkeypatch, entry):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", entry)
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        assert validate_url("https://factory.example/internal")
+
+    @pytest.mark.parametrize(
+        "entry", ["*.example", ".example", "example", "other.example", ""]
+    )
+    def test_does_not_match_wildcards_or_other_hosts(self, monkeypatch, entry):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", entry)
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("https://factory.example/internal")
+
+    def test_allowlist_is_ignored_while_force_safe_paths_is_set(self, monkeypatch):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "factory.example")
+        monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        with pytest.raises(ValueError, match="ignored while") as exc:
+            validate_url("https://factory.example/internal")
+        assert "CREWAI_TOOLS_FORCE_SAFE_PATHS" in str(exc.value)
+
+    def test_force_safe_paths_does_not_affect_unlisted_hosts_message(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "other.example")
+        monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+        monkeypatch.setattr(
+            socket,
+            "getaddrinfo",
+            lambda *_args, **_kwargs: [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443))
+            ],
+        )
+
+        with pytest.raises(ValueError) as exc:
+            validate_url("https://factory.example/internal")
+        assert "ignored while" not in str(exc.value)
+
+    def test_does_not_allow_private_ip_literal(self, monkeypatch):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS", "10.0.0.1")
         with pytest.raises(ValueError, match="private/reserved IP"):
             validate_url("http://10.0.0.1/internal")
 
