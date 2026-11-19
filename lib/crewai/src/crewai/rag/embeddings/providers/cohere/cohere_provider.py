@@ -1,18 +1,20 @@
 """Cohere embeddings provider."""
 
-from chromadb.utils.embedding_functions.cohere_embedding_function import (
-    CohereEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class CohereProvider(BaseEmbeddingsProvider[CohereEmbeddingFunction]):
+class CohereProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Cohere embeddings provider."""
 
-    embedding_callable: type[CohereEmbeddingFunction] = Field(
-        default=CohereEmbeddingFunction, description="Cohere embedding function class"
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "cohere_embedding_function", "CohereEmbeddingFunction"
+        ),
+        description="Cohere embedding function class",
     )
     api_key: str = Field(
         description="Cohere API key",
