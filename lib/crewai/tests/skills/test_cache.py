@@ -221,7 +221,7 @@ def test_safe_extractall_blocks_symlink_escaping_cache_destination(
         tf.addfile(info, io.BytesIO(payload))
 
     with _tar_from_members(build) as tf:
-        with pytest.raises(ValueError, match="escaping destination"):
+        with pytest.raises(ValueError, match="Blocked link member"):
             _safe_extractall(tf, dest)
 
     assert not (outside / "evil.txt").exists()
@@ -241,7 +241,7 @@ def test_safe_extractall_blocks_hardlink_escaping_cache_destination(
         tf.addfile(link)
 
     with _tar_from_members(build) as tf:
-        with pytest.raises(ValueError, match="escaping destination"):
+        with pytest.raises(ValueError, match="Blocked link member"):
             _safe_extractall(tf, dest)
 
 
@@ -260,8 +260,8 @@ def test_safe_extractall_blocks_special_cache_tar_member(tmp_path: Path) -> None
             _safe_extractall(tf, dest)
 
 
-def test_safe_extractall_allows_benign_cache_symlink(tmp_path: Path) -> None:
-    """A symlink that stays within dest is permitted."""
+def test_safe_extractall_refuses_cache_links_with_upgrade_hint(tmp_path: Path) -> None:
+    """Even a link that stays inside dest is refused; filter="data" handles it."""
     dest = tmp_path / "dest"
     dest.mkdir()
 
@@ -276,8 +276,34 @@ def test_safe_extractall_allows_benign_cache_symlink(tmp_path: Path) -> None:
         tf.addfile(link)
 
     with _tar_from_members(build) as tf:
-        _safe_extractall(tf, dest)
+        with pytest.raises(
+            ValueError, match=r"Python 3\.10\.12\+, 3\.11\.4\+, or 3\.12\+"
+        ):
+            _safe_extractall(tf, dest)
 
-    assert (dest / "real.txt").read_bytes() == b"hi"
-    assert (dest / "alias.txt").is_symlink()
-    assert (dest / "alias.txt").readlink() == Path("real.txt")
+    assert list(dest.iterdir()) == []
+
+
+def test_safe_extractall_blocks_member_written_through_cache_symlink_chain(
+    tmp_path: Path,
+) -> None:
+    """Self-referential symlinks followed by a regular member must not escape."""
+    dest = tmp_path / "cache" / "skill"
+    dest.mkdir(parents=True)
+
+    def build(tf: tarfile.TarFile) -> None:
+        link = tarfile.TarInfo("sub/up")
+        link.type = tarfile.SYMTYPE
+        link.linkname = ".."
+        tf.addfile(link)
+        payload = b"pwned"
+        info = tarfile.TarInfo("sub/up/up/../evil.txt")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+
+    with _tar_from_members(build) as tf:
+        with pytest.raises(ValueError, match="Blocked link member 'sub/up'"):
+            _safe_extractall(tf, dest)
+
+    assert not (tmp_path / "cache" / "evil.txt").exists()
+

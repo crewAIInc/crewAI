@@ -1,0 +1,48 @@
+---
+title: زحف المواقع باستخدام Firecrawl
+description: أداة `FirecrawlCrawlWebsiteTool` مصممة لزحف المواقع وتحويلها إلى markdown نظيف أو بيانات منظمة.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlCrawlWebsiteTool`
+
+## الوصف
+
+[Firecrawl](https://firecrawl.dev) هي منصة لزحف وتحويل أي موقع إلى markdown نظيف أو بيانات منظمة.
+
+## التثبيت
+
+- احصل على مفتاح API من [firecrawl.dev](https://firecrawl.dev) وعيّنه في متغيرات البيئة (`FIRECRAWL_API_KEY`).
+- ثبّت [Firecrawl SDK](https://github.com/mendableai/firecrawl) مع حزمة `crewai[tools]`:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## مثال
+
+استخدم FirecrawlScrapeFromWebsiteTool كما يلي للسماح لوكيلك بتحميل المواقع:
+
+```python Code
+from crewai_tools import FirecrawlCrawlWebsiteTool
+
+tool = FirecrawlCrawlWebsiteTool(url='firecrawl.dev')
+```
+
+## المعاملات
+
+- `api_key`: اختياري. يحدد مفتاح Firecrawl API. الافتراضي هو متغير البيئة `FIRECRAWL_API_KEY`.
+- `url`: عنوان URL الأساسي لبدء الزحف منه.
+- `page_options`: اختياري.
+  - `onlyMainContent`: اختياري. إرجاع المحتوى الرئيسي فقط للصفحة باستثناء الرؤوس وأشرطة التنقل والتذييلات وغيرها.
+  - `includeHtml`: اختياري. تضمين محتوى HTML الخام للصفحة. سيُخرج مفتاح html في الاستجابة.
+- `crawler_options`: اختياري. خيارات للتحكم في سلوك الزحف.
+  - `includes`: اختياري. أنماط URL لتضمينها في الزحف.
+  - `exclude`: اختياري. أنماط URL لاستبعادها من الزحف.
+  - `generateImgAltText`: اختياري. توليد نص بديل للصور باستخدام LLMs (يتطلب خطة مدفوعة).
+  - `returnOnlyUrls`: اختياري. إذا كان true، يُرجع عناوين URL فقط كقائمة في حالة الزحف. ملاحظة: ستكون الاستجابة قائمة عناوين URL داخل البيانات، وليست قائمة مستندات.
+  - `maxDepth`: اختياري. الحد الأقصى لعمق الزحف. العمق 1 هو عنوان URL الأساسي، والعمق 2 يشمل عنوان URL الأساسي وأبنائه المباشرين، وهكذا.
+  - `mode`: اختياري. وضع الزحف المستخدم. الوضع السريع يزحف أسرع 4 مرات على المواقع بدون خريطة موقع ولكنه قد لا يكون دقيقاً ولا يجب استخدامه على المواقع التي تعتمد بشكل كبير على JavaScript.
+  - `limit`: اختياري. الحد الأقصى لعدد الصفحات للزحف.
+  - `timeout`: اختياري. المهلة بالملي ثانية لعملية الزحف.

@@ -153,5 +153,4 @@ class PreparedSearchParams(TypedDict):
     limit: Annotated[int, "Max results to return"]
     with_payload: Annotated[bool, "Include payload in results"]
     with_vectors: Annotated[bool, "Include vectors in results"]
-    score_threshold: NotRequired[Annotated[float, "Min similarity score (0-1)"]]
     query_filter: NotRequired[Filter]
