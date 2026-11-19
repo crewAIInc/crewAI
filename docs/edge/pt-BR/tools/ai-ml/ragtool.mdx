@@ -131,6 +131,14 @@ def knowledge_expert(self) -> Agent:
     )
 ```
 
+## Banco Vetorial
+
+O `RagTool` armazena o conteúdo em um banco Qdrant local por padrão, usando o `text-embedding-3-small` da OpenAI como embedder. Para usar o ChromaDB, instale-o com `pip install "crewai[chromadb]"` e defina `"provider": "chromadb"` na configuração `vectordb`.
+
+<Note>
+O conteúdo que uma versão anterior armazenou no ChromaDB não é lido pelo padrão Qdrant. Adicione-o novamente ou defina o provedor `chromadb`.
+</Note>
+
 ## Configuração Avançada
 
 É possível personalizar o comportamento do `RagTool` fornecendo um dicionário de configuração:
@@ -177,6 +185,10 @@ O parâmetro `embedding_model` aceita um dicionário `crewai.rag.embeddings.type
 ```
 
 ### Provedores Suportados
+
+<Note>
+Estes provedores usam o ChromaDB e exigem `pip install "crewai[chromadb]"`: `bedrock`, `cohere`, `google-generativeai`, `huggingface`, `instructor`, `jina`, `ollama`, `onnx`, `openclip`, `roboflow`, `sentence-transformer`, `text2vec`. Os demais (como `openai`, `azure`, `openrouter`, `google-vertex`, `voyageai`, `watsonx`, `oracle` e `custom`) funcionam sem ele.
+</Note>
 
 <AccordionGroup>
   <Accordion title="OpenAI">
