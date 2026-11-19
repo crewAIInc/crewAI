@@ -32,7 +32,7 @@ def test_file_symlink_outside_cwd_is_rejected(project: Path, tmp_path: Path) -> 
     outside.write_text("secret")
     (project / "link.txt").symlink_to(outside)
 
-    with pytest.raises(ValueError, match="escapes allowed directory"):
+    with pytest.raises(ValueError, match="Symlink escapes allowed directory"):
         FilePath(path=Path("link.txt"))
 
 
@@ -44,7 +44,7 @@ def test_parent_directory_symlink_outside_cwd_is_rejected(
     (outside / "secret.txt").write_text("secret")
     (project / "linkdir").symlink_to(outside, target_is_directory=True)
 
-    with pytest.raises(ValueError, match="escapes allowed directory"):
+    with pytest.raises(ValueError, match="Symlink escapes allowed directory"):
         FilePath(path=Path("linkdir/secret.txt"))
 
 
@@ -56,5 +56,14 @@ def test_symlink_to_sibling_dir_sharing_cwd_prefix_is_rejected(
     (sibling / "keys.txt").write_text("secret")
     (project / "keys_link.txt").symlink_to(sibling / "keys.txt")
 
-    with pytest.raises(ValueError, match="escapes allowed directory"):
+    with pytest.raises(ValueError, match="Symlink escapes allowed directory"):
         FilePath(path=Path("keys_link.txt"))
+
+
+def test_plain_absolute_path_outside_cwd_is_allowed(
+    project: Path, tmp_path: Path
+) -> None:
+    outside = tmp_path / "outside.txt"
+    outside.write_text("ok")
+
+    assert FilePath(path=outside).filename == "outside.txt"

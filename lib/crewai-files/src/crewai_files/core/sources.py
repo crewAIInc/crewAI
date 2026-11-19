@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Iterator
 import inspect
 import json
 import mimetypes
+import os
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
 
@@ -225,9 +226,10 @@ class FilePath(BaseModel):
             raise ValueError(f"Path traversal not allowed: {self.path}")
 
         resolved = self.path.resolve()
-        cwd = Path.cwd().resolve()
-        if not resolved.is_relative_to(cwd):
-            raise ValueError(f"Path escapes allowed directory: {self.path}")
+        if resolved != Path(os.path.abspath(self.path)):
+            # A symlink is involved somewhere in the path (file or parent dir).
+            if not resolved.is_relative_to(Path.cwd().resolve()):
+                raise ValueError(f"Symlink escapes allowed directory: {self.path}")
 
         if not self.path.exists():
             raise ValueError(f"File not found: {self.path}")

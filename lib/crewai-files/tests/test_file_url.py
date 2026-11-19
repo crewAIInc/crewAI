@@ -183,9 +183,8 @@ class TestNormalizeSource:
         assert isinstance(result, FileUrl)
         assert result.url == "http://example.com/file.pdf"
 
-    def test_normalize_file_path_string(self, tmp_path, monkeypatch):
+    def test_normalize_file_path_string(self, tmp_path):
         """Test that file path strings are converted to FilePath."""
-        monkeypatch.chdir(tmp_path)
         test_file = tmp_path / "test.png"
         test_file.write_bytes(b"test content")
 
