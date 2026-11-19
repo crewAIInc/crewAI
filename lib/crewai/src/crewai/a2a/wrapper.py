@@ -177,17 +177,23 @@ def wrap_agent_with_a2a_instance(
         messages: str | list[Any],
         response_format: type[Any] | None = None,
         input_files: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Any:
         """Execute agent kickoff with A2A delegation support."""
         if not self.a2a:
-            return original_kickoff(self, messages, response_format, input_files)
+            return original_kickoff(
+                self, messages, response_format, input_files, **kwargs
+            )
 
         a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
 
         if not a2a_agents:
-            return original_kickoff(self, messages, response_format, input_files)
+            return original_kickoff(
+                self, messages, response_format, input_files, **kwargs
+            )
 
-        return _kickoff_with_a2a(
+        artifact = _delegation_artifact(kwargs)
+        result = _kickoff_with_a2a(
             self=self,
             a2a_agents=a2a_agents,
             original_kickoff=original_kickoff,
@@ -197,6 +203,9 @@ def wrap_agent_with_a2a_instance(
             agent_response_model=agent_response_model,
             extension_registry=extension_registry,
         )
+        if artifact:
+            self._save_kickoff_artifact(result, artifact)
+        return result
 
     @wraps(original_kickoff_async)
     async def kickoff_async_with_a2a(
@@ -204,21 +213,23 @@ def wrap_agent_with_a2a_instance(
         messages: str | list[Any],
         response_format: type[Any] | None = None,
         input_files: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Any:
         """Execute agent kickoff with A2A delegation support."""
         if not self.a2a:
             return await original_kickoff_async(
-                self, messages, response_format, input_files
+                self, messages, response_format, input_files, **kwargs
             )
 
         a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
 
         if not a2a_agents:
             return await original_kickoff_async(
-                self, messages, response_format, input_files
+                self, messages, response_format, input_files, **kwargs
             )
 
-        return await _akickoff_with_a2a(
+        artifact = _delegation_artifact(kwargs)
+        result = await _akickoff_with_a2a(
             self=self,
             a2a_agents=a2a_agents,
             original_kickoff_async=original_kickoff_async,
@@ -228,6 +239,9 @@ def wrap_agent_with_a2a_instance(
             agent_response_model=agent_response_model,
             extension_registry=extension_registry,
         )
+        if artifact:
+            await asyncio.to_thread(self._save_kickoff_artifact, result, artifact)
+        return result
 
     object.__setattr__(agent, "kickoff", MethodType(kickoff_with_a2a, agent))
     object.__setattr__(
@@ -390,6 +404,22 @@ def _execute_task_with_a2a(
         task.description = original_description
         task.output_pydantic = original_output_pydantic
         task.response_model = original_response_model
+
+
+def _delegation_artifact(kwargs: dict[str, Any]) -> Any:
+    """Take ``artifact`` out of kickoff kwargs for a delegating run.
+
+    Delegation calls the original kickoff once per turn, so the artifact is
+    saved once on the final result instead. Other kickoff options are not
+    supported while delegating.
+    """
+    artifact = kwargs.pop("artifact", None)
+    unsupported = sorted(k for k, v in kwargs.items() if v is not None)
+    if unsupported:
+        raise TypeError(
+            f"{', '.join(unsupported)} is not supported with A2A delegation"
+        )
+    return artifact
 
 
 def _kickoff_with_a2a(
