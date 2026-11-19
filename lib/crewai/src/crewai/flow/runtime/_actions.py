@@ -219,7 +219,10 @@ class CrewAction:
                 **(self.definition.inputs or {}),
             }
             crew, _ = await asyncio.to_thread(
-                load_crew_from_definition, crew_definition, source="crew action"
+                load_crew_from_definition,
+                crew_definition,
+                source="crew action",
+                project_root=self.flow._definition.source_dir,
             )
 
         inputs = Expression.from_flow(
@@ -265,6 +268,7 @@ class AgentAction:
             load_agent_from_definition,
             self.definition.with_,
             source="agent action",
+            project_root=self.flow._definition.source_dir,
         )
         input_files = {
             name: await asyncio.to_thread(reference.load_file)
