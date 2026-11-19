@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.providers.utils.common import claude_supports_vision
 from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
 
 try:
@@ -183,6 +184,23 @@ class TestAnthropicMultimodal:
         assert result[0]["source"]["media_type"] == "application/pdf"
 
 
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("claude-sonnet-5-5", True),
+        ("claude-3-5-sonnet-20241022", True),
+        ("claude-opus-4.8", True),
+        ("claude-2.1", False),
+        ("claude-v2", False),
+        ("not-claude-sonnet-5", False),
+        ("anthropic.claude-sonnet-5-5", False),
+    ],
+)
+def test_claude_supports_vision_reads_a_leading_claude_id(
+    model: str, expected: bool
+) -> None:
+    assert claude_supports_vision(model) is expected
+
 class TestOpenAIMultimodal:
     """Tests for OpenAI provider multimodal functionality."""
 
@@ -352,6 +370,52 @@ class TestBedrockMultimodal:
         """Test Bedrock gpt-oss (no image input) does not support multimodal."""
         llm = LLM(model="bedrock/openai.gpt-oss-120b-1:0")
         assert llm.supports_multimodal() is False
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/anthropic.claude-sonnet-5-5",
+            "bedrock/anthropic.claude-opus-5-5",
+            "bedrock/anthropic.claude-haiku-5-5",
+            "bedrock/anthropic.claude-fable-5-1",
+            "bedrock/us.anthropic.claude-sonnet-5-5",
+            "bedrock/global.anthropic.claude-opus-5-5",
+            "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/jp.anthropic.claude-sonnet-4-6",
+            "bedrock/au.anthropic.claude-opus-4-8",
+            "bedrock/in.anthropic.claude-sonnet-5",
+            "bedrock/us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "bedrock/eu.amazon.nova-pro-v1:0",
+            "bedrock/ca.amazon.nova-lite-v1:0",
+            "bedrock/amazon.nova-2-lite-v1:0",
+            "bedrock/jp.amazon.nova-2-lite-v1:0",
+            "bedrock/us.amazon.nova-premier-v1:0",
+            "bedrock/openai.gpt-6.1-sol",
+            "bedrock/global.openai.gpt-6.2-luna",
+        ],
+    )
+    def test_supports_multimodal_any_claude3_plus_and_geo_profile(
+        self, model: str
+    ) -> None:
+        assert LLM(model=model).supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/anthropic.claude-instant-v1",
+            "bedrock/anthropic.claude-v2:1",
+            "bedrock/us.anthropic.claude-v2",
+            "bedrock/eu.amazon.nova-micro-v1:0",
+            "bedrock/global.openai.gpt-oss-120b-1:0",
+            "bedrock/meta.llama3-70b-instruct-v1:0",
+            "bedrock/anthropic.not-claude-sonnet-5",
+            "bedrock/amazon.nova-lite-text-only",
+            "bedrock/openai.gpt-60",
+        ],
+    )
+    def test_does_not_support_text_only_models(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
