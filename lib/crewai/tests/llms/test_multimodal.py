@@ -2,11 +2,13 @@
 
 import base64
 import os
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.cache import mark_cache_breakpoint
 from crewai.llms.providers.utils.common import claude_supports_vision
 from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
 
@@ -182,6 +184,92 @@ class TestAnthropicMultimodal:
         assert result[0]["type"] == "document"
         assert result[0]["source"]["type"] == "base64"
         assert result[0]["source"]["media_type"] == "application/pdf"
+
+    def test_format_multimodal_content_sets_no_cache_control(self) -> None:
+        """File blocks leave cache breakpoints to the provider."""
+        files = {
+            "chart": ImageFile(source=MINIMAL_PNG),
+            "doc": PDFFile(source=MINIMAL_PDF),
+        }
+
+        result = format_multimodal_content(files, "anthropic")
+
+        assert len(result) == 2
+        assert all("cache_control" not in block for block in result)
+
+
+def _cache_control_count(value: Any) -> int:
+    if isinstance(value, dict):
+        return ("cache_control" in value) + sum(
+            _cache_control_count(v) for v in value.values()
+        )
+    if isinstance(value, list):
+        return sum(_cache_control_count(v) for v in value)
+    return 0
+
+
+def _marked_messages_with_images(count: int) -> list[dict[str, Any]]:
+    return [
+        mark_cache_breakpoint({"role": "system", "content": "You review images."}),
+        mark_cache_breakpoint(
+            {
+                "role": "user",
+                "content": "Describe each image.",
+                "files": {
+                    f"image_{i}": ImageFile(source=MINIMAL_PNG) for i in range(count)
+                },
+            }
+        ),
+    ]
+
+
+class _RequestCaptured(Exception):
+    pass
+
+
+@pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic SDK not installed")
+class TestAnthropicCacheBreakpointLimit:
+    """Anthropic rejects a request with more than four cache_control blocks."""
+
+    @pytest.fixture(autouse=True)
+    def mock_anthropic_env(self):
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            yield
+
+    def test_call_with_many_files_stays_within_limit(self) -> None:
+        llm = LLM(model="anthropic/claude-sonnet-4-5")
+        sent: dict[str, Any] = {}
+
+        def capture(**kwargs: Any) -> None:
+            sent.update(kwargs)
+            raise _RequestCaptured
+
+        with patch.object(llm._client.messages, "create", side_effect=capture):
+            with pytest.raises(_RequestCaptured):
+                llm.call(_marked_messages_with_images(6))
+
+        assert _cache_control_count(sent["system"]) == 1
+        assert _cache_control_count(sent["messages"]) == 1
+        user_blocks = sent["messages"][0]["content"]
+        assert [b["type"] for b in user_blocks].count("image") == 6
+        assert "cache_control" in user_blocks[-1]
+
+    @pytest.mark.asyncio
+    async def test_acall_with_many_files_stays_within_limit(self) -> None:
+        llm = LLM(model="anthropic/claude-sonnet-4-5")
+        sent: dict[str, Any] = {}
+
+        async def capture(**kwargs: Any) -> None:
+            sent.update(kwargs)
+            raise _RequestCaptured
+
+        with patch.object(llm._async_client.messages, "create", side_effect=capture):
+            with pytest.raises(_RequestCaptured):
+                await llm.acall(_marked_messages_with_images(6))
+
+        assert _cache_control_count(sent["system"]) == 1
+        assert _cache_control_count(sent["messages"]) == 1
+        assert "cache_control" in sent["messages"][0]["content"][-1]
 
 
 @pytest.mark.parametrize(
