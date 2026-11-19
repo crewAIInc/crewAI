@@ -23,8 +23,12 @@ The checks are plain Python functions, so they run next to your crew's tests and
 <Steps>
     <Step title="Install">
       ```shell
-      pip install agentest
+      pip install "git+https://github.com/srpadmanabhuni/agentest"
       ```
+
+      The distribution is called `agentest-ai` and is not on PyPI yet; the bare
+      `agentest` name there belongs to an unrelated package. Install from GitHub
+      until the release lands.
     </Step>
     <Step title="Write a check">
       A check is a function that asserts on the agent it is handed. See the [agentest README](https://github.com/srpadmanabhuni/agentest) for the exact import path in the version you install.
