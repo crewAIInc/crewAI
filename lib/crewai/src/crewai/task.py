@@ -1448,6 +1448,40 @@ Follow these guidelines:
             return f"{original_context}\n\n{validation_error}"
         return validation_error
 
+    def _apply_guardrail_result(
+        self,
+        task_output: TaskOutput,
+        result: Any,
+        accumulated_failures: list[ToolFailureRecord],
+    ) -> tuple[TaskOutput, str | BaseModel | None]:
+        """Apply a passing guardrail's result to the task output.
+
+        Returns the output to keep and, when the structured fields need to be
+        rebuilt, the value to export them from.
+        """
+        if isinstance(result, TaskOutput):
+            # A guardrail may return a whole new output; carry the
+            # accumulated failures over or earlier attempts vanish.
+            result.tool_failures = merge_tool_failures(
+                accumulated_failures, result.tool_failures
+            )
+            # Outputs are left unexported while guardrails run, so one passed
+            # straight through may still lack the configured structured field.
+            needs_export = (self.output_pydantic and result.pydantic is None) or (
+                self.output_json and result.json_dict is None
+            )
+            return result, result.raw if needs_export else None
+        if isinstance(result, BaseModel):
+            task_output.raw = result.model_dump_json()
+            return task_output, result
+        if isinstance(result, dict):
+            task_output.raw = json.dumps(result, default=str)
+            return task_output, task_output.raw
+        if isinstance(result, str):
+            task_output.raw = result
+            return task_output, result
+        return task_output, None
+
     def _invoke_guardrail_function(
         self,
         task_output: TaskOutput,
@@ -1490,20 +1524,13 @@ Follow these guidelines:
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
-                        guardrail_result.result
-                    )
+                task_output, to_export = self._apply_guardrail_result(
+                    task_output, guardrail_result.result, accumulated_failures
+                )
+                if to_export is not None:
+                    pydantic_output, json_output = self._export_output(to_export)
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    # A guardrail may return a whole new output; carry the
-                    # accumulated failures over or earlier attempts vanish.
-                    task_output = guardrail_result.result
-                    task_output.tool_failures = merge_tool_failures(
-                        accumulated_failures, task_output.tool_failures
-                    )
 
                 return task_output
 
@@ -1616,20 +1643,13 @@ Follow these guidelines:
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = await self._aexport_output(
-                        guardrail_result.result
-                    )
+                task_output, to_export = self._apply_guardrail_result(
+                    task_output, guardrail_result.result, accumulated_failures
+                )
+                if to_export is not None:
+                    pydantic_output, json_output = await self._aexport_output(to_export)
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    # A guardrail may return a whole new output; carry the
-                    # accumulated failures over or earlier attempts vanish.
-                    task_output = guardrail_result.result
-                    task_output.tool_failures = merge_tool_failures(
-                        accumulated_failures, task_output.tool_failures
-                    )
 
                 return task_output
 

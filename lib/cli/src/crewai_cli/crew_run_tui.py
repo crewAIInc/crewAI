@@ -103,6 +103,12 @@ def _try_parse_structured(text: str) -> Any | None:
     return None
 
 
+# A span nested deeper than this that fails to parse is kept as text in one
+# step. Retrying from each inner bracket re-parses the whole nest every time,
+# which on Python 3.12 (indent encoder in pure Python) took over a minute.
+_DEEP_SPAN = 100
+
+
 def _format_json_in_text(text: str) -> str:
     """Find JSON objects/arrays in text and pretty-print them."""
     if not text or ("{" not in text and "[" not in text):
@@ -114,9 +120,11 @@ def _format_json_in_text(text: str) -> str:
         if text[i] in ("{", "["):
             close = "}" if text[i] == "{" else "]"
             depth = 0
+            deepest = 0
             for j in range(i, len(text)):
                 if text[j] == text[i]:
                     depth += 1
+                    deepest = max(deepest, depth)
                 elif text[j] == close:
                     depth -= 1
                     if depth == 0:
@@ -127,6 +135,9 @@ def _format_json_in_text(text: str) -> str:
                                 parsed, indent=2, ensure_ascii=False
                             )
                             result.append(formatted)
+                            i = j + 1
+                        elif deepest > _DEEP_SPAN:
+                            result.append(candidate)
                             i = j + 1
                         else:
                             result.append(text[i])
