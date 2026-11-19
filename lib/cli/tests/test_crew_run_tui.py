@@ -2504,19 +2504,17 @@ def test_a_deep_span_that_does_not_parse_is_tried_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Retrying it from every inner bracket was quadratic: over a minute on 3.12."""
-    import crewai_cli.crew_run_tui as tui
-
     tried: list[str] = []
-    real = tui._try_parse_structured
+    real = crew_run_tui._try_parse_structured
 
     def counting(text: str) -> Any:
         tried.append(text)
         return real(text)
 
-    monkeypatch.setattr(tui, "_try_parse_structured", counting)
+    monkeypatch.setattr(crew_run_tui, "_try_parse_structured", counting)
     deep = "[" * 2000 + "x" + "]" * 2000
 
-    assert tui._format_json_in_text(deep) == deep
+    assert crew_run_tui._format_json_in_text(deep) == deep
     assert tried == [deep]
 
 
