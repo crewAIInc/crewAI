@@ -354,7 +354,7 @@ Tanto skills quanto knowledge modificam o prompt do agente, mas servem propósit
 | Aspecto | Skills | Knowledge |
 | :--- | :--- | :--- |
 | **O que fornece** | Instruções, procedimentos, diretrizes | Fatos, dados, informações |
-| **Como é armazenado** | Arquivos Markdown (SKILL.md) | Embarcado em banco vetorial (ChromaDB) |
+| **Como é armazenado** | Arquivos Markdown (SKILL.md) | Embarcado em banco vetorial (Qdrant por padrão) |
 | **Como é recuperado** | Corpo inteiro injetado no prompt | Busca semântica encontra trechos relevantes |
 | **Melhor para** | Metodologia, checklists, guias de estilo | Documentos da empresa, info de produto, dados de referência |
 | **Definido via** | `skills=["./skills"]` | `knowledge_sources=[source]` |

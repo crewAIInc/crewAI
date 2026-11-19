@@ -408,7 +408,7 @@ Both skills and knowledge modify the agent's prompt, but they serve different pu
 | Aspect | Skills | Knowledge |
 | :--- | :--- | :--- |
 | **What it provides** | Instructions, procedures, guidelines | Facts, data, information |
-| **How it's stored** | Markdown files (SKILL.md) | Embedded in vector store (ChromaDB) |
+| **How it's stored** | Markdown files (SKILL.md) | Embedded in vector store (Qdrant by default) |
 | **How it's retrieved** | Entire body injected into prompt | Semantic search finds relevant chunks |
 | **Best for** | Methodology, checklists, style guides | Company docs, product info, reference data |
 | **Set via** | `skills=["./skills"]` | `knowledge_sources=[source]` |
