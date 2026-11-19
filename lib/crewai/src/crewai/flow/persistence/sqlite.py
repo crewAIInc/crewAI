@@ -47,53 +47,6 @@ def _json_default(obj: Any) -> Any:
     return str(obj)
 
 
-def _validate_page(limit: int, offset: int) -> None:
-    """Reject pagination values that are not sane non-boolean integers."""
-    if (
-        not isinstance(limit, int)
-        or isinstance(limit, bool)
-        or not 1 <= limit <= MAX_HISTORY_LIMIT
-    ):
-        raise ValueError(
-            f"limit must be an integer between 1 and {MAX_HISTORY_LIMIT}, got {limit!r}"
-        )
-    if (
-        not isinstance(offset, int)
-        or isinstance(offset, bool)
-        or not 0 <= offset <= _SQLITE_MAX_INTEGER
-    ):
-        raise ValueError(
-            f"offset must be an integer between 0 and {_SQLITE_MAX_INTEGER}, "
-            f"got {offset!r}"
-        )
-
-
-def _fetch_history(
-    conn: sqlite3.Connection, flow_uuid: str, limit: int, offset: int
-) -> list[FlowStateHistoryRecord]:
-    """Run the metadata-only history query and map rows to records.
-
-    Timestamps written by older releases are naive UTC; they are normalised to
-    aware UTC so records from one database always compare with each other.
-    """
-    rows = conn.execute(
-        "SELECT id, method_name, timestamp FROM flow_states"
-        " WHERE flow_uuid = ? ORDER BY id ASC LIMIT ? OFFSET ?",
-        (flow_uuid, limit, offset),
-    ).fetchall()
-    records: list[FlowStateHistoryRecord] = []
-    for row_id, method_name, ts in rows:
-        timestamp = datetime.fromisoformat(ts)
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
-        records.append(
-            FlowStateHistoryRecord(
-                id=row_id, method_name=method_name, timestamp=timestamp
-            )
-        )
-    return records
-
-
 class SQLiteFlowPersistence(FlowPersistence):
     """SQLite-based implementation of flow state persistence.
 
@@ -308,9 +261,7 @@ class SQLiteFlowPersistence(FlowPersistence):
     ) -> list[FlowStateHistoryRecord]:
         """List metadata for every persisted state snapshot of a flow.
 
-        Uses the same connection settings as :meth:`load_state`. To inspect a
-        database without constructing a persistence instance (and so without
-        initializing its schema), use :meth:`read_history`.
+        Delegates to :meth:`read_history` with this instance's ``db_path``.
 
         Args:
             flow_uuid: Unique identifier for the flow instance.
@@ -323,14 +274,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         Raises:
             ValueError: If ``limit`` or ``offset`` is out of range.
         """
-        _validate_page(limit, offset)
-        with (
-            closing(
-                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
-            ) as conn,
-            conn,
-        ):
-            return _fetch_history(conn, flow_uuid, limit, offset)
+        return self.read_history(self.db_path, flow_uuid, limit=limit, offset=offset)
 
     @staticmethod
     def read_history(
@@ -342,9 +286,8 @@ class SQLiteFlowPersistence(FlowPersistence):
     ) -> list[FlowStateHistoryRecord]:
         """List state snapshot metadata without modifying the database.
 
-        Unlike :meth:`list_state_history`, this does not construct an instance,
-        so no database file or table is created and no schema or journal mode
-        is changed. The database is opened with ``mode=ro``, which makes it
+        This needs no persistence instance, so no database file or table is
+        created and no schema or journal mode is changed. The database is opened with ``mode=ro``, which makes it
         safe for inspection tools such as the CLI. Reading a WAL-mode database
         may create ``-wal``/``-shm`` sidecar files next to it; if they cannot
         be created, the ``sqlite3.OperationalError`` is raised.
@@ -363,7 +306,24 @@ class SQLiteFlowPersistence(FlowPersistence):
             ValueError: If ``limit`` or ``offset`` is out of range.
             sqlite3.DatabaseError: If the database cannot be read.
         """
-        _validate_page(limit, offset)
+        if (
+            not isinstance(limit, int)
+            or isinstance(limit, bool)
+            or not 1 <= limit <= MAX_HISTORY_LIMIT
+        ):
+            raise ValueError(
+                f"limit must be an integer between 1 and {MAX_HISTORY_LIMIT}, "
+                f"got {limit!r}"
+            )
+        if (
+            not isinstance(offset, int)
+            or isinstance(offset, bool)
+            or not 0 <= offset <= _SQLITE_MAX_INTEGER
+        ):
+            raise ValueError(
+                f"offset must be an integer between 0 and {_SQLITE_MAX_INTEGER}, "
+                f"got {offset!r}"
+            )
         path = Path(db_path)
         if not path.exists():
             return []
@@ -372,11 +332,29 @@ class SQLiteFlowPersistence(FlowPersistence):
             with closing(
                 sqlite3.connect(uri, uri=True, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
             ) as conn:
-                return _fetch_history(conn, flow_uuid, limit, offset)
+                rows = conn.execute(
+                    "SELECT id, method_name, timestamp FROM flow_states"
+                    " WHERE flow_uuid = ? ORDER BY id ASC LIMIT ? OFFSET ?",
+                    (flow_uuid, limit, offset),
+                ).fetchall()
         except sqlite3.OperationalError as exc:
             if "no such table" in str(exc).lower():
                 return []
             raise
+
+        # Older releases wrote naive UTC timestamps; normalise them to aware
+        # UTC so records from one database always compare with each other.
+        records: list[FlowStateHistoryRecord] = []
+        for row_id, method_name, ts in rows:
+            timestamp = datetime.fromisoformat(ts)
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            records.append(
+                FlowStateHistoryRecord(
+                    id=row_id, method_name=method_name, timestamp=timestamp
+                )
+            )
+        return records
 
     def load_state_from_history(
         self, flow_uuid: str, record_id: int

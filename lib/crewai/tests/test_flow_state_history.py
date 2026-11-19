@@ -24,15 +24,18 @@ from crewai.flow.persistence import sqlite as sqlite_module
 
 @pytest.fixture
 def db_path(tmp_path: Path) -> str:
+    """Path to a not-yet-created SQLite database in a temp directory."""
     return str(tmp_path / "flows.db")
 
 
 @pytest.fixture
 def persistence(db_path: str) -> SQLiteFlowPersistence:
+    """SQLite persistence backed by the ``db_path`` fixture."""
     return SQLiteFlowPersistence(db_path)
 
 
 def _methods(records: list[FlowStateHistoryRecord]) -> list[str]:
+    """Return the method names of history records, in order."""
     return [r.method_name for r in records]
 
 
@@ -64,6 +67,21 @@ def test_history_ids_are_stable_across_calls(
     persistence.save_state("flow", "second", {})
 
     assert persistence.list_state_history("flow")[0].id == first_id
+
+
+def test_list_state_history_matches_read_history(
+    persistence: SQLiteFlowPersistence, db_path: str
+) -> None:
+    for i in range(5):
+        persistence.save_state("flow", f"step{i}", {"i": i})
+    persistence.save_state("other", "step", {})
+
+    for limit, offset in ((50, 0), (2, 1), (2, 4)):
+        assert persistence.list_state_history(
+            "flow", limit=limit, offset=offset
+        ) == SQLiteFlowPersistence.read_history(
+            db_path, "flow", limit=limit, offset=offset
+        )
 
 
 def test_empty_history_for_unknown_flow(persistence: SQLiteFlowPersistence) -> None:
@@ -123,6 +141,8 @@ def test_equal_timestamps_are_ordered_by_row_id(
     frozen = datetime(2026, 1, 1, 12, 0, 0)
 
     class FrozenDatetime(datetime):
+        """``datetime`` whose ``now()`` always returns the same instant."""
+
         @classmethod
         def now(cls, tz: Any = None) -> datetime:  # type: ignore[override]
             return frozen.replace(tzinfo=tz)
@@ -188,6 +208,7 @@ def test_history_does_not_read_state_payloads(
     real_connect = sqlite3.connect
 
     def tracing_connect(*args: Any, **kwargs: Any) -> sqlite3.Connection:
+        """Open a connection that records every SQL statement it runs."""
         conn = real_connect(*args, **kwargs)
         conn.set_trace_callback(statements.append)
         return conn
@@ -302,6 +323,8 @@ def test_reader_raises_when_wal_sidecars_cannot_be_created(tmp_path: Path) -> No
 
 def test_base_persistence_does_not_support_history() -> None:
     class MemoryPersistence(FlowPersistence):
+        """Minimal backend that does not override ``list_state_history``."""
+
         def init_db(self) -> None:
             pass
 
