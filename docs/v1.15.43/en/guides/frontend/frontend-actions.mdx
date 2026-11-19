@@ -1,0 +1,121 @@
+---
+title: Frontend Actions
+description: Let your CrewAI agent call functions that run in the user's browser, from switching themes to navigating your app.
+icon: bolt
+mode: "wide"
+---
+
+## Let the agent act on the app
+
+A frontend action is a tool the agent calls that runs code in the browser instead of on the server. The model decides to invoke it; your handler switches the theme, navigates, highlights an element, or updates your app data; and the result flows back to the agent.
+
+It uses the same hook as tool-based generative UI, `useFrontendTool`. The difference is what you give it: a `handler` that runs code, instead of (or alongside) a `render` that draws UI.
+
+<Note>
+Frontend actions work with both Crews and Flows. Any agent that binds `copilotkit.actions` into its LLM call can invoke them.
+</Note>
+
+## Build a frontend action
+
+The example below lets the agent switch the app into dark mode on request.
+
+<Steps>
+
+<Step title="Register the action on the frontend">
+
+Call `useFrontendTool` with a `handler`. The handler runs in the browser when the agent invokes the tool, and the string it returns is fed back to the agent.
+
+```tsx
+"use client";
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+import { z } from "zod";
+
+useFrontendTool({
+  agentId: "assistant",
+  name: "set_theme",
+  description: "Switch the app between light and dark mode.",
+  parameters: z.object({
+    theme: z.enum(["light", "dark"]),
+  }),
+  followUp: false,
+  handler: async ({ theme }) => {
+    document.documentElement.dataset.theme = theme; // runs in the browser
+    return `Theme set to ${theme}.`;
+  },
+});
+```
+
+The arguments:
+
+- **`name`** — the tool name the model calls (`set_theme`).
+- **`description`** — a short explanation of what the tool does. The model reads it to decide *when* to call the tool, so make it specific. Omitting it leaves the model guessing from the name alone.
+- **`parameters`** — a [zod](https://zod.dev) schema describing the arguments the model must supply. CopilotKit turns this into the tool's JSON schema and validates the incoming call.
+- **`handler(args)`** — runs in the browser with the parsed arguments. Do your side effect here (set the theme, navigate, update state). The string you return is handed back to the agent as the tool result.
+- **`followUp: false`** — stops the agent from taking another turn after the action runs. Leave it out (or set `true`) when you want the agent to respond after acting.
+
+</Step>
+
+<Step title="Bind the frontend tools on the backend">
+
+The agent can only call a tool it has been given. In your Flow, pass the frontend-registered tools into the LLM `tools` list with `*self.state.copilotkit.actions`.
+
+```python
+from crewai.flow.flow import Flow, start
+from litellm import acompletion
+from ag_ui_crewai.sdk import copilotkit_stream, CopilotKitState
+
+class AssistantFlow(Flow[CopilotKitState]):
+    @start()
+    async def chat(self):
+        response = await copilotkit_stream(
+            await acompletion(
+                model="openai/gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Help the user. Use the tools available to control the app."},
+                    *self.state.messages,
+                ],
+                tools=[*self.state.copilotkit.actions],  # tools the frontend registered
+                parallel_tool_calls=False,
+                stream=True,
+            )
+        )
+        message = response.choices[0].message
+        self.state.messages.append(message)
+```
+
+`self.state.copilotkit.actions` holds the tool definitions for every frontend action registered with `useFrontendTool`. Spreading them into the LLM `tools` list is what makes the agent able to invoke browser-side actions. `copilotkit_stream` streams the response, including the tool call, back to the frontend, where CopilotKit runs the matching handler.
+
+</Step>
+
+<Step title="Serve the Flow">
+
+Expose the Flow over AG-UI with `add_crewai_flow_fastapi_endpoint(...)` and register it in the CopilotKit runtime, exactly as in the [Frontend Overview](/edge/en/guides/frontend/overview). Once both are running, asking the assistant to "switch to dark mode" triggers `set_theme`, and the page flips.
+
+</Step>
+
+</Steps>
+
+## Actions vs. generative UI
+
+`useFrontendTool` covers both ends of a spectrum, and you pick per tool:
+
+| You provide | What it does |
+| --- | --- |
+| **`handler`** | Runs code in the browser (a frontend action) |
+| **`render`** | Draws UI for the tool call (generative UI) |
+
+You can supply either one, or both. A `handler` with a `render` alongside it performs the action and draws UI while it runs. For render-only tools that just display the result of an agent action, see [Tool-Based Generative UI](/edge/en/guides/frontend/tool-based-generative-ui).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
+    Map agent tool calls to React components.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    Gate agent actions behind user approval.
+  </Card>
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
+    Keep agent state and your app UI in two-way sync.
+  </Card>
+</CardGroup>

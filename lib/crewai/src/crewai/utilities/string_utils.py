@@ -46,6 +46,12 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = _DUPLICATE_UNDERSCORE_PATTERN.sub("_", name)
     name = name.strip("_")
 
+    if name[:1].isdigit():
+        # Function names must start with a letter or underscore (see
+        # crewai.llms.providers.utils.common.validate_function_name); the tool
+        # schemas sent to every provider are built from this sanitized name.
+        name = f"_{name}"
+
     if len(name) > max_length:
         name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
         suffix = f"_{name_hash}"

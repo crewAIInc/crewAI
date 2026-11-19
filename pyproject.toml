@@ -139,6 +139,7 @@ exclude_dirs = ["lib/crewai/src/crewai/cli/templates", "lib/cli/src/crewai_cli/t
 [tool.pytest.ini_options]
 markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
+    "requires_chromadb: skipped when the optional chromadb package is not installed",
 ]
 testpaths = [
     "lib/crewai/tests",
@@ -303,7 +304,12 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # dnspython <2.9.0 has GHSA-45c3-73f7-pv4m (DNS name decompression CPU DoS); transitive via pymongo.
 # DNSPython 2.9.0 requires Python 3.11+, so Python 3.10 retains its compatible
 # transitive resolution until CrewAI drops Python 3.10 support.
-# soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; force 2.9.2+.
+# soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; fixed in 2.9.2.
+# <=2.9.2 has GHSA-4j63-6c4x-wfg4 / CVE-2026-126192 (quadratic :has() sibling
+# matching); fixed in 2.10 (published, Python >=3.10). <4.0.0 has
+# GHSA-mmhr-3c5m-f64f / CVE-2026-126190 (polynomial-time DoS in the descendant
+# combinator); fixed in 4.0, which requires Python >=3.11.5. Python <3.11.5 can
+# take 2.10 but not 4.0, so it keeps the 2.10 floor until 3.10 support is dropped.
 # litellm is pinned to ONE reviewed release (crewai[litellm] in lib/crewai/pyproject.toml), never a range:
 # a user's install resolves to the newest release a range allows, which we have not reviewed, and litellm
 # has shipped compromised releases before (GHSA-5mg7-485q-xm76, 1.82.7-1.82.8). Moving it is a crewAI release.
@@ -314,8 +320,13 @@ exclude-newer-package = { msgpack = "2026-10-26T00:00:00Z", pydantic-settings = 
 # and GHSA-hj66-6f7g-4r5v (JSONP callback injection on RevocationEndpoint). Fixed in 4.0.0.
 # 3.3.0-4.0.0 has GHSA-3jp2-3mrg-2vxc / CVE-2026-49272 (device-flow bearer token for any known
 # client ID). Fixed in 4.0.1.
-# Transitive via chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client.
+# A direct dependency of crewai, and also transitive via the crewai[chromadb] extra
+# (chromadb -> kubernetes -> requests-oauthlib, which uses oauthlib as a client).
 # 4.0.1 (2026-10-31) is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
+# mail-parser <4.6.3 has GHSA-r7w7-vpq8-c5vv (ReDoS), GHSA-fr3h-cpq2-9496 (path traversal),
+# GHSA-72px-j8gh-p79x (sender IP spoofing), GHSA-24mq-4vc6-2prf (uncaught exceptions /
+# silent header loss), and GHSA-xhrq-2mqv-q8wx (Received-date OverflowError/OSError);
+# fixed in 4.6.3. Transitive via docling extras (docling-slim[standard]).
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -335,9 +346,9 @@ override-dependencies = [
     "certifi>=2026.10.18",
     "python-multipart>=0.0.27,<1",
     "gitpython>=3.2.1,<4",
-    "opentelemetry-api>=1.45.1,<2",
-    "opentelemetry-sdk>=1.45.1,<2",
-    "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
+    "opentelemetry-api>=1.45.2,<2", # GHSA-mf5v-w3w3-f6cg
+    "opentelemetry-sdk>=1.45.2,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.2,<2",
     "pyasn1>=0.6.5",
     "langsmith>=0.8.18,<1",
     "authlib>=1.9.1",
@@ -361,11 +372,13 @@ override-dependencies = [
     "multidict>=6.9.1,<7",
     "pymongo>=4.18.3; python_version >= '3.11'",
     "pymongo>=4.18.2,<4.18.3; python_version < '3.11'",
-    "dnspython>=2.9.0; python_version >= '3.11'",
+    "dnspython>=2.9.2; python_version >= '3.11'", # GHSA-vvf4-9x63-8xvv (2.9.2 needs Python >=3.11; no 3.10 fix)
     "snowflake-connector-python>=4.7.3,<5",
     "snowflake-sqlalchemy>=1.11.0",
-    "soupsieve>=2.9.2",
+    "soupsieve>=4.0; python_full_version >= '3.11.5'",
+    "soupsieve>=2.10; python_full_version < '3.11.5'",
     "oauthlib>=4.0.1",
+    "mail-parser>=4.6.3,<5",
 ]
 
 [tool.uv.workspace]

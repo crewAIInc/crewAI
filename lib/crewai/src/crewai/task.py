@@ -65,6 +65,7 @@ from crewai.utilities.converter import (
     Converter,
     async_convert_to_model,
     convert_to_model,
+    validate_model,
 )
 from crewai.utilities.file_store import (
     clear_task_files,
@@ -746,7 +747,7 @@ class Task(BaseModel):
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -905,7 +906,7 @@ class Task(BaseModel):
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -1299,7 +1300,7 @@ Follow these guidelines:
                 self.converter_cls,
             )
             pydantic_output, json_output = self._unpack_model_output(
-                model_output, model
+                model_output, model, is_json_output=self.output_json is not None
             )
 
         return pydantic_output, json_output
@@ -1320,7 +1321,7 @@ Follow these guidelines:
                 self.converter_cls,
             )
             pydantic_output, json_output = self._unpack_model_output(
-                model_output, model
+                model_output, model, is_json_output=self.output_json is not None
             )
 
         return pydantic_output, json_output
@@ -1329,18 +1330,19 @@ Follow these guidelines:
     def _unpack_model_output(
         model_output: dict[str, Any] | BaseModel | str,
         model: type[BaseModel],
+        *,
+        is_json_output: bool,
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
+        # A string is either JSON a converter produced or the original answer
+        # that conversion fell back to; keep the validated result when it fits.
+        if isinstance(model_output, str):
+            try:
+                model_output = validate_model(model_output, model, is_json_output)
+            except ValidationError:
+                return None, None
         if isinstance(model_output, BaseModel):
             return model_output, None
-        if isinstance(model_output, dict):
-            return None, model_output
-        # A string is either JSON a converter produced or the original answer
-        # that conversion fell back to; keep it only when it fits the model.
-        try:
-            model.model_validate_json(model_output)
-        except ValidationError:
-            return None, None
-        return None, json.loads(model_output)
+        return None, model_output
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
@@ -1420,6 +1422,40 @@ Follow these guidelines:
         """
         return self.security_config.fingerprint
 
+    def _apply_guardrail_result(
+        self,
+        task_output: TaskOutput,
+        result: Any,
+        accumulated_failures: list[ToolFailureRecord],
+    ) -> tuple[TaskOutput, str | BaseModel | None]:
+        """Apply a passing guardrail's result to the task output.
+
+        Returns the output to keep and, when the structured fields need to be
+        rebuilt, the value to export them from.
+        """
+        if isinstance(result, TaskOutput):
+            # A guardrail may return a whole new output; carry the
+            # accumulated failures over or earlier attempts vanish.
+            result.tool_failures = merge_tool_failures(
+                accumulated_failures, result.tool_failures
+            )
+            # Outputs are left unexported while guardrails run, so one passed
+            # straight through may still lack the configured structured field.
+            needs_export = (self.output_pydantic and result.pydantic is None) or (
+                self.output_json and result.json_dict is None
+            )
+            return result, result.raw if needs_export else None
+        if isinstance(result, BaseModel):
+            task_output.raw = result.model_dump_json()
+            return task_output, result
+        if isinstance(result, dict):
+            task_output.raw = json.dumps(result, default=str)
+            return task_output, task_output.raw
+        if isinstance(result, str):
+            task_output.raw = result
+            return task_output, result
+        return task_output, None
+
     def _invoke_guardrail_function(
         self,
         task_output: TaskOutput,
@@ -1458,20 +1494,13 @@ Follow these guidelines:
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
-                        guardrail_result.result
-                    )
+                task_output, to_export = self._apply_guardrail_result(
+                    task_output, guardrail_result.result, accumulated_failures
+                )
+                if to_export is not None:
+                    pydantic_output, json_output = self._export_output(to_export)
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    # A guardrail may return a whole new output; carry the
-                    # accumulated failures over or earlier attempts vanish.
-                    task_output = guardrail_result.result
-                    task_output.tool_failures = merge_tool_failures(
-                        accumulated_failures, task_output.tool_failures
-                    )
 
                 return task_output
 
@@ -1516,7 +1545,7 @@ Follow these guidelines:
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -1579,20 +1608,13 @@ Follow these guidelines:
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = await self._aexport_output(
-                        guardrail_result.result
-                    )
+                task_output, to_export = self._apply_guardrail_result(
+                    task_output, guardrail_result.result, accumulated_failures
+                )
+                if to_export is not None:
+                    pydantic_output, json_output = await self._aexport_output(to_export)
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    # A guardrail may return a whole new output; carry the
-                    # accumulated failures over or earlier attempts vanish.
-                    task_output = guardrail_result.result
-                    task_output.tool_failures = merge_tool_failures(
-                        accumulated_failures, task_output.tool_failures
-                    )
 
                 return task_output
 
@@ -1637,7 +1659,7 @@ Follow these guidelines:
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None

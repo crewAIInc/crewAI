@@ -43,6 +43,9 @@ class PendingFeedbackContext:
             new uuid. New pauses always store a value.
         trace_context: Previous trace and root span IDs, used to link the resumed
             execution segment. Absent when execution tracing was disabled.
+        method_outputs: Outputs of the steps that ran before the pause, so
+            ``outputs.<step>`` still resolves after resume. ``None`` for
+            pending rows persisted before this field existed.
 
     Example:
         ```python
@@ -70,6 +73,7 @@ class PendingFeedbackContext:
     requested_at: datetime = field(default_factory=datetime.now)
     execution_uuid: str | None = None
     trace_context: tuple[int, int] | None = None
+    method_outputs: list[Any] | None = None
 
     @staticmethod
     def _make_json_safe(value: Any) -> Any:
@@ -116,6 +120,7 @@ class PendingFeedbackContext:
             "requested_at": self.requested_at.isoformat(),
             "execution_uuid": self.execution_uuid,
             "trace_context": list(self.trace_context) if self.trace_context else None,
+            "method_outputs": self._make_json_safe(self.method_outputs),
         }
 
     @classmethod
@@ -157,6 +162,7 @@ class PendingFeedbackContext:
             trace_context=(trace_context[0], trace_context[1])
             if trace_context
             else None,
+            method_outputs=data.get("method_outputs"),
         )
 
 
