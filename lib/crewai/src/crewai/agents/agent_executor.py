@@ -17,6 +17,7 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
+    ValidationError,
     model_validator,
 )
 from rich.console import Console
@@ -95,7 +96,6 @@ from crewai.utilities.agent_utils import (
     check_repeated_tool_call,
     enforce_rpm_limit,
     extract_tool_call_info,
-    format_message_for_llm,
     format_native_tool_output_for_agent,
     get_llm_response,
     get_tool_names,
@@ -112,12 +112,14 @@ from crewai.utilities.agent_utils import (
     parse_tool_call_args,
     process_llm_response,
     render_text_description_and_args,
+    repeated_tool_call_limit_reached,
     setup_native_tools,
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
@@ -144,6 +146,20 @@ if TYPE_CHECKING:
     from crewai.tools.tool_types import ToolResult
 
 _RouteT = TypeVar("_RouteT", bound=str)
+
+
+def _fit_response_model(model: type[BaseModel], text: str) -> BaseModel | None:
+    """Return ``text``, or the JSON object inside it, as ``model`` if it fits."""
+    stripped = text.strip()
+    candidate = (
+        stripped
+        if stripped.startswith(("{", "["))
+        else text[text.find("{") : text.rfind("}") + 1]
+    )
+    try:
+        return model.model_validate(json.loads(candidate, strict=False))
+    except (json.JSONDecodeError, ValidationError):
+        return None
 
 
 class AgentExecutorState(BaseModel):
@@ -388,7 +404,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{preview_suffix}\n---\n\nUse `{reader_name}` to read it in bounded sections. For a "
             f"roughly {read_target_tokens:,}-token read, request about "
             f"{recommended_line_count} lines, for example with `start_line=1` and "
-            f"`line_count={recommended_line_count}`."
+            f"`line_count={recommended_line_count}`.\n\nThe artifact is deleted when "
+            "this run ends, so do not cite its path in your final answer; include "
+            "the content you need instead."
         )
         if self.agent and self.agent.verbose:
             self._console.print(
@@ -1613,6 +1631,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             llm=self.llm,
             callbacks=self.callbacks,
             verbose=self.agent.verbose,
+            request_within_rpm_limit=self.request_within_rpm_limit,
         )
 
         self.state.current_answer = formatted_answer
@@ -1659,6 +1678,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             # Parse the LLM response
             formatted_answer = process_llm_response(answer, self.use_stop_words)
+            if (
+                isinstance(formatted_answer, AgentFinish)
+                and isinstance(formatted_answer.output, str)
+                and self._route_finish_with_todos("agent_finished") == "agent_finished"
+            ):
+                formatted_answer.output = self._structured_final_answer(
+                    formatted_answer.output
+                )
 
             self.state.current_answer = formatted_answer
 
@@ -1746,6 +1773,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self.state.pending_tool_calls = list(answer)
                 return "native_tool_calls"
 
+            if (
+                isinstance(answer, str)
+                and self._route_finish_with_todos("native_finished")
+                == "native_finished"
+            ):
+                answer = self._structured_final_answer(answer)
+
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
                     thought="",
@@ -1811,6 +1845,63 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 return "todo_satisfied"
         return default_route
 
+    def _structured_final_answer(self, answer: str) -> str | BaseModel:
+        """Ask once more for the response model when tools left the answer free-form.
+
+        Requests that offer tools carry no response schema, so a tool-using
+        agent's final answer is whatever text the model wrote. Repeating the
+        request over the same conversation, with the schema and without tools,
+        keeps the exact values from tool results that converting the prose
+        afterwards would lose.
+
+        Args:
+            answer: The final answer the model gave with tools available.
+
+        Returns:
+            ``answer`` when no response model applies or it already fits;
+            otherwise the structured answer, or ``answer`` if the model could
+            not produce one.
+        """
+        if (
+            self.response_model is None
+            or not self.original_tools
+            or _fit_response_model(self.response_model, answer) is not None
+        ):
+            return answer
+
+        enforce_rpm_limit(self.request_within_rpm_limit)
+        try:
+            structured = get_llm_response(
+                llm=self.llm,
+                messages=list(self.state.messages),
+                callbacks=self.callbacks,
+                printer=PRINTER,
+                from_task=self.task,
+                from_agent=self.agent,
+                response_model=self.response_model,
+                executor_context=self,
+                verbose=self.agent.verbose,
+            )
+        except HookAborted:
+            raise
+        # The run already has its answer, so no failure of this optional request
+        # may fail it: a reply that does not fit the schema, or a provider that
+        # rejects the request shape, keeps the text answer, which is converted
+        # afterwards as before. The provider logs and emits the failure itself.
+        except Exception as e:
+            if self.agent.verbose:
+                PRINTER.print(
+                    content=f"Structured final answer failed ({type(e).__name__}: {e}), keeping the text answer",
+                    color="yellow",
+                )
+            return answer
+
+        # The LiteLLM fallback returns the instance as JSON text, and a provider
+        # without structured output returns plain text, which is discarded.
+        if isinstance(structured, str):
+            structured = _fit_response_model(self.response_model, structured)
+        return structured if isinstance(structured, BaseModel) else answer
+
     @router(call_llm_and_parse)
     def route_by_answer_type(
         self,
@@ -1854,6 +1945,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except HookAborted:
+            # A deliberate stop: the generic handler below would feed the
+            # policy abort back to the LLM as a recoverable observation.
+            raise
+
         except ToolExecutionFailedError:
             # A deliberate stop: the generic handler below would feed it back
             # to the LLM as a recoverable observation.
@@ -1879,13 +1975,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             return "tool_completed"
 
-        check_repeated_tool_call(
+        tool_result.result += check_repeated_tool_call(
             self._tool_call_counts,
             tool_name=action.tool,
             tool_args=action.tool_input,
-            result=tool_result.result,
+            # Raw: ToolUsage periodically appends a format reminder to the result.
+            result=tool_result.raw_result,
             agent=self.agent,
             task=self.task,
+            crew=self.crew,
         )
         result = self._handle_agent_action(action, tool_result)
         self.state.current_answer = result
@@ -2018,6 +2116,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
                 result = self._prepare_tool_result_for_context(execution_result)
+                result += check_repeated_tool_call(
+                    self._tool_call_counts,
+                    tool_name=func_name,
+                    tool_args=execution_result.get("tool_args"),
+                    result=execution_result["result"],
+                    agent=self.agent,
+                    task=self.task,
+                    crew=self.crew,
+                )
                 original_tool = execution_result["original_tool"]
 
                 tool_message: LLMMessage = {
@@ -2049,6 +2156,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
             result = self._prepare_tool_result_for_context(execution_result)
+            # Here rather than in the worker threads, so the streak follows the
+            # order the model made the calls in, not the order they finished.
+            result += check_repeated_tool_call(
+                self._tool_call_counts,
+                tool_name=func_name,
+                tool_args=execution_result.get("tool_args"),
+                result=execution_result["result"],
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
             original_tool = execution_result["original_tool"]
 
             tool_message = {
@@ -2339,15 +2457,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 crew=self.crew,
             )
 
-        check_repeated_tool_call(
-            self._tool_call_counts,
-            tool_name=func_name,
-            tool_args=args_dict,
-            result=result,
-            agent=self.agent,
-            task=self.task,
-        )
-
         return {
             "call_id": call_id,
             "func_name": func_name,
@@ -2414,7 +2523,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         "force_final_answer", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
-        if has_reached_max_iterations(self.state.iterations, self.max_iter):
+        if has_reached_max_iterations(
+            self.state.iterations, self.max_iter
+        ) or repeated_tool_call_limit_reached(self._tool_call_counts):
             return "force_final_answer"
         if self.state.use_native_tools:
             return "continue_reasoning_native"
@@ -2844,8 +2955,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if self.task:
                 original_description = self.task.description
                 self.task.description = enhanced_description
-                output = planning_handler.handle_agent_reasoning()
-                self.task.description = original_description
+                try:
+                    output = planning_handler.handle_agent_reasoning()
+                finally:
+                    self.task.description = original_description
             else:
                 # description is a read-only property — recreate with enhanced text
                 input_text = getattr(self, "_kickoff_input", "")

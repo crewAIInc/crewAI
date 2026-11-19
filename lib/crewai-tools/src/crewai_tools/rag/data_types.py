@@ -15,6 +15,7 @@ class DataType(str, Enum):
     TEXT_FILE = "text_file"
     CSV = "csv"
     JSON = "json"
+    JSONL = "jsonl"
     XML = "xml"
     DOCX = "docx"
     MDX = "mdx"
@@ -39,6 +40,7 @@ class DataType(str, Enum):
             DataType.MDX: ("text_chunker", "MdxChunker"),
             DataType.CSV: ("structured_chunker", "CsvChunker"),
             DataType.JSON: ("structured_chunker", "JsonChunker"),
+            DataType.JSONL: ("structured_chunker", "JsonChunker"),
             DataType.XML: ("structured_chunker", "XmlChunker"),
             DataType.WEBSITE: ("web_chunker", "WebsiteChunker"),
             DataType.DIRECTORY: ("text_chunker", "TextChunker"),
@@ -70,6 +72,7 @@ class DataType(str, Enum):
             DataType.WEBSITE: ("webpage_loader", "WebPageLoader"),
             DataType.MDX: ("mdx_loader", "MDXLoader"),
             DataType.JSON: ("json_loader", "JSONLoader"),
+            DataType.JSONL: ("jsonl_loader", "JSONLLoader"),
             DataType.DOCX: ("docx_loader", "DOCXLoader"),
             DataType.CSV: ("csv_loader", "CSVLoader"),
             DataType.DIRECTORY: ("directory_loader", "DirectoryLoader"),
@@ -120,6 +123,8 @@ class DataTypes:
                 ".md": DataType.MDX,
                 ".docx": DataType.DOCX,
                 ".json": DataType.JSON,
+                ".jsonl": DataType.JSONL,
+                ".ndjson": DataType.JSONL,
                 ".xml": DataType.XML,
                 ".txt": DataType.TEXT_FILE,
             }
@@ -133,10 +138,13 @@ class DataTypes:
             if dtype:
                 return dtype
 
-            if "docs" in url.netloc or ("docs" in url.path and url.scheme != "file"):
-                return DataType.DOCS_SITE
             hostname = (url.hostname or "").lower()
-            if hostname == "github.com" or hostname.endswith(".github.com"):
+            is_github = hostname == "github.com" or hostname.endswith(".github.com")
+            if "docs" in url.netloc or (
+                "docs" in url.path and url.scheme != "file" and not is_github
+            ):
+                return DataType.DOCS_SITE
+            if is_github:
                 return DataType.GITHUB
 
             return DataType.WEBSITE

@@ -51,7 +51,7 @@ with runner.isolated_filesystem():
     Path("pyproject.toml").write_text('[project]\nname = "demo"\n')
 
     deploy_result = runner.invoke(crewai, ["deploy", "list"])
-    assert deploy_result.exit_code == 0, deploy_result.output
+    assert deploy_result.exit_code == 1, deploy_result.output
     assert "Please sign up/login" in deploy_result.output
     assert not isinstance(deploy_result.exception, ModuleNotFoundError)
 

@@ -69,6 +69,7 @@ from crewai_files.processing import (
     ProcessingDependencyError,
     ProviderConstraints,
     UnsupportedFileTypeError,
+    UnsupportedImageFormatError,
     VideoConstraints,
     get_constraints_for_provider,
     get_supported_content_types,
@@ -130,6 +131,7 @@ __all__ = [
     "TextExtension",
     "TextFile",
     "UnsupportedFileTypeError",
+    "UnsupportedImageFormatError",
     "UploadCache",
     "UploadResult",
     "UrlReference",
@@ -152,4 +154,4 @@ __all__ = [
     "wrap_file_source",
 ]
 
-__version__ = "1.15.28"
+__version__ = "1.15.43"

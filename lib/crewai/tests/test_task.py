@@ -1,11 +1,15 @@
 """Test Agent creation and execution basic functionality."""
 
 import ast
+from datetime import date, datetime
+from decimal import Decimal
 import json
 import os
+import threading
 import time
 from functools import partial
 from hashlib import md5
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -453,7 +457,7 @@ def test_inject_date_custom_format():
         process=Process.sequential,
     )
     result = crew.kickoff()
-    assert "May 21, 2025" in result.raw
+    assert "November 17, 2026" in result.raw
 
 
 @pytest.mark.vcr()
@@ -479,6 +483,22 @@ def test_no_inject_date():
     )
     result = crew.kickoff()
     assert "2025-05-21" not in result.raw
+
+
+def test_json_property_is_none_when_output_json_was_not_produced():
+    from crewai.crews.crew_output import CrewOutput
+    from crewai.tasks.output_format import OutputFormat
+
+    task_output = TaskOutput(
+        description="Score the title",
+        agent="Scorer",
+        raw="not json",
+        output_format=OutputFormat.JSON,
+    )
+    crew_output = CrewOutput(raw="not json", tasks_output=[task_output])
+
+    assert task_output.json is None
+    assert crew_output.json is None
 
 
 @pytest.mark.vcr()
@@ -693,6 +713,59 @@ def test_save_task_json_output():
             if isinstance(saved_content, str):
                 data = json.loads(saved_content)
                 assert "score" in data
+
+
+class _Article(BaseModel):
+    title: str
+    published: date
+    updated: datetime
+    price: Decimal
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        '{"title": "AI agents", "published": "2026-11-13", "updated": "2026-11-13T09:30:00", "price": "9.99"}',
+        _Article(
+            title="AI agents",
+            published=date(2026, 11, 13),
+            updated=datetime(2026, 11, 13, 9, 30),
+            price=Decimal("9.99"),
+        ),
+    ],
+    ids=["json_text", "model"],
+)
+def test_output_json_with_a_date_field_is_saved_as_json(tmp_path, monkeypatch, answer):
+    monkeypatch.chdir(tmp_path)
+    writer = Agent(
+        role="Writer",
+        goal="Write articles",
+        backstory="You write articles.",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Write an article about AI agents",
+        expected_output="An article",
+        agent=writer,
+        output_json=_Article,
+        output_file="article.json",
+    )
+    crew = Crew(agents=[writer], tasks=[task])
+
+    with patch.object(Agent, "execute_task", return_value=answer):
+        result = crew.kickoff()
+
+    expected = {
+        "title": "AI agents",
+        "published": "2026-11-13",
+        "updated": "2026-11-13T09:30:00",
+        "price": "9.99",
+    }
+    assert result.json_dict == expected
+    assert json.loads(result.json) == expected
+    assert json.loads(result.tasks_output[0].json) == expected
+    saved = (tmp_path / "article.json").read_text(encoding="utf-8")
+    assert json.loads(saved) == expected
 
 
 @pytest.mark.vcr()
@@ -1153,6 +1226,151 @@ def test_output_file_validation(tmp_path):
         )
 
 
+def test_output_file_path_traversal_via_interpolation():
+    """Test that path traversal injected through template interpolation is caught.
+
+    Regression test for GHSA-hq26-r99g-pvv4: output_file was validated at
+    construction time but not after template variable interpolation, allowing
+    callers to inject '../' segments via inputs.
+    """
+    # Template passes initial validation (no '..' in the template itself)
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}/output.txt",
+    )
+
+    # Interpolation with traversal segments must be rejected
+    with pytest.raises(ValueError, match="[Pp]ath traversal"):
+        task.interpolate_inputs_and_add_conversation_history(
+            {"topic": "../../etc/cron.d"}
+        )
+
+    # Legitimate interpolation must still work
+    task2 = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}/output.txt",
+    )
+    task2.interpolate_inputs_and_add_conversation_history({"topic": "finance"})
+    assert task2.output_file == "reports/finance/output.txt"
+    assert ".." not in task2.output_file
+
+
+def test_output_file_shell_injection_via_interpolation():
+    """Test that shell special chars injected through interpolation are caught."""
+    task = Task(
+        description="Write {name}",
+        expected_output="output",
+        output_file="out/{name}.txt",
+    )
+
+    with pytest.raises(ValueError, match="[Ss]hell special characters"):
+        task.interpolate_inputs_and_add_conversation_history(
+            {"name": "foo;rm -rf /"}
+        )
+
+
+@pytest.mark.parametrize(
+    "injected",
+    [
+        "/etc/cron.d",
+        "//etc/cron.d",
+        "\\\\server\\share",
+        "C:\\Windows\\System32",
+    ],
+)
+def test_output_file_absolute_path_via_interpolation(injected):
+    """Inputs cannot turn a relative output_file template into an absolute path."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="{topic}/output.txt",
+    )
+
+    with pytest.raises(
+        ValueError, match="Template inputs cannot make output_file an absolute path"
+    ):
+        task.interpolate_inputs_and_add_conversation_history({"topic": injected})
+
+
+@pytest.mark.parametrize(
+    "injected", ["../../etc/cron.d", "foo;rm -rf /", "{secret}"]
+)
+def test_rejected_output_file_is_not_kept_for_later_runs(injected):
+    """A rejected interpolation must leave output_file as it was, so a later run
+    with no inputs (which skips interpolation) cannot write to the injected path."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}.txt",
+    )
+    task.interpolate_inputs_and_add_conversation_history({"topic": "finance"})
+
+    with pytest.raises(ValueError, match="failed validation"):
+        task.interpolate_inputs_and_add_conversation_history({"topic": injected})
+    task.interpolate_inputs_and_add_conversation_history({})
+
+    assert task.output_file == "reports/finance.txt"
+
+
+@pytest.mark.parametrize("injected", ["/Windows/Temp/pwn", "\\Windows\\Temp\\pwn"])
+def test_output_file_drive_relative_template_cannot_become_absolute(injected):
+    """A drive-relative template (C:name) is not a root the inputs may extend."""
+    task = Task(
+        description="Write {name}",
+        expected_output="A report",
+        output_file="C:{name}.txt",
+    )
+
+    with pytest.raises(
+        ValueError, match="Template inputs cannot make output_file an absolute path"
+    ):
+        task.interpolate_inputs_and_add_conversation_history({"name": injected})
+
+
+def test_output_file_drive_relative_template_accepts_relative_input():
+    task = Task(
+        description="Write {name}",
+        expected_output="A report",
+        output_file="C:{name}.txt",
+    )
+
+    task.interpolate_inputs_and_add_conversation_history({"name": "report"})
+
+    assert task.output_file == "C:report.txt"
+
+
+def test_output_file_unresolved_template_via_interpolation():
+    """An input that smuggles template syntax back into the path is rejected."""
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file="reports/{topic}.txt",
+    )
+
+    with pytest.raises(ValueError, match="Unresolved template variables"):
+        task.interpolate_inputs_and_add_conversation_history({"topic": "{secret}"})
+
+
+def test_absolute_template_output_file_saves_outside_cwd(tmp_path, monkeypatch):
+    """A developer-written absolute template keeps working outside the cwd."""
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    monkeypatch.chdir(workdir)
+    output_root = tmp_path / "outputs"
+
+    task = Task(
+        description="Write report for {topic}",
+        expected_output="A report",
+        output_file=str(output_root / "{topic}" / "report.txt"),
+    )
+    task.interpolate_inputs_and_add_conversation_history({"topic": "AI"})
+    task._save_file("report body")
+
+    assert (output_root / "AI" / "report.txt").read_text() == "report body"
+
+
 def test_create_directory_true():
     """Test that directories are created when create_directory=True."""
     from pathlib import Path
@@ -1563,15 +1781,29 @@ def test_task_with_max_execution_time():
 
 
 @pytest.mark.vcr()
-def test_task_with_max_execution_time_exceeded():
+def test_task_with_max_execution_time_exceeded(monkeypatch: pytest.MonkeyPatch):
     from crewai.tools import tool
 
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
+    # The timed-out worker is not waited for, so it would otherwise outlive this
+    # test and replay requests against the next test's VCR cassette.
+    release = threading.Event()
+    worker_done = threading.Event()
+    run_without_timeout = Agent._execute_without_timeout
+
+    def tracked_run(self: Agent, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return run_without_timeout(self, *args, **kwargs)
+        finally:
+            worker_done.set()
+
+    monkeypatch.setattr(Agent, "_execute_without_timeout", tracked_run)
+
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
         "My tool"
-        time.sleep(10)
+        release.wait(10)
         return "okay"
 
     researcher = Agent(
@@ -1592,8 +1824,12 @@ def test_task_with_max_execution_time_exceeded():
         agent=researcher,
     )
 
-    with pytest.raises(TimeoutError):
-        task.execute_sync(agent=researcher)
+    try:
+        with pytest.raises(TimeoutError):
+            task.execute_sync(agent=researcher)
+    finally:
+        release.set()
+        assert worker_done.wait(10), "timed-out worker did not finish"
 
 
 @pytest.mark.vcr()

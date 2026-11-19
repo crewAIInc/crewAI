@@ -20,6 +20,7 @@ from crewai_core.version import (
     _is_cache_valid,
     _is_version_yanked,
 )
+from packaging.requirements import Requirement
 
 
 def test_dynamic_versioning_consistency() -> None:
@@ -36,6 +37,34 @@ def test_dynamic_versioning_consistency() -> None:
 def test_generated_project_dependency_uses_next_major_upper_bound() -> None:
     assert get_crewai_dependency_range("1.15.0") == ">=1.15.0,<2.0.0"
     assert get_crewai_tools_dependency("1.15.0") == "crewai[tools]>=1.15.0,<2.0.0"
+
+
+def test_generated_project_dependency_without_extras_is_unchanged() -> None:
+    assert get_crewai_tools_dependency("1.15.0", extras=()) == (
+        "crewai[tools]>=1.15.0,<2.0.0"
+    )
+    assert get_crewai_tools_dependency(extras=[]) == get_crewai_tools_dependency()
+    assert get_crewai_tools_dependency().startswith("crewai[tools]>=")
+
+
+def test_generated_project_dependency_lists_extras_sorted_after_tools() -> None:
+    dependency = get_crewai_tools_dependency(
+        "1.15.0", extras=["litellm", "google-genai", "anthropic", "google-genai"]
+    )
+
+    assert dependency == (
+        "crewai[tools,anthropic,google-genai,litellm]>=1.15.0,<2.0.0"
+    )
+    requirement = Requirement(dependency)
+    assert requirement.name == "crewai"
+    assert requirement.extras == {"tools", "anthropic", "google-genai", "litellm"}
+    assert str(requirement.specifier) == "<2.0.0,>=1.15.0"
+
+
+def test_generated_project_dependency_accepts_a_set_of_extras() -> None:
+    assert get_crewai_tools_dependency("1.15.0", extras={"bedrock"}) == (
+        "crewai[tools,bedrock]>=1.15.0,<2.0.0"
+    )
 
 
 class TestVersionChecking:

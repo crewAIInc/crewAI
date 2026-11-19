@@ -2,7 +2,33 @@ from __future__ import annotations
 
 import sys
 
+import click
+from click.testing import CliRunner
+import pytest
+
 from crewai_cli import kickoff_flow
+
+
+def test_failed_chat_cli_exits_nonzero_without_traceback(monkeypatch):
+    from types import SimpleNamespace
+
+    class FailedApp:
+        _status = "failed"
+        _error = "Provider unavailable"
+
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr(kickoff_flow, "is_interactive", lambda: True)
+    monkeypatch.setattr(kickoff_flow, "_load_conversational_flow_from_kickoff_script", lambda: SimpleNamespace(name="Chat"))
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", FailedApp)
+    result = CliRunner().invoke(click.command()(kickoff_flow.kickoff_flow))
+    assert result.exit_code == 1
+    assert "Error: Provider unavailable" in result.output
+    assert "Traceback" not in result.output
 
 
 def test_loads_conversational_flow_from_kickoff_script(tmp_path, monkeypatch) -> None:
@@ -63,7 +89,65 @@ def test_kickoff_flow_falls_back_to_uv_when_no_conversational_flow(
     assert calls == [["uv", "run", "kickoff"]]
 
 
-def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> None:
+def _patch_conversational_kickoff(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    reached: list[str] = []
+    monkeypatch.setattr(
+        kickoff_flow, "_load_conversational_flow_from_kickoff_script", object
+    )
+    monkeypatch.setattr(
+        kickoff_flow, "_run_conversational_flow_tui", lambda _flow: reached.append("tui")
+    )
+    monkeypatch.setattr(
+        kickoff_flow.subprocess,
+        "run",
+        lambda *_args, **_kwargs: reached.append("uv"),
+    )
+    return reached
+
+
+def test_kickoff_flow_conversational_flow_without_terminal_exits_with_guidance(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    reached = _patch_conversational_kickoff(monkeypatch)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+
+    with pytest.raises(SystemExit) as exc_info:
+        kickoff_flow.kickoff_flow()
+
+    assert exc_info.value.code == 1
+    assert reached == []
+    err = capsys.readouterr().err
+    assert "needs an interactive terminal" in err
+    assert "flow.handle_turn(message, session_id=...)" in err
+
+
+def test_kickoff_flow_conversational_flow_in_a_terminal_opens_the_tui(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reached = _patch_conversational_kickoff(monkeypatch)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+
+    kickoff_flow.kickoff_flow()
+
+    assert reached == ["tui"]
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {
+            "session_id": "session-1",
+            "exit_commands": ("BYE",),
+            "defer_trace_finalization": False,
+            "stream": False,
+            "restore_from_state_id": "previous-session",
+        },
+    ],
+)
+def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch, options) -> None:
     calls: list[str] = []
 
     class FakeEventListener:
@@ -81,6 +165,13 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> 
 
         def run(self) -> None:
             calls.append("run")
+            assert self._conversation_exit_commands == ({"bye"} if options else {"exit", "quit"})
+            assert self._conversation_defer_trace_finalization is options.get("defer_trace_finalization", True)
+            assert self._conversation_stream is options.get("stream")
+            assert self._conversation_turn_kwargs == (
+                {"session_id": "session-1", "restore_from_state_id": "previous-session"}
+                if options else {}
+            )
 
     class DemoFlow:
         name = "Demo"
@@ -94,7 +185,7 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> 
         FakeCrewRunApp,
     )
 
-    result = kickoff_flow._run_conversational_flow_tui(DemoFlow())
+    result = kickoff_flow._run_conversational_flow_tui(DemoFlow(), **options)
 
     assert result == "done"
     assert calls == ["listener", "app", "run"]

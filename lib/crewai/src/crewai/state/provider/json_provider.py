@@ -99,7 +99,7 @@ class JsonProvider(BaseProvider):
         """Remove oldest checkpoint files beyond *max_keep* on a branch."""
         _safe_branch(location, branch)
         branch_dir = os.path.join(location, branch)
-        pattern = os.path.join(branch_dir, "*.json")
+        pattern = os.path.join(glob.escape(branch_dir), "*.json")
         files = sorted(glob.glob(pattern), key=os.path.getmtime)
         removed = 0
         for path in files if max_keep == 0 else files[:-max_keep]:
