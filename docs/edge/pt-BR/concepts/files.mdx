@@ -20,6 +20,10 @@ uv add 'crewai[file-processing]'
 A API de processamento de arquivos está atualmente em acesso antecipado.
 </Note>
 
+<Tip>
+Para um agente trabalhar numa planilha que recebe como URL, veja [Planilhas](/pt-BR/concepts/agents).
+</Tip>
+
 ## Tipos de Arquivo
 
 O CrewAI suporta cinco tipos de arquivo específicos mais uma classe genérica `File` que detecta automaticamente o tipo:
@@ -222,6 +226,10 @@ image = ImageFile(source="large.png", mode="auto")
 image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
+
+<Note type="warning" title="Formatos de Imagem Suportados">
+Quando o CrewAI precisa ler as dimensões de uma imagem, redimensioná-la ou comprimi-la, ele abre apenas imagens PNG, JPEG, GIF e WEBP. O formato é identificado pelo conteúdo do arquivo, não pelo tipo de conteúdo declarado. Qualquer outra imagem gera `UnsupportedImageFormatError` (uma subclasse de `UnsupportedFileTypeError`) em todos os modos, incluindo `warn` e `auto`. Quando vários arquivos são enviados juntos, apenas essa imagem é deixada de fora e um erro é registrado.
+</Note>
 
 ## Restrições por Provedor
 
