@@ -78,7 +78,7 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
 
     monkeypatch.setattr(
         run_crew_module,
-        "_install_json_crew_dependencies_if_needed",
+        "_install_project_dependencies_if_needed",
         lambda: install_calls.append(True),
     )
     monkeypatch.setattr(
@@ -140,7 +140,7 @@ def test_json_run_uses_poetry_run_for_poetry_lock_without_uv_lock(
     (tmp_path / "poetry.lock").write_text("# lock\n")
     monkeypatch.setattr(
         run_crew_module,
-        "_install_json_crew_dependencies_if_needed",
+        "_install_project_dependencies_if_needed",
         lambda: None,
     )
     monkeypatch.setattr(
@@ -566,7 +566,7 @@ def test_json_project_env_run_failure_exits_nonzero(monkeypatch, tmp_path: Path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
 
     monkeypatch.setattr(
-        run_crew_module, "_install_json_crew_dependencies_if_needed", lambda: None
+        run_crew_module, "_install_project_dependencies_if_needed", lambda: None
     )
     monkeypatch.setattr(
         run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
@@ -598,7 +598,7 @@ def test_json_run_installs_dependencies_when_pyproject_has_no_lockfile(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == [([], True, None)]
 
@@ -618,7 +618,7 @@ def test_json_run_syncs_frozen_when_uv_lock_exists_without_venv(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == [(["--frozen"], True, None)]
 
@@ -638,7 +638,7 @@ def test_json_run_skips_uv_sync_when_only_poetry_lock_exists_without_venv(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == []
 
@@ -660,7 +660,7 @@ def test_json_run_skips_dependency_install_when_lockfile_and_venv_exist(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == []
 
@@ -678,7 +678,7 @@ def test_json_run_skips_dependency_install_without_pyproject(
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
-    run_crew_module._install_json_crew_dependencies_if_needed()
+    run_crew_module._install_project_dependencies_if_needed()
 
     assert calls == []
 
@@ -695,7 +695,7 @@ def test_json_run_install_failure_exits_nonzero(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
     with pytest.raises(SystemExit) as exc_info:
-        run_crew_module._install_json_crew_dependencies_if_needed()
+        run_crew_module._install_project_dependencies_if_needed()
 
     assert exc_info.value.code == 42
 
@@ -1111,7 +1111,7 @@ def test_run_json_crew_in_project_env_forwards_inputs(monkeypatch, tmp_path: Pat
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(
-        run_crew_module, "_install_json_crew_dependencies_if_needed", lambda: None
+        run_crew_module, "_install_project_dependencies_if_needed", lambda: None
     )
     monkeypatch.setattr(
         run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
@@ -1339,6 +1339,79 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
 
     assert capsys.readouterr().out == ""
     assert calls == [("kickoff", {"entity_type": "flow"})]
+
+
+def _uv_script_exits(monkeypatch, returncode: int) -> None:
+    def uv_run(command, **kwargs):
+        raise subprocess.CalledProcessError(returncode, command, output="boom")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", uv_run)
+    monkeypatch.setattr(run_crew_module, "record_run_stopped", lambda reason: None)
+
+
+@pytest.mark.parametrize("returncode", [1, 2, 137])
+def test_a_failed_uv_script_exits_with_its_own_code(monkeypatch, capsys, returncode):
+    _uv_script_exits(monkeypatch, returncode)
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exited.value.code == returncode
+    err = capsys.readouterr().err
+    assert "An error occurred while running the crew: Command '['uv', 'run', 'run_crew']'" in err
+    assert f"returned non-zero exit status {returncode}" in err
+    assert "boom" in err
+
+
+def test_a_uv_that_cannot_start_exits_1(monkeypatch, capsys):
+    def no_uv(command, **kwargs):
+        raise PermissionError("launch denied")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", no_uv)
+    monkeypatch.setattr(run_crew_module, "record_run_stopped", lambda reason: None)
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._execute_uv_script("kickoff", entity_type="flow")
+
+    assert exited.value.code == 1
+    assert "An unexpected error occurred: launch denied" in capsys.readouterr().err
+
+
+def test_a_succeeding_uv_script_returns(monkeypatch):
+    monkeypatch.setattr(
+        run_crew_module.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0),
+    )
+
+    assert run_crew_module._execute_uv_script("run_crew", entity_type="crew") is None
+
+
+def test_deprecated_flow_kickoff_exits_with_the_failed_scripts_code(
+    tmp_path, monkeypatch
+):
+    from click.testing import CliRunner
+
+    from crewai_cli.cli import crewai
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\n\n[tool.crewai]\ntype = "flow"\n'
+    )
+    monkeypatch.setattr(run_crew_module, "get_or_create_project_id", lambda: None)
+    monkeypatch.setattr(run_crew_module, "ask_for_missing_api_keys", lambda *args: None)
+    monkeypatch.setattr(run_crew_module, "record_run_started", lambda kind: None)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+    _uv_script_exits(monkeypatch, 4)
+
+    result = CliRunner().invoke(crewai, ["flow", "kickoff"])
+
+    assert result.exit_code == 4
+    assert "An error occurred while running the flow" in result.output
 
 
 @pytest.fixture
