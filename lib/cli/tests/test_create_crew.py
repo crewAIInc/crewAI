@@ -1036,6 +1036,73 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     get_token.assert_not_called()
 
 
+def test_platform_auth_ignores_transport_from_a_dotenv_loaded_on_import(
+    monkeypatch,
+) -> None:
+    seen_environ: dict[str, str | None] = {}
+    transport_keys = (
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "REQUESTS_CA_BUNDLE",
+        "CURL_CA_BUNDLE",
+        "CREWAI_FACTORY",
+    )
+
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    def client_for_selector(_selector, **_kwargs):
+        seen_environ.update({key: os.environ.get(key) for key in transport_keys})
+        client = mock.Mock()
+        client.get_actions.return_value = [object()]
+        return client
+
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=client_for_selector,
+    )
+    original_import = builtins.__import__
+
+    def import_loading_project_dotenv(
+        name, globals=None, locals=None, fromlist=(), level=0
+    ):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            # What crewai_tools' import-time load_dotenv() does with a hostile .env.
+            os.environ.update(
+                {
+                    "HTTPS_PROXY": "http://attacker.example:8080",
+                    "ALL_PROXY": "http://attacker.example:8080",
+                    "REQUESTS_CA_BUNDLE": "/tmp/attacker-ca.pem",
+                    "CURL_CA_BUNDLE": "/tmp/attacker-ca.pem",
+                    "CREWAI_FACTORY": "true",
+                }
+            )
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    for key in transport_keys:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("CURL_CA_BUNDLE", "/etc/machine-ca.pem")
+    monkeypatch.setattr(builtins, "__import__", import_loading_project_dotenv)
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+
+    token = json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
+
+    assert token == "test-token"
+    # Proxies fall back to whatever the machine had when crewAI started.
+    https_proxy = seen_environ.pop("HTTPS_PROXY")
+    all_proxy = seen_environ.pop("ALL_PROXY")
+    assert https_proxy != "http://attacker.example:8080"
+    assert all_proxy != "http://attacker.example:8080"
+    assert seen_environ == {
+        "REQUESTS_CA_BUNDLE": None,
+        "CURL_CA_BUNDLE": "/etc/machine-ca.pem",
+        "CREWAI_FACTORY": None,
+    }
+
+
 def test_platform_auth_fetches_token_from_login_when_env_is_missing(monkeypatch) -> None:
     class FakeApplicationSelector:
         @classmethod
@@ -2393,6 +2460,57 @@ def test_classic_create_with_skip_provider_keeps_the_tools_only_dependency(
     create_crew("Plain Crew", skip_provider=True)
 
     assert _crewai_dependency(tmp_path / "plain_crew") == get_crewai_tools_dependency()
+
+
+def test_json_create_returns_the_folder_it_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    project = json_crew.create_json_crew("News v2.0", skip_provider=True)
+
+    # A crew folder drops the ".", which a flow folder would keep.
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "crew.jsonc").is_file()
+
+
+def test_classic_create_returns_the_folder_it_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+
+    project = create_crew("News v2.0", skip_provider=True)
+
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "pyproject.toml").is_file()
+
+
+def test_classic_create_returns_none_when_it_adds_a_crew_to_a_project(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    project = create_crew("Writer", skip_provider=True, parent_folder="crews")
+
+    assert project is None
+    assert (tmp_path / "crews" / "writer" / "crew.py").is_file()
+
+
+def test_classic_create_returns_the_folder_when_the_provider_list_is_unavailable(
+    tmp_path, monkeypatch
+):
+    """The curated lists stand in for the catalog, so the crew is still created."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr("crewai_cli.create_crew.get_provider_data", lambda: None)
+    monkeypatch.setattr("crewai_cli.create_crew.select_provider", lambda *_: "openai")
+    monkeypatch.setattr(
+        "crewai_cli.create_crew.select_model", lambda *_: "gpt-6-luna"
+    )
+    monkeypatch.setattr("crewai_cli.create_crew.click.prompt", lambda *_a, **_k: "")
+
+    project = create_crew("Offline Crew")
+
+    assert project == Path("offline_crew")
+    assert (tmp_path / "offline_crew" / "pyproject.toml").is_file()
 
 
 @pytest.fixture

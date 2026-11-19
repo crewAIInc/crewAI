@@ -27,7 +27,7 @@ def create_flow(
     declarative: bool = False,
     provider: str | None = None,
     skip_provider: bool = False,
-) -> None:
+) -> Path | None:
     """Create a new flow.
 
     At a terminal, a Python flow asks for a model and its API keys and saves
@@ -40,6 +40,9 @@ def create_flow(
         provider: A provider, such as ``anthropic``, whose first listed model
             the flow uses, or a ``provider/model`` string.
         skip_provider: Ask for no model or API keys.
+
+    Returns:
+        The flow's folder, or None when that folder already exists.
 
     Raises:
         click.BadParameter: ``provider`` is neither a provider with a listed
@@ -68,7 +71,7 @@ def create_flow(
     project_root = Path(folder_name)
     if project_root.exists():
         click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
-        return
+        return None
 
     ask = (
         not declarative
@@ -133,6 +136,7 @@ def create_flow(
     click.secho("  Run your flow:", fg="cyan")
     click.echo("    crewai run")
     click.echo()
+    return project_root
 
 
 def _create_python_flow(

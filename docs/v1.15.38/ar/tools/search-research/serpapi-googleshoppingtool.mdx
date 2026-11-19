@@ -1,0 +1,62 @@
+---
+title: أداة تسوق Google عبر SerpApi
+description: أداة `SerpApiGoogleShoppingTool` تبحث في نتائج Google Shopping باستخدام SerpApi.
+icon: cart-shopping
+mode: "wide"
+---
+
+# `SerpApiGoogleShoppingTool`
+
+## الوصف
+
+استفد من `SerpApiGoogleShoppingTool` للاستعلام من Google Shopping عبر SerpApi واسترجاع نتائج موجّهة للمنتجات.
+
+## التثبيت
+
+```shell
+uv add crewai-tools[serpapi]
+```
+
+## متغيرات البيئة
+
+- `SERPAPI_API_KEY` (مطلوب): مفتاح API لـ SerpApi. أنشئ واحداً على https://serpapi.com/ (طبقة مجانية متاحة).
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SerpApiGoogleShoppingTool
+
+tool = SerpApiGoogleShoppingTool()
+
+agent = Agent(
+    role="Shopping Researcher",
+    goal="Find relevant products",
+    backstory="Expert in product search",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search Google Shopping for 'wireless noise-canceling headphones'",
+    expected_output="Top relevant products with titles and links",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## ملاحظات
+
+- عيّن `SERPAPI_API_KEY` في البيئة. أنشئ مفتاحاً على https://serpapi.com/
+- انظر أيضاً بحث Google على الويب عبر SerpApi: `/ar/tools/search-research/serpapi-googlesearchtool`
+
+## المعاملات
+
+### معاملات التشغيل
+
+- `search_query` (str، مطلوب): استعلام البحث عن المنتجات.
+- `location` (str، اختياري): معامل الموقع الجغرافي.
+
+
