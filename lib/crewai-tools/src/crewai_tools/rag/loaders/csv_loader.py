@@ -26,12 +26,12 @@ class CSVLoader(BaseLoader):
 
     @staticmethod
     def _load_from_file(path: str) -> str:
-        with open(path, encoding="utf-8") as file:
+        with open(path, encoding="utf-8", newline="") as file:
             return file.read()
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:
         try:
-            csv_reader = csv.DictReader(StringIO(content))
+            csv_reader = csv.DictReader(StringIO(content, newline=""))
 
             text_parts = []
             headers = csv_reader.fieldnames

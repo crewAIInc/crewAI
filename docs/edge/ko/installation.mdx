@@ -82,10 +82,6 @@ CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다
             ```
           </Warning>
 
-          <Warning>
-            Windows에서 `chroma-hnswlib==0.7.6` 빌드 오류(`fatal error C1083: Cannot open include file: 'float.h'`)가 발생하면, [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/)에서 *C++를 사용한 데스크톱 개발*을 설치하세요.
-          </Warning>
-
       - `crewai`가 정상적으로 설치되었는지 확인하려면 다음을 실행하세요:
         ```shell
         uv tool list
@@ -163,6 +159,9 @@ CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다
       ```shell
       uv add <package-name>
       ```
+      <Note>
+        ChromaDB는 선택적 의존성입니다. ChromaDB 벡터 스토어 또는 ChromaDB 기반 임베딩 프로바이더(Bedrock, Cohere, Google Generative AI, Hugging Face, Instructor, Jina, Ollama, ONNX, OpenCLIP, Roboflow, Sentence Transformers, Text2Vec)를 사용할 때만 `uv add "crewai[chromadb]"`로 설치하세요.
+      </Note>
     - crew를 실행하려면 프로젝트 루트에서 아래 명령을 실행하세요:
       ```bash
       crewai run

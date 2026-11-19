@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 import hashlib
 import json
-from typing import Literal, TypeGuard, cast
+from typing import Any, Literal, TypeGuard, cast
 
 from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.models.AsyncCollection import AsyncCollection
@@ -133,6 +133,19 @@ def _create_batch_slice(
         batch_metadatas = None
 
     return batch_ids, batch_texts, batch_metadatas
+
+
+def _metadata_filter_to_where(
+    metadata_filter: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Convert flat metadata conditions into Chroma's single-clause form."""
+    if not metadata_filter:
+        return None
+    if len(metadata_filter) == 1 or any(
+        field.startswith("$") for field in metadata_filter
+    ):
+        return metadata_filter
+    return {"$and": [{field: value} for field, value in metadata_filter.items()]}
 
 
 def _extract_search_params(
