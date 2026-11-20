@@ -479,28 +479,3 @@ def on(
         return func
 
     return decorator
-
-    def decorator(func: HookFn) -> HookFn:
-        func._interception_point = point  # type: ignore[attr-defined]
-        if normalized_tools:
-            func._filter_tools = normalized_tools  # type: ignore[attr-defined]
-        if agents:
-            func._filter_agents = agents  # type: ignore[attr-defined]
-
-        params = list(inspect.signature(func).parameters.keys())
-        is_method = len(params) >= 2 and params[0] == "self"
-
-        if not is_method:
-            hook = (
-                _wrap_with_filters(func, agents, normalized_tools)
-                if (agents or normalized_tools)
-                else func
-            )
-            register(point, hook)
-            # Remember the actually-registered callable so unregister_hook(func)
-            # can resolve the filter wrapper.
-            func._registered_hook = hook  # type: ignore[attr-defined]
-
-        return func
-
-    return decorator
