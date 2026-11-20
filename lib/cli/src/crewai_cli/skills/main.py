@@ -185,6 +185,10 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         in_project = os.path.isfile("pyproject.toml")
         if in_project:
             dest = Path("skills") / name
+            if dest.exists():
+                import shutil
+
+                shutil.rmtree(dest)
             dest.mkdir(parents=True, exist_ok=True)
             self._unpack_archive(archive_bytes, dest)
             console.print(

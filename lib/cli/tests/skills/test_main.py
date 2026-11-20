@@ -116,6 +116,28 @@ class TestSkillInstall:
             skill_command.install("@acme/my-skill")
             assert Path("skills/my-skill/SKILL.md").exists()
 
+    def test_install_in_project_removes_stale_files_on_reinstall(self, skill_command):
+        import base64
+
+        archive = self._zip_skill("my-skill")
+        encoded = "data:application/zip;base64," + base64.b64encode(archive).decode()
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"file": encoded, "version": "2.0.0"}
+        skill_command.plus_api_client.get_skill = MagicMock(return_value=mock_resp)
+
+        with in_temp_dir():
+            Path("pyproject.toml").write_text("[tool]\n")
+            skill_dir = Path("skills/my-skill")
+            skill_dir.mkdir(parents=True)
+            stale_file = skill_dir / "legacy_fetch.py"
+            stale_file.write_text("print('stale')")
+
+            skill_command.install("@acme/my-skill")
+            assert (skill_dir / "SKILL.md").exists()
+            assert not stale_file.exists()
+
 
 class TestSkillPublish:
     def test_publish_no_skill_md(self, skill_command):
