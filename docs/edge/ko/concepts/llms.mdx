@@ -607,6 +607,29 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     ```
   </Accordion>
 
+  <Accordion title="Together AI">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Together AI에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    TOGETHER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    TOGETHER_BASE_URL=https://api.together.ai/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        temperature=0.7
+    )
+    ```
+
+    모델 ID는 `org/model` 형식이므로 전체 참조는 세 부분으로 구성됩니다. 예: `together/Qwen/Qwen2.5-72B-Instruct-Turbo`. 현재 ID는 [Together AI 모델 목록](https://docs.together.ai/docs/serverless-models)을 참고하세요.
+  </Accordion>
+
   <Accordion title="Perplexity AI">
     `.env` 파일에 다음 환경 변수를 설정하십시오:
     ```toml Code
