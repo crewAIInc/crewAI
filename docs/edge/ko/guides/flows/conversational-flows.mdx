@@ -18,6 +18,10 @@ mode: "wide"
 | 턴 완료 | `trace_scope="turn"`일 때 성공한 턴마다 `conversation_turn_completed`와 `FlowFinished`; 실패하면 `FlowFailed` |
 | 세션 전체 트레이스 | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
+한 걸음 **내부**에서 질문을 해야 하고 턴을 시작하고 싶지 않다면 `handle_turn()` 대신
+입력 제공자와 함께 `Flow.ask()`를 사용하십시오. 차이점과 실행 가능한 제공자는
+[`ask()`로 입력 받기](/ko/concepts/flows#collecting-input-with-ask)를 참고하십시오.
+
 ## 턴 API
 
 REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지에는 **`flow.handle_turn(message, session_id=...)`**를 사용하세요. 대화형 `Flow`를 로컬 터미널 채팅 루프로 실행하고 싶을 때는 **`flow.chat()`**을 사용하세요.
