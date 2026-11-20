@@ -89,6 +89,32 @@ def test_tool_refuses_files_outside_workdir(store):
     assert not (store.root / "exec-1" / "secret").exists()
 
 
+def test_local_store_version_isolation_with_pruned_versions_and_extension_changes(
+    store, tmp_path
+):
+    directory = tmp_path / "artifacts" / "exec-1" / "report"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "v1.html").write_text("<h1>v1</h1>")
+    (directory / "v2.svg").write_text("<svg>v2</svg>")
+
+    # Simulate v1 being deleted/pruned
+    (directory / "v1.html").unlink()
+
+    # Save artifact with different extension (png)
+    report = Artifact(identifier="report", title="Report", kind="image")
+    saved = save_artifact(report, content=b"\x89PNG\r\n\x1a\n")
+
+    # Version must monotonically increment to 3 rather than colliding on 2
+    assert saved.version == 3
+    assert (directory / "v3.png").exists()
+    assert not (directory / "v2.png").exists()
+
+    # Both surviving versions must load correctly
+    assert store.load("exec-1", "report", version=2) == b"<svg>v2</svg>"
+    assert store.load("exec-1", "report", version=3) == b"\x89PNG\r\n\x1a\n"
+    assert store.load("exec-1", "report") == b"\x89PNG\r\n\x1a\n"
+
+
 def test_rejects_bad_identifier():
     with pytest.raises(ValueError):
         Artifact(identifier="Bad Id", title="x", kind="text")
