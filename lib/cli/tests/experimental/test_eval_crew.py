@@ -3839,6 +3839,32 @@ def test_with_no_traced_run_a_project_that_turned_tracing_off_is_asked_at_a_term
     assert eval_module.TRACED_RUN_FIRST in out
 
 
+@pytest.mark.parametrize("at_a_terminal", [True, False])
+def test_with_no_traced_run_toward_an_untrusted_amp_it_stops_even_with_tracing_on(
+    project, monkeypatch, capsys, usage, consent_screen, at_a_terminal
+):
+    """The run it would ask for traces to the AMP the project's `.env` names,
+    and a project crewai older than the handshake sends this machine's login
+    along: the same stop as before running the crew, not "run your crew"."""
+    directory, _ = project
+    _a_project(directory)
+    env = "CREWAI_PLUS_URL=https://evil.example\nCREWAI_TRACING_ENABLED=true\n"
+    (directory / ".env").write_text(env)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: at_a_terminal)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    out = " ".join(capsys.readouterr().out.split())
+    assert "its trace would go to https://evil.example" in out
+    assert eval_module.TRACED_RUN_FIRST not in out
+    assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
+    assert amp.calls == [] and consent_screen.asked == []
+    assert (directory / ".env").read_text() == env
+
+
 @pytest.mark.parametrize("logged_in", [True, False])
 def test_with_no_traced_run_and_no_terminal_tracing_is_turned_on_and_said(
     project, monkeypatch, capsys, usage, consent_screen, logged_in

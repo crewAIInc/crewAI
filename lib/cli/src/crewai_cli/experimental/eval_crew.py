@@ -1231,15 +1231,17 @@ def _trace_the_next_run(trusted: set[str]) -> None:
     crew's own run gets (`_run_the_crew_to_evaluate`): a person at a terminal
     is asked (Enter means yes) and a no stops here; with nobody there, the yes
     is inferred from `crewai eval` and said, except for a project that turned
-    tracing off, which is told how to turn it on. Never toward an AMP this
-    command does not trust with the login (`untrusted_amp_stop`)."""
-    turned_off = tracing_turned_off()
-    if not turned_off and tracing_already_on():
-        return
+    tracing off, which is told how to turn it on. Toward an AMP this command
+    does not trust with the login (`untrusted_amp_stop`) it stops first, even
+    when tracing is on already: that is where the asked-for run would send its
+    trace, and the login with it."""
     stop = untrusted_amp_stop(trusted)
     if stop is not None:
         record_stop("untrusted_amp")
         _fail(stop)
+    turned_off = tracing_turned_off()
+    if not turned_off and tracing_already_on():
+        return
     if not _at_a_terminal():
         if turned_off:
             record_stop("tracing_off")
