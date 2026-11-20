@@ -860,6 +860,29 @@ def test_unknown_image_bytes_are_refused(store):
         save_artifact(Artifact(identifier="b", title="B", kind="image"), content=b"not an image")
 
 
+@pytest.mark.parametrize("data", [b"<svg xmlns='http://www.w3.org/2000/svg'/>", b"not an image"])
+def test_unknown_image_file_bytes_are_refused(store, tmp_path, data):
+    path = tmp_path / "chart.svg"
+    path.write_bytes(data)
+
+    with pytest.raises(ValueError, match="image bytes must be PNG, JPEG, GIF or WebP"):
+        save_artifact(
+            Artifact(identifier="b", title="B", kind="image"), file_path=str(path)
+        )
+
+
+def test_image_file_format_comes_from_its_bytes(store, tmp_path):
+    path = tmp_path / "chart.txt"
+    path.write_bytes(b"\x89PNG\r\n\x1a\nrest")
+
+    saved = save_artifact(
+        Artifact(identifier="b", title="B", kind="image"), file_path=str(path)
+    )
+
+    assert saved.content_type == "image/png"
+    assert saved.url.endswith("/v1.png")
+
+
 FENCED_HTML = '```html\n<!doctype html>\n<html lang="en">\n<body>Q3</body>\n</html>\n```'
 
 
