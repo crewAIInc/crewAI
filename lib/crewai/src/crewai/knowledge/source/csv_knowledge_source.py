@@ -42,10 +42,3 @@ class CSVKnowledgeSource(BaseFileKnowledgeSource):
         new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
         await self._asave_documents()
-
-    def _chunk_text(self, text: str) -> list[str]:
-        """Utility method to split text into chunks."""
-        return [
-            text[i : i + self.chunk_size]
-            for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
-        ]
