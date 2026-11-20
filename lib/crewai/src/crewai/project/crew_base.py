@@ -557,7 +557,8 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
             else:
                 before_tool_hook = bound_hook
 
-            register_before_tool_call_hook(before_tool_hook)
+            on_error = getattr(hook_method, "_hook_on_error", "ignore")
+            register_before_tool_call_hook(before_tool_hook, on_error=on_error)
             instance._registered_hook_functions.append(
                 ("before_tool_call", before_tool_hook)
             )
@@ -591,7 +592,8 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
             else:
                 after_tool_hook = bound_hook
 
-            register_after_tool_call_hook(after_tool_hook)
+            on_error = getattr(hook_method, "_hook_on_error", "ignore")
+            register_after_tool_call_hook(after_tool_hook, on_error=on_error)
             instance._registered_hook_functions.append(
                 ("after_tool_call", after_tool_hook)
             )
@@ -607,12 +609,13 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
             bound_hook = on_method.__get__(instance, cls)
             tools_filter = getattr(on_method, "_filter_tools", None)
             agents_filter = getattr(on_method, "_filter_agents", None)
+            on_error = getattr(on_method, "_hook_on_error", "ignore")
             hook = (
                 _wrap_with_filters(bound_hook, agents_filter, tools_filter)
                 if (tools_filter or agents_filter)
                 else bound_hook
             )
-            register_interception_hook(point, hook)
+            register_interception_hook(point, hook, on_error=on_error)
             instance._registered_hook_functions.append((point.value, hook))
 
     instance._hooks_being_registered = False
