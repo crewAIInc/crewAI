@@ -35,7 +35,7 @@ from crewai.events.event_context import restore_event_scope, set_last_event_id
 from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorageField
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
@@ -342,13 +342,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None, description="Knowledge for the agent."
     )
     knowledge_sources: Annotated[
-        list[BaseKnowledgeSource] | None,
+        list[SerializeAsAny[BaseKnowledgeSource]] | None,
         BeforeValidator(_resolve_knowledge_sources),
     ] = Field(
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge_storage: BaseKnowledgeStorage | None = Field(
+    knowledge_storage: KnowledgeStorageField = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )
