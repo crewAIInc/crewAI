@@ -2519,6 +2519,188 @@ def test_the_run_apps_door_offers_the_login_only_through_the_callers_hook(projec
     assert logins.calls == []
 
 
+# --- Signed out, AMP wants an account to read the run again: offer the login ---
+
+READ_ONCE = httpx.Response(401, json={
+    "error": "account_required",
+    "message": f"Execution {EXECUTION_ID} was already read once without an account. "
+    "Log in with `crewai login`, or create an account at https://app.crewai.com, to read it again.",
+})
+CLAIMED = httpx.Response(401, json={
+    "error": "account_required",
+    "message": f"Execution {EXECUTION_ID} belongs to an account now. Log in with `crewai login` to read it.",
+})
+
+
+@pytest.fixture
+def login_question(monkeypatch):
+    """The `Log in now and evaluate it?` question, answered as the test says."""
+    asked: list[dict] = []
+    answer = {"yes": True}
+    confirm = eval_module.click.confirm  # the consent screen, for any other question
+
+    def ask(text, **kwargs):
+        if text != eval_module.LOG_IN_TO_EVALUATE_QUESTION:
+            return confirm(text, **kwargs)
+        asked.append(kwargs)
+        return answer["yes"]
+
+    monkeypatch.setattr(eval_module.click, "confirm", ask)
+    return SimpleNamespace(asked=asked, answer=answer)
+
+
+@pytest.mark.parametrize("refusal", [READ_ONCE, CLAIMED], ids=["read once", "claimed by this account's organization"])
+def test_signed_out_at_a_terminal_a_run_that_needs_an_account_offers_a_login_and_evaluates(
+    project, monkeypatch, capsys, usage, logins, login_question, refusal
+):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.token["value"] = None
+    amp = install(monkeypatch, FakeAMP(create=[refusal, httpx.Response(202, json={"id": "ev-1", "url": URL})], statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert login_question.asked == [{"default": True}]  # Enter means yes
+    assert logins.calls == ["login"]
+    assert amp.calls == [("create", EXECUTION_ID), ("create", EXECUTION_ID), ("get", "ev-1")]
+    assert amp.api_key == "new-login-token"  # the retry went with the new login
+    assert usage == ["cli_usage:eval_login_prompted", "cli_usage:eval", "cli_usage:eval_finished:passed"]
+    out = capsys.readouterr().out
+    assert refusal.json()["message"] in out  # why the question is asked
+    assert "did not accept the saved login" not in out  # there was none
+    assert "Goal gate: PASSED" in out
+
+
+def test_signed_out_a_declined_login_stops_with_amps_refusal(project, monkeypatch, capsys, usage, logins, login_question):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.token["value"] = None
+    login_question.answer["yes"] = False
+    amp = install(monkeypatch, FakeAMP(create=READ_ONCE))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert logins.calls == []
+    assert amp.calls == [("create", EXECUTION_ID)]
+    assert usage == ["cli_usage:eval_stopped:declined"]
+    out = capsys.readouterr().out
+    assert "was already read once without an account" in out
+    assert eval_module.NOT_LOGGED_IN in out
+
+
+@pytest.mark.parametrize(
+    ("tty", "dmn"),
+    [(False, False), (True, True)],
+    ids=["no terminal", "enterprise non-interactive mode"],
+)
+def test_signed_out_with_nobody_to_ask_the_refusal_says_how_to_log_in(
+    project, monkeypatch, capsys, usage, logins, login_question, tty, dmn
+):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: tty)
+    monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: dmn)
+    logins.token["value"] = None
+    amp = install(monkeypatch, FakeAMP(create=READ_ONCE))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert login_question.asked == []
+    assert logins.calls == []
+    assert amp.calls == [("create", EXECUTION_ID)]
+    assert usage == ["cli_usage:eval_stopped:amp_401"]
+    out = capsys.readouterr().out
+    assert "was already read once without an account" in out
+    assert "Run `crewai login`, then `crewai eval` again." in out
+
+
+def test_signed_out_a_run_another_account_claimed_says_so_after_the_login(
+    project, monkeypatch, capsys, usage, logins, login_question
+):
+    """Logged in, AMP does not find a run another organization claimed: the
+    login was the user's, the run is not, and the sentence says which."""
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.token["value"] = None
+    not_found = httpx.Response(404, json={"error": "trace_not_found", "message": f"No spans recorded for execution {EXECUTION_ID}"})
+    amp = install(monkeypatch, FakeAMP(create=[CLAIMED, not_found]))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert logins.calls == ["login"]
+    assert amp.calls == [("create", EXECUTION_ID), ("create", EXECUTION_ID)]  # one retry, no more
+    assert usage == ["cli_usage:eval_login_prompted", "cli_usage:eval_stopped:login_still_required"]
+    out = capsys.readouterr().out
+    assert "belongs to an account now" in out
+    assert (
+        f"Logged in, but CrewAI AMP has no run this account may read (No spans recorded for execution {EXECUTION_ID}). "
+        "A run that already belongs to another account stays with it: log in as a member of its organization"
+    ) in out
+
+
+def test_signed_out_a_login_amp_still_refuses_is_not_offered_twice(
+    project, monkeypatch, capsys, usage, logins, login_question
+):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.token["value"] = None
+    amp = install(monkeypatch, FakeAMP(create=READ_ONCE))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert login_question.asked == [{"default": True}]
+    assert logins.calls == ["login"]
+    assert amp.calls == [("create", EXECUTION_ID), ("create", EXECUTION_ID)]
+    assert usage == ["cli_usage:eval_login_prompted", "cli_usage:eval_stopped:login_still_required"]
+    assert "CrewAI AMP still refused the login after signing in again" in capsys.readouterr().out
+
+
+def test_signed_out_no_login_is_offered_toward_an_amp_it_would_not_be_sent_to(
+    project, monkeypatch, capsys, usage, logins, login_question
+):
+    """The project points at an AMP this machine does not log in to: a login
+    would not go with the retry, so the refusal stands as it always did."""
+    directory, _ = project
+    record_last_run(directory, amp_base_url="https://elsewhere.test")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    logins.token["value"] = None
+    amp = install(monkeypatch, FakeAMP(create=READ_ONCE), configured_amp="https://elsewhere.test")
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    assert login_question.asked == []
+    assert logins.calls == []
+    assert amp.calls == [("create", EXECUTION_ID)]
+    assert usage == ["cli_usage:eval_stopped:amp_401"]
+    assert "was already read once without an account" in capsys.readouterr().out
+
+
+def test_the_run_app_offers_no_login_to_a_signed_out_read(project, monkeypatch, logins):
+    """The run app evaluates the run it just traced, inside its read window: the
+    offer is `crewai eval`'s, and the app's own LOG_IN is for a saved login."""
+    logins.token["value"] = None
+    install(monkeypatch, FakeAMP(create=READ_ONCE))
+    monkeypatch.setattr(eval_module, "get_project_id", lambda: None)
+
+    with pytest.raises(eval_module.EvaluationStoppedError, match="already read once without an account") as stopped:
+        eval_module.evaluate_run(EXECUTION_ID, on_started=lambda started: None, log_in=lambda: True)
+    assert stopped.value.reason == "amp_401"
+    assert logins.calls == []
+
+
 def test_an_unreachable_amp_at_the_start_counts_as_a_network_error(project, monkeypatch, usage):
     directory, _ = project
     record_last_run(directory)
