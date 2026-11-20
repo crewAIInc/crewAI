@@ -192,12 +192,12 @@ def test_every_provider_extra_is_a_crewai_extra() -> None:
 
 def test_every_provider_create_offers_is_mapped_or_needs_no_extra() -> None:
     """A provider added to either picker has to be checked against crewai's
-    routing: openai, ollama and cerebras run on `crewai[tools]` alone."""
+    routing: openai, ollama, cerebras and groq run on `crewai[tools]` alone."""
     from crewai_cli.create_json_crew import _PROVIDERS
 
     offered = set(PROVIDERS) | {key for key, _ in _PROVIDERS}
 
-    assert offered - set(PROVIDER_EXTRAS) == {"openai", "ollama", "cerebras"}
+    assert offered - set(PROVIDER_EXTRAS) == {"openai", "ollama", "cerebras", "groq"}
     assert set(PROVIDER_EXTRAS) <= offered
 
 
@@ -219,7 +219,7 @@ def test_provider_for_model_matches_every_prefix_crewai_routes() -> None:
         ("bedrock/us.amazon.nova-pro-v1:0", {"bedrock"}),
         ("bedrock/us-gov-east-1/anthropic.claude-haiku-4-5-20251001-v1:0", {"bedrock"}),
         ("azure/my-deployment", {"azure-ai-inference"}),
-        ("groq/llama-3.3-70b-versatile", {"litellm"}),
+        ("groq/llama-3.3-70b-versatile", set()),
         ("openai/gpt-5.6-luna", set()),
         ("ollama/llama3.3", set()),
         ("cerebras/llama3.1-8b", set()),
