@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from crewai.artifacts import SavedArtifact
 from crewai.tools.tool_failure import ToolFailureRecord
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.planning_types import TodoItem
@@ -35,6 +36,10 @@ class LiteAgentOutput(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     raw: str = Field(description="Raw output of the agent", default="")
+    artifact: SavedArtifact | None = Field(
+        default=None,
+        description="The artifact saved from this output, when kickoff sets one.",
+    )
     pydantic: BaseModel | None = Field(
         description="Pydantic output of the agent", default=None
     )
