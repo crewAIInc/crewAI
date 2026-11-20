@@ -138,10 +138,13 @@ class DataTypes:
             if dtype:
                 return dtype
 
-            if "docs" in url.netloc or ("docs" in url.path and url.scheme != "file"):
-                return DataType.DOCS_SITE
             hostname = (url.hostname or "").lower()
-            if hostname == "github.com" or hostname.endswith(".github.com"):
+            is_github = hostname == "github.com" or hostname.endswith(".github.com")
+            if "docs" in url.netloc or (
+                "docs" in url.path and url.scheme != "file" and not is_github
+            ):
+                return DataType.DOCS_SITE
+            if is_github:
                 return DataType.GITHUB
 
             return DataType.WEBSITE
