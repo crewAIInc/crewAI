@@ -1045,6 +1045,36 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="AI Stupid Level">
+    يتصل CrewAI بـ AI Stupid Level عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM. AI Stupid Level موجِّه (router): يرسل كل طلب إلى النموذج الأعلى أداءً حاليًا في اختبارات البرمجة والاستدلال واستخدام الأدوات التي يُعاد تشغيلها باستمرار، باستخدام مفاتيح المزوّدين الخاصة بك (OpenAI وAnthropic وGoogle وDeepSeek وKimi وGLM).
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required: a router key (aism_...) from https://aistupidlevel.info/router/keys
+    AISTUPIDLEVEL_API_KEY=<your-router-key>
+
+    # Optional
+    AISTUPIDLEVEL_BASE_URL=https://aistupidlevel.info/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="aistupidlevel/auto-coding",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات AI Stupid Level:
+      - أوضاع التوجيه كمعرّفات نماذج: `auto-coding` و`auto-reasoning` و`auto-tooling` و`auto-best`
+      - أوضاع `auto-value*` تختار أكبر عدد من نقاط الاختبار لكل دولار مُقاس بين النماذج القريبة من الأفضل
+      - استدعاء الأدوات والبث والمخرجات المنظمة بمخطط JSON؛ وتبقى حلقة الأدوات على نموذج واحد
+    </Info>
+
+    أي معرّف نموذج حقيقي (مثل `aistupidlevel/claude-opus-5-5`) يثبّت ذلك النموذج. راجع [أوضاع التوجيه](https://aistupidlevel.info/router/docs#strategies) و`GET /v1/models` للقائمة الكاملة.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

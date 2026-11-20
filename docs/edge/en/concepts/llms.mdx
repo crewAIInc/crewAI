@@ -1188,6 +1188,36 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="AI Stupid Level">
+    CrewAI talks to AI Stupid Level through its native OpenAI client, so no LiteLLM install is needed. AI Stupid Level is a router: it sends each request to the model that currently scores best on continuously re-run coding, reasoning and tool-use benchmarks, using your own provider keys (OpenAI, Anthropic, Google, DeepSeek, Kimi, GLM).
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required: a router key (aism_...) from https://aistupidlevel.info/router/keys
+    AISTUPIDLEVEL_API_KEY=<your-router-key>
+
+    # Optional
+    AISTUPIDLEVEL_BASE_URL=https://aistupidlevel.info/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="aistupidlevel/auto-coding",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      AI Stupid Level features:
+      - Routing modes as model ids: `auto-coding`, `auto-reasoning`, `auto-tooling`, `auto-best`
+      - `auto-value*` modes pick the most benchmark points per measured dollar among near-top models
+      - Tool calling, streaming and JSON schema structured outputs; a tool loop stays on one model
+    </Info>
+
+    Any real model id (for example `aistupidlevel/claude-opus-5-5`) pins that model. See the [routing modes](https://aistupidlevel.info/router/docs#strategies) and `GET /v1/models` for the full list.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
