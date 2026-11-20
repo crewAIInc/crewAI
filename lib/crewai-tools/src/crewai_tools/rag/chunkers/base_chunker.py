@@ -107,6 +107,7 @@ class RecursiveCharacterTextSplitter:
 
     def _merge_splits(self, splits: list[str], separator: str) -> list[str]:
         """Merge splits into chunks with proper overlap."""
+        separator = "" if self._keep_separator else separator
         docs: list[str] = []
         current_doc: list[str] = []
         total = 0
@@ -115,13 +116,7 @@ class RecursiveCharacterTextSplitter:
             split_len = len(split)
 
             if total + split_len > self._chunk_size and current_doc:
-                if separator == "":
-                    doc = "".join(current_doc)
-                else:
-                    if self._keep_separator and separator == " ":
-                        doc = "".join(current_doc)
-                    else:
-                        doc = separator.join(current_doc)
+                doc = separator.join(current_doc)
 
                 if doc:
                     docs.append(doc)
@@ -139,13 +134,7 @@ class RecursiveCharacterTextSplitter:
                 total += len(separator)
 
         if current_doc:
-            if separator == "":
-                doc = "".join(current_doc)
-            else:
-                if self._keep_separator and separator == " ":
-                    doc = "".join(current_doc)
-                else:
-                    doc = separator.join(current_doc)
+            doc = separator.join(current_doc)
 
             if doc:
                 docs.append(doc)
