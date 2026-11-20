@@ -70,6 +70,8 @@ def _make_tool(
     max_distance: float | None = None,
     embedding_model: str = "text-embedding-3-large",
     custom_embedding_fn=None,
+    db2_package=None,
+    db2_dbi_package=None,
 ) -> DB2VectorSearchTool:
     """Return a DB2VectorSearchTool with mocked ibm_db packages."""
     return DB2VectorSearchTool(
@@ -81,8 +83,8 @@ def _make_tool(
         distance_metric=distance_metric,
         max_distance=max_distance,
         embedding_model=embedding_model,
-        db2_package=_ibm_db_stub,
-        db2_dbi_package=_ibm_db_dbi_stub,
+        db2_package=_ibm_db_stub if db2_package is None else db2_package,
+        db2_dbi_package=_ibm_db_dbi_stub if db2_dbi_package is None else db2_dbi_package,
         custom_embedding_fn=custom_embedding_fn,
     )
 
@@ -705,3 +707,44 @@ class TestToolMetadata:
 
         assert DB2VectorSearchTool is not None
         assert DB2ToolSchema is not None
+
+
+# ---------------------------------------------------------------------------
+# _resolve_db2_packages allowlist
+# ---------------------------------------------------------------------------
+
+class TestResolveDB2Packages:
+    def test_arbitrary_package_string_is_rejected(self):
+        """A string db2_package must not reach importlib.import_module: the
+        fields are typed Any, so a repository record (or any deserialized
+        tool) could otherwise name an arbitrary module whose top-level code
+        runs at connect time."""
+        tool = _make_tool(db2_package="os", db2_dbi_package="json")
+        with pytest.raises(ValueError, match="Only 'ibm_db' may be imported"):
+            tool._resolve_db2_packages()
+        assert tool.db2_package == "os"
+
+    def test_arbitrary_dbi_package_string_is_rejected(self):
+        tool = _make_tool(db2_package="ibm_db", db2_dbi_package="os")
+        with pytest.raises(ValueError, match="Only 'ibm_db_dbi' may be imported"):
+            tool._resolve_db2_packages()
+
+    def test_fixed_package_names_still_resolve(self):
+        tool = _make_tool(db2_package="ibm_db", db2_dbi_package="ibm_db_dbi")
+        tool._resolve_db2_packages()
+        assert tool.db2_package is _ibm_db_stub
+        assert tool.db2_dbi_package is _ibm_db_dbi_stub
+
+    def test_none_defaults_still_resolve(self):
+        tool = _make_tool()
+        tool.db2_package = None
+        tool.db2_dbi_package = None
+        tool._resolve_db2_packages()
+        assert tool.db2_package is _ibm_db_stub
+        assert tool.db2_dbi_package is _ibm_db_dbi_stub
+
+    def test_already_resolved_module_objects_are_kept(self):
+        tool = _make_tool()
+        tool._resolve_db2_packages()
+        assert tool.db2_package is _ibm_db_stub
+        assert tool.db2_dbi_package is _ibm_db_dbi_stub
