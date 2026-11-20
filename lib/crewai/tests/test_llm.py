@@ -1,3 +1,5 @@
+from collections.abc import Callable
+import copy
 import importlib.util
 import logging
 import os
@@ -1528,3 +1530,33 @@ def test_an_installed_litellm_loads() -> None:
     from crewai.llm import _ensure_litellm
 
     assert _ensure_litellm() is True
+
+
+@pytest.mark.parametrize("copy_fn", [copy.copy, copy.deepcopy])
+def test_llm_copy_keeps_timeout_and_context_window_size(
+    copy_fn: Callable[[LLM], LLM],
+) -> None:
+    llm = LLM(
+        model="gpt-4o-mini",
+        is_litellm=True,
+        timeout=600,
+        context_window_size=12345,
+    )
+
+    copied = copy_fn(llm)
+
+    assert copied is not llm
+    assert copied.timeout == 600
+    assert copied.context_window_size == 12345
+
+
+def test_agent_copy_keeps_llm_timeout() -> None:
+    from crewai import Agent
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, timeout=600)
+    agent = Agent(role="role", goal="goal", backstory="backstory", llm=llm)
+
+    copied = agent.copy()
+
+    assert copied.llm is not agent.llm
+    assert copied.llm.timeout == 600
