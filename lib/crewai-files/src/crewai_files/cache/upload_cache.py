@@ -281,9 +281,10 @@ class UploadCache:
         Returns:
             The created cache entry.
         """
-        await self._evict_if_needed()
-
         key = _make_key(file_hash, provider)
+        if key not in self._provider_keys.get(provider, set()):
+            await self._evict_if_needed()
+
         now = datetime.now(timezone.utc)
 
         cached = CachedUpload(
