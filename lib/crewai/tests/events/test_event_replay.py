@@ -173,6 +173,77 @@ class TestCheckpointResumeReplaysEvents:
         assert captured_started == ["step_a", "step_b", "step_c"]
         assert captured_finished == ["step_a", "step_b", "step_c"]
 
+    def test_restored_instance_kickoff_keeps_recorded_events(self, tmp_path) -> None:
+        """Kicking off Flow.from_checkpoint() must not drop the restored state.
+
+        The snapshot is written from the test thread, so the stored execution
+        context carries no flow id. The following top-level kickoff then used
+        to treat the state installed by from_checkpoint() as leftover baggage
+        and reset it, leaving nothing for _replay_recorded_events to dispatch.
+        """
+        import json
+        from pathlib import Path
+
+        from crewai.flow.flow import Flow, listen, start
+        from crewai.state.checkpoint_config import CheckpointConfig
+
+        at_step_c = threading.Event()
+        release = threading.Event()
+        captured: list[Any] = []
+
+        class ThreeStepFlow(Flow[dict]):
+            @start()
+            def step_a(self) -> str:
+                return "a"
+
+            @listen(step_a)
+            def step_b(self) -> str:
+                return "b"
+
+            @listen(step_b)
+            def step_c(self) -> str:
+                captured.append(crewai_event_bus.runtime_state)
+                at_step_c.set()
+                release.wait(timeout=10)
+                return "c"
+
+        runner = threading.Thread(target=ThreeStepFlow().kickoff)
+        runner.start()
+        try:
+            assert at_step_c.wait(timeout=10)
+            location = captured[0].checkpoint(str(tmp_path / "cp"))
+        finally:
+            release.set()
+            runner.join(timeout=10)
+
+        data = json.loads(Path(location).read_text())
+        for entity in data["entities"]:
+            entity["execution_context"] = None
+        contextless = Path(location).with_name("contextless.json")
+        contextless.write_text(json.dumps(data))
+
+        restored = ThreeStepFlow.from_checkpoint(
+            CheckpointConfig(restore_from=str(contextless))
+        )
+
+        captured_started: list[str] = []
+        captured_finished: list[str] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(MethodExecutionStartedEvent)
+            def _cs(_: Any, event: MethodExecutionStartedEvent) -> None:
+                captured_started.append(event.method_name)
+
+            @crewai_event_bus.on(MethodExecutionFinishedEvent)
+            def _cf(_: Any, event: MethodExecutionFinishedEvent) -> None:
+                captured_finished.append(event.method_name)
+
+            restored.kickoff()
+
+        assert captured_started == ["step_a", "step_b", "step_c"]
+        assert captured_finished == ["step_a", "step_b", "step_c"]
+
 
 class TestPersistResumeDoesNotReplayCompletedEvents:
     """A @persist resume continues from pending methods only.
