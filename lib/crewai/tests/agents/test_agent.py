@@ -137,6 +137,28 @@ def test_agent_copy_does_not_emit_i18n_deprecation_warning():
     )
 
 
+def test_agent_copy_isolates_llm_mutable_state():
+    """A copied agent must not share the LLM's params or token totals."""
+    llm = LLM(model="gpt-4o-mini")
+    llm.additional_params["bucket"] = []
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=llm,
+    )
+
+    copied = agent.copy()
+    copied.llm.additional_params["bucket"].append(1)
+    copied.llm._token_usage["total_tokens"] += 5
+
+    assert copied.llm is not agent.llm
+    assert copied.llm.additional_params is not agent.llm.additional_params
+    assert copied.llm._token_usage is not agent.llm._token_usage
+    assert agent.llm.additional_params["bucket"] == []
+    assert agent.llm._token_usage["total_tokens"] == 0
+
+
 def test_agent_with_only_system_template():
     """Test that an agent with only system_template works without errors."""
     agent = Agent(
