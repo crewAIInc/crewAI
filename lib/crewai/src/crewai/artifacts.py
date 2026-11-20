@@ -321,6 +321,9 @@ def save_artifact(
     if file_path is not None:
         path = _check_readable(file_path)
         data = path.read_bytes()
+        if artifact.kind == "image":
+            # Same check as image bytes passed as content: trust the bytes, not the name.
+            extension, content_type = _image_format(data)
         extension = extension or path.suffix.lstrip(".") or "bin"
         content_type = (
             content_type
