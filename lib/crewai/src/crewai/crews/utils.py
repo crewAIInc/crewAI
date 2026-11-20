@@ -266,7 +266,15 @@ def prepare_kickoff(
     )
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
+    # Checkpoint saves copy the live kickoff id into the public field, so on
+    # an instance that already ran it is a stale pointer, not a resume
+    # request: drop it, or this kickoff would skip every task and return the
+    # previous run's outputs. ``from_checkpoint`` resets ``_has_kicked_off``.
+    if crew._has_kicked_off:
+        crew.checkpoint_kickoff_event_id = None
+    crew._has_kicked_off = True
     resuming = crew.checkpoint_kickoff_event_id is not None
+    crew._resuming = resuming
 
     if not resuming and get_current_parent_id() is None:
         reset_emission_counter()
