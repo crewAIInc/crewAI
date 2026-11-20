@@ -1200,13 +1200,15 @@ class AzureCompletion(BaseLLM):
                     stream_response_id = chunk_id
 
                 if update.usage:
+                    # Usage can ride on a chunk that still has a delta (vLLM
+                    # sends it on every chunk with continuous_usage_stats):
+                    # keep the delta.
                     usage = update.usage
                     usage_data = {
                         "prompt_tokens": usage.prompt_tokens,
                         "completion_tokens": usage.completion_tokens,
                         "total_tokens": usage.total_tokens,
                     }
-                    continue
 
                 full_response = self._process_streaming_update(
                     update=update,
@@ -1279,13 +1281,13 @@ class AzureCompletion(BaseLLM):
                     stream_response_id = chunk_id
 
                 if hasattr(update, "usage") and update.usage:
+                    # A content chunk may carry usage too: keep its delta.
                     usage = update.usage
                     usage_data = {
                         "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                         "completion_tokens": getattr(usage, "completion_tokens", 0),
                         "total_tokens": getattr(usage, "total_tokens", 0),
                     }
-                    continue
 
                 full_response = self._process_streaming_update(
                     update=update,
