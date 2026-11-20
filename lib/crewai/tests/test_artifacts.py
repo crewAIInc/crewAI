@@ -64,7 +64,7 @@ def test_same_identifier_creates_new_versions_and_emits_events(store, tmp_path):
 
 
 def test_tool_saves_file_and_returns_link(store, tmp_path):
-    (tmp_path / "chart.png").write_bytes(b"\x89PNG")
+    (tmp_path / "chart.png").write_bytes(b"\x89PNG\r\n\x1a\n")
 
     result = json.loads(
         SaveArtifactTool().run(
@@ -77,7 +77,7 @@ def test_tool_saves_file_and_returns_link(store, tmp_path):
     assert result["share_url"] is None
     saved = tmp_path / "artifacts" / "exec-1" / "chart" / "v1.png"
     assert result["url"] == saved.resolve().as_uri()
-    assert saved.read_bytes() == b"\x89PNG"
+    assert saved.read_bytes() == b"\x89PNG\r\n\x1a\n"
 
 
 def test_tool_saves_a_rewritten_file_again_when_tool_caching_is_on(store, tmp_path):
@@ -513,7 +513,7 @@ def test_task_artifact_accepts_file_from_an_earlier_run(store, tmp_path):
     import os
 
     old = tmp_path / "chart.png"
-    old.write_bytes(b"\x89PNG old")
+    old.write_bytes(b"\x89PNG\r\n\x1a\n old")
     os.utime(old, (1_000_000_000, 1_000_000_000))
     agent = _agent()
     task = Task(
@@ -527,7 +527,7 @@ def test_task_artifact_accepts_file_from_an_earlier_run(store, tmp_path):
         output = task.execute_sync(agent=agent)
 
     assert output.artifact is not None
-    assert (tmp_path / "artifacts" / "exec-1" / "c" / "v1.png").read_bytes() == b"\x89PNG old"
+    assert (tmp_path / "artifacts" / "exec-1" / "c" / "v1.png").read_bytes() == b"\x89PNG\r\n\x1a\n old"
 
 
 def test_file_kind_without_file_path_is_rejected():
@@ -543,7 +543,7 @@ def test_kickoff_artifact_saves_file_the_agent_wrote(store, tmp_path):
     from crewai.lite_agent_output import LiteAgentOutput
 
     def run(*_a, **_k):
-        _writes("chart.png", b"\x89PNG new")()
+        _writes("chart.png", b"\x89PNG\r\n\x1a\n new")()
         return LiteAgentOutput(raw="Drawn.", agent_role="Writer")
 
     with patch.object(Agent, "_execute_and_build_output", side_effect=run):
@@ -553,7 +553,7 @@ def test_kickoff_artifact_saves_file_the_agent_wrote(store, tmp_path):
         )
 
     assert result.artifact.content_type == "image/png"
-    assert (tmp_path / "artifacts" / "exec-1" / "chart" / "v1.png").read_bytes() == b"\x89PNG new"
+    assert (tmp_path / "artifacts" / "exec-1" / "chart" / "v1.png").read_bytes() == b"\x89PNG\r\n\x1a\n new"
 
 
 def test_declarative_agent_artifact_file_path_uses_flow_expressions(tmp_path, monkeypatch):
@@ -564,7 +564,7 @@ def test_declarative_agent_artifact_file_path_uses_flow_expressions(tmp_path, mo
     set_artifact_store(LocalArtifactStore(tmp_path / "artifacts"))
 
     async def run(*_a, **_k):
-        _writes("output/q3.png", b"\x89PNG q3")()
+        _writes("output/q3.png", b"\x89PNG\r\n\x1a\n q3")()
         return LiteAgentOutput(raw="Drawn.", agent_role="Designer")
 
     yaml_str = """
@@ -1030,3 +1030,27 @@ def test_declarative_artifact_input_that_is_missing_fails_the_step(store):
 def test_declarative_artifact_input_is_validated_when_loaded(reference):
     with pytest.raises(Exception, match="input_files"):
         Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW.replace("{artifact: board-report}", reference))
+
+
+@pytest.mark.parametrize(
+    ("name", "data"),
+    [
+        ("chart.svg", b"<svg xmlns='http://www.w3.org/2000/svg'/>"),
+        ("chart.png", b"<svg xmlns='http://www.w3.org/2000/svg'/>"),
+        ("notes", b"not an image"),
+    ],
+)
+def test_image_file_with_unknown_bytes_is_refused(store, tmp_path, name, data):
+    (tmp_path / name).write_bytes(data)
+    image = Artifact(identifier="chart", title="Chart", kind="image")
+    with pytest.raises(ValueError, match="image bytes must be PNG, JPEG, GIF or WebP"):
+        save_artifact(image, file_path=name)
+
+
+def test_image_file_type_comes_from_its_bytes(store, tmp_path):
+    (tmp_path / "chart").write_bytes(b"GIF89arest")
+    saved = save_artifact(
+        Artifact(identifier="chart", title="Chart", kind="image"), file_path="chart"
+    )
+    assert saved.content_type == "image/gif"
+    assert saved.url.endswith(".gif")
