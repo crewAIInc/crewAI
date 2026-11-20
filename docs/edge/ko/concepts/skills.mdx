@@ -127,7 +127,7 @@ agent = Agent(
 가장 일반적인 실제 패턴. 스킬은 작업에 *어떻게* 접근할지를 제공하고, 도구는 에이전트가 *무엇을* 할 수 있는지를 제공합니다:
 
 ```python
-from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+from crewai_tools import SerperDevTool, FileReadTool
 
 analyst = Agent(
     role="Security Analyst",
@@ -137,7 +137,6 @@ analyst = Agent(
     tools=[
         SerperDevTool(),                  # 알려진 취약점 조사
         FileReadTool(),                   # 설정 파일 읽기
-        CodeInterpreterTool(),            # 분석 스크립트 실행
     ],
 )
 ```
