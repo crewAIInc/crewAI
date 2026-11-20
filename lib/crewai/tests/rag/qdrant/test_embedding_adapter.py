@@ -153,6 +153,7 @@ def test_same_document_gets_the_same_point_id():
 def test_explicit_doc_id_is_kept():
     from crewai.rag.qdrant.utils import _create_point_from_document
 
-    point = _create_point_from_document({"content": "x", "doc_id": "my-id"}, [0.1])
+    doc_id = "123e4567-e89b-42d3-a456-426614174000"
+    point = _create_point_from_document({"content": "x", "doc_id": doc_id}, [0.1])
 
-    assert point.id == "my-id"
+    assert point.id == doc_id
