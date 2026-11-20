@@ -59,6 +59,7 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
+from crewai.events.types.artifact_events import ArtifactCreatedEvent
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -667,6 +668,10 @@ class TraceCollectionListener(BaseEventListener):
             # skill was actually used, and the only one that re-fires per
             # execution. Without it a trace cannot attribute usage to a task.
             self._handle_action_event("skill_used", source, event)
+
+        @self._on(event_bus, ArtifactCreatedEvent)
+        def on_artifact_created(source: Any, event: ArtifactCreatedEvent) -> None:
+            self._handle_action_event("artifact_created", source, event)
 
     def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for A2A (Agent-to-Agent) events."""
