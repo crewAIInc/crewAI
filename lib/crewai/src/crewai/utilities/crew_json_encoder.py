@@ -26,7 +26,9 @@ class CrewJSONEncoder(json.JSONEncoder):
         """
         if isinstance(obj, BaseModel):
             return self._handle_pydantic_model(obj)
-        if isinstance(obj, (UUID, Decimal, Enum)):
+        if isinstance(obj, Enum):
+            return obj.value
+        if isinstance(obj, (UUID, Decimal)):
             return str(obj)
 
         if isinstance(obj, (datetime, date)):

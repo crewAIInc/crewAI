@@ -187,6 +187,23 @@ class TestUploadCache:
         assert cleared == 2
         assert len(cache) == 0
 
+    def test_clear_resets_eviction_order(self):
+        """Entries added after clear must still obey max_entries."""
+        cache = UploadCache(max_entries=2)
+        for index in range(2):
+            cache.set_by_hash(
+                f"old-{index}", "text/plain", "gemini", file_id=f"old-{index}"
+            )
+
+        cache.clear()
+
+        for index in range(3):
+            cache.set_by_hash(
+                f"new-{index}", "text/plain", "gemini", file_id=f"new-{index}"
+            )
+
+        assert len(cache) <= 2
+
     def test_get_all_for_provider(self):
         """Test getting all cached uploads for a provider."""
         cache = UploadCache()

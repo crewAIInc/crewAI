@@ -4,6 +4,103 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 11월 19일">
+  ## v1.15.44
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.44)
+
+  ## 변경 사항
+
+  ### 기능
+  - 버전 관리가 가능하고 공유 가능한 아티팩트로 파일을 저장하는 기능 추가.
+
+  ### 버그 수정
+  - 흐름 파일에 대한 인라인 에이전트 및 크루 액션 참조 수정.
+  - 청크 병합 시 유지된 구분자를 중복하지 않도록 수정.
+  - 공유 흐름 선언에서 중첩된 기본값을 격리.
+  - 이미지를 열 때 Pillow를 PNG, JPEG, GIF 및 WEBP로 제한.
+  - 클리어 시 캐시 퇴출 순서 재설정.
+  - GitHub의 docs 경로를 리포지토리로 처리.
+  - crewai train 실패 시 스크립트의 상태로 종료.
+  - 현재 FFmpeg 설치를 보장하기 위해 av 핀을 완화.
+  - 실행 앱이 한 단계에서 텍스트로 렌더링할 수 없는 깊이 중첩된 span 유지.
+  - 모든 anthropic 파일 블록에 cache_control 스탬프를 찍지 않도록 수정.
+  - Claude 3+ 모델 및 지리 프로필에 대한 비전을 감지.
+  - 비보호 결과에서 구조화된 출력 내보내기.
+  - 모든 FilePath 경로에 대해 cwd 포함을 강제.
+
+  ### 문서화
+  - 아티팩트를 저장하고 읽는 흐름 기술 교육.
+
+  ## 기여자
+
+  @HanYuanLu, @Kiko0301, @Vidit-Ostwal, @adityajai119, @anilkr09, @gabemilani, @joaomdmoura, @kuquert, @nurlanmnn, @willnhansen
+
+</Update>
+
+<Update label="2026년 11월 18일">
+  ## v1.15.43
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.43)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - Claude 5에 대한 다중 모드 지원 감지 수정.
+
+  ### 문서
+  - v1.15.42에 대한 스냅샷 및 변경 로그 업데이트.
+
+  ## 기여자
+
+  @Vidit-Ostwal, @anubhavlal07, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 11월 18일">
+  ## v1.15.42
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.42)
+
+  ## 변경 사항
+
+  ### 기능
+  - ChromaDB를 선택적 추가 기능으로 만듭니다.
+  - 기본 지식을 로컬 Qdrant로 설정하고 저장소를 ChromaDB와 분리합니다.
+  - 독립형 에이전트를 위한 도구를 선택하고 나중에 추가합니다.
+
+  ### 버그 수정
+  - 날짜 문제를 방지하기 위해 output_json 값을 JSON으로 저장합니다.
+  - 각 Flow에 초기 상태 인스턴스에서 고유 ID를 부여합니다.
+  - 작업자를 기다리지 않고 max_execution_time을 준수합니다.
+  - URL 및 기타 Pydantic 유형을 포함하는 작업 출력을 저장합니다.
+  - 실험 기준선을 UTF-8로 읽습니다.
+  - 숫자로 시작하는 정제된 도구 이름에 접두사를 추가합니다.
+  - 범위가 지정된 LanceDB 레코드를 정확히 50,000개 이상 계산합니다.
+  - Serply의 하이브리드 플래그를 자체 필드에서 보고합니다.
+  - TavilyResearchTool의 구성된 기본값을 적용합니다.
+  - 평면 Chroma 메타데이터 필터를 정규화합니다.
+  - 셀 값을 변환하지 않고 CSV 레코드의 줄 바꿈을 처리합니다.
+  - UTF-8 BOM으로 저장된 JSON 크루 및 에이전트 파일을 로드합니다.
+  - 구성된 형식으로 검증된 변환기 출력을 보존합니다.
+  - .env를 UTF-8로 읽고 씁니다.
+  - 청크가 사용량도 포함할 때 스트리밍 델타를 유지합니다.
+  - 호출자가 제공한 Weaviate 헤더를 존중합니다.
+  - crewai 설치 실패 시 UV 상태로 종료합니다.
+  - 프로젝트 헬퍼에서 pyproject.toml을 UTF-8로 읽습니다.
+  - agents.yaml에서 LLM 매핑을 수락합니다.
+  - CVE-2026-126190에 대해 soupsieve 바닥을 4.0으로 올립니다.
+
+  ### 문서
+  - 크루 엔드포인트 경로를 런타임 예제와 일치시킵니다.
+  - FAQ 링크를 AMP 제목으로 업데이트합니다.
+
+  ## 기여자
+
+  @HhH666-ux, @Kiko0301, @Pranav-Singh-Devloper, @TejasLamba2006, @Varshith-Kali, @Vidit-Ostwal, @adityajai119, @ats3v, @bballhaus, @github-actions[bot], @iris-clawd, @jjhong011001, @lakers-abing, @lorenzejay, @lxcxjxhx, @xu-song
+
+</Update>
+
 <Update label="2026년 11월 13일">
   ## v1.15.41
 

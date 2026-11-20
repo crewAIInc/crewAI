@@ -1,13 +1,14 @@
 """RAG client configuration utilities."""
 
 from contextvars import ContextVar
-from typing import cast
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
 from crewai.rag.config.constants import DEFAULT_RAG_PROVIDER
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.factory import create_client
 
 
@@ -57,22 +58,27 @@ def get_rag_provider() -> str:
     return context.config.provider if context else DEFAULT_RAG_PROVIDER
 
 
-def _default_rag_config() -> RagConfigType:
-    """Build the default config: local Qdrant with OpenAI's text-embedding-3-small.
+def default_embedding_function() -> EmbeddingFunction[Any]:
+    """Return the default embedder: OpenAI's text-embedding-3-small.
 
-    This is the model Knowledge used before Qdrant became the default store. It
-    is set explicitly here so that ``QdrantConfig()`` keeps its own local default.
+    This is the model Knowledge and the RAG tools used with Chroma. It is set
+    explicitly wherever the default store is Qdrant, so that ``QdrantConfig()``
+    keeps its own local default.
     """
     from crewai.rag.embeddings.providers.openai.embedding_callable import (
         OpenAIEmbeddingFunction,
     )
+
+    return OpenAIEmbeddingFunction(model_name="text-embedding-3-small")
+
+
+def _default_rag_config() -> RagConfigType:
+    """Build the default config: local Qdrant with the default embedder."""
     from crewai.rag.qdrant.config import QdrantConfig
     from crewai.rag.qdrant.embedding_adapter import QdrantEmbeddingAdapter
     from crewai.rag.qdrant.types import QdrantEmbeddingFunctionWrapper
 
-    embedder = QdrantEmbeddingAdapter(
-        OpenAIEmbeddingFunction(model_name="text-embedding-3-small")
-    )
+    embedder = QdrantEmbeddingAdapter(default_embedding_function())
     return QdrantConfig(
         embedding_function=cast(QdrantEmbeddingFunctionWrapper, embedder)
     )

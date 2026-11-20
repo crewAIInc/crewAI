@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.15.41",
-    "crewai-cli==1.15.41",
+    "crewai-core==1.15.44",
+    "crewai-cli==1.15.44",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -24,7 +24,7 @@ dependencies = [
     "opentelemetry-sdk>=1.45.2,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.45.2,<2",
     # Data Handling
-    "chromadb~=1.5.9",
+    "qdrant-client~=1.14.3",
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
@@ -58,7 +58,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.15.41",
+    "crewai-tools==1.15.44",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
@@ -82,7 +82,11 @@ docling = [
     # replaces that requirement, so the floor has to live here too.
     "docling-core[chunking]>=2.98.0,<3",
 ]
+chromadb = [
+    "chromadb~=1.5.9",
+]
 qdrant = [
+    # Adds fastembed, the local embedder behind QdrantConfig()'s default.
     "qdrant-client[fastembed]~=1.14.3",
 ]
 aws = [
@@ -119,13 +123,13 @@ a2a = [
      "aiocache[redis,memcached]~=0.12.3",
 ]
 file-processing = [
-    "crewai-files==1.15.41",
+    "crewai-files==1.15.44",
 ]
 # crewai-tools carries the SSRF-guarded download an agent fetches its
 # spreadsheet URLs through.
 spreadsheets = [
-    "crewai-files[spreadsheets]==1.15.41",
-    "crewai-tools==1.15.41",
+    "crewai-files[spreadsheets]==1.15.44",
+    "crewai-tools==1.15.44",
 ]
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",

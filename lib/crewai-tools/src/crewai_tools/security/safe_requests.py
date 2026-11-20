@@ -59,6 +59,12 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
             if not _is_sensitive_header(str(key))
         }
     sanitized.pop("cookies", None)
+    # Auth handlers, TLS client certificates, query parameters and request
+    # bodies are credentials too, and each is reapplied by the next
+    # ``_raw_get`` call. Drop them rather than replaying a caller's secret to
+    # a new origin.
+    for key in ("auth", "cert", "params", "data", "json", "files"):
+        sanitized.pop(key, None)
     return sanitized
 
 
