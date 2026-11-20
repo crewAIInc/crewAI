@@ -2,6 +2,7 @@
 
 import atexit
 from collections.abc import Callable
+import contextlib
 import functools
 import json
 import os
@@ -74,9 +75,16 @@ def _remove_folder_if_owner(folder: str, owner_pid: int) -> None:
     """Delete ``folder`` at exit, but only in the process that created it.
 
     A forked child inherits this exit handler and must not delete its parent's
-    storage when it exits.
+    storage when it exits. The folder's client is closed first: Windows cannot
+    delete files that are still open, so the folder would otherwise be left
+    behind.
     """
     if os.getpid() == owner_pid:
+        with _local_clients_lock:
+            client = _local_clients.pop(folder, None)
+        if client is not None:
+            with contextlib.suppress(Exception):
+                client.close()
         shutil.rmtree(folder, ignore_errors=True)
 
 
