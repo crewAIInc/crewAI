@@ -8,6 +8,8 @@ from crewai.events.event_listener import event_listener
 from crewai.hooks.dispatch import (
     HookAborted,
     InterceptionPoint,
+    OnErrorPolicy,
+    _apply_on_error,
     dispatch,
     get_global_hook_list,
 )
@@ -207,6 +209,8 @@ def run_after_tool_call_hooks(context: ToolCallHookContext) -> str | None:
 
 def register_before_tool_call_hook(
     hook: BeforeToolCallHookType | BeforeToolCallHookCallable,
+    *,
+    on_error: OnErrorPolicy = "ignore",
 ) -> None:
     """Register a global before_tool_call hook.
 
@@ -239,11 +243,13 @@ def register_before_tool_call_hook(
         >>>
         >>> register_before_tool_call_hook(block_dangerous_tools)
     """
-    _before_tool_call_hooks.append(hook)
+    _before_tool_call_hooks.append(_apply_on_error(hook, on_error))
 
 
 def register_after_tool_call_hook(
     hook: AfterToolCallHookType | AfterToolCallHookCallable,
+    *,
+    on_error: OnErrorPolicy = "ignore",
 ) -> None:
     """Register a global after_tool_call hook.
 
@@ -270,7 +276,7 @@ def register_after_tool_call_hook(
         >>>
         >>> register_after_tool_call_hook(log_tool_results)
     """
-    _after_tool_call_hooks.append(hook)
+    _after_tool_call_hooks.append(_apply_on_error(hook, on_error))
 
 
 def get_before_tool_call_hooks() -> list[
@@ -314,8 +320,13 @@ def unregister_before_tool_call_hook(
         >>> unregister_before_tool_call_hook(my_hook)
         True
     """
+    target = (
+        hook
+        if hook in _before_tool_call_hooks
+        else getattr(hook, "_registered_hook", hook)
+    )
     try:
-        _before_tool_call_hooks.remove(hook)
+        _before_tool_call_hooks.remove(target)
         return True
     except ValueError:
         return False
@@ -324,24 +335,13 @@ def unregister_before_tool_call_hook(
 def unregister_after_tool_call_hook(
     hook: AfterToolCallHookType | AfterToolCallHookCallable,
 ) -> bool:
-    """Unregister a specific global after_tool_call hook.
-
-    Args:
-        hook: The hook function to remove
-
-    Returns:
-        True if the hook was found and removed, False otherwise
-
-    Example:
-        >>> def my_hook(context: ToolCallHookContext) -> str | None:
-        ...     return None
-        >>>
-        >>> register_after_tool_call_hook(my_hook)
-        >>> unregister_after_tool_call_hook(my_hook)
-        True
-    """
+    target = (
+        hook
+        if hook in _after_tool_call_hooks
+        else getattr(hook, "_registered_hook", hook)
+    )
     try:
-        _after_tool_call_hooks.remove(hook)
+        _after_tool_call_hooks.remove(target)
         return True
     except ValueError:
         return False

@@ -5,6 +5,7 @@ from functools import wraps
 import inspect
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from crewai.hooks.dispatch import OnErrorPolicy
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -38,6 +39,7 @@ def _create_hook_decorator(
         *,
         tools: list[str] | None = None,
         agents: list[str] | None = None,
+        on_error: OnErrorPolicy = "ignore",
     ) -> Callable[..., Any]:
         if tools:
             tools = [sanitize_tool_name(t) for t in tools]
@@ -53,6 +55,12 @@ def _create_hook_decorator(
                 f._filter_tools = tools  # type: ignore[attr-defined]
             if agents:
                 f._filter_agents = agents  # type: ignore[attr-defined]
+            if on_error != "ignore":
+                f._hook_on_error = on_error  # type: ignore[attr-defined]
+
+            register_kwargs: dict[str, Any] = (
+                {"on_error": on_error} if on_error != "ignore" else {}
+            )
 
             if tools or agents:
 
@@ -69,12 +77,15 @@ def _create_hook_decorator(
                     return f(context)
 
                 if not is_method:
-                    register_function(filtered_hook)
+                    register_function(filtered_hook, **register_kwargs)
+                    f._registered_hook = getattr(  # type: ignore[attr-defined]
+                        filtered_hook, "_registered_hook", filtered_hook
+                    )
 
                 return f
 
             if not is_method:
-                register_function(f)
+                register_function(f, **register_kwargs)
 
             return f
 
@@ -110,21 +121,7 @@ def before_llm_call(
         [Callable[[LLMCallHookContext], None]], Callable[[LLMCallHookContext], None]
     ]
 ):
-    """Decorator to register a function as a before_llm_call hook.
-
-    Example:
-        Simple usage::
-
-            @before_llm_call
-            def log_calls(context):
-                print(f"LLM call by {context.agent.role}")
-
-        With agent filter::
-
-            @before_llm_call(agents=["Researcher", "Analyst"])
-            def log_specific_agents(context):
-                print(f"Filtered LLM call: {context.agent.role}")
-    """
+    """Decorator to register a function as a before_llm_call hook."""
     from crewai.hooks.llm_hooks import register_before_llm_call_hook
 
     return _create_hook_decorator(  # type: ignore[no-any-return]
@@ -161,24 +158,7 @@ def after_llm_call(
         Callable[[LLMCallHookContext], str | None],
     ]
 ):
-    """Decorator to register a function as an after_llm_call hook.
-
-    Example:
-        Simple usage::
-
-            @after_llm_call
-            def sanitize(context):
-                if "SECRET" in context.response:
-                    return context.response.replace("SECRET", "[REDACTED]")
-                return None
-
-        With agent filter::
-
-            @after_llm_call(agents=["Researcher"])
-            def log_researcher_responses(context):
-                print(f"Response length: {len(context.response)}")
-                return None
-    """
+    """Decorator to register a function as an after_llm_call hook."""
     from crewai.hooks.llm_hooks import register_after_llm_call_hook
 
     return _create_hook_decorator(  # type: ignore[no-any-return]
@@ -199,6 +179,7 @@ def before_tool_call(
     *,
     tools: list[str] | None = None,
     agents: list[str] | None = None,
+    on_error: OnErrorPolicy = "ignore",
 ) -> Callable[
     [Callable[[ToolCallHookContext], bool | None]],
     Callable[[ToolCallHookContext], bool | None],
@@ -210,6 +191,7 @@ def before_tool_call(
     *,
     tools: list[str] | None = None,
     agents: list[str] | None = None,
+    on_error: OnErrorPolicy = "ignore",
 ) -> (
     Callable[[ToolCallHookContext], bool | None]
     | Callable[
@@ -217,36 +199,14 @@ def before_tool_call(
         Callable[[ToolCallHookContext], bool | None],
     ]
 ):
-    """Decorator to register a function as a before_tool_call hook.
-
-    Example:
-        Simple usage::
-
-            @before_tool_call
-            def log_all_tools(context):
-                print(f"Tool: {context.tool_name}")
-                return None
-
-        With tool filter::
-
-            @before_tool_call(tools=["delete_file", "execute_code"])
-            def approve_dangerous(context):
-                response = context.request_human_input(prompt="Approve?")
-                return None if response == "yes" else False
-
-        With combined filters::
-
-            @before_tool_call(tools=["write_file"], agents=["Developer"])
-            def approve_dev_writes(context):
-                return None  # Only for Developer writing files
-    """
+    """Decorator to register a function as a before_tool_call hook."""
     from crewai.hooks.tool_hooks import register_before_tool_call_hook
 
     return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="tool",
         register_function=register_before_tool_call_hook,
         marker_attribute="is_before_tool_call_hook",
-    )(func=func, tools=tools, agents=agents)
+    )(func=func, tools=tools, agents=agents, on_error=on_error)
 
 
 @overload
@@ -260,6 +220,7 @@ def after_tool_call(
     *,
     tools: list[str] | None = None,
     agents: list[str] | None = None,
+    on_error: OnErrorPolicy = "ignore",
 ) -> Callable[
     [Callable[[ToolCallHookContext], str | None]],
     Callable[[ToolCallHookContext], str | None],
@@ -271,6 +232,7 @@ def after_tool_call(
     *,
     tools: list[str] | None = None,
     agents: list[str] | None = None,
+    on_error: OnErrorPolicy = "ignore",
 ) -> (
     Callable[[ToolCallHookContext], str | None]
     | Callable[
@@ -278,28 +240,11 @@ def after_tool_call(
         Callable[[ToolCallHookContext], str | None],
     ]
 ):
-    """Decorator to register a function as an after_tool_call hook.
-
-    Example:
-        Simple usage::
-
-            @after_tool_call
-            def log_results(context):
-                print(f"Result: {len(context.tool_result)} chars")
-                return None
-
-        With tool filter::
-
-            @after_tool_call(tools=["web_search", "ExaSearchTool"])
-            def sanitize_search_results(context):
-                if "SECRET" in context.tool_result:
-                    return context.tool_result.replace("SECRET", "[REDACTED]")
-                return None
-    """
+    """Decorator to register a function as an after_tool_call hook."""
     from crewai.hooks.tool_hooks import register_after_tool_call_hook
 
     return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="tool",
         register_function=register_after_tool_call_hook,
         marker_attribute="is_after_tool_call_hook",
-    )(func=func, tools=tools, agents=agents)
+    )(func=func, tools=tools, agents=agents, on_error=on_error)
