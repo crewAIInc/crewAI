@@ -5,7 +5,10 @@ from unittest.mock import patch
 
 from crewai_files import ImageFile, PDFFile, TextFile
 from crewai_files.core.sources import FileBytes
-from crewai_files.processing.exceptions import ProcessingDependencyError
+from crewai_files.processing.exceptions import (
+    ProcessingDependencyError,
+    UnsupportedImageFormatError,
+)
 from crewai_files.processing.transformers import (
     chunk_pdf,
     chunk_text,
@@ -313,13 +316,12 @@ class TestGetImageDimensions:
 
         assert dims == (150, 100)
 
-    def test_returns_none_for_invalid_image(self) -> None:
-        """Test that None is returned for invalid image data."""
+    def test_raises_for_invalid_image(self) -> None:
+        """Test that bytes Pillow can't open as a supported format are refused."""
         img = ImageFile(source=FileBytes(data=b"not an image", filename="bad.png"))
 
-        dims = get_image_dimensions(img)
-
-        assert dims is None
+        with pytest.raises(UnsupportedImageFormatError):
+            get_image_dimensions(img)
 
     def test_returns_none_without_pillow(self) -> None:
         """Test that None is returned when Pillow is not installed."""
