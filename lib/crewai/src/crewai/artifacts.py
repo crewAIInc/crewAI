@@ -18,7 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.artifact_events import ArtifactCreatedEvent
 from crewai.execution import get_execution_uuid
-from crewai.tools.base_tool import BaseTool
+from crewai.tools.base_tool import BaseTool, _never_cache_function
+from crewai.types.callback import SerializableCallable
 
 
 ArtifactKind = Literal[
@@ -428,6 +429,9 @@ class SaveArtifactTool(BaseTool):
         "you can send onward (for example in a message)."
     )
     args_schema: type[BaseModel] = SaveArtifactSchema
+    # Never cached: each call saves a new version, and a file at the same path
+    # may have been rewritten since the last call with the same arguments.
+    cache_function: SerializableCallable = Field(default=_never_cache_function)
     agent: Any = Field(default=None, exclude=True)
     task: Any = Field(default=None, exclude=True)
 
