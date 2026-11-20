@@ -40,6 +40,18 @@ _T = TypeVar("_T")
 _active_llm_rate_limit_retry: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_active_llm_rate_limit_retry", default=False
 )
+_llm_retry_replay: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "_llm_retry_replay", default=False
+)
+
+
+def in_rate_limit_retry_replay() -> bool:
+    """Whether the attempt running right now replays an already-failed call.
+
+    Providers that carry retries of their own use this to keep them for the
+    first attempt and drop them on replays, so the two layers stop multiplying.
+    """
+    return _llm_retry_replay.get()
 
 
 class _ThrottlingErrorClassifier:
@@ -141,7 +153,11 @@ def run_with_rate_limit_retry(
     token = _active_llm_rate_limit_retry.set(True)
     try:
         for attempt_number in range(1, _LLM_RATE_LIMIT_MAX_ATTEMPTS + 1):
-            succeeded, result, error = attempt()
+            replay_token = _llm_retry_replay.set(attempt_number > 1)
+            try:
+                succeeded, result, error = attempt()
+            finally:
+                _llm_retry_replay.reset(replay_token)
             if succeeded:
                 return cast(_T, result)
             if error is None:
@@ -183,7 +199,11 @@ async def arun_with_rate_limit_retry(
     token = _active_llm_rate_limit_retry.set(True)
     try:
         for attempt_number in range(1, _LLM_RATE_LIMIT_MAX_ATTEMPTS + 1):
-            succeeded, result, error = await attempt()
+            replay_token = _llm_retry_replay.set(attempt_number > 1)
+            try:
+                succeeded, result, error = await attempt()
+            finally:
+                _llm_retry_replay.reset(replay_token)
             if succeeded:
                 return cast(_T, result)
             if error is None:
