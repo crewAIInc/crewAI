@@ -104,3 +104,23 @@ def test_invalid_on_error_policy_raises_value_error():
 
     with pytest.raises(ValueError, match="Invalid on_error policy"):
         register_before_tool_call_hook(noop, on_error="invalid")  # type: ignore[arg-type]
+    
+def test_crew_base_filtered_tool_hooks_preserve_fail_closed():
+    from crewai.project import CrewBase
+
+    @CrewBase
+    class GuardedCrew:
+        @before_tool_call(tools=["sensitive_tool"], on_error="abort")
+        def before_guard(self, ctx: ToolCallHookContext) -> None:
+            raise RuntimeError("CrewBase before guardrail failed")
+
+        @after_tool_call(tools=["sensitive_tool"], on_error="abort")
+        def after_guard(self, ctx: ToolCallHookContext) -> str | None:
+            raise RuntimeError("CrewBase after guardrail failed")
+
+    GuardedCrew()
+
+    assert run_before_tool_call_hooks(_make_context()) is True
+
+    with pytest.raises(HookAborted, match="CrewBase after guardrail failed"):
+        run_after_tool_call_hooks(_make_context(tool_result="secret"))
