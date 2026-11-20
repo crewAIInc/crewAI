@@ -80,6 +80,49 @@ def test_tool_saves_file_and_returns_link(store, tmp_path):
     assert saved.read_bytes() == b"\x89PNG"
 
 
+def test_tool_saves_a_rewritten_file_again_when_tool_caching_is_on(store, tmp_path):
+    from types import SimpleNamespace
+
+    from crewai.agents.cache.cache_handler import CacheHandler
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+    tool = SaveArtifactTool()
+    handler = ToolsHandler(cache=CacheHandler())
+    agent = _agent()
+    chart = tmp_path / "chart.svg"
+    tool_call = SimpleNamespace(
+        id="c1",
+        function=SimpleNamespace(
+            name="save_artifact",
+            arguments=json.dumps(
+                {"identifier": "chart", "title": "Chart", "kind": "svg", "file_path": "chart.svg"}
+            ),
+        ),
+    )
+
+    results = []
+    for label in ("draft", "final"):
+        chart.write_text(f"<svg>{label}</svg>")
+        results.append(
+            execute_single_native_tool_call(
+                tool_call,
+                available_functions={"save_artifact": tool.run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=handler,
+                agent=agent,
+                task=None,
+                crew=None,
+                event_source=agent,
+            )
+        )
+
+    directory = tmp_path / "artifacts" / "exec-1" / "chart"
+    assert [json.loads(r.result)["version"] for r in results] == [1, 2]
+    assert (directory / "v2.svg").read_text() == "<svg>final</svg>"
+
+
 def test_tool_refuses_files_outside_workdir(store):
     result = SaveArtifactTool().run(
         identifier="secret", title="x", kind="file", file_path="/etc/hosts"
