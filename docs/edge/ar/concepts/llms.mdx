@@ -1045,6 +1045,37 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Fireworks AI">
+    يتصل CrewAI بـ Fireworks AI عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    FIREWORKS_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    FIREWORKS_BASE_URL=https://api.fireworks.ai/inference/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3p1-8b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Fireworks AI:
+      - نماذج مفتوحة الأوزان خلف نقطة نهاية متوافقة مع OpenAI
+      - البث واستدعاء الأدوات والمخرجات المنظمة بمخطط JSON
+      - عمليات نشر بدون خادم أو عند الطلب
+    </Info>
+
+    تُزال بادئة `fireworks_ai/` فقط. أما المسار `accounts/<account>/models/<model>` الذي يليها
+    فيصل إلى SDK دون تغيير، لذا تظل المعرّفات المرتبطة بالحساب تعمل.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
