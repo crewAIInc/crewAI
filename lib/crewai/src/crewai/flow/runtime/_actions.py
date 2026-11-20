@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from crewai.artifacts import Artifact
 from crewai.flow.expressions import Expression, ExpressionData
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
@@ -218,7 +219,10 @@ class CrewAction:
                 **(self.definition.inputs or {}),
             }
             crew, _ = await asyncio.to_thread(
-                load_crew_from_definition, crew_definition, source="crew action"
+                load_crew_from_definition,
+                crew_definition,
+                source="crew action",
+                project_root=self.flow._definition.source_dir,
             )
 
         inputs = Expression.from_flow(
@@ -246,15 +250,35 @@ class AgentAction:
             local_context=local_context,
         ).render_template()
         agent_input = _normalize_agent_input(rendered_input)
+        artifact = self.definition.with_.artifact
+        if isinstance(artifact, Artifact) and artifact.file_path:
+            file_path = Expression.from_flow(
+                cast(ExpressionData, artifact.file_path),
+                self.flow,
+                local_context=local_context,
+            ).render_template()
+            from crewai.task import validate_interpolated_path
+
+            file_path = validate_interpolated_path(
+                str(file_path), artifact.file_path, "artifact.file_path"
+            )
+            artifact = artifact.model_copy(update={"file_path": file_path})
 
         agent, response_format = await asyncio.to_thread(
             load_agent_from_definition,
             self.definition.with_,
             source="agent action",
+            project_root=self.flow._definition.source_dir,
         )
+        input_files = {
+            name: await asyncio.to_thread(reference.load_file)
+            for name, reference in (self.definition.with_.input_files or {}).items()
+        }
         return await agent.kickoff_async(
             agent_input,
             response_format=response_format,
+            input_files=input_files or None,
+            artifact=artifact,
         )
 
 
