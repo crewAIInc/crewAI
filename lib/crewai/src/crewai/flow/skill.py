@@ -71,6 +71,7 @@ def template_context(
         "examples_format": examples_format,
         "example": render_flow_example(examples_format),
         "example_language": examples_format,
+        "include_artifacts": "artifacts" not in skips,
         "include_each_action": "each" not in skips,
         "include_conversational": "conversational" not in skips,
         "include_hitl": "hitl" not in skips,

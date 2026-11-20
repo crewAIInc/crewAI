@@ -38,6 +38,12 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
+from crewai.artifacts import (
+    Artifact,
+    SavedArtifact,
+    check_artifact_source,
+    save_output_artifact,
+)
 from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
@@ -217,6 +223,13 @@ class Task(BaseModel):
         description="A file path to be used to create a file output.",
         default=None,
     )
+    artifact: Artifact | bool | None = Field(
+        description=(
+            "Save the task's final output as this artifact. True names it "
+            "after the task and picks the kind from the output."
+        ),
+        default=None,
+    )
     create_directory: bool | None = Field(
         description="Whether to create the directory for output_file if it doesn't exist.",
         default=True,
@@ -322,6 +335,7 @@ class Task(BaseModel):
     _input_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    _original_artifact_path: str | None = PrivateAttr(default=None)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     checkpoint_input_description: str | None = Field(default=None, exclude=False)
@@ -514,7 +528,9 @@ class Task(BaseModel):
         return result
 
     @staticmethod
-    def _validate_output_file_path(value: str, *, allow_templates: bool = False) -> str:
+    def _validate_output_file_path(
+        value: str, *, allow_templates: bool = False, label: str = "output_file"
+    ) -> str:
         """Validate an output file path for security concerns.
 
         Args:
@@ -535,23 +551,23 @@ class Task(BaseModel):
         """
         if ".." in value:
             raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
+                f"Path traversal attempts are not allowed in {label} paths"
             )
 
         if value.startswith(("~", "$")):
             raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
+                f"Shell expansion characters are not allowed in {label} paths"
             )
 
         if any(char in value for char in ["|", ">", "<", "&", ";"]):
             raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
+                f"Shell special characters are not allowed in {label} paths"
             )
 
         if "{" in value or "}" in value:
             if not allow_templates:
                 raise ValueError(
-                    "Unresolved template variables are not allowed in interpolated output_file paths"
+                    f"Unresolved template variables are not allowed in interpolated {label} paths"
                 )
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
             for var in template_vars:
@@ -562,6 +578,20 @@ class Task(BaseModel):
         if allow_templates and value.startswith("/"):
             return value[1:]
         return value
+
+    @field_validator("artifact")
+    @classmethod
+    def artifact_kind_validation(
+        cls, value: Artifact | bool | None
+    ) -> Artifact | bool | None:
+        """Reject kinds a task's text output can never fill."""
+        if isinstance(value, Artifact):
+            if value.file_path is not None:
+                cls._validate_output_file_path(
+                    value.file_path, allow_templates=True, label="artifact.file_path"
+                )
+            return check_artifact_source(value)
+        return value or None
 
     @field_validator("output_file")
     @classmethod
@@ -806,6 +836,12 @@ class Task(BaseModel):
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
+            if self.output_file:
+                self._save_file(self._output_content(task_output))
+            if self.artifact:
+                task_output.artifact = await asyncio.to_thread(
+                    self._save_artifact, self.artifact, task_output
+                )
 
             if self.callback:
                 cb_result = self.callback(self.output)
@@ -823,17 +859,6 @@ class Task(BaseModel):
                 if inspect.isawaitable(cb_result):
                     await cb_result
 
-            if self.output_file:
-                content = (
-                    task_output.json_dict
-                    if task_output.json_dict
-                    else (
-                        task_output.pydantic.model_dump_json()
-                        if task_output.pydantic
-                        else task_output.raw
-                    )
-                )
-                self._save_file(content)
             crewai_event_bus.emit(
                 self,
                 TaskCompletedEvent(output=task_output, task=self),
@@ -968,6 +993,10 @@ class Task(BaseModel):
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
+            if self.output_file:
+                self._save_file(self._output_content(task_output))
+            if self.artifact:
+                task_output.artifact = self._save_artifact(self.artifact, task_output)
 
             if self.callback:
                 cb_result = self.callback(self.output)
@@ -985,17 +1014,6 @@ class Task(BaseModel):
                 if inspect.iscoroutine(cb_result):
                     asyncio.run(cb_result)
 
-            if self.output_file:
-                content = (
-                    task_output.json_dict
-                    if task_output.json_dict
-                    else (
-                        task_output.pydantic.model_dump_json()
-                        if task_output.pydantic
-                        else task_output.raw
-                    )
-                )
-                self._save_file(content)
             crewai_event_bus.emit(
                 self,
                 TaskCompletedEvent(output=task_output, task=self),
@@ -1107,6 +1125,20 @@ Follow these guidelines:
             tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 
+    def _interpolate_path(
+        self,
+        template: str,
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]],
+        label: str,
+    ) -> str:
+        """Fill ``{placeholders}`` in a file path template and re-validate it."""
+        try:
+            path = interpolate_only(input_string=template, inputs=inputs)
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"Error interpolating {label} path: {e!s}") from e
+
+        return validate_interpolated_path(path, template, label)
+
     def interpolate_inputs_and_add_conversation_history(
         self, inputs: dict[str, str | int | float | dict[str, Any] | list[Any]]
     ) -> None:
@@ -1127,6 +1159,12 @@ Follow these guidelines:
             self._original_expected_output = self.expected_output
         if self.output_file is not None and self._original_output_file is None:
             self._original_output_file = self.output_file
+        if (
+            isinstance(self.artifact, Artifact)
+            and self.artifact.file_path is not None
+            and self._original_artifact_path is None
+        ):
+            self._original_artifact_path = self.artifact.file_path
 
         if not inputs:
             # The description stays as the last inputs filled it in, and so
@@ -1163,33 +1201,17 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating expected_output: {e!s}") from e
 
         if self.output_file is not None:
-            try:
-                output_file = interpolate_only(
-                    input_string=self._original_output_file, inputs=inputs
-                )
-            except (KeyError, ValueError) as e:
-                raise ValueError(f"Error interpolating output_file path: {e!s}") from e
-
-            # Re-validate after interpolation: inputs are caller-controlled, so
-            # they must not add traversal segments or make the path absolute.
-            # Only the developer's template may anchor the path at a root.
-            # Assign only once every check passes, so a rejected path never
-            # stays on the task for a later run that skips interpolation.
-            try:
-                output_file = self._validate_output_file_path(
-                    output_file, allow_templates=False
-                )
-                # Set at the top of this method whenever output_file is.
-                template = cast(str, self._original_output_file)
-                if _path_anchor(output_file) > _path_anchor(template):
-                    raise ValueError(
-                        "Template inputs cannot make output_file an absolute path"
+            self.output_file = self._interpolate_path(
+                cast(str, self._original_output_file), inputs, "output_file"
+            )
+        if isinstance(self.artifact, Artifact) and self._original_artifact_path:
+            self.artifact = self.artifact.model_copy(
+                update={
+                    "file_path": self._interpolate_path(
+                        self._original_artifact_path, inputs, "artifact.file_path"
                     )
-            except ValueError as e:
-                raise ValueError(
-                    f"Interpolated output_file path failed validation: {e!s}"
-                ) from e
-            self.output_file = output_file
+                }
+            )
 
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(
@@ -1356,6 +1378,32 @@ Follow these guidelines:
         if self.output_pydantic:
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
+
+    @staticmethod
+    def _output_content(task_output: TaskOutput) -> dict[str, Any] | str:
+        if task_output.json_dict:
+            return task_output.json_dict
+        if task_output.pydantic:
+            return task_output.pydantic.model_dump_json()
+        return task_output.raw
+
+    def _save_artifact(
+        self, artifact: Artifact | bool, task_output: TaskOutput
+    ) -> SavedArtifact | None:
+        """Save the output as ``artifact``. Logs and returns None if it fails."""
+        content = self._output_content(task_output)
+        if isinstance(content, dict):
+            content = json.dumps(content, ensure_ascii=False, indent=2)
+        try:
+            return save_output_artifact(
+                artifact,
+                content=content,
+                name=self.name or self.description,
+                from_task=self,
+            )
+        except Exception as e:
+            self.logger.warning("Failed to save artifact for task %s: %s", self.id, e)
+            return None
 
     def _save_file(self, result: dict[str, Any] | str | Any) -> None:
         """Save task output to a file.
@@ -1718,3 +1766,18 @@ Follow these guidelines:
             accumulated_failures = list(task_output.tool_failures)
 
         return task_output
+
+
+def validate_interpolated_path(path: str, template: str, label: str) -> str:
+    """Check a file path after inputs were filled into ``template``.
+
+    Inputs are caller-controlled, so they must not add traversal segments or
+    make the path absolute. Only the developer's template may anchor it.
+    """
+    try:
+        path = Task._validate_output_file_path(path, allow_templates=False, label=label)
+        if _path_anchor(path) > _path_anchor(template):
+            raise ValueError(f"Template inputs cannot make {label} an absolute path")
+    except ValueError as e:
+        raise ValueError(f"Interpolated {label} path failed validation: {e!s}") from e
+    return path
