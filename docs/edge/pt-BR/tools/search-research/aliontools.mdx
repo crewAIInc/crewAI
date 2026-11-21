@@ -1,0 +1,81 @@
+---
+title: Ferramentas Alion
+description: As ferramentas Alion buscam empresas, startups e vagas de emprego e consultam perfis de empresas no grafo de empresas da Alion, atualizado continuamente.
+icon: building
+mode: "wide"
+---
+
+# Ferramentas Alion
+
+## Descrição
+
+A [Alion](https://alion.io/developers) é um grafo de empresas do mundo todo, atualizado continuamente a partir dos sites das próprias empresas, de portais de vagas e de registros públicos: o que cada empresa faz, onde atua, sua stack tecnológica, suas rodadas de investimento e investidores e o ritmo de contratações, além de vagas de emprego verificadas. As ferramentas Alion permitem que agentes montem listas de prospecção, pesquisem um mercado, encontrem empresas parecidas e vejam para quais cargos uma empresa está contratando.
+
+| Ferramenta | O que faz | Chave de API |
+|---|---|---|
+| `AlionCompanySearchTool` | Busca empresas por setor, país, porte, status de startup, estágio de investimento, rodadas recentes, investidor, tecnologia e contratações | Não é necessária |
+| `AlionSimilarCompaniesTool` | Encontra empresas parecidas com uma empresa informada, opcionalmente em um país | Não é necessária |
+| `AlionJobSearchTool` | Busca vagas verificadas por cargo, empresa, país, cidade, modelo de trabalho, senioridade, tecnologia, salário e patrocínio de visto | Não é necessária |
+| `AlionCompanyProfileTool` | Retorna uma empresa em detalhe: investimentos, contratações, stack tecnológica, escritórios e patrocínio de visto | Necessária para o perfil completo |
+
+## Instalação
+
+As ferramentas usam apenas as dependências do `crewai-tools`:
+
+```shell
+uv add crewai-tools
+```
+
+## Primeiros passos
+
+1. **Sem chave para começar**: as ferramentas de busca funcionam sem conta na Alion, dentro de uma cota diária por rede (300 chamadas por dia).
+2. **Chave de API opcional**: crie uma chave em [alion.io/developers/keys](https://alion.io/developers/keys) e defina-a como `ALION_API_KEY` para obter perfis completos de empresas.
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlionCompanySearchTool, AlionJobSearchTool, AlionSimilarCompaniesTool
+
+scout = Agent(
+    role="Startup scout",
+    goal="Find recently funded startups in a market and what they hire for",
+    backstory="You map markets from live company data and never guess.",
+    tools=[AlionCompanySearchTool(), AlionSimilarCompaniesTool(), AlionJobSearchTool()],
+)
+
+task = Task(
+    description=(
+        "Find fintech startups in Germany that raised an early-stage round in the last 180 days, "
+        "then list the roles the three largest of them are hiring for."
+    ),
+    expected_output="A markdown table of company, domain, last round, round date and open roles.",
+    agent=scout,
+)
+
+print(Crew(agents=[scout], tasks=[task]).kickoff())
+```
+
+## Parâmetros
+
+### Parâmetros do construtor
+
+As quatro ferramentas aceitam:
+
+- **api_key**: Opcional. Uma chave de API da Alion. Por padrão, usa a variável de ambiente `ALION_API_KEY`; sem chave, as ferramentas usam o endereço aberto e gratuito da Alion.
+- **timeout**: Opcional. Segundos por chamada (padrão `60`).
+
+### Parâmetros de execução
+
+- `AlionCompanySearchTool`: `query`, `country`, `industry`, `size`, `startup`, `funding_stage`, `raised_since`, `investor`, `technology`, `hiring`, `sort`, `limit`.
+- `AlionSimilarCompaniesTool`: `company` (obrigatório), `country`, `limit`.
+- `AlionJobSearchTool`: `query`, `role`, `company`, `country`, `city`, `work_mode`, `seniority`, `technology`, `salary_min_usd`, `posted_since`, `visa_sponsorship`, `limit`.
+- `AlionCompanyProfileTool`: `domain` ou `name`.
+
+## Saída
+
+Cada ferramenta retorna `{"success": True, "result": {...}}` com a resposta da Alion, ou `{"success": False, "error": "..."}` quando a chamada falha, para que o agente possa se ajustar. Sem chave, a `AlionCompanyProfileTool` retorna a qual empresa o domínio ou o nome se refere, com uma nota de que o perfil completo exige `ALION_API_KEY`.
+
+## Conclusão
+
+As ferramentas Alion dão aos agentes dados atualizados de empresas, startups e contratações sem nenhuma configuração: adicione-as a um agente e comece a buscar. Para perfis completos de empresas, investidores e estatísticas salariais, adicione uma chave de API da Alion. A Alion também mantém um servidor MCP em `https://alion.io/mcp/open`, que pode ser conectado pelo campo `mcps` de um agente.

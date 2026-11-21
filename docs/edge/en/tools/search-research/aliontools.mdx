@@ -1,0 +1,81 @@
+---
+title: Alion Tools
+description: The Alion tools search companies, startups and job postings and look up company profiles from Alion's live company graph.
+icon: building
+mode: "wide"
+---
+
+# Alion Tools
+
+## Description
+
+[Alion](https://alion.io/developers) is a live graph of companies worldwide, built from the companies' own websites, job boards and public registers: what each company does, where it operates, its tech stack, its funding rounds and investors, and how fast it is hiring, plus verified job postings. The Alion tools let agents build prospect lists, research a market, find lookalike companies and see what a company is hiring for.
+
+| Tool | What it does | API key |
+|---|---|---|
+| `AlionCompanySearchTool` | Searches companies by industry, country, size, startup status, funding stage, recent rounds, investor, technology and hiring | Not needed |
+| `AlionSimilarCompaniesTool` | Finds companies similar to a given company, optionally in one country | Not needed |
+| `AlionJobSearchTool` | Searches verified job postings by role, company, country, city, work mode, seniority, technology, pay and visa sponsorship | Not needed |
+| `AlionCompanyProfileTool` | Returns one company in depth: funding, hiring, tech stack, offices and visa sponsorship | Needed for the full profile |
+
+## Installation
+
+The tools use only the dependencies of `crewai-tools`:
+
+```shell
+uv add crewai-tools
+```
+
+## Steps to Get Started
+
+1. **No key needed to start**: the search tools work without an Alion account, within a daily allowance per network (300 calls a day).
+2. **Optional API key**: create a key at [alion.io/developers/keys](https://alion.io/developers/keys) and set it as `ALION_API_KEY` to get full company profiles.
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlionCompanySearchTool, AlionJobSearchTool, AlionSimilarCompaniesTool
+
+scout = Agent(
+    role="Startup scout",
+    goal="Find recently funded startups in a market and what they hire for",
+    backstory="You map markets from live company data and never guess.",
+    tools=[AlionCompanySearchTool(), AlionSimilarCompaniesTool(), AlionJobSearchTool()],
+)
+
+task = Task(
+    description=(
+        "Find fintech startups in Germany that raised an early-stage round in the last 180 days, "
+        "then list the roles the three largest of them are hiring for."
+    ),
+    expected_output="A markdown table of company, domain, last round, round date and open roles.",
+    agent=scout,
+)
+
+print(Crew(agents=[scout], tasks=[task]).kickoff())
+```
+
+## Parameters
+
+### Constructor parameters
+
+All four tools accept:
+
+- **api_key**: Optional. An Alion API key. Defaults to the `ALION_API_KEY` environment variable; without a key the tools use Alion's free open address.
+- **timeout**: Optional. Seconds per call (default `60`).
+
+### Run parameters
+
+- `AlionCompanySearchTool`: `query`, `country`, `industry`, `size`, `startup`, `funding_stage`, `raised_since`, `investor`, `technology`, `hiring`, `sort`, `limit`.
+- `AlionSimilarCompaniesTool`: `company` (required), `country`, `limit`.
+- `AlionJobSearchTool`: `query`, `role`, `company`, `country`, `city`, `work_mode`, `seniority`, `technology`, `salary_min_usd`, `posted_since`, `visa_sponsorship`, `limit`.
+- `AlionCompanyProfileTool`: `domain` or `name`.
+
+## Output
+
+Each tool returns `{"success": True, "result": {...}}` with Alion's answer, or `{"success": False, "error": "..."}` when the call fails, so the agent can adjust. Without a key, `AlionCompanyProfileTool` returns which company the domain or name means, with a note that the full profile needs `ALION_API_KEY`.
+
+## Conclusion
+
+The Alion tools give agents live company, startup and hiring data with no setup: add them to an agent and start searching. For full company profiles, investors and pay statistics, add an Alion API key. Alion also runs an MCP server at `https://alion.io/mcp/open` that you can connect with the `mcps` field of an agent.
