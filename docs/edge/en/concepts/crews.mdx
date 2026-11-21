@@ -121,9 +121,11 @@ Classic projects created with `crewai create crew <name> --classic` use `crew.py
 
 Alternatively, you can define the crew directly in code without using YAML configuration files.
 
+This example uses `FileReadTool` to read local market data files. Include the file path in the task description when running it. To use your own tool, follow [Create Custom Tools](/en/learn/create-custom-tools) and import the class from your own module; `YourCustomTool` is a placeholder, not an export of `crewai_tools`.
+
 ```python code
 from crewai import Agent, Crew, Task, Process
-from crewai_tools import YourCustomTool
+from crewai_tools import FileReadTool
 
 class YourCrewName:
     def agent_one(self) -> Agent:
@@ -132,7 +134,7 @@ class YourCrewName:
             goal="Analyze data trends in the market",
             backstory="An experienced data analyst with a background in economics",
             verbose=True,
-            tools=[YourCustomTool()]
+            tools=[FileReadTool()]
         )
 
     def agent_two(self) -> Agent:
