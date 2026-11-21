@@ -1,0 +1,64 @@
+---
+title: AlterLab لكشط الويب
+description: تقوم أدوات AlterLab بكشط المواقع والبحث فيها وزحفها، بما في ذلك الصفحات كثيفة JavaScript والمحمية من الروبوتات، عبر واجهة AlterLab البرمجية.
+icon: spider-web
+mode: "wide"
+---
+
+# `AlterLabScrapeTool`, `AlterLabSearchTool`, `AlterLabCrawlTool`
+
+## الوصف
+
+[AlterLab](https://alterlab.io) هي واجهة برمجية لكشط الويب تتعامل مع حماية الروبوتات وتدعم عرض JavaScript. تعيد Markdown جاهزاً لنماذج اللغة، وتختار أقل مستويات الكشط تكلفة القادر على جلب كل صفحة. يوفر CrewAI ثلاث أدوات لها:
+
+| Tool | وظيفتها |
+|:-----|:-----|
+| `AlterLabScrapeTool` | تجلب عنوان URL واحداً وتعيد محتواه بصيغة Markdown. |
+| `AlterLabSearchTool` | تنفذ بحثاً على الويب وتعيد العناوين وعناوين URL والمقتطفات. |
+| `AlterLabCrawlTool` | تزحف على موقع بدءاً من عنوان URL معين وتعيد Markdown لكل صفحة. |
+
+## الإعداد
+
+تستدعي الأدوات واجهة AlterLab REST مباشرة ولا تحتاج إلى حزمة إضافية. أنشئ مفتاح API من [لوحة تحكم AlterLab](https://alterlab.io) واضبطه في المتغير `ALTERLAB_API_KEY`:
+
+```shell
+export ALTERLAB_API_KEY="your-api-key"
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import AlterLabScrapeTool, AlterLabSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find and summarize information from the web",
+    backstory="An analyst who reads sources before answering.",
+    tools=[AlterLabSearchTool(num_results=5), AlterLabScrapeTool()],
+)
+
+task = Task(
+    description="Find recent articles about web scraping APIs and summarize the top one.",
+    expected_output="A short summary with the source URL.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## المعاملات
+
+| المعامل | النوع | الوصف |
+|:---------|:-----|:------------|
+| **api_key** | `string` | مفتاح AlterLab API. القيمة الافتراضية هي متغير البيئة `ALTERLAB_API_KEY`. |
+| **base_url** | `string` | عنوان API الأساسي. القيمة الافتراضية `https://api.alterlab.io`. |
+| **scrape_params** | `object` | لأداة الكشط فقط. حقول إضافية للطلب مثل `{"mode": "js"}`. القيمة الافتراضية `{"formats": ["markdown"]}`. |
+| **num_results** | `int` | لأداة البحث فقط. عدد النتائج من 1 إلى 30. القيمة الافتراضية `10`. |
+| **search_params** | `object` | لأداة البحث فقط. حقول إضافية مثل `{"country": "us", "time_range": "week"}`. |
+| **max_pages**, **max_depth** | `int` | لأداة الزحف فقط. حدود عدد الصفحات وعمق الروابط. القيمتان الافتراضيتان `10` و`2`. |
+| **crawl_params** | `object` | لأداة الزحف فقط. حقول إضافية مثل `{"include_patterns": ["/docs/*"]}`. |
+
+<Note>
+يتطلب الاستخراج المعتمد على نماذج اللغة (`extraction_prompt` أو `extraction_schema` في `scrape_params`) مفتاح مزود نماذج اللغة الخاص بك (OpenAI وAnthropic وOpenRouter وغيرها) مسجلاً في حسابك على AlterLab. لا توفر AlterLab استخدام نماذج لغة تتحمل المنصة تكلفته. الكشط والبحث والزحف لا تحتاج إلى مفتاح.
+</Note>
