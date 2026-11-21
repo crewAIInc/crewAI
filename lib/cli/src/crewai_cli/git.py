@@ -206,13 +206,17 @@ class Repository:
         )
 
     def deployable_files(self) -> list[str]:
-        """Return files tracked by Git or untracked and not ignored."""
+        """Return files tracked by Git or untracked and not ignored.
+
+        ``-z`` makes Git print paths verbatim; otherwise non-ASCII names or
+        names with quotes come back C-quoted and match no file on disk.
+        """
         output = subprocess.check_output(
-            ["git", "ls-files", "--cached", "--others", "--exclude-standard"],  # noqa: S607
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],  # noqa: S607
             cwd=self.path,
             encoding="utf-8",
         )
-        return [line for line in output.splitlines() if line]
+        return [path for path in output.split("\0") if path]
 
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""
