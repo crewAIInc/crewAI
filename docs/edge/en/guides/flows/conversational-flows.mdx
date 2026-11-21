@@ -35,6 +35,84 @@ Use **`flow.handle_turn(message, session_id=...)`** for every user message from 
 
 `handle_turn()`, `stream_turn()`, and `chat()` raise `ValueError` unless conversational mode is enabled. Applying `@ConversationConfig(...)` enables it automatically; otherwise set `conversational = True`.
 
+## Mid-flow input with `ask()`
+
+Use `self.ask(message)` inside any flow step to pause and prompt for input — useful for wizards, clarifications, or human-in-the-loop data collection. It blocks the current step until input arrives, the timeout expires, or the provider returns `None`.
+
+```python
+from crewai import Flow
+from crewai.flow import start
+
+
+class SupportFlow(Flow):
+    @start()
+    def gather(self):
+        topic = self.ask("What topic should we research?", metadata={"user_id": "u123"})
+        if topic is None:
+            return "No input received"
+        return topic
+
+
+flow = SupportFlow()
+# Defaults to ConsoleProvider, which reads from stdin.
+flow.kickoff()
+```
+
+`ask()` accepts `timeout` (seconds; `None` waits indefinitely) and `metadata` (forwarded to the provider). On timeout or provider error it returns `None`, enabling the `while (msg := self.ask("You: ", timeout=300)) is not None` loop pattern. Before waiting, the current state is checkpointed to persistence (if configured) for durability.
+
+### Custom input provider (scripted, no stdin / no LLM)
+
+Implement the `InputProvider` protocol to drive input from a script, queue, websocket, or any external system instead of `input()`. Providers may return a plain `str` or an `InputResponse` that also carries response metadata (who answered, thread ID, timestamps).
+
+```python
+from crewai import Flow, start
+from crewai.flow.input_provider import InputProvider, InputResponse
+
+
+class ScriptedProvider(InputProvider):
+    """Deterministic provider: returns pre-scripted responses, no stdin/LLM."""
+
+    def __init__(self, scripts: list[str | InputResponse | None]) -> None:
+        self.scripts = list(scripts)
+        self.calls: list[tuple[str, dict | None]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict | None = None,
+    ) -> str | InputResponse | None:
+        self.calls.append((message, metadata))
+        if not self.scripts:
+            return None
+        return self.scripts.pop(0)
+
+
+class ResearchFlow(Flow):
+    input_provider = ScriptedProvider(
+        [
+            InputResponse(
+                text="AI",
+                metadata={"responded_by": "script-1", "thread_id": "t1"},
+            )
+        ]
+    )
+
+    @start()
+    def gather(self):
+        topic = self.ask("Topic?", metadata={"user_id": "u123"})
+        if topic is None:
+            return "No input received"
+        return topic
+
+
+flow = ResearchFlow()
+result = flow.kickoff()          # "AI"
+# flow._input_history[0]["response_metadata"] == {"responded_by": "script-1", "thread_id": "t1"}
+```
+
+`ask()` normalizes both return types — callers always get `str | None`. The caller-supplied `metadata` and the provider's `response_metadata` are both recorded in `flow._input_history` and emitted in `FlowInputRequestedEvent` / `FlowInputReceivedEvent`, so you can audit who answered which prompt without touching stdin.
+
 ## Quick start
 
 ```python
@@ -180,7 +258,7 @@ class MyChatState(ChatState):
 | `receive_user_message(text, *, outcomes=None, llm=None)` | Append user message; optionally set `last_intent` |
 | `finalize_session_traces()` | Emit deferred `flow_finished` and finalize the session trace batch |
 | `_should_defer_trace_finalization()` | Advanced/internal hook that resolves whether per-turn trace finalization is deferred |
-| `input_history` | Audit trail of `ask()` prompts and responses |
+| `_input_history` | Audit trail of `ask()` prompts and responses |
 
 ### Module helpers (`crewai.flow.conversation`)
 
@@ -195,7 +273,7 @@ Importable from `crewai.flow.conversation` for tests or custom orchestration. Th
 | `receive_user_message(flow, text, ...)` | Same as instance method |
 | `set_state_field(flow, name, value)` | Set a field on dict or Pydantic state |
 | `get_conversational_config(flow)` | Read class `conversational_config` |
-| `input_history_to_messages(entries)` | Convert `input_history` to LLM message format |
+| `input_history_to_messages(entries)` | Convert `_input_history` to LLM message format |
 
 ## Intent routing patterns
 
@@ -645,6 +723,7 @@ from crewai.flow import (
     router,
     start,
 )
+from crewai.flow.input_provider import InputProvider, InputResponse
 from crewai.flow.conversation import prepare_conversational_turn
 from crewai.flow import (
     ConversationConfig,
