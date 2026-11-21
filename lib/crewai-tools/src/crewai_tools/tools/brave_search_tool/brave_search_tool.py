@@ -161,7 +161,7 @@ class BraveSearchTool(BaseTool):
 
                     web_results_items.append(item)
 
-            content = json.dumps(web_results_items)
+            content = json.dumps(web_results_items, ensure_ascii=False)
         except requests.RequestException as e:
             return f"Error performing search: {e!s}"
         except KeyError as e:
