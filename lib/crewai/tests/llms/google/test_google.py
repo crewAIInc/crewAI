@@ -175,24 +175,54 @@ def test_gemini_developer_token_count_uses_character_fallback_for_unrepresentabl
     llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
     client = MagicMock()
     client.vertexai = False
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is CrewAI?"},
+    ]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
 
     with patch.object(llm, "_get_sync_client", return_value=client):
-        assert llm.get_input_tokens_count(
-            [
-                {"role": "system", "content": "Be concise."},
-                {"role": "user", "content": "What is CrewAI?"},
-            ],
-            tools=[
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "search_docs",
-                        "description": "Search the documentation.",
-                        "parameters": {"type": "object", "properties": {}},
-                    },
-                }
-            ],
-        ) == 7
+        assert llm.get_input_tokens_count(messages) == 7
+        assert llm.get_input_tokens_count(messages, tools=tools) > 7
+
+
+@pytest.mark.parametrize("explicit_model", [False, True])
+@pytest.mark.parametrize("vertexai", [False, True])
+def test_gemini_token_count_preserves_configured_response_schema(explicit_model, vertexai):
+    from pydantic import BaseModel
+    from crewai.llms.base_llm import BaseLLM
+
+    class Answer(BaseModel):
+        explanation: str
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash-001",
+        api_key="test-key",
+        response_format=Answer,
+    )
+    client = MagicMock()
+    client.vertexai = vertexai
+    client.models.count_tokens.side_effect = RuntimeError("Count Tokens unavailable")
+    prompt = "Explain CrewAI."
+    expected = BaseLLM.get_input_tokens_count(llm, prompt, response_model=Answer)
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        actual = llm.get_input_tokens_count(
+            prompt, response_model=Answer if explicit_model else None
+        )
+    assert actual == expected
+    if vertexai:
+        client.models.count_tokens.assert_called_once()
+    else:
+        client.models.count_tokens.assert_not_called()
 
 
 def test_gemini_developer_token_count_forwards_supported_content():
