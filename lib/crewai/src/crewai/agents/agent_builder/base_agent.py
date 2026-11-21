@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from copy import copy as shallow_copy
+from copy import copy as shallow_copy, deepcopy
 from hashlib import md5
 from pathlib import Path
 import re
@@ -728,6 +728,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "apps",
             "mcps",
             "actions",
+            "a2a",
         }
 
         existing_llm = shallow_copy(self._llm_for_copy())
@@ -764,6 +765,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             copied_data.pop("cache", None)
             if self._constructor_cache_opt_in:
                 copied_data["cache"] = True
+        existing_a2a = getattr(self, "a2a", None)
         return type(self)(
             **copied_data,
             llm=existing_llm,
@@ -771,6 +773,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             knowledge_sources=existing_knowledge_sources,
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
+            a2a=deepcopy(existing_a2a) if existing_a2a is not None else None,
         )
 
     def _llm_for_copy(self) -> Any:
