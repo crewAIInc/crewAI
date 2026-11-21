@@ -337,6 +337,44 @@ blog_task = Task(
 )
 ```
 
+### Drex guardrail
+
+A function guardrail can call Drex through the published `nace-sdk` package. Drex returns a probability. You choose the threshold. Return `(False, feedback)` when the task should run again.
+
+```python Code
+from crewai import Task, TaskOutput
+from nace_sdk import NaceClient, Noul
+
+def drex_on_topic(result: TaskOutput) -> tuple[bool, str]:
+    """Ask Drex whether the output answers the task."""
+    with NaceClient() as client:
+        response = client.system_one(
+            result.raw,
+            {
+                "on_topic": Noul(
+                    instructions="Does this output answer the task it was given?"
+                )
+            },
+            model="drex-v2.0",
+        )
+    score = response.answers["on_topic"].noul
+    if score < 0.5:
+        return (
+            False,
+            f"Off topic. P(yes)={score:.2f}. Rewrite the output so it answers the task.",
+        )
+    return True, result.raw
+
+checked_task = Task(
+    description="Summarize the refund policy in two sentences.",
+    expected_output="Two sentences about the refund policy",
+    agent=writer,
+    guardrail=drex_on_topic,
+)
+```
+
+`NaceClient()` reads `NACE_API_KEY`. Install the SDK with `pip install nace-sdk`. Pass `model="drex-v2.0"` for text. Send images only with `model="drex-max"`. `drex-v2.0` rejects an image with HTTP 422 and the message `images require drex-max`.
+
 ### LLM-Based Guardrails (String Descriptions)
 
 Instead of writing custom validation functions, you can use string descriptions that leverage LLM-based validation. When you provide a string to the `guardrail` or `guardrails` parameter, CrewAI automatically creates an `LLMGuardrail` that uses the agent's LLM to validate the output based on your description.

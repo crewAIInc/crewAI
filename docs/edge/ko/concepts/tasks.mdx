@@ -400,6 +400,44 @@ blog_task = Task(
 )
 ```
 
+### Drex 가드레일
+
+함수 가드레일은 게시된 `nace-sdk` 패키지로 Drex를 호출할 수 있습니다. Drex는 확률을 반환합니다. 임계값은 직접 정합니다. 태스크를 다시 실행해야 하면 `(False, feedback)`을 반환하세요.
+
+```python Code
+from crewai import Task, TaskOutput
+from nace_sdk import NaceClient, Noul
+
+def drex_on_topic(result: TaskOutput) -> tuple[bool, str]:
+    """Ask Drex whether the output answers the task."""
+    with NaceClient() as client:
+        response = client.system_one(
+            result.raw,
+            {
+                "on_topic": Noul(
+                    instructions="Does this output answer the task it was given?"
+                )
+            },
+            model="drex-v2.0",
+        )
+    score = response.answers["on_topic"].noul
+    if score < 0.5:
+        return (
+            False,
+            f"Off topic. P(yes)={score:.2f}. Rewrite the output so it answers the task.",
+        )
+    return True, result.raw
+
+checked_task = Task(
+    description="Summarize the refund policy in two sentences.",
+    expected_output="Two sentences about the refund policy",
+    agent=writer,
+    guardrail=drex_on_topic,
+)
+```
+
+`NaceClient()`는 `NACE_API_KEY`를 읽습니다. SDK는 `pip install nace-sdk`로 설치합니다. 텍스트에는 `model="drex-v2.0"`을 전달하세요. 이미지는 `model="drex-max"`로만 보내세요. `drex-v2.0`은 이미지를 HTTP 422와 메시지 `images require drex-max`로 거부합니다.
+
 ### Guardrail 함수 요구사항
 
 1. **함수 시그니처**:

@@ -408,6 +408,44 @@ blog_task = Task(
 )
 ```
 
+### Guardrail Drex
+
+Um guardrail de função pode chamar o Drex pelo pacote publicado `nace-sdk`. O Drex devolve uma probabilidade. Você escolhe o limiar. Retorne `(False, feedback)` quando a tarefa deve ser executada de novo.
+
+```python Code
+from crewai import Task, TaskOutput
+from nace_sdk import NaceClient, Noul
+
+def drex_on_topic(result: TaskOutput) -> tuple[bool, str]:
+    """Ask Drex whether the output answers the task."""
+    with NaceClient() as client:
+        response = client.system_one(
+            result.raw,
+            {
+                "on_topic": Noul(
+                    instructions="Does this output answer the task it was given?"
+                )
+            },
+            model="drex-v2.0",
+        )
+    score = response.answers["on_topic"].noul
+    if score < 0.5:
+        return (
+            False,
+            f"Off topic. P(yes)={score:.2f}. Rewrite the output so it answers the task.",
+        )
+    return True, result.raw
+
+checked_task = Task(
+    description="Summarize the refund policy in two sentences.",
+    expected_output="Two sentences about the refund policy",
+    agent=writer,
+    guardrail=drex_on_topic,
+)
+```
+
+`NaceClient()` lê `NACE_API_KEY`. Instale o SDK com `pip install nace-sdk`. Passe `model="drex-v2.0"` para texto. Envie imagens somente com `model="drex-max"`. `drex-v2.0` rejeita uma imagem com HTTP 422 e a mensagem `images require drex-max`.
+
 ### Requisitos da Função Guardrail
 
 1. **Assinatura da Função**:
