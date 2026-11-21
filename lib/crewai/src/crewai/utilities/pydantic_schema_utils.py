@@ -73,14 +73,18 @@ if TYPE_CHECKING:
     from pydantic import EmailStr
     from pydantic.main import AnyClassMethod
 else:
+    # pydantic always exports EmailStr, but using it raises ImportError unless
+    # the optional email-validator package is installed.
     try:
-        from pydantic import EmailStr
+        import email_validator  # noqa: F401
     except ImportError:
-        logger.warning(
+        logger.debug(
             "EmailStr unavailable, using str fallback",
             extra={"missing_package": "email_validator"},
         )
         EmailStr = str
+    else:
+        from pydantic import EmailStr
 
 
 class JsonSchemaInfo(TypedDict):
