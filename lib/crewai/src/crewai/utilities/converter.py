@@ -67,7 +67,7 @@ class Converter(OutputConverter):
                 result=response,
                 model=self.model,
                 is_json_output=False,
-                agent=None,
+                agent=self.agent,
             )
             if isinstance(partial, BaseModel):
                 return partial
@@ -665,5 +665,8 @@ def create_converter(
 
     if not converter:
         raise Exception("No output converter found or set.")
+
+    if agent is not None and converter.agent is None:
+        converter.agent = agent
 
     return converter  # type: ignore[no-any-return]

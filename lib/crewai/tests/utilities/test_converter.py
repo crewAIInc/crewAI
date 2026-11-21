@@ -325,6 +325,21 @@ def test_create_converter_with_custom_converter() -> None:
     assert isinstance(converter, CustomConverter)
 
 
+def test_create_converter_attaches_agent_context() -> None:
+    mock_agent = MagicMock()
+
+    converter = create_converter(
+        agent=mock_agent,
+        converter_cls=CustomConverter,
+        llm=Mock(),
+        text="Sample",
+        model=SimpleModel,
+        instructions="Convert",
+    )
+
+    assert converter.agent is mock_agent
+
+
 def test_create_converter_fails_without_agent_or_converter_cls() -> None:
     with pytest.raises(
         ValueError, match="Either agent or converter_cls must be provided"
@@ -491,6 +506,26 @@ def test_converter_error_handling() -> None:
         converter.to_pydantic()
 
     assert "Failed to convert text into a Pydantic model" in str(exc_info.value)
+
+
+def test_converter_passes_agent_to_partial_json_fallback() -> None:
+    mock_agent = MagicMock()
+    converter = Converter(
+        agent=mock_agent,
+        llm=Mock(),
+        text="invalid",
+        model=SimpleModel,
+        instructions="Convert",
+    )
+    expected = SimpleModel(name="Fallback", age=1)
+
+    with patch(
+        "crewai.utilities.converter.handle_partial_json", return_value=expected
+    ) as mock_handle:
+        result = converter._coerce_response_to_pydantic("invalid")
+
+    assert result is expected
+    assert mock_handle.call_args.kwargs["agent"] is mock_agent
 
 
 def test_converter_retry_logic() -> None:
