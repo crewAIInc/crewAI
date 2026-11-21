@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai_core.lock_store import lock as store_lock
 from crewai_core.paths import db_storage_path
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.flow.persistence.base import FlowPersistence
@@ -25,6 +25,81 @@ if TYPE_CHECKING:
 
 _SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 _SCHEMA_RETRY_DELAY_SECONDS = 0.05
+
+_SELECT_STATE_RECORD = """
+SELECT id, method_name, timestamp, state_json
+FROM flow_states
+WHERE id = ? AND flow_uuid = ?
+"""
+
+
+class FlowStateRecord(BaseModel):
+    """One persisted state of a flow, as ``read_flow_state`` returns it.
+
+    Attributes:
+        id: Row id of the snapshot in the ``flow_states`` table. It increases
+            with each save and is not the flow's ``state.id``.
+        method_name: The flow method whose completion saved the snapshot.
+        timestamp: When the snapshot was saved, as an aware UTC datetime.
+        state: The saved state.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: int
+    method_name: str
+    timestamp: datetime
+    state: dict[str, Any]
+
+
+def read_flow_state(
+    db_path: str | Path, flow_uuid: str, record_id: int
+) -> FlowStateRecord | None:
+    """Read one persisted state of a flow without modifying the database.
+
+    The database is opened read-only, so no file or table is created and the
+    journal mode is left alone, which makes this safe for inspection tools
+    such as the CLI. Reading a WAL-mode database may still leave ``-wal`` and
+    ``-shm`` files next to it.
+
+    Args:
+        db_path: Path to a ``SQLiteFlowPersistence`` database file.
+        flow_uuid: Unique identifier for the flow instance.
+        record_id: Row id of the snapshot. A row saved by another flow is
+            never returned, so an id from the wrong flow reads as missing.
+
+    Returns:
+        The record, or None if the database file, the table, or a snapshot
+        with that id for that flow does not exist. As with ``load_state``, a
+        stored state that is not a JSON object also reads as None.
+    """
+    path = Path(db_path)
+    if not path.is_file():
+        return None
+    try:
+        with closing(
+            sqlite3.connect(
+                f"{path.resolve().as_uri()}?mode=ro",
+                uri=True,
+                timeout=_SQLITE_BUSY_TIMEOUT_SECONDS,
+            )
+        ) as conn:
+            row = conn.execute(_SELECT_STATE_RECORD, (record_id, flow_uuid)).fetchone()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc).lower():
+            return None
+        raise
+    if row is None:
+        return None
+    state = json.loads(row[3])
+    if not isinstance(state, dict):
+        return None
+    timestamp = datetime.fromisoformat(row[2])
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return FlowStateRecord(
+        id=row[0], method_name=row[1], timestamp=timestamp, state=state
+    )
 
 
 def _json_default(obj: Any) -> Any:

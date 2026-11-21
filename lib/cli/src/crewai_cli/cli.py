@@ -1248,6 +1248,41 @@ def flow_add_crew(crew_name: str) -> None:
     add_crew_to_flow(crew_name)
 
 
+@flow.group(name="state")
+def flow_state() -> None:
+    """Inspect states saved by SQLiteFlowPersistence.
+
+    These are the snapshots @persist writes to the flow_states table, not the
+    full-object checkpoints that `crewai checkpoint` browses.
+    """
+
+
+@flow_state.command(name="diff")
+@click.argument("flow_uuid")
+@click.argument("before_id", type=int)
+@click.argument("after_id", type=int)
+@click.option(
+    "--db",
+    "db_path",
+    default=None,
+    help="SQLiteFlowPersistence database. Defaults to the one @persist uses.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Print the result as JSON.")
+def flow_state_diff(
+    flow_uuid: str, before_id: int, after_id: int, db_path: str | None, as_json: bool
+) -> None:
+    """Compare two saved states of one flow by their record ids."""
+    from crewai_cli.flow_state_cli import default_flow_state_db, diff_flow_states
+
+    diff_flow_states(
+        db_path if db_path is not None else default_flow_state_db(),
+        flow_uuid,
+        before_id,
+        after_id,
+        as_json,
+    )
+
+
 @crewai.group()
 def triggers() -> None:
     """Trigger related commands. Use 'crewai triggers list' to see available triggers, or 'crewai triggers run app_slug/trigger_slug' to execute."""
