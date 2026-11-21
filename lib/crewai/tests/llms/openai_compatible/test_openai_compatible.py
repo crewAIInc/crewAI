@@ -105,6 +105,18 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_token_kiosk_config(self):
+        """Test Token Kiosk provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["token_kiosk"]
+        assert config.base_url == "https://api-token-kiosk.gaib.ai/v1"
+        assert config.api_key_env == "TOKEN_KIOSK_API_KEY"
+        assert config.base_url_env == "TOKEN_KIOSK_BASE_URL"
+        assert "HTTP-Referer" in config.default_headers
+        assert config.api_key_required is True
+
+        assert OPENAI_COMPATIBLE_PROVIDERS["tokenkiosk"].base_url == "https://api-token-kiosk.gaib.ai/v1"
+        assert OPENAI_COMPATIBLE_PROVIDERS["token-kiosk"].base_url == "https://api-token-kiosk.gaib.ai/v1"
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -340,6 +352,16 @@ class TestLLMIntegration:
             # prefix is itself two segments and must reach the API intact.
             assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
             assert llm.base_url == "https://api.deepinfra.com/v1/openai"
+
+    def test_llm_creates_openai_compatible_for_token_kiosk(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Token Kiosk."""
+        with patch.dict(os.environ, {"TOKEN_KIOSK_API_KEY": "test-key"}):
+            llm = LLM(model="token_kiosk/claude-3-5-sonnet")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "token_kiosk"
+            assert llm.model == "claude-3-5-sonnet"
+            assert llm.base_url == "https://api-token-kiosk.gaib.ai/v1"
+            assert llm.default_headers is not None and "HTTP-Referer" in llm.default_headers
 
     def test_deepinfra_base_url_env_override(self):
         """DEEPINFRA_BASE_URL redirects DeepInfra to a proxy or private endpoint."""
