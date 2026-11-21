@@ -88,6 +88,63 @@ def test_from_function(basic_function):
     assert isinstance(tool.args_schema, type(BaseModel))
 
 
+def test_from_function_with_variadic_parameters() -> None:
+    def variadic_func(
+        required_param: str,
+        optional_param: int = 0,
+        *args: int,
+        **kwargs: int,
+    ) -> tuple[str, int, tuple[int, ...], dict[str, int]]:
+        """Return the arguments received by the function."""
+        return required_param, optional_param, args, kwargs
+
+    tool = CrewStructuredTool.from_function(variadic_func)
+
+    assert tool.invoke({"required_param": "test"}) == ("test", 0, (), {})
+    assert set(tool.args) == {"required_param", "optional_param"}
+    assert tool.args_schema is not None
+    assert tool.args_schema.model_json_schema()["required"] == ["required_param"]
+    assert tool.invoke({"required_param": "test", "optional_param": 42}, extra=7) == (
+        "test",
+        42,
+        (),
+        {"extra": 7},
+    )
+
+    with pytest.raises(ValueError, match="required_param"):
+        tool.invoke({})
+
+    with pytest.raises(ValueError, match="optional_param"):
+        tool.invoke({"required_param": "test", "optional_param": "invalid"})
+
+
+def test_from_function_with_only_variadic_parameters() -> None:
+    def variadic_func(
+        *args: int, **kwargs: int
+    ) -> tuple[tuple[int, ...], dict[str, int]]:
+        """Return the arguments received by the function."""
+        return args, kwargs
+
+    tool = CrewStructuredTool.from_function(variadic_func)
+
+    assert tool.invoke({}) == ((), {})
+    assert tool.args == {}
+    assert tool.invoke({}, extra=7) == ((), {"extra": 7})
+
+
+@pytest.mark.asyncio
+async def test_from_function_with_variadic_keyword_parameters_async() -> None:
+    async def variadic_func(query: str, **kwargs: int) -> tuple[str, dict[str, int]]:
+        """Return the arguments received by the function."""
+        return query, kwargs
+
+    tool = CrewStructuredTool.from_function(variadic_func)
+
+    assert await tool.ainvoke({"query": "test"}) == ("test", {})
+    assert set(tool.args) == {"query"}
+    assert await tool.ainvoke({"query": "test"}, extra=7) == ("test", {"extra": 7})
+
+
 class StructuredOutput(BaseModel):
     value: str
     count: int
