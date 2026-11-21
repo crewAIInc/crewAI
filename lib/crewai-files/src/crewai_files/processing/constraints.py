@@ -389,4 +389,12 @@ def get_supported_content_types(provider: str, api: str | None = None) -> list[s
         types.append("video/")
     if constraints.text:
         types.append("text/")
+        # The formatter also emits these structured text formats inline, and
+        # this list decides which files are auto-injected instead of being
+        # offered to the model through the read_file tool. Keep both lists in
+        # sync, otherwise JSON/XML/YAML inputs are attached by the formatter
+        # while the prompt still tells the model to read them with a tool.
+        types.append("application/json")
+        types.append("application/xml")
+        types.append("application/x-yaml")
     return types

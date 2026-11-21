@@ -79,6 +79,18 @@ class TestPDFConstraints:
         assert "application/pdf" in supported_types
 
 
+class TestSupportedContentTypes:
+    """Tests for the public supported-content-types helper."""
+
+    def test_structured_text_formats_are_reported_for_text_providers(self):
+        """JSON/XML/YAML are formatter inputs, so the public helper must list them."""
+        supported_types = get_supported_content_types("gemini")
+
+        assert "application/json" in supported_types
+        assert "application/xml" in supported_types
+        assert "application/x-yaml" in supported_types
+
+
 class TestAudioConstraints:
     """Tests for AudioConstraints dataclass."""
 
