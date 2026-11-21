@@ -86,6 +86,50 @@ class TestNormalizeKickoffInputs:
         assert merged["foo"] == 1
 
 
+class TestMultimodalUserMessage:
+    def test_prepare_turn_extracts_text_from_content_parts(self) -> None:
+        flow = SimpleChatFlow()
+        flow._state = ChatState(messages=[])
+
+        prepare_conversational_turn(
+            flow,
+            user_message={
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "describe this"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,AAAA"},
+                    },
+                ],
+            },
+        )
+
+        assert flow.state.messages == [{"role": "user", "content": "describe this"}]
+        assert flow.state.last_user_message == "describe this"
+
+    def test_prepare_turn_names_image_only_content(self) -> None:
+        flow = SimpleChatFlow()
+        flow._state = ChatState(messages=[])
+
+        prepare_conversational_turn(
+            flow,
+            user_message={
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,AAAA"},
+                    }
+                ],
+            },
+        )
+
+        assert flow.state.messages == [
+            {"role": "user", "content": "[multimodal content]"}
+        ]
+
+
 class TestMessageHelpers:
     def test_append_message_on_pydantic_state(self) -> None:
         flow = SimpleChatFlow()
