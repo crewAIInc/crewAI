@@ -2327,6 +2327,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             agent=self.agent,
             task=self.task,
             crew=self.crew,
+            tool_call_id=call_id,
         )
         hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
@@ -2417,6 +2418,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             crew=self.crew,
             tool_result=result,
             raw_tool_result=raw_tool_result,
+            tool_call_id=call_id,
         )
         modified_result = run_after_tool_call_hooks(after_hook_context)
         if modified_result is not None:
