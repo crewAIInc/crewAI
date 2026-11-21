@@ -63,6 +63,13 @@ def _sync_checkpoint_fields(entity: object) -> None:
     if isinstance(entity, BaseAgent):
         entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
     if isinstance(entity, Flow):
+        # RuntimeState deserializes saved subclasses as plain Flow objects.
+        # Preserve their recorded definition name until from_checkpoint replaces
+        # the selected slot with the rebuilt subclass.
+        if entity.checkpoint_flow_name is None or type(entity) is not Flow:
+            entity.checkpoint_flow_name = (
+                entity._stable_definition_name or entity._definition.name
+            )
         entity.checkpoint_completed_methods = (
             set(entity._completed_methods) if entity._completed_methods else None
         )
