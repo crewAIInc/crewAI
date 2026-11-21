@@ -50,7 +50,7 @@ class BrightDataDatasetToolSchema(BaseModel):
 
     dataset_type: str = Field(..., description="The Bright Data Dataset Type")
     format: str | None = Field(
-        default="json", description="Response format (json by default)"
+        default=None, description="Response format (json by default)"
     )
     url: str = Field(..., description="The URL to extract data from")
     zipcode: str | None = Field(default=None, description="Optional zipcode")
