@@ -368,6 +368,65 @@ class TestWritableCTE:
                 "WITH cte AS\t(DELETE FROM users RETURNING *) SELECT * FROM cte"
             )
 
+    def test_writable_cte_with_materialized_keyword_blocked(self):
+        """PostgreSQL allows AS MATERIALIZED (...) — the CTE body is still checked."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH deleted AS MATERIALIZED (DELETE FROM users RETURNING *) "
+                "SELECT * FROM deleted"
+            )
+
+    def test_writable_cte_with_not_materialized_keyword_blocked(self):
+        """PostgreSQL allows AS NOT MATERIALIZED (...) — same treatment."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH deleted AS NOT MATERIALIZED (DELETE FROM users RETURNING *) "
+                "SELECT * FROM deleted"
+            )
+
+    def test_read_only_materialized_cte_still_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query(
+            "WITH cte AS MATERIALIZED (SELECT id FROM users) SELECT * FROM cte"
+        )
+
+    def test_writable_cte_with_compact_as_paren_blocked(self):
+        """``AS(`` is valid SQL; dropping the space must not bypass the check."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH deleted AS(DELETE FROM users RETURNING *) SELECT * FROM deleted"
+            )
+
+    def test_writable_cte_with_compact_materialized_keyword_blocked(self):
+        """PostgreSQL accepts ``AS MATERIALIZED(`` without a space before ``(``."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH deleted AS MATERIALIZED(DELETE FROM users RETURNING *) "
+                "SELECT * FROM deleted"
+            )
+
+    def test_writable_cte_with_compact_not_materialized_keyword_blocked(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH deleted AS NOT MATERIALIZED(DELETE FROM users RETURNING *) "
+                "SELECT * FROM deleted"
+            )
+
+    def test_cte_with_compact_as_paren_and_write_main_query_blocked(self):
+        """The main-query guard must also see a compact ``AS(`` CTE header."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("WITH cte AS(SELECT 1) DELETE FROM users")
+
+    def test_read_only_compact_cte_still_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("WITH cte AS(SELECT id FROM users) SELECT * FROM cte")
+
 
 class TestExplainAnalyze:
     def test_explain_analyze_delete_blocked_in_read_only(self):
