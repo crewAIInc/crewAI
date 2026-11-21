@@ -15,12 +15,14 @@ import uuid
 from a2a.client import Client, ClientConfig, ClientFactory
 from a2a.types import (
     AgentCard,
-    FilePart,
-    FileWithBytes,
     Message,
     Part,
-    PushNotificationConfig as A2APushNotificationConfig,
     Role,
+)
+from crewai.a2a._compat import (
+    FilePart,
+    FileWithBytes,
+    PushNotificationConfig as A2APushNotificationConfig,
     TextPart,
 )
 import httpx

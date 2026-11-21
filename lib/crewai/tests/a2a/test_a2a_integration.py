@@ -7,7 +7,8 @@ import pytest
 import pytest_asyncio
 
 from a2a.client import ClientFactory
-from a2a.types import AgentCard, Message, Part, Role, TaskState, TextPart
+from a2a.types import AgentCard, Message, Part, Role, TaskState
+from crewai.a2a._compat import TextPart
 
 from crewai.a2a.updates.polling.handler import PollingHandler
 from crewai.a2a.updates.streaming.handler import StreamingHandler
