@@ -23,6 +23,7 @@ from crewai_files.processing.exceptions import (
     FileTooLargeError,
     FileValidationError,
     UnsupportedFileTypeError,
+    UnsupportedImageFormatError,
 )
 from crewai_files.processing.transformers import (
     chunk_pdf,
@@ -166,12 +167,18 @@ class FileProcessor:
 
         Returns:
             Dictionary mapping names to processed files. If a file is chunked,
-            multiple entries are created with indexed names.
+            multiple entries are created with indexed names. An image whose
+            bytes are not a PNG, JPEG, GIF or WEBP image is logged and left
+            out, so the other files are still returned.
         """
         result: dict[str, FileInput] = {}
 
         for name, file in files.items():
-            processed = self.process(file)
+            try:
+                processed = self.process(file)
+            except UnsupportedImageFormatError as e:
+                logger.error(f"Skipping file '{name}': {e}")
+                continue
 
             if isinstance(processed, Sequence) and not isinstance(
                 processed, (str, bytes)
@@ -291,12 +298,16 @@ class FileProcessor:
                         processed = resize_image(file, max_w, max_h)
                         content = processed.read()
                         current_size = len(content)
+                    except UnsupportedImageFormatError:
+                        raise
                     except Exception as e:
                         logger.warning(f"Failed to resize image: {e}")
 
         if current_size > image_constraints.max_size_bytes:
             try:
                 processed = optimize_image(processed, image_constraints.max_size_bytes)
+            except UnsupportedImageFormatError:
+                raise
             except Exception as e:
                 logger.warning(f"Failed to optimize image: {e}")
 

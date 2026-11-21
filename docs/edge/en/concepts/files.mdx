@@ -20,6 +20,10 @@ uv add 'crewai[file-processing]'
 The file processing API is currently in early access.
 </Note>
 
+<Tip>
+To have an agent work on a spreadsheet it gets as a URL, see [Spreadsheets](/en/concepts/agents#spreadsheets).
+</Tip>
+
 ## File Types
 
 CrewAI supports five specific file types plus a generic `File` class that auto-detects the type:
@@ -173,9 +177,9 @@ Different providers support different file types. CrewAI automatically formats f
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
 | **OpenAI** (completions API) | ✓ | | | | |
 | **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
-| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Anthropic** (claude-3 and later) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3 and later, nova) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="Gemini for Maximum File Support">
@@ -210,6 +214,24 @@ CrewAI automatically chooses the optimal method to send files to each provider:
 You don't need to manage this yourself. CrewAI automatically uses the most efficient method based on file size and provider capabilities. Providers without file upload APIs use inline base64 for all files.
 </Note>
 
+## Formatting Files Yourself
+
+LLM calls format files for you. To build the content blocks yourself, for example to call a provider's SDK directly, use `format_multimodal_content` (or `aformat_multimodal_content`) from `crewai_files`. It returns the blocks in the provider's format.
+
+Anthropic file blocks carry no `cache_control` (since crewai 1.15.44). Anthropic allows at most four cache breakpoints per request, and CrewAI's Anthropic provider places them on the messages it marks. If you send the blocks yourself and want prompt caching, add a breakpoint to the last block of the message: it caches everything before it, files included.
+
+```python
+from crewai_files import ImageFile, format_multimodal_content
+
+blocks = format_multimodal_content(
+    {"chart": ImageFile(source="chart.png")},
+    "anthropic",
+    text="What does this chart show?",
+)
+blocks[-1]["cache_control"] = {"type": "ephemeral"}
+message = {"role": "user", "content": blocks}
+```
+
 ## File Handling Modes
 
 Control how files are processed when they exceed provider limits:
@@ -222,6 +244,10 @@ image = ImageFile(source="large.png", mode="auto")
 image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
+
+<Note type="warning" title="Supported Image Formats">
+When CrewAI needs to read an image's dimensions, resize it, or compress it, it only opens PNG, JPEG, GIF, and WEBP images. The format is detected from the file contents, not the declared content type. Any other image raises `UnsupportedImageFormatError` (a subclass of `UnsupportedFileTypeError`) in every mode, including `warn` and `auto`. When several files are sent together, only that image is left out and an error is logged.
+</Note>
 
 ## Provider Constraints
 
@@ -243,8 +269,8 @@ Each provider has specific limits for file sizes and dimensions:
 - **Video**: Max 2 GB, up to 1 hour
 
 ### AWS Bedrock
-- **Images**: Max 4.5 MB, max 8000x8000 pixels
-- **PDFs**: Max 3.75 MB, up to 100 pages
+- **Images**: Max 3.75 MB, max 8000x8000 pixels
+- **PDFs**: Max 4.5 MB, up to 100 pages
 
 ## Referencing Files in Prompts
 

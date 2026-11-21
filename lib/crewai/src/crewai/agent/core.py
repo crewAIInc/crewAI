@@ -8,8 +8,10 @@ import concurrent.futures
 import contextvars
 import inspect
 import json
+import logging
 import os
 from pathlib import Path
+from threading import Lock
 import time
 from typing import (
     TYPE_CHECKING,
@@ -21,6 +23,11 @@ from typing import (
 )
 import warnings
 
+from crewai_core.platform_apps import (
+    PlatformAppsUnavailableError,
+    UnresolvedPlatformAppsWarning,
+)
+from crewai_core.printer import set_suppress_console_output
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -34,6 +41,15 @@ from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self, TypeIs
 
 from crewai.agent.planning_config import PlanningConfig
+from crewai.agent.spreadsheet_inputs import (
+    SpreadsheetInputs,
+    enter_spreadsheet_scope,
+    exit_spreadsheet_scope,
+    kickoff_input_text,
+    read_spreadsheet_inputs,
+    task_input_text,
+    with_spreadsheet_tools,
+)
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -51,8 +67,9 @@ from crewai.agents.agent_builder.base_agent import (
     _serialize_llm_ref,
     _validate_llm_ref,
 )
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.artifacts import Artifact, check_artifact_source, save_output_artifact
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -74,7 +91,6 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.execution import begin_execution, end_execution
-from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -87,6 +103,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
+from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
@@ -100,10 +117,10 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
-    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
+from crewai.utilities.config import process_config
 from crewai.utilities.constants import (
     CREWAI_TRAINED_AGENTS_FILE_ENV,
     TRAINED_AGENTS_DATA_FILE,
@@ -115,6 +132,7 @@ from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_fo
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -133,6 +151,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.flow.flow import Flow
     from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
@@ -148,34 +167,31 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
 )
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
-    "CrewAgentExecutor": CrewAgentExecutor,
     "AgentExecutor": AgentExecutor,
 }
+_conversation_flow_lock = Lock()
 
 
 def _is_resuming_agent_executor(
-    executor: CrewAgentExecutor | AgentExecutor | None,
+    executor: AgentExecutor | None,
 ) -> TypeIs[AgentExecutor]:
     """Type guard: True when the executor is resuming from a checkpoint."""
     return isinstance(executor, AgentExecutor) and executor._resuming
 
 
 def _validate_executor_class(value: Any) -> Any:
+    if getattr(value, "__name__", None) == "CrewAgentExecutor" or (
+        isinstance(value, str) and value == "CrewAgentExecutor"
+    ):
+        raise ValueError(
+            "CrewAgentExecutor has been removed. Use "
+            "crewai.agents.agent_executor.AgentExecutor."
+        )
     if isinstance(value, str):
         cls = _EXECUTOR_CLASS_MAP.get(value)
         if cls is None:
             raise ValueError(f"Unknown executor class: {value}")
-        value = cls
-    import warnings
-
-    if value is CrewAgentExecutor:
-        warnings.warn(
-            "CrewAgentExecutor is deprecated and will be removed in a future release. "
-            "Agents inside Crews now use AgentExecutor by default. "
-            "Switch to crewai.experimental.AgentExecutor.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        return cls
     return value
 
 
@@ -222,7 +238,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
+            agent_executor: The AgentExecutor running this agent.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -255,6 +271,11 @@ class Agent(BaseAgent):
     _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _conversation_flow: Any = PrivateAttr(default=None)
+    conversational: bool = Field(
+        default=False,
+        description="Experimental: enable standalone conversations through a Flow session.",
+    )
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time in seconds for an agent to execute a task",
@@ -299,6 +320,10 @@ class Agent(BaseAgent):
         default=True,
         description="Keep messages under the context window size by summarizing content.",
     )
+    use_better_compaction: bool = Field(
+        default=True,
+        description="Defer oversized tool results to temporary artifacts for bounded reads.",
+    )
     max_retry_limit: int = Field(
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
@@ -307,6 +332,10 @@ class Agent(BaseAgent):
         default=False,
         deprecated=True,
         description="[DEPRECATED, will be removed in v2.0 - pass files natively.] Whether the agent is multimodal.",
+    )
+    artifacts: bool = Field(
+        default=False,
+        description="Give the agent a save_artifact tool to save files to view, download or share.",
     )
     inject_date: bool = Field(
         default=False,
@@ -386,23 +415,30 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+    agent_executor: AgentExecutor | None = Field(
+        default=None,
+        description="Executor running this agent.",
     )
     executor_class: Annotated[
-        type[CrewAgentExecutor] | type[AgentExecutor],
+        type[AgentExecutor],
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
         default=AgentExecutor,
-        description="Class to use for the agent executor. Defaults to AgentExecutor, can optionally use CrewAgentExecutor.",
+        description="Class to use for the agent executor. CrewAgentExecutor has been removed.",
     )
 
     @model_validator(mode="before")
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
         """Merge repository agent config with provided values before validation."""
-        if v is not None and (from_repository := v.get("from_repository")):
+        if v is None:
+            return v
+        # Flatten ``config`` first so a ``from_repository`` set in agents.yaml is
+        # seen here, and its config fields override the repository's values.
+        # Copy so the caller's mapping keeps its ``config`` key.
+        v = process_config(dict(v), cls)
+        if from_repository := v.get("from_repository"):
             return load_agent_from_repository(from_repository) | v
         return v
 
@@ -703,6 +739,22 @@ class Agent(BaseAgent):
         task_prompt = format_task_with_context(task_prompt, context)
         return self._retrieve_memory_context(task, task_prompt)
 
+    def _with_spreadsheets(
+        self,
+        task_prompt: str,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> tuple[str, list[BaseTool] | None]:
+        """The task prompt and tools, plus the overview and tools for the
+        spreadsheets the task's URLs point to; unchanged when there are none."""
+        if not spreadsheets.overview:
+            return task_prompt, tools
+        configured = tools or list(self.tools or [])
+        return (
+            f"{task_prompt}\n\n{spreadsheets.overview}",
+            with_spreadsheet_tools(configured, spreadsheets),
+        )
+
     def _finalize_task_prompt(
         self,
         task_prompt: str,
@@ -975,6 +1027,20 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        spreadsheets = read_spreadsheet_inputs(task_input_text(task))
+        scope = enter_spreadsheet_scope(spreadsheets)
+        try:
+            return self._execute_task(task, context, tools, spreadsheets)
+        finally:
+            exit_spreadsheet_scope(scope)
+
+    def _execute_task(
+        self,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> Any:
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -989,6 +1055,7 @@ class Agent(BaseAgent):
             else lambda *a, **k: None,
         )
 
+        task_prompt, tools = self._with_spreadsheets(task_prompt, tools, spreadsheets)
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
@@ -1042,7 +1109,8 @@ class Agent(BaseAgent):
             RuntimeError: If execution fails for other reasons.
         """
         ctx = contextvars.copy_context()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor = concurrent.futures.ThreadPoolExecutor()
+        try:
             future = executor.submit(
                 ctx.run,
                 self._execute_without_timeout,
@@ -1065,6 +1133,11 @@ class Agent(BaseAgent):
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
+        finally:
+            # A context manager would call shutdown(wait=True), which blocks
+            # until a timed-out worker returns and makes max_execution_time
+            # report the timeout only after the work has already finished.
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
@@ -1117,6 +1190,23 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        # Downloading and parsing block, so they stay off the event loop.
+        spreadsheets = await asyncio.to_thread(
+            read_spreadsheet_inputs, task_input_text(task)
+        )
+        scope = enter_spreadsheet_scope(spreadsheets)
+        try:
+            return await self._aexecute_task(task, context, tools, spreadsheets)
+        finally:
+            exit_spreadsheet_scope(scope)
+
+    async def _aexecute_task(
+        self,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+        spreadsheets: SpreadsheetInputs,
+    ) -> Any:
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1124,6 +1214,7 @@ class Agent(BaseAgent):
             self, task, task_prompt, knowledge_config
         )
 
+        task_prompt, tools = self._with_spreadsheets(task_prompt, tools, spreadsheets)
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
@@ -1255,16 +1346,28 @@ class Agent(BaseAgent):
 
         return prompt, stop_words, rpm_limit_fn
 
+    def _with_artifact_tool(
+        self, tools: list[BaseTool], task: Task | None = None
+    ) -> list[BaseTool]:
+        """Add the save_artifact tool when ``artifacts`` is on and none is there.
+
+        A crew adds it already; this covers a task run outside a crew and kickoff.
+        """
+        if not self.artifacts or "save_artifact" in {
+            sanitize_tool_name(t.name) for t in tools
+        }:
+            return tools
+        from crewai.artifacts import SaveArtifactTool
+
+        return [*tools, SaveArtifactTool(agent=self, task=task)]
+
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
-        """Create an agent executor for the agent.
-
-        Returns:
-            An instance of the CrewAgentExecutor class.
-        """
+        """Create the AgentExecutor for the agent."""
         configured_tools = tools if tools is not None else self.tools or []
-        raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)
+        raw_tools = self._with_artifact_tool(list(configured_tools), task=task)
+        raw_tools = self._add_skill_loader_tool(raw_tools, task=task)
         parsed_tools = parse_tools(raw_tools)
 
         prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
@@ -1307,6 +1410,8 @@ class Agent(BaseAgent):
                 if task
                 else None,
             )
+            if isinstance(self.agent_executor, AgentExecutor):
+                self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def _update_executor_parameters(
         self,
@@ -1340,10 +1445,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        if isinstance(self.agent_executor, AgentExecutor):
-            self.agent_executor.stop_words = stop_words
-        else:
-            self.agent_executor.stop = stop_words
+        self.agent_executor.stop_words = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -1354,6 +1456,8 @@ class Agent(BaseAgent):
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
@@ -1367,29 +1471,41 @@ class Agent(BaseAgent):
 
         Returns:
             The resolved tools, or an empty list when none resolve or resolution
-            fails. A non-empty ``apps`` that resolves to no tools emits a
-            ``UserWarning`` naming the agent and its apps.
+            fails for another reason, such as a missing token. A non-empty
+            ``apps`` that resolves to no tools emits an
+            ``UnresolvedPlatformAppsWarning`` naming the agent and its apps.
+
+        Raises:
+            PlatformAppsUnavailableError: CrewAI AMP named apps it cannot
+                resolve, because they are not connected or it does not know
+                them. Running without them would let the agent invent what
+                they would have returned.
         """
         platform_tools: list[BaseTool] = []
+        cause = ""
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
             platform_tools = CrewaiPlatformTools(apps=apps)
+        except PlatformAppsUnavailableError:
+            raise
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
+            cause = f" Cause: {e!s}"
 
         if apps and not platform_tools:
             # Logger.log above is verbose-gated; without a warning a bad `apps`
             # entry only shows up later as a task the agent couldn't do.
-            app_names = ", ".join(str(app) for app in apps)
             warnings.warn(
-                f"Agent '{self.role}' declares apps [{app_names}] but none "
-                "resolved to any tools; the agent will run without them and may "
-                "be unable to complete its goal. Check that these apps exist and "
-                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
-                UserWarning,
+                UnresolvedPlatformAppsWarning(
+                    # A role YAML folds (`role: >`) ends in a newline.
+                    self.role.strip(),
+                    [str(app) for app in apps],
+                    [],
+                    cause,
+                ),
                 stacklevel=2,
             )
 
@@ -1599,6 +1715,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        spreadsheets: SpreadsheetInputs | None = None,
     ) -> tuple[AgentExecutor, dict[str, Any], dict[str, Any], list[CrewStructuredTool]]:
         """Prepare common setup for kickoff execution.
 
@@ -1610,10 +1727,14 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
+            spreadsheets: The spreadsheets the input's URLs point to, already
+                read; read here when not given.
 
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        if spreadsheets is None:
+            spreadsheets = read_spreadsheet_inputs(kickoff_input_text(messages))
         self.reset_tool_failures()
 
         if self.tools_handler:
@@ -1632,7 +1753,7 @@ class Agent(BaseAgent):
                     self.tools = []
                 self.tools.extend(mcps)
 
-        raw_tools = list(self.tools or [])
+        raw_tools = with_spreadsheet_tools(list(self.tools or []), spreadsheets)
 
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
@@ -1645,6 +1766,7 @@ class Agent(BaseAgent):
                 if sanitize_tool_name(mt.name) not in existing_names
             )
 
+        raw_tools = self._with_artifact_tool(raw_tools)
         raw_tools = self._add_skill_loader_tool(raw_tools)
         parsed_tools = parse_tools(raw_tools)
 
@@ -1679,6 +1801,7 @@ class Agent(BaseAgent):
                 BaseLLM | None, self.function_calling_llm
             )
             executor.respect_context_window = self.respect_context_window
+            executor.use_better_compaction = self.use_better_compaction
             executor.request_within_rpm_limit = rpm_limit_fn
             executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
@@ -1696,6 +1819,7 @@ class Agent(BaseAgent):
                 step_callback=self.step_callback,
                 function_calling_llm=self.function_calling_llm,
                 respect_context_window=self.respect_context_window,
+                use_better_compaction=self.use_better_compaction,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
                 response_model=response_format,
@@ -1737,6 +1861,9 @@ class Agent(BaseAgent):
 
         if input_files:
             all_files.update(input_files)
+
+        if spreadsheets.overview:
+            formatted_messages += "\n\n" + spreadsheets.overview
 
         if agent_memory is not None:
             try:
@@ -1797,12 +1924,67 @@ class Agent(BaseAgent):
 
         return executor, inputs, agent_info, parsed_tools
 
+    def __copy__(self) -> Self:
+        copied = super().__copy__()
+        copied._conversation_flow = None
+        return copied
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        # Sessions contain locks and a loader bound to their original Agent.
+        return BaseModel.__deepcopy__(self.__copy__(), memo)
+
+    def as_flow(self) -> Flow[Any]:
+        """Return this Agent's experimental conversational Flow session.
+
+        Requires ``conversational=True``. Reuse the returned Flow for multiple
+        turns, or configure its persistence to restore sessions across processes.
+        Direct ``kickoff`` calls remain independent executions.
+        """
+        if not self.conversational:
+            raise ValueError("Agent conversations require conversational=True")
+        with _conversation_flow_lock:
+            if self._conversation_flow is None:
+                from crewai.agent.conversation import agent_flow
+
+                self._conversation_flow = agent_flow(lambda: self, name=self.role)()
+        return cast("Flow[Any]", self._conversation_flow)
+
+    def handle_turn(self, message: str, **kwargs: Any) -> Any:
+        """Run a turn with the history of this experimental Agent conversation.
+
+        ``kwargs`` are forwarded to ``Flow.handle_turn``, including session and
+        persistence restore options. One Agent owns one session; use a new Agent
+        for another session. Overlapping turns on one Agent are rejected.
+        """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span("standalone_agent:handle_turn")
+        context = contextvars.copy_context()
+        if not self.verbose:
+            context.run(set_suppress_console_output, True)
+        return context.run(flow.handle_turn, message, **kwargs)
+
+    def chat(self, *, tui: bool = False, **kwargs: Any) -> None:
+        """Start an experimental conversation using the same options as Flow.chat.
+
+        Requires ``conversational=True``. Use ``tui=True`` for the terminal UI,
+        or omit it for a plain REPL. Other options are forwarded to Flow.chat.
+        """
+        flow = self.as_flow()
+        Telemetry().feature_usage_span(
+            "standalone_agent:chat:tui" if tui else "standalone_agent:chat:repl"
+        )
+        context = contextvars.copy_context()
+        if not self.verbose and not tui:
+            context.run(set_suppress_console_output, True)
+        context.run(flow.chat, tui=tui, **kwargs)
+
     def kickoff(
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
+        artifact: Artifact | bool | None = None,
     ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
         """Execute the agent with the given messages using the AgentExecutor.
 
@@ -1830,6 +2012,10 @@ class Agent(BaseAgent):
             from_checkpoint: Optional checkpoint config. If ``restore_from``
                 is set, the agent resumes from that checkpoint. Remaining
                 config fields enable checkpointing for the run.
+            artifact: Optional artifact to save the final output as. The
+                saved version is on the result's ``artifact``. True names it
+                after the running flow method, or else the agent's role, and
+                picks the kind from the output.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -1844,15 +2030,22 @@ class Agent(BaseAgent):
                 messages=messages,
                 response_format=response_format,
                 input_files=input_files,
+                artifact=artifact,
             )
 
+        if isinstance(artifact, Artifact):
+            check_artifact_source(artifact)
         if is_inside_event_loop():
-            return self.kickoff_async(messages, response_format, input_files)
+            return self.kickoff_async(
+                messages, response_format, input_files, artifact=artifact
+            )
 
+        spreadsheets = read_spreadsheet_inputs(kickoff_input_text(messages))
         execution_token = begin_execution()
+        scope = enter_spreadsheet_scope(spreadsheets)
         try:
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-                messages, response_format, input_files
+                messages, response_format, input_files, spreadsheets
             )
 
             try:
@@ -1880,11 +2073,13 @@ class Agent(BaseAgent):
                     messages,
                     agent_info,
                     usage_baseline,
+                    artifact,
                 )
 
             except Exception as e:
                 self._emit_kickoff_error(agent_info, e)
         finally:
+            exit_spreadsheet_scope(scope)
             end_execution(execution_token)
 
     def _finalize_kickoff(
@@ -1896,8 +2091,9 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         agent_info: dict[str, Any],
         usage_baseline: UsageMetrics | None = None,
+        artifact: Artifact | bool | None = None,
     ) -> LiteAgentOutput:
-        """Apply guardrails, save to memory, and emit completion event.
+        """Apply guardrails, save the artifact and memory, and emit completion.
 
         Args:
             output: The execution output.
@@ -1908,21 +2104,86 @@ class Agent(BaseAgent):
             agent_info: Agent metadata for events.
             usage_baseline: Usage snapshot taken at kickoff start, so retries
                 report per-call usage relative to it.
+            artifact: Optional artifact to save the output as.
 
         Returns:
             The finalized output.
         """
-        if self.guardrail is not None:
-            output = self._process_kickoff_guardrail(
-                output=output,
-                executor=executor,
-                inputs=inputs,
-                response_format=response_format,
-                usage_baseline=usage_baseline,
+        output = self._guard_kickoff_output(
+            output, executor, inputs, response_format, usage_baseline
+        )
+        if artifact:
+            self._save_kickoff_artifact(output, artifact)
+        return self._complete_kickoff(output, messages, agent_info)
+
+    async def _afinalize_kickoff(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None,
+        messages: str | list[LLMMessage],
+        agent_info: dict[str, Any],
+        usage_baseline: UsageMetrics | None = None,
+        artifact: Artifact | bool | None = None,
+    ) -> LiteAgentOutput:
+        """Async :meth:`_finalize_kickoff`: saves the artifact off the event loop."""
+        output = self._guard_kickoff_output(
+            output, executor, inputs, response_format, usage_baseline
+        )
+        if artifact:
+            # A store may upload over the network; keep the loop free.
+            await asyncio.to_thread(self._save_kickoff_artifact, output, artifact)
+        return self._complete_kickoff(output, messages, agent_info)
+
+    def _guard_kickoff_output(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None,
+        usage_baseline: UsageMetrics | None,
+    ) -> LiteAgentOutput:
+        if self.guardrail is None:
+            return output
+        return self._process_kickoff_guardrail(
+            output=output,
+            executor=executor,
+            inputs=inputs,
+            response_format=response_format,
+            usage_baseline=usage_baseline,
+        )
+
+    def _save_kickoff_artifact(
+        self,
+        output: LiteAgentOutput,
+        artifact: Artifact | bool,
+    ) -> None:
+        """Save the output as ``artifact`` onto ``output.artifact``; logs failures."""
+        from crewai.flow.flow_context import current_flow_method_name
+
+        content = output.pydantic.model_dump_json() if output.pydantic else output.raw
+        # Inside a flow the method name is the stable name across reruns.
+        method = current_flow_method_name.get()
+        name = method if method != "unknown" else self.role
+        try:
+            output.artifact = save_output_artifact(
+                artifact,
+                content=content,
+                name=name,
+                from_agent=self,
             )
+        except Exception as e:
+            # A failed save never fails the run, same as Task(artifact=).
+            logging.getLogger(__name__).warning("Failed to save artifact: %s", e)
 
+    def _complete_kickoff(
+        self,
+        output: LiteAgentOutput,
+        messages: str | list[LLMMessage],
+        agent_info: dict[str, Any],
+    ) -> LiteAgentOutput:
         self._save_kickoff_to_memory(messages, output.raw)
-
         crewai_event_bus.emit(
             self,
             event=LiteAgentExecutionCompletedEvent(
@@ -1930,7 +2191,6 @@ class Agent(BaseAgent):
                 output=output.raw,
             ),
         )
-
         return output
 
     def _emit_kickoff_error(self, agent_info: dict[str, Any], e: Exception) -> NoReturn:
@@ -2192,6 +2452,7 @@ class Agent(BaseAgent):
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
+        artifact: Artifact | bool | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously with the given messages.
 
@@ -2215,6 +2476,7 @@ class Agent(BaseAgent):
                    Files can be paths, bytes, or File objects from crewai_files.
             from_checkpoint: Optional checkpoint config. If ``restore_from``
                 is set, the agent resumes from that checkpoint.
+            artifact: Optional artifact to save the final output as.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -2225,12 +2487,21 @@ class Agent(BaseAgent):
                 messages=messages,
                 response_format=response_format,
                 input_files=input_files,
+                artifact=artifact,
             )
 
+        if isinstance(artifact, Artifact):
+            check_artifact_source(artifact)
+
+        # Downloading and parsing block, so they stay off the event loop.
+        spreadsheets = await asyncio.to_thread(
+            read_spreadsheet_inputs, kickoff_input_text(messages)
+        )
         execution_token = begin_execution()
+        scope = enter_spreadsheet_scope(spreadsheets)
         try:
             executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-                messages, response_format, input_files
+                messages, response_format, input_files, spreadsheets
             )
 
             try:
@@ -2250,7 +2521,7 @@ class Agent(BaseAgent):
                 output = await self._execute_and_build_output_async(
                     executor, inputs, response_format, usage_baseline
                 )
-                return self._finalize_kickoff(
+                return await self._afinalize_kickoff(
                     output,
                     executor,
                     inputs,
@@ -2258,11 +2529,13 @@ class Agent(BaseAgent):
                     messages,
                     agent_info,
                     usage_baseline,
+                    artifact,
                 )
 
             except Exception as e:
                 self._emit_kickoff_error(agent_info, e)
         finally:
+            exit_spreadsheet_scope(scope)
             end_execution(execution_token)
 
     async def akickoff(
@@ -2271,6 +2544,7 @@ class Agent(BaseAgent):
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
+        artifact: Artifact | bool | None = None,
     ) -> LiteAgentOutput:
         """Async version of kickoff. Alias for kickoff_async.
 
@@ -2280,10 +2554,15 @@ class Agent(BaseAgent):
             input_files: Optional dict of named files to attach to the message.
             from_checkpoint: Optional checkpoint config. If ``restore_from``
                 is set, the agent resumes from that checkpoint.
+            artifact: Optional artifact to save the final output as.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
         return await self.kickoff_async(
-            messages, response_format, input_files, from_checkpoint
+            messages,
+            response_format,
+            input_files,
+            from_checkpoint=from_checkpoint,
+            artifact=artifact,
         )

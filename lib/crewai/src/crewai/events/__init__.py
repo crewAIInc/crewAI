@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         LiteAgentExecutionErrorEvent,
         LiteAgentExecutionStartedEvent,
     )
+    from crewai.events.types.artifact_events import ArtifactCreatedEvent
     from crewai.events.types.checkpoint_events import (
         CheckpointBaseEvent,
         CheckpointCompletedEvent,
@@ -87,6 +88,9 @@ if TYPE_CHECKING:
         KnowledgeSearchQueryFailedEvent,
     )
     from crewai.events.types.llm_events import (
+        ContextWindowSummarizationCompletedEvent,
+        ContextWindowSummarizationFailedEvent,
+        ContextWindowSummarizationStartedEvent,
         LLMCallCompletedEvent,
         LLMCallFailedEvent,
         LLMCallStartedEvent,
@@ -167,6 +171,7 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "LiteAgentExecutionCompletedEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionErrorEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
+    "ArtifactCreatedEvent": "crewai.events.types.artifact_events",
     "CheckpointBaseEvent": "crewai.events.types.checkpoint_events",
     "CheckpointCompletedEvent": "crewai.events.types.checkpoint_events",
     "CheckpointFailedEvent": "crewai.events.types.checkpoint_events",
@@ -211,6 +216,9 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "KnowledgeRetrievalCompletedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeRetrievalStartedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeSearchQueryFailedEvent": "crewai.events.types.knowledge_events",
+    "ContextWindowSummarizationCompletedEvent": "crewai.events.types.llm_events",
+    "ContextWindowSummarizationFailedEvent": "crewai.events.types.llm_events",
+    "ContextWindowSummarizationStartedEvent": "crewai.events.types.llm_events",
     "LLMCallCompletedEvent": "crewai.events.types.llm_events",
     "LLMCallFailedEvent": "crewai.events.types.llm_events",
     "LLMCallStartedEvent": "crewai.events.types.llm_events",
@@ -301,6 +309,7 @@ __all__ = [
     "AgentReasoningCompletedEvent",
     "AgentReasoningFailedEvent",
     "AgentReasoningStartedEvent",
+    "ArtifactCreatedEvent",
     "BaseEventListener",
     "CheckpointBaseEvent",
     "CheckpointCompletedEvent",
@@ -315,6 +324,9 @@ __all__ = [
     "CheckpointRestoreStartedEvent",
     "CheckpointStartedEvent",
     "CircularDependencyError",
+    "ContextWindowSummarizationCompletedEvent",
+    "ContextWindowSummarizationFailedEvent",
+    "ContextWindowSummarizationStartedEvent",
     "ConversationMessageAddedEvent",
     "ConversationRouteSelectedEvent",
     "ConversationTurnCompletedEvent",

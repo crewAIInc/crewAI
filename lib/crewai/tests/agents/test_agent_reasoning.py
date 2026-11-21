@@ -269,7 +269,7 @@ def test_agent_kickoff_multi_step_task_with_planning():
 
 @pytest.mark.vcr()
 def test_agent_execute_task_with_planning():
-    """Test Agent.execute_task() with planning via CrewAgentExecutor."""
+    """Test Agent.execute_task() with planning via AgentExecutor."""
     llm = LLM("gpt-4o-mini")
 
     agent = Agent(

@@ -11,6 +11,33 @@ from crewai_cli.constants import (
 )
 
 
+class _FakeClock:
+    """Stands in for ``time`` in the OAuth2 module: sleeping advances ``monotonic``."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture
+def fake_clock():
+    clock = _FakeClock()
+    with patch("crewai_core.auth.oauth2.time", clock):
+        yield clock
+
+
+def _token_response(status_code: int, body: dict[str, str]) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    response.json.return_value = body
+    return response
+
+
 class TestAuthenticationCommand:
     def setup_method(self):
         # Mock Settings so we always use default constants regardless of local config.
@@ -174,11 +201,12 @@ class TestAuthenticationCommand:
         mock_settings_instance = MagicMock()
         mock_settings_instance.org_name = "Test Org"
         mock_settings_instance.org_uuid = "test-uuid-123"
+        mock_settings_instance.enterprise_base_url = "https://app.crewai.com"
         mock_settings.return_value = mock_settings_instance
 
         self.auth_command._login_to_tool_repository()
 
-        mock_tool_command.assert_called_once()
+        mock_tool_command.assert_called_once_with(base_url="https://app.crewai.com")
         mock_tool_instance.login.assert_called_once()
 
         expected_calls = [
@@ -282,6 +310,7 @@ class TestAuthenticationCommand:
             patch.object(
                 self.auth_command, "_login_to_tool_repository"
             ) as mock_tool_login,
+            patch.object(self.auth_command, "_select_organization") as mock_select_org,
         ):
             self.auth_command.oauth2_provider = MagicMock()
             self.auth_command.oauth2_provider.get_token_url.return_value = (
@@ -302,6 +331,7 @@ class TestAuthenticationCommand:
             )
 
             mock_validate.assert_called_once()
+            mock_select_org.assert_called_once()
             mock_tool_login.assert_called_once()
 
             expected_calls = [
@@ -311,24 +341,185 @@ class TestAuthenticationCommand:
             ]
             mock_console_print.assert_has_calls(expected_calls)
 
+    @patch("crewai_cli.authentication.main.pick", return_value="org-research")
+    @patch("crewai_cli.authentication.main.console")
+    @patch("crewai_cli.authentication.main.Settings")
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_saves_the_prompted_choice(
+        self,
+        mock_plus_api,
+        mock_get_auth_token,
+        mock_settings,
+        mock_console,
+        mock_pick,
+    ):
+        response = MagicMock()
+        response.json.return_value = [
+            {"name": "Engineering", "uuid": "org-engineering"},
+            {"name": "Research", "uuid": "org-research"},
+        ]
+        mock_plus_api.return_value.get_organizations.return_value = response
+        mock_settings.return_value.enterprise_base_url = "https://app.crewai.com"
+
+        self.auth_command._select_organization()
+
+        mock_plus_api.assert_called_once_with(
+            api_key="token", base_url="https://app.crewai.com"
+        )
+        response.raise_for_status.assert_called_once()
+        mock_pick.assert_called_once_with(
+            "Select an organization (Name / ID):",
+            [("org-engineering", "Engineering"), ("org-research", "Research")],
+            labels=["Engineering  org-engineering", "Research     org-research"],
+        )
+        settings = mock_settings.return_value
+        assert settings.org_name == "Research"
+        assert settings.org_uuid == "org-research"
+        settings.dump.assert_called_once()
+
+    @patch("crewai_cli.authentication.main.Settings")
+    @patch("crewai_cli.authentication.main.pick", return_value=None)
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_keeps_settings_when_picker_is_cancelled(
+        self, mock_plus_api, mock_get_auth_token, mock_pick, mock_settings
+    ):
+        response = MagicMock()
+        response.json.return_value = [{"name": "Engineering", "uuid": "org-engineering"}]
+        mock_plus_api.return_value.get_organizations.return_value = response
+
+        self.auth_command._select_organization()
+
+        mock_settings.return_value.dump.assert_not_called()
+
+    @patch("crewai_cli.authentication.main.pick", return_value="org-unknown")
+    @patch("crewai_cli.authentication.main.console")
+    @patch("crewai_cli.authentication.main.Settings")
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_displays_a_fallback_for_a_missing_name(
+        self,
+        mock_plus_api,
+        mock_get_auth_token,
+        mock_settings,
+        mock_console,
+        mock_pick,
+    ):
+        response = MagicMock()
+        response.json.return_value = [{"name": None, "uuid": "org-unknown"}]
+        mock_plus_api.return_value.get_organizations.return_value = response
+
+        self.auth_command._select_organization()
+
+        mock_pick.assert_called_once_with(
+            "Select an organization (Name / ID):",
+            [("org-unknown", None)],
+            labels=["Unnamed organization  org-unknown"],
+        )
+        settings = mock_settings.return_value
+        assert settings.org_name is None
+        assert settings.org_uuid == "org-unknown"
+
+    @patch("crewai_cli.authentication.main.console")
+    @patch("crewai_cli.authentication.main.get_auth_token", return_value="token")
+    @patch("crewai_cli.authentication.main.PlusAPI")
+    def test_select_organization_handles_no_available_organizations(
+        self, mock_plus_api, mock_get_auth_token, mock_console
+    ):
+        response = MagicMock()
+        response.json.return_value = []
+        mock_plus_api.return_value.get_organizations.return_value = response
+
+        self.auth_command._select_organization()
+
+        mock_console.print.assert_called_once_with(
+            "You don't belong to any organizations yet.", style="yellow"
+        )
+
     @patch("crewai_core.auth.oauth2.httpx.post")
     @patch("crewai_core.auth.oauth2.console.print")
-    def test_poll_for_token_timeout(self, mock_console_print, mock_post):
-        mock_response_pending = MagicMock()
-        mock_response_pending.status_code = 400
-        mock_response_pending.json.return_value = {"error": "authorization_pending"}
-        mock_post.return_value = mock_response_pending
+    def test_poll_for_token_waits_until_the_code_expires_then_exits(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        mock_post.return_value = _token_response(400, {"error": "authorization_pending"})
 
-        device_code_data = {
-            "device_code": "test_device_code",
-            "interval": 0.1,  # Short interval for testing
-        }
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 300}
+            )
 
-        self.auth_command._poll_for_token(device_code_data)
-
+        assert exc_info.value.code == 1
+        assert 300 <= fake_clock.now < 305
         mock_console_print.assert_any_call(
-            "Timeout: Failed to get the token. Please try again.", style="bold red"
+            "Timeout: the login code expired before sign-in finished. "
+            "Please try again.",
+            style="bold red",
         )
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_falls_back_to_ten_minutes_without_expires_in(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        mock_post.return_value = _token_response(400, {"error": "authorization_pending"})
+
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5}
+            )
+
+        assert exc_info.value.code == 1
+        assert 600 <= fake_clock.now < 605
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_treats_the_providers_expired_token_as_the_timeout(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        """The provider can expire the code before our own deadline passes."""
+        mock_post.side_effect = [
+            _token_response(400, {"error": "authorization_pending"}),
+            _token_response(400, {"error": "expired_token"}),
+        ]
+
+        with pytest.raises(SystemExit) as exc_info:
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 300}
+            )
+
+        assert exc_info.value.code == 1
+        assert fake_clock.now == 5
+        mock_console_print.assert_any_call(
+            "Timeout: the login code expired before sign-in finished. "
+            "Please try again.",
+            style="bold red",
+        )
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
+    def test_poll_for_token_signs_in_after_more_than_ten_pending_polls(
+        self, mock_console_print, mock_post, fake_clock
+    ):
+        """A sign-in that takes about a minute used to be cut off at 10 polls."""
+        mock_post.side_effect = [
+            *(
+                _token_response(400, {"error": "authorization_pending"})
+                for _ in range(12)
+            ),
+            _token_response(200, {"access_token": "test_access_token"}),
+        ]
+
+        with (
+            patch.object(self.auth_command, "_validate_and_save_token") as mock_save,
+            patch.object(self.auth_command, "_post_login"),
+        ):
+            self.auth_command._poll_for_token(
+                {"device_code": "test_device_code", "interval": 5, "expires_in": 900}
+            )
+
+        mock_save.assert_called_once_with({"access_token": "test_access_token"})
+        mock_console_print.assert_any_call("Success!", style="bold green")
 
     @patch("crewai_core.auth.oauth2.httpx.post")
     def test_poll_for_token_error(self, mock_post):

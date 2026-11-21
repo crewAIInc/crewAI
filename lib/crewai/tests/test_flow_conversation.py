@@ -3769,3 +3769,38 @@ class TestHandlerReplyPromotion:
             ("user", "hi"),
             ("assistant", "explicit"),
         ]
+
+
+@pytest.mark.parametrize("scope,expected", [("turn", False), ("session", True)])
+@pytest.mark.parametrize("legacy_defer", [False, True])
+def test_explicit_trace_scope_wins_over_legacy_flags(scope, expected, legacy_defer):
+    @ConversationConfig(trace_scope=scope, defer_trace_finalization=legacy_defer)
+    class ScopedChat(ConversationalFlow):
+        pass
+
+    flow = ScopedChat()
+    flow.defer_trace_finalization = True
+    assert flow._should_defer_trace_finalization() is expected
+    assert ScopedChat.flow_definition().conversational.trace_scope == scope
+
+
+def test_declarative_trace_scope_and_class_precedence():
+    declaration = _conversational_declaration(conversational={"trace_scope": "turn"})
+    declared = Flow.from_declaration(contents=declaration)
+    assert declared._conversation_config.trace_scope == "turn"
+    assert declared._should_defer_trace_finalization() is False
+
+    @ConversationConfig(trace_scope="session")
+    class SessionChat(ConversationalFlow):
+        pass
+
+    assert SessionChat.from_declaration(contents=declaration)._should_defer_trace_finalization() is True
+
+
+def test_invalid_conversation_trace_scope_is_rejected():
+    with pytest.raises(ValueError, match="trace_scope"):
+        ConversationConfig(trace_scope="forever")
+    with pytest.raises(ValidationError):
+        Flow.from_declaration(contents=_conversational_declaration(
+            conversational={"trace_scope": "forever"}
+        ))
