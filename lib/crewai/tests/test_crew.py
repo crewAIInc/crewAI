@@ -13,6 +13,8 @@ from typing import Any, cast
 from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
+from crewai.a2a.auth.client_schemes import BearerTokenAuth
+from crewai.a2a.config import A2AClientConfig
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
@@ -4977,6 +4979,30 @@ def test_crew_copy_with_memory():
             raise e
     except Exception as e:
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
+
+
+def test_crew_copy_with_a2a_bearer_auth():
+    """Crew.copy() keeps an authenticated A2A config on its agents (#9447)."""
+    agent = Agent(
+        role="Test Agent",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AClientConfig(
+            endpoint="http://example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="test-token"),
+        ),
+    )
+    task = Task(description="Test Task", expected_output="Test Output", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    crew_copy = crew.copy()
+
+    copied_agent = crew_copy.agents[0]
+    assert isinstance(copied_agent.a2a, A2AClientConfig)
+    assert isinstance(copied_agent.a2a.auth, BearerTokenAuth)
+    assert copied_agent.a2a.auth.token == "test-token"
+    assert copied_agent.a2a is not agent.a2a
 
 
 def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():

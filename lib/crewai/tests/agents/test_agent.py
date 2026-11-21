@@ -24,6 +24,13 @@ from crewai.utilities.errors import AgentRepositoryError
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.a2a.auth.client_schemes import BearerTokenAuth
+from crewai.a2a.auth.server_schemes import (
+    OAuth2ServerAuth,
+    OIDCAuth,
+    SimpleTokenAuth,
+)
+from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
 from crewai.agents.cache import CacheHandler
 from crewai.tools import tool
 from crewai.utilities import RPMController
@@ -135,6 +142,170 @@ def test_agent_copy_does_not_emit_i18n_deprecation_warning():
     assert not any(
         "Agent.i18n is deprecated" in str(w.message) for w in caught_warnings
     )
+
+
+def test_agent_copy_with_a2a_bearer_auth():
+    """Agent.copy() keeps an authenticated A2A config (regression test for #9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AClientConfig(
+            endpoint="http://example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="test-token"),
+        ),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AClientConfig)
+    assert isinstance(copied.a2a.auth, BearerTokenAuth)
+    assert copied.a2a.auth.token == "test-token"
+    assert copied.a2a.endpoint == agent.a2a.endpoint
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
+
+
+def test_agent_copy_with_deprecated_a2a_config_auth():
+    """Agent.copy() keeps auth on the deprecated A2AConfig path (#9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AConfig(
+            endpoint="http://example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="test-token"),
+        ),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AConfig)
+    assert isinstance(copied.a2a.auth, BearerTokenAuth)
+    assert copied.a2a.auth.token == "test-token"
+    assert copied.a2a is not agent.a2a
+
+
+def test_agent_copy_with_a2a_auth_list():
+    """Agent.copy() keeps auth when a2a is a list of configs (#9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=[
+            A2AClientConfig(
+                endpoint="http://example.com/.well-known/agent-card.json",
+                auth=BearerTokenAuth(token="test-token"),
+            ),
+            A2AClientConfig(endpoint="http://example.org"),
+        ],
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, list)
+    assert len(copied.a2a) == 2
+    assert isinstance(copied.a2a[0].auth, BearerTokenAuth)
+    assert copied.a2a[0].auth.token == "test-token"
+    assert copied.a2a[1].auth is None
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a[0] is not agent.a2a[0]
+
+
+def test_agent_copy_with_a2a_server_auth():
+    """Agent.copy() keeps auth on an A2A server config (#9447)."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AServerConfig(auth=SimpleTokenAuth()),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AServerConfig)
+    assert isinstance(copied.a2a.auth, SimpleTokenAuth)
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
+
+
+def test_agent_copy_with_a2a_oidc_auth():
+    """Agent.copy() keeps auth on an OIDC server config (#9447).
+
+    OIDCAuth caches a PyJWKClient, which holds a threading lock and cannot
+    be deep-copied, so copy() must rebuild the scheme with a fresh client.
+    """
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AServerConfig(
+            auth=OIDCAuth(
+                issuer="https://auth.example.com",
+                audience="api://my-agent",
+            )
+        ),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AServerConfig)
+    assert isinstance(copied.a2a.auth, OIDCAuth)
+    assert str(copied.a2a.auth.issuer) == "https://auth.example.com/"
+    assert copied.a2a.auth.audience == "api://my-agent"
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
+    assert copied.a2a.auth._jwk_client is not None
+    assert copied.a2a.auth._jwk_client is not agent.a2a.auth._jwk_client
+
+
+def test_agent_copy_with_a2a_oauth2_server_auth():
+    """Agent.copy() keeps auth on an OAuth2 server config (#9447).
+
+    OAuth2ServerAuth caches a PyJWKClient, which holds a threading lock
+    and cannot be deep-copied, so copy() must rebuild the scheme with a
+    fresh client.
+    """
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="gpt-4o-mini",
+        a2a=A2AServerConfig(
+            auth=OAuth2ServerAuth(
+                token_url="https://auth.example.com/oauth/token",
+                jwks_url="https://auth.example.com/.well-known/jwks.json",
+            )
+        ),
+    )
+
+    copied = agent.copy()
+
+    assert isinstance(copied.a2a, A2AServerConfig)
+    assert isinstance(copied.a2a.auth, OAuth2ServerAuth)
+    assert str(copied.a2a.auth.token_url) == "https://auth.example.com/oauth/token"
+    assert (
+        str(copied.a2a.auth.jwks_url)
+        == "https://auth.example.com/.well-known/jwks.json"
+    )
+    assert copied.a2a is not agent.a2a
+    assert copied.a2a.auth is not agent.a2a.auth
+    assert copied.a2a.auth._jwk_client is not None
+    assert copied.a2a.auth._jwk_client is not agent.a2a.auth._jwk_client
+
+
+def test_agent_copy_without_a2a():
+    """Agent.copy() works when no A2A config is set (#9447)."""
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    copied = agent.copy()
+
+    assert copied.a2a is None
 
 
 def test_agent_with_only_system_template():
