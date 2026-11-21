@@ -5,7 +5,7 @@ from collections.abc import Mapping
 import json
 import re
 from typing import TypeGuard
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from qdrant_client import (
     AsyncQdrantClient,
@@ -38,6 +38,10 @@ from crewai.rag.types import BaseRecord, SearchResult
 # path separators in a local store), plus control characters.
 _INVALID_COLLECTION_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _MAX_COLLECTION_NAME_BYTES = 255
+# Payload key holding a document ID that had to be mapped to another point ID.
+_DOC_ID_KEY = "crewai_doc_id"
+# Namespace of the point IDs mapped from document IDs, apart from the default IDs.
+_DOC_ID_NAMESPACE = uuid5(NAMESPACE_URL, "crewai:doc_id")
 
 
 def _sanitize_collection_name(name: str) -> str:
@@ -224,12 +228,16 @@ def _process_search_results(
     """
     results: list[SearchResult] = []
     for point in response.points:
-        payload = point.payload or {}
+        payload = dict(point.payload or {})
+        doc_id = point.id
+        stored = payload.get(_DOC_ID_KEY)
+        if isinstance(stored, str) and stored != doc_id and _point_id(stored) == doc_id:
+            doc_id = payload.pop(_DOC_ID_KEY)
         score = _normalize_qdrant_score(score=point.score)
         if score_threshold is not None and score < score_threshold:
             continue
         result: SearchResult = {
-            "id": str(point.id),
+            "id": str(doc_id),
             "content": payload.get("content", ""),
             "metadata": {k: v for k, v in payload.items() if k != "content"},
             "score": score,
@@ -249,6 +257,19 @@ def _default_doc_id(content: str, metadata: Mapping[str, object]) -> str:
     if metadata:
         key = f"{content}|{json.dumps(metadata, sort_keys=True, default=str)}"
     return str(uuid5(NAMESPACE_URL, key))
+
+
+def _point_id(doc_id: str) -> str:
+    """Return the point ID for a document ID.
+
+    Qdrant accepts only integers and UUIDs as point IDs, so any other string is
+    mapped to a UUID derived from it.
+    """
+    try:
+        UUID(doc_id)
+    except ValueError:
+        return str(uuid5(_DOC_ID_NAMESPACE, doc_id))
+    return doc_id
 
 
 def _create_point_from_document(
@@ -273,9 +294,14 @@ def _create_point_from_document(
         metadata = dict(metadata) if metadata else {}
 
     doc_id = doc.get("doc_id") or _default_doc_id(doc["content"], metadata)
+    point_id = _point_id(doc_id) if isinstance(doc_id, str) else doc_id
+    if point_id != doc_id:
+        if _DOC_ID_KEY in metadata:
+            raise ValueError(f"metadata key {_DOC_ID_KEY!r} is reserved for doc_id")
+        metadata = {**metadata, _DOC_ID_KEY: doc_id}
 
     return PointStruct(
-        id=doc_id,
+        id=point_id,
         vector=vector,
         payload={"content": doc["content"], **metadata},
     )

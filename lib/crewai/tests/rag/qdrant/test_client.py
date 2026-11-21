@@ -250,7 +250,7 @@ class TestQdrantClient:
 
         documents: list[BaseRecord] = [
             {
-                "doc_id": "custom-id-123",
+                "doc_id": "123e4567-e89b-42d3-a456-426614174000",
                 "content": "Test document",
                 "metadata": {"source": "test"},
             }
@@ -260,7 +260,7 @@ class TestQdrantClient:
 
         call_args = mock_qdrant_client.upsert.call_args
         point = call_args.kwargs["points"][0]
-        assert point.id == "custom-id-123"
+        assert point.id == "123e4567-e89b-42d3-a456-426614174000"
 
     def test_add_documents_empty_list(self, client, mock_qdrant_client):
         """Test that add_documents raises error for empty documents list."""
@@ -346,7 +346,7 @@ class TestQdrantClient:
 
         documents: list[BaseRecord] = [
             {
-                "doc_id": "custom-id-123",
+                "doc_id": "123e4567-e89b-42d3-a456-426614174000",
                 "content": "Test document",
                 "metadata": {"source": "test"},
             }
@@ -358,7 +358,7 @@ class TestQdrantClient:
 
         call_args = mock_async_qdrant_client.upsert.call_args
         point = call_args.kwargs["points"][0]
-        assert point.id == "custom-id-123"
+        assert point.id == "123e4567-e89b-42d3-a456-426614174000"
 
     @pytest.mark.asyncio
     async def test_aadd_documents_empty_list(
@@ -842,3 +842,107 @@ class TestSearchScoreThreshold:
         )
 
         assert [r["content"] for r in results] == ["near", "far"]
+
+
+class TestStringDocIds:
+    """A ``doc_id`` is a plain string, so it does not have to be a UUID."""
+
+    @pytest.fixture
+    def memory_client(self) -> QdrantClient:
+        client = QdrantClient(
+            client=SyncQdrantClient(":memory:"),
+            embedding_function=lambda text: [1.0, 0.0],
+        )
+        client.create_collection(
+            collection_name="docs",
+            vectors_config=VectorParams(size=2, distance=Distance.COSINE),
+        )
+        return client
+
+    @pytest.mark.parametrize("doc_id", ["doc-1", "1", "custom_id"])
+    def test_non_uuid_doc_id_is_searched_back_unchanged(self, memory_client, doc_id):
+        memory_client.add_documents(
+            collection_name="docs",
+            documents=[{"doc_id": doc_id, "content": "a", "metadata": {"k": 1}}],
+        )
+
+        (result,) = memory_client.search(collection_name="docs", query="a")
+
+        assert (result["id"], result["metadata"]) == (doc_id, {"k": 1})
+
+    @pytest.mark.asyncio
+    async def test_non_uuid_doc_id_is_searched_back_unchanged_async(self):
+        client = QdrantClient(
+            client=AsyncQdrantClient(":memory:"),
+            embedding_function=lambda text: [1.0, 0.0],
+        )
+        await client.acreate_collection(
+            collection_name="docs",
+            vectors_config=VectorParams(size=2, distance=Distance.COSINE),
+        )
+
+        await client.aadd_documents(
+            collection_name="docs", documents=[{"doc_id": "doc-1", "content": "a"}]
+        )
+        (result,) = await client.asearch(collection_name="docs", query="a")
+
+        assert (result["id"], result["metadata"]) == ("doc-1", {})
+
+    def test_batch_keeps_ids_apart_from_each_other_and_from_content(
+        self, memory_client
+    ):
+        memory_client.add_documents(
+            collection_name="docs",
+            documents=[
+                {"doc_id": "7", "content": "a"},
+                {"doc_id": "doc-2", "content": "old"},
+                {"doc_id": "doc-2", "content": "new"},
+                {"content": "doc_id:doc-2"},
+            ],
+        )
+
+        results = memory_client.search(collection_name="docs", query="a")
+
+        assert len(results) == 3
+        assert {r["id"]: r["content"] for r in results if r["id"] == "doc-2"} == {
+            "doc-2": "new"
+        }
+        assert "7" in {r["id"] for r in results}
+
+    def test_uuid_and_missing_doc_ids_add_nothing_to_the_payload(self, memory_client):
+        uuid_id = "123e4567-e89b-42d3-a456-426614174000"
+        memory_client.add_documents(
+            collection_name="docs",
+            documents=[{"doc_id": uuid_id, "content": "a"}, {"content": "b"}],
+        )
+
+        results = memory_client.search(collection_name="docs", query="a")
+
+        assert uuid_id in {r["id"] for r in results}
+        for result in results:
+            (record,) = memory_client.client.retrieve("docs", ids=[result["id"]])
+            assert set(record.payload) == {"content"}
+
+    def test_metadata_named_like_the_stored_doc_id_is_left_alone(self, memory_client):
+        uuid_id = "123e4567-e89b-42d3-a456-426614174000"
+        memory_client.add_documents(
+            collection_name="docs",
+            documents=[
+                {"doc_id": uuid_id, "content": "a", "metadata": {"crewai_doc_id": "x"}},
+                {"content": "b", "metadata": {"crewai_doc_id": "x"}},
+            ],
+        )
+
+        results = memory_client.search(collection_name="docs", query="a")
+
+        assert uuid_id in {r["id"] for r in results}
+        assert [r["metadata"] for r in results] == [{"crewai_doc_id": "x"}] * 2
+
+    def test_reserved_metadata_key_with_a_mapped_doc_id_raises(self, memory_client):
+        with pytest.raises(ValueError, match="reserved"):
+            memory_client.add_documents(
+                collection_name="docs",
+                documents=[
+                    {"doc_id": "doc-1", "content": "c", "metadata": {"crewai_doc_id": "x"}}
+                ],
+            )
