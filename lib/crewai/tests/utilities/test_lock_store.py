@@ -2,16 +2,19 @@
 
 We verify our own logic: the _redis_available guard, which portalocker
 backend is selected, and that a custom backend can be plugged in. We trust
-portalocker to handle actual locking mechanics.
+portalocker and redis-py to handle actual locking mechanics.
 """
 
 from __future__ import annotations
 
 from contextlib import contextmanager
 import sys
+import time
 from unittest import mock
 
+import portalocker.exceptions
 import pytest
+import redis.exceptions
 
 import crewai_core.lock_store as lock_store
 from crewai_core.lock_store import lock
@@ -61,19 +64,84 @@ def test_uses_file_lock_when_redis_unavailable():
     assert "crewai:" in mock_lock.call_args.args[0]
 
 
-def test_uses_redis_lock_when_redis_available(monkeypatch):
-    fake_conn = mock.MagicMock()
+@pytest.fixture
+def redis_conn(monkeypatch):
+    """A fake Redis connection whose ``lock()`` hands out one mock lock."""
+    conn = mock.MagicMock()
+    conn.lock.return_value.acquire.return_value = True
     monkeypatch.setattr(lock_store, "_redis_available", mock.Mock(return_value=True))
-    monkeypatch.setattr(lock_store, "_redis_connection", mock.Mock(return_value=fake_conn))
+    monkeypatch.setattr(lock_store, "_redis_connection", mock.Mock(return_value=conn))
+    return conn
 
-    with mock.patch("portalocker.RedisLock") as mock_redis_lock:
+
+def test_uses_redis_set_nx_lock_when_redis_available(redis_conn):
+    with mock.patch("portalocker.RedisLock") as mock_pubsub_lock:
+        with lock("redis_test", timeout=7):
+            redis_conn.lock.return_value.release.assert_not_called()
+
+    mock_pubsub_lock.assert_not_called()
+    name = redis_conn.lock.call_args.args[0]
+    assert name.startswith("crewai:")
+    assert redis_conn.lock.call_args.kwargs["timeout"] == lock_store._LEASE_SECONDS
+    acquire_kwargs = redis_conn.lock.return_value.acquire.call_args.kwargs
+    assert acquire_kwargs["blocking_timeout"] == 7
+    redis_conn.lock.return_value.release.assert_called_once()
+
+
+def test_redis_lock_timeout_raises_lock_exception(redis_conn):
+    redis_conn.lock.return_value.acquire.return_value = False
+
+    with pytest.raises(portalocker.exceptions.LockException, match="redis_test"):
+        with lock("redis_test", timeout=0):
+            pytest.fail("body must not run without the lock")
+
+    redis_conn.lock.return_value.release.assert_not_called()
+
+
+def test_redis_lock_releases_when_body_raises(redis_conn):
+    with pytest.raises(ValueError, match="body failed"):
+        with lock("redis_test"):
+            raise ValueError("body failed")
+
+    redis_conn.lock.return_value.release.assert_called_once()
+
+
+def test_redis_lock_lost_before_release_is_logged_not_raised(redis_conn, caplog):
+    redis_conn.lock.return_value.release.side_effect = redis.exceptions.LockNotOwnedError(
+        "expired"
+    )
+
+    with caplog.at_level("WARNING", logger=lock_store.__name__):
         with lock("redis_test"):
             pass
 
-    mock_redis_lock.assert_called_once()
-    kwargs = mock_redis_lock.call_args.kwargs
-    assert kwargs["channel"].startswith("crewai:")
-    assert kwargs["connection"] is fake_conn
+    assert "redis_test" in caplog.text
+
+
+def test_redis_lock_renews_lease_while_held(redis_conn, monkeypatch):
+    monkeypatch.setattr(lock_store, "_LEASE_SECONDS", 0.03)
+    held = redis_conn.lock.return_value
+
+    with lock("redis_test"):
+        time.sleep(0.1)
+    renewals_at_exit = held.reacquire.call_count
+    time.sleep(0.05)
+
+    assert renewals_at_exit >= 2
+    assert held.reacquire.call_count == renewals_at_exit
+
+
+def test_redis_lock_renewal_stops_when_lease_is_lost(redis_conn, monkeypatch, caplog):
+    monkeypatch.setattr(lock_store, "_LEASE_SECONDS", 0.03)
+    held = redis_conn.lock.return_value
+    held.reacquire.side_effect = redis.exceptions.LockNotOwnedError("expired")
+
+    with caplog.at_level("WARNING", logger=lock_store.__name__):
+        with lock("redis_test"):
+            time.sleep(0.1)
+
+    assert held.reacquire.call_count == 1
+    assert "redis_test" in caplog.text
 
 
 # custom backend
