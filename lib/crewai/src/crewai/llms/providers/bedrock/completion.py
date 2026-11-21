@@ -946,12 +946,6 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
-            return self._invoke_after_llm_call_hooks(
-                messages,
-                text_content,
-                from_agent,
-            )
-
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
             error_msg = e.response.get("Error", {}).get("Message", str(e))
@@ -996,10 +990,19 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+        except HookAborted:
+            # Raised by the after-hooks of a recursive call after tool execution.
+            raise
         except Exception as e:
             error_msg = f"Unexpected error in Bedrock converse call: {e}"
             logging.error(error_msg)
             raise RuntimeError(error_msg) from e
+
+        return self._invoke_after_llm_call_hooks(
+            messages,
+            text_content,
+            from_agent,
+        )
 
     def _handle_streaming_converse(
         self,
@@ -1305,7 +1308,11 @@ class BedrockCompletion(BaseLLM):
             response_id=response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            messages,
+            full_response,
+            from_agent,
+        )
 
     async def _ensure_async_client(self) -> Any:
         """Ensure async client is initialized and return it."""
@@ -1561,8 +1568,6 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
-            return text_content
-
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
             error_msg = e.response.get("Error", {}).get("Message", str(e))
@@ -1605,10 +1610,19 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+        except HookAborted:
+            # Raised by the after-hooks of a recursive call after tool execution.
+            raise
         except Exception as e:
             error_msg = f"Unexpected error in Bedrock converse call: {e}"
             logging.error(error_msg)
             raise RuntimeError(error_msg) from e
+
+        return self._invoke_after_llm_call_hooks(
+            messages,
+            text_content,
+            from_agent,
+        )
 
     async def _ahandle_streaming_converse(
         self,
