@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import hmac
 import logging
 import os
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal
@@ -130,6 +131,11 @@ class ServerAuthScheme(ABC, BaseModel):
         ...
 
 
+def _tokens_equal(provided: str, expected: str) -> bool:
+    """Compare two credential strings in constant time."""
+    return hmac.compare_digest(provided.encode("utf-8"), expected.encode("utf-8"))
+
+
 class SimpleTokenAuth(ServerAuthScheme):
     """Simple bearer token authentication.
 
@@ -144,11 +150,18 @@ class SimpleTokenAuth(ServerAuthScheme):
         description="Expected token. Falls back to AUTH_TOKEN env var.",
     )
 
+    @model_validator(mode="after")
+    def _require_non_empty_token(self) -> Self:
+        """Reject an explicitly configured empty token."""
+        if self.token is not None and not self.token.get_secret_value():
+            raise ValueError("token must not be empty")
+        return self
+
     def _get_expected_token(self) -> str | None:
         """Get the expected token value."""
-        if self.token:
-            return self.token.get_secret_value()
-        return os.environ.get("AUTH_TOKEN")
+        if self.token is not None:
+            return self.token.get_secret_value() or None
+        return os.environ.get("AUTH_TOKEN") or None
 
     async def authenticate(self, token: str) -> AuthenticatedUser:
         """Authenticate using simple token comparison.
@@ -164,7 +177,7 @@ class SimpleTokenAuth(ServerAuthScheme):
         """
         expected = self._get_expected_token()
 
-        if expected is None:
+        if not expected:
             logger.warning(
                 "Simple token authentication failed",
                 extra={"reason": "no_token_configured"},
@@ -174,7 +187,7 @@ class SimpleTokenAuth(ServerAuthScheme):
                 detail="Authentication not configured",
             )
 
-        if token != expected:
+        if not _tokens_equal(token, expected):
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Invalid or missing authentication credentials",
@@ -701,6 +714,13 @@ class APIKeyServerAuth(ServerAuthScheme):
         description="Expected API key value",
     )
 
+    @model_validator(mode="after")
+    def _require_non_empty_api_key(self) -> Self:
+        """Reject an empty API key."""
+        if not self.api_key.get_secret_value():
+            raise ValueError("api_key must not be empty")
+        return self
+
     async def authenticate(self, token: str) -> AuthenticatedUser:
         """Authenticate using API key comparison.
 
@@ -713,7 +733,8 @@ class APIKeyServerAuth(ServerAuthScheme):
         Raises:
             HTTPException: If authentication fails.
         """
-        if token != self.api_key.get_secret_value():
+        expected = self.api_key.get_secret_value()
+        if not expected or not _tokens_equal(token, expected):
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Invalid API key",
