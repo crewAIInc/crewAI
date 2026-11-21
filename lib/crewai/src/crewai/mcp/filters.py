@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from crewai.utilities.string_utils import sanitize_tool_name
+
 
 if TYPE_CHECKING:
     pass
@@ -58,14 +60,23 @@ class StaticToolFilter:
     ) -> None:
         """Initialize static tool filter.
 
+        Names are compared after ``sanitize_tool_name``, the same
+        normalization MCPClient applies to listed tool names, so both the
+        server's tool name (e.g. ``delete-file``) and its sanitized form
+        (``delete_file``) match.
+
         Args:
             allowed_tool_names: List of tool names to allow. If None,
                 all tools are allowed (unless blocked).
             blocked_tool_names: List of tool names to block. Blocked tools
                 take precedence over allowed tools.
         """
-        self.allowed_tool_names = set(allowed_tool_names or [])
-        self.blocked_tool_names = set(blocked_tool_names or [])
+        self.allowed_tool_names = {
+            sanitize_tool_name(name) for name in allowed_tool_names or []
+        }
+        self.blocked_tool_names = {
+            sanitize_tool_name(name) for name in blocked_tool_names or []
+        }
 
     def __call__(self, tool: dict[str, Any]) -> bool:
         """Filter tool based on allow/block lists.
@@ -76,7 +87,7 @@ class StaticToolFilter:
         Returns:
             True if tool should be included, False otherwise.
         """
-        tool_name = tool.get("name", "")
+        tool_name = sanitize_tool_name(tool.get("name", ""))
 
         # Blocked tools take precedence over allowed tools
         if self.blocked_tool_names and tool_name in self.blocked_tool_names:
