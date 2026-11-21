@@ -196,8 +196,9 @@ class MongoDBVectorSearchTool(BaseTool):
         """
         from bson import ObjectId
 
+        texts = list(texts)
         _metadatas = metadatas or [{} for _ in texts]
-        ids = [str(ObjectId()) for _ in range(len(list(texts)))]
+        ids = ids or [str(ObjectId()) for _ in texts]
 
         result_ids = []
         texts_batch = []
