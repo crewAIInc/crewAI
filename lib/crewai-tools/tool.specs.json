@@ -20909,6 +20909,165 @@
       }
     },
     {
+      "description": "Check whether a cold or marketing email to one address is allowed in the recipient's country (UK, US, Canada, Germany, France, Australia, Ireland, the Netherlands, Spain, Italy, Latvia, the UAE, Egypt and Qatar). Call it once per address before the first email to anyone who is not already a customer. It returns a verdict (ok_to_email, consent_needed, blocked or unknown), the rule with its source, what the footer must include, a next step and a signed receipt id. Send only on ok_to_email, with a footer that meets the footer requirements. Treat unknown as consent_needed. Not needed for invoices, receipts or other transactional email.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional. A free key from https://precleared.dev/get-key gives your own daily allowance; without one a small shared allowance applies.",
+          "name": "PRECLEARED_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "Precleared cold email check",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Check whether a cold or marketing email may be sent to one address.",
+        "properties": {
+          "check_url": {
+            "default": "https://precleared.dev/api/v1/check",
+            "title": "Check Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "PreclearedTool",
+        "type": "object"
+      },
+      "name": "PreclearedTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for PreclearedTool.",
+        "properties": {
+          "address_source": {
+            "default": "unknown",
+            "description": "Where the address came from: published (on their own website), bought, scraped, given (they gave it to you) or unknown.",
+            "title": "Address Source",
+            "type": "string"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The recipient's company name, if you have it. Helps find a UK company on the register.",
+            "title": "Company Name"
+          },
+          "existing_customer": {
+            "default": false,
+            "description": "True only if this person or company is already your customer.",
+            "title": "Existing Customer",
+            "type": "boolean"
+          },
+          "pitch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "One line on what you are offering. Some countries need the pitch to be relevant to the recipient's role.",
+            "title": "Pitch"
+          },
+          "recipient_country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Two-letter code of the recipient's country, only if you are sure of it. Otherwise leave it out and Precleared works it out.",
+            "title": "Recipient Country"
+          },
+          "recipient_email": {
+            "description": "The address you want to send a cold email to.",
+            "title": "Recipient Email",
+            "type": "string"
+          },
+          "recipient_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The recipient's full name, if you have it. Matched against company officers and not stored.",
+            "title": "Recipient Name"
+          },
+          "sender_country": {
+            "default": "GB",
+            "description": "Two-letter country code of the sender, for example GB, US, CA, DE or AE. Only Canada adds sender-side rules (CASL).",
+            "title": "Sender Country",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipient_email"
+        ],
+        "title": "PreclearedToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Search Qdrant vector DB for relevant documents.",
       "env_vars": [
         {
