@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from typing import TYPE_CHECKING, Any, cast
 import uuid
 
@@ -15,6 +16,7 @@ from pydantic import PrivateAttr
 from pydantic.dataclasses import is_pydantic_dataclass
 from typing_extensions import TypeIs, Unpack
 
+from crewai_tools.rag.content_item import parse_data_type, resolve_content_item
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.misc import sanitize_metadata_for_chromadb
 from crewai_tools.tools.rag.rag_tool import Adapter
@@ -115,6 +117,13 @@ class CrewAIRagAdapter(Adapter):
     def add(self, *args: ContentItem, **kwargs: Unpack[AddDocumentParams]) -> None:
         """Add content to the knowledge base.
 
+        A document dictionary is read as a ``source`` and a ``content``: the
+        ``content`` body is indexed as plain text and the ``source`` is kept
+        as the ``source`` metadata of the indexed chunks. A body is never
+        read from disk and never fetched, so it is indexed as the text it
+        is. Pass an explicit ``data_type`` such as ``"text_file"`` to load
+        the ``source`` instead of indexing the body.
+
         Args:
             *args: Content items to add (strings, paths, or document dicts)
             **kwargs: Additional parameters including:
@@ -135,32 +144,18 @@ class CrewAIRagAdapter(Adapter):
             rag_tool.add(file_path="path/to/document.pdf", data_type="pdf_file")
 
             rag_tool.add("path/to/document.pdf")  # auto-detects PDF
-        """
-        import os
 
+            rag_tool.add({"source": "batch-A", "content": "Solve 2x + 3 = 11."})
+        """
         from crewai_tools.rag.base_loader import LoaderResult
         from crewai_tools.rag.data_types import DataType, DataTypes
         from crewai_tools.rag.source_content import SourceContent
 
         documents: list[BaseRecord] = []
-        raw_data_type = kwargs.get("data_type")
         base_metadata: dict[str, Any] = kwargs.get("metadata", {})
 
-        data_type: DataType | None = None
-        if raw_data_type is not None:
-            if isinstance(raw_data_type, DataType):
-                if raw_data_type != DataType.FILE:
-                    data_type = raw_data_type
-            elif isinstance(raw_data_type, str):
-                if raw_data_type != "file":
-                    try:
-                        data_type = DataType(raw_data_type)
-                    except ValueError:
-                        raise ValueError(
-                            f"Invalid data_type: '{raw_data_type}'. "
-                            f"Valid values are: 'file' (auto-detect), or one of: "
-                            f"{', '.join(dt.value for dt in DataType)}"
-                        ) from None
+        data_type: DataType | None = parse_data_type(kwargs.get("data_type"))
+        detected_type: DataType | None = None
 
         content_items: list[ContentItem] = list(args)
 
@@ -193,26 +188,29 @@ class CrewAIRagAdapter(Adapter):
         }
 
         for arg in content_items:
-            source_ref: str
-            if isinstance(arg, dict):
-                source_ref = str(arg.get("source", arg.get("content", "")))
-            else:
-                source_ref = str(arg)
+            item = resolve_content_item(arg, data_type)
+            reference = item.reference
 
-            if not data_type:
-                ext = os.path.splitext(source_ref)[1].lower()
-                is_url = source_ref.startswith(("http://", "https://", "file://"))
+            item_type = data_type or detected_type
+            if item.inline:
+                # An inline body is plain text: it is indexed verbatim, never
+                # read from disk and never fetched.
+                item_type = DataType.TEXT
+            elif item_type is None:
+                ext = os.path.splitext(reference)[1].lower()
+                is_url = reference.startswith(("http://", "https://", "file://"))
                 if (
                     ext in file_extensions
                     and not is_url
-                    and not os.path.isfile(source_ref)
+                    and not os.path.isfile(reference)
                 ):
-                    raise FileNotFoundError(f"File does not exist: {source_ref}")
-                data_type = DataTypes.from_content(source_ref)
+                    raise FileNotFoundError(f"File does not exist: {reference}")
+                item_type = DataTypes.from_content(reference)
+                detected_type = item_type
 
-            if data_type == DataType.DIRECTORY:
-                if not os.path.isdir(source_ref):
-                    raise ValueError(f"Directory does not exist: {source_ref}")
+            if item_type == DataType.DIRECTORY:
+                if not os.path.isdir(reference):
+                    raise ValueError(f"Directory does not exist: {reference}")
 
                 # Define binary and non-text file extensions to skip
                 binary_extensions = {
@@ -247,7 +245,7 @@ class CrewAIRagAdapter(Adapter):
                     ".ear",
                 }
 
-                for root, dirs, files in os.walk(source_ref):
+                for root, dirs, files in os.walk(reference):
                     dirs[:] = [d for d in dirs if not d.startswith(".")]
 
                     for filename in files:
@@ -304,9 +302,11 @@ class CrewAIRagAdapter(Adapter):
                             continue
             else:
                 metadata: dict[str, Any] = base_metadata.copy()
-                source_content = SourceContent(source_ref)
+                # An inline document body is what gets loaded; the `source`
+                # label only travels along as metadata.
+                source_content = SourceContent(reference)
 
-                if data_type in [
+                if item_type in [
                     DataType.PDF_FILE,
                     DataType.TEXT_FILE,
                     DataType.DOCX,
@@ -317,10 +317,12 @@ class CrewAIRagAdapter(Adapter):
                     DataType.MDX,
                 ]:
                     if not source_content.is_url() and not source_content.path_exists():
-                        raise FileNotFoundError(f"File does not exist: {source_ref}")
+                        raise FileNotFoundError(
+                            f"File does not exist: {source_content.source}"
+                        )
 
-                loader = data_type.get_loader()
-                chunker = data_type.get_chunker()
+                loader = item_type.get_loader()
+                chunker = item_type.get_chunker()
 
                 loader_result: LoaderResult = loader.load(source_content, **kwargs)
 
@@ -329,17 +331,21 @@ class CrewAIRagAdapter(Adapter):
                 for i, chunk in enumerate(chunks):
                     chunk_metadata: dict[str, Any] = metadata.copy()
                     chunk_metadata.update(loader_result.metadata)
-                    chunk_metadata["data_type"] = str(data_type)
+                    chunk_metadata["data_type"] = str(item_type)
                     chunk_metadata["chunk_index"] = i
                     chunk_metadata["total_chunks"] = len(chunks)
-                    chunk_metadata["source"] = source_ref
+                    chunk_metadata["source"] = item.label
 
                     if isinstance(arg, dict):
                         chunk_metadata.update(arg.get("metadata", {}))
 
-                    chunk_hash = hashlib.sha256(
-                        f"{loader_result.doc_id}_{i}_{chunk}".encode()
-                    ).hexdigest()
+                    # Documents that carry an explicit source label get the
+                    # label mixed into their identity, so identical bodies from
+                    # different sources stay separate records.
+                    identity = f"{loader_result.doc_id}_{i}_{chunk}"
+                    if item.inline and item.labelled:
+                        identity = f"{loader_result.doc_id}_{item.label}_{i}_{chunk}"
+                    chunk_hash = hashlib.sha256(identity.encode()).hexdigest()
                     chunk_id = str(uuid.UUID(chunk_hash[:32]))
 
                     documents.append(
