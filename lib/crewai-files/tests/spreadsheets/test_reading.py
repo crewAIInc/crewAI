@@ -535,6 +535,30 @@ class TestText:
         book = parse(b'Amount\n"1,234.50"\n12\n', "a.csv")
         assert book.sheets[0].table().frame["Amount"].tolist() == [1234.5, 12.0]
 
+    @pytest.mark.parametrize(
+        "csv",
+        [
+            b"id\n1234567890123456789\n1234567890123456790\n",
+            b'id\n"1,234,567,890,123,456,789"\n"1,234,567,890,123,456,790"\n',
+            b"id;n\n1234567890123456789;1\n1234567890123456790;2\n",
+        ],
+    )
+    def test_integers_a_float_cannot_hold_stay_text(self, csv):
+        """A float rounds integers past 15 digits, so these IDs read as one."""
+        table = parse(csv, "a.csv").sheets[0].table()
+        assert table.kinds["id"] == "text"
+        assert table.frame["id"].str.replace(",", "").tolist() == [
+            "1234567890123456789",
+            "1234567890123456790",
+        ]
+
+    def test_fifteen_digit_integers_are_still_numbers(self):
+        table = parse(b"n\n999999999999999\n000001\n", "a.csv").sheets[0].table()
+        assert (table.kinds["n"], table.frame["n"].tolist()) == (
+            "integer",
+            [999999999999999.0, 1.0],
+        )
+
     def test_text_dates_become_dates_when_nine_in_ten_parse(self):
         rows = "\n".join(f"0{d}.03.2026;x" for d in range(1, 10))
         table = (
