@@ -1078,20 +1078,28 @@ def _setup_env(folder_path: Path, llm_models: list[str]) -> None:
 
 
 def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
-    """Return unique platform application slugs selected across all agents."""
+    """Return unique platform application selectors selected across all agents."""
     apps: list[str] = []
     for agent in agents:
         for tool in agent.get("tools", []):
             if isinstance(tool, str) and tool.startswith("platform:"):
-                app = tool.removeprefix("platform:").split("/", maxsplit=1)[0]
-                if app and app not in apps:
-                    apps.append(app)
+                raw = tool.removeprefix("platform:")
+                if "@" in raw and "/" in raw and raw.index("@") < raw.index("/"):
+                    selector = raw
+                else:
+                    app_and_action, sep, connection = raw.partition("@")
+                    app = app_and_action.partition("/")[0]
+                    selector = f"{app}{sep}{connection}" if app else ""
+                if selector and selector not in apps:
+                    apps.append(selector)
     return apps
 
 
 def _platform_app_name(app: str) -> str:
-    """Return the display name for a platform application slug."""
-    return PLATFORM_APP_DISPLAY_NAMES.get(app, app.replace("_", " ").title())
+    """Return the display name for a platform application selector."""
+    slug, sep, connection = app.partition("@")
+    name = PLATFORM_APP_DISPLAY_NAMES.get(slug, slug.replace("_", " ").title())
+    return f"{name} (@{connection})" if sep and connection else name
 
 
 def _get_logged_in_platform_token() -> str:

@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 from typing import Any
+from uuid import UUID
 
 import click
 from crewai_core.platform_apps import PLATFORM_APP_TOOLS
@@ -119,19 +120,53 @@ def save_platform_token(project_root: Path, token: str) -> None:
 
 
 def validate_tool_references(tools: list[str]) -> None:
-    """Reject empty references and unknown CrewAI Platform applications."""
+    """Reject empty references and invalid CrewAI Platform selectors."""
     for tool in tools:
         if not tool.strip():
             raise click.BadParameter("Tool references cannot be empty.")
         if not tool.startswith("platform:"):
             continue
-        app, _, action = tool.removeprefix("platform:").partition("/")
+        selector = tool.removeprefix("platform:")
+        if (
+            "@" in selector
+            and "/" in selector
+            and selector.index("@") < selector.index("/")
+        ):
+            raise click.BadParameter(
+                f"Invalid platform tool reference '{tool}': "
+                "connection ID must be the last segment."
+            )
+        app_and_action, has_connection, connection = selector.partition("@")
+        app, has_action, action = app_and_action.partition("/")
+        if not app:
+            raise click.BadParameter(
+                f"Invalid platform tool reference '{tool}': application cannot be empty."
+            )
         if app not in PLATFORM_APP_TOOLS:
             raise click.BadParameter(f"Unknown CrewAI Platform application '{app}'.")
-        if action and action not in {item.slug for item in PLATFORM_APP_TOOLS[app]}:
-            raise click.BadParameter(
-                f"Unknown action '{action}' for CrewAI Platform application '{app}'."
-            )
+        if has_action:
+            if not action:
+                raise click.BadParameter(
+                    f"Invalid platform tool reference '{tool}': action cannot be empty."
+                )
+            if action not in {item.slug for item in PLATFORM_APP_TOOLS[app]}:
+                raise click.BadParameter(
+                    f"Unknown action '{action}' for CrewAI Platform application '{app}'."
+                )
+        if has_connection:
+            if not connection:
+                raise click.BadParameter(
+                    f"Invalid platform tool reference '{tool}': "
+                    "connection ID cannot be empty."
+                )
+            if not (connection.isascii() and connection.isalpha()):
+                try:
+                    UUID(connection)
+                except ValueError as error:
+                    raise click.BadParameter(
+                        f"Invalid platform tool reference '{tool}': "
+                        "connection ID must be a valid UUID or alias (e.g. private)."
+                    ) from error
 
 
 def agent_definition_path(project_root: Path) -> Path:

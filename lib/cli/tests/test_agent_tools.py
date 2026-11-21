@@ -113,7 +113,14 @@ def test_tool_add_leaves_definition_untouched_when_platform_setup_is_cancelled(
     ("reference", "message"),
     [
         ("platform:not_an_app", "Unknown CrewAI Platform application"),
+        ("platform:not_an_app@private", "Unknown CrewAI Platform application"),
         ("platform:gmail/not_an_action", "Unknown action"),
+        ("platform:gmail/not_an_action@private", "Unknown action"),
+        ("platform:", "application cannot be empty"),
+        ("platform:gmail/", "action cannot be empty"),
+        ("platform:gmail@", "connection ID cannot be empty"),
+        ("platform:gmail@not-a-uuid-123", "valid UUID or alias"),
+        ("platform:gmail@private/send-email", "connection ID must be the last segment"),
     ],
 )
 def test_tool_add_rejects_unknown_platform_references(
@@ -126,6 +133,68 @@ def test_tool_add_rejects_unknown_platform_references(
     assert result.exit_code == 2
     assert message in result.output
     assert _definition(project)["tools"] == TEMPLATE_TOOLS
+
+
+@pytest.mark.parametrize("fmt", ["json", "yaml"])
+def test_tool_add_accepts_platform_connection_selectors(
+    fmt: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    platform_setup: list[list[str]],
+) -> None:
+    project = _create(tmp_path, monkeypatch, fmt)
+    selectors = [
+        "platform:gmail@private",
+        "platform:gmail/send-email@550e8400-e29b-41d4-a716-446655440000",
+    ]
+
+    result = CliRunner().invoke(crewai, ["tool", "add", *selectors])
+
+    assert result.exit_code == 0, result.output
+    assert _definition(project)["tools"] == [*TEMPLATE_TOOLS, *selectors]
+    assert platform_setup == [selectors]
+
+
+def test_tool_setup_checks_action_connection_selector_on_amp(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import builtins
+    from unittest import mock
+
+    project = _create(tmp_path, monkeypatch, "json")
+    definition = _definition(project)
+    definition["tools"].append("platform:whatsapp/send-message@private")
+    (project / "agent.json").write_text(json.dumps(definition))
+
+    seen_selectors: list[str] = []
+
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            seen_selectors.append(value)
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_integrations(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            return fake_integrations
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_integrations)
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+
+    result = CliRunner().invoke(crewai, ["tool", "setup"])
+
+    assert result.exit_code == 0, result.output
+    assert seen_selectors == ["whatsapp@private"]
+    assert "WhatsApp (@private)" in result.output
 
 
 @pytest.mark.parametrize(

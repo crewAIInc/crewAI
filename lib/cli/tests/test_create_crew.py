@@ -794,6 +794,26 @@ def test_platform_validation_deduplicates_actions_by_application() -> None:
     assert apps == ["github", "gmail"]
 
 
+def test_platform_validation_preserves_connection_selectors() -> None:
+    conn_uuid = "550e8400-e29b-41d4-a716-446655440000"
+    apps = json_crew._platform_apps_from_agents(
+        [
+            {
+                "tools": [
+                    "platform:whatsapp/send_message@private",
+                    "platform:whatsapp/list_messages@private",
+                    f"platform:whatsapp@{conn_uuid}",
+                    "platform:github/create_repository",
+                ]
+            }
+        ]
+    )
+
+    assert apps == ["whatsapp@private", f"whatsapp@{conn_uuid}", "github"]
+    assert json_crew._platform_app_name("whatsapp@private") == "WhatsApp (@private)"
+    assert json_crew._platform_app_name("whatsapp") == "WhatsApp"
+
+
 def test_platform_revalidation_requires_confirmation(monkeypatch) -> None:
     confirm_options: list[dict[str, object]] = []
 
