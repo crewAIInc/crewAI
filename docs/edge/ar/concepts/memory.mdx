@@ -758,7 +758,19 @@ memory = Memory(
 ## واجهة التخزين
 
 - **الافتراضي**: LanceDB، مخزّن تحت `./.crewai/memory` (أو `$CREWAI_STORAGE_DIR/memory` إذا تم تعيين متغير البيئة، أو المسار الذي تمرره كـ `storage="path/to/dir"`).
+- **Chroma**: يحفظ `ChromaStorage` السجلات في مجموعة على خادم Chroma، أو في العميل داخل العملية من حزمة `chromadb`. تُطابَق النطاقات حسب المسار، ويُصفّي الخادم البحث حسب الفئات.
 - **واجهة مخصصة**: نفّذ بروتوكول `StorageBackend` (انظر `crewai.memory.storage.backend`) ومرّر مثيلًا إلى `Memory(storage=your_backend)`. لعمليات النشر الإنتاجية، يمكنك استخدام `MongoDBStorageBackend` من حزمة `crewai-mongodb-memory`. لمعرفة المزيد، راجع [دليل تطبيق MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/).
+
+لاستخدام Chroma، مرّر عميلًا من حزمة `chromadb`:
+
+```python
+import chromadb
+from crewai import Memory
+from crewai.memory.storage.chroma_storage import ChromaStorage
+
+client = chromadb.HttpClient(host="localhost", port=8000)
+memory = Memory(storage=ChromaStorage(client=client))
+```
 
 
 ## الاستكشاف

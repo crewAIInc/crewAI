@@ -758,7 +758,19 @@ memory = Memory(
 ## Backend de Armazenamento
 
 - **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
+- **Chroma**: o `ChromaStorage` guarda os registros em uma coleção de um servidor Chroma, ou do cliente em processo do pacote `chromadb`. Os escopos são comparados por caminho, e uma busca por categoria é filtrada pelo servidor.
 - **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`. Para implantações em produção, você pode usar o `MongoDBStorageBackend` do pacote `crewai-mongodb-memory`. Para saber mais, veja o [tutorial de implementação do MongoDB](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/).
+
+Para usar o Chroma, passe um cliente do pacote `chromadb`:
+
+```python
+import chromadb
+from crewai import Memory
+from crewai.memory.storage.chroma_storage import ChromaStorage
+
+client = chromadb.HttpClient(host="localhost", port=8000)
+memory = Memory(storage=ChromaStorage(client=client))
+```
 
 
 ## Descoberta
