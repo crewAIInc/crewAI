@@ -128,6 +128,18 @@ def test_build_flow_structure_from_flow_class():
     assert structure["nodes"]["begin"]["class_name"] == "SimpleFlow"
 
 
+def test_build_flow_structure_from_declared_flow_instance():
+    """A flow built with Flow.from_declaration plots its own methods."""
+    declared = Flow.from_declaration(
+        contents=SimpleFlow.flow_definition().model_dump(mode="json")
+    )
+
+    structure = build_flow_structure(declared)
+
+    assert set(structure["nodes"]) == {"begin", "process"}
+    assert structure["start_methods"] == ["begin"]
+
+
 def test_build_flow_structure_from_flow_definition():
     """Test building visualization directly from a FlowDefinition."""
     definition = FlowDefinition.from_declaration(contents=
