@@ -48,7 +48,6 @@ class MultiOnTool(BaseTool):
                 raise ImportError(
                     "`multion` package not found, please run `uv add multion`"
                 ) from None
-        self.session_id = None
         self.multion = MultiOn(api_key=api_key or os.getenv("MULTION_API_KEY"))
 
     def _run(
