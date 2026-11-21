@@ -2062,9 +2062,19 @@ class Agent(BaseAgent):
                     self._kickoff_event_id = started_event.event_id
 
                 usage_baseline = self._current_usage_summary()
-                output = self._execute_and_build_output(
-                    executor, inputs, response_format, usage_baseline
-                )
+                validate_max_execution_time(self.max_execution_time)
+                if self.max_execution_time is not None:
+                    output = self._execute_and_build_output_with_timeout(
+                        executor,
+                        inputs,
+                        response_format,
+                        usage_baseline,
+                        self.max_execution_time,
+                    )
+                else:
+                    output = self._execute_and_build_output(
+                        executor, inputs, response_format, usage_baseline
+                    )
                 return self._finalize_kickoff(
                     output,
                     executor,
@@ -2348,6 +2358,43 @@ class Agent(BaseAgent):
             result, executor, response_format, usage_baseline, kickoff_failures
         )
 
+    def _execute_and_build_output_with_timeout(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None,
+        usage_baseline: UsageMetrics | None,
+        timeout: int,
+    ) -> LiteAgentOutput:
+        """Execute the agent synchronously with a timeout."""
+        ctx = contextvars.copy_context()
+        pool = concurrent.futures.ThreadPoolExecutor()
+        try:
+            future = pool.submit(
+                ctx.run,
+                self._execute_and_build_output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
+                usage_baseline=usage_baseline,
+            )
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError as e:
+                future.cancel()
+                raise TimeoutError(
+                    f"Agent '{self.role}' execution timed out after {timeout} seconds. "
+                    "Consider increasing max_execution_time or optimizing the agent."
+                ) from e
+            except _passthrough_exceptions:
+                future.cancel()
+                raise
+            except Exception as e:
+                future.cancel()
+                raise RuntimeError(f"Agent execution failed: {e!s}") from e
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+
     async def _execute_and_build_output_async(
         self,
         executor: AgentExecutor,
@@ -2518,9 +2565,24 @@ class Agent(BaseAgent):
                     self._kickoff_event_id = started_event.event_id
 
                 usage_baseline = self._current_usage_summary()
-                output = await self._execute_and_build_output_async(
-                    executor, inputs, response_format, usage_baseline
-                )
+                validate_max_execution_time(self.max_execution_time)
+                if self.max_execution_time is not None:
+                    try:
+                        output = await asyncio.wait_for(
+                            self._execute_and_build_output_async(
+                                executor, inputs, response_format, usage_baseline
+                            ),
+                            timeout=self.max_execution_time,
+                        )
+                    except asyncio.TimeoutError as e:
+                        raise TimeoutError(
+                            f"Agent '{self.role}' execution timed out after {self.max_execution_time} seconds. "
+                            "Consider increasing max_execution_time or optimizing the agent."
+                        ) from e
+                else:
+                    output = await self._execute_and_build_output_async(
+                        executor, inputs, response_format, usage_baseline
+                    )
                 return await self._afinalize_kickoff(
                     output,
                     executor,
