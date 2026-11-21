@@ -6,8 +6,10 @@ import pytest
 
 from crewai_tools.rag.chunkers.base_chunker import RecursiveCharacterTextSplitter
 from crewai_tools.rag.chunkers.structured_chunker import JsonChunker
+from crewai_tools.rag.chunkers.text_chunker import TextChunker
 from crewai_tools.rag.data_types import DataType, DataTypes
 from crewai_tools.rag.loaders.jsonl_loader import JSONLLoader
+from crewai_tools.rag.loaders.notebook_loader import NotebookLoader
 
 
 class TestDataTypeChunkers:
@@ -125,3 +127,30 @@ class TestDataTypesJSONL:
 
     def test_inline_content_remains_text_without_explicit_type(self) -> None:
         assert DataTypes.from_content('{"a": 1}\n{"b": 2}') is DataType.TEXT
+
+
+class TestDataTypesNotebook:
+    """Notebooks use the existing registry for explicit selection and discovery."""
+
+    def test_explicit_type(self) -> None:
+        assert DataType("notebook") is DataType.NOTEBOOK
+        assert isinstance(DataType.NOTEBOOK.get_loader(), NotebookLoader)
+        assert type(DataType.NOTEBOOK.get_chunker()) is TextChunker
+
+    @pytest.mark.parametrize("as_path", [True, False])
+    def test_file_extension(self, tmp_path: Path, as_path: bool) -> None:
+        path = tmp_path / "analysis.ipynb"
+        path.write_text('{"nbformat": 4, "cells": []}', encoding="utf-8")
+        assert (
+            DataTypes.from_content(path if as_path else str(path)) is DataType.NOTEBOOK
+        )
+
+    @pytest.mark.parametrize("suffix", ["", "?download=1#cells"])
+    def test_url_extension(self, suffix: str) -> None:
+        assert (
+            DataTypes.from_content(f"https://example.com/analysis.ipynb{suffix}")
+            is DataType.NOTEBOOK
+        )
+
+    def test_inline_content_remains_text_without_explicit_type(self) -> None:
+        assert DataTypes.from_content('{"nbformat": 4, "cells": []}') is DataType.TEXT

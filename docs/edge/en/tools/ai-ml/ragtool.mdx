@@ -50,6 +50,7 @@ The `RagTool` can be used with a wide variety of data sources, including:
 - 📊 CSV files
 - 📃 JSON files
 - JSONL files (`.jsonl` and `.ndjson`)
+- Jupyter notebooks (`.ipynb`)
 - 📝 Text
 - 📁 Directories/Folders
 - 🌐 HTML Web pages
@@ -102,10 +103,18 @@ rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
 
 # Auto-detect a local JSONL file by its extension
 rag_tool.add(path="path/to/your/records.ndjson")
+
+# Add a local Jupyter notebook (auto-detected by its .ipynb extension)
+rag_tool.add(path="path/to/your/analysis.ipynb")
 ```
 
 JSONL files contain one JSON value per line. The JSONL loader supports local files;
 recognizing a JSONL URL does not fetch its content.
+
+Jupyter notebooks are indexed by cell source, with each cell prefixed by a
+`[cell N: type]` marker. Notebooks are never executed and cell outputs are not
+indexed. The notebook loader supports local files; recognizing a notebook URL
+does not fetch its content. Use `data_type="notebook"` to select it explicitly.
 
 ## Agent Integration Example
 

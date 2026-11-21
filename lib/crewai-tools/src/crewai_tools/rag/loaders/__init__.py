@@ -4,6 +4,7 @@ from crewai_tools.rag.loaders.docx_loader import DOCXLoader
 from crewai_tools.rag.loaders.json_loader import JSONLoader
 from crewai_tools.rag.loaders.jsonl_loader import JSONLLoader
 from crewai_tools.rag.loaders.mdx_loader import MDXLoader
+from crewai_tools.rag.loaders.notebook_loader import NotebookLoader
 from crewai_tools.rag.loaders.pdf_loader import PDFLoader
 from crewai_tools.rag.loaders.text_loader import TextFileLoader, TextLoader
 from crewai_tools.rag.loaders.webpage_loader import WebPageLoader
@@ -19,6 +20,7 @@ __all__ = [
     "JSONLLoader",
     "JSONLoader",
     "MDXLoader",
+    "NotebookLoader",
     "PDFLoader",
     "TextFileLoader",
     "TextLoader",
