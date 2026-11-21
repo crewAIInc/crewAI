@@ -94,16 +94,22 @@ class MCPNativeTool(BaseTool):
         try:
             try:
                 asyncio.get_running_loop()
-
-                import concurrent.futures
-
-                ctx = contextvars.copy_context()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    coro = self._run_async(**kwargs)
-                    future = executor.submit(ctx.run, asyncio.run, coro)
-                    return future.result()
             except RuntimeError:
                 return asyncio.run(self._run_async(**kwargs))
+
+            # A loop is already running, so the coroutine is driven in a worker
+            # thread. Only the loop detection may fall back to `asyncio.run`:
+            # catching `RuntimeError` around `future.result()` would mistake an
+            # error raised by the tool for that signal, hide it behind
+            # "asyncio.run() cannot be called from a running event loop" and
+            # run the tool a second time.
+            import concurrent.futures
+
+            ctx = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                coro = self._run_async(**kwargs)
+                future = executor.submit(ctx.run, asyncio.run, coro)
+                return future.result()
 
         except Exception as e:
             raise RuntimeError(
