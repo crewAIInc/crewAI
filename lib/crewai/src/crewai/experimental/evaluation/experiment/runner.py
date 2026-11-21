@@ -137,7 +137,8 @@ class ExperimentRunner:
         - If both expected and actual scores are single numbers, the actual score must be >= expected.
         - If expected is a single number and actual is a dict, compare against the average of actual values.
         - If expected is a dict and actual is a single number, actual must be >= all expected values.
-        - If both are dicts, actual must have matching keys with values >= expected values.
+        - If both are dicts, every key in expected must be present in actual (fail closed if any
+          expected metric produced no score), and each actual value must be >= its expected threshold.
         """
 
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
@@ -155,11 +156,14 @@ class ExperimentRunner:
         if isinstance(expected, dict) and isinstance(actual, dict):
             if not expected:
                 return True
-            matching_keys = set(expected.keys()) & set(actual.keys())
-            if not matching_keys:
+            missing_keys = set(expected.keys()) - set(actual.keys())
+            if missing_keys:
+                # Fail closed: an expected metric that produced no score is a failure,
+                # not a pass.  This prevents a multi-metric expected_score from passing
+                # when one evaluator returns score=None or raises, leaving that metric
+                # absent from `actual`.
                 return False
-
-            # All matching keys must have actual >= expected
-            return all(actual[key] >= expected[key] for key in matching_keys)
+            # All expected keys are present; each actual value must meet its threshold.
+            return all(actual[key] >= expected[key] for key in expected)
 
         return False
