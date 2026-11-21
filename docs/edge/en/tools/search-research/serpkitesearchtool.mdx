@@ -1,0 +1,57 @@
+---
+title: "SerpKite Search"
+description: "Google search results as Markdown using the external SerpKite package."
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+# `SerpKiteSearchTool`
+
+This integration is maintained by the SerpKite team and distributed in `serpkite[crewai]`. It is not part of `crewai-tools`.
+
+## Installation
+
+Install the package and set `SERPKITE_API_KEY` to a key from [SerpKite](https://app.serpkite.com/keys).
+
+```shell
+uv add "serpkite[crewai]"
+export SERPKITE_API_KEY="skt_live_..."
+```
+
+## Usage
+
+The tool returns Markdown containing search results and source links. Pass it directly to a CrewAI agent. Configure your preferred LLM provider separately.
+
+```python
+from crewai import Agent
+from serpkite.crewai import SerpKiteSearchTool
+
+search = SerpKiteSearchTool()
+print(search.run(query="latest Python release"))
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information and cite sources",
+    backstory="You research public information using web search.",
+    tools=[search],
+)
+```
+
+## Configuration
+
+Use `endpoint` to choose `search` (default), `news`, `images`, `videos`, `maps`, `places`, `shopping`, `scholar`, `patents` or `autocomplete`. Set `country`, `language`, `location` and `num` as defaults. The agent can provide `query`, `num`, `country`, `language` and `time` (`hour`, `day`, `week`, `month`, `year`).
+
+Not every endpoint accepts every option. For example, `scholar` does not accept `time`. Check the [endpoint reference](https://serpkite.com/docs) before setting endpoint-specific options.
+
+```python
+news = SerpKiteSearchTool(endpoint="news", country="us", language="en", num=10)
+print(news.run(query="renewable energy", time="week"))
+```
+
+## Resources
+
+- [Provider guide](https://serpkite.com/integrations/crewai)
+- [Source and package](https://github.com/SerpKite/serpkite-python)
+- [PyPI](https://pypi.org/project/serpkite/)
+
+Google is a trademark of Google LLC.
