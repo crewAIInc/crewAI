@@ -2898,9 +2898,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Then execute listeners for the router result (e.g., "approved")
             router_result = result.value if isinstance(result, enum.Enum) else result
             router_result_trigger = FlowMethodName(str(router_result))
+            is_feedback_from_this_router = (
+                self.last_human_feedback is not None
+                and getattr(self.last_human_feedback, "method_name", None) == start_method_name
+            )
             listener_result = (
                 self.last_human_feedback
-                if self.last_human_feedback is not None
+                if is_feedback_from_this_router
                 else result
             )
             await self._execute_listeners(
@@ -3260,13 +3264,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_str = str(router_result)
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
+                is_feedback_from_this_router = (
+                    self.last_human_feedback is not None
+                    and getattr(self.last_human_feedback, "method_name", None) == trigger_method
+                )
                 router_result_payloads[router_result_str] = (
                     self.last_human_feedback
-                    if self.last_human_feedback is not None
+                    if is_feedback_from_this_router
                     else router_result
                 )
 
-                if self.last_human_feedback is not None:
+                if is_feedback_from_this_router:
                     router_result_to_feedback[router_result_str] = (
                         self.last_human_feedback
                     )
