@@ -23,6 +23,8 @@ uv add 'crewai[tools]' tavily-python
 export TAVILY_API_KEY='your_tavily_api_key'
 ```
 
+لتوجيه الطلبات عبر وكيل (proxy) أو نقطة نهاية متوافقة مع Tavily، عيّن `TAVILY_API_BASE_URL` (أو مرّر `api_base_url` عند إنشاء الأداة). إذا لم يتم تعيينه، تستخدم الأداة عنوان Tavily API الافتراضي.
+
 احصل على مفتاح API على https://app.tavily.com/ (سجّل، ثم أنشئ مفتاحاً).
 
 ## مثال على الاستخدام
