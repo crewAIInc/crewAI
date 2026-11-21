@@ -6,7 +6,8 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+import re
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -14,7 +15,10 @@ from typing_extensions import Required
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -50,6 +54,27 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+
+def _normalize_litellm_bedrock_kwargs(data: dict[str, Any]) -> dict[str, Any]:
+    """Map LiteLLM Bedrock kwargs to their native-provider equivalents."""
+    normalized_data = dict(data)
+    additional_params = normalized_data.get("additional_params")
+    if isinstance(additional_params, dict):
+        additional_params = dict(additional_params)
+        normalized_data["additional_params"] = additional_params
+
+    for litellm_name, native_name in (
+        ("aws_region_name", "region_name"),
+        ("guardrailConfig", "guardrail_config"),
+    ):
+        value = normalized_data.pop(litellm_name, None)
+        if value is None and isinstance(additional_params, dict):
+            value = additional_params.pop(litellm_name, None)
+        if normalized_data.get(native_name) is None and value is not None:
+            normalized_data[native_name] = value
+
+    return normalized_data
 
 
 def _preprocess_structured_data(
@@ -203,6 +228,13 @@ class BedrockConverseStreamRequestBody(TypedDict, total=False):
     additionalModelResponseFieldPaths: list[str]
 
 
+# GPT-6 IDs include point releases (``openai.gpt-6.1-*``), so the family ends at
+# ``.`` or ``-``; Nova IDs carry a ``-v<n>`` version.
+_BEDROCK_VISION_MODEL: Final[re.Pattern[str]] = re.compile(
+    r"openai\.gpt-6[.-]|amazon\.nova-(?:lite|pro|premier|2-lite)-v\d"
+)
+
+
 class BedrockCompletion(BaseLLM):
     """AWS Bedrock native completion implementation using the Converse API.
 
@@ -265,6 +297,8 @@ class BedrockCompletion(BaseLLM):
 
         data.pop("provider", None)
         data["provider"] = "bedrock"
+
+        data = _normalize_litellm_bedrock_kwargs(data)
 
         popped = data.pop("stop_sequences", None)
         seqs = popped if popped is not None else (data.get("stop") or [])
@@ -407,7 +441,7 @@ class BedrockCompletion(BaseLLM):
                 modelId=self.model_id,
                 input={"converse": converse_input},
             )
-        except ClientError:
+        except (BotoCoreError, ClientError):
             return super().get_input_tokens_count(messages, tools, response_model)
         return int(response["inputTokens"])
 
@@ -2222,38 +2256,30 @@ class BedrockCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, BEDROCK_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+            self.model,
+            BEDROCK_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
         )
 
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+, Nova Lite/Pro/Premier and OpenAI GPT-6 (Sol, Luna, Astra)
-        on Bedrock support vision.
+        Claude 3+, Nova Lite/Pro/Premier/2 Lite and OpenAI GPT-6 (Sol, Luna,
+        Astra) on Bedrock support vision, also behind a geo inference profile
+        prefix (``us.``, ``eu.``, ``global.``, ...).
 
         Returns:
             True if the model supports images.
         """
+        from crewai.llms.context_window import _REGION_PREFIXES
+
         model_lower = self.model.lower()
-        vision_models = (
-            "anthropic.claude-3",
-            "anthropic.claude-sonnet-4",
-            "anthropic.claude-opus-4",
-            "anthropic.claude-haiku-4",
-            "openai.gpt-6",
-            "us.openai.gpt-6",
-            "global.openai.gpt-6",
-            "amazon.nova-lite",
-            "amazon.nova-pro",
-            "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
-        )
-        return any(model_lower.startswith(m) for m in vision_models)
+        if model_lower.startswith(_REGION_PREFIXES):
+            model_lower = model_lower.split(".", 1)[1]
+        if model_lower.startswith("anthropic."):
+            return claude_supports_vision(model_lower.removeprefix("anthropic."))
+        return _BEDROCK_VISION_MODEL.match(model_lower) is not None
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.

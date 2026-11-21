@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import chromadb
 from crewai.utilities.lock_store import lock as store_lock
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -43,6 +42,13 @@ class RAG(Adapter):
     _lock_name: str = PrivateAttr(default="")
 
     def model_post_init(self, __context: Any) -> None:
+        try:
+            import chromadb
+        except ImportError as e:
+            raise ImportError(
+                "RAG requires chromadb. Install it with: pip install crewai[chromadb]"
+            ) from e
+
         try:
             self._lock_name = (
                 f"chromadb:{os.path.realpath(self.persist_directory)}"

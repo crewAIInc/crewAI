@@ -1,18 +1,19 @@
 """Roboflow embeddings provider."""
 
-from chromadb.utils.embedding_functions.roboflow_embedding_function import (
-    RoboflowEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.chromadb_loader import load_chromadb_embedding_function
 
 
-class RoboflowProvider(BaseEmbeddingsProvider[RoboflowEmbeddingFunction]):
+class RoboflowProvider(BaseEmbeddingsProvider[EmbeddingFunction]):  # type: ignore[type-arg]
     """Roboflow embeddings provider."""
 
-    embedding_callable: type[RoboflowEmbeddingFunction] = Field(
-        default=RoboflowEmbeddingFunction,
+    embedding_callable: type[EmbeddingFunction] = Field(  # type: ignore[type-arg]
+        default_factory=lambda: load_chromadb_embedding_function(
+            "roboflow_embedding_function", "RoboflowEmbeddingFunction"
+        ),
         description="Roboflow embedding function class",
     )
     api_key: str = Field(

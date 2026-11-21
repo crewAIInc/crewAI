@@ -1,0 +1,498 @@
+---
+title: 도구 호출 훅
+description: CrewAI에서 도구 실행을 가로채고, 수정하고, 제어하는 도구 호출 훅 사용 방법 배우기
+mode: "wide"
+---
+
+도구 호출 훅(Tool Call Hooks)은 에이전트 작업 중 도구 실행에 대한 세밀한 제어를 제공합니다. 이러한 훅을 사용하면 도구 호출을 가로채고, 입력을 수정하고, 출력을 변환하고, 안전 검사를 구현하고, 포괄적인 로깅 또는 모니터링을 추가할 수 있습니다.
+
+## 개요
+
+도구 훅은 두 가지 중요한 시점에 실행됩니다:
+- **도구 호출 전**: 입력 수정, 매개변수 검증 또는 실행 차단
+- **도구 호출 후**: 결과 변환, 출력 정제 또는 실행 세부사항 로깅
+
+## 훅 타입
+
+### 도구 호출 전 훅
+
+모든 도구 실행 전에 실행되며, 다음을 수행할 수 있습니다:
+- 도구 입력 검사 및 수정
+- 조건에 따라 도구 실행 차단
+- 위험한 작업에 대한 승인 게이트 구현
+- 매개변수 검증
+- 도구 호출 로깅
+
+**시그니처:**
+```python
+def before_hook(context: ToolCallHookContext) -> bool | None:
+    # 실행을 차단하려면 False 반환
+    # 실행을 허용하려면 True 또는 None 반환
+    ...
+```
+
+### 도구 호출 후 훅
+
+모든 도구 실행 후에 실행되며, 다음을 수행할 수 있습니다:
+- 도구 결과 수정 또는 정제
+- 메타데이터 또는 서식 추가
+- 실행 결과 로깅
+- 결과 검증 구현
+- 출력 형식 변환
+
+**시그니처:**
+```python
+def after_hook(context: ToolCallHookContext) -> str | None:
+    # 수정된 결과 문자열 반환
+    # 원본 결과를 유지하려면 None 반환
+    ...
+```
+
+## 도구 훅 컨텍스트
+
+`ToolCallHookContext` 객체는 도구 실행 상태에 대한 포괄적인 액세스를 제공합니다:
+
+```python
+class ToolCallHookContext:
+    tool_name: str                    # 호출되는 도구의 이름
+    tool_input: dict[str, Any]        # 변경 가능한 도구 입력 매개변수
+    tool: CrewStructuredTool          # 도구 인스턴스 참조
+    agent: Agent | BaseAgent | None   # 도구를 실행하는 에이전트
+    task: Task | None                 # 현재 작업
+    crew: Crew | None                 # 크루 인스턴스
+    tool_result: str | None           # 도구 결과 (후 훅용)
+```
+
+### 도구 입력 수정
+
+**중요:** 항상 도구 입력을 제자리에서 수정하세요:
+
+```python
+# ✅ 올바름 - 제자리에서 수정
+def sanitize_input(context: ToolCallHookContext) -> None:
+    context.tool_input['query'] = context.tool_input['query'].lower()
+
+# ❌ 잘못됨 - 딕셔너리 참조를 교체
+def wrong_approach(context: ToolCallHookContext) -> None:
+    context.tool_input = {'query': 'new query'}
+```
+
+## 등록 방법
+
+### 1. 데코레이터 기반 등록 (권장)
+
+더 깔끔한 구문을 위해 데코레이터를 사용합니다:
+
+```python
+from crewai.hooks import before_tool_call, after_tool_call
+
+@before_tool_call
+def block_dangerous_tools(context):
+    """위험한 도구를 차단합니다."""
+    dangerous_tools = ['delete_database', 'drop_table', 'rm_rf']
+    if context.tool_name in dangerous_tools:
+        print(f"⛔ 위험한 도구 차단됨: {context.tool_name}")
+        return False  # 실행 차단
+    return None
+
+@after_tool_call
+def sanitize_results(context):
+    """결과를 정제합니다."""
+    if context.tool_result and "password" in context.tool_result.lower():
+        return context.tool_result.replace("password", "[수정됨]")
+    return None
+```
+
+### 2. 크루 범위 훅
+
+특정 크루 인스턴스에 대한 훅을 등록합니다:
+
+```python
+from crewai import CrewBase
+from crewai.project import crew
+from crewai.hooks import before_tool_call_crew, after_tool_call_crew
+
+@CrewBase
+class MyProjCrew:
+    @before_tool_call_crew
+    def validate_tool_inputs(self, context):
+        # 이 크루에만 적용됩니다
+        if context.tool_name == "web_search":
+            if not context.tool_input.get('query'):
+                print("❌ 잘못된 검색 쿼리")
+                return False
+        return None
+    
+    @after_tool_call_crew
+    def log_tool_results(self, context):
+        # 크루별 도구 로깅
+        print(f"✅ {context.tool_name} 완료됨")
+        return None
+    
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+## 일반적인 사용 사례
+
+### 1. 안전 가드레일
+
+```python
+@before_tool_call
+def safety_check(context: ToolCallHookContext) -> bool | None:
+    """해를 끼칠 수 있는 도구를 차단합니다."""
+    destructive_tools = [
+        'delete_file',
+        'drop_table',
+        'remove_user',
+        'system_shutdown'
+    ]
+    
+    if context.tool_name in destructive_tools:
+        print(f"🛑 파괴적인 도구 차단됨: {context.tool_name}")
+        return False
+    
+    # 민감한 작업에 대해 경고
+    sensitive_tools = ['send_email', 'post_to_social_media', 'charge_payment']
+    if context.tool_name in sensitive_tools:
+        print(f"⚠️  민감한 도구 실행 중: {context.tool_name}")
+    
+    return None
+```
+
+### 2. 사람의 승인 게이트
+
+```python
+@before_tool_call
+def require_approval_for_actions(context: ToolCallHookContext) -> bool | None:
+    """특정 작업에 대한 승인을 요구합니다."""
+    approval_required = [
+        'send_email',
+        'make_purchase',
+        'delete_file',
+        'post_message'
+    ]
+    
+    if context.tool_name in approval_required:
+        response = context.request_human_input(
+            prompt=f"{context.tool_name}을(를) 승인하시겠습니까?",
+            default_message=f"입력: {context.tool_input}\n승인하려면 'yes'를 입력하세요:"
+        )
+        
+        if response.lower() != 'yes':
+            print(f"❌ 도구 실행 거부됨: {context.tool_name}")
+            return False
+    
+    return None
+```
+
+### 3. 입력 검증 및 정제
+
+```python
+@before_tool_call
+def validate_and_sanitize_inputs(context: ToolCallHookContext) -> bool | None:
+    """입력을 검증하고 정제합니다."""
+    # 검색 쿼리 검증
+    if context.tool_name == 'web_search':
+        query = context.tool_input.get('query', '')
+        if len(query) < 3:
+            print("❌ 검색 쿼리가 너무 짧습니다")
+            return False
+        
+        # 쿼리 정제
+        context.tool_input['query'] = query.strip().lower()
+    
+    # 파일 경로 검증
+    if context.tool_name == 'read_file':
+        path = context.tool_input.get('path', '')
+        if '..' in path or path.startswith('/'):
+            print("❌ 잘못된 파일 경로")
+            return False
+    
+    return None
+```
+
+### 4. 결과 정제
+
+```python
+@after_tool_call
+def sanitize_sensitive_data(context: ToolCallHookContext) -> str | None:
+    """민감한 데이터를 정제합니다."""
+    if not context.tool_result:
+        return None
+    
+    import re
+    result = context.tool_result
+    
+    # API 키 제거
+    result = re.sub(
+        r'(api[_-]?key|token)["\']?\s*[:=]\s*["\']?[\w-]+',
+        r'\1: [수정됨]',
+        result,
+        flags=re.IGNORECASE
+    )
+    
+    # 이메일 주소 제거
+    result = re.sub(
+        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+        '[이메일-수정됨]',
+        result
+    )
+    
+    # 신용카드 번호 제거
+    result = re.sub(
+        r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b',
+        '[카드-수정됨]',
+        result
+    )
+    
+    return result
+```
+
+### 5. 도구 사용 분석
+
+```python
+import time
+from collections import defaultdict
+
+tool_stats = defaultdict(lambda: {'count': 0, 'total_time': 0, 'failures': 0})
+
+@before_tool_call
+def start_timer(context: ToolCallHookContext) -> None:
+    context.tool_input['_start_time'] = time.time()
+    return None
+
+@after_tool_call
+def track_tool_usage(context: ToolCallHookContext) -> None:
+    start_time = context.tool_input.get('_start_time', time.time())
+    duration = time.time() - start_time
+    
+    tool_stats[context.tool_name]['count'] += 1
+    tool_stats[context.tool_name]['total_time'] += duration
+    
+    if not context.tool_result or 'error' in context.tool_result.lower():
+        tool_stats[context.tool_name]['failures'] += 1
+    
+    print(f"""
+    📊 {context.tool_name} 도구 통계:
+    - 실행 횟수: {tool_stats[context.tool_name]['count']}
+    - 평균 시간: {tool_stats[context.tool_name]['total_time'] / tool_stats[context.tool_name]['count']:.2f}초
+    - 실패: {tool_stats[context.tool_name]['failures']}
+    """)
+    
+    return None
+```
+
+### 6. 속도 제한
+
+```python
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+tool_call_history = defaultdict(list)
+
+@before_tool_call
+def rate_limit_tools(context: ToolCallHookContext) -> bool | None:
+    """도구 호출 속도를 제한합니다."""
+    tool_name = context.tool_name
+    now = datetime.now()
+    
+    # 오래된 항목 정리 (1분 이상 된 것)
+    tool_call_history[tool_name] = [
+        call_time for call_time in tool_call_history[tool_name]
+        if now - call_time < timedelta(minutes=1)
+    ]
+    
+    # 속도 제한 확인 (분당 최대 10회 호출)
+    if len(tool_call_history[tool_name]) >= 10:
+        print(f"🚫 {tool_name}에 대한 속도 제한 초과")
+        return False
+    
+    # 이 호출 기록
+    tool_call_history[tool_name].append(now)
+    return None
+```
+
+### 7. 디버그 로깅
+
+```python
+@before_tool_call
+def debug_tool_call(context: ToolCallHookContext) -> None:
+    """도구 호출을 디버그합니다."""
+    print(f"""
+    🔍 도구 호출 디버그:
+    - 도구: {context.tool_name}
+    - 에이전트: {context.agent.role if context.agent else '알 수 없음'}
+    - 작업: {context.task.description[:50] if context.task else '알 수 없음'}...
+    - 입력: {context.tool_input}
+    """)
+    return None
+
+@after_tool_call
+def debug_tool_result(context: ToolCallHookContext) -> None:
+    """도구 결과를 디버그합니다."""
+    if context.tool_result:
+        result_preview = context.tool_result[:200]
+        print(f"✅ 결과 미리보기: {result_preview}...")
+    else:
+        print("⚠️  반환된 결과 없음")
+    return None
+```
+
+## 훅 관리
+
+### 훅 등록 해제
+
+```python
+from crewai.hooks import (
+    unregister_before_tool_call_hook,
+    unregister_after_tool_call_hook
+)
+
+# 특정 훅 등록 해제
+def my_hook(context):
+    ...
+
+register_before_tool_call_hook(my_hook)
+# 나중에...
+success = unregister_before_tool_call_hook(my_hook)
+print(f"등록 해제됨: {success}")
+```
+
+### 훅 지우기
+
+```python
+from crewai.hooks import (
+    clear_before_tool_call_hooks,
+    clear_after_tool_call_hooks,
+    clear_all_tool_call_hooks
+)
+
+# 특정 훅 타입 지우기
+count = clear_before_tool_call_hooks()
+print(f"{count}개의 전(before) 훅이 지워졌습니다")
+
+# 모든 도구 훅 지우기
+before_count, after_count = clear_all_tool_call_hooks()
+print(f"{before_count}개의 전(before) 훅과 {after_count}개의 후(after) 훅이 지워졌습니다")
+```
+
+## 고급 패턴
+
+### 조건부 훅 실행
+
+```python
+@before_tool_call
+def conditional_blocking(context: ToolCallHookContext) -> bool | None:
+    """특정 조건에서만 차단합니다."""
+    # 특정 에이전트에 대해서만 차단
+    if context.agent and context.agent.role == "junior_agent":
+        if context.tool_name in ['delete_file', 'send_email']:
+            print(f"❌ 주니어 에이전트는 {context.tool_name}을(를) 사용할 수 없습니다")
+            return False
+    
+    # 특정 작업 중에만 차단
+    if context.task and "민감한" in context.task.description.lower():
+        if context.tool_name == 'web_search':
+            print("❌ 민감한 작업에서는 웹 검색이 차단됩니다")
+            return False
+    
+    return None
+```
+
+### 컨텍스트 인식 입력 수정
+
+```python
+@before_tool_call
+def enhance_tool_inputs(context: ToolCallHookContext) -> None:
+    """에이전트 역할에 따라 컨텍스트를 추가합니다."""
+    # 에이전트 역할에 따라 컨텍스트 추가
+    if context.agent and context.agent.role == "researcher":
+        if context.tool_name == 'web_search':
+            # 연구원에 대한 도메인 제한 추가
+            context.tool_input['domains'] = ['edu', 'gov', 'org']
+    
+    # 작업에 따라 컨텍스트 추가
+    if context.task and "긴급" in context.task.description.lower():
+        if context.tool_name == 'send_email':
+            context.tool_input['priority'] = 'high'
+    
+    return None
+```
+
+## 모범 사례
+
+1. **훅을 집중적으로 유지**: 각 훅은 단일 책임을 가져야 합니다
+2. **무거운 계산 피하기**: 훅은 모든 도구 호출마다 실행됩니다
+3. **오류를 우아하게 처리**: try-except를 사용하여 훅 실패 방지
+4. **타입 힌트 사용**: 더 나은 IDE 지원을 위해 `ToolCallHookContext` 활용
+5. **차단 조건 문서화**: 도구가 차단되는 시기/이유를 명확히 하세요
+6. **훅을 독립적으로 테스트**: 프로덕션에서 사용하기 전에 단위 테스트
+7. **테스트에서 훅 지우기**: 테스트 실행 간 `clear_all_tool_call_hooks()` 사용
+8. **제자리에서 수정**: 항상 `context.tool_input`을 제자리에서 수정하고 교체하지 마세요
+9. **중요한 결정 로깅**: 특히 도구 실행을 차단할 때
+10. **성능 고려**: 가능한 경우 비용이 많이 드는 검증을 캐시
+
+## 오류 처리
+
+```python
+@before_tool_call
+def safe_validation(context: ToolCallHookContext) -> bool | None:
+    try:
+        # 검증 로직
+        if not validate_input(context.tool_input):
+            return False
+    except Exception as e:
+        print(f"⚠️ 훅 오류: {e}")
+        # 결정: 오류 발생 시 허용 또는 차단
+        return None  # 오류에도 불구하고 실행 허용
+```
+
+## 타입 안전성
+
+```python
+from crewai.hooks import ToolCallHookContext, BeforeToolCallHookType, AfterToolCallHookType
+
+# 명시적 타입 주석
+def my_before_hook(context: ToolCallHookContext) -> bool | None:
+    return None
+
+def my_after_hook(context: ToolCallHookContext) -> str | None:
+    return None
+
+# 타입 안전 등록
+register_before_tool_call_hook(my_before_hook)
+register_after_tool_call_hook(my_after_hook)
+```
+
+## 문제 해결
+
+### 훅이 실행되지 않음
+- 크루 실행 전에 훅이 등록되었는지 확인
+- 이전 훅이 `False`를 반환했는지 확인 (실행 및 후속 훅 차단)
+- 훅 시그니처가 예상 타입과 일치하는지 확인
+
+### 입력 수정이 작동하지 않음
+- 제자리 수정 사용: `context.tool_input['key'] = value`
+- 딕셔너리를 교체하지 마세요: `context.tool_input = {}`
+
+### 결과 수정이 작동하지 않음
+- 후 훅에서 수정된 문자열을 반환
+- `None`을 반환하면 원본 결과가 유지됩니다
+- 도구가 실제로 결과를 반환했는지 확인
+
+### 도구가 예기치 않게 차단됨
+- 차단 조건에 대한 모든 전(before) 훅 확인
+- 훅 실행 순서 확인
+- 어떤 훅이 차단하는지 식별하기 위해 디버그 로깅 추가
+
+## 결론
+
+도구 호출 훅은 CrewAI에서 도구 실행을 제어하고 모니터링하는 강력한 기능을 제공합니다. 이를 사용하여 안전 가드레일, 승인 게이트, 입력 검증, 결과 정제, 로깅 및 분석을 구현하세요. 적절한 오류 처리 및 타입 안전성과 결합하면, 훅을 통해 포괄적인 관찰성을 갖춘 안전하고 프로덕션 준비가 된 에이전트 시스템을 구축할 수 있습니다.
+

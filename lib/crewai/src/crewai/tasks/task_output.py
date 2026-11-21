@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from crewai.artifacts import SavedArtifact
 from crewai.tasks.output_format import OutputFormat
 from crewai.tools.tool_failure import ToolFailureRecord
 from crewai.utilities.types import LLMMessage
@@ -47,6 +48,10 @@ class TaskOutput(BaseModel):
     messages: list[LLMMessage] = Field(
         description="Messages of the task", default_factory=list
     )
+    artifact: SavedArtifact | None = Field(
+        default=None,
+        description="The artifact saved from this output, when the task sets one.",
+    )
     tool_failures: list[ToolFailureRecord] = Field(
         default_factory=list,
         description=(
@@ -76,7 +81,8 @@ class TaskOutput(BaseModel):
         """Get the JSON string representation of the task output.
 
         Returns:
-            JSON string representation of the task output.
+            JSON string representation of the task output, or None when the
+            output could not be converted to the task's ``output_json`` model.
 
         Raises:
             ValueError: If output format is not JSON.
@@ -93,6 +99,8 @@ class TaskOutput(BaseModel):
                 """
             )
 
+        if self.json_dict is None:
+            return None
         return json.dumps(self.json_dict)
 
     def to_dict(self) -> dict[str, Any]:

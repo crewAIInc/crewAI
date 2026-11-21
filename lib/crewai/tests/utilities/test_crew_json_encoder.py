@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 from pathlib import Path
 from typing import Any
@@ -54,3 +55,24 @@ def test_task_output_storage_round_trips_root_values(
     storage.add(task, {"pydantic": model}, task_index=0)
 
     assert storage.load()[0]["output"] == {"pydantic": expected}
+
+
+class Status(Enum):
+    DONE = "done"
+
+
+class Result(BaseModel):
+    status: Status
+
+
+def test_enum_serializes_value():
+    assert json.dumps(Status.DONE, cls=CrewJSONEncoder) == '"done"'
+
+
+def test_pydantic_model_with_enum_round_trips():
+    result = Result(status=Status.DONE)
+
+    encoded = json.dumps(result, cls=CrewJSONEncoder)
+
+    assert json.loads(encoded) == {"status": "done"}
+    assert Result.model_validate_json(encoded) == result

@@ -12,7 +12,7 @@ from crewai import Agent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool
@@ -179,3 +179,29 @@ def test_blocked_hook_does_not_return_a_cached_result(backend):
     assert from_cache is False
     assert tool.calls == []
     assert cache.read("lookup", key) == "cached:original"
+
+
+@pytest.mark.parametrize("backend", ["agent", "shared"])
+def test_finished_event_reports_a_cache_hit(backend):
+    """The finished event should say the cache answered, not that the tool ran."""
+    from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
+
+    tool = LookupTool()
+    cache = CacheHandler()
+    cache.add("lookup", json.dumps({"term": "original"}), "cached:original")
+
+    finished: list[ToolUsageFinishedEvent] = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def _collect(_source, event):
+            finished.append(event)
+
+        result, from_cache = native_call(backend, tool, cache, {"term": "original"})
+        crewai_event_bus.flush()
+
+    assert from_cache is True
+    assert tool.calls == []
+    assert [event.from_cache for event in finished] == [True]
+    assert finished[0].output == result

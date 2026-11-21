@@ -1,0 +1,66 @@
+---
+title: أداة بحث Google عبر SerpApi
+description: أداة `SerpApiGoogleSearchTool` تنفذ عمليات بحث Google باستخدام خدمة SerpApi.
+icon: google
+mode: "wide"
+---
+
+# `SerpApiGoogleSearchTool`
+
+## الوصف
+
+استخدم `SerpApiGoogleSearchTool` لتشغيل عمليات بحث Google باستخدام SerpApi واسترجاع نتائج منظمة. يتطلب مفتاح SerpApi API.
+
+## التثبيت
+
+```shell
+uv add crewai-tools[serpapi]
+```
+
+## متغيرات البيئة
+
+- `SERPAPI_API_KEY` (مطلوب): مفتاح API لـ SerpApi. أنشئ واحداً على https://serpapi.com/ (طبقة مجانية متاحة).
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SerpApiGoogleSearchTool
+
+tool = SerpApiGoogleSearchTool()
+
+agent = Agent(
+    role="Researcher",
+    goal="Answer questions using Google search",
+    backstory="Search specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search for the latest CrewAI releases",
+    expected_output="A concise list of relevant results with titles and links",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## ملاحظات
+
+- عيّن `SERPAPI_API_KEY` في البيئة. أنشئ مفتاحاً على https://serpapi.com/
+- انظر أيضاً Google Shopping عبر SerpApi: `/ar/tools/search-research/serpapi-googleshoppingtool`
+
+## المعاملات
+
+### معاملات التشغيل
+
+- `search_query` (str، مطلوب): استعلام Google.
+- `location` (str، اختياري): معامل الموقع الجغرافي.
+
+## ملاحظات
+
+- هذه الأداة تغلّف SerpApi وتُرجع نتائج بحث منظمة.
+
+

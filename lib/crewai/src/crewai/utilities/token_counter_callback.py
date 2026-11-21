@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.logger_utils import suppress_warnings
 
 
@@ -50,6 +51,19 @@ class TokenCalcHandler(BaseModel):
                 usage = response_obj["usage"]
                 if usage:
                     self.token_cost_process.sum_successful_requests(1)
+                    if isinstance(usage, dict):
+                        metrics = UsageMetrics.from_provider_dict(usage)
+                        if metrics is not None:
+                            self.token_cost_process.sum_prompt_tokens(
+                                metrics.prompt_tokens
+                            )
+                            self.token_cost_process.sum_completion_tokens(
+                                metrics.completion_tokens
+                            )
+                            self.token_cost_process.sum_cached_prompt_tokens(
+                                metrics.cached_prompt_tokens
+                            )
+                        return
                     if hasattr(usage, "prompt_tokens"):
                         self.token_cost_process.sum_prompt_tokens(usage.prompt_tokens)
                     if hasattr(usage, "completion_tokens"):
