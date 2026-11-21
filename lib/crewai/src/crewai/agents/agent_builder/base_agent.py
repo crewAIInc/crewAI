@@ -736,7 +736,9 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if getattr(existing_llm, "additional_params", None) is not None:
             existing_llm.additional_params = deepcopy(existing_llm.additional_params)
         if getattr(existing_llm, "_token_usage", None) is not None:
-            existing_llm._token_usage = deepcopy(existing_llm._token_usage)
+            # A copy starts a new run. kickoff_for_each sums each copy's
+            # lifetime totals, so carried-over counts would be added once per input.
+            existing_llm._token_usage = dict.fromkeys(existing_llm._token_usage, 0)
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         existing_knowledge_sources = None

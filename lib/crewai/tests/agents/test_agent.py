@@ -141,6 +141,7 @@ def test_agent_copy_isolates_llm_mutable_state():
     """A copied agent must not share the LLM's params or token totals."""
     llm = LLM(model="gpt-4o-mini")
     llm.additional_params["bucket"] = []
+    llm._token_usage["total_tokens"] = 10
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -156,7 +157,8 @@ def test_agent_copy_isolates_llm_mutable_state():
     assert copied.llm.additional_params is not agent.llm.additional_params
     assert copied.llm._token_usage is not agent.llm._token_usage
     assert agent.llm.additional_params["bucket"] == []
-    assert agent.llm._token_usage["total_tokens"] == 0
+    assert agent.llm._token_usage["total_tokens"] == 10
+    assert copied.llm._token_usage["total_tokens"] == 5
 
 
 def test_agent_with_only_system_template():
