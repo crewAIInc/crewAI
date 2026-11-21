@@ -215,19 +215,25 @@ def supports_stop_words(self) -> bool:
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
-    
-    # Manually truncate at stop words
+
+    # Manually truncate at the earliest stop word, whatever the list order
     if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
-    
+        positions = [content.find(stop_word) for stop_word in self.stop]
+        positions = [position for position in positions if position != -1]
+        if positions:
+            content = content[: min(positions)].strip()
+
     return content
 
 def supports_stop_words(self) -> bool:
     return False  # Tell CrewAI we handle stop words manually
 ```
+
+절단은 `self.stop`의 첫 항목이 아니라 **가장 먼저 등장하는** 일치 지점에서 이뤄지므로,
+목록 순서를 바꿔도 결과가 달라지지 않습니다. `self.stop = ["LATE", "EARLY"]`와
+`self.stop = ["EARLY", "LATE"]` 모두 `"hello EARLY middle LATE tail"`을 `"hello"`로 만듭니다.
+`BaseLLM._apply_stop_words`도 같은 방식으로 동작하며 스톱 워드 앞의 공백까지 제거하므로,
+예제에서 `.strip()`을 호출합니다.
 
 ## 함수 호출
 
