@@ -68,7 +68,7 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
             search_from = start + 1
             continue
         try:
-            parsed: dict[str, Any] = json.loads(text[start : end + 1])
+            parsed = json.loads(text[start : end + 1])
             return parsed
         except json.JSONDecodeError:
             search_from = start + 1  # not JSON; try the next {...} span
