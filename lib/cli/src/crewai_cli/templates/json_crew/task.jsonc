@@ -28,6 +28,7 @@
       // "response_model": null,
       // "converter_cls": { "python": "my_project.converters.CustomConverter" },
       // "markdown": false,
+      // "artifact": {"identifier": "report", "title": "Report", "kind": "markdown"},
       // "input_files": { "brief": "data/brief.txt" },
       // "security_config": {},
 

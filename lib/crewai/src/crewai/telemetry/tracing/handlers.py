@@ -94,6 +94,7 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
+from crewai.events.types.artifact_events import ArtifactCreatedEvent
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
@@ -210,6 +211,12 @@ def register_handlers(
         (
             SkillUsedEvent,
             lambda source, event: handle_skill_used(providers, ctx, source, event),
+        ),
+        (
+            ArtifactCreatedEvent,
+            lambda source, event: handle_artifact_created(
+                providers, ctx, source, event
+            ),
         ),
         (
             SkillDiscoveryStartedEvent,
@@ -3075,6 +3082,41 @@ def handle_skill_used(
 
     providers.emit_log(
         f"Skill used: {event.skill_name}",
+        level="INFO",
+        span=span,
+        attributes=attrs,
+        ctx=ctx,
+    )
+
+
+def handle_artifact_created(
+    providers: TelemetryProviders,
+    ctx: TelemetryExecutionContext,
+    source: Any,
+    event: Any,
+) -> None:
+    """Record a saved artifact version, with the agent and task that saved it."""
+    attrs = {
+        **semantic_conventions.crewai_span(
+            event_name=event.type, subject=event.title or event.identifier
+        ),
+        **semantic_conventions.crewai_artifact(
+            id=event.id,
+            identifier=event.identifier,
+            version=event.version,
+            kind=event.kind,
+            content_type=event.content_type,
+            size=event.size,
+            url=event.url,
+        ),
+        **semantic_conventions.crewai_agent(role=event.agent_role),
+        **semantic_conventions.crewai_task(id=event.task_id, name=event.task_name),
+    }
+
+    span = _instant_span(providers, ctx, "save artifact", event, attrs)
+
+    providers.emit_log(
+        f"Artifact saved: {event.identifier} v{event.version}",
         level="INFO",
         span=span,
         attributes=attrs,
