@@ -33,7 +33,7 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_text,
 )
-from crewai.memory.utils import join_scope_paths
+from crewai.memory.utils import join_scope_paths, normalize_scope_path
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
@@ -71,6 +71,18 @@ def _non_streaming_analysis_llm(llm: Any) -> Any:
     with suppress(Exception):
         analysis_llm.stream = False
     return analysis_llm
+
+
+def _scope_within(scope: str, root_scope: str) -> bool:
+    """Return whether ``scope`` is ``root_scope`` itself or nested under it.
+
+    Comparison is by whole path component, so ``/t1x`` is not inside ``/t1``.
+    """
+    root = normalize_scope_path(root_scope)
+    if root == "/":
+        return True
+    target = normalize_scope_path(scope)
+    return target == root or target.startswith(root + "/")
 
 
 class Memory(BaseModel):
@@ -873,7 +885,7 @@ class Memory(BaseModel):
         Args:
             record_id: ID of the record to update.
             content: New content; re-embedded if provided.
-            scope: New scope path.
+            scope: New scope path, nested under ``root_scope`` when one is set.
             categories: New categories.
             metadata: New metadata.
             importance: New importance score.
@@ -883,10 +895,17 @@ class Memory(BaseModel):
             is set.
 
         Raises:
-            ValueError: If the record is not found.
+            ValueError: If the record is not found, or lies outside
+                ``root_scope`` when one is set.
         """
         existing = self._storage.get_record(record_id)
         if existing is None:
+            raise ValueError(f"Record not found: {record_id}")
+        if self.root_scope and not _scope_within(existing.scope, self.root_scope):
+            # Report the same error as for a missing record, so the check does
+            # not confirm that the ID exists outside this Memory's root_scope.
+            # It runs before the read_only return so a read-only view cannot be
+            # used to read another scope's content either.
             raise ValueError(f"Record not found: {record_id}")
         if self.read_only:
             return existing
@@ -897,7 +916,7 @@ class Memory(BaseModel):
             embedding = embed_text(self._embedder, content)
             updates["embedding"] = embedding if embedding else existing.embedding
         if scope is not None:
-            updates["scope"] = scope
+            updates["scope"] = join_scope_paths(self.root_scope, scope)
         if categories is not None:
             updates["categories"] = categories
         if metadata is not None:
