@@ -11,17 +11,26 @@ This module tests the async/non-blocking human feedback flow, including:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import (
+    Flow,
+    HumanFeedbackResult,
+    and_,
+    human_feedback,
+    listen,
+    start,
+)
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -1000,6 +1009,63 @@ class TestAsyncHumanFeedbackIntegration:
 
 
 # Edge Case Tests
+
+
+@pytest.mark.parametrize("reply_mode", ["immediate", "restored"])
+@pytest.mark.parametrize("review_is_start", [False, True])
+@pytest.mark.parametrize("asynchronous", [False, True])
+def test_resumed_review_emits_method_completion_and_outcome(
+    tmp_path: Path, reply_mode: str, review_is_start: bool, asynchronous: bool
+) -> None:
+    """A deferred routed review completes the same listeners as an immediate reply."""
+    review_trigger = start() if review_is_start else listen("begin")
+
+    class ReviewProvider:
+        def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+            if reply_mode != "immediate":
+                raise HumanFeedbackPending(context=context)
+            return ""
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "request"
+
+        @review_trigger
+        @human_feedback(
+            message="Approve this draft",
+            provider=ReviewProvider(),
+            emit=["approved", "rejected"],
+            default_outcome="approved",
+        )
+        def review(self) -> str:
+            self.state["steps"] = []
+            self.state["review_runs"] = self.state.get("review_runs", 0) + 1
+            return "draft"
+
+        @listen(review)
+        def audit(self, outcome: str) -> None:
+            assert outcome == "approved"
+            self.state["steps"].append("audit")
+
+        @listen(and_(review, "approved"))
+        def publish(self, result: HumanFeedbackResult) -> str:
+            assert result.output == "draft"
+            self.state["steps"].append("publish")
+            return "published"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "reviews.db"))
+    flow = ReviewFlow(persistence=persistence)
+    result = asyncio.run(flow.kickoff_async()) if asynchronous else flow.kickoff()
+    if reply_mode != "immediate":
+        assert isinstance(result, HumanFeedbackPending)
+        flow = ReviewFlow.from_pending(result.context.flow_id, persistence)
+        result = asyncio.run(flow.resume_async()) if asynchronous else flow.resume()
+
+    assert flow.state["steps"] == ["audit", "publish"]
+    assert flow.state["review_runs"] == 1
+    assert result == "published"
+    assert persistence.load_pending_feedback(flow.state["id"]) is None
 
 
 class TestAutoPersistence:
