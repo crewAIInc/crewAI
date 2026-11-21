@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
 import importlib
-from inspect import Parameter, signature
+from inspect import Parameter, iscoroutinefunction, signature
 import threading
 from typing import (
     Any,
@@ -27,7 +27,6 @@ from pydantic import (
     field_validator,
 )
 from pydantic_core import CoreSchema, core_schema
-from typing_extensions import TypeIs
 
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
@@ -113,11 +112,6 @@ _BUILTIN_CACHE_FUNCTIONS: dict[str, Callable[..., bool]] = {
 def _is_async_callable(func: Callable[..., Any]) -> bool:
     """Check if a callable is async."""
     return asyncio.iscoroutinefunction(func)
-
-
-def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
-    """Type narrowing check for awaitable values."""
-    return asyncio.iscoroutine(value) or asyncio.isfuture(value)
 
 
 class EnvVar(BaseModel):
@@ -605,6 +599,18 @@ class Tool(BaseTool, Generic[P, R]):
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
+        # Reject a sync function before calling it: the call may have side
+        # effects, and discovering afterwards that there is nothing to await
+        # would report a failure for work that already happened.
+        if not (
+            iscoroutinefunction(self.func)
+            or iscoroutinefunction(type(self.func).__call__)
+        ):
+            raise NotImplementedError(
+                f"{sanitize_tool_name(self.name)} does not have an async function. "
+                "Use run() for sync execution or provide an async function."
+            )
+
         limit_error = self._claim_usage()
         if limit_error:
             return limit_error  # type: ignore[return-value]
@@ -622,15 +628,9 @@ class Tool(BaseTool, Generic[P, R]):
             The result of the async function execution.
 
         Raises:
-            NotImplementedError: If the wrapped function is not async.
+            TypeError: If the wrapped function does not return an awaitable.
         """
-        result = self.func(*args, **kwargs)
-        if _is_awaitable(result):
-            return await result
-        raise NotImplementedError(
-            f"{sanitize_tool_name(self.name)} does not have an async function. "
-            "Use run() for sync execution or provide an async function."
-        )
+        return await self.func(*args, **kwargs)
 
     @classmethod
     def from_langchain(cls, tool: Any) -> Tool[..., Any]:
