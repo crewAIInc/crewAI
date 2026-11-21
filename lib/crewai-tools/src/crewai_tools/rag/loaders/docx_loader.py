@@ -61,10 +61,13 @@ class DOCXLoader(BaseLoader):
         try:
             doc = DocxDocument(file_path)
 
-            text_parts = []
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text_parts.append(paragraph.text)  # noqa: PERF401
+            # Walk paragraphs and tables in document order so table text is
+            # kept next to the text that introduces it.
+            text_parts = [
+                line
+                for block in doc.iter_inner_content()
+                for line in self._block_lines(block)
+            ]
 
             content = "\n".join(text_parts)
 
@@ -83,3 +86,40 @@ class DOCXLoader(BaseLoader):
 
         except Exception as e:
             raise ValueError(f"Error loading DOCX file: {e!s}") from e
+
+    @classmethod
+    def _block_lines(cls, block: Any) -> list[str]:
+        """Return the non-empty text lines of a paragraph or table.
+
+        A table yields one line per row with cells joined by `` | ``. Each
+        physical cell is read once: a cell spanning several columns appears
+        once, and the continuation of a vertically merged cell is left empty.
+        Line breaks inside a cell and tables nested in it are flattened into
+        the cell's text, so a row always stays on one line.
+        """
+        from docx.table import Table, _Cell
+
+        if not isinstance(block, Table):
+            text = block.text
+            return [text] if text.strip() else []
+
+        lines = []
+        for row in block.rows:
+            # Iterate the row's own <w:tc> elements rather than ``row.cells``,
+            # which repeats a cell once per spanned grid column and maps a
+            # vertical-merge continuation back to the merged cell, re-reading
+            # its content (and any nested tables) for every row it spans.
+            row_text = []
+            for tc in row._tr.tc_lst:
+                if tc.vMerge == "continue":
+                    row_text.append("")
+                    continue
+                cell_lines = [
+                    line
+                    for inner in _Cell(tc, block).iter_inner_content()
+                    for line in cls._block_lines(inner)
+                ]
+                row_text.append(" ".join(" ".join(cell_lines).split()))
+            if any(row_text):
+                lines.append(" | ".join(row_text))
+        return lines
