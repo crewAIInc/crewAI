@@ -235,6 +235,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     - `previous_response_id`: ID of previous response for multi-turn
     - `include`: Additional data to include in response (e.g., `["reasoning.encrypted_content"]`)
     - `builtin_tools`: List of OpenAI built-in tools: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `tool_search`: Set to `True` to defer function tools and let the model load them on demand through OpenAI's hosted tool search (off by default)
     - `parse_tool_outputs`: Return structured `ResponsesAPIResult` with parsed built-in tool outputs
     - `auto_chain`: Automatically track and use response IDs for multi-turn conversations
     - `auto_chain_reasoning`: Track encrypted reasoning items for ZDR (Zero Data Retention) compliance
