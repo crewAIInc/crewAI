@@ -251,7 +251,7 @@ class SingleStoreSearchTool(BaseTool):
             "track_env": track_env or False,
             "enable_extended_data_types": enable_extended_data_types or False,
             "vector_data_format": vector_data_format or "binary",
-            "parse_json": parse_json or True,
+            "parse_json": parse_json if parse_json is not None else True,
         }
 
         # Ensure connection attributes are properly initialized
