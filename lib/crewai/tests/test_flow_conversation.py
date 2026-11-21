@@ -3804,3 +3804,53 @@ def test_invalid_conversation_trace_scope_is_rejected():
         Flow.from_declaration(contents=_conversational_declaration(
             conversational={"trace_scope": "forever"}
         ))
+
+
+def test_sqlite_persistence_restores_conversation_across_fresh_instances(
+    tmp_path: Any,
+) -> None:
+    """Smoke-check the documented SQLite persistence example.
+
+    A deterministic, LLM-free conversational Flow must restore both sides of a
+    conversation across fresh instances sharing a session id, in order and
+    without duplicates, while a different session id starts a separate history.
+    """
+    store = SQLiteFlowPersistence(str(tmp_path / "conversation.db"))
+    session_id = "persist-fresh-instance-session"
+
+    @ConversationConfig()
+    @persist(store)
+    class RecallFlow(ConversationalFlow):
+        def route_turn(self, context: dict[str, Any]) -> str | None:
+            return "recall"
+
+        @listen("recall")
+        def handle_recall(self) -> str:
+            reply = f"echo: {self.state.current_user_message or ''}"
+            self.append_assistant_message(reply)
+            return reply
+
+    # Turn 1 on the first instance.
+    RecallFlow().handle_turn("hello", session_id=session_id)
+
+    # Turn 2 on a fresh instance with the same persistence and session id.
+    flow_b = RecallFlow()
+    flow_b.handle_turn("are you there?", session_id=session_id)
+
+    roles = [(message.role, message.content) for message in flow_b.state.messages]
+    assert roles == [
+        ("user", "hello"),
+        ("assistant", "echo: hello"),
+        ("user", "are you there?"),
+        ("assistant", "echo: are you there?"),
+    ]
+
+    # A different session id starts a separate conversation.
+    flow_c = RecallFlow()
+    flow_c.handle_turn("first message", session_id="persist-fresh-other-session")
+
+    other_roles = [(message.role, message.content) for message in flow_c.state.messages]
+    assert other_roles == [
+        ("user", "first message"),
+        ("assistant", "echo: first message"),
+    ]
