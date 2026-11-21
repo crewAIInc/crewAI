@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -440,6 +440,10 @@ class LanceDBStorage:
     ) -> int:
         if self._table is None:
             return 0
+        # Stored created_at values are naive UTC (MemoryRecord default), so a
+        # tz-aware threshold is normalised to naive UTC before any comparison.
+        if older_than is not None and older_than.tzinfo is not None:
+            older_than = older_than.astimezone(timezone.utc).replace(tzinfo=None)
         with store_lock(self._lock_name):
             if record_ids and not (categories or metadata_filter):
                 before = int(self._table.count_rows())

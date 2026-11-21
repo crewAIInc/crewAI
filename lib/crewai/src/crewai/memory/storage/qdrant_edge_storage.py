@@ -403,6 +403,10 @@ class QdrantEdgeStorage:
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
         """Delete matching records from central shard."""
+        # Stored created_at values are naive UTC (MemoryRecord default), so a
+        # tz-aware threshold is normalised to naive UTC before any comparison.
+        if older_than is not None and older_than.tzinfo is not None:
+            older_than = older_than.astimezone(timezone.utc).replace(tzinfo=None)
         total_deleted = 0
         for shard_path in (self._central_path, self._local_path):
             if not shard_path.exists():
