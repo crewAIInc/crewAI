@@ -22,7 +22,6 @@ class CacheTools(BaseModel):
         )
 
     def hit_cache(self, key: str) -> str | None:
-        split = key.split("tool:")
-        tool = split[1].split("|input:")[0].strip()
-        tool_input = split[1].split("|input:")[1].strip()
-        return self.cache_handler.read(tool, tool_input)
+        """Read a formatted cache key without splitting delimiters in its input."""
+        tool, tool_input = key.split("tool:", 1)[1].split("|input:", 1)
+        return self.cache_handler.read(tool.strip(), tool_input.strip())
