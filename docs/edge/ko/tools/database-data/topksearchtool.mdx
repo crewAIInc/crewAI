@@ -1,0 +1,133 @@
+---
+title: TopK 검색 도구
+description: TopK를 활용한 CrewAI 에이전트용 키워드(BM25), 시맨틱, 하이브리드 검색. 서버 측 임베딩, 필터, 사용자별 파티션을 지원합니다.
+icon: magnifying-glass-plus
+mode: "wide"
+---
+
+# `TopKSearchTool`
+
+## 설명
+
+CrewAI 에이전트에서 [TopK](https://topk.io) 컬렉션을 검색합니다. 에이전트는 호출할 때마다 `search_mode`를 선택합니다:
+
+| `search_mode` | 동작 | 용도 |
+| --- | --- | --- |
+| `keyword` | BM25 전문 검색. 검색어가 포함된 문서만 반환합니다. | 정확한 오류 코드, ID, SKU, 제품명이나 함수명 |
+| `semantic` | TopK 내장 임베딩을 사용한 의미 기반 검색. | 다르게 표현된 질문이나 개념적인 질문 |
+| `hybrid` (기본값) | 시맨틱 유사도와 BM25를 하나의 쿼리에서 함께 순위화. | 의미와 정확한 용어가 섞인 질문 |
+
+TopK가 서버에서 텍스트를 임베딩하므로 OpenAI 키나 별도의 임베딩 모델이 필요 없습니다. 텍스트만 보내면 됩니다. TopK의 `semantic_index()`는 문서를 쓸 때마다, 그리고 검색할 때마다 쿼리를 임베딩하고, 키워드 검색과 하이브리드 검색에 쓰이는 BM25 인덱스도 만듭니다. 관리할 임베딩 모델, 벡터 컬럼, 임베딩 파이프라인이 없습니다. 에이전트는 `filters`로 결과를 좁힐 수 있고, `partition`은 도구를 한 테넌트나 사용자의 데이터로 제한합니다.
+
+## 설치
+
+```bash
+uv add topk-sdk
+```
+
+## 환경 변수
+
+```bash
+TOPK_API_KEY=your_topk_api_key        # https://console.topk.io
+TOPK_REGION=aws-us-east-1-elastica    # https://docs.topk.io/regions
+```
+
+## 컬렉션 만들기
+
+이 도구는 기존 컬렉션을 검색합니다. 텍스트 필드에 `semantic_index()`를 지정하고 일반 텍스트를 upsert하세요. TopK가 쓰기 시점에 각 문서를 임베딩하므로 직접 벡터를 계산하거나 저장할 필요가 없습니다.
+
+```python
+import os
+from topk_sdk import Client
+from topk_sdk.schema import semantic_index, text
+
+client = Client(api_key=os.environ["TOPK_API_KEY"], region=os.environ["TOPK_REGION"])
+client.collections().create("runbook", schema={"text": text().required().index(semantic_index())})
+
+client.collection("runbook").upsert([
+    {"_id": "e4021", "text": "Error code E-4021 means the payment gateway timed out.", "source": "runbook", "year": 2024},
+    {"_id": "e4012", "text": "Error code E-4012 means the card was declined by the bank.", "source": "runbook", "year": 2024},
+    {"_id": "churn", "text": "Customers cancel subscriptions mostly because onboarding takes too long.", "source": "notes", "year": 2025},
+])
+```
+
+## 기본 사용법
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import TopKSearchTool
+
+search = TopKSearchTool(collection_name="runbook", return_fields=["text", "source"])
+
+support_agent = Agent(
+    role="Support Engineer",
+    goal="Answer questions about errors and incidents from the runbook",
+    backstory="You always search the runbook before answering.",
+    tools=[search],
+)
+
+task = Task(
+    description="A customer reports error E-4021 at checkout. What does it mean?",
+    expected_output="The meaning of the error and what to do next",
+    agent=support_agent,
+)
+
+Crew(agents=[support_agent], tasks=[task]).kickoff()
+```
+
+`E-4021` 같은 정확한 코드는 에이전트가 `search_mode="keyword"`로 도구를 호출할 수 있습니다. 시맨틱 검색만으로는 `E-4021`과 `E-4012`를 확실히 구분하지 못합니다.
+
+## 필터
+
+에이전트는 컬렉션 필드에 대한 JSON 객체로 `filters`를 전달합니다. 중첩 필드는 점으로 지정합니다:
+
+```python
+search.run(query="payment failures", filters={"source": "runbook", "year": {"$gte": 2024}})
+```
+
+연산자: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$contains`. 값만 쓰면 `$eq`로 처리됩니다.
+
+## 파티션을 이용한 사용자별 데이터
+
+TopK [파티션](https://docs.topk.io/concepts#multi-tenancy)은 완전히 격리되므로 사용자나 테넌트마다 하나씩 할당하고 사용자별로 도구를 만들 수 있습니다. 그 도구를 가진 에이전트는 다른 사람의 데이터를 볼 수 없습니다:
+
+```python
+alice_notes = TopKSearchTool(collection_name="notes", partition="user-alice")
+```
+
+같은 파티션에 쓰려면 `client.collection("notes", partition="user-alice").upsert([...])`를 사용하세요.
+
+## 인자
+
+### 에이전트 입력
+
+| 인자 | 타입 | 설명 |
+| --- | --- | --- |
+| `query` | `str` | 검색할 내용 (필수). |
+| `search_mode` | `"hybrid" \| "keyword" \| "semantic"` | 기본값은 `"hybrid"`. |
+| `filters` | `dict` | 선택적 필드 필터 (위 참조). |
+
+### 도구 설정
+
+| 인자 | 기본값 | 설명 |
+| --- | --- | --- |
+| `collection_name` | (필수) | 검색할 TopK 컬렉션. |
+| `text_field` | `"text"` | `semantic_index()`가 있는 필드. |
+| `return_fields` | `["text"]` | 각 결과에서 `id`, `score`(항상 해당 결과를 나타냄)와 함께 반환할 필드. |
+| `partition` | `None` | 이 파티션만 검색. |
+| `limit` | `5` | 검색당 결과 수 (1-100). |
+| `hybrid_alpha` | `0.5` | 하이브리드 검색에서 시맨틱 점수의 가중치이며, BM25는 `1 - hybrid_alpha`를 받습니다. 두 점수 모두 정규화되지 않은 TopK 원점수를 그대로 가중하므로, 조정하기 전에 결과를 몇 개 확인하세요. |
+| `api_key`, `region` | 환경 변수 | 기본값은 `TOPK_API_KEY`, `TOPK_REGION`. |
+| `client` | `None` | 기존 `topk_sdk.Client` 재사용. |
+
+## 출력
+
+가장 잘 맞는 결과가 먼저 오는 JSON 목록:
+
+```json
+[
+  {"id": "e4021", "score": 1.7231, "text": "Error code E-4021 means the payment gateway timed out.", "source": "runbook"}
+]
+```
+
+`keyword` 모드는 검색어가 포함된 문서가 없으면 `[]`를 반환하므로, 에이전트는 그 용어가 어디에도 없다는 것을 알 수 있습니다.
