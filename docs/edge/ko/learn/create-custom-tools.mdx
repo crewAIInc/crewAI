@@ -50,6 +50,52 @@ def my_simple_tool(question: str) -> str:
     return "Tool output"
 ```
 
+### 검증 가능한 도구 결과 보존하기
+
+타입이 지정된 결과는 답변과 함께 근거를 전달할 수 있습니다. 선택 사항인 [CAEL 브리지](https://github.com/Vovala14/CAEL/tree/d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f/examples/agent_provenance)는 실제 로컬 엔진 응답, 정확한 출처 인용과 ID, 입력 및 엔진 해시, 검증된 유한 규칙 증명을 반환하는 `BaseTool` 예제입니다. 이 도구는 제한된 논리 전제를 처리하며 LLM이나 API 키 없이 실행됩니다. 범용 채팅 모델은 아닙니다.
+
+어댑터를 설치하고 고정된 외부 런타임을 준비하세요. 어댑터에는 MIT 라이선스가 적용됩니다. CAEL 엔진과 모델에는 별도의 비상업적 개인·연구용 라이선스가 적용되며 어댑터 패키지에 포함되지 않습니다.
+
+```bash Code
+uv pip install 'cael-provenance-bridge[crewai] @ git+https://github.com/Vovala14/CAEL.git@d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f#subdirectory=examples/agent_provenance'
+git clone https://github.com/Vovala14/CAEL.git cael-runtime
+git -C cael-runtime checkout 49359eae9aa197d5b92631c16efb74085180a27c
+export CAEL040_ROOT="$PWD/cael-runtime"
+export OTEL_SDK_DISABLED=true
+export CREWAI_TELEMETRY_ENABLED=false
+export CREWAI_DISABLE_VERSION_CHECK=true
+```
+
+`BaseTool.run`을 직접 호출하면 전체 Pydantic 객체가 보존됩니다. 원래 요청을 신뢰 기준으로 유지하고 인용을 사용하기 전에 전체 결과를 검증하세요:
+
+```python Code
+import os
+
+from cael_provenance import CAELRuntime, verify
+from cael_provenance.crewai import CAELProofTool
+
+runtime = CAELRuntime(os.environ["CAEL040_ROOT"])
+request = {
+    "episode_id": "bird-claim",
+    "sources": [
+        {"id": "s1", "text": "Aria is a wren"},
+        {"id": "s2", "text": "Every wren is a bird"},
+        {"id": "s3", "text": "Every bird is visible"},
+    ],
+    "entity": "Aria",
+    "predicate": "visible",
+    "negated": False,
+}
+tool = CAELProofTool(runtime)
+result = tool.run(**request)
+certificate = result.model_dump(mode="json")
+assert verify(certificate, request, runtime)
+assert certificate["reported"]["answer"] == "true"
+assert [item["source_id"] for item in certificate["evidence"]] == ["s1", "s2", "s3"]
+```
+
+검증은 CAEL이 파싱한 전제에 따른 도출을 확인합니다. 외부 사실, 출처 작성자 또는 임의의 영어 문장 해석이 정확하다는 보장은 아닙니다. 출처 위치는 호출자가 선언하며 해시는 서명이 아닙니다. 알 수 없음과 충돌은 별도로 유지되며 지원하지 않는 입력에는 검증된 답변이 없습니다. Agent가 결과를 다시 작성하면 새 문장은 원래 인증서의 검증 범위에 포함되지 않습니다. 링크된 소스에는 프레임워크, 체크포인트, 격리 및 변조 검사를 재현하는 테스트와 해결하지 않은 파서 실패 두 건이 포함됩니다.
+
 ### 도구를 위한 캐시 함수 정의하기
 
 도구의 성능을 캐싱으로 최적화하려면, `cache_function` 속성을 사용하여 사용자 맞춤 캐싱 전략을 정의할 수 있습니다.

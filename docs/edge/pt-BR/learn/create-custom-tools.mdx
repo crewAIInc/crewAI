@@ -53,6 +53,52 @@ def my_simple_tool(question: str) -> str:
     return "Tool output"
 ```
 
+### Preservar um Resultado Verificável da Ferramenta
+
+Um resultado tipado pode transportar evidências junto com a resposta. A [ponte CAEL](https://github.com/Vovala14/CAEL/tree/d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f/examples/agent_provenance) opcional é um exemplo de `BaseTool` que retorna a resposta real do mecanismo local, citações e IDs exatos das fontes, hashes da entrada e do mecanismo e uma prova finita de regras verificada. Essa ferramenta limitada a premissas lógicas funciona sem LLM ou chave de API. Ela não é um modelo de chat de uso geral.
+
+Instale o adaptador e forneça o runtime externo fixado. O adaptador usa a licença MIT; o mecanismo e o modelo CAEL têm uma licença separada, não comercial, para uso pessoal e de pesquisa, e não estão incluídos no pacote do adaptador.
+
+```bash Code
+uv pip install 'cael-provenance-bridge[crewai] @ git+https://github.com/Vovala14/CAEL.git@d3384a5fe2e7d8830ffa8b5921fc8cb04ca3c59f#subdirectory=examples/agent_provenance'
+git clone https://github.com/Vovala14/CAEL.git cael-runtime
+git -C cael-runtime checkout 49359eae9aa197d5b92631c16efb74085180a27c
+export CAEL040_ROOT="$PWD/cael-runtime"
+export OTEL_SDK_DISABLED=true
+export CREWAI_TELEMETRY_ENABLED=false
+export CREWAI_DISABLE_VERSION_CHECK=true
+```
+
+Chamadas diretas a `BaseTool.run` preservam o objeto Pydantic completo. Mantenha a solicitação original como referência confiável e verifique o resultado completo antes de usar suas citações:
+
+```python Code
+import os
+
+from cael_provenance import CAELRuntime, verify
+from cael_provenance.crewai import CAELProofTool
+
+runtime = CAELRuntime(os.environ["CAEL040_ROOT"])
+request = {
+    "episode_id": "bird-claim",
+    "sources": [
+        {"id": "s1", "text": "Aria is a wren"},
+        {"id": "s2", "text": "Every wren is a bird"},
+        {"id": "s3", "text": "Every bird is visible"},
+    ],
+    "entity": "Aria",
+    "predicate": "visible",
+    "negated": False,
+}
+tool = CAELProofTool(runtime)
+result = tool.run(**request)
+certificate = result.model_dump(mode="json")
+assert verify(certificate, request, runtime)
+assert certificate["reported"]["answer"] == "true"
+assert [item["source_id"] for item in certificate["evidence"]] == ["s1", "s2", "s3"]
+```
+
+A verificação estabelece uma derivação relativa às premissas interpretadas pelo CAEL, não a verdade externa, a autoria das fontes ou a interpretação correta de inglês arbitrário. As origens são declaradas pelo chamador e os hashes não são assinaturas. Resultados desconhecidos e conflitantes permanecem distintos; entradas não suportadas não têm resposta verificada. Se um Agent reescrever o resultado, o novo texto não será coberto pelo certificado original. O código vinculado inclui testes reproduzíveis dos frameworks, de checkpoints, isolamento e adulteração, incluindo duas falhas preservadas do analisador.
+
 ### Definindo uma Função de Cache para a Ferramenta
 
 Para otimizar o desempenho da ferramenta com cache, defina estratégias de cache personalizadas utilizando o atributo `cache_function`.
