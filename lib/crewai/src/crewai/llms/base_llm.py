@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import contextvars
 from datetime import datetime
 from functools import wraps
+import inspect
 import json
 import logging
 import re
@@ -998,70 +999,140 @@ class BaseLLM(BaseModel, ABC):
             return None
 
         try:
-            started_at = datetime.now()
-
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageStartedEvent(
-                    tool_name=function_name,
-                    tool_args=function_args,
-                    from_agent=from_agent,
-                    from_task=from_task,
-                ),
+            started_at = self._emit_tool_execution_started(
+                function_name, function_args, from_task, from_agent
             )
-
-            fn = available_functions[function_name]
-            result = fn(**function_args)
-
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageFinishedEvent(
-                    output=result,
-                    tool_name=function_name,
-                    tool_args=function_args,
-                    started_at=started_at,
-                    finished_at=datetime.now(),
-                    from_task=from_task,
-                    from_agent=from_agent,
-                ),
+            result = available_functions[function_name](**function_args)
+            return self._finish_tool_execution(
+                result, function_name, function_args, started_at, from_task, from_agent
             )
+        except Exception as e:
+            self._fail_tool_execution(
+                e, function_name, function_args, from_task, from_agent
+            )
+            return None
 
-            self._emit_call_completed_event(
-                response=result,
-                call_type=LLMCallType.TOOL_CALL,
+    async def _ahandle_tool_execution(
+        self,
+        function_name: str,
+        function_args: dict[str, Any],
+        available_functions: dict[str, Any],
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+    ) -> str | None:
+        """Async variant of ``_handle_tool_execution``.
+
+        Awaits the function's result when it is awaitable, so coroutine
+        functions run to completion instead of returning a coroutine object.
+
+        Returns:
+            Result of function execution or None if function not found
+        """
+        if function_name not in available_functions:
+            logging.warning(
+                f"Function '{function_name}' not found in available functions"
+            )
+            return None
+
+        try:
+            started_at = self._emit_tool_execution_started(
+                function_name, function_args, from_task, from_agent
+            )
+            result = available_functions[function_name](**function_args)
+            if inspect.isawaitable(result):
+                result = await result
+            return self._finish_tool_execution(
+                result, function_name, function_args, started_at, from_task, from_agent
+            )
+        except Exception as e:
+            self._fail_tool_execution(
+                e, function_name, function_args, from_task, from_agent
+            )
+            return None
+
+    def _emit_tool_execution_started(
+        self,
+        function_name: str,
+        function_args: dict[str, Any],
+        from_task: Task | None,
+        from_agent: BaseAgent | None,
+    ) -> datetime:
+        """Emit the tool-started event and return the start time."""
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=function_name,
+                tool_args=function_args,
+                from_agent=from_agent,
+                from_task=from_task,
+            ),
+        )
+        return started_at
+
+    def _finish_tool_execution(
+        self,
+        result: Any,
+        function_name: str,
+        function_args: dict[str, Any],
+        started_at: datetime,
+        from_task: Task | None,
+        from_agent: BaseAgent | None,
+    ) -> str:
+        """Emit tool-finished and LLM tool-call completion events for a result."""
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageFinishedEvent(
+                output=result,
+                tool_name=function_name,
+                tool_args=function_args,
+                started_at=started_at,
+                finished_at=datetime.now(),
                 from_task=from_task,
                 from_agent=from_agent,
-            )
+            ),
+        )
 
-            return str(result) if not isinstance(result, str) else result
+        self._emit_call_completed_event(
+            response=result,
+            call_type=LLMCallType.TOOL_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+        )
 
-        except Exception as e:
-            error_msg = f"Error executing function '{function_name}': {e!s}"
-            logging.error(error_msg)
+        return str(result) if not isinstance(result, str) else result
 
-            if not hasattr(crewai_event_bus, "emit"):
-                raise ValueError(
-                    "crewai_event_bus does not have an emit method"
-                ) from None
+    def _fail_tool_execution(
+        self,
+        error: Exception,
+        function_name: str,
+        function_args: dict[str, Any],
+        from_task: Task | None,
+        from_agent: BaseAgent | None,
+    ) -> None:
+        """Emit tool-error and LLM failure events for a failed tool call."""
+        error_msg = f"Error executing function '{function_name}': {error!s}"
+        logging.error(error_msg)
 
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageErrorEvent(
-                    tool_name=function_name,
-                    tool_args=function_args,
-                    error=error_msg,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                ),
-            )
+        if not hasattr(crewai_event_bus, "emit"):
+            raise ValueError("crewai_event_bus does not have an emit method") from None
 
-            self._emit_call_failed_event(
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageErrorEvent(
+                tool_name=function_name,
+                tool_args=function_args,
                 error=error_msg,
                 from_task=from_task,
                 from_agent=from_agent,
-            )
+            ),
+        )
 
-            return None
+        self._emit_call_failed_event(
+            error=error_msg,
+            from_task=from_task,
+            from_agent=from_agent,
+        )
 
     def _format_messages(
         self, messages: str | list[LLMMessage], *, file_api: str | None = None
