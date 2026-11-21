@@ -463,6 +463,17 @@ class TestTables:
             "Amount (3)",
         ]
 
+    def test_generated_header_suffixes_do_not_collide_with_real_headers(self):
+        """A literal "Amount (2)" header must not erase a duplicated column."""
+        book = parse(
+            xlsx(("S", [["Amount", "Amount", "Amount (2)"], [1, 2, 3]])), "w.xlsx"
+        )
+        assert list(book.sheets[0].table().frame.columns) == [
+            "Amount",
+            "Amount (2)",
+            "Amount (2) (2)",
+        ]
+
     def test_a_row_whose_only_cell_is_off_type_is_still_a_row(self):
         rows = [["n"]] + [[i] for i in range(10)] + [["Total"]]
         table = parse(xlsx(("S", rows)), "w.xlsx").sheets[0].table()

@@ -711,12 +711,20 @@ def _detect_header(grid: list[list[Cell]]) -> int:
 def _header_names(row: list[Cell], width: int) -> list[str]:
     names: list[str] = []
     seen: dict[str, int] = {}
+    used: set[str] = set()
     for i in range(width):
         cell = row[i] if i < len(row) else None
         name = "" if _blank(cell) else text_of(cell)[:80]
         name = name or f"column_{i + 1}"
         seen[name] = seen.get(name, 0) + 1
-        names.append(name if seen[name] == 1 else f"{name} ({seen[name]})")
+        unique = name if seen[name] == 1 else f"{name} ({seen[name]})"
+        # A real header can already look like a generated suffix ("Amount (2)").
+        # Keep advancing the suffix until the name is unused.
+        while unique in used:
+            seen[name] += 1
+            unique = f"{name} ({seen[name]})"
+        used.add(unique)
+        names.append(unique)
     return names
 
 
