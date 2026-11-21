@@ -1,8 +1,8 @@
 """Lightweight SQLite reader for kickoff task outputs.
 
-Only used by the ``crewai log-tasks-outputs`` CLI command.  Depends solely on
-the standard library + *appdirs* so crewai-cli can read stored outputs without
-importing the full crewai framework.
+Used by the ``crewai log-tasks-outputs`` and ``crewai replay --list`` commands.
+Depends solely on the standard library + *appdirs* so crewai-cli can read stored
+outputs without importing the full crewai framework.
 """
 
 from __future__ import annotations
@@ -19,8 +19,14 @@ from crewai_cli.user_data import _db_storage_path
 logger = logging.getLogger(__name__)
 
 
-def load_task_outputs(db_path: str | None = None) -> list[dict[str, Any]]:
-    """Return all rows from the kickoff task outputs database."""
+def load_task_outputs(
+    db_path: str | None = None, *, raise_on_error: bool = False
+) -> list[dict[str, Any]]:
+    """Return all rows from the kickoff task outputs database.
+
+    Set ``raise_on_error`` to propagate SQLite errors instead of returning an
+    empty list.
+    """
     if db_path is None:
         db_path = str(Path(_db_storage_path()) / "latest_kickoff_task_outputs.db")
 
@@ -39,6 +45,8 @@ def load_task_outputs(db_path: str | None = None) -> list[dict[str, Any]]:
             """)
             rows = cursor.fetchall()
     except sqlite3.Error as e:
+        if raise_on_error:
+            raise
         logger.error("Failed to load task outputs: %s", e)
         return []
 
