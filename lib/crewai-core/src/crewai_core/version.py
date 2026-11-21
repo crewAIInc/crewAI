@@ -115,7 +115,12 @@ def get_latest_version_from_pypi(timeout: int = 2) -> str | None:
     if cache_file.exists():
         try:
             cache_data = json.loads(cache_file.read_text())
-            if _is_cache_valid(cache_data) and "current_version" in cache_data:
+            # The entry also records whether the installed version is yanked, so
+            # one written for another version is not reused after an upgrade.
+            if (
+                _is_cache_valid(cache_data)
+                and cache_data.get("current_version") == get_crewai_version()
+            ):
                 version: str | None = cache_data.get("version")
                 return version
         except (json.JSONDecodeError, OSError):
@@ -166,6 +171,8 @@ def is_current_version_yanked() -> tuple[bool, str]:
 
     try:
         cache_data = json.loads(cache_file.read_text())
+        if cache_data.get("current_version") != get_crewai_version():
+            return False, ""
         return (
             bool(cache_data.get("current_version_yanked", False)),
             str(cache_data.get("current_version_yanked_reason", "")),
