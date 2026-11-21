@@ -73,6 +73,76 @@ class CustomLLM(BaseLLM):
         return 8192  # Adjust based on your model's actual context window
 ```
 
+## 실행 가능한 오프라인 예제
+
+위 예제들은 실제 HTTP 엔드포인트를 호출합니다. API 키나 네트워크 호출 없이 `BaseLLM` 인터페이스를 시험해 보려면, 고정된 응답을 반환하는 스텁을 사용하세요. 확장 지점을 익히거나 테스트할 때 유용합니다. 준비가 되면 `call` 본문을 실제 제공자 요청으로 교체하세요(위 예제 참고).
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.llms.base_llm import BaseLLM
+
+
+class OfflineLLM(BaseLLM):
+    """A deterministic, offline LLM — no API key, no network. For learning and tests."""
+
+    def __init__(self, response: str = "Hello from your custom LLM!", model: str = "offline-stub"):
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        # CrewAI drives agents with a ReAct loop. When it asks the model to think, reply with a
+        # Final Answer so the agent can finish. A real provider would send `messages` to its API here.
+        if "Thought:" in str(messages):
+            return f"Thought: I now know the final answer\nFinal Answer: {self.response}"
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False  # this stub has no native tool calling
+
+    def supports_stop_words(self) -> bool:
+        return False  # this stub handles no stop words
+
+
+# 1) Call the model directly.
+llm = OfflineLLM(response="42")
+print(llm.call("What is the answer to everything?"))  # -> 42
+
+# 2) Power an Agent / Task / Crew with it — no API key, no network.
+agent = Agent(
+    role="Greeter",
+    goal="Greet the user",
+    backstory="You greet people warmly.",
+    llm=OfflineLLM(response="Hello! Nice to meet you!"),
+)
+task = Task(description="Say hi to the user", expected_output="A greeting", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+print(crew.kickoff().raw)  # -> Hello! Nice to meet you!
+```
+
+이 코드를 `offline_llm.py`로 저장하고 실행하세요:
+
+```bash
+python offline_llm.py
+```
+
+예상 출력:
+
+```text
+42
+Hello! Nice to meet you!
+```
+
+이 스텁은 학습과 테스트용일 뿐입니다. 실제 모델을 사용하려면 `call` 본문을 제공자 API 요청으로 교체하고, 해당 제공자에 맞게 `supports_function_calling`과 `supports_stop_words`를 정직하게 선언하세요.
+
 ## 사용자 지정 LLM 사용하기
 
 ```python

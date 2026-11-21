@@ -73,6 +73,76 @@ class CustomLLM(BaseLLM):
         return 8192  # Adjust based on your model's actual context window
 ```
 
+## A runnable offline example
+
+The examples above call a real HTTP endpoint. To try the `BaseLLM` interface without any API key or network call, use a stub that returns a fixed response. It is handy for learning the extension points and for tests; replace the body of `call` with a real provider request (as shown above) when you are ready.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.llms.base_llm import BaseLLM
+
+
+class OfflineLLM(BaseLLM):
+    """A deterministic, offline LLM — no API key, no network. For learning and tests."""
+
+    def __init__(self, response: str = "Hello from your custom LLM!", model: str = "offline-stub"):
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        # CrewAI drives agents with a ReAct loop. When it asks the model to think, reply with a
+        # Final Answer so the agent can finish. A real provider would send `messages` to its API here.
+        if "Thought:" in str(messages):
+            return f"Thought: I now know the final answer\nFinal Answer: {self.response}"
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False  # this stub has no native tool calling
+
+    def supports_stop_words(self) -> bool:
+        return False  # this stub handles no stop words
+
+
+# 1) Call the model directly.
+llm = OfflineLLM(response="42")
+print(llm.call("What is the answer to everything?"))  # -> 42
+
+# 2) Power an Agent / Task / Crew with it — no API key, no network.
+agent = Agent(
+    role="Greeter",
+    goal="Greet the user",
+    backstory="You greet people warmly.",
+    llm=OfflineLLM(response="Hello! Nice to meet you!"),
+)
+task = Task(description="Say hi to the user", expected_output="A greeting", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+print(crew.kickoff().raw)  # -> Hello! Nice to meet you!
+```
+
+Save this as `offline_llm.py` and run it:
+
+```bash
+python offline_llm.py
+```
+
+Expected output:
+
+```text
+42
+Hello! Nice to meet you!
+```
+
+This stub is only for learning and testing. To use a real model, replace the body of `call` with a request to your provider's API (see the real-provider example above), and declare `supports_function_calling` and `supports_stop_words` honestly for that provider.
+
 ## Using Your Custom LLM
 
 ```python
