@@ -193,7 +193,12 @@ def _build_definition_state_model(
     state_definition: FlowStateDefinition,
     compose: Callable[[type[BaseModel]], type[BaseModel]] | None = None,
 ) -> BaseModel | None:
-    kwargs = dict(state_definition.default or {})
+    # Isolate nested values. A shallow dict() copy leaves inner
+    # containers shared across flows built from the same declaration.
+    try:
+        kwargs: dict[str, Any] = copy.deepcopy(state_definition.default or {})
+    except (TypeError, AttributeError):
+        kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
     state_ref = getattr(state_definition, "ref", None)
@@ -1772,7 +1777,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             model = init_state
             if hasattr(model, "id"):
                 state_dict = model.model_dump()
-                if not state_dict.get("id"):
+                id_field = type(model).model_fields.get("id")
+                if (
+                    id_field is not None
+                    and id_field.default_factory is not None
+                    and "initial_state" not in self.model_fields_set
+                    and "id" not in model.model_fields_set
+                ):
+                    # A class-level instance is shared by every Flow, and its
+                    # default_factory id was generated once, so give each Flow its own.
+                    state_dict["id"] = id_field.get_default(
+                        call_default_factory=True, validated_data=state_dict
+                    )
+                elif not state_dict.get("id"):
                     state_dict["id"] = str(uuid4())
                 model_class = type(model)
                 return cast(T, model_class(**state_dict))
@@ -1813,7 +1830,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "Flow %r declares state of unknown type; falling back to dict state",
                 self._definition.name,
             )
-        dict_state: dict[str, Any] = dict(state_definition.default or {})
+        # Isolate nested values. A shallow dict() copy leaves inner
+        # containers shared across flows built from the same declaration.
+        try:
+            dict_state: dict[str, Any] = copy.deepcopy(state_definition.default or {})
+        except (TypeError, AttributeError):
+            dict_state = dict(state_definition.default or {})
         if "id" not in dict_state:
             dict_state["id"] = str(uuid4())
         return dict_state

@@ -1089,6 +1089,21 @@ def test_a_json_crew_reads_its_agents_and_crew_jsonc_past_comments(
     assert "GROQ_API_KEY" not in result.output
 
 
+def test_a_json_crew_saved_with_a_utf8_bom_is_read(
+    project, children, no_prompt
+) -> None:
+    json_crew_project(project)
+    (project / "crew.jsonc").write_bytes(b'\xef\xbb\xbf{"agents": ["researcher"]}')
+    (project / "agents" / "researcher.jsonc").write_bytes(
+        b'\xef\xbb\xbf{"llm": "anthropic/claude-sonnet-5"}'
+    )
+
+    result = crewai_run()
+
+    assert result.exit_code == 0, result.output
+    assert warning(project, "ANTHROPIC_API_KEY") in result.output
+
+
 def test_a_json_crew_file_that_does_not_parse_is_left_to_the_run(
     project, children, no_prompt
 ) -> None:
