@@ -141,7 +141,7 @@ Para tarefas de longa duração, use `kickoff_async` para evitar bloquear sua AP
 Use o decorador `@persist` para salvar o estado do seu Flow em um banco de dados. Isso permite retomar a execução se o processo falhar ou se você precisar esperar pela entrada humana.
 
 ```python
-@persist
+@persist()
 class ProductionFlow(Flow[AppState]):
     # ...
 ```
