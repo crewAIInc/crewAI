@@ -55,6 +55,20 @@ except ImportError:
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
+# Claude models that reject a forced toolChoice ("any" or a named "tool") on
+# Bedrock with a 400. For these, structured_output is offered without forcing.
+_FORCED_TOOL_CHOICE_UNSUPPORTED = (
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-fable-5-1",
+)
+
+
+def _supports_forced_tool_choice(model: str) -> bool:
+    """Return False for models that reject a forced toolChoice on Bedrock."""
+    model_lower = model.lower()
+    return not any(m in model_lower for m in _FORCED_TOOL_CHOICE_UNSUPPORTED)
+
 
 def _normalize_litellm_bedrock_kwargs(data: dict[str, Any]) -> dict[str, Any]:
     """Map LiteLLM Bedrock kwargs to their native-provider equivalents."""
@@ -431,7 +445,9 @@ class BedrockCompletion(BaseLLM):
             ):
                 existing_tools.append(structured_tool)
                 converse_input["toolConfig"] = {"tools": existing_tools}
-                if len(existing_tools) == 1:
+                if len(existing_tools) == 1 and _supports_forced_tool_choice(
+                    self.model
+                ):
                     converse_input["toolConfig"]["toolChoice"] = {
                         "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
                     }
@@ -754,7 +770,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
                         "ToolConfigurationTypeDef",
@@ -946,11 +962,22 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
-            return self._invoke_after_llm_call_hooks(
+            text_content = self._invoke_after_llm_call_hooks(
                 messages,
                 text_content,
                 from_agent,
             )
+
+            if response_model:
+                # Text instead of a structured_output call: parse it as the OpenAI provider does.
+                try:
+                    return self._validate_structured_output(
+                        text_content, response_model
+                    )
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
+
+            return text_content
 
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -1043,7 +1070,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     # Append structured_output to existing tools, don't force toolChoice
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
@@ -1305,6 +1332,14 @@ class BedrockCompletion(BaseLLM):
             response_id=response_id,
         )
 
+        if response_model:
+            # Text instead of a structured_output call: parse it as the OpenAI provider does.
+            # Intentionally no after_llm_call hooks: this handler's text return never ran them.
+            try:
+                return self._validate_structured_output(full_response, response_model)  # type: ignore[return-value]
+            except ValueError as e:
+                logging.warning(f"Structured output validation failed: {e}")
+
         return full_response
 
     async def _ensure_async_client(self) -> Any:
@@ -1370,7 +1405,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     # Append structured_output to existing tools, don't force toolChoice
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
@@ -1561,6 +1596,16 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
+            if response_model:
+                # Text instead of a structured_output call: parse it as the OpenAI provider does.
+                # Intentionally no after_llm_call hooks: this handler's text return never ran them.
+                try:
+                    return self._validate_structured_output(
+                        text_content, response_model
+                    )
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
+
             return text_content
 
         except ClientError as e:
@@ -1652,7 +1697,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     # Append structured_output to existing tools, don't force toolChoice
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
@@ -1921,11 +1966,20 @@ class BedrockCompletion(BaseLLM):
             response_id=response_id,
         )
 
-        return self._invoke_after_llm_call_hooks(
+        full_response = self._invoke_after_llm_call_hooks(
             messages,
             full_response,
             from_agent,
         )
+
+        if response_model:
+            # Text instead of a structured_output call: parse it as the OpenAI provider does.
+            try:
+                return self._validate_structured_output(full_response, response_model)  # type: ignore[return-value]
+            except ValueError as e:
+                logging.warning(f"Structured output validation failed: {e}")
+
+        return full_response
 
     def _format_messages_for_converse(
         self, messages: str | list[LLMMessage]
