@@ -493,3 +493,64 @@ def test_parent_pause_persists_its_own_trace_and_resume_feedback(
         assert link.context.trace_id == parent_span.context.trace_id
         assert link.context.span_id == parent_span.context.span_id
         assert link.attributes["crewai.link.type"] == "follows_from"
+
+
+class FailingRun(Flow):
+    @start()
+    def turn(self):
+        raise RuntimeError("the run failed")
+
+
+@pytest.mark.parametrize(
+    "closed", ["no terminal", "under test", "messages suppressed"]
+)
+def test_a_failed_run_crewai_eval_started_is_still_uploaded_to_be_graded(
+    traces, monkeypatch, tmp_path, closed
+):
+    """A failed run is still a run to grade: `crewai eval` started it, the
+    command was the yes, and a logged-in failed run is already graded. Its
+    trace goes up and the run is recorded for the command to find."""
+    from crewai.telemetry.tracing import last_run
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.setattr(last_run, "project_dir", lambda: tmp_path)
+    monkeypatch.setattr(last_run, "recording_enabled", lambda: True)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
+    monkeypatch.setattr(
+        f"{utils}.should_suppress_tracing_messages",
+        lambda: closed == "messages suppressed",
+    )
+
+    with eval_handshake.awaiting_evaluation() as told:
+        assert told
+        with pytest.raises(RuntimeError, match="the run failed"):
+            FailingRun().kickoff()
+        assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()
+    assert len(grants) == 1
+    exported = [span for recorder in recorders for span in recorder.get_finished_spans()]
+    assert any(span.status.status_code is trace.StatusCode.ERROR for span in exported)
+    assert last_run.read_last_run(tmp_path)["execution_id"] == grants[0].execution_uuid
+
+
+def test_a_failed_run_nobody_is_evaluating_is_not_uploaded(traces, monkeypatch):
+    """Tracing on, and the run failed outside `crewai eval`: as before, its
+    trace is discarded without a question or a request."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: True
+    )
+
+    with pytest.raises(RuntimeError, match="the run failed"):
+        FailingRun().kickoff()
+    assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()
+    assert buffers and buffers[0]._closed and not buffers[0]._spans
+    assert not grants and not recorders
