@@ -48,6 +48,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     Raises:
         SkillParseError: If frontmatter delimiters are missing or YAML is invalid.
     """
+    content = content.removeprefix("\ufeff")
     if not content.startswith("---"):
         msg = "SKILL.md must start with '---' frontmatter delimiter"
         raise SkillParseError(msg)
