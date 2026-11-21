@@ -1841,6 +1841,18 @@ def test_json_watsonx_models_use_the_prefix_crewai_can_run(
         )
 
 
+def test_json_deepinfra_models_keep_their_org_segment(monkeypatch):
+    """DeepInfra ids are org/model, so a picked model reads deepinfra/org/model."""
+    monkeypatch.setattr(
+        json_crew, "get_provider_models", lambda _provider, fallback: fallback
+    )
+    deepinfra = [key for key, _ in json_crew._PROVIDERS].index("deepinfra")
+    picks = iter([deepinfra, 1])
+    monkeypatch.setattr(json_crew, "pick_one", lambda *_a, **_k: next(picks))
+
+    assert json_crew._select_model() == "deepinfra/zai-org/GLM-5.3-Flash"
+
+
 @pytest.mark.parametrize(
     ("provider", "key_name"),
     [("claude/claude-sonnet-5-5", "ANTHROPIC_API_KEY"), ("google/gemini-3.8-flash", "GEMINI_API_KEY")],
