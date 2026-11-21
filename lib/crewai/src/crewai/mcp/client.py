@@ -434,21 +434,36 @@ class MCPClient:
         return tools
 
     async def _list_tools_impl(self) -> list[dict[str, Any]]:
-        """Internal implementation of list_tools."""
-        tools_result = await asyncio.wait_for(
-            self.session.list_tools(),
-            timeout=self.discovery_timeout,
-        )
+        """Collect all tool pages within one discovery attempt."""
+        from mcp.types import PaginatedRequestParams
 
-        return [
-            {
-                "name": sanitize_tool_name(tool.name),
-                "original_name": tool.name,
-                "description": getattr(tool, "description", ""),
-                "inputSchema": getattr(tool, "inputSchema", {}),
-            }
-            for tool in tools_result.tools
-        ]
+        tools: list[dict[str, Any]] = []
+        params: PaginatedRequestParams | None = None
+        seen_cursors: set[str] = set()
+
+        while True:
+            tools_result = await asyncio.wait_for(
+                self.session.list_tools(params=params),
+                timeout=self.discovery_timeout,
+            )
+            tools.extend(
+                {
+                    "name": sanitize_tool_name(tool.name),
+                    "original_name": tool.name,
+                    "description": getattr(tool, "description", ""),
+                    "inputSchema": getattr(tool, "inputSchema", {}),
+                }
+                for tool in tools_result.tools
+            )
+
+            if tools_result.nextCursor is None:
+                return tools
+            if tools_result.nextCursor in seen_cursors:
+                raise RuntimeError(
+                    "MCP server returned a repeated tools/list pagination cursor"
+                )
+            seen_cursors.add(tools_result.nextCursor)
+            params = PaginatedRequestParams(cursor=tools_result.nextCursor)
 
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
