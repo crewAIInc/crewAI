@@ -4,6 +4,7 @@ from crewai_tools.rag.base_loader import LoaderResult
 from crewai_tools.rag.loaders.webpage_loader import WebPageLoader
 from crewai_tools.rag.source_content import SourceContent
 import pytest
+import requests
 
 
 class TestWebPageLoader:
@@ -165,3 +166,17 @@ class TestWebPageLoader:
             mock_bs.return_value = self.setup_mock_soup("Content")
             result = WebPageLoader().load(SourceContent("https://example.com"))
             assert result.metadata["content_type"] == ctype
+
+    @pytest.mark.parametrize("status_code", [401, 403, 404, 429, 500, 503])
+    @patch("crewai_tools.security.safe_requests._raw_get")
+    def test_http_error_response_raises(self, mock_get, status_code):
+        response = requests.Response()
+        response.status_code = status_code
+        response.url = f"https://example.com/{status_code}"
+        response.headers["content-type"] = "text/html"
+        response._content = f"<html><body>Error {status_code}</body></html>".encode()
+        mock_get.return_value = response
+
+        with pytest.raises(ValueError, match="Error loading webpage") as exc_info:
+            WebPageLoader().load(SourceContent(f"https://example.com/{status_code}"))
+        assert isinstance(exc_info.value.__cause__, requests.HTTPError)
