@@ -456,16 +456,24 @@ class QdrantEdgeStorage:
     ) -> int:
         """Delete matching records from a single shard, returning count deleted."""
         before = shard.count(CountRequest())
+        scope_filter = self._build_scope_filter(scope_prefix)
 
-        if record_ids and not (categories or metadata_filter or older_than):
+        # Deleting by ID is only a shortcut while no scope was requested: with a
+        # scope_filter the ids have to be intersected with it, or a caller
+        # confined to one subtree (e.g. Memory.forget() with a root_scope) would
+        # delete points that live anywhere in the shard.
+        if (
+            record_ids
+            and not (categories or metadata_filter or older_than)
+            and scope_filter is None
+        ):
             point_ids: list[int | uuid.UUID | str] = [
                 _uuid_to_point_id(rid) for rid in record_ids
             ]
             shard.update(UpdateOperation.delete_points(point_ids))
             return before - shard.count(CountRequest())
 
-        if categories or metadata_filter or older_than:
-            scope_filter = self._build_scope_filter(scope_prefix)
+        if record_ids or categories or metadata_filter or older_than:
             points = self._scroll_all(shard, filt=scope_filter)
             allowed_ids: set[str] | None = set(record_ids) if record_ids else None
             to_delete: list[int | uuid.UUID | str] = []
@@ -486,7 +494,6 @@ class QdrantEdgeStorage:
                 shard.update(UpdateOperation.delete_points(to_delete))
             return before - shard.count(CountRequest())
 
-        scope_filter = self._build_scope_filter(scope_prefix)
         if scope_filter:
             shard.update(UpdateOperation.delete_points_by_filter(filter=scope_filter))
         else:
