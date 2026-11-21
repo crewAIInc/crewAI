@@ -65,8 +65,13 @@ def test_throttling_error_classifier_follows_exception_causes() -> None:
     "error",
     [
         _StructuredProviderError("InvalidRequest"),
+        _StructuredProviderError("ServiceQuotaExceededException"),
         RuntimeError("input exceeds the context window"),
         ValueError("request validation failed"),
+        type("OpenAIQuotaError", (Exception,), {"status_code": 429, "type": "insufficient_quota"})("quota exceeded"),
+        type("OpenAICreditExhaustedError", (Exception,), {"status_code": 429, "code": "credit_balance_exhausted"})("credits exhausted"),
+        type("OpenAISpendLimitError", (Exception,), {"status_code": 429, "code": "project_spend_limit_exceeded"})("spend limit exceeded"),
+        type("OpenAIBodyQuotaError", (Exception,), {"status_code": 429, "body": {"type": "insufficient_quota"}})("quota exceeded"),
     ],
 )
 def test_throttling_error_classifier_rejects_non_transient_errors(
