@@ -183,6 +183,15 @@ class WebSearchParams(BaseModel):
     )
 
 
+class BraveSearchParams(WebSearchParams):
+    """Web search parameters for BraveSearchTool with per-call file saving."""
+
+    save_file: bool | None = Field(
+        default=None,
+        description="Whether to save the results to a file. Defaults to the tool setting.",
+    )
+
+
 class LocalPOIsParams(BaseModel):
     """Parameters for Brave Local POIs endpoint."""
 
