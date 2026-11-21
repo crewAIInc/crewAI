@@ -22,12 +22,17 @@ def build_env_with_tool_repository_credentials(
     settings = Settings()
 
     env = os.environ.copy()
-    env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
-        settings.tool_repository_username or ""
-    )
-    env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
-        settings.tool_repository_password or ""
-    )
+    # Only override what the user actually saved. Writing "" for an unset
+    # setting would erase credentials the caller already exported for this
+    # index, which is common in CI.
+    if settings.tool_repository_username is not None:
+        env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
+            settings.tool_repository_username
+        )
+    if settings.tool_repository_password is not None:
+        env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
+            settings.tool_repository_password
+        )
 
     return env
 
