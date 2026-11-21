@@ -363,6 +363,7 @@
                       "edge/en/observability/neatlogs",
                       "edge/en/observability/openlit",
                       "edge/en/observability/opik",
+                      "edge/en/observability/agentest",
                       "edge/en/observability/patronus-evaluation",
                       "edge/en/observability/portkey",
                       "edge/en/observability/weave",
