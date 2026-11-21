@@ -1060,6 +1060,8 @@ class Memory(BaseModel):
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
+        agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> MemoryRecord | None:
         """Async remember: delegates to sync for now."""
         return self.remember(
@@ -1070,6 +1072,8 @@ class Memory(BaseModel):
             importance=importance,
             source=source,
             private=private,
+            agent_role=agent_role,
+            root_scope=root_scope,
         )
 
     async def aremember_many(
@@ -1082,6 +1086,7 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Async remember_many: delegates to sync for now."""
         return self.remember_many(
@@ -1093,6 +1098,7 @@ class Memory(BaseModel):
             source=source,
             private=private,
             agent_role=agent_role,
+            root_scope=root_scope,
         )
 
     async def arecall(
