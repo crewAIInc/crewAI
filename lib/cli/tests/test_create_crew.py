@@ -1596,6 +1596,61 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert f'"llm": "{default_model}"' in agent_template
 
 
+def test_json_create_keeps_non_ascii_wizard_text_readable(tmp_path, monkeypatch):
+    """Non-ASCII text must land in the .jsonc files verbatim, not as \\uXXXX.
+
+    Every value starts with English and then carries Chinese, Korean and
+    Japanese: the escape is ASCII vs non-ASCII rather than one language's
+    problem, and the ASCII prefix is a control that must survive unchanged.
+    """
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: (
+            [
+                {
+                    "name": "test",
+                    "role": "role 角色 역할 役割",
+                    # English first, then three scripts: the escape is
+                    # ASCII vs non-ASCII, not one language.
+                    "goal": "goal 目标 목표 ゴール",
+                    "backstory": "backstory 背景 배경 バックグラウンド",
+                    "llm": "openai/gpt-5.5",
+                    "tools": [],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "test_task",
+                    "description": "description 说明 {topic} 설명 説明",
+                    "expected_output": "output 结果 결과 出力",
+                    "agent": "test",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {"topic": "topic 主题 주제 トピック"}},
+        ),
+    )
+
+    json_crew.create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+
+    project_root = tmp_path / "json_crew"
+    agent_text = (project_root / "agents" / "test.jsonc").read_text(encoding="utf-8")
+    crew_text = (project_root / "crew.jsonc").read_text(encoding="utf-8")
+
+    assert '"role": "role 角色 역할 役割"' in agent_text
+    assert '"goal": "goal 目标 목표 ゴール"' in agent_text
+    assert '"backstory": "backstory 背景 배경 バックグラウンド"' in agent_text
+    assert '"description": "description 说明 {topic} 설명 説明"' in crew_text
+    assert '"expected_output": "output 结果 결과 出力"' in crew_text
+    assert '"topic": "topic 主题 주제 トピック"' in crew_text
+    assert "\\u" not in agent_text
+    assert "\\u" not in crew_text
+
+
 FALLBACK_LLM = "openai/gpt-6-luna"
 
 
