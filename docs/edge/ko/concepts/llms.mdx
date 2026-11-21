@@ -788,6 +788,49 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+  <Accordion title="HopBase">
+    [HopBase](https://hop-base.com?utm_source=crewai&utm_medium=listing)는 하나의 API 키로 Claude, GPT, Gemini, DeepSeek, Qwen, GLM, Kimi, Doubao Seed, Grok 모델을 제공하는 AI 게이트웨이입니다. OpenAI 호환 엔드포인트는 `openai/` 접두사와 `base_url`을 통해 CrewAI의 네이티브 OpenAI 클라이언트와 함께 작동하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    HOPBASE_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/deepseek-v4.1-flash",
+        base_url="https://api.hop-base.com/v1",
+        api_key=os.environ["HOPBASE_API_KEY"],
+    )
+    ```
+
+    Claude 모델은 Anthropic 호환 엔드포인트를 사용하며, 이 기본 URL에는 `/v1`이 없습니다:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-sonnet-5-5",
+        base_url="https://api.hop-base.com",
+        api_key=os.environ["HOPBASE_API_KEY"],
+        max_tokens=4096,
+    )
+    ```
+
+    <Info>
+      HopBase 특징:
+      - 여러 모델 계열의 채팅 모델과 이미지·비디오 모델을 하나의 키로 사용
+      - OpenAI 호환 (`/v1/chat/completions`, `/v1/responses`) 및 Anthropic 호환 (`/v1/messages`) 엔드포인트
+      - 풀링된 용량 간 라우팅과 자동 장애 조치
+    </Info>
+
+    키로 호출할 수 있는 모델은 키에 연결된 그룹에 따라 달라집니다. 인증된
+    `GET https://api.hop-base.com/v1/models` 요청으로 목록을 확인하고, 반환된 ID를 `openai/` 접두사 뒤에
+    사용하세요. 예: `openai/gpt-6-sol` 또는 `openai/qwen3.8-max`. 키는
+    [HopBase 콘솔](https://api.hop-base.com/login)에서 생성하고, 모델 ID와 파라미터는
+    [HopBase 문서](https://hop-base.com/en/docs?utm_source=crewai&utm_medium=listing)를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
