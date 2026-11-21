@@ -183,7 +183,11 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             )
 
         data["api_key"] = cls._configured_api_key(data.get("api_key"), config)
-        data["base_url"] = cls._resolve_base_url(data.get("base_url"), config, provider)
+        # Like OpenAICompletion and Snowflake, accept api_base as the fallback for
+        # base_url; otherwise the provider default is stored as base_url and wins.
+        data["base_url"] = cls._resolve_base_url(
+            data.get("base_url") or data.get("api_base"), config, provider
+        )
         data["default_headers"] = cls._resolve_headers(
             data.get("default_headers"), config
         )

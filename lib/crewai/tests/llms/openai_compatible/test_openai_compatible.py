@@ -242,6 +242,45 @@ class TestOpenAICompatibleCompletion:
             completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
             assert completion.base_url == "http://custom-ollama:11434/v1"
 
+    def test_api_base_overrides_env_and_config(self):
+        """Test api_base is used as the endpoint, like base_url."""
+        with patch.dict(
+            os.environ,
+            {"DEEPSEEK_API_KEY": "test-key", "DEEPSEEK_BASE_URL": "https://env.deepseek.com/v1"},
+        ):
+            completion = OpenAICompatibleCompletion(
+                model="deepseek-chat",
+                provider="deepseek",
+                api_base="https://proxy.example.com/v1",
+            )
+            assert completion.base_url == "https://proxy.example.com/v1"
+            assert (
+                completion._get_client_params()["base_url"]
+                == "https://proxy.example.com/v1"
+            )
+
+    def test_explicit_base_url_wins_over_api_base(self):
+        """Test base_url keeps precedence over api_base."""
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            completion = OpenAICompatibleCompletion(
+                model="deepseek-chat",
+                provider="deepseek",
+                base_url="https://explicit.deepseek.com/v1",
+                api_base="https://proxy.example.com/v1",
+            )
+            assert completion.base_url == "https://explicit.deepseek.com/v1"
+
+    def test_ollama_api_base_normalized(self):
+        """Test a remote Ollama api_base is used and normalized to include /v1."""
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("OLLAMA_HOST", None)
+            llm = LLM(model="ollama/llama3", api_base="http://remote-ollama:11434")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "http://remote-ollama:11434/v1"
+            assert (
+                llm._get_client_params()["base_url"] == "http://remote-ollama:11434/v1"
+            )
+
     def test_openrouter_headers(self):
         """Test OpenRouter has HTTP-Referer header."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}):
