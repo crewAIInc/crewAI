@@ -28,6 +28,40 @@ def http_config():
     return MCPServerHTTP(url="https://mcp.example.com/api")
 
 
+class TestResolveNativeNullDescription:
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_tool_with_null_description_is_registered(
+        self, mock_client_class, resolver, http_config
+    ):
+        # FastMCP publishes "description": null for a tool function without a
+        # docstring; MCP allows it, so the tool must not be dropped.
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(
+            return_value=[{"name": "search", "description": None}]
+        )
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools, _ = resolver._resolve_native(http_config)
+
+        assert len(tools) == 1
+        assert tools[0].description == "Tool search from mcp_example_com_api"
+
+
+def test_mcp_tool_wrapper_accepts_null_description():
+    from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
+
+    wrapper = MCPToolWrapper(
+        mcp_server_params={"url": "https://mcp.example.com/api"},
+        tool_name="search",
+        tool_schema={"description": None},
+        server_name="example",
+    )
+    assert "Tool search from example" in wrapper.description
+
+
 class TestResolveNativeEmptyTools:
     @patch("crewai.mcp.tool_resolver.MCPClient")
     def test_logs_warning_and_returns_empty_when_server_has_no_tools(

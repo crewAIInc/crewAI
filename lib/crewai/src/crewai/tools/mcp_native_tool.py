@@ -49,11 +49,15 @@ class MCPNativeTool(BaseTool):
 
         args_schema = tool_schema.get("args_schema")
 
+        # MCP allows a null description (FastMCP sends one for a function
+        # without a docstring); treat it like a missing one.
+        description = tool_schema.get("description")
+        if description is None:
+            description = f"Tool {tool_name} from {server_name}"
+
         kwargs = {
             "name": prefixed_name,
-            "description": tool_schema.get(
-                "description", f"Tool {tool_name} from {server_name}"
-            ),
+            "description": description,
         }
 
         if args_schema is not None:
