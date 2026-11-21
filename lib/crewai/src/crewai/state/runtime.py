@@ -38,6 +38,7 @@ from crewai.events.types.checkpoint_events import (
 )
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.event_record import EventRecord
+from crewai.state.method_outputs import annotate_method_output_types
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
 
@@ -67,7 +68,9 @@ def _sync_checkpoint_fields(entity: object) -> None:
             set(entity._completed_methods) if entity._completed_methods else None
         )
         entity.checkpoint_method_outputs = (
-            list(entity._method_outputs) if entity._method_outputs else None
+            [annotate_method_output_types(entry) for entry in entity._method_outputs]
+            if entity._method_outputs
+            else None
         )
         entity.checkpoint_method_counts = (
             {str(k): v for k, v in entity._method_execution_counts.items()}
