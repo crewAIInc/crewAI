@@ -29,6 +29,8 @@ def train_crew(n_iterations: int, filename: str) -> None:
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while training the crew: {e}", err=True)
         click.echo(e.output, err=True)
+        raise SystemExit(e.returncode) from e
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise SystemExit(1) from e

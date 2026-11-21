@@ -1067,7 +1067,10 @@ def _json_schema_to_pydantic_field(
         if "pattern" in json_schema:
             field_params["pattern"] = json_schema["pattern"]
 
-    if not is_required:
+    # A field with an explicit default is already usable when omitted, so it
+    # should not be made nullable unless the schema actually allows ``None``.
+    # Only fields that fall back to a ``None`` default need the Optional wrap.
+    if not is_required and default is None:
         type_ = Optional[type_]  # noqa: UP045 - ForwardRef does not support `|`
 
     if schema_extra:

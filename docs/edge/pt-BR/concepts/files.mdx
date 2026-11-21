@@ -177,9 +177,9 @@ Diferentes provedores suportam diferentes tipos de arquivo. O CrewAI formata aut
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
 | **OpenAI** (API completions) | ✓ | | | | |
 | **OpenAI** (API responses) | ✓ | ✓ | ✓ | | |
-| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Anthropic** (claude-3 e posteriores) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3 e posteriores, nova) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="Gemini para Máximo Suporte de Arquivos">
@@ -214,6 +214,24 @@ O CrewAI escolhe automaticamente o método ideal para enviar arquivos para cada 
 Você não precisa gerenciar isso. O CrewAI usa automaticamente o método mais eficiente baseado no tamanho do arquivo e nas capacidades do provedor. Provedores sem APIs de upload de arquivo usam base64 inline para todos os arquivos.
 </Note>
 
+## Formatando Arquivos Você Mesmo
+
+As chamadas ao LLM formatam os arquivos para você. Para montar os blocos de conteúdo você mesmo, por exemplo para chamar o SDK do provedor diretamente, use `format_multimodal_content` (ou `aformat_multimodal_content`) de `crewai_files`. Ele retorna os blocos no formato do provedor.
+
+Os blocos de arquivo da Anthropic não têm `cache_control` (desde o crewai 1.15.44). A Anthropic permite no máximo quatro pontos de cache por requisição, e o provedor Anthropic do CrewAI os coloca nas mensagens que marca. Se você enviar os blocos por conta própria e quiser cache de prompt, adicione um ponto de cache ao último bloco da mensagem: ele armazena em cache tudo o que vem antes, inclusive os arquivos.
+
+```python
+from crewai_files import ImageFile, format_multimodal_content
+
+blocks = format_multimodal_content(
+    {"chart": ImageFile(source="chart.png")},
+    "anthropic",
+    text="What does this chart show?",
+)
+blocks[-1]["cache_control"] = {"type": "ephemeral"}
+message = {"role": "user", "content": blocks}
+```
+
 ## Modos de Tratamento de Arquivo
 
 Controle como os arquivos são processados quando excedem os limites do provedor:
@@ -226,6 +244,10 @@ image = ImageFile(source="large.png", mode="auto")
 image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
+
+<Note type="warning" title="Formatos de Imagem Suportados">
+Quando o CrewAI precisa ler as dimensões de uma imagem, redimensioná-la ou comprimi-la, ele abre apenas imagens PNG, JPEG, GIF e WEBP. O formato é identificado pelo conteúdo do arquivo, não pelo tipo de conteúdo declarado. Qualquer outra imagem gera `UnsupportedImageFormatError` (uma subclasse de `UnsupportedFileTypeError`) em todos os modos, incluindo `warn` e `auto`. Quando vários arquivos são enviados juntos, apenas essa imagem é deixada de fora e um erro é registrado.
+</Note>
 
 ## Restrições por Provedor
 

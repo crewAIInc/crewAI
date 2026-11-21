@@ -177,9 +177,9 @@ Flow input_files < Crew input_files < Task input_files
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
 | **OpenAI** (completions API) | ✓ | | | | |
 | **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
-| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Anthropic** (claude-3 이상) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3 이상, nova) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="최대 파일 지원을 위한 Gemini">
@@ -214,6 +214,24 @@ CrewAI는 각 프로바이더에 파일을 전송하는 최적의 방법을 자�
 이를 직접 관리할 필요가 없습니다. CrewAI는 파일 크기와 프로바이더 기능에 따라 가장 효율적인 방법을 자동으로 사용합니다. 파일 업로드 API가 없는 프로바이더는 모든 파일에 인라인 base64를 사용합니다.
 </Note>
 
+## 파일 직접 포맷하기
+
+LLM 호출은 파일을 자동으로 포맷합니다. 프로바이더 SDK를 직접 호출하는 경우처럼 콘텐츠 블록을 직접 만들려면 `crewai_files`의 `format_multimodal_content`(또는 `aformat_multimodal_content`)를 사용하세요. 프로바이더 형식의 블록을 반환합니다.
+
+Anthropic 파일 블록에는 `cache_control`이 없습니다(crewai 1.15.44부터). Anthropic은 요청당 캐시 브레이크포인트를 최대 4개까지 허용하며, CrewAI의 Anthropic 프로바이더가 표시한 메시지에 이를 배치합니다. 블록을 직접 보내면서 프롬프트 캐싱을 원한다면 메시지의 마지막 블록에 브레이크포인트를 추가하세요. 브레이크포인트는 파일을 포함해 그 앞의 모든 내용을 캐시합니다.
+
+```python
+from crewai_files import ImageFile, format_multimodal_content
+
+blocks = format_multimodal_content(
+    {"chart": ImageFile(source="chart.png")},
+    "anthropic",
+    text="What does this chart show?",
+)
+blocks[-1]["cache_control"] = {"type": "ephemeral"}
+message = {"role": "user", "content": blocks}
+```
+
 ## 파일 처리 모드
 
 프로바이더 제한을 초과할 때 파일 처리 방식을 제어합니다:
@@ -226,6 +244,10 @@ image = ImageFile(source="large.png", mode="auto")
 image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
+
+<Note type="warning" title="지원되는 이미지 형식">
+CrewAI가 이미지의 크기를 읽거나, 크기를 조정하거나, 압축해야 할 때는 PNG, JPEG, GIF, WEBP 이미지만 엽니다. 형식은 선언된 콘텐츠 유형이 아니라 파일 내용으로 판별됩니다. 그 외의 이미지는 `warn`과 `auto`를 포함한 모든 모드에서 `UnsupportedImageFormatError`(`UnsupportedFileTypeError`의 하위 클래스)를 발생시킵니다. 여러 파일을 함께 보내는 경우 해당 이미지만 제외되고 오류가 기록됩니다.
+</Note>
 
 ## 프로바이더 제약사항
 

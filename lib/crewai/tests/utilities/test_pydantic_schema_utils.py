@@ -103,6 +103,54 @@ class TestRequiredOptional:
         obj = Model()
         assert obj.name is None
 
+    def test_field_with_explicit_non_null_default_stays_non_nullable(self) -> None:
+        """A field omitted from ``required`` but carrying an explicit default
+        is already usable when omitted, so it must not be made nullable.
+
+        This is the ``model_json_schema() -> create_model_from_schema()``
+        round-trip used to persist tool schemas: ``limit: int = 10`` produces
+        ``{"type": "integer", "default": 10}`` and must not come back as
+        ``Optional[int]`` that silently accepts ``None``.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "default": 10},
+                "include_snippets": {"type": "boolean", "default": True},
+                "note": {"type": "string", "default": ""},
+            },
+            "required": ["query"],
+        }
+        Model = create_model_from_schema(schema)
+
+        assert Model.model_fields["limit"].annotation is int
+        assert Model.model_fields["include_snippets"].annotation is bool
+        assert Model.model_fields["note"].annotation is str
+
+        obj = Model(query="x")
+        assert obj.limit == 10
+        assert obj.include_snippets is True
+        assert obj.note == ""
+
+        for field in ("limit", "include_snippets", "note"):
+            with pytest.raises(Exception):
+                Model(query="x", **{field: None})
+
+    def test_field_with_explicit_null_default_remains_nullable(self) -> None:
+        """An explicit ``default: null`` must keep accepting ``None``."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "default": None},
+            },
+            "required": ["query"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(query="x").limit is None
+        assert Model(query="x", limit=None).limit is None
+
     def test_mixed_required_optional(self) -> None:
         schema = {
             "type": "object",
