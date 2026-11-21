@@ -21,6 +21,9 @@ Tavily API 키가 환경 변수로 설정되어 있는지 확인하세요:
 
 ```bash
 export TAVILY_API_KEY='your_tavily_api_key'
+
+# 선택 사항: 프록시, 게이트웨이 또는 Tavily 호환 제공자로 요청을 보내도록 지정합니다
+export TAVILY_API_BASE_URL='https://your-tavily-compatible-endpoint.com'
 ```
 
 https://app.tavily.com/에서 API 키를 발급받으세요(회원가입 후 키를 생성하면 됩니다).
@@ -83,6 +86,7 @@ print(result)
 - `include_raw_content` (bool, 선택): 검색된 페이지의 원시 HTML 콘텐츠를 포함할지 여부입니다. 기본값은 `False`입니다.
 - `include_images` (bool, 선택): 이미지 결과를 포함할지 여부입니다. 기본값은 `False`입니다.
 - `timeout` (int, 선택): 요청의 타임아웃(초)입니다. 기본값은 `60`입니다.
+- `api_base_url` (str, 선택): Tavily API의 기본 URL입니다(예: 프록시, 게이트웨이 또는 Tavily 호환 제공자). 기본값은 `TAVILY_API_BASE_URL` 환경 변수이며, 설정되지 않은 경우 Tavily 공개 API를 사용합니다.
 
 ## 고급 사용법
 

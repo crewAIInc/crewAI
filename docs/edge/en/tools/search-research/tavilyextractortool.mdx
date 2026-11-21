@@ -19,6 +19,9 @@ You also need to set your Tavily API key as an environment variable:
 
 ```bash
 export TAVILY_API_KEY='your-tavily-api-key'
+
+# Optional: point the tool at a proxy, a gateway or a Tavily-compatible provider
+export TAVILY_API_BASE_URL='https://your-tavily-compatible-endpoint.com'
 ```
 
 ## Example Usage
@@ -71,6 +74,7 @@ The `TavilyExtractorTool` accepts the following arguments:
 - `include_images` (Optional[bool]): Whether to include images in the extraction results. Defaults to `False`.
 - `extract_depth` (Literal["basic", "advanced"]): The depth of extraction. Use `"basic"` for faster, surface-level extraction or `"advanced"` for more comprehensive extraction. Defaults to `"basic"`.
 - `timeout` (int): The maximum time in seconds to wait for the extraction request to complete. Defaults to `60`.
+- `api_base_url` (str, optional): Base URL for the Tavily API, e.g. a proxy, a gateway or a Tavily-compatible provider. Defaults to the `TAVILY_API_BASE_URL` environment variable, or Tavily's public API when that is not set.
 
 ## Advanced Usage
 

@@ -21,6 +21,9 @@ Ensure your Tavily API key is set as an environment variable:
 
 ```bash
 export TAVILY_API_KEY='your_tavily_api_key'
+
+# Optional: point the tool at a proxy, a gateway or a Tavily-compatible provider
+export TAVILY_API_BASE_URL='https://your-tavily-compatible-endpoint.com'
 ```
 
 Get an API key at https://app.tavily.com/ (sign up, then create a key).
@@ -83,6 +86,7 @@ The `TavilySearchTool` accepts the following arguments during initialization or 
 - `include_raw_content` (bool, optional): Whether to include the raw HTML content of the searched pages. Defaults to `False`.
 - `include_images` (bool, optional): Whether to include image results. Defaults to `False`.
 - `timeout` (int, optional): The request timeout in seconds. Defaults to `60`.
+- `api_base_url` (str, optional): Base URL for the Tavily API, e.g. a proxy, a gateway or a Tavily-compatible provider. Defaults to the `TAVILY_API_BASE_URL` environment variable, or Tavily's public API when that is not set.
 
 ## Advanced Usage
 

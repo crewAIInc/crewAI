@@ -21,6 +21,9 @@ uv add 'crewai[tools]' tavily-python
 
 ```bash
 export TAVILY_API_KEY='your_tavily_api_key'
+
+# اختياري: توجيه الأداة إلى خادم وسيط أو بوابة أو مزود متوافق مع Tavily
+export TAVILY_API_BASE_URL='https://your-tavily-compatible-endpoint.com'
 ```
 
 احصل على مفتاح API على https://app.tavily.com/ (سجّل، ثم أنشئ مفتاحاً).
@@ -83,6 +86,7 @@ print(result)
 - `include_raw_content` (bool، اختياري): ما إذا كان يجب تضمين محتوى HTML الخام للصفحات المبحوث عنها. الافتراضي هو `False`.
 - `include_images` (bool، اختياري): ما إذا كان يجب تضمين نتائج الصور. الافتراضي هو `False`.
 - `timeout` (int، اختياري): مهلة الطلب بالثواني. الافتراضي هو `60`.
+- `api_base_url` (str، اختياري): عنوان URL الأساسي لـ Tavily API، مثل خادم وسيط أو بوابة أو مزود متوافق مع Tavily. القيمة الافتراضية هي متغير البيئة `TAVILY_API_BASE_URL`، أو واجهة Tavily العامة إن لم يتم تعيينه.
 
 ## الاستخدام المتقدم
 
