@@ -39,6 +39,18 @@ class FileUploader(ABC):
     def provider_name(self) -> str:
         """Return the provider name."""
 
+    def is_configured(self) -> bool:
+        """Return whether this uploader has what it needs to accept an upload.
+
+        Uploaders that work out of the box (the provider remote keeps the file)
+        return True. Ones that stage files somewhere the caller has to provide,
+        like a bucket, only do so once that is set up.
+
+        Returns:
+            True if `upload` can reasonably be called, False otherwise.
+        """
+        return True
+
     @abstractmethod
     def upload(self, file: FileInput, purpose: str | None = None) -> UploadResult:
         """Upload a file to the provider.

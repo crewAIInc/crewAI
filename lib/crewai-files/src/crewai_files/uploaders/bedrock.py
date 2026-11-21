@@ -142,6 +142,10 @@ class BedrockFileUploader(FileUploader):
         """Return the provider name."""
         return "bedrock"
 
+    def is_configured(self) -> bool:
+        """Return True when an S3 bucket is set, i.e. an upload can be staged."""
+        return bool(self._bucket_name)
+
     @property
     def bucket_name(self) -> str:
         """Return the configured bucket name."""

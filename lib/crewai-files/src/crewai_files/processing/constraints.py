@@ -200,6 +200,12 @@ class ProviderConstraints:
     supports_url_references: bool = False
 
 
+# Bedrock has no file upload API: the payload goes inline as raw bytes, or as an
+# S3 URI in a `uri` source. A file that no longer fits inline (over the image or
+# PDF size cap) can only be sent if someone configured a bucket for the uploader
+# to stage it in, so `_should_upload` checks for that at resolve time.
+
+
 ANTHROPIC_CONSTRAINTS = ProviderConstraints(
     name="anthropic",
     image=ImageConstraints(

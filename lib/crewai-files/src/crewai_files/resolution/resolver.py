@@ -5,6 +5,7 @@ import base64
 from dataclasses import dataclass, field
 import hashlib
 import logging
+from typing import cast
 
 from crewai_files.cache.metrics import measure_operation
 from crewai_files.cache.upload_cache import CachedUpload, UploadCache
@@ -249,7 +250,12 @@ class FileResolver:
         Returns:
             True if the file should be uploaded, False otherwise.
         """
-        if constraints is None or not constraints.supports_file_upload:
+        if constraints is None:
+            return False
+
+        if not constraints.supports_file_upload and not self._can_stage_in_bucket(
+            cast(ProviderType, provider)
+        ):
             return False
 
         if self.config.prefer_upload:
@@ -275,6 +281,22 @@ class FileResolver:
             return True
 
         return False
+
+    def _can_stage_in_bucket(self, provider: ProviderType) -> bool:
+        """Check whether this resolver can upload for a provider without an upload API.
+
+        Bedrock takes files inline, or as an S3 URI the caller already built. The
+        uploader can stage a file in S3, but only when a bucket is configured; with
+        no bucket it raises `UploaderConfigurationError`, which is a setup problem
+        and not something a resolve call should recover from silently. So ask the
+        uploader whether it is configured before sending a file down the upload path.
+        """
+        from crewai_files.processing.exceptions import UploaderConfigurationError
+
+        try:
+            return self._get_uploader(provider).is_configured()
+        except UploaderConfigurationError:
+            return False
 
     def _resolve_via_upload(
         self,

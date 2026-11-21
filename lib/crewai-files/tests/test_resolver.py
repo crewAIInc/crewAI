@@ -1,14 +1,16 @@
 """Tests for FileResolver."""
 
-from crewai_files import FileBytes, ImageFile
+from crewai_files import FileBytes, ImageFile, PDFFile
 from crewai_files.cache.upload_cache import UploadCache
-from crewai_files.core.resolved import InlineBase64, InlineBytes
+from crewai_files.core.resolved import FileReference, InlineBase64, InlineBytes
+from crewai_files.processing.constraints import BEDROCK_CONSTRAINTS
 from crewai_files.processing.exceptions import UploaderConfigurationError
 from crewai_files.resolution.resolver import (
     FileResolver,
     FileResolverConfig,
     create_resolver,
 )
+from crewai_files.uploaders import UploadResult
 import pytest
 
 
@@ -233,3 +235,78 @@ class TestBatchUploaderErrors:
 
         assert set(resolved) == {"good"}
         assert isinstance(resolved["good"], InlineBase64)
+
+
+class TestBedrockInlineLimitOverflow:
+    """A Bedrock file over the inline size cap must go through S3, not inline bytes."""
+
+    @staticmethod
+    def _big_pdf(tmp_path):
+        path = tmp_path / "big.pdf"
+        path.write_bytes(
+            b"%PDF-1.4\n" + b"0" * (BEDROCK_CONSTRAINTS.pdf.max_size_bytes + 1024)
+        )
+        return PDFFile(source=path), path.stat().st_size
+
+    def test_should_upload_when_a_bucket_is_configured(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CREWAI_BEDROCK_S3_BUCKET", "crewai-test")
+        resolver = FileResolver()
+        file, size = self._big_pdf(tmp_path)
+
+        assert resolver._should_upload(file, "bedrock", BEDROCK_CONSTRAINTS, size)
+
+    def test_stays_inline_when_no_bucket_is_configured(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("CREWAI_BEDROCK_S3_BUCKET", raising=False)
+        resolver = FileResolver()
+        file, size = self._big_pdf(tmp_path)
+
+        # Without a bucket there is nowhere to stage it, so inlining is all we can do.
+        assert not resolver._should_upload(file, "bedrock", BEDROCK_CONSTRAINTS, size)
+        assert isinstance(resolver.resolve(file, "bedrock"), InlineBytes)
+
+    def test_resolve_uploads_through_s3(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CREWAI_BEDROCK_S3_BUCKET", "crewai-test")
+        file, _ = self._big_pdf(tmp_path)
+
+        class _S3Uploader:
+            def is_configured(self):
+                return True
+
+            def upload(self, file, purpose=None):
+                return UploadResult(
+                    file_id="crewai-files/big.pdf",
+                    provider="bedrock",
+                    content_type="application/pdf",
+                    file_uri="s3://crewai-test/crewai-files/big.pdf",
+                )
+
+        resolver = FileResolver()
+        resolver._uploaders["bedrock"] = _S3Uploader()
+
+        resolved = resolver.resolve(file, "bedrock")
+
+        assert isinstance(resolved, FileReference)
+        assert resolved.file_uri == "s3://crewai-test/crewai-files/big.pdf"
+
+    def test_bucket_check_is_skipped_when_the_uploader_cannot_be_built(
+        self, monkeypatch
+    ):
+        monkeypatch.delenv("CREWAI_BEDROCK_S3_BUCKET", raising=False)
+        resolver = _NoUploaderResolver()
+
+        # Building the uploader fails, which reads as "cannot stage" instead of raising.
+        assert not resolver._can_stage_in_bucket("openai")
+
+
+class TestBedrockDocumentOverLimit:
+    """A Bedrock PDF over the inline cap has to go to S3; there is no other way to send it."""
+
+    def test_big_pdf_uploaded_when_bucket_set(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CREWAI_BEDROCK_S3_BUCKET", "crewai-test")
+        path = tmp_path / "big.pdf"
+        path.write_bytes(b"%PDF-1.4\n" + b"0" * (5 * 1024 * 1024))
+        file = PDFFile(source=path)
+
+        assert FileResolver()._should_upload(
+            file, "bedrock", BEDROCK_CONSTRAINTS, 5 * 1024 * 1024
+        )
