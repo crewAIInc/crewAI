@@ -10,15 +10,24 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__file__)
 
 
-class SpiderToolSchema(BaseModel):
-    """Input schema for SpiderTool."""
+class SpiderToolWithDefaultURLSchema(BaseModel):
+    """Input for a SpiderTool with a configured default URL."""
 
-    website_url: str = Field(
-        ..., description="Mandatory website URL to scrape or crawl"
+    website_url: str | None = Field(
+        default=None,
+        description="Website URL to scrape or crawl. Omit to use the configured URL.",
     )
     mode: Literal["scrape", "crawl"] = Field(
         default="scrape",
         description="The mode of the SpiderTool. The only two allowed modes are `scrape` or `crawl`. Crawl mode will follow up to 5 links and return their content in markdown format.",
+    )
+
+
+class SpiderToolSchema(SpiderToolWithDefaultURLSchema):
+    """Input for a SpiderTool without a configured default URL."""
+
+    website_url: str = Field(
+        ..., description="Mandatory website URL to scrape or crawl"
     )
 
 
@@ -91,6 +100,8 @@ class SpiderTool(BaseTool):
         super().__init__(**kwargs)
         if website_url is not None:
             self.website_url = website_url
+            self.args_schema = SpiderToolWithDefaultURLSchema
+            self._generate_description()
 
         self.log_failures = log_failures
         self.custom_params = custom_params
@@ -138,7 +149,7 @@ class SpiderTool(BaseTool):
 
     def _run(
         self,
-        website_url: str,
+        website_url: str | None = None,
         mode: Literal["scrape", "crawl"] = "scrape",
     ) -> str | None:
         """Execute the spider tool to scrape or crawl the specified website.
