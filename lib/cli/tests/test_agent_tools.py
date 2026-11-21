@@ -144,6 +144,29 @@ def test_tool_add_reports_unparseable_definitions(
     assert f"Cannot parse agent.{fmt}" in result.output
 
 
+@pytest.mark.parametrize("fmt", ["json", "yaml"])
+def test_tool_add_and_setup_read_a_definition_saved_with_a_bom(
+    fmt: str,
+    platform_setup: list[list[str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = _create(tmp_path, monkeypatch, fmt)
+    definition = project / f"agent.{fmt}"
+    content = definition.read_bytes().replace(
+        b"custom:support_hours", b"platform:gmail/send-email"
+    )
+    definition.write_bytes(b"\xef\xbb\xbf" + content)
+
+    setup = CliRunner().invoke(crewai, ["tool", "setup"])
+    add = CliRunner().invoke(crewai, ["tool", "add", "SerperDevTool"])
+
+    assert setup.exit_code == 0, setup.output
+    assert platform_setup[0][0] == "platform:gmail/send-email"
+    assert add.exit_code == 0, add.output
+    assert _definition(project)["tools"][-1] == "SerperDevTool"
+
+
 def test_tool_add_needs_tool_names_outside_a_terminal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
