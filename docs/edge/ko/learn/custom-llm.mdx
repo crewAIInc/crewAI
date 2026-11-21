@@ -9,9 +9,113 @@ mode: "wide"
 
 CrewAI는 `BaseLLM` 추상 기반 클래스를 통해 커스텀 LLM 구현을 지원합니다. 이를 통해 LiteLLM에 내장 지원이 없는 모든 LLM 제공자를 통합하거나, 커스텀 인증 메커니즘을 구현할 수 있습니다.
 
-## 빠른 시작
+## 오프라인 빠른 시작 (API 키 불필요)
 
-여기 최소한의 커스텀 LLM 구현 예시가 있습니다:
+제공자 자격 증명이나 HTTP 모델 호출 **없이** `BaseLLM` 인터페이스를 배우고 `Agent` / `Task` / `Crew` 연결을 검증하려면 이 결정론적 stub을 사용하세요. 학습 및 스모크 테스트 전용이며, 프로덕션으로 넘어갈 때 `call()` 본문을 제공자 API 요청으로 교체하세요.
+
+```python
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Process, Task
+
+
+class OfflineStubLLM(BaseLLM):
+    """Offline stub for learning and tests — not for production use."""
+
+    def __init__(
+        self,
+        response: str = "Hello from OfflineStubLLM!",
+        model: str = "offline-stub",
+    ) -> None:
+        super().__init__(model=model)
+        self.response = response
+
+    def call(
+        self,
+        messages: str | list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any = None,
+        from_agent: Any = None,
+        response_model: Any = None,
+    ) -> str:
+        # Replace this block with your provider's HTTP/API call.
+        if "Thought:" in str(messages):
+            return (
+                "Thought: Using the offline stub.\n"
+                f"Final Answer: {self.response}"
+            )
+        return self.response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, *args: Any, **kwargs: Any) -> str:
+        raise NotImplementedError
+
+
+def main() -> None:
+    llm = OfflineStubLLM()
+
+    direct = llm.call("Say hi without an API key.")
+    print(f"Direct call: {direct}")
+
+    agent = Agent(
+        role="Greeter",
+        goal="Return a friendly greeting",
+        backstory="You respond with the stub greeting.",
+        llm=llm,
+    )
+    task = Task(
+        description="Say hello to the user",
+        expected_output="A short greeting",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=False,
+    )
+    result = crew.kickoff()
+    print(f"Crew result: {result.raw}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### 예제 실행
+
+위 스크립트를 저장소 루트에 `offline_custom_llm.py`로 저장한 뒤 (`uv sync` 이후):
+
+```bash
+uv run python offline_custom_llm.py
+```
+
+테스트 스위트에서 동일한 스모크 검사를 실행할 수도 있습니다 (API 키 또는 VCR 카세트 불필요):
+
+```bash
+uv run pytest lib/crewai/tests/test_custom_llm.py::test_offline_custom_llm_quick_start_smoke -q
+```
+
+**예상 출력** (커스텀 모델의 대략적인 토큰 수에 대한 일회성 로그 줄이 함께 나올 수 있음):
+
+```text
+Direct call: Hello from OfflineStubLLM!
+Crew result: Hello from OfflineStubLLM!
+```
+
+## 실제 제공자 연결
+
+오프라인 stub이 동작하면 제공자를 통합하세요. 다음은 최소한의 커스텀 LLM 구현 예시입니다:
 
 ```python
 from crewai import BaseLLM
@@ -314,38 +418,6 @@ def __init__(self, model: str, api_key: str, temperature: Optional[float] = None
 
 ## 커스텀 LLM 테스트하기
 
-```python
-from crewai import Agent, Task, Crew
-
-def test_custom_llm():
-    llm = CustomLLM(
-        model="test-model",
-        api_key="test-key",
-        endpoint="https://api.test.com"
-    )
-    
-    # Test basic call
-    result = llm.call("Hello, world!")
-    assert isinstance(result, str)
-    assert len(result) > 0
-    
-    # Test with CrewAI agent
-    agent = Agent(
-        role="Test Agent",
-        goal="Test custom LLM",
-        backstory="A test agent.",
-        llm=llm
-    )
-    
-    task = Task(
-        description="Say hello",
-        expected_output="A greeting",
-        agent=agent
-    )
-    
-    crew = Crew(agents=[agent], tasks=[task])
-    result = crew.kickoff()
-    assert "hello" in result.raw.lower()
-```
+네트워크 없이 통합을 검증하려면 [오프라인 빠른 시작](#오프라인-빠른-시작-api-키-불필요)과 `lib/crewai/tests/test_custom_llm.py`의 `test_offline_custom_llm_quick_start_smoke`부터 시작하세요. 실제 엔드포인트를 연결한 뒤에는 제공자 샌드박스 자격 증명으로 통합 테스트를 추가하세요.
 
 이 가이드는 CrewAI에서 커스텀 LLM을 구현하는 주요 사항을 다룹니다.
