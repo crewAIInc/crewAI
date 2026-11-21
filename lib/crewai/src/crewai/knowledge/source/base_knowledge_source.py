@@ -41,10 +41,20 @@ class BaseKnowledgeSource(BaseModel, ABC):
         return self.chunk_embeddings
 
     def _chunk_text(self, text: str) -> list[str]:
-        """Utility method to split text into chunks."""
+        """Split text into chunks of ``chunk_size`` that overlap by ``chunk_overlap``.
+
+        Stops once a chunk reaches the end of the text, so the last chunk is
+        never just the tail of the one before it.
+        """
+        if not text:
+            return []
         return [
             text[i : i + self.chunk_size]
-            for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
+            for i in range(
+                0,
+                max(len(text) - self.chunk_overlap, 1),
+                self.chunk_size - self.chunk_overlap,
+            )
         ]
 
     def _save_documents(self) -> None:

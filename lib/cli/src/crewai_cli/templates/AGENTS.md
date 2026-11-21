@@ -121,6 +121,7 @@ Not used by default; reach for these when the task calls for them. Each line end
 
 - Guardrails: `Task(guardrail=fn_or_"rule")` or `guardrails=[...]`; `fn(output)` gets the `TaskOutput` and returns `(True, value)` to accept or `(False, feedback)` to make the agent retry. `concepts/tasks#task-guardrails`
 - Structured task output: `Task(output_pydantic=Model)` or `output_json=Model`; read `result.pydantic` or `.json_dict`. `concepts/tasks`
+- Artifacts (files people preview and share): `Task(artifact=Artifact(identifier="report", title="Report", kind="html"))`; `artifacts=True` adds a `save_artifact` tool; flows call `save_artifact(...)`. `concepts/artifacts`
 - Knowledge: `knowledge_sources=[StringKnowledgeSource(content=...), PDFKnowledgeSource(file_paths=[...])]` on an agent or crew. `concepts/knowledge`
 - Hierarchical crews: `Crew(process=Process.hierarchical, manager_llm=...)` or `manager_agent=`; delegation is `Agent(allow_delegation=True)`. `learn/hierarchical-process`
 - Planning: `Agent(planning_config=PlanningConfig(...))` makes an agent plan its approach before acting and replan as it goes (`from crewai import PlanningConfig`; it replaces `reasoning=True`); `Crew(planning=True)` plans the crew's tasks up front. `concepts/planning`
