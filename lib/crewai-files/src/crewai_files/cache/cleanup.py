@@ -121,7 +121,7 @@ def cleanup_expired_files(
         for provider in _get_providers_from_cache(cache):
             expired_entries.extend(
                 upload
-                for upload in cache.get_all_for_provider(provider)
+                for upload in cache.get_all_for_provider(provider, include_expired=True)
                 if upload.is_expired()
             )
 
@@ -300,7 +300,7 @@ async def acleanup_expired_files(
 
     if delete_from_provider:
         for provider in _get_providers_from_cache(cache):
-            uploads = await cache.aget_all_for_provider(provider)
+            uploads = await cache.aget_all_for_provider(provider, include_expired=True)
             expired_entries.extend(upload for upload in uploads if upload.is_expired())
 
     removed = await cache.aclear_expired()
