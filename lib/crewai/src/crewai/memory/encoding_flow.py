@@ -28,7 +28,7 @@ from crewai.memory.analyze import (
     analyze_for_save,
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
-from crewai.memory.utils import join_scope_paths
+from crewai.memory.utils import join_scope_paths, normalize_scope_path
 
 
 logger = logging.getLogger(__name__)
@@ -151,6 +151,17 @@ class EncodingFlow(Flow[EncodingState]):
             return 0.0
         return dot / (norm_a * norm_b)
 
+    @staticmethod
+    def _consolidation_scope(item: ItemState) -> str:
+        if item.root_scope:
+            return join_scope_paths(item.root_scope, item.scope)
+        return item.scope or "/"
+
+    @staticmethod
+    def _within_scope(record: MemoryRecord, prefix: str) -> bool:
+        scope = normalize_scope_path(record.scope)
+        return scope == prefix or scope.startswith(prefix.rstrip("/") + "/")
+
     @listen(intra_batch_dedup)
     def parallel_find_similar(self) -> None:
         """Search storage for similar records, concurrently for all active items."""
@@ -167,22 +178,21 @@ class EncodingFlow(Flow[EncodingState]):
         def _search_one(
             item: ItemState,
         ) -> list[tuple[MemoryRecord, float]]:
-            # Use root_scope as the search boundary, then narrow by explicit scope if provided
-            effective_prefix = None
-            if item.root_scope:
-                effective_prefix = item.root_scope.rstrip("/")
-                if item.scope and item.scope.strip("/"):
-                    effective_prefix = effective_prefix + "/" + item.scope.strip("/")
-            elif item.scope and item.scope.strip("/"):
-                effective_prefix = item.scope
-
-            return self._storage.search(  # type: ignore[no-any-return]
+            search_scope = self._consolidation_scope(item)
+            raw = self._storage.search(
                 item.embedding,
-                scope_prefix=effective_prefix,
+                scope_prefix=search_scope if search_scope.strip("/") else None,
                 categories=None,
                 limit=self._config.consolidation_limit,
                 min_score=0.0,
             )
+            # A backend may return sibling scopes for a prefix query.
+            prefix = normalize_scope_path(search_scope)
+            return [
+                (record, score)
+                for record, score in raw
+                if self._within_scope(record, prefix)
+            ]
 
         if len(active) == 1:
             _, item = active[0]
@@ -398,21 +408,23 @@ class EncodingFlow(Flow[EncodingState]):
 
         # Multiple items may reference the same existing record (because their
         # similar_records overlap). Collect one action per record_id, first wins.
-        # Also build a map from record_id to the original MemoryRecord for updates.
-        dedup_deletes: set[str] = set()  # record_ids to delete
-        dedup_updates: dict[
-            str, tuple[int, str]
-        ] = {}  # record_id -> (item_idx, new_content)
-        all_similar: dict[str, MemoryRecord] = {}  # record_id -> MemoryRecord
+        dedup_deletes: set[str] = set()
+        dedup_updates: dict[str, tuple[MemoryRecord, str]] = {}
 
-        for i, item in enumerate(items):
+        for item in items:
             if item.dropped or item.plan is None:
                 continue
-            for r in item.similar_records:
-                if r.id not in all_similar:
-                    all_similar[r.id] = r
+            prefix = normalize_scope_path(self._consolidation_scope(item))
+            item.similar_records = [
+                record
+                for record in item.similar_records
+                if self._within_scope(record, prefix)
+            ]
+            candidates = {record.id: record for record in item.similar_records}
             for action in item.plan.actions:
                 rid = action.record_id
+                if rid not in candidates:
+                    continue
                 if (
                     action.action == "delete"
                     and rid not in dedup_deletes
@@ -425,11 +437,9 @@ class EncodingFlow(Flow[EncodingState]):
                     and rid not in dedup_deletes
                     and rid not in dedup_updates
                 ):
-                    dedup_updates[rid] = (i, action.new_content)
+                    dedup_updates[rid] = (candidates[rid], action.new_content)
 
-        update_list = list(
-            dedup_updates.items()
-        )  # [(record_id, (item_idx, new_content)), ...]
+        update_list = list(dedup_updates.items())
         update_embeddings: list[list[float]] = []
         if update_list:
             update_contents = [content for _, (_, content) in update_list]
@@ -470,24 +480,22 @@ class EncodingFlow(Flow[EncodingState]):
             self._storage.delete(record_ids=list(dedup_deletes))
             self.state.records_deleted += len(dedup_deletes)
 
-        for rid, (_item_idx, new_content) in dedup_updates.items():
-            existing = all_similar.get(rid)
-            if existing is not None:
-                new_emb = update_emb_map.get(rid, [])
-                updated = MemoryRecord(
-                    id=existing.id,
-                    content=new_content,
-                    scope=existing.scope,
-                    categories=existing.categories,
-                    metadata=existing.metadata,
-                    importance=existing.importance,
-                    created_at=existing.created_at,
-                    last_accessed=now,
-                    embedding=new_emb if new_emb else existing.embedding,
-                )
-                self._storage.update(updated)
-                self.state.records_updated += 1
-                updated_records[rid] = updated
+        for rid, (existing, new_content) in dedup_updates.items():
+            new_emb = update_emb_map.get(rid, [])
+            updated = MemoryRecord(
+                id=existing.id,
+                content=new_content,
+                scope=existing.scope,
+                categories=existing.categories,
+                metadata=existing.metadata,
+                importance=existing.importance,
+                created_at=existing.created_at,
+                last_accessed=now,
+                embedding=new_emb if new_emb else existing.embedding,
+            )
+            self._storage.update(updated)
+            self.state.records_updated += 1
+            updated_records[rid] = updated
 
         if to_insert:
             records = [r for _, r in to_insert]
@@ -502,11 +510,14 @@ class EncodingFlow(Flow[EncodingState]):
                 continue
             if item.result_record is not None:
                 continue
+            candidate_ids = {record.id for record in item.similar_records}
             first_updated = next(
                 (
                     updated_records[a.record_id]
                     for a in item.plan.actions
-                    if a.action == "update" and a.record_id in updated_records
+                    if a.action == "update"
+                    and a.record_id in candidate_ids
+                    and a.record_id in updated_records
                 ),
                 None,
             )
