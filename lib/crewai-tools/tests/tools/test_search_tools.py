@@ -361,3 +361,20 @@ def test_github_search_tool(mock_adapter):
     mock_adapter.query.assert_called_once_with(
         "tell me about crewai repo", similarity_threshold=0.6, limit=5
     )
+
+    # ensure content_types configured at construction is retained on dynamic tool
+    mock_adapter.query.reset_mock()
+    mock_adapter.add.reset_mock()
+
+    tool = GithubSearchTool(
+        gh_token="test_token",
+        content_types=["repo"],
+        adapter=mock_adapter,
+    )
+    assert tool.content_types == ["repo"]
+    tool.add(repo="crewai/crewai")
+    mock_adapter.add.assert_called_once_with(
+        "https://github.com/crewai/crewai",
+        data_type=DataType.GITHUB,
+        metadata={"content_types": ["repo"], "gh_token": "test_token"},
+    )
