@@ -634,7 +634,7 @@ class TestKickoffFromCheckpoint:
             result = agent.kickoff(messages="hello", from_checkpoint=cfg)
 
         mock_restored.kickoff.assert_called_once_with(
-            messages="hello", response_format=None, input_files=None
+            messages="hello", response_format=None, input_files=None, artifact=None
         )
         assert mock_restored.checkpoint.restore_from is None
         assert result == "agent_result"

@@ -511,6 +511,22 @@ class LanceDBStorage:
         result: list[dict[str, Any]] = q.limit(limit).to_list()
         return result
 
+    def _count_rows(self, scope_prefix: str | None = None) -> int:
+        """Count rows matching a scope prefix using LanceDB's native count.
+
+        Unlike _scan_rows, this is not capped at _SCAN_ROWS_LIMIT, so scoped
+        counts stay exact on large tables. It uses the same scope-prefix
+        predicate as the scan, so the matched set is identical.
+        """
+        if self._table is None:
+            return 0
+        if scope_prefix is None or scope_prefix.strip("/") == "":
+            return int(self._table.count_rows())
+        prefix = scope_prefix.rstrip("/")
+        if not prefix.startswith("/"):
+            prefix = "/" + prefix
+        return int(self._table.count_rows(filter=_scope_prefix_filter(prefix)))
+
     def list_records(
         self, scope_prefix: str | None = None, limit: int = 200, offset: int = 0
     ) -> list[MemoryRecord]:
@@ -591,7 +607,7 @@ class LanceDBStorage:
                         newest = dt
         return ScopeInfo(
             path=scope or "/",
-            record_count=len(rows),
+            record_count=self._count_rows(prefix or None),
             categories=sorted(categories_set),
             oldest_record=oldest,
             newest_record=newest,
@@ -628,10 +644,7 @@ class LanceDBStorage:
     def count(self, scope_prefix: str | None = None) -> int:
         if self._table is None:
             return 0
-        if scope_prefix is None or scope_prefix.strip("/") == "":
-            return int(self._table.count_rows())
-        info = self.get_scope_info(scope_prefix)
-        return info.record_count
+        return self._count_rows(scope_prefix)
 
     def reset(self, scope_prefix: str | None = None) -> None:
         with store_lock(self._lock_name):

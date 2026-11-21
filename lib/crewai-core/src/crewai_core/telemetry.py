@@ -578,8 +578,18 @@ class Telemetry:
     # that promise to hold neither. The dimensions every span already carries
     # are never on a list: a caller that could overwrite `feature` could file
     # its use under somebody else's name.
+    #
+    # A key ending in ":" covers every feature under it whose last segment is a
+    # word from a closed list the CLI owns (a gate, a stop reason); an exact key
+    # wins over it.
     FEATURE_ATTRIBUTES: ClassVar[dict[str, frozenset[str]]] = {
-        "cli_usage:eval": frozenset({"authenticated"}),
+        # `target`: which run was graded, from a closed list (`EvalTarget` in
+        # the CLI). `eval_id`: a uuid4 drawn per evaluation, never derived from
+        # a run, a project or an account, that joins a start to its verdict or
+        # stop.
+        "cli_usage:eval": frozenset({"authenticated", "target", "eval_id"}),
+        "cli_usage:eval_finished:": frozenset({"eval_id"}),
+        "cli_usage:eval_stopped:": frozenset({"eval_id"}),
         # The models compared: a model in crewAI's own catalog by name (anyone
         # can read it off a price list), any other — a fine-tune, a deployment
         # name, a self-hosted model — as `<provider>/other`; the CLI decides
@@ -612,7 +622,12 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "feature", feature)
-            allowed = self.FEATURE_ATTRIBUTES.get(feature, frozenset())
+            allowed = self.FEATURE_ATTRIBUTES.get(
+                feature,
+                self.FEATURE_ATTRIBUTES.get(
+                    feature.rpartition(":")[0] + ":", frozenset()
+                ),
+            )
             for key, value in (attributes or {}).items():
                 if key in allowed:
                     self._add_attribute(span, key, str(value))
