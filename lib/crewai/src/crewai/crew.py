@@ -269,6 +269,10 @@ class Crew(FlowTrackable, BaseModel):
             "or a Memory/MemoryScope/MemorySlice instance for custom configuration."
         ),
     )
+    artifacts: bool = Field(
+        default=False,
+        description="Give every agent a save_artifact tool for files the user can view and share.",
+    )
     embedder: EmbedderConfig | None = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
@@ -1709,6 +1713,11 @@ class Crew(FlowTrackable, BaseModel):
         resolved_memory = getattr(agent, "memory", None) or self._memory
         if resolved_memory is not None:
             tools = self._add_memory_tools(tools, resolved_memory)
+
+        if self.artifacts or getattr(agent, "artifacts", False):
+            from crewai.artifacts import SaveArtifactTool
+
+            tools = self._merge_tools(tools, [SaveArtifactTool(agent=agent, task=task)])
 
         files = get_all_files(self.id, task.id)
         if files:

@@ -617,6 +617,29 @@ def crewai_skill(
     )
 
 
+def crewai_artifact(
+    *,
+    id: str | None = None,
+    identifier: str | None = None,
+    version: int | None = None,
+    kind: str | None = None,
+    content_type: str | None = None,
+    size: int | None = None,
+    url: str | None = None,
+) -> dict[str, Any]:
+    return _filter_none(
+        {
+            "crewai.artifact.id": id,
+            "crewai.artifact.identifier": identifier,
+            "crewai.artifact.version": version,
+            "crewai.artifact.kind": kind,
+            "crewai.artifact.content_type": content_type,
+            "crewai.artifact.size": size,
+            "crewai.artifact.url": url,
+        }
+    )
+
+
 def crewai_llm(
     *,
     call_id: str | None = None,

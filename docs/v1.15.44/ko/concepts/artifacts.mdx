@@ -1,0 +1,288 @@
+---
+title: 아티팩트
+description: 실행에서 만든 보고서, 차트, PDF 등의 파일을 저장해 사람들이 미리 보고, 내려받고, 공유할 수 있게 합니다.
+icon: box-archive
+---
+
+## 개요
+
+아티팩트는 Crew, Agent 또는 Flow가 만드는 이름 있는 파일입니다. HTML 보고서, 마크다운 문서, 차트, PDF, CSV 등이 해당됩니다. 각 아티팩트에는 `identifier`가 있습니다. 같은 실행에서 같은 identifier로 다시 저장하면 새 버전(v1, v2, ...)이 만들어집니다.
+
+로컬에서는 아티팩트가 디스크에 저장됩니다. CrewAI AMP에서는 실행 옆에 표시되며, 사람들이 미리 보고, 내려받고, 공유할 수 있습니다.
+
+아티팩트는 직접 켜야 하는 기능입니다. Task나 Agent의 출력을 저장하거나, 도구로 Agent가 파일을 저장하게 하거나, 직접 작성한 코드에서 저장할 수 있습니다.
+
+## Task 또는 Agent 출력 저장
+
+Task에 `artifact`를 설정합니다. Task가 끝나면 최종 출력이 아티팩트로 저장됩니다. 도구 호출도, 추가 토큰도 없으므로 모델이 저장을 잊을 수 없습니다.
+
+```python
+from crewai import Artifact, Task
+
+report = Task(
+    description="Write the Q3 report as HTML",
+    expected_output="A full HTML page",
+    agent=analyst,
+    artifact=Artifact(identifier="q3-report", title="Q3 report", kind="html"),
+)
+```
+
+JSON Crew에서는 `crew.jsonc`의 Task에 추가합니다.
+
+```jsonc
+"artifact": {"identifier": "q3-report", "title": "Q3 report", "kind": "html"}
+```
+
+### CrewAI가 이름 정하기
+
+세부 정보를 생략하려면 `artifact=True`를 전달합니다. CrewAI가 다음과 같이 채웁니다.
+
+- `identifier`와 `title`은 Task 이름(또는 설명)에서 가져옵니다. Flow 안에서는 Flow 메서드 이름을 사용합니다. 그 밖의 경우에는 Agent의 role을 사용합니다.
+- `kind`는 출력을 보고 정합니다. `<!doctype html` 또는 `<html`로 시작하면 `html`, `<svg`로 시작하면 `svg`, JSON 객체나 배열이면 `json`, 그 밖에는 `markdown`입니다.
+
+```python
+report = Task(name="Q3 report", description="...", expected_output="...", artifact=True)
+# saved as identifier "q3-report", title "Q3 report"
+```
+
+같은 Task나 같은 Flow 메서드가 다시 실행되어도 이름이 같으므로, 다시 실행하면 새 아티팩트가 아니라 다음 버전이 만들어집니다.
+
+### 단일 Agent
+
+`Agent.kickoff`도 같은 `artifact` 인자를 `Artifact` 또는 `True`로 받습니다.
+
+```python
+result = analyst.kickoff(
+    "Write the Q3 report as HTML",
+    artifact=Artifact(identifier="q3-report", title="Q3 report", kind="html"),
+)
+```
+
+`kickoff_async`와 `akickoff`도 지원합니다.
+
+### 선언형 Flow
+
+Flow 선언에서는 `call: agent` 단계의 `with` 아래에 `artifact`를 설정합니다.
+
+```yaml
+methods:
+  write_report:
+    start: true
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Write the weekly report as a full HTML page
+        backstory: Writes clear reports for executives.
+        input: "Weekly report on ${state.topic}"
+        artifact: true
+```
+
+`artifact: true`는 메서드 이름을 사용하며, 여기서는 `write-report`가 됩니다. 세부 정보를 직접 정하려면 `{identifier: weekly-report, title: Weekly report, kind: html}` 같은 객체를 사용합니다.
+
+실행이 앞서 저장한 아티팩트를 Agent에게 주려면 `input_files` 아래에 나열합니다. 각 항목은 참조이며, 단계가 실행될 때 불러옵니다.
+
+```yaml
+revise_report:
+  listen: needs_changes
+  do:
+    call: agent
+    with:
+      role: Analyst
+      goal: Revise the weekly report from the reviewer's feedback
+      backstory: Writes clear reports for executives.
+      input: Apply the reviewer's feedback to the attached report.
+      input_files:
+        current_report: {artifact: write-report}
+        first_draft: {artifact: write-report, version: 1}
+      artifact: true
+```
+
+`version`이 없으면 최신 버전을 사용합니다. 아티팩트가 없으면 Agent가 실행되기 전에 단계가 실패합니다. 입력 파일에는 `crewai[file-processing]`이 필요합니다.
+
+### Agent가 쓰는 파일 저장
+
+차트, PDF 등 Agent의 도구가 디스크에 쓰는 파일은 `file_path`에 파일 위치를 설정합니다. CrewAI는 텍스트 출력 대신 그 파일을 저장합니다. `image`, `pdf`, `file` 종류에는 `file_path`가 필요합니다.
+
+```python
+chart = Task(
+    description="Draw the {quarter} sales chart and save it to output/{quarter}.png",
+    expected_output="A short summary of the chart",
+    agent=designer,
+    artifact=Artifact(
+        identifier="sales-chart",
+        title="Sales chart",
+        kind="image",
+        file_path="output/{quarter}.png",
+    ),
+)
+```
+
+- 파일을 어디에 쓸지 Agent에게 알려 주세요. 예를 들어 Task 설명에 적습니다.
+- Task에서는 `file_path`의 `{placeholders}`가 `output_file`처럼 kickoff 입력으로 채워집니다. Flow 선언에서는 `output/${state.quarter}.png`처럼 `${...}` 표현식을 사용합니다.
+- 파일은 작업 디렉터리 안에 있어야 합니다. 그 밖의 경로는 거부되므로 차트와 PDF는 프로젝트 디렉터리에 저장하세요.
+
+### 저장된 아티팩트 사용
+
+저장된 버전은 출력의 `artifact`에 있으므로, 콜백이나 이후 Flow 단계, 직접 작성한 코드에서 링크를 전달할 수 있습니다.
+
+```python
+output = report.execute_sync()
+print(output.artifact.url)
+
+result = analyst.kickoff("...", artifact=True)
+print(result.artifact.url)
+```
+
+Flow 선언에서는 `${outputs.write_report.artifact.url}`로 읽습니다.
+
+## Agent가 아티팩트를 저장하게 하기
+
+Crew에 `artifacts=True`를 설정하면 모든 Agent가 `save_artifact` 도구를 받습니다. Agent 하나에 설정하면 그 Agent만 도구를 받습니다.
+
+```python
+from crewai import Agent, Crew
+
+crew = Crew(agents=[analyst, writer], tasks=[...], artifacts=True)
+# or
+analyst = Agent(role="Analyst", goal="...", backstory="...", artifacts=True)
+```
+
+도구는 `identifier`, `title`, `kind`와 함께 `content`(텍스트) 또는 `file_path`(차트 PNG처럼 Agent가 만든 파일) 중 하나를 받습니다. 결과는 JSON입니다.
+
+```json
+{"id": "0b9e6c1e-...", "identifier": "q3-report", "version": 1, "url": "file:///.../v1.html", "share_url": null}
+```
+
+이후 Task는 이 `url`을 사용할 수 있습니다. 예를 들어 Slack에 올리거나 이메일에 첨부할 수 있습니다.
+
+## 코드에서 저장
+
+Flow 단계 같은 Python 코드 어디에서나 `save_artifact`를 호출할 수 있습니다. Agent가 필요하지 않습니다.
+
+```python
+from crewai import Artifact, save_artifact
+from crewai.flow import Flow, listen, start
+
+class ReportFlow(Flow):
+    @start()
+    def write(self):
+        return "# Weekly report\n..."
+
+    @listen(write)
+    def publish(self, report: str):
+        saved = save_artifact(
+            Artifact(identifier="weekly-report", title="Weekly report", kind="markdown"),
+            content=report,
+        )
+        return saved.url
+```
+
+`content`(`str` 또는 `bytes`)나 `file_path` 중 하나만 전달합니다. 반환값은 `id`, `identifier`, `title`, `kind`, `version`, `content_type`, `size`, `url`, `share_url`을 가진 `SavedArtifact`입니다.
+
+## 저장된 아티팩트 읽기
+
+실행이 저장한 아티팩트를 다시 읽으려면 `load_artifact`를 호출합니다. 최신 버전의 바이트를 반환하며, 버전을 지정하면 그 버전의 바이트를 반환합니다.
+
+```python
+from crewai import Artifact, load_artifact, save_artifact
+
+report = Artifact(identifier="board-report", title="Board report", kind="html")
+save_artifact(report, content="<h1>Draft</h1>")
+save_artifact(report, content="<h1>Revised</h1>")
+
+latest = load_artifact("board-report")              # b"<h1>Revised</h1>"
+first = load_artifact("board-report", version=1)    # b"<h1>Draft</h1>"
+```
+
+이 기능은 사람의 피드백을 기다리며 멈추는 Flow에서 가장 중요합니다. Flow는 나중에 다른 머신에서 재개될 수 있고, 그곳에는 멈추기 전에 쓴 파일이 없지만 아티팩트는 남아 있습니다. 재개된 실행은 보고서를 다시 읽고 수정한 뒤 다음 버전으로 저장합니다.
+
+- `load_artifact`는 현재 실행에서 읽습니다. 재개된 Flow가 이어 가는 바로 그 실행입니다.
+- 일치하는 아티팩트나 버전이 없으면 `ArtifactNotFoundError`가 발생합니다.
+
+## Identifier와 버전
+
+- `identifier`는 `[a-z0-9][a-z0-9_.-]{0,63}` 형식이어야 합니다. 예: `q3-report`.
+- 아티팩트는 하나의 실행에 속합니다. Flow 안의 Crew는 Flow의 실행을 공유하므로 모든 아티팩트가 함께 묶입니다.
+- 실행 중에 같은 identifier로 다시 저장하면 다음 버전이 만들어집니다. 피드백을 받은 뒤 보고서를 다시 만드는 human-in-the-loop Flow에 잘 맞습니다.
+
+## 종류
+
+| Kind | 저장 형식 | 참고 |
+|:-----|:----------|:-----|
+| `markdown` | `.md` | |
+| `html` | `.html` | AMP에서 샌드박스로 렌더링 |
+| `svg` | `.svg` | |
+| `json` | `.json` | |
+| `a2ui` | `.json` | A2UI 페이로드 |
+| `text` | `.txt` | |
+| `csv` | `.csv` | |
+| `image` | 파일 확장자 | `file_path` 필요. AMP는 PNG, JPEG, GIF, WebP 허용 |
+| `pdf` | `.pdf` | Task나 Agent에서는 `file_path` 필요 |
+| `file` | 파일 확장자 | `file_path` 필요. 다운로드 전용 |
+
+## 아티팩트 저장 위치
+
+로컬에서는 다음 위치에 저장됩니다.
+
+```
+./artifacts/<run id>/<identifier>/v<N>.<ext>
+```
+
+`url`은 `file://` URL이고 `share_url`은 비어 있습니다.
+
+CrewAI AMP에서는 플랫폼이 시작할 때 자체 store를 등록하므로, 같은 코드가 아티팩트를 실행에 업로드합니다. Crew 코드는 바꿀 필요가 없습니다.
+
+## 실패
+
+아티팩트 저장이 실패해도 실행은 실패하지 않습니다.
+
+- `save_artifact` 도구는 오류 메시지를 Agent에게 돌려줍니다.
+- `Task(artifact=...)`와 `kickoff(artifact=...)`는 경고를 남기고, 실행은 그대로 완료됩니다. `file_path`의 파일이 없는 경우도 마찬가지입니다.
+- 직접 작성한 코드에서 `save_artifact`를 호출하면 오류가 발생하므로, 처리 방법을 직접 정할 수 있습니다.
+
+## 이벤트
+
+저장할 때마다 이벤트 버스에 `ArtifactCreatedEvent`가 발생합니다. `id`, `identifier`, `version`, `title`, `kind`, `content_type`, `size`, `url`을 포함합니다.
+
+```python
+from crewai.events import ArtifactCreatedEvent, BaseEventListener
+
+class ArtifactLogger(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(ArtifactCreatedEvent)
+        def on_artifact(source, event):
+            print(f"Saved {event.identifier} v{event.version}: {event.url}")
+
+ArtifactLogger()
+```
+
+[이벤트 리스너](/ko/concepts/event-listener)를 참고하세요.
+
+## 사용자 정의 store
+
+아티팩트를 다른 곳으로 보내려면 `ArtifactStore`를 상속하고 kickoff 전에 등록합니다.
+
+```python
+from crewai.artifacts import ArtifactStore, SavedArtifact, set_artifact_store
+
+class S3ArtifactStore(ArtifactStore):
+    def save(self, artifact_id, execution_id, artifact, data, extension, content_type):
+        key = f"{execution_id}/{artifact.identifier}/{artifact_id}.{extension}"
+        url = upload_to_s3(key, data, content_type)  # your code
+        return SavedArtifact(
+            **artifact.model_dump(),
+            id=artifact_id,
+            version=next_version(execution_id, artifact.identifier),  # your code
+            content_type=content_type,
+            size=len(data),
+            url=url,
+        )
+
+    def load(self, execution_id, identifier, version=None):
+        return download_from_s3(execution_id, identifier, version)  # your code
+
+set_artifact_store(S3ArtifactStore())
+```
+
+store가 업로드를 재시도한다면 매번 같은 `artifact_id`를 보내야 받는 쪽에서 중복을 걸러낼 수 있습니다. `load`는 선택 사항입니다. 없으면 `load_artifact`가 `NotImplementedError`를 발생시킵니다.
