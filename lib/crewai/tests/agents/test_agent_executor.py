@@ -3325,6 +3325,108 @@ class TestTodoResultHandling:
         assert item.result == "existing", "None result should not overwrite existing"
 
 
+# Multimodal Message Content
+
+
+class TestMultimodalMessageContent:
+    """Multimodal message content must be read as text, not as a Python repr."""
+
+    IMAGE_PART: dict[str, Any] = {
+        "type": "image_url",
+        "image_url": {"url": "https://example.com/replan-diagram.png"},
+    }
+
+    @staticmethod
+    def _executor_with(
+        messages: list[LLMMessage],
+        current_answer: AgentAction | AgentFinish | None = None,
+    ) -> AgentExecutor:
+        agent = Mock()
+        agent.planning_config = None
+        executor = _build_executor(agent=agent)
+        executor.state.messages = messages
+        executor.state.current_answer = current_answer
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Step 1", status="running")]
+        )
+        return executor
+
+    def test_todo_result_from_multimodal_tool_message_is_text(self) -> None:
+        executor = self._executor_with(
+            [
+                {
+                    "role": "tool",
+                    "tool_call_id": "call_1",
+                    "content": [
+                        {"type": "text", "text": "Chart rendered"},
+                        self.IMAGE_PART,
+                    ],
+                }
+            ],
+            current_answer=AgentAction(
+                thought="", tool="render", tool_input="{}", text=""
+            ),
+        )
+
+        with patch.object(AgentExecutor, "_mark_todo_as_completed") as mark:
+            executor.mark_todo_complete()
+
+        mark.assert_called_once_with(1, "Chart rendered")
+
+    def test_native_tool_results_are_joined_as_text(self) -> None:
+        executor = self._executor_with(
+            [
+                {"role": "assistant", "content": None, "tool_calls": [{"id": "a"}]},
+                {
+                    "role": "tool",
+                    "tool_call_id": "a",
+                    "content": [{"type": "text", "text": "first"}, self.IMAGE_PART],
+                },
+                {"role": "tool", "tool_call_id": "b", "content": "second"},
+            ]
+        )
+
+        with patch.object(AgentExecutor, "_mark_todo_as_completed") as mark:
+            executor.mark_todo_complete()
+
+        mark.assert_called_once_with(1, "first\nsecond")
+
+    def test_image_url_containing_replan_does_not_trigger_replan(self) -> None:
+        executor = self._executor_with(
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": "Here is the diagram."},
+                        self.IMAGE_PART,
+                    ],
+                }
+            ]
+        )
+
+        assert executor._should_replan() == (False, "")
+
+    def test_text_part_asking_to_revise_the_plan_still_triggers_replan(
+        self,
+    ) -> None:
+        executor = self._executor_with(
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": "We should revise the plan."},
+                        self.IMAGE_PART,
+                    ],
+                }
+            ]
+        )
+
+        should_replan, reason = executor._should_replan()
+
+        assert should_replan is True
+        assert "revise the plan" in reason
+
+
 # Dependency Resolution with Failed Steps
 
 
