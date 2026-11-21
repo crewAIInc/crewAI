@@ -223,6 +223,39 @@ class TestEmitCallStartedEventIntrospectsSamplingParams:
         assert event.temperature == 0.9
 
 
+class TestEmitCallStartedEventToolSchemas:
+    def test_keeps_nested_tool_parameter_schemas(self, mock_emit):
+        # Property schemas sit at depth 5 (tools -> tool -> function ->
+        # parameters -> properties -> schema) and nested objects go deeper.
+        tool = {
+            "type": "function",
+            "function": {
+                "name": "lookup_product",
+                "description": "Look up a product",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "productName": {"title": "Productname", "type": "string"},
+                        "filters": {
+                            "type": "object",
+                            "properties": {
+                                "color": {"type": "string", "enum": ["red", "blue"]},
+                            },
+                        },
+                    },
+                    "required": ["productName"],
+                },
+            },
+        }
+
+        _StubLLM(model="test-model")._emit_call_started_event(
+            messages="hi", tools=[tool]
+        )
+
+        event = mock_emit.call_args[1]["event"]
+        assert event.tools == [tool]
+
+
 class TestBaseLLMSamplingParamFields:
     # Regression: PR #5945 review feedback. Sampling params are declared as
     # typed fields on BaseLLM so ``_emit_call_started_event`` reads them via
