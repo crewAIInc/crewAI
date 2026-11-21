@@ -363,6 +363,52 @@ class TestGetMCPToolsAmpIntegration:
 
     @patch("crewai.mcp.tool_resolver.MCPClient")
     @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
+    def test_specific_tool_filter_does_not_match_suffix_tools(
+        self, mock_fetch, mock_client_class, agent
+    ):
+        """notion#search must not also select advanced_search or research."""
+        mock_fetch.return_value = {
+            "notion": {
+                "type": "sse",
+                "url": "https://mcp.notion.so/sse",
+                "headers": {"Authorization": "Bearer token"},
+            },
+        }
+
+        suffixed_tool_definitions = [
+            {
+                "name": "search",
+                "original_name": "search",
+                "description": "Search tool",
+                "inputSchema": {},
+            },
+            {
+                "name": "advanced_search",
+                "original_name": "advanced_search",
+                "description": "Advanced search",
+                "inputSchema": {},
+            },
+            {
+                "name": "research",
+                "original_name": "research",
+                "description": "Research",
+                "inputSchema": {},
+            },
+        ]
+
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=suffixed_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools = agent.get_mcp_tools(["notion#search"])
+
+        assert [tool.name for tool in tools] == ["mcp_notion_so_sse_search"]
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
     def test_deduplicates_slugs(
         self, mock_fetch, mock_client_class, agent, mock_tool_definitions
     ):
