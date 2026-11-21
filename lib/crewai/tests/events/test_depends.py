@@ -276,3 +276,46 @@ async def test_aemit_ignores_dependencies():
         await crewai_event_bus.aemit("test_source", event)
 
         assert execution_order == ["async_handler"]
+
+
+@pytest.mark.asyncio
+async def test_duplicate_dependencies_are_not_a_cycle():
+    """Listing the same dependency twice shouldn't be reported as a cycle."""
+    from crewai.events.handler_graph import build_execution_plan
+
+    def handler_a(source, event: DependsTestEvent):
+        pass
+
+    def handler_b(source, event: DependsTestEvent):
+        pass
+
+    plan = build_execution_plan(
+        [handler_a, handler_b],
+        {handler_b: [Depends(handler_a), Depends(handler_a)]},
+    )
+
+    assert plan == [{handler_a}, {handler_b}]
+
+
+@pytest.mark.asyncio
+async def test_duplicate_dependencies_still_run_in_order():
+    """The duplicated dependency is still executed before its dependent."""
+    execution_order = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(DependsTestEvent)
+        def handler_a(source, event: DependsTestEvent):
+            execution_order.append("handler_a")
+
+        @crewai_event_bus.on(
+            DependsTestEvent, depends_on=[Depends(handler_a), Depends(handler_a)]
+        )
+        def handler_b(source, event: DependsTestEvent):
+            execution_order.append("handler_b")
+
+        future = crewai_event_bus.emit("test_source", DependsTestEvent(value=1))
+        if future:
+            await asyncio.wrap_future(future)
+
+    assert execution_order == ["handler_a", "handler_b"]
