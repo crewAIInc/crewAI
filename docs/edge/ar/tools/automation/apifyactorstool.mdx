@@ -78,6 +78,45 @@ agent = Agent(
 
 يمكنك تشغيل Actors أخرى من [متجر Apify](https://apify.com/store) ببساطة عن طريق تغيير `actor_name` وعند الاستخدام اليدوي، ضبط `run_input` بناءً على مخطط إدخال Actor.
 
+### Actors ذات المدخلات محددة الأنواع
+
+يأخذ `apify/rag-web-browser` استعلامًا واحدًا فقط. تحتوي كثير من Actors على عدة حقول إدخال محددة الأنواع. تضع الأداة مخطط إدخال Actor في وصف الوسيط `run_input`، حتى يتمكن الوكيل من ملء هذه الحقول بناءً على المهمة. يستخدم هذا المثال [Actor LinkedIn Jobs API](https://apify.com/johnvc/linkedin-jobs-api)، الذي يأخذ كلمة مفتاحية وموقعًا و`timeRange` (`past-day` أو `past-week` أو `past-month`) وحدًا أقصى `maxJobs`:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import ApifyActorsTool
+
+# The Actor's input schema goes into the description of the tool's run_input argument.
+jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
+
+# Run it manually to see the output shape
+jobs = jobs_tool.run(run_input={
+    "keyword": "machine learning engineer",
+    "location": "United States",
+    "timeRange": "past-week",
+    "maxJobs": 10,
+})
+for job in jobs:
+    print(job.get("title"), "at", job.get("companyName"), "-", job.get("salary") or "no salary listed")
+
+# Or let an agent pick the arguments from the task
+analyst = Agent(
+    role="Job market analyst",
+    goal="Summarize who is hiring for a role and what they pay",
+    backstory="You compare job listings and report the pattern, not the individual postings.",
+    tools=[jobs_tool],
+)
+task = Task(
+    description="Find machine learning engineer jobs posted in the past week in the United States, "
+                "cap it at 25, and report the five companies with the most openings and the salary range where listed.",
+    expected_output="A short report with a company table and the salary range.",
+    agent=analyst,
+)
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+يفرض Actor رسومًا على كل وظيفة يتم إرجاعها، لذا فإن `maxJobs` يحدّ أيضًا من تكلفة التشغيل.
+
 لمثال على الاستخدام مع الوكلاء، راجع [قالب CrewAI Actor](https://apify.com/templates/python-crewai).
 
 ## الإعداد

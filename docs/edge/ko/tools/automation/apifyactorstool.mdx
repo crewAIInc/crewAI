@@ -79,6 +79,45 @@ agent = Agent(
 
 [Apify Store](https://apify.com/store)에 있는 다른 Actor도 `actor_name`만 변경하고, 수동으로 사용할 경우 Actor 입력 스키마에 따라 `run_input`을 조정하여 간단히 실행할 수 있습니다.
 
+### 타입이 지정된 입력을 받는 Actor
+
+`apify/rag-web-browser`는 검색어 하나만 받습니다. 많은 Actor는 타입이 지정된 입력 필드를 여러 개 가지고 있습니다. 이 도구는 Actor의 입력 스키마를 `run_input` 인수의 설명에 포함하므로, 에이전트가 작업에 맞춰 해당 필드를 채울 수 있습니다. 다음 예시는 키워드, 위치, `timeRange`(`past-day`, `past-week`, `past-month`), `maxJobs` 상한을 받는 [LinkedIn Jobs API Actor](https://apify.com/johnvc/linkedin-jobs-api)를 사용합니다:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import ApifyActorsTool
+
+# The Actor's input schema goes into the description of the tool's run_input argument.
+jobs_tool = ApifyActorsTool(actor_name="johnvc/linkedin-jobs-api")
+
+# Run it manually to see the output shape
+jobs = jobs_tool.run(run_input={
+    "keyword": "machine learning engineer",
+    "location": "United States",
+    "timeRange": "past-week",
+    "maxJobs": 10,
+})
+for job in jobs:
+    print(job.get("title"), "at", job.get("companyName"), "-", job.get("salary") or "no salary listed")
+
+# Or let an agent pick the arguments from the task
+analyst = Agent(
+    role="Job market analyst",
+    goal="Summarize who is hiring for a role and what they pay",
+    backstory="You compare job listings and report the pattern, not the individual postings.",
+    tools=[jobs_tool],
+)
+task = Task(
+    description="Find machine learning engineer jobs posted in the past week in the United States, "
+                "cap it at 25, and report the five companies with the most openings and the salary range where listed.",
+    expected_output="A short report with a company table and the salary range.",
+    agent=analyst,
+)
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+Actor는 반환된 채용 공고 수에 따라 요금을 부과하므로, `maxJobs`는 실행 비용의 상한 역할도 합니다.
+
 에이전트와 함께 사용하는 예시는 [CrewAI Actor 템플릿](https://apify.com/templates/python-crewai)을 참고하세요.
 
 ## 구성
