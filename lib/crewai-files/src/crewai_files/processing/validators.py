@@ -3,9 +3,11 @@
 from collections.abc import Sequence
 import io
 import logging
+from typing import cast
 
 from crewai_files.core.types import (
     AudioFile,
+    File,
     FileInput,
     ImageFile,
     PDFFile,
@@ -28,6 +30,20 @@ from crewai_files.processing.images import open_image
 
 
 logger = logging.getLogger(__name__)
+
+_TEXT_CONTENT_TYPES = frozenset(
+    {
+        "text/plain",
+        "text/markdown",
+        "text/csv",
+        "text/xml",
+        "text/yaml",
+        "text/html",
+        "application/json",
+        "application/xml",
+        "application/x-yaml",
+    }
+)
 
 
 def _get_image_dimensions(
@@ -519,6 +535,65 @@ def _check_unsupported_type(
     return [msg]
 
 
+def _validate_detected_file(
+    file: File,
+    constraints: ProviderConstraints,
+    *,
+    raise_on_error: bool,
+) -> Sequence[str]:
+    """Validate a generic file using the type detected from its content.
+
+    ``File`` carries no concrete type, so dispatch on the MIME type that its
+    source detected. Without this, generic files bypass validation entirely.
+    """
+    content_type = file.content_type
+
+    if content_type.startswith("image/"):
+        if constraints.image is None:
+            return _check_unsupported_type(
+                file, constraints.name, "images", raise_on_error
+            )
+        return validate_image(
+            cast(ImageFile, file), constraints.image, raise_on_error=raise_on_error
+        )
+
+    if content_type == "application/pdf":
+        if constraints.pdf is None:
+            return _check_unsupported_type(
+                file, constraints.name, "PDFs", raise_on_error
+            )
+        return validate_pdf(
+            cast(PDFFile, file), constraints.pdf, raise_on_error=raise_on_error
+        )
+
+    if content_type.startswith("audio/"):
+        if constraints.audio is None:
+            return _check_unsupported_type(
+                file, constraints.name, "audio", raise_on_error
+            )
+        return validate_audio(
+            cast(AudioFile, file), constraints.audio, raise_on_error=raise_on_error
+        )
+
+    if content_type.startswith("video/"):
+        if constraints.video is None:
+            return _check_unsupported_type(
+                file, constraints.name, "video", raise_on_error
+            )
+        return validate_video(
+            cast(VideoFile, file), constraints.video, raise_on_error=raise_on_error
+        )
+
+    if content_type.startswith("text/") or content_type in _TEXT_CONTENT_TYPES:
+        return validate_text(
+            cast(TextFile, file), constraints, raise_on_error=raise_on_error
+        )
+
+    return _check_unsupported_type(
+        file, constraints.name, f"files of type '{content_type}'", raise_on_error
+    )
+
+
 def validate_file(
     file: FileInput,
     constraints: ProviderConstraints,
@@ -572,5 +647,8 @@ def validate_file(
 
     if isinstance(file, TextFile):
         return validate_text(file, constraints, raise_on_error=raise_on_error)
+
+    if isinstance(file, File):
+        return _validate_detected_file(file, constraints, raise_on_error=raise_on_error)
 
     return []
