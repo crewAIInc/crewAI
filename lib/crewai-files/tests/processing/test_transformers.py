@@ -1,6 +1,7 @@
 """Unit tests for file transformers."""
 
 import io
+from typing import cast
 from unittest.mock import patch
 
 from crewai_files import ImageFile, PDFFile, TextFile
@@ -302,6 +303,22 @@ class TestChunkText:
 
         assert len(result) > 1
         # Should still complete without hanging
+
+    @pytest.mark.parametrize("max_chars", [0, -1])
+    def test_non_positive_max_chars_is_rejected(self, max_chars: int) -> None:
+        """A non-positive limit cannot produce a chunk; fail instead of yielding empties."""
+
+        class _Text:
+            filename = "data.txt"
+
+            @staticmethod
+            def read() -> bytes:
+                return b"hello"
+
+        text = cast(TextFile, _Text())
+
+        with pytest.raises(ValueError, match="max_chars"):
+            list(chunk_text(text, max_chars=max_chars))
 
 
 class TestGetImageDimensions:
