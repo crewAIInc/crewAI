@@ -28571,16 +28571,23 @@
         "description": "Input schema for TavilyResearchTool.",
         "properties": {
           "citation_format": {
-            "default": "numbered",
-            "description": "Citation format for the research report.",
-            "enum": [
-              "numbered",
-              "mla",
-              "apa",
-              "chicago"
+            "anyOf": [
+              {
+                "enum": [
+                  "numbered",
+                  "mla",
+                  "apa",
+                  "chicago"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Citation Format",
-            "type": "string"
+            "default": null,
+            "description": "Citation format for the research report.",
+            "title": "Citation Format"
           },
           "input": {
             "description": "The research task or question to investigate.",
@@ -28588,15 +28595,22 @@
             "type": "string"
           },
           "model": {
-            "default": "auto",
-            "description": "The model used by the Tavily research agent.",
-            "enum": [
-              "mini",
-              "pro",
-              "auto"
+            "anyOf": [
+              {
+                "enum": [
+                  "mini",
+                  "pro",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Model",
-            "type": "string"
+            "default": null,
+            "description": "The model used by the Tavily research agent.",
+            "title": "Model"
           },
           "output_schema": {
             "anyOf": [
@@ -28613,10 +28627,17 @@
             "title": "Output Schema"
           },
           "stream": {
-            "default": false,
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
             "description": "Whether to stream research progress and results as SSE chunks.",
-            "title": "Stream",
-            "type": "boolean"
+            "title": "Stream"
           }
         },
         "required": [

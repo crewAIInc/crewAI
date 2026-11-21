@@ -99,14 +99,15 @@ def test_azure_tool_use_conversation_flow():
         assert mock_complete.called
 
 @pytest.mark.usefixtures("mock_azure_credentials")
-def test_azure_completion_module_is_imported():
+def test_azure_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using Azure provider
     """
     module_name = "crewai.llms.providers.azure.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    # monkeypatch puts the original module back afterwards. Otherwise later tests
+    # get a second AzureCompletion class and fail their isinstance checks.
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="azure/gpt-4")
 

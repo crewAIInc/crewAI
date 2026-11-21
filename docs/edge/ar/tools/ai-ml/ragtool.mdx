@@ -131,6 +131,14 @@ def knowledge_expert(self) -> Agent:
     )
 ```
 
+## قاعدة البيانات المتجهية
+
+تخزّن `RagTool` المحتوى في قاعدة بيانات Qdrant محلية افتراضيًا، مع استخدام `text-embedding-3-small` من OpenAI كأداة تضمين. لاستخدام ChromaDB، ثبّته باستخدام `pip install "crewai[chromadb]"` وعيّن `"provider": "chromadb"` في إعداد `vectordb`.
+
+<Note>
+لا يقرأ الإعداد الافتراضي Qdrant المحتوى الذي خزّنته إصدارات سابقة في ChromaDB. أضفه مرة أخرى، أو عيّن المزود `chromadb`.
+</Note>
+
 ## إعداد متقدم
 
 يمكنك تخصيص سلوك `RagTool` من خلال تقديم قاموس إعداد:
@@ -177,6 +185,10 @@ rag_tool = RagTool(config=config, summarize=True)
 ```
 
 ### المزودون المدعومون
+
+<Note>
+تستخدم هذه المزودات ChromaDB وتتطلب `pip install "crewai[chromadb]"`: ‎`bedrock`، ‎`cohere`، ‎`google-generativeai`، ‎`huggingface`، ‎`instructor`، ‎`jina`، ‎`ollama`، ‎`onnx`، ‎`openclip`، ‎`roboflow`، ‎`sentence-transformer`، ‎`text2vec`. أما المزودات الأخرى (مثل `openai` و`azure` و`openrouter` و`google-vertex` و`voyageai` و`watsonx` و`oracle` و`custom`) فتعمل بدونه.
+</Note>
 
 <AccordionGroup>
   <Accordion title="OpenAI">

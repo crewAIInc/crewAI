@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         LiteAgentExecutionErrorEvent,
         LiteAgentExecutionStartedEvent,
     )
+    from crewai.events.types.artifact_events import ArtifactCreatedEvent
     from crewai.events.types.checkpoint_events import (
         CheckpointBaseEvent,
         CheckpointCompletedEvent,
@@ -170,6 +171,7 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "LiteAgentExecutionCompletedEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionErrorEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
+    "ArtifactCreatedEvent": "crewai.events.types.artifact_events",
     "CheckpointBaseEvent": "crewai.events.types.checkpoint_events",
     "CheckpointCompletedEvent": "crewai.events.types.checkpoint_events",
     "CheckpointFailedEvent": "crewai.events.types.checkpoint_events",
@@ -307,6 +309,7 @@ __all__ = [
     "AgentReasoningCompletedEvent",
     "AgentReasoningFailedEvent",
     "AgentReasoningStartedEvent",
+    "ArtifactCreatedEvent",
     "BaseEventListener",
     "CheckpointBaseEvent",
     "CheckpointCompletedEvent",

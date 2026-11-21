@@ -15,7 +15,9 @@ dependencies = [
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
     "tinytag>=2.3.0,<3",
-    "av~=13.0.0",
+    "av>=17.1.0,<18; python_version < '3.11'",
+    "av>=18.1.0,<19; python_version == '3.11'",
+    "av>=19.0.2,<20; python_version >= '3.12'",
 ]
 
 [project.optional-dependencies]
