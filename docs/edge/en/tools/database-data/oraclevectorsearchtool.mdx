@@ -1,0 +1,146 @@
+---
+title: "Oracle Vector Search Tool"
+description: "Search Oracle AI Vector Search tables and use Oracle-generated embeddings with CrewAI agents"
+icon: "database"
+mode: "wide"
+---
+
+## Overview
+
+`OracleVectorSearchTool` searches documents stored in Oracle Database using Oracle AI Vector Search. It supports JSON metadata filters, per-query limits, maximum distance thresholds, and HNSW or IVF indexes.
+
+## Installation and prerequisites
+
+Use Oracle Database 23ai or later with AI Vector Search available. Install the Oracle extra:
+
+```bash
+uv add 'crewai-tools[oracledb]'
+```
+
+Set `ORACLE_DB_USERNAME`, `ORACLE_DB_SECRET`, and `ORACLE_DB_DSN` for the examples below. These names are read explicitly by the examples.
+
+Import an embedding model into Oracle Database before running this example, set `ORACLE_EMBEDDING_MODEL` to its model name, and set `ORACLE_EMBEDDING_DIMENSIONS` to its output dimension. Installing `oracledb` does not install an embedding model. The database account needs permission to use `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS` and the selected model. Each document passed to the Oracle provider must be at most 4000 characters.
+
+## Basic usage
+
+This example generates embeddings in Oracle Database, creates a table, inserts two documents, and searches them. The embedding model and vector dimension must match the vectors already stored in an existing table.
+
+```python
+import os
+
+import oracledb
+from crewai.rag.embeddings.factory import build_embedder
+from crewai_tools import (
+    OracleVectorSearchConfig,
+    OracleVectorSearchQueryConfig,
+    OracleVectorSearchTool,
+)
+
+connection = oracledb.connect(
+    user=os.environ["ORACLE_DB_USERNAME"],
+    password=os.environ["ORACLE_DB_SECRET"],
+    dsn=os.environ["ORACLE_DB_DSN"],
+)
+oracle_embedder = build_embedder({
+    "provider": "oracle",
+    "config": {
+        "conn": connection,
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+
+
+def embed_text(text: str) -> list[float]:
+    if not isinstance(text, str):
+        raise TypeError("embed_text expects a single string")
+    return oracle_embedder([text])[0].tolist()
+
+
+tool = OracleVectorSearchTool(
+    oracle_config=OracleVectorSearchConfig(
+        table_name="CREWAI_DOCS",
+        distance_strategy="COSINE",
+        limit=3,
+    ),
+    query_config=OracleVectorSearchQueryConfig(filter={"source": "docs"}),
+    client=connection,
+    embedding_function=embed_text,
+    dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
+)
+
+tool.create_table()
+tool.add_texts(
+    [
+        "CrewAI agents can search documents in Oracle Database.",
+        "Oracle AI Vector Search supports semantic similarity queries.",
+    ],
+    metadatas=[
+        {"source": "docs", "tags": ["oracle", "crewai"]},
+        {"source": "docs", "tags": ["oracle", "search"]},
+    ],
+)
+
+results = tool.run(query="How can agents search Oracle documents?")
+print(results)
+```
+
+The table must contain `id`, `text`, `metadata` (native Oracle `JSON`), and `embedding` (`VECTOR`) columns. `create_table()` creates `id VARCHAR2(64) PRIMARY KEY`, `text CLOB`, `metadata JSON`, and `embedding VECTOR(dimensions, FLOAT32)`. The account needs access to the table and permissions for any table or index creation it performs.
+
+`create_table()` and index creation execute Oracle DDL, which implicitly commits. Successful `add_texts()` calls commit the connection. If an insert fails, the batch rolls back to a savepoint, preserving earlier pending work when the table already exists.
+
+## Metadata filters and distances
+
+Pass richer filters as a JSON string through `filters`. Filters from `query_config` and from the search call are combined with AND.
+
+```python
+import json
+
+results = tool.run(
+    query="Oracle semantic search",
+    filters=json.dumps({"tags": {"$in": ["search"]}}),
+    limit=2,
+    score_threshold=0.6,
+)
+```
+
+Supported operators include `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$between`, `$in`, `$nin`, `$all`, `$exists`, and `$not`; combine them with `$and`, `$or`, or `$nor`. Logical lists and nested filter objects must be non-empty. `$in`, `$nin`, and `$all` require non-empty lists. `$in` and `$nin` inspect scalar values or array elements; `$all` requires every requested value. Dots represent nested members, `[*]` represents an array wildcard, and member names containing spaces are quoted automatically. For simple scalar equality, pass `filter_by` and `filter_value` together.
+
+`score_threshold` is a maximum distance: a match is retained when `distance <= score_threshold`. Supported strategies are `COSINE`, `EUCLIDEAN`, and `DOT`. `DOT` returns the negative inner product, so negative thresholds are valid. Limits must be positive integers. Rows with null embeddings are excluded.
+
+## Vector indexes
+
+Create an index after loading documents. HNSW is the default index type; IVF is an alternative. Database resources and permissions must support the selected index type.
+
+```python
+tool.create_vector_index(idx_type="HNSW", params={"accuracy": 90})
+
+# An alternative to HNSW:
+# tool.create_vector_index(index_name="CREWAI_DOCS_IVF", idx_type="IVF")
+
+print(tool.vector_index_exists(idx_type="HNSW"))
+```
+
+Without an explicit `index_name`, names are generated from the table name and index type. Use `vector_index_exists(idx_type="IVF")` when checking an IVF index. Schema-qualified table and index names are supported; identifier casing is preserved.
+
+## Oracle connections
+
+The example uses the [Oracle embedding provider](/edge/en/concepts/memory) with a caller-managed connection. Keep the connection open for the search and index examples above, then call `connection.close()` when finished.
+
+`client` also accepts a caller-managed `oracledb.ConnectionPool`. The tool acquires a connection for each database operation. Keep caller-managed connections or pools open while using the tool, and close them when finished. `connection_kwargs` forwards extra options, such as wallet configuration, to `oracledb.connect()` when the tool creates its own connection.
+
+## Configuration
+
+| Argument | Purpose |
+| --- | --- |
+| `oracle_config` | Connection and search settings. `table_name` is required; provide connection credentials when no `client` is supplied. Other fields include `connection_kwargs`, `limit`, `score_threshold`, `distance_strategy`, and `index_name`. |
+| `query_config` | Optional default `filter`, `limit`, and `score_threshold`. Per-call limits and thresholds override defaults. |
+| `client` | Existing Oracle connection or connection pool. |
+| `embedding_function` | Single-text embedding callable; supply the Oracle embedding function shown above. |
+| `dimensions` | Vector dimension for table creation; set it to the Oracle model output dimension. |
+
+## Results and errors
+
+`run()` returns a JSON string containing a list of matches. Each match contains `context`, `metadata`, `distance`, and `score`. `score` is currently equal to the raw distance; it is not a normalized similarity score. A successful search with no matches returns `"[]"`. Search errors are logged and return an empty string (`""`); check logs before treating an empty string as no matches.
