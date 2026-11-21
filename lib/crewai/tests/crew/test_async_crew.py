@@ -150,6 +150,44 @@ class TestAsyncCrewKickoff:
         assert "Test error" in str(exc_info.value)
 
     @pytest.mark.asyncio
+    @pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$"])
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_rejected_concurrent_akickoff_keeps_previous_task_input(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        task = Task(
+            description="Handle {case_payload}",
+            expected_output="A result",
+            agent=test_agent,
+        )
+        crew = Crew(agents=[test_agent], tasks=[task], verbose=False)
+        mock_execute.return_value = TaskOutput(
+            description="Handle TENANT_A_CANARY",
+            raw="done",
+            agent="Test Agent",
+        )
+
+        await crew.akickoff(inputs={"case_payload": "TENANT_A_CANARY"})
+        executor = test_agent.agent_executor
+        assert executor is not None
+
+        with executor._execution_lock:
+            executor._is_executing = True
+        try:
+            with pytest.raises(RuntimeError, match="Executor is already running"):
+                await crew.akickoff(inputs={"case_payload": "TENANT_B_CANARY"})
+        finally:
+            with executor._execution_lock:
+                executor._is_executing = False
+
+        assert crew._inputs == {"case_payload": "TENANT_A_CANARY"}
+        assert task.description == "Handle TENANT_A_CANARY"
+
+        await crew.akickoff(inputs={})
+
+        assert "TENANT_B_CANARY" not in task.description
+
+    @pytest.mark.asyncio
     @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
     async def test_akickoff_calls_before_callbacks(
         self, mock_execute: AsyncMock, test_agent: Agent
