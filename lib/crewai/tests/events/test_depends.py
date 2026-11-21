@@ -258,8 +258,9 @@ async def test_depends_equality():
 
 
 @pytest.mark.asyncio
-async def test_aemit_ignores_dependencies():
-    """Test that aemit only processes async handlers (no dependency support yet)."""
+async def test_aemit_without_dependencies_runs_async_only():
+    """Test that aemit without registered dependencies still runs only async
+    handlers."""
     execution_order = []
 
     with crewai_event_bus.scoped_handlers():
@@ -276,3 +277,47 @@ async def test_aemit_ignores_dependencies():
         await crewai_event_bus.aemit("test_source", event)
 
         assert execution_order == ["async_handler"]
+
+
+@pytest.mark.asyncio
+async def test_aemit_respects_async_dependency_chain():
+    """Test that aemit executes async handlers in depends_on order."""
+    execution_order = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(DependsTestEvent)
+        async def handler_a(source, event: DependsTestEvent):
+            await asyncio.sleep(0.01)
+            execution_order.append("handler_a")
+
+        @crewai_event_bus.on(DependsTestEvent, depends_on=Depends(handler_a))
+        async def handler_b(source, event: DependsTestEvent):
+            execution_order.append("handler_b")
+
+        event = DependsTestEvent(value=1)
+        await crewai_event_bus.aemit("test_source", event)
+
+        assert execution_order == ["handler_a", "handler_b"]
+
+
+@pytest.mark.asyncio
+async def test_aemit_runs_sync_dependency_handlers():
+    """Test that aemit executes sync handlers that async handlers depend on."""
+    execution_order = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(DependsTestEvent)
+        def sync_setup(source, event: DependsTestEvent):
+            execution_order.append("sync_setup")
+
+        @crewai_event_bus.on(DependsTestEvent, depends_on=Depends(sync_setup))
+        async def async_process(source, event: DependsTestEvent):
+            await asyncio.sleep(0.01)
+            execution_order.append("async_process")
+
+        event = DependsTestEvent(value=1)
+        await crewai_event_bus.aemit("test_source", event)
+
+        assert execution_order == ["sync_setup", "async_process"]
