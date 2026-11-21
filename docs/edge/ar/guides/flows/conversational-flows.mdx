@@ -30,7 +30,7 @@ mode: "wide"
 | `stream_turn(message, session_id=...)` | بث جولة محادثية واحدة كإطارات runtime مرتبة |
 | `chat()` | REPL محلي في الطرفية لـ `Flow` محادثي |
 | `kickoff(inputs={...})` | تشغيل متقدم للـ flow بدون معالجة جولة محادثية |
-| `ask()` | مطالبة حاجزة **داخل** خطوة واحدة (معالج إرشادي أو طلب توضيح) |
+| [`ask()`](/ar/concepts/flows#asking-the-user-for-input-with-ask) | مطالبة حاجزة **داخل** خطوة واحدة (معالج إرشادي أو طلب توضيح) |
 | `@human_feedback` | الموافقة/الرفض على **مخرجات خطوة** — وليس السطر التالي |
 
 ترفع `handle_turn()` و`stream_turn()` و`chat()` الخطأ `ValueError` ما لم يكن الوضع المحادثاتي مفعّلاً. يؤدي تطبيق `@ConversationConfig(...)` إلى تفعيله تلقائياً؛ وإلا فعيّن `conversational = True`.
