@@ -29,6 +29,7 @@ from typing import (
     ParamSpec,
     TypeVar,
     cast,
+    get_type_hints,
 )
 from uuid import uuid4
 
@@ -746,6 +747,39 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
     checkpoint_state: dict[str, Any] | None = Field(default=None)
 
+    def _revive_method_output(self, entry: dict[str, Any]) -> dict[str, Any]:
+        """Restore a Pydantic method output a checkpoint roundtrip turned into a dict.
+
+        Checkpoints serialise ``_method_outputs`` with ``model_dump_json()``, so a
+        method that returned a BaseModel comes back as a plain dict and a listener
+        that reads model attributes (``quote.amount``, or ``result.feedback`` on a
+        ``@human_feedback`` listener) raises ``AttributeError``. Re-validate
+        against the method's annotated return type when there is one. Outputs that
+        do not fit - plain dicts that really are dicts, methods this instance does
+        not know, values that fail validation - are kept exactly as restored.
+        """
+        output = entry.get("output")
+        if not isinstance(output, dict):
+            return entry
+        method_name = str(entry.get("method", ""))
+        method = self._methods.get(FlowMethodName(method_name))
+        if method is None:
+            return entry
+        # The flow-method wrappers (StartMethod/ListenMethod/...) carry their own
+        # generic annotations, so resolve on the wrapped function.
+        target = getattr(method, "_meth", None) or getattr(method, "__func__", method)
+        try:
+            model = get_type_hints(target).get("return")
+        except Exception:
+            return entry
+        if not isinstance(model, type) or not issubclass(model, BaseModel):
+            return entry
+        try:
+            entry["output"] = model.model_validate(output)
+        except ValidationError:
+            pass
+        return entry
+
     def _restore_from_checkpoint(self) -> None:
         """Restore private execution state from checkpoint fields."""
         if self.checkpoint_completed_methods is not None:
@@ -755,9 +789,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
             self._method_outputs = [
-                entry
-                if isinstance(entry, dict) and "method" in entry and "output" in entry
-                else {"method": "", "output": entry}
+                self._revive_method_output(
+                    entry
+                    if isinstance(entry, dict)
+                    and "method" in entry
+                    and "output" in entry
+                    else {"method": "", "output": entry}
+                )
                 for entry in self.checkpoint_method_outputs
             ]
         if self.checkpoint_method_counts is not None:
@@ -1322,7 +1360,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
-        instance._method_outputs = list(pending_context.method_outputs or [])
+        instance._method_outputs = [
+            instance._revive_method_output(
+                entry
+                if isinstance(entry, dict) and "output" in entry
+                else {"method": "", "output": entry}
+            )
+            for entry in (pending_context.method_outputs or [])
+        ]
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
