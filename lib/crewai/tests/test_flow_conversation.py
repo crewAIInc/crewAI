@@ -51,6 +51,7 @@ from crewai.flow.conversation import (
     normalize_kickoff_inputs,
     prepare_conversational_turn,
 )
+from crewai.flow.conversational import message_to_llm_dict
 
 class ConversationalFlow(Flow[ConversationState]):
     """Test base: a ``Flow[ConversationState]`` with conversational mode enabled.
@@ -107,6 +108,38 @@ class TestMessageHelpers:
         assert flow._conversation_messages == [
             {"role": "assistant", "content": "reply"}
         ]
+
+
+class TestConversationMessageId:
+    def test_id_stays_stable_across_snapshots(self) -> None:
+        state = ConversationState(
+            messages=[
+                ConversationMessage(role="user", content="hello"),
+                ConversationMessage(role="assistant", content="hi"),
+            ]
+        )
+
+        first = state.model_dump()
+        second = state.model_dump()
+        first_ids = [message["id"] for message in first["messages"]]
+        second_ids = [message["id"] for message in second["messages"]]
+
+        assert first_ids == second_ids
+        assert len(set(first_ids)) == 2
+        assert all(first_ids)
+
+        restored = ConversationState.model_validate(first)
+        assert [message.id for message in restored.messages] == first_ids
+
+        pinned = ConversationMessage(role="user", content="hello", id="client-1")
+        assert pinned.id == "client-1"
+        assert pinned.model_dump()["id"] == "client-1"
+        assert ConversationMessage.model_validate(pinned.model_dump()).id == "client-1"
+
+        llm_message = message_to_llm_dict(state.messages[0])
+        assert "id" not in llm_message
+        assert llm_message["role"] == "user"
+        assert llm_message["content"] == "hello"
 
 
 class TestIntentPerTurn:
