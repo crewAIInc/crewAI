@@ -34,6 +34,7 @@ from crewai.tools.structured_tool import (
     _deserialize_schema,
     _format_tool_output_for_agent,
     _infer_result_schema_from_callable,
+    _reject_partial_keyword_overrides,
     _serialize_schema,
     build_schema_hint,
     format_description_for_llm,
@@ -555,6 +556,11 @@ class Tool(BaseTool, Generic[P, R]):
     """
 
     func: Callable[P, R | Awaitable[R]]
+    _protect_partial_keywords: bool = PrivateAttr(default=False)
+
+    def _reject_registered_partial_overrides(self, kwargs: dict[str, Any]) -> None:
+        if self._protect_partial_keywords:
+            _reject_partial_keyword_overrides(self.func, kwargs)
 
     def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the tool synchronously.
@@ -566,6 +572,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        self._reject_registered_partial_overrides(kwargs)
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
@@ -573,6 +580,7 @@ class Tool(BaseTool, Generic[P, R]):
         if limit_error:
             return limit_error  # type: ignore[return-value]
 
+        self._reject_registered_partial_overrides(kwargs)
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
@@ -590,6 +598,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the function execution.
         """
+        self._reject_registered_partial_overrides(kwargs)
         return self.func(*args, **kwargs)  # type: ignore[return-value]
 
     async def arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -602,6 +611,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        self._reject_registered_partial_overrides(kwargs)
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
@@ -624,6 +634,7 @@ class Tool(BaseTool, Generic[P, R]):
         Raises:
             NotImplementedError: If the wrapped function is not async.
         """
+        self._reject_registered_partial_overrides(kwargs)
         result = self.func(*args, **kwargs)
         if _is_awaitable(result):
             return await result
@@ -681,13 +692,15 @@ class Tool(BaseTool, Generic[P, R]):
                     f"{sanitize_tool_name(tool.name)}_input", __base__=PydanticBaseModel
                 )
 
-        return cls(
+        registered = cls(
             name=getattr(tool, "name", "Unnamed Tool"),
             description=getattr(tool, "description", ""),
             func=tool.func,
             args_schema=args_schema,
             result_schema=result_schema,
         )
+        registered._protect_partial_keywords = isinstance(tool, CrewStructuredTool)
+        return registered
 
 
 def to_langchain(
