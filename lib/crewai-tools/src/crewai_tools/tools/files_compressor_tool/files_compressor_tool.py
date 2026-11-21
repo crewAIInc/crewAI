@@ -50,6 +50,8 @@ class FileCompressorTool(BaseTool):
             output_path = self._generate_output_path(input_path, format)
 
         output_path = validate_file_path(output_path)
+        if os.path.realpath(output_path) == os.path.realpath(input_path):
+            return "Error: input and output paths must be different."
 
         format_extension = {
             "zip": ".zip",
@@ -110,7 +112,8 @@ class FileCompressorTool(BaseTool):
 
     @staticmethod
     def _compress_zip(input_path: str, output_path: str) -> None:
-        """Compresses input into a zip archive."""
+        """Compresses input into a zip archive, excluding the archive itself."""
+        output_real = os.path.realpath(output_path)
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
                 zipf.write(input_path, os.path.basename(input_path))
@@ -118,6 +121,8 @@ class FileCompressorTool(BaseTool):
                 for root, _, files in os.walk(input_path):
                     for file in files:
                         full_path = os.path.join(root, file)
+                        if os.path.realpath(full_path) == output_real:
+                            continue
                         arcname = os.path.relpath(full_path, start=input_path)
                         zipf.write(full_path, arcname)
 
@@ -135,7 +140,15 @@ class FileCompressorTool(BaseTool):
             raise ValueError(f"Unsupported tar format: {format}")
 
         mode = format_mode[format]
+        output_real = os.path.realpath(output_path)
+        parent = os.path.dirname(os.path.abspath(input_path))
+
+        def skip_archive(member: tarfile.TarInfo) -> tarfile.TarInfo | None:
+            """Keep the archive being written out of its own contents."""
+            if os.path.realpath(os.path.join(parent, member.name)) == output_real:
+                return None
+            return member
 
         with tarfile.open(output_path, mode) as tarf:  # type: ignore[call-overload]
             arcname = os.path.basename(input_path)
-            tarf.add(input_path, arcname=arcname)
+            tarf.add(input_path, arcname=arcname, filter=skip_archive)
