@@ -386,3 +386,83 @@ agent = Agent(
     50,000자에서 소프트 경고가 있지만 하드 리밋은 없습니다. 최상의 결과를 위해 스킬을 집중적이고 간결하게 유지하세요 — 너무 큰 프롬프트 주입은 에이전트의 주의를 분산시킬 수 있습니다.
   </Accordion>
 </AccordionGroup>
+
+---
+
+## 예제: 연구와 보고 스킬을 사용하는 단일 에이전트
+
+증거를 보고서로 바꾸는 순차 작업에서 한 에이전트가 두 스킬을 사용해 중간 결과를 다른 에이전트에 전달하지 않고 작업할 수 있습니다. 이는 선택 가능한 설계이며, 별도 작업 경계나 위임이 중요할 때는 여러 에이전트가 유용합니다. 스킬 선택은 모델에 따라 달라지며 보장되지 않습니다.
+
+작업 디렉터리에 다음 파일을 만드세요:
+
+```markdown skills/research/SKILL.md
+---
+name: research
+description: Extract supported facts and gaps from supplied evidence.
+---
+
+Extract facts with their evidence identifiers and identify missing information.
+```
+
+```markdown skills/report/SKILL.md
+---
+name: report
+description: Write a concise report grounded in supplied evidence.
+---
+
+Write facts, analysis, and limitations. Cite evidence identifiers and
+distinguish observations from inferences.
+```
+
+지원되는 LLM과 API 키를 설정한 후 한 워크플로를 선택하세요. 모델 호출에는 비용이 발생할 수 있습니다. 두 설계는 프롬프트와 작업 경계가 다르며 이 예제는 품질, 비용 또는 지연 시간을 측정하지 않습니다.
+
+```python
+from crewai import Agent, Crew, Process, Task
+
+evidence = """[E1] A library trial ran for four weeks with 120 volunteers.
+[E2] 72 volunteers used the reservation system at least once.
+[E3] Of 60 survey respondents, 42 found reservation convenient.
+[E4] There was no control group; the response rate was 50%."""
+report_request = "Write facts, analysis, and limitations; cite evidence IDs."
+
+researcher = Agent(
+    role="Researcher", goal="Extract supported facts and gaps",
+    backstory="You analyze supplied evidence.", allow_delegation=False,
+)
+reporter = Agent(
+    role="Reporter", goal="Write an evidence-grounded report",
+    backstory="You distinguish observations from inferences.",
+    allow_delegation=False,
+)
+research_task = Task(
+    description=f"Extract facts and information gaps from:\n{evidence}",
+    expected_output="Facts with evidence IDs and gaps", agent=researcher,
+)
+report_task = Task(
+    description=report_request, expected_output="An evidence-grounded report",
+    agent=reporter, context=[research_task],
+)
+baseline = Crew(
+    agents=[researcher, reporter], tasks=[research_task, report_task],
+    process=Process.sequential,
+)
+
+assistant = Agent(
+    role="Research and reporting assistant",
+    goal="Extract evidence and write a grounded report",
+    backstory="You analyze evidence and write concise reports.",
+    skills=["./skills"], allow_delegation=False,
+)
+single_task = Task(
+    description=(
+        "Extract facts and gaps, then write a report. Use the relevant "
+        f"research and report skills.\n{evidence}\n{report_request}"
+    ),
+    expected_output="An evidence-grounded report", agent=assistant,
+)
+single_agent = Crew(agents=[assistant], tasks=[single_task])
+
+# Run one workflow:
+print(single_agent.kickoff().raw)
+# To run the baseline instead: print(baseline.kickoff().raw)
+```
