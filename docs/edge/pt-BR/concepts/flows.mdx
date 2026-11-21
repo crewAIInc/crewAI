@@ -716,6 +716,16 @@ Acesse todo o feedback coletado durante um flow via `self.last_human_feedback` (
 
 Para um guia completo sobre feedback humano em flows, incluindo feedback assíncrono/não-bloqueante com providers customizados (Slack, webhooks, etc.), veja [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
 
+## Solicitando entrada com `ask()` e um provedor personalizado
+
+Dentro de uma etapa em execução, um Flow pode solicitar entrada com `self.ask(...)`. Por padrão ele lê do console, mas você pode conectar seu próprio **provedor de entrada** (um bot do Slack, uma UI web, um harness de teste) definindo `input_provider` no Flow. Um provedor implementa `request_input(message, flow, metadata=None)` e retorna a resposta como uma string, como um `InputResponse` (para anexar metadados de resposta) ou `None` quando a entrada está indisponível. Diferente de `handle_turn()`, que inicia um turno de conversa inteiro, `ask()` solicita um único valor no meio de uma etapa.
+
+```python
+# (não traduzir blocos de código)
+```
+
+`ask()` retorna apenas o texto; os metadados de resposta do provedor ficam no histórico de entrada do flow (`flow._input_history`). Trate uma resposta `None` explicitamente — significa que a entrada estava indisponível, não uma resposta vazia. Provedores são síncronos; o CrewAI os executa em uma thread, então `ask()` nunca bloqueia o event loop.
+
 ## Adicionando Agentes aos Flows
 
 Os agentes podem ser integrados facilmente aos seus flows, oferecendo uma alternativa leve às crews completas quando você precisar executar tarefas simples e focadas. Veja um exemplo de como utilizar um agente em um flow para realizar uma pesquisa de mercado:
