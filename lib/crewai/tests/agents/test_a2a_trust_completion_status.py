@@ -105,10 +105,13 @@ def test_trust_remote_completion_status_false_continues_conversation():
         a2a_ids = ["http://test-endpoint.com/"]
 
     call_count = 0
+    captured_descriptions = []
 
     def mock_original_fn(self, task, context, tools):
         nonlocal call_count
         call_count += 1
+        captured_descriptions.append(task.description)
+
         if call_count == 1:
             # Server decides to finish
             return '{"is_a2a": false, "message": "Server final answer", "a2a_ids": []}'
@@ -141,6 +144,11 @@ def test_trust_remote_completion_status_false_continues_conversation():
 
         assert call_count >= 1
         assert result == "Server final answer"
+        assert len(captured_descriptions) == 1
+        expected_artifact = (
+            "\n<REMOTE_AGENT_RESULT>\nDone by remote\n</REMOTE_AGENT_RESULT>\n"
+        )
+        assert expected_artifact in captured_descriptions[0]
 
 
 @pytest.mark.skipif(not A2A_SDK_INSTALLED, reason="Requires a2a-sdk to be installed")
