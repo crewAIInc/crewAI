@@ -181,7 +181,7 @@ def process_task_state(
         if a2a_task.history:
             new_messages.extend(a2a_task.history)
 
-        response_text = " ".join(result_parts) if result_parts else ""
+        response_text = "".join(result_parts) if result_parts else ""
         message_id = None
         if a2a_task.status and a2a_task.status.message:
             message_id = a2a_task.status.message.message_id
@@ -327,7 +327,7 @@ async def send_message_and_get_task_id(
                 result_parts = [
                     part.root.text for part in event.parts if part.root.kind == "text"
                 ]
-                response_text = " ".join(result_parts) if result_parts else ""
+                response_text = "".join(result_parts) if result_parts else ""
 
                 crewai_event_bus.emit(
                     None,
