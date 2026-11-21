@@ -629,18 +629,116 @@ reply = stream.result
 
 비대화형 Flow에서는 `stream = True`로 설정하면 `kickoff()`가 `StreamSession`을 반환합니다. `handle_turn()`을 사용할 때 `flow.stream = True`로 설정하지 마세요. 대화형 스트리밍 수명 주기는 `stream_turn()`이 관리합니다.
 
+## 저장된 대화 백업 및 마이그레이션
+
+`FlowPersistence` 백엔드는 각 세션 id의 최신 상태를 저장합니다. 현재 이 대화를 읽으려면 Flow를 만들고 `handle_turn()`을 호출해야 하는데, 그러면 새 턴이 추가됩니다. `ConversationSnapshot`은 저장된 상태를 직접 읽으므로 대화를 진행하지 않고도 대화 내용을 표시하거나, 세션을 백업하거나, 다른 백엔드로 옮길 수 있습니다.
+
+스냅샷은 체크포인트가 **아닙니다**. `CheckpointConfig`는 장애 복구를 위해 Flow 전체(완료된 메서드, 그래프 진행 상태, 실행 리소스)를 직렬화합니다. 스냅샷은 저장된 대화 상태 blob만 담습니다. 스냅샷을 복원하면 대화 상태만 복구되며, 실행 중인 백그라운드 작업이나 실행 리소스는 복구되지 않습니다.
+
+아래 예제는 결정적입니다. `route_turn()`을 오버라이드했으므로 LLM, API 키, 네트워크가 필요하지 않습니다. `trace_scope="turn"`은 각 턴의 trace를 자동으로 완료하므로 `finalize_session_traces()`를 명시적으로 호출할 필요가 없습니다.
+
+```python
+# conversation_snapshot_demo.py
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from crewai.flow import (
+    ConversationConfig,
+    ConversationSnapshot,
+    ConversationState,
+    Flow,
+    listen,
+    persist,
+    read_snapshot,
+    write_snapshot,
+)
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+SESSION_ID = "customer-4471"
+
+
+def make_bot(store: SQLiteFlowPersistence) -> type[Flow[ConversationState]]:
+    """Build the same deterministic bot against one persistence backend."""
+
+    @ConversationConfig(trace_scope="turn")
+    @persist(store)
+    class SupportBot(Flow[ConversationState]):
+        conversational = True
+
+        def route_turn(self, context: dict) -> str | None:
+            return "echo"
+
+        @listen("echo")
+        def handle_echo(self) -> str:
+            return f"echo: {self.state.current_user_message}"
+
+    return SupportBot
+
+
+with TemporaryDirectory() as tmp:
+    primary = SQLiteFlowPersistence(str(Path(tmp) / "primary.db"))
+    replica = SQLiteFlowPersistence(str(Path(tmp) / "replica.db"))
+
+    # Turn 1 on the primary database.
+    make_bot(primary)().handle_turn("Where is my order?", session_id=SESSION_ID)
+
+    # Read without running a turn: the session is not advanced.
+    snapshot = read_snapshot(SESSION_ID, primary)
+    assert snapshot is not None
+    print("transcript:", snapshot.transcript)
+
+    # A portable artifact: versioned, deterministic JSON.
+    payload = snapshot.to_json()
+    Path(tmp, "backup.json").write_text(payload, encoding="utf-8")
+
+    # Restore into a different backend, then resume on a fresh Flow instance.
+    restored = ConversationSnapshot.from_json(payload)
+    write_snapshot(restored, replica)
+    make_bot(replica)().handle_turn("Has it shipped?", session_id=SESSION_ID)
+
+    resumed_snapshot = read_snapshot(SESSION_ID, replica)
+    assert resumed_snapshot is not None
+    print("resumed:", resumed_snapshot.transcript)
+
+    # A different session id starts a separate conversation.
+    make_bot(replica)().handle_turn("New topic", session_id="customer-9999")
+    other_snapshot = read_snapshot("customer-9999", replica)
+    assert other_snapshot is not None
+    print("other:", other_snapshot.transcript)
+```
+
+실행 명령:
+
+```bash
+python conversation_snapshot_demo.py
+```
+
+예상 출력 (프레임워크가 출력하는 Flow 진행 패널과 상태 저장 로그는 생략):
+
+```text
+transcript: [('user', 'Where is my order?'), ('assistant', 'echo: Where is my order?')]
+resumed: [('user', 'Where is my order?'), ('assistant', 'echo: Where is my order?'), ('user', 'Has it shipped?'), ('assistant', 'echo: Has it shipped?')]
+other: [('user', 'New topic'), ('assistant', 'echo: New topic')]
+```
+
+`copy_snapshot("customer-4471", source=primary, target=replica)` 는 읽기-쓰기 쌍의 축약형입니다. `read_snapshot()`은 `load_state()`만 호출하며 절대 쓰지 않고, `write_snapshot()`은 새 상태 행을 추가하므로 기존 히스토리와 백엔드 감사 기록이 보존됩니다. 두 함수 모두 모든 `FlowPersistence` 구현에서 동작하며, 커스텀 백엔드에 추가 메서드는 필요하지 않습니다.
+
 ## import
 
 ```python
 from crewai.flow import (
     ChatState,
+    ConversationSnapshot,
     ConversationalConfig,
     ConversationalInputs,
     Flow,
+    copy_snapshot,
     listen,
     persist,
+    read_snapshot,
     router,
     start,
+    write_snapshot,
 )
 from crewai.flow.conversation import prepare_conversational_turn
 from crewai.flow import (

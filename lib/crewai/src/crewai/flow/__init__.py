@@ -22,7 +22,13 @@ from crewai.flow.expressions import Expression
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_config import flow_config
 from crewai.flow.input_provider import InputProvider, InputResponse
-from crewai.flow.persistence import persist
+from crewai.flow.persistence import (
+    ConversationSnapshot,
+    copy_snapshot,
+    persist,
+    read_snapshot,
+    write_snapshot,
+)
 from crewai.flow.visualization import (
     FlowStructure,
     build_flow_structure,
@@ -37,6 +43,7 @@ __all__ = [
     "ConversationConfig",
     "ConversationEvent",
     "ConversationMessage",
+    "ConversationSnapshot",
     "ConversationState",
     "ConversationalConfig",
     "ConversationalInputs",
@@ -52,12 +59,15 @@ __all__ = [
     "RouterConfig",
     "and_",
     "build_flow_structure",
+    "copy_snapshot",
     "flow_config",
     "human_feedback",
     "listen",
     "or_",
     "persist",
+    "read_snapshot",
     "router",
     "start",
     "visualize_flow_structure",
+    "write_snapshot",
 ]

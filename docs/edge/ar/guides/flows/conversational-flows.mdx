@@ -633,18 +633,116 @@ reply = stream.result
 
 بالنسبة إلى Flow غير محادثاتي، يؤدي ضبط `stream = True` إلى جعل `kickoff()` يعيد `StreamSession`. لا تضبط `flow.stream = True` عند استخدام `handle_turn()`؛ إذ تملك `stream_turn()` دورة حياة البث المحادثاتي.
 
+## النسخ الاحتياطي وترحيل محادثة محفوظة
+
+تخزّن واجهة `FlowPersistence` أحدث حالة لكل معرّف جلسة. لقراءة تلك المحادثة اليوم عليك إنشاء Flow واستدعاء `handle_turn()`، وهذا يضيف دورًا جديدًا. يقرأ `ConversationSnapshot` الحالة المخزّنة مباشرة، لذا يمكنك عرض النص أو أخذ نسخة احتياطية أو نقل الجلسة إلى خلفية تخزين أخرى دون تقديم المحادثة.
+
+اللقطات **ليست** نقاط تحفّظ (checkpoints). يُسلّس `CheckpointConfig` كامل الـ Flow (الطرق المكتملة وتقدّم الرسم البياني وموارد التنفيذ) للتعافي من الأعطال. تحتفظ اللقطة ب blob حالة المحادثة المحفوظة فقط. استعادتها تستعيد حالة المحادثة؛ ولا تستعيد الأعمال الخلفية الجارية أو موارد التنفيذ.
+
+المثال أدناه حتمي: تم تجاوز `route_turn()`، لذا لا يحتاج إلى LLM أو مفتاح API أو اتصال بالشبكة. يُنهِي `trace_scope="turn"` تتبّع كل دور تلقائيًا، لذا لا يلزم استدعاء `finalize_session_traces()` صراحةً.
+
+```python
+# conversation_snapshot_demo.py
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from crewai.flow import (
+    ConversationConfig,
+    ConversationSnapshot,
+    ConversationState,
+    Flow,
+    listen,
+    persist,
+    read_snapshot,
+    write_snapshot,
+)
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+SESSION_ID = "customer-4471"
+
+
+def make_bot(store: SQLiteFlowPersistence) -> type[Flow[ConversationState]]:
+    """Build the same deterministic bot against one persistence backend."""
+
+    @ConversationConfig(trace_scope="turn")
+    @persist(store)
+    class SupportBot(Flow[ConversationState]):
+        conversational = True
+
+        def route_turn(self, context: dict) -> str | None:
+            return "echo"
+
+        @listen("echo")
+        def handle_echo(self) -> str:
+            return f"echo: {self.state.current_user_message}"
+
+    return SupportBot
+
+
+with TemporaryDirectory() as tmp:
+    primary = SQLiteFlowPersistence(str(Path(tmp) / "primary.db"))
+    replica = SQLiteFlowPersistence(str(Path(tmp) / "replica.db"))
+
+    # Turn 1 on the primary database.
+    make_bot(primary)().handle_turn("Where is my order?", session_id=SESSION_ID)
+
+    # Read without running a turn: the session is not advanced.
+    snapshot = read_snapshot(SESSION_ID, primary)
+    assert snapshot is not None
+    print("transcript:", snapshot.transcript)
+
+    # A portable artifact: versioned, deterministic JSON.
+    payload = snapshot.to_json()
+    Path(tmp, "backup.json").write_text(payload, encoding="utf-8")
+
+    # Restore into a different backend, then resume on a fresh Flow instance.
+    restored = ConversationSnapshot.from_json(payload)
+    write_snapshot(restored, replica)
+    make_bot(replica)().handle_turn("Has it shipped?", session_id=SESSION_ID)
+
+    resumed_snapshot = read_snapshot(SESSION_ID, replica)
+    assert resumed_snapshot is not None
+    print("resumed:", resumed_snapshot.transcript)
+
+    # A different session id starts a separate conversation.
+    make_bot(replica)().handle_turn("New topic", session_id="customer-9999")
+    other_snapshot = read_snapshot("customer-9999", replica)
+    assert other_snapshot is not None
+    print("other:", other_snapshot.transcript)
+```
+
+شغّله باستخدام:
+
+```bash
+python conversation_snapshot_demo.py
+```
+
+المخرجات المتوقعة (يطبع الإطار أيضًا لوحات تقدّم الـ Flow وأسطر حالة الثبات، المحذوفة هنا):
+
+```text
+transcript: [('user', 'Where is my order?'), ('assistant', 'echo: Where is my order?')]
+resumed: [('user', 'Where is my order?'), ('assistant', 'echo: Where is my order?'), ('user', 'Has it shipped?'), ('assistant', 'echo: Has it shipped?')]
+other: [('user', 'New topic'), ('assistant', 'echo: New topic')]
+```
+
+`copy_snapshot("customer-4471", source=primary, target=replica)` هي اختصار لزوج القراءة ثم الكتابة. يستدعي `read_snapshot()` دالة `load_state()` فقط ولا يكتب أبدًا؛ ويضيف `write_snapshot()` صف حالة جديدًا، فتبقى المحفوظات السابقة وسجل التدقيق في الخلفية محفوظة. يعمل كلاهما مع أي تنفيذ لـ `FlowPersistence` — لا تحتاج الخلفيات المخصّصة إلى طرق إضافية.
+
 ## الاستيراد
 
 ```python
 from crewai.flow import (
     ChatState,
+    ConversationSnapshot,
     ConversationalConfig,
     ConversationalInputs,
     Flow,
+    copy_snapshot,
     listen,
     persist,
+    read_snapshot,
     router,
     start,
+    write_snapshot,
 )
 from crewai.flow.conversation import prepare_conversational_turn
 from crewai.flow import (
