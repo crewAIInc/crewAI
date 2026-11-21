@@ -25,7 +25,7 @@ Design notes:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Hashable, Iterator
 from contextlib import contextmanager
 import contextvars
 from enum import Enum
@@ -89,6 +89,95 @@ class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
 
 HookFn = Callable[[Any], Any]
 
+
+class HookErrorPolicy(str, Enum):
+    """What dispatch does when a hook raises something other than ``HookAborted``.
+
+    ``FAIL_OPEN`` is the historical behaviour: the error is swallowed so a buggy
+    user hook cannot break the framework. ``ABORT`` treats the failure as
+    :class:`HookAborted`, which is what a hook acting as a security control needs
+    - a hook that cannot reach a decision must not let the operation through.
+    """
+
+    FAIL_OPEN = "fail_open"
+    ABORT = "abort"
+
+
+_error_policies: dict[HookFn, HookErrorPolicy] = {}
+
+
+def set_error_policy(hook: HookFn, policy: HookErrorPolicy | str) -> None:
+    """Choose what dispatch does when ``hook`` raises something other than ``HookAborted``.
+
+    Args:
+        hook: The callable that was or will be registered, or the original
+            function of a filtered hook. It has to be hashable.
+        policy: ``"fail_open"`` (the default for every hook) or ``"abort"``.
+    """
+    resolved = HookErrorPolicy(policy)
+    try:
+        if resolved is HookErrorPolicy.FAIL_OPEN:
+            _error_policies.pop(hook, None)
+        else:
+            _error_policies[hook] = resolved
+    except TypeError as error:
+        raise ValueError(
+            "on_error='abort' needs a hashable hook callable; wrap it in a function."
+        ) from error
+
+
+def _policy_candidates(hook: Any) -> Iterator[Any]:
+    """The callables a policy for ``hook`` may have been registered under.
+
+    The object dispatch invokes is rarely the object the caller holds:
+
+    - a filtered hook (``@before_tool_call(tools=...)``, ``@on(..., agents=...)``,
+      a ``@CrewBase`` filter) is registered as a wrapper, which
+      ``functools.wraps`` links back through ``__wrapped__``;
+    - ``@on`` also stashes the registered wrapper on the original, in
+      ``_registered_hook``;
+    - a ``@CrewBase`` method is registered as a bound method, while the decorator
+      returns - and the docs tell callers to pass - the plain function, which a
+      bound method exposes as ``__func__``.
+    """
+    seen: set[int] = set()
+    pending = [hook]
+    while pending:
+        candidate = pending.pop(0)
+        if candidate is None or id(candidate) in seen:
+            continue
+        seen.add(id(candidate))
+        yield candidate
+        pending.append(getattr(candidate, "__wrapped__", None))
+        pending.append(getattr(candidate, "_registered_hook", None))
+        pending.append(getattr(candidate, "__func__", None))
+
+
+def _error_policy(hook: HookFn) -> HookErrorPolicy:
+    """The error policy registered for ``hook``, fail-open by default."""
+    for candidate in _policy_candidates(hook):
+        try:
+            policy = _error_policies.get(candidate)
+        except TypeError:  # an unhashable callable can never carry a policy
+            continue
+        if policy is not None:
+            return policy
+    return HookErrorPolicy.FAIL_OPEN
+
+
+def _pop_error_policy(hook: Any) -> None:
+    """Drop the policy of ``hook`` and of the functions it wraps or came from."""
+    for candidate in _policy_candidates(hook):
+        if isinstance(candidate, Hashable):
+            _error_policies.pop(candidate, None)
+
+
+def clear_error_policy(hook: HookFn) -> None:
+    """Public counterpart of :func:`_pop_error_policy`, for registries that
+    remove a hook without going through :func:`unregister`."""
+    _pop_error_policy(hook)
+
+
 # (ctx, result) -> modified?  A reducer maps a hook's return value onto the
 # context using point-specific semantics. It may raise HookAborted.
 Reducer = Callable[[Any, Any], bool]
@@ -133,6 +222,8 @@ def unregister(point: InterceptionPoint, hook: HookFn) -> bool:
     target = hook if hook in hooks else getattr(hook, "_registered_hook", hook)
     try:
         hooks.remove(target)
+        _pop_error_policy(target)
+        _pop_error_policy(hook)
         return True
     except ValueError:
         return False
@@ -145,14 +236,19 @@ def get_hooks(point: InterceptionPoint) -> list[HookFn]:
 
 def clear(point: InterceptionPoint) -> int:
     """Clear all global hooks for a point. Returns the number cleared."""
-    count = len(_global_hooks[point])
-    _global_hooks[point].clear()
+    hooks = _global_hooks[point]
+    count = len(hooks)
+    for hook in hooks:
+        _pop_error_policy(hook)
+    hooks.clear()
     return count
 
 
 def clear_all() -> None:
     """Clear all global hooks across every interception point."""
     for hooks in _global_hooks.values():
+        for hook in hooks:
+            _pop_error_policy(hook)
         hooks.clear()
 
 
@@ -282,6 +378,10 @@ def _invoke_hook(
             aborted.source = hook
         raise
     except Exception as error:
+        if _error_policy(hook) is HookErrorPolicy.ABORT:
+            raise HookAborted(
+                f"{source_name(hook) or 'hook'} failed: {error}", source=hook
+            ) from error
         if verbose:
             from crewai_core.printer import PRINTER
 
