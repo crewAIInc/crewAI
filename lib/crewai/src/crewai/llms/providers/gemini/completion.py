@@ -231,12 +231,7 @@ class GeminiCompletion(BaseLLM):
         if self.max_output_tokens is not None:
             config["max_output_tokens"] = self.max_output_tokens
         if self.safety_settings:
-            config["safety_settings"] = [
-                {"category": str(s.category), "threshold": str(s.threshold)}
-                if hasattr(s, "category") and hasattr(s, "threshold")
-                else s
-                for s in self.safety_settings
-            ]
+            config["safety_settings"] = dict(self.safety_settings)
         return config
 
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:
@@ -606,7 +601,12 @@ class GeminiCompletion(BaseLLM):
                 config_params["response_schema"] = response_model
 
         if self.safety_settings:
-            config_params["safety_settings"] = self.safety_settings
+            # safety_settings is a {category: threshold} mapping, but the SDK
+            # only accepts a list of SafetySetting.
+            config_params["safety_settings"] = [
+                types.SafetySetting(category=category, threshold=threshold)
+                for category, threshold in self.safety_settings.items()
+            ]
 
         if self.thinking_config is not None:
             config_params["thinking_config"] = self.thinking_config
