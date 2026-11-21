@@ -216,12 +216,13 @@ def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
-    # Manually truncate at stop words
+    # Manually truncate at the earliest stop word, the way BaseLLM._apply_stop_words does:
+    # the order of self.stop must not matter, and the whitespace before the stop word is
+    # dropped, so "hello EARLY middle LATE tail" gives "hello", not "hello ".
     if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
+        positions = [pos for pos in (content.find(word) for word in self.stop) if pos != -1]
+        if positions:
+            content = content[: min(positions)].strip()
     
     return content
 
