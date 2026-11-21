@@ -6,7 +6,13 @@ import asyncio
 from threading import Event
 from typing import ClassVar
 
-from pydantic import Field, PrivateAttr, ValidationError
+from pydantic import (
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    ValidationError,
+    model_validator,
+)
 import pytest
 
 from crewai.flow import ConversationState, Flow, listen, start
@@ -178,6 +184,39 @@ def test_success_requires_the_current_stage_to_commit_and_updates_are_serializab
         )
     with pytest.raises(ValidationError):
         proposal(state, job, True, "started")
+
+
+class AssignmentValidatedJob(ReportJob):
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    @model_validator(mode="after")
+    def collected_stage_has_notes(self) -> AssignmentValidatedJob:
+        if "collect" in self.committed_stages and not self.notes:
+            raise ValueError("A committed collect stage needs notes")
+        return self
+
+
+def test_commit_installs_validated_fields_together_under_assignment_validation():
+    state = JobState[AssignmentValidatedJob]()
+    job = AssignmentValidatedJob(session_id=state.id, question="Report")
+    assert add_job(state, job)
+    assert commit_job_update(state, proposal(state, job, 1, "started"))
+    before = state.model_dump_json()
+    assert not commit_job_update(
+        state, proposal(state, job, 2, "stage_completed", stage="collect")
+    )
+    assert state.model_dump_json() == before
+    assert commit_job_update(
+        state,
+        proposal(
+            state, job, 2, "stage_completed", stage="collect", outputs={"notes": ["Fact"]}
+        ),
+    )
+    assert state.jobs[job.job_id] is job
+    assert job.committed_stages == ["collect"]
+    assert job.notes == ["Fact"]
+    assert job.last_update_seq == 2
+    assert state.job_sequence == 3
 
 
 @pytest.mark.asyncio
