@@ -1,0 +1,68 @@
+---
+title: "TraceRoot 통합"
+description: "TraceRoot Python SDK로 CrewAI 실행과 OpenAI 호출을 추적합니다."
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+[TraceRoot](https://traceroot.ai/docs/integrations/crewai)는 CrewAI의 Crew, Agent, Task를 계측합니다. 같은 트레이스에 모델 호출을 기록하려면 OpenAI 통합을 활성화하세요.
+
+## SDK 설치
+
+```bash
+uv add crewai traceroot
+```
+
+## API 키 설정
+
+[TraceRoot Cloud](https://app.traceroot.ai)에서 프로젝트 API 키를 생성한 다음 OpenAI 키와 함께 환경 변수로 내보내세요.
+
+```bash
+export TRACEROOT_API_KEY="your-traceroot-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+TraceRoot SDK는 프로세스 환경 변수를 읽습니다. `.env` 파일을 사용한다면 초기화 전에 로드하세요. 자체 호스팅 인스턴스에서는 `TRACEROOT_HOST_URL`도 해당 URL로 설정하세요.
+
+## Crew 실행
+
+이 예제를 `main.py`로 저장하세요. Agent를 생성하기 전에 통합을 초기화하세요. 프로세스가 종료되기 전에 대기 중인 스팬을 전송하세요.
+
+```python
+import traceroot
+from traceroot import Integration
+
+from crewai import Agent, Crew, Task
+
+traceroot.initialize(integrations=[Integration.CREWAI, Integration.OPENAI])
+
+writer = Agent(
+    role="Technical writer",
+    goal="Explain agent workflows clearly",
+    backstory="You write concise explanations for developers.",
+    llm="openai/gpt-4o-mini",
+    allow_delegation=False,
+)
+task = Task(
+    description="Explain how a Crew coordinates agents and tasks in three sentences.",
+    expected_output="A three-sentence explanation.",
+    agent=writer,
+)
+crew = Crew(agents=[writer], tasks=[task])
+
+try:
+    result = crew.kickoff()
+    print(result.raw)
+finally:
+    traceroot.flush()
+```
+
+```bash
+uv run python main.py
+```
+
+## 트레이스 확인
+
+TraceRoot 프로젝트를 열고 이번 실행의 트레이스를 선택하세요. Crew, Agent, Task, 모델 스팬에서 입력, 출력, 실행 시간을 비교하세요.
+
+트레이스 데이터에는 프롬프트와 출력이 포함될 수 있습니다. 설정과 다른 제공자 통합은 [Python SDK 참조](https://traceroot.ai/docs/tracing/python-sdk)를 확인하세요.

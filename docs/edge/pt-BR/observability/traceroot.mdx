@@ -1,0 +1,68 @@
+---
+title: "Integração com TraceRoot"
+description: "Rastreie execuções do CrewAI e chamadas ao OpenAI com o SDK Python do TraceRoot."
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+O [TraceRoot](https://traceroot.ai/docs/integrations/crewai) instrumenta Crews, Agents e Tasks do CrewAI. Ative a integração com OpenAI para registrar as chamadas ao modelo no mesmo rastreamento.
+
+## Instale o SDK
+
+```bash
+uv add crewai traceroot
+```
+
+## Configure as chaves de API
+
+Crie uma chave de API do projeto no [TraceRoot Cloud](https://app.traceroot.ai) e exporte-a junto com sua chave do OpenAI.
+
+```bash
+export TRACEROOT_API_KEY="your-traceroot-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+O SDK do TraceRoot lê as variáveis de ambiente do processo. Se você usar um arquivo `.env`, carregue-o antes da inicialização. Para uma instância auto-hospedada, defina também `TRACEROOT_HOST_URL` com a URL da instância.
+
+## Execute um Crew
+
+Salve este exemplo como `main.py`. Inicialize as integrações antes de criar os Agents. Envie os spans pendentes antes de encerrar o processo.
+
+```python
+import traceroot
+from traceroot import Integration
+
+from crewai import Agent, Crew, Task
+
+traceroot.initialize(integrations=[Integration.CREWAI, Integration.OPENAI])
+
+writer = Agent(
+    role="Technical writer",
+    goal="Explain agent workflows clearly",
+    backstory="You write concise explanations for developers.",
+    llm="openai/gpt-4o-mini",
+    allow_delegation=False,
+)
+task = Task(
+    description="Explain how a Crew coordinates agents and tasks in three sentences.",
+    expected_output="A three-sentence explanation.",
+    agent=writer,
+)
+crew = Crew(agents=[writer], tasks=[task])
+
+try:
+    result = crew.kickoff()
+    print(result.raw)
+finally:
+    traceroot.flush()
+```
+
+```bash
+uv run python main.py
+```
+
+## Inspecione o rastreamento
+
+Abra seu projeto no TraceRoot e selecione o rastreamento desta execução. Inspecione os spans do Crew, Agent, Task e modelo para comparar suas entradas, saídas e duração.
+
+Os dados de rastreamento podem incluir prompts e saídas. Consulte a [referência do SDK Python](https://traceroot.ai/docs/tracing/python-sdk) para configurações e integrações com outros provedores.
