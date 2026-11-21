@@ -12,9 +12,35 @@ from pydantic import BaseModel, BeforeValidator, Field, PlainSerializer, Private
 
 from crewai.events.base_events import BaseEvent
 from crewai.utilities.rw_lock import RWLock
+from crewai.utilities.serialization import Serializable, to_serializable
 
 
 _event_type_map: dict[str, type[BaseEvent]] = {}
+
+
+def _json_payload(event: BaseEvent) -> Serializable:
+    """Dump a recorded event for persistence, degrading only what JSON cannot hold.
+
+    ``model_dump(mode="json")`` raises ``PydanticSerializationError`` when an event
+    carries a live object -- the exception in a tool error event's ``error``, the tool
+    class in ``tool_class`` -- and the checkpoint listener only logs that failure, so
+    every checkpoint written after such an event was lost. Such a payload goes through
+    ``to_serializable`` instead, the conversion ``BaseEvent.to_json`` already uses,
+    which degrades what JSON cannot hold instead of raising.
+
+    The plain dump stays the first choice, and that order is what keeps the change
+    invisible for events that were already serializable: they still produce the JSON
+    they did before, at full depth. ``to_serializable`` re-walks its input with
+    ``max_depth`` 5 by default, which replaces nested LLM ``messages`` and
+    ``tool_calls`` -- they sit at that depth -- with ``repr`` strings, so it is only
+    reached for a payload that could not be written at all, and is then called with
+    the cap lifted: there is nothing left to protect once the alternative is losing
+    the event.
+    """
+    try:
+        return event.model_dump(mode="json")
+    except Exception:  # a payload JSON cannot encode must not cost the checkpoint
+        return to_serializable(event, max_depth=0)
 
 
 def _resolve_event(v: Any) -> BaseEvent:
@@ -64,12 +90,15 @@ EdgeType = Literal[
 class EventNode(BaseModel):
     """A node wrapping a single event with its adjacency lists."""
 
+    # A recorded event can carry live objects, which ``model_dump(mode="json")``
+    # cannot encode; ``_json_payload`` keeps such an event writable without changing
+    # what an ordinary event stores.
     event: Annotated[
         BaseEvent,
         BeforeValidator(_resolve_event),
         PlainSerializer(
             lambda v, info: (
-                v.model_dump(mode="json") if info.mode == "json" else v.model_dump()
+                _json_payload(v) if info.mode == "json" else v.model_dump()
             ),
         ),
     ]
