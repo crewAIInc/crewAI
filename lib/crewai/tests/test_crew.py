@@ -3143,6 +3143,65 @@ def test_replay_feature(researcher, writer):
         assert mock_execute_task.call_count == 3
 
 
+def test_replay_rehydrates_pydantic_prefix_output(researcher, writer):
+    """A replayed prefix task keeps structured output as its real model."""
+
+    class ReplayOutput(BaseModel):
+        score: int
+        label: str
+
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+        output_pydantic=ReplayOutput,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    structured = ReplayOutput(score=7, label="ok")
+    prefix_output = TaskOutput(
+        description=list_ideas.description,
+        raw=structured.model_dump_json(),
+        agent="Researcher",
+        pydantic=structured,
+        json_dict=None,
+        output_format=OutputFormat.PYDANTIC,
+        messages=[],
+    )
+    tail_output = TaskOutput(
+        description=write.description,
+        raw="A sentence about the events",
+        agent="Senior Writer",
+        pydantic=None,
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        messages=[],
+    )
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.side_effect = [prefix_output, tail_output, tail_output]
+        crew.kickoff()
+
+        crew.replay(str(write.id))
+
+    replayed = crew.tasks[0].output
+    assert isinstance(replayed.pydantic, ReplayOutput)
+    assert replayed.pydantic == structured
+    assert replayed.to_dict() == {"score": 7, "label": "ok"}
+    assert "score=7" in str(replayed)
+
+
 def test_replay_emits_paired_kickoff_events(researcher, writer):
     """replay() must emit its own CrewKickoffStartedEvent before completing.
 
