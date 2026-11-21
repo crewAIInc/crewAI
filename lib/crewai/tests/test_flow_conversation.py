@@ -1099,6 +1099,71 @@ class TestConversationalFlow:
         mock_finalize.assert_called_once_with()
         assert flow.defer_trace_finalization is False
 
+    def test_chat_restores_defer_setting_when_finalization_fails(self) -> None:
+        """A failing finalizer must not leak the temporary deferral setting."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        def run_chat(input_fn) -> None:
+            flow = MyChat()
+            with patch.object(
+                flow,
+                "finalize_session_traces",
+                side_effect=RuntimeError("finalization failed"),
+            ) as mock_finalize:
+                with pytest.raises(RuntimeError, match="finalization failed"):
+                    flow.chat(input_fn=input_fn, output_fn=lambda _: None)
+            mock_finalize.assert_called_once_with()
+            assert flow.defer_trace_finalization is False
+
+        def raise_eof(_prompt: str) -> str:
+            raise EOFError
+
+        def raise_keyboard_interrupt(_prompt: str) -> str:
+            raise KeyboardInterrupt
+
+        # normal quit, EOF, and KeyboardInterrupt exits must all restore it
+        run_chat(lambda _: "quit")
+        run_chat(raise_eof)
+        run_chat(raise_keyboard_interrupt)
+
+    def test_chat_restores_initially_enabled_defer_setting_on_finalization_failure(
+        self,
+    ) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+        flow.defer_trace_finalization = True
+        with patch.object(
+            flow, "finalize_session_traces", side_effect=RuntimeError("boom")
+        ):
+            with pytest.raises(RuntimeError, match="boom"):
+                flow.chat(input_fn=lambda _: "quit", output_fn=lambda _: None)
+        assert flow.defer_trace_finalization is True
+
+    def test_chat_finalization_failure_with_defer_opt_out_leaves_setting_untouched(
+        self,
+    ) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+        with patch.object(
+            flow, "finalize_session_traces", side_effect=RuntimeError("boom")
+        ):
+            with pytest.raises(RuntimeError, match="boom"):
+                flow.chat(
+                    input_fn=lambda _: "quit",
+                    output_fn=lambda _: None,
+                    defer_trace_finalization=False,
+                )
+        assert flow.defer_trace_finalization is False
+
     def test_chat_stringifies_repl_output_like_conversation_helpers(self) -> None:
         class RawResult:
             raw = "raw assistant output"
