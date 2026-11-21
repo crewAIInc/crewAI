@@ -48,6 +48,7 @@ updates:
       include: "scope"
     groups:
       github-actions:
+        update-types: ["minor", "patch"]
         applies-to: version-updates
         patterns:
           - "*"
