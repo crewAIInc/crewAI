@@ -759,6 +759,7 @@ memory = Memory(
 
 - **기본값**: LanceDB, `./.crewai/memory` 아래에 저장 (또는 환경 변수가 설정된 경우 `$CREWAI_STORAGE_DIR/memory`, 또는 `storage="path/to/dir"`로 전달한 경로).
 - **사용자 정의 백엔드**: `StorageBackend` 프로토콜을 구현하고(`crewai.memory.storage.backend` 참조) `Memory(storage=your_backend)`에 인스턴스를 전달합니다. 프로덕션 배포의 경우 `crewai-mongodb-memory` 패키지의 `MongoDBStorageBackend`를 사용할 수 있습니다. 자세한 내용은 [MongoDB 구현 튜토리얼](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/)을 참고하세요.
+- **호스팅 메모리 API**: 로컬 저장소 대신 [past dev](https://past.dev)에 메모리를 보관하려면 `crewai-pastdotdev` 패키지의 `PastDevMemory`를 `memory=`로 전달합니다. past dev는 추출, 임베딩, 순위 지정을 자체적으로 수행합니다. [past dev 페이지](/ko/tools/ai-ml/pastdev)를 참조하세요.
 
 
 ## 탐색(Discovery)
