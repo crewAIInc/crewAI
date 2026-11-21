@@ -188,10 +188,35 @@ class TodoList(BaseModel):
         Preserves completed, failed, and running todos, replaces only pending ones.
         Used during replanning to swap in a new plan for remaining work.
 
+        Step numbers identify todos in every lookup, so they must stay unique.
+        A planner that restarts numbering at 1 would otherwise alias the new
+        steps to the preserved ones: marking a new step running or completed
+        would change the old step, and a new step would see an old step as its
+        dependency. When the new numbers collide with preserved ones, the new
+        steps are renumbered after the highest preserved number and their
+        dependencies on each other follow.
+
         Args:
             new_items: The new todo items to replace pending ones.
         """
         non_pending = [item for item in self.items if item.status != "pending"]
+        kept_numbers = {item.step_number for item in non_pending}
+        if kept_numbers and any(item.step_number in kept_numbers for item in new_items):
+            offset = max(kept_numbers) + 1 - min(item.step_number for item in new_items)
+            renumbered = {
+                item.step_number: item.step_number + offset for item in new_items
+            }
+            new_items = [
+                item.model_copy(
+                    update={
+                        "step_number": renumbered[item.step_number],
+                        "depends_on": [
+                            renumbered.get(dep, dep) for dep in item.depends_on
+                        ],
+                    }
+                )
+                for item in new_items
+            ]
         self.items = non_pending + new_items
 
 
