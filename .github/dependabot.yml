@@ -1,6 +1,10 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
+
+# Proposal for the maintainers. Adds a 7-day cooldown on version updates
+# (security updates are never delayed) and a grouped GitHub Actions entry.
+# Titles keep the chore(deps) form pr-title.yml expects.
 updates:
   - package-ecosystem: uv
     directory: "/"
@@ -8,6 +12,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"
+      include: "scope"
     groups:
       security-updates:
         applies-to: security-updates
@@ -20,7 +29,29 @@ updates:
         update-types:
           - patch
           - minor
+    # ignore also binds security updates: a fix that needs a major never gets a PR.
     ignore:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
