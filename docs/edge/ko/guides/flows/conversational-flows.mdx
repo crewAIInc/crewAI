@@ -35,6 +35,8 @@ REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지
 
 대화형 모드가 활성화되지 않으면 `handle_turn()`, `stream_turn()`, `chat()`은 `ValueError`를 발생시킵니다. `@ConversationConfig(...)`를 적용하면 자동으로 활성화되며, 그렇지 않으면 `conversational = True`로 설정하세요.
 
+stdin 없이 `ask()`를 구동하는 **스크립트 커스텀 입력 프로바이더** 예시(메타데이터, `InputResponse`, 사용 불가 입력)는 Flow 가이드의 [`Flow.ask()`용 커스텀 입력 프로바이더](/edge/ko/concepts/flows#custom-input-provider-for-flowask)를 참조하세요.
+
 ## 빠른 시작
 
 ```python

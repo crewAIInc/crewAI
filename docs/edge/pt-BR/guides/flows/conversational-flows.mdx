@@ -35,6 +35,8 @@ Use **`flow.handle_turn(message, session_id=...)`** para cada mensagem de usuár
 
 `handle_turn()`, `stream_turn()` e `chat()` geram `ValueError` se o modo conversacional não estiver habilitado. Aplicar `@ConversationConfig(...)` o habilita automaticamente; caso contrário, defina `conversational = True`.
 
+Para um **provider de entrada customizado com roteiro** que aciona `ask()` sem stdin (metadados, `InputResponse` e entrada indisponível), veja [Provider de entrada customizado para `Flow.ask()`](/edge/pt-BR/concepts/flows#custom-input-provider-for-flowask) no guia de Flows.
+
 ## Início rápido
 
 ```python
