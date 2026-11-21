@@ -1,0 +1,59 @@
+---
+title: Firecrawl Alexandria
+description: FirecrawlAlexandriaTool은 Firecrawl Alexandria 데이터 제공자의 기능을 실행하고 구조화된 데이터를 반환합니다.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlAlexandriaTool`
+
+## 설명
+
+[Firecrawl Alexandria](https://www.firecrawl.dev/alexandria?utm_source=crewai&utm_medium=integration)는 Firecrawl API를 통해 100개 이상의 데이터 제공자(기업 공시, 공공 기록, 금융, 스포츠 등)의 구조화된 데이터를 에이전트에 제공합니다. 이 도구는 제공자의 기능 하나를 실행하고 그 데이터를 반환합니다. 탐색도 지원합니다: `firecrawl` 제공자의 `find-tools` 기능은 카탈로그를 검색하고 각 기능의 옵션을 보여줍니다.
+
+## 설치
+
+- [firecrawl.dev](https://www.firecrawl.dev/?utm_source=crewai&utm_medium=integration)에서 API 키를 받아 환경 변수(`FIRECRAWL_API_KEY`)에 설정합니다.
+- [Firecrawl SDK](https://github.com/firecrawl/firecrawl)와 `crewai[tools]` 패키지를 설치합니다:
+
+```shell
+pip install 'firecrawl-py>=4.43.0' 'crewai[tools]'
+```
+
+## 예시
+
+```python Code
+from crewai_tools import FirecrawlAlexandriaTool
+
+tool = FirecrawlAlexandriaTool()
+
+# Find a capability and its options (free)
+tool.run(
+    provider="firecrawl",
+    capability="find-tools",
+    options='{"query": "SEC filer profile by ticker", "level": "tools", "expand": ["options"], "limit": 5}',
+)
+
+# Run it
+tool.run(
+    provider="sec-gov",
+    capability="filings/company",
+    options='{"ticker": "AAPL"}',
+)
+```
+
+이 도구를 가진 에이전트는 같은 두 단계를 스스로 수행합니다: 쿼리로 `find-tools`를 호출한 뒤, 선택한 기능을 실행합니다.
+
+`find-tools`는 무료입니다. 기능을 실행하면 `find-tools`가 `creditsCost`로 표시하는 크레딧이 차감되며, 일부 제공자는 먼저 Firecrawl 계정에서 약관 동의를 요구합니다.
+
+## 인자
+
+- `api_key`: 선택 사항. Firecrawl API 키를 지정합니다. 기본값은 `FIRECRAWL_API_KEY` 환경 변수입니다.
+
+실행 인자:
+
+- `provider`: Alexandria 제공자 id. 예: `sec-gov`, 또는 `find-tools`의 경우 `firecrawl`.
+- `capability`: 해당 제공자의 기능. 예: `filings/company`.
+- `options`: 선택 사항. 기능의 입력값을 담은 JSON 객체 문자열. 예: `'{"ticker": "AAPL"}'`.
+
+호출이 실패하면(예: 누락된 옵션 또는 알 수 없는 기능), 도구는 오류 코드와 메시지가 담긴 `ToolFailure`를 반환합니다.

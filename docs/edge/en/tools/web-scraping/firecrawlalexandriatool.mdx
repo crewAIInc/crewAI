@@ -1,0 +1,59 @@
+---
+title: Firecrawl Alexandria
+description: The `FirecrawlAlexandriaTool` runs Firecrawl Alexandria data provider capabilities and returns structured data.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlAlexandriaTool`
+
+## Description
+
+[Firecrawl Alexandria](https://www.firecrawl.dev/alexandria?utm_source=crewai&utm_medium=integration) gives agents structured data from 100+ data providers (company filings, public records, finance, sports and more) through the Firecrawl API. This tool runs one provider capability and returns its data. It also covers discovery: the `firecrawl` provider's `find-tools` capability searches the catalog and lists each capability's options.
+
+## Installation
+
+- Get an API key from [firecrawl.dev](https://www.firecrawl.dev/?utm_source=crewai&utm_medium=integration) and set it in environment variables (`FIRECRAWL_API_KEY`).
+- Install the [Firecrawl SDK](https://github.com/firecrawl/firecrawl) along with `crewai[tools]` package:
+
+```shell
+pip install 'firecrawl-py>=4.43.0' 'crewai[tools]'
+```
+
+## Example
+
+```python Code
+from crewai_tools import FirecrawlAlexandriaTool
+
+tool = FirecrawlAlexandriaTool()
+
+# Find a capability and its options (free)
+tool.run(
+    provider="firecrawl",
+    capability="find-tools",
+    options='{"query": "SEC filer profile by ticker", "level": "tools", "expand": ["options"], "limit": 5}',
+)
+
+# Run it
+tool.run(
+    provider="sec-gov",
+    capability="filings/company",
+    options='{"ticker": "AAPL"}',
+)
+```
+
+An agent with this tool follows the same two steps on its own: it calls `find-tools` with a query, then runs the capability it picked.
+
+`find-tools` is free. Running a capability costs the credits `find-tools` lists as `creditsCost`, and some providers ask you to accept their terms in your Firecrawl account first.
+
+## Arguments
+
+- `api_key`: Optional. Specifies Firecrawl API key. Defaults to the `FIRECRAWL_API_KEY` environment variable.
+
+Run arguments:
+
+- `provider`: The Alexandria provider id, for example `sec-gov`, or `firecrawl` for `find-tools`.
+- `capability`: The capability of that provider, for example `filings/company`.
+- `options`: Optional. A JSON-encoded object string with the capability inputs, for example `'{"ticker": "AAPL"}'`.
+
+If the call fails (for example a missing option or an unknown capability), the tool returns a `ToolFailure` with the error code and message.
