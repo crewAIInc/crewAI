@@ -13,6 +13,38 @@ _EXPORT_PATTERN: Final[re.Pattern[str]] = re.compile(
 _JSX_TAG_PATTERN: Final[re.Pattern[str]] = re.compile(r"<[^>]+>")
 _EXTRA_NEWLINES_PATTERN: Final[re.Pattern[str]] = re.compile(r"\n\s*\n\s*\n")
 
+# Literal regions whose text must be preserved verbatim: fenced code blocks and
+# inline code spans. MDX cleanup (imports/exports, JSX tags, blank-line
+# collapsing) must not run inside them, or it corrupts the code a message is
+# trying to show. A fenced block wins over an inline span at the same position
+# because the alternatives are tried left to right.
+_PROTECTED_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"(?ms)"
+    r"^(?P<fence>`{3,}|~{3,})[^\n]*\n.*?(?:^(?P=fence)[ \t]*$|\Z)"
+    r"|`+[^`\n]*`+"
+)
+
+
+def _strip_mdx_syntax(content: str) -> str:
+    """Remove MDX imports/exports and JSX tags, keeping literal code intact.
+
+    Code fences and inline code spans are swapped for placeholders before the
+    MDX-specific cleanup runs, then restored, so their contents are never
+    rewritten into markdown or blanked out.
+    """
+    protected: list[str] = []
+
+    def _protect(match: re.Match[str]) -> str:
+        protected.append(match.group(0))
+        return f"\x00{len(protected) - 1}\x00"
+
+    masked = _PROTECTED_PATTERN.sub(_protect, content)
+    masked = _IMPORT_PATTERN.sub("", masked)
+    masked = _EXPORT_PATTERN.sub("", masked)
+    masked = _JSX_TAG_PATTERN.sub("", masked)
+    masked = _EXTRA_NEWLINES_PATTERN.sub("\n\n", masked)
+    return re.sub(r"\x00(\d+)\x00", lambda m: protected[int(m.group(1))], masked)
+
 
 class MDXLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
@@ -37,16 +69,7 @@ class MDXLoader(BaseLoader):
             return file.read()
 
     def _parse_mdx(self, content: str, source_ref: str) -> LoaderResult:
-        cleaned_content = content
-
-        cleaned_content = _IMPORT_PATTERN.sub("", cleaned_content)
-
-        cleaned_content = _EXPORT_PATTERN.sub("", cleaned_content)
-
-        cleaned_content = _JSX_TAG_PATTERN.sub("", cleaned_content)
-
-        cleaned_content = _EXTRA_NEWLINES_PATTERN.sub("\n\n", cleaned_content)
-        cleaned_content = cleaned_content.strip()
+        cleaned_content = _strip_mdx_syntax(content).strip()
 
         metadata = {"format": "mdx"}
         return LoaderResult(
