@@ -206,3 +206,22 @@ Final text.
             phrase not in result.content
             for phrase in ["import {", "export {", "<Component>"]
         )
+
+    def test_preserves_fenced_and_inline_code(self):
+        content = """# Examples
+
+```python
+import json
+print(json.loads('{}'))
+<LiteralTag />
+```
+
+Use `List<T>` and `import_value` in the schema.
+"""
+
+        result, _ = self._load_from_file(content)
+
+        assert "import json" in result.content
+        assert "<LiteralTag />" in result.content
+        assert "`List<T>`" in result.content
+        assert "`import_value`" in result.content
