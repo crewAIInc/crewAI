@@ -155,7 +155,7 @@ def _is_yaml(path: Path) -> bool:
 
 
 def _read_definition(path: Path) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8-sig")
     if _is_yaml(path):
         yaml = _import_yaml()
         parse, parse_error = yaml.safe_load, yaml.YAMLError
