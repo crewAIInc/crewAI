@@ -2336,12 +2336,15 @@ class Crew(FlowTrackable, BaseModel):
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
+        counted_llm_ids: set[int] = set()
 
         for agent in self.agents:
             if isinstance(agent.llm, BaseLLM):
-                llm_usage = agent.llm.get_token_usage_summary()
-
-                total_usage_metrics.add_usage_metrics(llm_usage)
+                if id(agent.llm) not in counted_llm_ids:
+                    counted_llm_ids.add(id(agent.llm))
+                    total_usage_metrics.add_usage_metrics(
+                        agent.llm.get_token_usage_summary()
+                    )
             else:
                 if hasattr(agent, "_token_process"):
                     token_sum = agent._token_process.get_summary()
@@ -2353,8 +2356,11 @@ class Crew(FlowTrackable, BaseModel):
 
         if self.manager_agent:
             if isinstance(self.manager_agent.llm, BaseLLM):
-                llm_usage = self.manager_agent.llm.get_token_usage_summary()
-                total_usage_metrics.add_usage_metrics(llm_usage)
+                if id(self.manager_agent.llm) not in counted_llm_ids:
+                    counted_llm_ids.add(id(self.manager_agent.llm))
+                    total_usage_metrics.add_usage_metrics(
+                        self.manager_agent.llm.get_token_usage_summary()
+                    )
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
