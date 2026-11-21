@@ -642,19 +642,33 @@ class MCPClient:
 
     async def _list_prompts_impl(self) -> list[dict[str, Any]]:
         """Internal implementation of list_prompts."""
-        prompts_result = await asyncio.wait_for(
-            self.session.list_prompts(),
-            timeout=self.discovery_timeout,
-        )
+        prompts: list[dict[str, Any]] = []
+        seen_cursors: set[str] = set()
+        cursor: str | None = None
 
-        return [
-            {
-                "name": prompt.name,
-                "description": getattr(prompt, "description", ""),
-                "arguments": getattr(prompt, "arguments", []),
-            }
-            for prompt in prompts_result.prompts
-        ]
+        while True:
+            prompts_result = await asyncio.wait_for(
+                self.session.list_prompts(cursor=cursor),
+                timeout=self.discovery_timeout,
+            )
+
+            prompts.extend(
+                {
+                    "name": prompt.name,
+                    "description": getattr(prompt, "description", ""),
+                    "arguments": getattr(prompt, "arguments", []),
+                }
+                for prompt in prompts_result.prompts
+            )
+
+            if prompts_result.nextCursor is None:
+                return prompts
+            if prompts_result.nextCursor in seen_cursors:
+                raise RuntimeError(
+                    "MCP server returned a repeated prompts/list pagination cursor"
+                )
+            seen_cursors.add(prompts_result.nextCursor)
+            cursor = prompts_result.nextCursor
 
     async def get_prompt(
         self, prompt_name: str, arguments: dict[str, Any] | None = None
