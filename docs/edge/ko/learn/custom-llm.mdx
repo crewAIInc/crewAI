@@ -209,25 +209,34 @@ def supports_stop_words(self) -> bool:
     return True  # Your LLM supports stop sequences
 ```
 
-만약 사용 중인 LLM이 스톱 워드를 기본적으로 지원하지 않는다면:
+만약 사용 중인 LLM이 스톱 워드를 기본적으로 지원하지 않는다면, 상속받은
+`BaseLLM._apply_stop_words()` 헬퍼로 응답을 잘라내세요:
 
 ```python
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
-    # Manually truncate at stop words
-    if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
-    
-    return content
+    # Truncate at the stop word that appears earliest in the response
+    return self._apply_stop_words(content)
 
 def supports_stop_words(self) -> bool:
     return False  # Tell CrewAI we handle stop words manually
 ```
+
+이 헬퍼는 응답 텍스트에서 가장 앞에 나타나는 스톱 워드를 기준으로 잘라내므로,
+결과가 `self.stop`의 순서에 좌우되지 않습니다. 응답이
+`"hello EARLY middle LATE tail"`일 때 `["LATE", "EARLY"]`와 `["EARLY", "LATE"]`는
+모두 `"hello"`를 반환합니다. 잘라낸 텍스트에 `.strip()`이 적용되므로 `EARLY` 앞의
+공백은 의도적으로 제거됩니다. 스톱 워드가 하나도 포함되지 않은 응답은 그대로
+반환됩니다.
+
+<Warning>
+`self.stop`에 들어 있는 항목 중 응답에 존재하는 *첫 번째 항목*을 기준으로 잘라내지
+마세요(예: 첫 번째 일치에서 `break`하는 루프 안에서 `content.split(stop_word)[0]`을
+사용하는 방식). 이렇게 하면 목록에서 뒤에 나열된 스톱 워드 이후에 모델이 생성한
+텍스트가 남고, 스톱 워드 목록의 순서를 바꿀 때 출력이 달라집니다.
+</Warning>
 
 ## 함수 호출
 
