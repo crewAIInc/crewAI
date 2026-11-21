@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 from typing import Any, Final, Literal, Protocol, TypeGuard, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
@@ -20,7 +19,10 @@ from crewai.llms.base_llm import (
 )
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -71,8 +73,6 @@ _MAX_OUTPUT_TOKENS_BY_PREFIX: Final[tuple[tuple[str, int], ...]] = (
 )
 _DEFAULT_MODEL_MAX_TOKENS: Final[int] = 32000
 DEFAULT_MODEL: Final[str] = "claude-sonnet-4-6"
-
-_CLAUDE_MAJOR_VERSION: Final[re.Pattern[str]] = re.compile(r"claude-(?:[a-z]+-)?(\d+)")
 
 
 def _default_max_tokens_for_model(model: str) -> int:
@@ -2158,8 +2158,7 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             True if the model supports images and PDFs.
         """
-        match = _CLAUDE_MAJOR_VERSION.search(self.model.lower())
-        return match is not None and int(match.group(1)) >= 3
+        return claude_supports_vision(self.model)
 
     def get_file_uploader(self) -> Any:
         """Get an Anthropic file uploader using this LLM's clients.

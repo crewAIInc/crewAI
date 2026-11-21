@@ -757,6 +757,27 @@ class TestMessageContentText:
 
         assert message_content_text(msg) == "real text"
 
+    def test_non_dict_blocks_are_skipped(self) -> None:
+        """A list may contain non-dict blocks from a model; they carry no text."""
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [None, "x", 123, {"type": "text", "text": "real text"}],
+        }
+
+        assert message_content_text(msg) == "real text"
+
+    def test_non_dict_blocks_only_are_named_not_repr(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [None, "x", 123],
+        }
+
+        text = message_content_text(msg)
+
+        assert text == "[multimodal content]"
+        assert "None" not in text
+        assert "123" not in text
+
     def test_list_content_without_text_is_named_not_repr(self) -> None:
         msg: dict[str, Any] = {
             "role": "user",

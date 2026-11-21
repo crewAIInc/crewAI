@@ -1931,6 +1931,120 @@ methods:
     }
 
 
+@pytest.mark.parametrize("action_kind", ["agent", "crew"])
+def test_inline_flow_actions_resolve_project_refs_relative_to_flow_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, action_kind: str
+):
+    import sys
+
+    from crewai import Agent, Crew
+
+    project_root = tmp_path / "project"
+    tools_root = project_root / "tools"
+    tools_root.mkdir(parents=True)
+    (project_root / "flow_reply_models.py").write_text(
+        "from pydantic import BaseModel\n\n"
+        "class SupportReply(BaseModel):\n"
+        "    summary: str\n",
+        encoding="utf-8",
+    )
+    (tools_root / "lookup.py").write_text(
+        "from crewai.tools import BaseTool\n\n"
+        "class LookupTool(BaseTool):\n"
+        "    name: str = 'lookup'\n"
+        "    description: str = 'Look up support notes'\n\n"
+        "    def _run(self, query: str) -> str:\n"
+        "        return query\n",
+        encoding="utf-8",
+    )
+
+    if action_kind == "agent":
+
+        async def fake_agent_kickoff(
+            self: Agent,
+            messages: str,
+            response_format: type[BaseModel] | None = None,
+            **_kwargs: Any,
+        ) -> dict[str, Any]:
+            return {
+                "tools": [tool.name for tool in self.tools],
+                "model": response_format.__name__ if response_format else None,
+            }
+
+        monkeypatch.setattr(Agent, "kickoff_async", fake_agent_kickoff)
+        yaml_str = """
+schema: crewai.flow/v1
+name: SupportAgentFlow
+methods:
+  run_step:
+    do:
+      call: agent
+      with:
+        role: Support
+        goal: Answer questions
+        backstory: Knows the docs.
+        tools:
+          - custom:lookup
+        response_format:
+          python: flow_reply_models.SupportReply
+        input: "${state.topic}"
+    start: true
+"""
+    else:
+
+        async def fake_crew_kickoff(
+            self: Crew, **_kwargs: Any
+        ) -> dict[str, Any]:
+            output_model = self.tasks[0].output_pydantic
+            return {
+                "tools": [tool.name for tool in self.agents[0].tools],
+                "model": output_model.__name__ if output_model else None,
+            }
+
+        monkeypatch.setattr(Crew, "kickoff_async", fake_crew_kickoff)
+        yaml_str = """
+schema: crewai.flow/v1
+name: SupportCrewFlow
+methods:
+  run_step:
+    do:
+      call: crew
+      with:
+        agents:
+          researcher:
+            role: Researcher
+            goal: Research {topic}
+            backstory: Knows things.
+            tools:
+              - custom:lookup
+        tasks:
+          - description: Research {topic}
+            expected_output: Findings about {topic}
+            agent: researcher
+            output_pydantic:
+              python: flow_reply_models.SupportReply
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+
+    flow_path = project_root / "flow.yaml"
+    flow_path.write_text(yaml_str, encoding="utf-8")
+
+    other_cwd = tmp_path / "other"
+    other_cwd.mkdir()
+    monkeypatch.chdir(other_cwd)
+    monkeypatch.delitem(sys.modules, "flow_reply_models", raising=False)
+
+    try:
+        flow = Flow.from_declaration(path=flow_path)
+        result = flow.kickoff(inputs={"topic": "AI"})
+    finally:
+        sys.modules.pop("flow_reply_models", None)
+
+    assert result == {"tools": ["lookup"], "model": "SupportReply"}
+
+
 def test_crew_action_from_declaration_rejects_paths_outside_flow_file(
     tmp_path: Path,
 ):

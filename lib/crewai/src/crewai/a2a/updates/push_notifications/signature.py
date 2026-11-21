@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 import secrets
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, model_validator
 
 
 class WebhookSignatureMode(str, Enum):
@@ -50,6 +50,15 @@ class WebhookSignatureConfig(BaseModel):
         default="X-A2A-Signature-Timestamp",
         description="HTTP header name for the timestamp",
     )
+
+    @model_validator(mode="after")
+    def _require_secret_for_hmac(self) -> WebhookSignatureConfig:
+        """Reject HMAC mode without a usable secret."""
+        if self.mode is WebhookSignatureMode.HMAC_SHA256 and (
+            self.secret is None or not self.secret.get_secret_value()
+        ):
+            raise ValueError("secret is required when mode is 'hmac_sha256'")
+        return self
 
     @classmethod
     def generate_secret(cls, length: int = 32) -> str:

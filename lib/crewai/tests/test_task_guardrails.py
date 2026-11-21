@@ -1,5 +1,7 @@
-from unittest.mock import Mock, patch
+import json
+from unittest.mock import AsyncMock, Mock, patch
 
+from pydantic import BaseModel
 import pytest
 
 from crewai import Agent, Task
@@ -779,3 +781,114 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+class Score(BaseModel):
+    name: str
+    score: int
+
+
+def _structured_output_agent() -> Mock:
+    agent = Mock()
+    agent.role = "structured_agent"
+    agent.crew = None
+    agent.last_messages = []
+    agent.execute_task.return_value = '{"name": "x", "score": 3}'
+    agent.aexecute_task = AsyncMock(return_value='{"name": "x", "score": 3}')
+    return agent
+
+
+PASSING_GUARDRAIL_RESULTS = [
+    pytest.param(lambda output: output, {"name": "x", "score": 3}, id="task_output"),
+    pytest.param(
+        lambda output: Score(name="y", score=9), {"name": "y", "score": 9}, id="model"
+    ),
+    pytest.param(
+        lambda output: {"name": "z", "score": 1}, {"name": "z", "score": 1}, id="dict"
+    ),
+]
+
+
+@pytest.mark.parametrize("make_result,expected", PASSING_GUARDRAIL_RESULTS)
+def test_passing_guardrail_result_fills_output_pydantic(make_result, expected):
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_pydantic=Score,
+        guardrail=lambda output: (True, make_result(output)),
+    )
+
+    result = task.execute_sync(agent=_structured_output_agent())
+
+    assert result.pydantic == Score(**expected)
+    assert json.loads(result.raw) == expected
+
+
+@pytest.mark.parametrize("make_result,expected", PASSING_GUARDRAIL_RESULTS)
+def test_passing_guardrail_result_fills_output_json(make_result, expected):
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_json=Score,
+        guardrail=lambda output: (True, make_result(output)),
+    )
+
+    result = task.execute_sync(agent=_structured_output_agent())
+
+    assert result.json_dict == expected
+    assert json.loads(result.raw) == expected
+
+
+def test_passing_guardrail_task_output_fills_the_configured_field():
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_json=Score,
+        guardrail=lambda output: (
+            True,
+            output.model_copy(update={"pydantic": Score(name="x", score=3)}),
+        ),
+    )
+
+    result = task.execute_sync(agent=_structured_output_agent())
+
+    assert result.json_dict == {"name": "x", "score": 3}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("make_result,expected", PASSING_GUARDRAIL_RESULTS)
+async def test_passing_guardrail_result_fills_output_pydantic_async(
+    make_result, expected
+):
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_pydantic=Score,
+        guardrail=lambda output: (True, make_result(output)),
+    )
+
+    result = await task.aexecute_sync(agent=_structured_output_agent())
+
+    assert result.pydantic == Score(**expected)
+    assert json.loads(result.raw) == expected
+
+
+@pytest.mark.parametrize(
+    "guardrail_result",
+    [Score(name="y", score=9), {"name": "y", "score": 9}],
+    ids=["model", "dict"],
+)
+def test_passing_guardrail_result_replaces_native_structured_output(guardrail_result):
+    agent = _structured_output_agent()
+    agent.execute_task.return_value = Score(name="x", score=3)
+    task = create_smart_task(
+        description="Score the input",
+        expected_output="A score",
+        output_pydantic=Score,
+        guardrail=lambda output: (True, guardrail_result),
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.pydantic == Score(name="y", score=9)
+    assert json.loads(result.raw) == {"name": "y", "score": 9}
