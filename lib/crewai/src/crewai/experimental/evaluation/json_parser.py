@@ -29,4 +29,17 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
                 return parsed
             except json.JSONDecodeError:  # noqa: PERF203
                 continue
+
+    # Evaluation models often put a valid object after a short explanation
+    # without a markdown fence.  ``raw_decode`` understands nested objects and
+    # braces inside JSON strings, unlike a greedy ``.*`` regular expression.
+    decoder = json.JSONDecoder()
+    for candidate in re.finditer(r"[\{\[]", text):
+        try:
+            parsed, _ = decoder.raw_decode(text, candidate.start())
+        except json.JSONDecodeError:  # noqa: PERF203
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
     raise ValueError("No valid JSON found in the response")
