@@ -1,0 +1,105 @@
+---
+title: أدوات Anakin
+description: استخرج محتوى الويب وابحث فيه وزحف عبر المواقع وأجرِ أبحاثًا باستخدام Anakin، مع إجراءات جاهزة للمواقع ومراقبة الصفحات ومتصفح سحابي يعمل بالذكاء الاصطناعي.
+icon: globe
+mode: "wide"
+---
+
+# أدوات Anakin
+
+تحوّل [Anakin](https://anakin.io) المواقع الإلكترونية إلى Markdown نظيف أو JSON منظم. توفر حزمة
+`crewai-anakin` لوكلاء CrewAI عدد 22 أداة من Anakin: استخراج محتوى صفحة، والبحث في الويب، ورسم
+خريطة موقع والزحف عبره، وإجراء أبحاث عبر مصادر متعددة، واستخدام إجراءات Wire الجاهزة على مئات
+المواقع، ومراقبة التغييرات في الصفحات، ومقارنة محركات الإجابة بالذكاء الاصطناعي، والتحكم في متصفح سحابي.
+
+تتولى Anakin صيانة الحزمة، وهي منشورة على PyPI
+([الشيفرة المصدرية](https://github.com/Anakin-Inc/crewai-anakin)).
+
+## التثبيت
+
+```shell
+uv add crewai-anakin
+```
+
+## متغيرات البيئة
+
+- `ANAKIN_API_KEY` (مطلوب)
+
+احصل على مفتاح API مجاني من [لوحة تحكم Anakin](https://anakin.io/dashboard).
+
+## الأدوات المضمنة
+
+بيانات الويب:
+
+- `AnakinScrapeTool`: صفحة واحدة بتنسيق Markdown نظيف، مع JSON مستخرج بالذكاء الاصطناعي عند الطلب.
+- `AnakinSearchTool`: بحث في الويب يعيد الروابط والعناوين والمقتطفات فورًا.
+- `AnakinMapTool`: جميع روابط الموقع، لتحديد ما يجب الزحف إليه.
+- `AnakinCrawlTool`: صفحات متعددة من موقع واحد بتنسيق Markdown، مع تحديد النطاق بأنماط تضمين واستبعاد.
+- `AnakinAgenticSearchTool`: بحث عبر مصادر متعددة يعيد ملخصًا وبيانات منظمة.
+
+إجراءات المواقع الجاهزة (Wire) والمراقبة ورؤية الذكاء الاصطناعي وأتمتة المتصفح:
+
+- `AnakinWireDiscoverTool` و`AnakinWireCatalogTool` و`AnakinWireReadActionTool` و`AnakinWireWriteActionTool` وغيرها: ابحث عن إجراءات مختبرة وشغّلها على مواقع مثل Amazon وLinkedIn وZillow.
+- `AnakinMonitorCreateTool` وأدوات المراقبة الأخرى: راقب صفحة أو موقعًا أو إجراء Wire وفق جدول زمني.
+- `AnakinAiVisibilitySearchTool`: اطرح السؤال نفسه على ChatGPT وGemini وGoogle AI Overview وقارن الإجابات.
+- `AnakinBrowserTaskTool`: وكيل ذكاء اصطناعي يتحكم في متصفح حقيقي لتنفيذ مهمة متعددة الخطوات.
+
+تعيد `get_anakin_tools()` جميع الأدوات الـ 22 باستخدام عميل مشترك واحد. مرّر `read_only=True`
+لاستبعاد الأدوات السبع التي تغيّر شيئًا في موقع ما أو في حسابك على Anakin، أو تبدأ مهمة طويلة
+مدفوعة (مثل `AnakinBrowserTaskTool`).
+
+## أمثلة
+
+### استخراج محتوى صفحة
+
+```python Code
+from crewai_anakin import AnakinScrapeTool
+
+tool = AnakinScrapeTool()
+print(tool.run(url="https://example.com"))
+```
+
+### الزحف عبر جزء من موقع
+
+```python Code
+from crewai_anakin import AnakinCrawlTool
+
+tool = AnakinCrawlTool()
+print(tool.run(url="https://docs.example.com", max_pages=20, include_patterns=["/guides/*"]))
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_anakin import AnakinScrapeTool, AnakinSearchTool
+
+agent = Agent(
+    role="Market Researcher",
+    goal="Answer questions with facts from the web",
+    backstory="An analyst who cites the pages used",
+    tools=[AnakinSearchTool(), AnakinScrapeTool()],
+    verbose=True,
+)
+
+task = Task(
+    description="What do the top three CRM vendors charge per seat?",
+    expected_output="A table of vendor, plan and price per seat, with source URLs",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+- 401: تحقق من `ANAKIN_API_KEY`.
+- 402: نفد رصيد الحساب.
+- محتوى فارغ من صفحة تعتمد كثيرًا على JavaScript: مرّر `use_browser=True` إلى `AnakinScrapeTool` أو `AnakinCrawlTool`.
+- رفض المدفوعات: ترفض `AnakinWireWriteActionTool` و`AnakinWireBuildTool` و`AnakinBrowserTaskTool` الطلبات التي تبدو كعملية دفع أو تحويل أموال، ما لم تُنشأ الأداة مع `allow_financial_actions=True`.
