@@ -1820,3 +1820,81 @@ class TestLearnOnResume:
             ["Lead with the customer outcome"], source="hitl"
         )
         assert "first draft" in llm.call.call_args.args[0][1]["content"]
+
+
+class TestResumeDispatchesPostStep:
+    """Regression tests for issue #9064: a @human_feedback method finalized
+    through from_pending(...).resume(...) must dispatch POST_STEP exactly like
+    the inline completion path."""
+
+    def _make_flow(self, provider=None):
+        from crewai.flow import Flow, human_feedback, listen, start
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(message="Review draft", provider=provider)
+            def review(self):
+                return "draft"
+
+            @listen(review)
+            def finish(self, result):
+                return result
+
+        return ReviewFlow
+
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resume_runs_post_step_hook_and_applies_payload(self, mock_emit):
+        """The resumed review method dispatches one POST_STEP hook and the
+        returned payload replaces the result, as inline feedback does."""
+        from crewai.flow import HumanFeedbackPending
+        from crewai.hooks import InterceptionPoint, clear_all_hooks, on
+
+        class PendingProvider:
+            def request_feedback(self, context, flow):
+                raise HumanFeedbackPending(context=context)
+
+        calls: list[str] = []
+
+        @on(InterceptionPoint.POST_STEP)
+        def normalize(ctx):
+            if ctx.kind == "flow_method" and ctx.step_name == "review":
+                calls.append(ctx.step_name)
+                return "normalized"
+            return None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+            flow = self._make_flow(provider=PendingProvider())(
+                persistence=persistence, suppress_flow_events=True
+            )
+            pending = flow.kickoff()
+            assert isinstance(pending, HumanFeedbackPending)
+
+            restored = self._make_flow(provider=PendingProvider()).from_pending(
+                pending.context.flow_id, persistence, suppress_flow_events=True
+            )
+            result = restored.resume("reviewed")
+
+        assert calls == ["review"]
+        assert result == "normalized"
+        clear_all_hooks()
+
+    @patch("builtins.input", return_value="ship it")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_inline_feedback_still_runs_post_step(self, mock_emit, mock_input):
+        """Sanity: the inline path keeps dispatching POST_STEP (unchanged)."""
+        from crewai.hooks import InterceptionPoint, clear_all_hooks, on
+
+        calls: list[str] = []
+
+        @on(InterceptionPoint.POST_STEP)
+        def record(ctx):
+            if ctx.kind == "flow_method" and ctx.step_name == "review":
+                calls.append(ctx.step_name)
+            return None
+
+        flow = self._make_flow()(suppress_flow_events=True)
+        flow.kickoff()
+
+        assert calls == ["review"]
+        clear_all_hooks()
