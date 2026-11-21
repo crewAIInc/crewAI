@@ -2759,6 +2759,8 @@ class LLM(BaseLLM):
         return LLM(
             model=self.model,
             is_litellm=self.is_litellm,
+            timeout=self.timeout,
+            context_window_size=self.context_window_size,
             temperature=self.temperature,
             top_p=self.top_p,
             n=self.n,
@@ -2822,6 +2824,8 @@ class LLM(BaseLLM):
         return LLM(
             model=self.model,
             is_litellm=self.is_litellm,
+            timeout=self.timeout,
+            context_window_size=self.context_window_size,
             temperature=self.temperature,
             top_p=self.top_p,
             n=self.n,
