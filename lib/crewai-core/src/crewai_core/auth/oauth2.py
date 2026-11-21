@@ -21,6 +21,10 @@ console = Console()
 # self-hosted provider that omits it anyway.
 _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS = 600
 
+# RFC 8628 section 3.2 makes `interval` optional and defines 5 seconds as the
+# value to use when the provider omits it.
+_DEFAULT_DEVICE_CODE_INTERVAL_SECONDS = 5
+
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
@@ -174,7 +178,9 @@ class AuthenticationCommand:
                     token_data.get("error_description") or token_data.get("error")
                 )
 
-            time.sleep(device_code_data["interval"])
+            time.sleep(
+                device_code_data.get("interval", _DEFAULT_DEVICE_CODE_INTERVAL_SECONDS)
+            )
 
         console.print(
             "Timeout: the login code expired before sign-in finished. "
