@@ -729,6 +729,126 @@ Access all feedback collected during a flow via `self.last_human_feedback` (most
 
 For a complete guide on human feedback in flows, including **async/non-blocking feedback** with custom providers (Slack, webhooks, etc.), see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
 
+## Custom Input Providers
+
+<Note>
+`Flow.ask()` and the `InputProvider` protocol require **CrewAI version 1.10.0 or higher**.
+</Note>
+
+`Flow.ask()` lets a flow method prompt for input **inside a running step** — a wizard question, a clarification, a missing field. By default, `ask()` blocks reading from the console. To collect input somewhere else (a web UI, a ticket queue, a test), set `input_provider` on your Flow to any object implementing the `InputProvider` protocol: a single `request_input(message, flow, metadata=None)` method that returns the answer as a string, an `InputResponse` with optional response metadata, or `None` when input is unavailable.
+
+### Example: scripted input provider
+
+The following complete example replays scripted answers — no console, no model calls, no credentials — so you can run it as-is and see the whole contract: request metadata reaching the provider, response metadata coming back through `InputResponse`, and `None` signaling unavailable input.
+
+```python
+from typing import Any
+
+from crewai.flow import Flow, InputResponse, start
+
+
+class ScriptedInputProvider:
+    """Replays scripted answers, then reports that input is unavailable."""
+
+    def __init__(self, answers: list[str]) -> None:
+        self.answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | None:
+        # metadata is whatever the caller passed to ask()
+        self.received_metadata.append(metadata)
+
+        if not self.answers:
+            return None  # no input available (queue closed, user left)
+
+        answer = self.answers.pop(0)
+        return InputResponse(
+            text=answer,
+            metadata={"responded_by": "scripted-user"},  # response metadata
+        )
+
+
+class TicketFlow(Flow):
+    input_provider = ScriptedInputProvider(["My printer is on fire"])
+
+    @start()
+    def triage(self) -> str:
+        issue = self.ask("Describe the issue:", metadata={"channel": "web"})
+        if issue is None:
+            # ask() returns None when input is unavailable - handle it
+            # explicitly instead of treating it as an answer.
+            print("No answer received; opening the ticket as untriaged.")
+            return "untriaged"
+
+        print(f"Ticket issue: {issue}")
+        priority = self.ask("What priority is this?", metadata={"channel": "web"})
+        if priority is None:
+            print("Priority unavailable; defaulting to normal.")
+            return "normal"
+
+        print(f"Ticket priority: {priority}")
+        return priority
+
+
+flow = TicketFlow(suppress_flow_events=True)  # keep console output clean
+result = flow.kickoff()
+print(f"Final result: {result}")
+
+# ask() returns the response text; response metadata stays in input_history
+for entry in flow.input_history:
+    print(f"Q: {entry['message']}")
+    print(f"A: {entry['response']}")
+    print(f"Request metadata: {entry['metadata']}")
+    print(f"Response metadata: {entry['response_metadata']}")
+```
+
+Run it:
+
+```bash
+python ticket_flow.py
+```
+
+Expected output:
+
+```text
+Ticket issue: My printer is on fire
+Priority unavailable; defaulting to normal.
+Final result: normal
+Q: Describe the issue:
+A: My printer is on fire
+Request metadata: {'channel': 'web'}
+Response metadata: {'responded_by': 'scripted-user'}
+Q: What priority is this?
+A: None
+Request metadata: {'channel': 'web'}
+Response metadata: None
+```
+
+Things to notice:
+
+- **Request metadata flows out.** Both `ask()` calls pass `metadata={"channel": "web"}`, and the provider receives it — use this to route the question to the right place (channel, user, session).
+- **Response metadata flows back.** The provider wraps its answer in an `InputResponse`. `ask()` still returns just the response text; the extra fields land in `flow.input_history`.
+- **`None` means unavailable, not empty.** An empty string means the user submitted nothing on purpose; `None` means no input could be collected. The flow checks for `None` explicitly and never treats it as an answer.
+- **`input_history` is the audit trail.** Every `ask()` call appends one entry with `message`, `response`, `method_name`, `timestamp`, `metadata` (sent to the provider), and `response_metadata` (returned by the provider).
+
+### `ask()` vs `handle_turn()`
+
+`ask()` collects input for the step that is **already running**. `handle_turn()` starts a **new conversational turn** through the conversational graph — it is the entry point for each user message in a chat app, not a mid-step prompt.
+
+| | `ask()` | `handle_turn()` |
+|---|---------|-----------------|
+| Called from | Inside a flow method (`@start`, `@listen`) | Your transport layer (REST, WebSocket, REPL) |
+| Purpose | Mid-step input: wizard, clarification | One chat turn with the full graph |
+| Requires | An `InputProvider` (console by default) | Conversational mode (`@ConversationConfig`) |
+| Returns | Response text, or `None` if unavailable | The assistant's reply for that turn |
+
+For the turn-based pattern, see [Conversational Flows](/en/guides/flows/conversational-flows).
+
 ## Adding Agents to Flows
 
 Agents can be seamlessly integrated into your flows, providing a lightweight alternative to full Crews when you need simpler, focused task execution. Here's an example of how to use an Agent within a flow to perform market research:

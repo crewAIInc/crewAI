@@ -726,6 +726,126 @@ def next_step(self, result: HumanFeedbackResult):
 
 للحصول على دليل كامل حول التغذية الراجعة البشرية في التدفقات، بما في ذلك **التغذية الراجعة غير المتزامنة/غير الحاجبة** مع مزودين مخصصين (Slack، webhooks، إلخ)، انظر [التغذية الراجعة البشرية في التدفقات](/ar/learn/human-feedback-in-flows).
 
+## مزودو الإدخال المخصصون
+
+<Note>
+تتطلب `Flow.ask()` وبروتوكول `InputProvider` **الإصدار 1.10.0 أو أحدث من CrewAI**.
+</Note>
+
+تتيح `Flow.ask()` لدالة التدفق طلب إدخال **داخل خطوة قيد التنفيذ** — سؤال معالج إرشادي، أو طلب توضيح، أو حقل ناقص. افتراضيًا، تنتظر `ask()` القراءة من وحدة التحكم. لجمع الإدخال من مكان آخر (واجهة ويب، أو قائمة تذاكر، أو اختبار)، اضبط `input_provider` على التدفق الخاص بك لأي كائن يطبق بروتوكول `InputProvider`: دالة واحدة `request_input(message, flow, metadata=None)` تُرجع الإجابة كسلسلة نصية، أو `InputResponse` مع بيانات وصفية اختيارية للإجابة، أو `None` عندما يكون الإدخال غير متاح.
+
+### مثال: مزود إدخال مُبرمَج
+
+يعيد المثال الكامل التالي تشغيل إجابات مُبرمَجة — بدون وحدة تحكم، أو استدعاءات نموذج، أو بيانات اعتماد — حتى تتمكن من تشغيله كما هو ورؤية العقد الكامل: البيانات الوصفية للطلب تصل إلى المزود، والبيانات الوصفية للإجابة تعود عبر `InputResponse`، و`None` يشير إلى إدخال غير متاح.
+
+```python
+from typing import Any
+
+from crewai.flow import Flow, InputResponse, start
+
+
+class ScriptedInputProvider:
+    """Replays scripted answers, then reports that input is unavailable."""
+
+    def __init__(self, answers: list[str]) -> None:
+        self.answers = list(answers)
+        self.received_metadata: list[dict[str, Any] | None] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | None:
+        # metadata is whatever the caller passed to ask()
+        self.received_metadata.append(metadata)
+
+        if not self.answers:
+            return None  # no input available (queue closed, user left)
+
+        answer = self.answers.pop(0)
+        return InputResponse(
+            text=answer,
+            metadata={"responded_by": "scripted-user"},  # response metadata
+        )
+
+
+class TicketFlow(Flow):
+    input_provider = ScriptedInputProvider(["My printer is on fire"])
+
+    @start()
+    def triage(self) -> str:
+        issue = self.ask("Describe the issue:", metadata={"channel": "web"})
+        if issue is None:
+            # ask() returns None when input is unavailable - handle it
+            # explicitly instead of treating it as an answer.
+            print("No answer received; opening the ticket as untriaged.")
+            return "untriaged"
+
+        print(f"Ticket issue: {issue}")
+        priority = self.ask("What priority is this?", metadata={"channel": "web"})
+        if priority is None:
+            print("Priority unavailable; defaulting to normal.")
+            return "normal"
+
+        print(f"Ticket priority: {priority}")
+        return priority
+
+
+flow = TicketFlow(suppress_flow_events=True)  # keep console output clean
+result = flow.kickoff()
+print(f"Final result: {result}")
+
+# ask() returns the response text; response metadata stays in input_history
+for entry in flow.input_history:
+    print(f"Q: {entry['message']}")
+    print(f"A: {entry['response']}")
+    print(f"Request metadata: {entry['metadata']}")
+    print(f"Response metadata: {entry['response_metadata']}")
+```
+
+شغّله:
+
+```bash
+python ticket_flow.py
+```
+
+الناتج المتوقع:
+
+```text
+Ticket issue: My printer is on fire
+Priority unavailable; defaulting to normal.
+Final result: normal
+Q: Describe the issue:
+A: My printer is on fire
+Request metadata: {'channel': 'web'}
+Response metadata: {'responded_by': 'scripted-user'}
+Q: What priority is this?
+A: None
+Request metadata: {'channel': 'web'}
+Response metadata: None
+```
+
+نقاط تستحق الانتباه:
+
+- **البيانات الوصفية للطلب تتدفق للخارج.** كلتا استدعاءتي `ask()` تمرر `metadata={"channel": "web"}`، ويتلقاها المزود — استخدم هذا لتوجيه السؤال إلى المكان الصحيح (قناة، مستخدم، جلسة).
+- **البيانات الوصفية للإجابة تتدفق للداخل.** يغلف المزود إجابته في `InputResponse`. تُرجع `ask()` نص الإجابة فقط؛ أما الحقول الإضافية فتصل إلى `flow.input_history`.
+- **`None` تعني غير متاح، وليس فارغًا.** السلسلة النصية الفارغة تعني أن المستخدم لم يرسل شيئًا عمدًا؛ أما `None` فتعني أنه تعذر جمع أي إدخال. يتحقق التدفق من `None` صراحةً ولا يعاملها أبدًا كإجابة.
+- **`input_history` هو سجل التدقيق.** كل استدعاء `ask()` يضيف إدخالًا واحدًا يحمل `message` و`response` و`method_name` و`timestamp` و`metadata` (المرسل إلى المزود) و`response_metadata` (المرجَع من المزود).
+
+### `ask()` مقابل `handle_turn()`
+
+يجمع `ask()` إدخالًا للخطوة التي **قيد التنفيذ بالفعل**. أما `handle_turn()` فيبدأ **دورة محادثة جديدة** عبر الرسم البياني للمحادثة — فهو نقطة الدخول لكل رسالة مستخدم في تطبيق دردشة، وليس مطالبة في منتصف خطوة.
+
+| | `ask()` | `handle_turn()` |
+|---|---------|-----------------|
+| يُستدعى من | داخل دالة تدفق (`@start`، `@listen`) | طبقة النقل لديك (REST، WebSocket، REPL) |
+| الغرض | إدخال في منتصف الخطوة: معالج إرشادي، توضيح | دورة دردشة واحدة عبر الرسم البياني الكامل |
+| يتطلب | `InputProvider` (وحدة التحكم افتراضيًا) | الوضع المحادثاتي (`@ConversationConfig`) |
+| يُرجع | نص الإجابة، أو `None` إذا لم يكن متاحًا | رد المساعد ل تلك الدورة |
+
+للنمط القائم على الدورات، راجع [التدفقات المحادثاتية](/ar/guides/flows/conversational-flows).
+
 ## إضافة Agents إلى التدفقات
 
 يمكن دمج Agents بسلاسة في تدفقاتك، مما يوفر بديلًا خفيف الوزن لفرق Crew الكاملة عندما تحتاج إلى تنفيذ مهام أبسط وأكثر تركيزًا. إليك مثال على كيفية استخدام Agent ضمن تدفق لإجراء أبحاث السوق:
