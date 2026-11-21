@@ -10,6 +10,8 @@ import logging
 from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
 
+from crewai.utilities.network_guard import run_in_new_loop
+
 
 if TYPE_CHECKING:
     from aiocache import Cache  # type: ignore[import-untyped]
@@ -49,10 +51,10 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
         asyncio.get_running_loop()
         ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(ctx.run, asyncio.run, coro)
+            future = executor.submit(ctx.run, run_in_new_loop, coro)
             return future.result()
     except RuntimeError:
-        return asyncio.run(coro)
+        return run_in_new_loop(coro)
 
 
 DEFAULT_TTL = 3600

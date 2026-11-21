@@ -1,12 +1,48 @@
+import socket
 import threading
 from unittest.mock import Mock
 
+import pytest
+
 from crewai.events.base_events import BaseEvent
-from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
 
 
 class TestEvent(BaseEvent):
     pass
+
+
+def test_executor_init_survives_socket_blocking_guards(monkeypatch):
+    """Event-bus startup must not be broken by socket-blocking test guards.
+
+    Windows emulates ``socket.socketpair()`` with a real ``connect()`` to
+    127.0.0.1, and asyncio builds every event loop's self-pipe that way.
+    Socket-blocking guards (pytest-recording's ``--block-network``,
+    pytest-socket's ``--disable-socket``) replace ``socket.socket.connect``
+    and reject that internal, non-network self-pipe, so the first ``emit()``
+    dies with "Network is disabled" before any test logic runs. Linux builds
+    the self-pipe via ``os.socketpair()`` and never calls ``connect()``,
+    which is why CI never sees this. The event bus must initialize under the
+    guard and put the guard back afterwards.
+    """
+
+    def _network_guard(self, address, *args, **kwargs):
+        raise RuntimeError("Network is disabled")
+
+    monkeypatch.setattr(socket.socket, "connect", _network_guard)
+    monkeypatch.setattr(socket.socket, "connect_ex", _network_guard)
+
+    bus = CrewAIEventsBus()
+    bus._ensure_executor_initialized()
+
+    assert bus._loop is not None
+    bus._loop.call_soon_threadsafe(lambda: None)
+
+    # The guard must be reinstated once the loop exists.
+    with pytest.raises(RuntimeError, match="Network is disabled"):
+        socket.socket().connect(("127.0.0.1", 1))
+
+    monkeypatch.undo()
 
 
 def test_specific_event_handler():
