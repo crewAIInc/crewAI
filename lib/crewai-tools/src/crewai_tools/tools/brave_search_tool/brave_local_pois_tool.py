@@ -50,6 +50,21 @@ def _simplify_opening_hours(result: LocationResult) -> list[dict[str, str]] | No
     return entries or None
 
 
+def _format_location_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Flatten one POI result, tolerating nullable nested objects."""
+    postal_address = result.get("postal_address") or {}
+    contact = result.get("contact") or {}
+
+    return {
+        "title": result.get("title"),
+        "url": result.get("url"),
+        "description": result.get("description"),
+        "address": postal_address.get("displayAddress"),
+        "contact": contact.get("telephone") or contact.get("email") or None,
+        "opening_hours": _simplify_opening_hours(cast(LocationResult, result)),
+    }
+
+
 class BraveLocalPOIsTool(BraveSearchToolBase):
     """A tool that retrieves local POIs using the Brave Search API."""
 
@@ -67,19 +82,7 @@ class BraveLocalPOIsTool(BraveSearchToolBase):
 
     def _refine_response(self, response: dict[str, Any]) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = response.get("results", [])
-        return [
-            {
-                "title": result.get("title"),
-                "url": result.get("url"),
-                "description": result.get("description"),
-                "address": result.get("postal_address", {}).get("displayAddress"),
-                "contact": result.get("contact", {}).get("telephone")
-                or result.get("contact", {}).get("email")
-                or None,
-                "opening_hours": _simplify_opening_hours(cast(LocationResult, result)),
-            }
-            for result in results
-        ]
+        return [_format_location_result(result) for result in results]
 
 
 class BraveLocalPOIsDescriptionTool(BraveSearchToolBase):
