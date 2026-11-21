@@ -826,14 +826,19 @@ def eval_command(
     """Evaluate this crew through CrewAI AMP, or compare models on the project's
     deployment (--models).
 
-    It grades the project's last traced run. When there is none, or the project
-    changed since it, it runs the crew first and grades that run: the run is
-    traced and its trace sent to CrewAI AMP, which grades it. The first time
-    tracing is turned on for the project, a person at a terminal is asked
-    first; with no terminal (a coding agent, a script) nothing is asked and the
-    command says it turned tracing on, so `crewai eval` alone takes an agent
-    from a change to its verdict. A project that turned tracing off is asked
-    at a terminal, and told how to turn it on without one.
+    It grades the project's last traced run. When there is none, it asks you to
+    run your crew with `crewai run` first, and turns tracing on for the project
+    so that run is traced. When the project changed since its last traced run,
+    it runs the crew again and grades that run: the run is traced and its trace
+    sent to CrewAI AMP, which grades it. The first time tracing is turned on for
+    the project, a person at a terminal is asked first; with no terminal (a
+    coding agent, a script) nothing is asked and the command says it turned
+    tracing on. A project that turned tracing off is asked at a terminal, and
+    told how to turn it on without one.
+
+    After the verdict it prints the report and trace links, and where to go
+    next: `crewai deploy` for continuous monitoring, and `eval.jsonc` for the
+    criteria.
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act
