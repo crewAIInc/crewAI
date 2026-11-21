@@ -209,20 +209,16 @@ def supports_stop_words(self) -> bool:
     return True  # Your LLM supports stop sequences
 ```
 
-If your LLM doesn't support stop words natively:
+If your LLM doesn't support stop words natively, truncate the response with `BaseLLM._apply_stop_words`. The cut is the earliest occurrence of any stop word in the generated text. Both `stop=["LATE", "EARLY"]` and `stop=["EARLY", "LATE"]` turn `"hello EARLY middle LATE tail"` into `"hello"`, because `EARLY` appears first and the kept prefix is passed through `str.strip()`. Text that contains none of the stop words is returned unchanged.
 
 ```python
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
-    
-    # Manually truncate at stop words
-    if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
-    
+
+    # Earliest stop word in the text wins; the kept prefix is stripped.
+    content = self._apply_stop_words(content)
+
     return content
 
 def supports_stop_words(self) -> bool:
