@@ -105,6 +105,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_wiro_config(self):
+        """Test Wiro AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["wiro"]
+        assert config.base_url == "https://llm.wiro.ai/v1"
+        assert config.api_key_env == "WIRO_API_KEY"
+        assert config.base_url_env == "WIRO_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -411,6 +419,46 @@ class TestLLMIntegration:
         """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
 
+    @pytest.mark.parametrize(
+        "model_id",
+        [
+            "openai/gpt-5-4-nano",
+            "claude/sonnet-5",
+            "google/gemini-3-pro",
+            "deepseek/v4-flash",
+        ],
+    )
+    def test_llm_creates_openai_compatible_for_wiro(self, model_id):
+        """Wiro ids are owner/model and the owner is often a crewAI prefix too:
+        only the leading wiro/ names the provider, the rest is the model id."""
+        with patch.dict(os.environ, {"WIRO_API_KEY": "test-key"}):
+            llm = LLM(model=f"wiro/{model_id}")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "wiro"
+            assert llm.model == model_id
+            assert llm.base_url == "https://llm.wiro.ai/v1"
+
+    def test_wiro_base_url_env_override(self):
+        """WIRO_BASE_URL replaces the default Wiro endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "WIRO_API_KEY": "test-key",
+                "WIRO_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="wiro/openai/gpt-5-4-nano")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_wiro_explicit_provider(self):
+        """Explicit provider="wiro" routes natively and keeps the owner/model id."""
+        with patch.dict(os.environ, {"WIRO_API_KEY": "test-key"}):
+            llm = LLM(model="openai/gpt-5-4-nano", provider="wiro")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "wiro"
+            assert llm.model == "openai/gpt-5-4-nano"
+
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
         with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
@@ -455,6 +503,7 @@ KEYED_PROVIDERS = {
     "cerebras": "llama3.1-8b",
     "dashscope": "qwen-turbo",
     "deepinfra": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "wiro": "openai/gpt-5-4-nano",
 }
 
 WEATHER_TOOL = {
@@ -665,3 +714,19 @@ class TestCallMatrixWithAKey:
             "tool_call_id": "call_1",
             "content": "sunny, 21C",
         }
+
+    def test_wiro_sends_the_owner_and_model_id_unchanged(self, server):
+        """The request names the id after wiro/ as its model, owner included."""
+        import httpx
+
+        requests, replies = server
+        replies.append(
+            httpx.Response(200, json=_completion({"content": "Hello there"}))
+        )
+        llm = self.build("wiro")
+
+        with patch.dict(os.environ, {}, clear=True):
+            assert llm.call("Say hi") == "Hello there"
+
+        assert str(requests[0].url) == "https://llm.wiro.ai/v1/chat/completions"
+        assert json.loads(requests[0].content)["model"] == "openai/gpt-5-4-nano"

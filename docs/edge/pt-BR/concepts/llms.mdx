@@ -761,6 +761,39 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     [catálogo de modelos selecionado para o CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     que é público e não exige autenticação, para obter os IDs atuais, tamanhos de contexto e preços.
   </Accordion>
+
+  <Accordion title="Wiro AI">
+    O CrewAI se comunica com a Wiro AI pelo cliente OpenAI nativo, então não é necessário instalar o LiteLLM.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    WIRO_API_KEY=<your-api-key>
+
+    # Optional, overrides the default base URL
+    WIRO_BASE_URL=https://llm.wiro.ai/v1
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="wiro/openai/gpt-5-4-nano"
+    )
+    ```
+
+    <Info>
+      Recursos da Wiro AI:
+      - Modelos GPT, Claude, Gemini, Grok, DeepSeek, Qwen e outros em uma única API compatível com OpenAI, com uma única chave de API
+      - Chamada de ferramentas, streaming e saídas estruturadas com JSON schema
+      - Chat Completions por padrão e a Responses API com `api="responses"`
+    </Info>
+
+    Os IDs dos modelos já estão no formato `owner/model`, então uma referência completa tem três segmentos,
+    por exemplo `wiro/claude/sonnet-5`. Consulte o [catálogo de modelos](https://wiro.ai/models?categories=llm-tool-call)
+    ou chame `GET https://llm.wiro.ai/v1/models` com a sua chave para obter os IDs atuais.
+    Crie um projeto em [wiro.ai/panel/project/new](https://wiro.ai/panel/project/new) para obter uma chave de API.
+    A [documentação do gateway](https://wiro.ai/docs/completions-api) descreve a API.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming
