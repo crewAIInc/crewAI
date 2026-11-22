@@ -148,6 +148,12 @@ def _to_serializable_key(key: Any) -> str:
         return _to_serializable_key(key.value)
     if isinstance(key, (str, int)):
         return str(key)
+    if isinstance(key, float):
+        # repr, not str: keeps the key stable for equal float values instead
+        # of falling through to the id-based fallback below.
+        return repr(key)
+    if isinstance(key, uuid.UUID):
+        return str(key)
     if isinstance(key, (date, datetime)):
         return key.isoformat()
     if isinstance(key, (tuple, list)):
