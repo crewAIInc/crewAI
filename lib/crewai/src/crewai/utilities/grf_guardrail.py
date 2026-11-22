@@ -3,6 +3,13 @@
 The adapter invokes the project's existing GRF CLI check and returns the
 ``(passed, feedback)`` pair expected by ``Task.guardrail``. It never enrolls a
 project in cloud services or changes the user's GRF session.
+
+This is a user-imported helper, not a default guardrail or a top-level export::
+
+    from crewai import Task
+    from crewai.utilities.grf_guardrail import grf_guardrail
+
+    task = Task(..., guardrail=grf_guardrail("/path/to/configured/project"))
 """
 
 from __future__ import annotations

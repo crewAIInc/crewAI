@@ -1,23 +1,10 @@
 from __future__ import annotations
 
-import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
 
-
-_SOURCE = (
-    Path(__file__).parents[2]
-    / "src"
-    / "crewai"
-    / "utilities"
-    / "grf_guardrail.py"
-)
-_SPEC = importlib.util.spec_from_file_location("grf_guardrail_under_test", _SOURCE)
-if _SPEC is None or _SPEC.loader is None:
-    raise RuntimeError(f"Cannot load GRF guardrail module at {_SOURCE}")
-_MODULE = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(_MODULE)
+from crewai.utilities.grf_guardrail import grf_guardrail
 
 
 class GrfGuardrailTests(unittest.TestCase):
@@ -31,7 +18,7 @@ class GrfGuardrailTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            passed, feedback = _MODULE.grf_guardrail(project)(None)
+            passed, feedback = grf_guardrail(project)(None)
 
         self.assertFalse(passed)
         self.assertIn("acceptance is incomplete", feedback)
@@ -50,7 +37,7 @@ class GrfGuardrailTests(unittest.TestCase):
                 "print('acceptance passed')\n",
                 encoding="utf-8",
             )
-            check = _MODULE.grf_guardrail(project)
+            check = grf_guardrail(project)
 
             rejected, failure = check(None)
             acceptance.write_text("complete", encoding="utf-8")
@@ -63,7 +50,7 @@ class GrfGuardrailTests(unittest.TestCase):
 
     def test_missing_cli_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            passed, feedback = _MODULE.grf_guardrail(directory)(None)
+            passed, feedback = grf_guardrail(directory)(None)
 
         self.assertFalse(passed)
         self.assertIn("grf.py", feedback)
@@ -71,7 +58,7 @@ class GrfGuardrailTests(unittest.TestCase):
     def test_nonpositive_timeout_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "timeout must be greater than zero"):
-                _MODULE.grf_guardrail(directory, timeout=0)
+                grf_guardrail(directory, timeout=0)
 
 
 if __name__ == "__main__":
