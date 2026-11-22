@@ -21,6 +21,7 @@ from crewai_core.platform_apps import (
     PLATFORM_APP_TOOLS,
     PLATFORM_APP_TOOL_COUNTS,
 )
+from crewai_core.plus_api import restore_machine_transport
 from crewai_core.settings import Settings
 from crewai_core.telemetry import Telemetry
 import httpx
@@ -297,6 +298,10 @@ _COMMON_TOOL_ORDER = [
     "platform:gmail",
     "platform:whatsapp",
 ]
+
+# requests settings that restore_machine_transport does not pin: CA bundles,
+# and CREWAI_FACTORY, which turns off TLS verification in the platform client.
+_REQUESTS_TRANSPORT = ("REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "CREWAI_FACTORY")
 
 _ANSI_SEQUENCE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
@@ -1295,6 +1300,11 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         return None
 
     click.echo()
+    # Importing crewai_tools runs load_dotenv(), which can pull the .env of the
+    # project crewai is installed in into this process. The AMP check sends the
+    # login-derived token with requests, so put back the machine's proxy, CA and
+    # TLS settings afterwards and never let that .env choose them.
+    requests_transport = {key: os.environ.get(key) for key in _REQUESTS_TRANSPORT}
     try:
         # Importing crewai_tools currently initializes optional tool SDKs. Keep
         # their import-time warnings out of the interactive token setup flow.
@@ -1310,6 +1320,12 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             "Install it with `uv add crewai-tools` or "
             "`pip install 'crewai[tools]'`."
         ) from error
+    restore_machine_transport(os.environ)
+    for key, value in requests_transport.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
 
     click.secho(
         "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",

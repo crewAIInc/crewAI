@@ -2,11 +2,14 @@
 
 import base64
 import os
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.cache import mark_cache_breakpoint
+from crewai.llms.providers.utils.common import claude_supports_vision
 from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
 
 try:
@@ -137,6 +140,26 @@ class TestAnthropicMultimodal:
         llm = LLM(model="anthropic/claude-4-opus")
         assert llm.supports_multimodal() is True
 
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "anthropic/claude-sonnet-5-5",
+            "anthropic/claude-opus-5-5",
+            "anthropic/claude-haiku-5-5",
+            "anthropic/claude-fable-5-1",
+            "anthropic/claude-opus-4.8",
+            "anthropic/claude-3-5-sonnet-20241022",
+        ],
+    )
+    def test_supports_multimodal_claude3_and_later(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model", ["anthropic/claude-2.1", "anthropic/claude-instant-1.2"]
+    )
+    def test_does_not_support_pre_claude3(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Anthropic image format uses source-based structure."""
         llm = LLM(model="anthropic/claude-3-sonnet-20240229")
@@ -162,6 +185,109 @@ class TestAnthropicMultimodal:
         assert result[0]["source"]["type"] == "base64"
         assert result[0]["source"]["media_type"] == "application/pdf"
 
+    def test_format_multimodal_content_sets_no_cache_control(self) -> None:
+        """File blocks leave cache breakpoints to the provider."""
+        files = {
+            "chart": ImageFile(source=MINIMAL_PNG),
+            "doc": PDFFile(source=MINIMAL_PDF),
+        }
+
+        result = format_multimodal_content(files, "anthropic")
+
+        assert len(result) == 2
+        assert all("cache_control" not in block for block in result)
+
+
+def _cache_control_count(value: Any) -> int:
+    if isinstance(value, dict):
+        return ("cache_control" in value) + sum(
+            _cache_control_count(v) for v in value.values()
+        )
+    if isinstance(value, list):
+        return sum(_cache_control_count(v) for v in value)
+    return 0
+
+
+def _marked_messages_with_images(count: int) -> list[dict[str, Any]]:
+    return [
+        mark_cache_breakpoint({"role": "system", "content": "You review images."}),
+        mark_cache_breakpoint(
+            {
+                "role": "user",
+                "content": "Describe each image.",
+                "files": {
+                    f"image_{i}": ImageFile(source=MINIMAL_PNG) for i in range(count)
+                },
+            }
+        ),
+    ]
+
+
+class _RequestCaptured(Exception):
+    pass
+
+
+@pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic SDK not installed")
+class TestAnthropicCacheBreakpointLimit:
+    """Anthropic rejects a request with more than four cache_control blocks."""
+
+    @pytest.fixture(autouse=True)
+    def mock_anthropic_env(self):
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            yield
+
+    def test_call_with_many_files_stays_within_limit(self) -> None:
+        llm = LLM(model="anthropic/claude-sonnet-4-5")
+        sent: dict[str, Any] = {}
+
+        def capture(**kwargs: Any) -> None:
+            sent.update(kwargs)
+            raise _RequestCaptured
+
+        with patch.object(llm._client.messages, "create", side_effect=capture):
+            with pytest.raises(_RequestCaptured):
+                llm.call(_marked_messages_with_images(6))
+
+        assert _cache_control_count(sent["system"]) == 1
+        assert _cache_control_count(sent["messages"]) == 1
+        user_blocks = sent["messages"][0]["content"]
+        assert [b["type"] for b in user_blocks].count("image") == 6
+        assert "cache_control" in user_blocks[-1]
+
+    @pytest.mark.asyncio
+    async def test_acall_with_many_files_stays_within_limit(self) -> None:
+        llm = LLM(model="anthropic/claude-sonnet-4-5")
+        sent: dict[str, Any] = {}
+
+        async def capture(**kwargs: Any) -> None:
+            sent.update(kwargs)
+            raise _RequestCaptured
+
+        with patch.object(llm._async_client.messages, "create", side_effect=capture):
+            with pytest.raises(_RequestCaptured):
+                await llm.acall(_marked_messages_with_images(6))
+
+        assert _cache_control_count(sent["system"]) == 1
+        assert _cache_control_count(sent["messages"]) == 1
+        assert "cache_control" in sent["messages"][0]["content"][-1]
+
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("claude-sonnet-5-5", True),
+        ("claude-3-5-sonnet-20241022", True),
+        ("claude-opus-4.8", True),
+        ("claude-2.1", False),
+        ("claude-v2", False),
+        ("not-claude-sonnet-5", False),
+        ("anthropic.claude-sonnet-5-5", False),
+    ],
+)
+def test_claude_supports_vision_reads_a_leading_claude_id(
+    model: str, expected: bool
+) -> None:
+    assert claude_supports_vision(model) is expected
 
 class TestOpenAIMultimodal:
     """Tests for OpenAI provider multimodal functionality."""
@@ -332,6 +458,52 @@ class TestBedrockMultimodal:
         """Test Bedrock gpt-oss (no image input) does not support multimodal."""
         llm = LLM(model="bedrock/openai.gpt-oss-120b-1:0")
         assert llm.supports_multimodal() is False
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/anthropic.claude-sonnet-5-5",
+            "bedrock/anthropic.claude-opus-5-5",
+            "bedrock/anthropic.claude-haiku-5-5",
+            "bedrock/anthropic.claude-fable-5-1",
+            "bedrock/us.anthropic.claude-sonnet-5-5",
+            "bedrock/global.anthropic.claude-opus-5-5",
+            "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/jp.anthropic.claude-sonnet-4-6",
+            "bedrock/au.anthropic.claude-opus-4-8",
+            "bedrock/in.anthropic.claude-sonnet-5",
+            "bedrock/us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "bedrock/eu.amazon.nova-pro-v1:0",
+            "bedrock/ca.amazon.nova-lite-v1:0",
+            "bedrock/amazon.nova-2-lite-v1:0",
+            "bedrock/jp.amazon.nova-2-lite-v1:0",
+            "bedrock/us.amazon.nova-premier-v1:0",
+            "bedrock/openai.gpt-6.1-sol",
+            "bedrock/global.openai.gpt-6.2-luna",
+        ],
+    )
+    def test_supports_multimodal_any_claude3_plus_and_geo_profile(
+        self, model: str
+    ) -> None:
+        assert LLM(model=model).supports_multimodal() is True
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/anthropic.claude-instant-v1",
+            "bedrock/anthropic.claude-v2:1",
+            "bedrock/us.anthropic.claude-v2",
+            "bedrock/eu.amazon.nova-micro-v1:0",
+            "bedrock/global.openai.gpt-oss-120b-1:0",
+            "bedrock/meta.llama3-70b-instruct-v1:0",
+            "bedrock/anthropic.not-claude-sonnet-5",
+            "bedrock/amazon.nova-lite-text-only",
+            "bedrock/openai.gpt-60",
+        ],
+    )
+    def test_does_not_support_text_only_models(self, model: str) -> None:
+        assert LLM(model=model).supports_multimodal() is False
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
