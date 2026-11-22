@@ -530,6 +530,43 @@ class TestText:
             ["3", "i;j;k;l"],
         ]
 
+    @pytest.mark.parametrize(
+        "note",
+        ["First line\nSecond line", "First line\nSecond line\n" * 3000],
+        ids=["complete-file", "sample-ends-inside-note"],
+    )
+    def test_final_multiline_record_disambiguates_the_header(self, note):
+        data = f'Price, EUR;Description\n12;"{note}"\n'.encode()
+        book = parse(data, "example.csv")
+        assert book.sheets[0].grid == [
+            ["Price, EUR", "Description"],
+            ["12", note],
+        ]
+
+    def test_commas_in_addresses_do_not_split_semicolon_delimited_records(self):
+        data = (
+            b"address;note\n"
+            b'York, NY, US;"ready; review"\n'
+            b'Bath, Avon, UK;"paid, signed; done"\n'
+            b'Lyon, Rhone, FR;"sent, signed, closed; ok"\n'
+            b'Bern, Bern, CH;"paid; ok"\n'
+        )
+        book = parse(data, "example.csv")
+        assert book.sheets[0].grid == [
+            ["address", "note"],
+            ["York, NY, US", "ready; review"],
+            ["Bath, Avon, UK", "paid, signed; done"],
+            ["Lyon, Rhone, FR", "sent, signed, closed; ok"],
+            ["Bern, Bern, CH", "paid; ok"],
+        ]
+
+    def test_commas_in_one_data_row_do_not_override_a_consistent_delimiter(self):
+        data = b"price;address\n1,02;York, NY, US\n"
+        assert parse(data, "example.csv").sheets[0].grid == [
+            ["price", "address"],
+            ["1,02", "York, NY, US"],
+        ]
+
     def test_a_tsv_splits_on_tabs(self):
         book = parse(b"a,x\tb\n1,2\t3\n", "a.tsv")
         assert (book.kind, book.sheets[0].grid) == ("tsv", [["a,x", "b"], ["1,2", "3"]])

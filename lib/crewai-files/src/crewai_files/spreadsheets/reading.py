@@ -7,6 +7,7 @@ sheet's extent is measured from its XML before calamine reads it.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable
 import csv
 from dataclasses import dataclass, field
@@ -41,9 +42,9 @@ _MAX_SHEETS: Final = 50
 _MAX_COLUMNS: Final = 2_000
 _HEADER_SCAN: Final = 20
 _SNIFF_BYTES: Final = 64 * 1024
-# A complete quoted field at a record boundary or beside a candidate delimiter.
+# The sample can end inside a quoted field.
 _QUOTED_CSV_FIELD: Final = re.compile(
-    r'(?<![^,;\t|\r\n])"(?:[^"]|"")*"(?=[,;\t|\r\n]|$)'
+    r'(?<![^,;\t|\r\n])"(?:[^"]|"")*(?:"(?=[,;\t|\r\n]|$)|\Z)'
 )
 # Each parse of a large workbook holds hundreds of MB; more than two at once waits.
 _PARSE_SLOTS: Final = 2
@@ -563,7 +564,7 @@ def _read_text(data: bytes, extension: str) -> Workbook:
 
 def _parse_text(data: bytes, extension: str) -> Workbook:
     text = _decode(data)
-    delimiter = "\t" if extension == "tsv" else _sniff_delimiter(text[:_SNIFF_BYTES])
+    delimiter = "\t" if extension == "tsv" else _sniff_delimiter(text)
     rows: list[list[Cell]] = []
     cells = 0
     try:
@@ -603,20 +604,37 @@ def _decode(data: bytes) -> str:
     return data.decode("cp1252", errors="replace")
 
 
-def _sniff_delimiter(sample: str) -> str:
-    """The candidate that splits the most lines into the same, largest number of
-    fields, quotes respected. A ";" export's 1.234,56 amounts split by "," into
-    fewer fields per line."""
-    # Mask field contents so their punctuation and newlines cannot skew the score.
-    sample = _QUOTED_CSV_FIELD.sub('""', sample)
-    lines = sample.splitlines()[:-1] or sample.splitlines()
-    best, best_score = ",", 0
+def _sniff_delimiter(text: str) -> str:
+    """Score field counts on records whose quoted fields the candidate respects."""
+    sample = _QUOTED_CSV_FIELD.sub('""', text[:_SNIFF_BYTES])
+    truncated = len(text) > _SNIFF_BYTES
+    records = [
+        (
+            line.removesuffix("\n"),
+            len(_QUOTED_CSV_FIELD.findall(line)),
+            truncated and not line.endswith("\n"),
+        )
+        for line in io.StringIO(sample, newline=None)
+    ]
+    best, best_score = ",", (False, 0, 0)
     for candidate in (",", ";", "\t", "|"):
-        widths = [len(r) for r in csv.reader(lines, delimiter=candidate) if len(r) > 1]
-        if not widths:
-            continue
-        modal = max(set(widths), key=widths.count)
-        score = widths.count(modal) * modal
+        widths: Counter[int] = Counter()
+        partial_width = 0
+        for record, quoted, partial in records:
+            fields = record.split(candidate)
+            # Each masked field must stand alone under this delimiter.
+            if len(fields) < 2 or fields.count('""') != quoted:
+                continue
+            if partial:
+                partial_width = len(fields)
+            else:
+                widths[len(fields)] += 1
+        support, width = max(
+            ((count, width) for width, count in widths.items()), default=(0, 0)
+        )
+        # A width repeated across records carries more evidence than one noisy row.
+        # A cut-off record can break a tie, but its width may be incomplete.
+        score = (support > 1, support * width, partial_width)
         if score > best_score:
             best, best_score = candidate, score
     return best
