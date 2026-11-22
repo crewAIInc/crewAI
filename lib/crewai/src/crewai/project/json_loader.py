@@ -211,7 +211,7 @@ def parse_jsonc(text: str, source: str | Path = "<string>") -> Any:
 def load_jsonc_file(source: str | Path) -> Any:
     """Load a JSON or JSONC file."""
     path = Path(source)
-    return parse_jsonc(path.read_text(encoding="utf-8"), source=path)
+    return parse_jsonc(path.read_text(encoding="utf-8-sig"), source=path)
 
 
 def _instantiate_agent_from_data(
@@ -313,6 +313,8 @@ def load_agent_from_definition(
     definition_data = agent_definition.model_dump(mode="python", exclude_none=True)
     response_format_ref = definition_data.pop("response_format", None)
     definition_data.pop("input", None)
+    definition_data.pop("artifact", None)
+    definition_data.pop("input_files", None)
 
     agent = _instantiate_agent_from_data(definition_data, source_label, root)
 

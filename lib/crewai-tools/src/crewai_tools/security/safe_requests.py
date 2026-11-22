@@ -59,6 +59,12 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
             if not _is_sensitive_header(str(key))
         }
     sanitized.pop("cookies", None)
+    # Auth handlers, TLS client certificates, query parameters and request
+    # bodies are credentials too, and each is reapplied by the next
+    # ``_raw_get`` call. Drop them rather than replaying a caller's secret to
+    # a new origin.
+    for key in ("auth", "cert", "params", "data", "json", "files"):
+        sanitized.pop(key, None)
     return sanitized
 
 
@@ -126,13 +132,19 @@ def _raw_get(url: str, **kwargs: Any) -> requests.Response:
             session.close()
 
 
-def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
+def safe_get(
+    url: str,
+    *,
+    max_redirects: int = 10,
+    **kwargs: Any,
+) -> requests.Response:
     """GET a URL while validating each redirect target before following it.
 
     On success the hops are attached to the returned response's ``history`` and
     are the caller's to close. On failure they are closed here: a caller given
     an exception has no handle on them, and a streamed hop holds its connection
-    until its body is read or closed.
+    until its body is read or closed. Private hosts must be explicitly listed
+    in ``CREWAI_TOOLS_ALLOWED_PRIVATE_HOSTS``; every redirect is checked again.
     """
     current_url = validate_url(url)
     _reject_proxies(kwargs)

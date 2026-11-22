@@ -1524,6 +1524,21 @@ def test_skill_conversational_skip_suppresses_both_sections():
     assert "conversational-router" not in skill
 
 
+def test_skill_explains_saving_and_reading_artifacts():
+    skill = flow_definition.FlowDefinition.skill()
+
+    assert "Save an agent's output as an artifact" in skill
+    assert "`artifact: true`" in skill
+    assert "{artifact: <identifier>}" in skill
+    assert "outputs.method_name.artifact.url" in skill
+
+
+def test_skill_artifacts_skip_drops_the_guidance():
+    skill = flow_definition.FlowDefinition.skill(skips=["artifacts"])
+
+    assert "Save an agent's output as an artifact" not in skill
+
+
 def test_skill_can_render_json_examples():
     skill = flow_definition.FlowDefinition.skill(examples_format="json")
 

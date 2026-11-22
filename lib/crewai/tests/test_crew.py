@@ -54,7 +54,7 @@ from crewai.tools.agent_tools.add_image_tool import AddImageTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 import pydantic_core
 import pytest
 
@@ -3558,6 +3558,30 @@ def test_crew_task_db_init():
             assert True  # If we reach this point, no exception was raised
         except Exception as e:
             pytest.fail(f"An exception was raised: {e!s}")
+
+
+@pytest.mark.parametrize("output_field", ["output_pydantic", "output_json"])
+def test_kickoff_saves_a_task_output_with_a_url_field(researcher, output_field):
+    class Source(BaseModel):
+        title: str
+        url: HttpUrl
+
+    task = Task(
+        description="Find a source about AI agents",
+        expected_output="A source",
+        agent=researcher,
+        **{output_field: Source},
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    with patch.object(
+        Agent,
+        "execute_task",
+        return_value='{"title": "AI agents", "url": "https://example.com/a"}',
+    ):
+        result = crew.kickoff()
+
+    assert str(result["url"]) == "https://example.com/a"
 
 
 @pytest.mark.vcr()
