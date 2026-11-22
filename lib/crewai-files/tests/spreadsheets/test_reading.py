@@ -520,6 +520,16 @@ class TestText:
         book = parse(b'name,notes\nAcme,"late, again"\nBrix,"ok, fine"\n', "a.csv")
         assert book.sheets[0].grid[1] == ["Acme", "late, again"]
 
+    def test_quoted_semicolons_do_not_override_the_comma_delimiter(self):
+        data = b'id,note\n1,"a;b;c;d"\n2,"e;f;g;h"\n3,"i;j;k;l"\n'
+        book = parse(data, "example.csv")
+        assert book.sheets[0].grid == [
+            ["id", "note"],
+            ["1", "a;b;c;d"],
+            ["2", "e;f;g;h"],
+            ["3", "i;j;k;l"],
+        ]
+
     def test_a_tsv_splits_on_tabs(self):
         book = parse(b"a,x\tb\n1,2\t3\n", "a.tsv")
         assert (book.kind, book.sheets[0].grid) == ("tsv", [["a,x", "b"], ["1,2", "3"]])
