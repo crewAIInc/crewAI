@@ -9,6 +9,87 @@ mode: "wide"
 
 CrewAI supports custom LLM implementations through the `BaseLLM` abstract base class. This allows you to integrate any LLM provider that doesn't have built-in support in LiteLLM, or implement custom authentication mechanisms.
 
+## Offline Quick Start (No API Key Required)
+
+This self-contained example runs without any provider credentials. Use it to
+verify that the `BaseLLM` interface works before wiring up a real model.
+
+```python
+# offline_llm_quickstart.py
+from crewai import Agent, BaseLLM, Crew, Task
+
+
+class OfflineLLM(BaseLLM):
+    """Deterministic LLM stub that needs no network or API key."""
+
+    def __init__(self):
+        super().__init__(model="offline-stub")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        return "Thought: I know the answer.\nFinal Answer: Hello from OfflineLLM!"
+
+    def supports_function_calling(self) -> bool:
+        return False  # This stub does not handle tool calls.
+
+    def supports_stop_words(self) -> bool:
+        return False  # No native stop-word support.
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+
+# --- Direct call ---
+llm = OfflineLLM()
+print(llm.call("Hi"))  # → "Thought: I know the answer.\nFinal Answer: Hello from OfflineLLM!"
+
+# --- Full Agent / Task / Crew run ---
+agent = Agent(
+    role="Greeter",
+    goal="Say hello",
+    backstory="A friendly offline agent.",
+    llm=llm,
+)
+
+task = Task(
+    description="Greet the user",
+    expected_output="A short greeting",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+print(result.raw)  # → "Hello from OfflineLLM!"
+```
+
+Run it with:
+
+```bash
+python offline_llm_quickstart.py
+```
+
+Expected output:
+
+```
+Thought: I know the answer.
+Final Answer: Hello from OfflineLLM!
+Hello from OfflineLLM!
+```
+
+<Note>
+  This stub is for learning and testing only. To connect a real provider,
+  replace the body of `call()` with an HTTP request to your model endpoint —
+  the Quick Start below shows how.
+</Note>
+
 ## Quick Start
 
 Here's a minimal custom LLM implementation:

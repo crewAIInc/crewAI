@@ -9,6 +9,70 @@ mode: "wide"
 
 يدعم CrewAI تنفيذات LLM المخصصة من خلال فئة `BaseLLM` المجردة. يتيح لك ذلك دمج أي مزود LLM لا يحظى بدعم مدمج في LiteLLM، أو تنفيذ آليات مصادقة مخصصة.
 
+## بداية سريعة بدون اتصال (بدون مفتاح API)
+
+هذا المثال المكتفي ذاتياً يعمل بدون أي بيانات اعتماد. استخدمه للتحقق من أن واجهة `BaseLLM` تعمل قبل ربط نموذج حقيقي.
+
+```python
+# offline_llm_quickstart.py
+from crewai import Agent, BaseLLM, Crew, Task
+
+
+class OfflineLLM(BaseLLM):
+    """نموذج LLM حتمي لا يحتاج إلى شبكة أو مفتاح API."""
+
+    def __init__(self):
+        super().__init__(model="offline-stub")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        return "Thought: I know the answer.\nFinal Answer: Hello from OfflineLLM!"
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+
+llm = OfflineLLM()
+print(llm.call("Hi"))
+
+agent = Agent(
+    role="Greeter",
+    goal="Say hello",
+    backstory="A friendly offline agent.",
+    llm=llm,
+)
+
+task = Task(
+    description="Greet the user",
+    expected_output="A short greeting",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+print(result.raw)
+```
+
+شغّله باستخدام: `python offline_llm_quickstart.py`
+
+<Note>
+  هذا النموذج للتعلم والاختبار فقط. لربط مزود حقيقي، استبدل محتوى `call()` بطلب HTTP — البداية السريعة أدناه توضح الطريقة.
+</Note>
+
 ## بداية سريعة
 
 راجع الملف الإنجليزي الأصلي للحصول على تنفيذ LLM مخصص كامل يوضح طريقة `call()` المطلوبة والطرق الاختيارية مثل `supports_function_calling()` و`get_context_window_size()`.

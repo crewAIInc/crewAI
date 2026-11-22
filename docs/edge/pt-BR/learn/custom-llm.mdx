@@ -9,6 +9,70 @@ mode: "wide"
 
 O CrewAI oferece suporte a implementações personalizadas de LLM por meio da classe abstrata `BaseLLM`. Isso permite integrar qualquer provedor de LLM que não tenha suporte nativo no LiteLLM ou implementar mecanismos de autenticação personalizados.
 
+## Início Rápido Offline (Sem Chave de API)
+
+Este exemplo autossuficiente funciona sem credenciais de provedor. Use-o para verificar que a interface `BaseLLM` funciona antes de conectar um modelo real.
+
+```python
+# offline_llm_quickstart.py
+from crewai import Agent, BaseLLM, Crew, Task
+
+
+class OfflineLLM(BaseLLM):
+    """Stub de LLM determinístico que não precisa de rede ou chave de API."""
+
+    def __init__(self):
+        super().__init__(model="offline-stub")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        return "Thought: I know the answer.\nFinal Answer: Hello from OfflineLLM!"
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+
+llm = OfflineLLM()
+print(llm.call("Hi"))
+
+agent = Agent(
+    role="Greeter",
+    goal="Say hello",
+    backstory="A friendly offline agent.",
+    llm=llm,
+)
+
+task = Task(
+    description="Greet the user",
+    expected_output="A short greeting",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+print(result.raw)
+```
+
+Execute com: `python offline_llm_quickstart.py`
+
+<Note>
+  Este stub é apenas para aprendizado e testes. Para conectar um provedor real, substitua o corpo de `call()` por uma requisição HTTP — o Início Rápido abaixo mostra como.
+</Note>
+
 ## Início Rápido
 
 Aqui está uma implementação mínima de LLM personalizada:
