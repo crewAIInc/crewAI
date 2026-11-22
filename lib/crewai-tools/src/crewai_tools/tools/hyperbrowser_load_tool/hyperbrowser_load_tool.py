@@ -12,7 +12,7 @@ class HyperbrowserLoadToolSchema(BaseModel):
     operation: Literal["scrape", "crawl"] = Field(
         description="Operation to perform on the website. Either 'scrape' or 'crawl'"
     )
-    params: dict[str, Any] | None = Field(
+    params: dict[str, Any] | None = Field(default=None,
         description="Optional params for scrape or crawl. For more information on the supported params, visit https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait or https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait"
     )
 
