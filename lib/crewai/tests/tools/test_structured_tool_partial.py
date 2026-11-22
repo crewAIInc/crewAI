@@ -15,9 +15,86 @@ class SearchResult(BaseModel):
     limit: int
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("entry", ["run", "_run", "arun", "_arun"])
+@pytest.mark.parametrize("nested", [False, True])
+async def test_direct_partial_tool_rejects_native_overrides(
+    entry: str, nested: bool
+) -> None:
+    calls: list[tuple[str, str]] = []
+
+    async def lookup(collection: str, query: str) -> str:
+        calls.append((collection, query))
+        return f"{collection}:{query}"
+
+    def sync_lookup(collection: str, query: str) -> str:
+        calls.append((collection, query))
+        return f"{collection}:{query}"
+
+    bound = partial(
+        lookup if entry in {"arun", "_arun"} else sync_lookup,
+        collection="handbook",
+        query="travel",
+    )
+    if nested:
+        bound.__dict__["label"] = "inner"
+        bound = partial(bound)
+    direct = Tool(name="lookup", description="Search the handbook.", func=bound)
+    with pytest.raises(
+        ValueError, match="Cannot override partial-bound keywords: collection"
+    ):
+        if entry in {"arun", "_arun"}:
+            await getattr(direct, entry)(collection="other")
+        else:
+            getattr(direct, entry)(collection="other")
+    assert calls == []
+    assert direct.current_usage_count == 0
+    if entry in {"arun", "_arun"}:
+        assert await getattr(direct, entry)() == "handbook:travel"
+    else:
+        assert getattr(direct, entry)() == "handbook:travel"
+    assert calls == [("handbook", "travel")]
+
+
 def search_collection(collection: str, query: str, limit: int = 5) -> SearchResult:
     """Search a collection."""
     return SearchResult(collection=collection, query=query, limit=limit)
+
+
+def test_direct_partial_tool_infers_unbound_schema() -> None:
+    direct = Tool(
+        name="lookup",
+        description="Search a collection.",
+        func=partial(search_collection, collection="handbook"),
+    )
+    assert set(direct.args_schema.model_fields) == {"query", "limit"}
+    assert "handbook" not in direct.formatted_description
+    assert direct.run(query="travel", limit="3") == SearchResult(
+        collection="handbook",
+        query="travel",
+        limit=3,
+    )
+
+
+@pytest.mark.parametrize("use_alias", [False, True])
+def test_direct_partial_tool_rejects_schema_exposing_bound_keyword(
+    use_alias: bool,
+) -> None:
+    class CollectionArgs(BaseModel):
+        collection: str = "other"
+        query: str
+
+    class AliasedCollectionArgs(BaseModel):
+        index: str = Field(default="other", validation_alias="collection")
+        query: str
+
+    with pytest.raises(ValueError, match="args_schema.*collection"):
+        Tool(
+            name="lookup",
+            description="Search the handbook.",
+            func=partial(search_collection, collection="handbook"),
+            args_schema=AliasedCollectionArgs if use_alias else CollectionArgs,
+        )
 
 
 @pytest.mark.parametrize("explicit_metadata", [False, True])
@@ -216,7 +293,7 @@ async def test_openai_adapter_preserves_registered_partial_bindings(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("schema_mode", ["empty", "query_only", "exposes_collection"])
+@pytest.mark.parametrize("schema_mode", ["empty", "query_only"])
 @pytest.mark.parametrize("use_json", [False, True])
 async def test_openai_adapter_rejects_overrides_for_direct_partial_tools(
     schema_mode: str, use_json: bool
@@ -231,9 +308,6 @@ async def test_openai_adapter_rejects_overrides_for_direct_partial_tools(
 
     class QueryArgs(BaseModel):
         query: str
-
-    class CollectionArgs(QueryArgs):
-        collection: str = "handbook"
 
     calls: list[tuple[str, str]] = []
 
@@ -253,7 +327,7 @@ async def test_openai_adapter_rejects_overrides_for_direct_partial_tools(
             name="lookup",
             description="Look up a document.",
             func=partial(lookup, collection="handbook"),
-            args_schema=QueryArgs if schema_mode == "query_only" else CollectionArgs,
+            args_schema=QueryArgs,
         )
         arguments = {"query": "travel"}
 

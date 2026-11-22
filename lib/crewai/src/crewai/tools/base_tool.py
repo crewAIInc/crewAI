@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
+from functools import partial
 import importlib
 from inspect import Parameter, signature
 import threading
@@ -556,11 +557,23 @@ class Tool(BaseTool, Generic[P, R]):
     """
 
     func: Callable[P, R | Awaitable[R]]
-    _protect_partial_keywords: bool = PrivateAttr(default=False)
+
+    def model_post_init(self, __context: Any) -> None:
+        if isinstance(self.func, partial):
+            structured = CrewStructuredTool.from_function(
+                self.func,
+                name=self.name,
+                description=self.description,
+                args_schema=(
+                    self.args_schema if "args_schema" in self.model_fields_set else None
+                ),
+            )
+            if structured.args_schema is not None:
+                self.args_schema = structured.args_schema
+        super().model_post_init(__context)
 
     def _reject_registered_partial_overrides(self, kwargs: dict[str, Any]) -> None:
-        if self._protect_partial_keywords:
-            _reject_partial_keyword_overrides(self.func, kwargs)
+        _reject_partial_keyword_overrides(self.func, kwargs)
 
     def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the tool synchronously.
@@ -692,15 +705,13 @@ class Tool(BaseTool, Generic[P, R]):
                     f"{sanitize_tool_name(tool.name)}_input", __base__=PydanticBaseModel
                 )
 
-        registered = cls(
+        return cls(
             name=getattr(tool, "name", "Unnamed Tool"),
             description=getattr(tool, "description", ""),
             func=tool.func,
             args_schema=args_schema,
             result_schema=result_schema,
         )
-        registered._protect_partial_keywords = isinstance(tool, CrewStructuredTool)
-        return registered
 
 
 def to_langchain(
