@@ -1,0 +1,101 @@
+---
+title: Flatverify Tools
+description: The `FlatverifyVerifyEmailTool` and `FlatverifyBulkVerifyTool` check whether email addresses can receive mail.
+icon: envelope-circle-check
+mode: "wide"
+---
+
+# `FlatverifyVerifyEmailTool` and `FlatverifyBulkVerifyTool`
+
+## Description
+
+These tools let an agent check whether email addresses can receive mail with [Flatverify](https://flatverify.com). Use `FlatverifyVerifyEmailTool` for one address and `FlatverifyBulkVerifyTool` for a list, which runs as one job and returns one row per address.
+
+Each address comes back `valid`, `invalid`, `risky` or `unknown`, with a `sub_status` reason such as `accepted`, `mailbox_not_found`, `catch_all`, `role_account` or `disposable`, and `disposable`, `role`, `free` and `catch_all` flags.
+
+## Installation
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## Steps to Get Started
+
+1. Create an API key in the [Flatverify app](https://app.flatverify.com) under API keys. New accounts get 100 free checks.
+2. Set the key as the `FLATVERIFY_API_KEY` environment variable.
+
+```shell
+export FLATVERIFY_API_KEY="fv_..."
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import FlatverifyBulkVerifyTool, FlatverifyVerifyEmailTool
+
+checker = Agent(
+    role="List hygiene specialist",
+    goal="Make sure every address on a lead list can receive mail",
+    backstory="You clean lead lists before they reach the sending tool.",
+    tools=[FlatverifyVerifyEmailTool(), FlatverifyBulkVerifyTool()],
+)
+
+task = Task(
+    description=(
+        "Check these addresses and list the ones that are safe to email: "
+        "maya.chen@amazon.com, j.ortiz@salesforce.com, info@shopify.com"
+    ),
+    expected_output="The valid addresses, and the reason for each address you dropped.",
+    agent=checker,
+)
+
+Crew(agents=[checker], tasks=[task]).kickoff()
+```
+
+## Parameters
+
+### Constructor Parameters
+
+Both tools accept:
+
+- `api_key` (optional) defaults to the `FLATVERIFY_API_KEY` environment variable.
+- `timeout` (optional) is the number of seconds before one HTTP request times out. Default `30`.
+- `max_retries` (optional) sets how often rate limited (429) and busy (503) answers are retried after the `Retry-After` delay. Default `3`.
+
+`FlatverifyBulkVerifyTool` also accepts:
+
+- `wait_timeout` (optional) is how many seconds the tool waits for the job. Default `300`.
+- `max_results` (optional) caps the result rows returned per call. Default `1000`.
+
+### Run Parameters
+
+- `FlatverifyVerifyEmailTool` takes `email`, the address to check.
+- `FlatverifyBulkVerifyTool` takes `emails`, the list to check, an optional `name` for the job, and `job_id` only to fetch an earlier job that was not finished yet.
+
+## Return Format
+
+The single check returns the result for the address:
+
+```json
+{
+  "email": "maya.chen@amazon.com",
+  "status": "valid",
+  "sub_status": "accepted",
+  "reason": "...",
+  "disposable": false,
+  "role": false,
+  "free": false,
+  "catch_all": false
+}
+```
+
+The bulk check returns `job_id`, `status`, `counts` per status, `skipped` (duplicates and malformed entries), and `results` with one row per address. If the job is still running when `wait_timeout` ends, the tool returns the `job_id` and the agent calls the tool again with only that `job_id`.
+
+API errors come back as a `ToolFailure`, so the run records them as failed calls.
+
+## Use Cases
+
+- **Verify new leads before the sequence.** Check each new address before it enters outreach.
+- **Gate a list export.** Send a Clay or Apollo export through the bulk check and pass on only the valid rows.
+- **Route catch-all and role addresses.** Use `sub_status` to send `catch_all` to a slower step and `role_account` to a company-level flow.

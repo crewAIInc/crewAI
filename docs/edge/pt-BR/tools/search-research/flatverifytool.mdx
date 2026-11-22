@@ -1,0 +1,101 @@
+---
+title: Ferramentas Flatverify
+description: As ferramentas `FlatverifyVerifyEmailTool` e `FlatverifyBulkVerifyTool` verificam se endereços de e-mail podem receber mensagens.
+icon: envelope-circle-check
+mode: "wide"
+---
+
+# `FlatverifyVerifyEmailTool` e `FlatverifyBulkVerifyTool`
+
+## Descrição
+
+Estas ferramentas permitem que um agente verifique com o [Flatverify](https://flatverify.com) se endereços de e-mail podem receber mensagens. Use `FlatverifyVerifyEmailTool` para um endereço e `FlatverifyBulkVerifyTool` para uma lista, que roda como um único job e retorna uma linha por endereço.
+
+Cada endereço volta como `valid`, `invalid`, `risky` ou `unknown`, com um motivo em `sub_status`, como `accepted`, `mailbox_not_found`, `catch_all`, `role_account` ou `disposable`, e as flags `disposable`, `role`, `free` e `catch_all`.
+
+## Instalação
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## Primeiros passos
+
+1. Crie uma chave de API no [app do Flatverify](https://app.flatverify.com), em API keys. Contas novas recebem 100 verificações grátis.
+2. Defina a chave na variável de ambiente `FLATVERIFY_API_KEY`.
+
+```shell
+export FLATVERIFY_API_KEY="fv_..."
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import FlatverifyBulkVerifyTool, FlatverifyVerifyEmailTool
+
+checker = Agent(
+    role="List hygiene specialist",
+    goal="Make sure every address on a lead list can receive mail",
+    backstory="You clean lead lists before they reach the sending tool.",
+    tools=[FlatverifyVerifyEmailTool(), FlatverifyBulkVerifyTool()],
+)
+
+task = Task(
+    description=(
+        "Check these addresses and list the ones that are safe to email: "
+        "maya.chen@amazon.com, j.ortiz@salesforce.com, info@shopify.com"
+    ),
+    expected_output="The valid addresses, and the reason for each address you dropped.",
+    agent=checker,
+)
+
+Crew(agents=[checker], tasks=[task]).kickoff()
+```
+
+## Parâmetros
+
+### Parâmetros do construtor
+
+As duas ferramentas aceitam:
+
+- `api_key` (opcional) usa por padrão a variável de ambiente `FLATVERIFY_API_KEY`.
+- `timeout` (opcional) é o número de segundos até uma requisição HTTP expirar. Padrão `30`.
+- `max_retries` (opcional) define quantas vezes respostas de limite de taxa (429) e de serviço ocupado (503) são repetidas após o intervalo de `Retry-After`. Padrão `3`.
+
+A `FlatverifyBulkVerifyTool` também aceita:
+
+- `wait_timeout` (opcional) é quantos segundos a ferramenta espera pelo job. Padrão `300`.
+- `max_results` (opcional) limita as linhas de resultado retornadas por chamada. Padrão `1000`.
+
+### Parâmetros de execução
+
+- `FlatverifyVerifyEmailTool` recebe `email`, o endereço a verificar.
+- `FlatverifyBulkVerifyTool` recebe `emails`, a lista a verificar, um `name` opcional para o job e `job_id` apenas para buscar um job anterior que ainda não terminou.
+
+## Formato de retorno
+
+A verificação individual retorna o resultado do endereço:
+
+```json
+{
+  "email": "maya.chen@amazon.com",
+  "status": "valid",
+  "sub_status": "accepted",
+  "reason": "...",
+  "disposable": false,
+  "role": false,
+  "free": false,
+  "catch_all": false
+}
+```
+
+A verificação em lote retorna `job_id`, `status`, `counts` por status, `skipped` (duplicados e entradas malformadas) e `results` com uma linha por endereço. Se o job ainda estiver rodando quando `wait_timeout` terminar, a ferramenta retorna o `job_id` e o agente chama a ferramenta de novo apenas com esse `job_id`.
+
+Erros da API voltam como `ToolFailure`, então a execução os registra como chamadas com falha.
+
+## Casos de uso
+
+- **Verifique novos leads antes da sequência.** Confira cada endereço novo antes de ele entrar na prospecção.
+- **Filtre uma exportação de lista.** Passe uma exportação do Clay ou do Apollo pela verificação em lote e siga apenas com as linhas válidas.
+- **Direcione endereços catch-all e de função.** Use `sub_status` para mandar `catch_all` para uma etapa mais lenta e `role_account` para um fluxo no nível da empresa.

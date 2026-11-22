@@ -1,0 +1,101 @@
+---
+title: Flatverify 도구
+description: `FlatverifyVerifyEmailTool`과 `FlatverifyBulkVerifyTool`은 이메일 주소가 메일을 받을 수 있는지 확인합니다.
+icon: envelope-circle-check
+mode: "wide"
+---
+
+# `FlatverifyVerifyEmailTool` 및 `FlatverifyBulkVerifyTool`
+
+## 설명
+
+이 도구들을 사용하면 에이전트가 [Flatverify](https://flatverify.com)로 이메일 주소가 메일을 받을 수 있는지 확인할 수 있습니다. 주소 하나에는 `FlatverifyVerifyEmailTool`을, 목록에는 `FlatverifyBulkVerifyTool`을 사용하세요. 목록은 하나의 작업으로 실행되며 주소마다 한 행을 반환합니다.
+
+각 주소는 `valid`, `invalid`, `risky` 또는 `unknown`으로 반환되며, `accepted`, `mailbox_not_found`, `catch_all`, `role_account`, `disposable` 같은 `sub_status` 사유와 `disposable`, `role`, `free`, `catch_all` 플래그가 함께 제공됩니다.
+
+## 설치
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## 시작하기
+
+1. [Flatverify 앱](https://app.flatverify.com)의 API keys 메뉴에서 API 키를 만드세요. 새 계정에는 무료 확인 100회가 제공됩니다.
+2. 키를 `FLATVERIFY_API_KEY` 환경 변수로 설정하세요.
+
+```shell
+export FLATVERIFY_API_KEY="fv_..."
+```
+
+## 예제
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import FlatverifyBulkVerifyTool, FlatverifyVerifyEmailTool
+
+checker = Agent(
+    role="List hygiene specialist",
+    goal="Make sure every address on a lead list can receive mail",
+    backstory="You clean lead lists before they reach the sending tool.",
+    tools=[FlatverifyVerifyEmailTool(), FlatverifyBulkVerifyTool()],
+)
+
+task = Task(
+    description=(
+        "Check these addresses and list the ones that are safe to email: "
+        "maya.chen@amazon.com, j.ortiz@salesforce.com, info@shopify.com"
+    ),
+    expected_output="The valid addresses, and the reason for each address you dropped.",
+    agent=checker,
+)
+
+Crew(agents=[checker], tasks=[task]).kickoff()
+```
+
+## 매개변수
+
+### 생성자 매개변수
+
+두 도구 모두 다음을 받습니다.
+
+- `api_key` (선택 사항)의 기본값은 `FLATVERIFY_API_KEY` 환경 변수입니다.
+- `timeout` (선택 사항)은 HTTP 요청 하나가 시간 초과되기까지의 초입니다. 기본값 `30`.
+- `max_retries` (선택 사항)는 속도 제한(429) 및 혼잡(503) 응답을 `Retry-After` 지연 후 재시도하는 횟수입니다. 기본값 `3`.
+
+`FlatverifyBulkVerifyTool`은 다음도 받습니다.
+
+- `wait_timeout` (선택 사항)은 도구가 작업을 기다리는 초입니다. 기본값 `300`.
+- `max_results` (선택 사항)는 호출당 반환되는 결과 행의 최대 수입니다. 기본값 `1000`.
+
+### 실행 매개변수
+
+- `FlatverifyVerifyEmailTool`은 확인할 주소인 `email`을 받습니다.
+- `FlatverifyBulkVerifyTool`은 확인할 목록인 `emails`, 선택적인 작업 이름 `name`, 그리고 아직 끝나지 않은 이전 작업을 가져올 때만 쓰는 `job_id`를 받습니다.
+
+## 반환 형식
+
+단일 확인은 해당 주소의 결과를 반환합니다.
+
+```json
+{
+  "email": "maya.chen@amazon.com",
+  "status": "valid",
+  "sub_status": "accepted",
+  "reason": "...",
+  "disposable": false,
+  "role": false,
+  "free": false,
+  "catch_all": false
+}
+```
+
+대량 확인은 `job_id`, `status`, 상태별 `counts`, `skipped`(중복 및 형식이 잘못된 항목), 그리고 주소마다 한 행이 담긴 `results`를 반환합니다. `wait_timeout`이 끝났을 때 작업이 아직 실행 중이면 도구는 `job_id`를 반환하고, 에이전트는 그 `job_id`만으로 도구를 다시 호출합니다.
+
+API 오류는 `ToolFailure`로 반환되므로 실행 기록에 실패한 호출로 남습니다.
+
+## 사용 사례
+
+- **시퀀스 전에 새 리드 확인.** 새 주소가 아웃리치에 들어가기 전에 확인합니다.
+- **목록 내보내기 검사.** Clay 또는 Apollo 내보내기를 대량 확인에 통과시키고 유효한 행만 넘깁니다.
+- **catch-all 및 역할 주소 분기.** `sub_status`로 `catch_all`은 느린 단계로, `role_account`는 회사 단위 흐름으로 보냅니다.

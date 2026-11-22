@@ -1,0 +1,101 @@
+---
+title: أدوات Flatverify
+description: تتحقق الأداتان `FlatverifyVerifyEmailTool` و`FlatverifyBulkVerifyTool` مما إذا كانت عناوين البريد الإلكتروني قادرة على استقبال الرسائل.
+icon: envelope-circle-check
+mode: "wide"
+---
+
+# `FlatverifyVerifyEmailTool` و`FlatverifyBulkVerifyTool`
+
+## الوصف
+
+تتيح هذه الأدوات للوكيل التحقق باستخدام [Flatverify](https://flatverify.com) مما إذا كانت عناوين البريد الإلكتروني قادرة على استقبال الرسائل. استخدم `FlatverifyVerifyEmailTool` لعنوان واحد و`FlatverifyBulkVerifyTool` لقائمة، إذ تعمل القائمة كمهمة واحدة وتعيد صفًا واحدًا لكل عنوان.
+
+يعود كل عنوان بالحالة `valid` أو `invalid` أو `risky` أو `unknown`، مع سبب في `sub_status` مثل `accepted` أو `mailbox_not_found` أو `catch_all` أو `role_account` أو `disposable`، إضافة إلى العلامات `disposable` و`role` و`free` و`catch_all`.
+
+## التثبيت
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## خطوات البدء
+
+1. أنشئ مفتاح API في [تطبيق Flatverify](https://app.flatverify.com) ضمن API keys. تحصل الحسابات الجديدة على 100 عملية تحقق مجانية.
+2. اضبط المفتاح في متغير البيئة `FLATVERIFY_API_KEY`.
+
+```shell
+export FLATVERIFY_API_KEY="fv_..."
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import FlatverifyBulkVerifyTool, FlatverifyVerifyEmailTool
+
+checker = Agent(
+    role="List hygiene specialist",
+    goal="Make sure every address on a lead list can receive mail",
+    backstory="You clean lead lists before they reach the sending tool.",
+    tools=[FlatverifyVerifyEmailTool(), FlatverifyBulkVerifyTool()],
+)
+
+task = Task(
+    description=(
+        "Check these addresses and list the ones that are safe to email: "
+        "maya.chen@amazon.com, j.ortiz@salesforce.com, info@shopify.com"
+    ),
+    expected_output="The valid addresses, and the reason for each address you dropped.",
+    agent=checker,
+)
+
+Crew(agents=[checker], tasks=[task]).kickoff()
+```
+
+## المعاملات
+
+### معاملات المُنشئ
+
+تقبل الأداتان ما يلي:
+
+- `api_key` (اختياري) قيمته الافتراضية هي متغير البيئة `FLATVERIFY_API_KEY`.
+- `timeout` (اختياري) عدد الثواني قبل انتهاء مهلة طلب HTTP واحد. القيمة الافتراضية `30`.
+- `max_retries` (اختياري) عدد مرات إعادة المحاولة بعد مهلة `Retry-After` عند ردود تجاوز حد المعدل (429) أو الانشغال (503). القيمة الافتراضية `3`.
+
+وتقبل `FlatverifyBulkVerifyTool` أيضًا:
+
+- `wait_timeout` (اختياري) عدد الثواني التي تنتظر فيها الأداة انتهاء المهمة. القيمة الافتراضية `300`.
+- `max_results` (اختياري) الحد الأقصى لصفوف النتائج في كل استدعاء. القيمة الافتراضية `1000`.
+
+### معاملات التشغيل
+
+- تأخذ `FlatverifyVerifyEmailTool` المعامل `email`، وهو العنوان المراد التحقق منه.
+- تأخذ `FlatverifyBulkVerifyTool` المعامل `emails`، وهو القائمة المراد التحقق منها، و`name` اختياريًا اسمًا للمهمة، و`job_id` فقط لجلب مهمة سابقة لم تنتهِ بعد.
+
+## صيغة الإرجاع
+
+يعيد التحقق الفردي نتيجة العنوان:
+
+```json
+{
+  "email": "maya.chen@amazon.com",
+  "status": "valid",
+  "sub_status": "accepted",
+  "reason": "...",
+  "disposable": false,
+  "role": false,
+  "free": false,
+  "catch_all": false
+}
+```
+
+يعيد التحقق الجماعي `job_id` و`status` و`counts` لكل حالة و`skipped` (العناوين المكررة والمدخلات غير الصالحة) و`results` بصف واحد لكل عنوان. إذا كانت المهمة لا تزال قيد التشغيل عند انتهاء `wait_timeout`، تعيد الأداة `job_id` ويستدعي الوكيل الأداة مرة أخرى بهذا `job_id` فقط.
+
+تعود أخطاء API بصيغة `ToolFailure`، فيسجلها التشغيل كاستدعاءات فاشلة.
+
+## حالات الاستخدام
+
+- **تحقق من العملاء المحتملين الجدد قبل التسلسل.** افحص كل عنوان جديد قبل دخوله حملة التواصل.
+- **صفِّ قائمة مُصدَّرة.** مرّر ملف التصدير من Clay أو Apollo عبر التحقق الجماعي ومرّر الصفوف الصالحة فقط.
+- **وجّه عناوين catch-all وعناوين الأدوار.** استخدم `sub_status` لإرسال `catch_all` إلى خطوة أبطأ و`role_account` إلى مسار على مستوى الشركة.
