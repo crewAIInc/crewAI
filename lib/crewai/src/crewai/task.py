@@ -1525,6 +1525,7 @@ Follow these guidelines:
         # Each retry resets the agent's failure list, so accumulate to keep
         # failures from blocked attempts on the final output.
         accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
+        original_context = self.prompt_context
 
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
@@ -1570,9 +1571,12 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
+            validation_context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
+            )
+            context = "\n\n".join(
+                part for part in (original_context, validation_context) if part
             )
             if agent and agent.verbose:
                 PRINTER.print(
@@ -1639,6 +1643,7 @@ Follow these guidelines:
         # Each retry resets the agent's failure list, so accumulate to keep
         # failures from blocked attempts on the final output.
         accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
+        original_context = self.prompt_context
 
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
@@ -1684,9 +1689,12 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
+            validation_context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
+            )
+            context = "\n\n".join(
+                part for part in (original_context, validation_context) if part
             )
             if agent and agent.verbose:
                 PRINTER.print(
