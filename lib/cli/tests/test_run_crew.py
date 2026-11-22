@@ -1341,6 +1341,79 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
     assert calls == [("kickoff", {"entity_type": "flow"})]
 
 
+def _uv_script_exits(monkeypatch, returncode: int) -> None:
+    def uv_run(command, **kwargs):
+        raise subprocess.CalledProcessError(returncode, command, output="boom")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", uv_run)
+    monkeypatch.setattr(run_crew_module, "record_run_stopped", lambda reason: None)
+
+
+@pytest.mark.parametrize("returncode", [1, 2, 137])
+def test_a_failed_uv_script_exits_with_its_own_code(monkeypatch, capsys, returncode):
+    _uv_script_exits(monkeypatch, returncode)
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exited.value.code == returncode
+    err = capsys.readouterr().err
+    assert "An error occurred while running the crew: Command '['uv', 'run', 'run_crew']'" in err
+    assert f"returned non-zero exit status {returncode}" in err
+    assert "boom" in err
+
+
+def test_a_uv_that_cannot_start_exits_1(monkeypatch, capsys):
+    def no_uv(command, **kwargs):
+        raise PermissionError("launch denied")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", no_uv)
+    monkeypatch.setattr(run_crew_module, "record_run_stopped", lambda reason: None)
+
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._execute_uv_script("kickoff", entity_type="flow")
+
+    assert exited.value.code == 1
+    assert "An unexpected error occurred: launch denied" in capsys.readouterr().err
+
+
+def test_a_succeeding_uv_script_returns(monkeypatch):
+    monkeypatch.setattr(
+        run_crew_module.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0),
+    )
+
+    assert run_crew_module._execute_uv_script("run_crew", entity_type="crew") is None
+
+
+def test_deprecated_flow_kickoff_exits_with_the_failed_scripts_code(
+    tmp_path, monkeypatch
+):
+    from click.testing import CliRunner
+
+    from crewai_cli.cli import crewai
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\n\n[tool.crewai]\ntype = "flow"\n'
+    )
+    monkeypatch.setattr(run_crew_module, "get_or_create_project_id", lambda: None)
+    monkeypatch.setattr(run_crew_module, "ask_for_missing_api_keys", lambda *args: None)
+    monkeypatch.setattr(run_crew_module, "record_run_started", lambda kind: None)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+    _uv_script_exits(monkeypatch, 4)
+
+    result = CliRunner().invoke(crewai, ["flow", "kickoff"])
+
+    assert result.exit_code == 4
+    assert "An error occurred while running the flow" in result.output
+
+
 @pytest.fixture
 def python_flow_project(tmp_path, monkeypatch):
     """Write a Python flow project whose `kickoff` script lives in `main.py`,

@@ -1,0 +1,59 @@
+---
+title: أداة إجراءات Zapier
+description: يعرض `ZapierActionsAdapter` إجراءات Zapier كأدوات CrewAI للأتمتة.
+icon: bolt
+mode: "wide"
+---
+
+# `ZapierActionsAdapter`
+
+## الوصف
+
+استخدم محول Zapier لسرد واستدعاء إجراءات Zapier كأدوات CrewAI. يمكّن هذا الوكلاء من تشغيل عمليات الأتمتة عبر آلاف التطبيقات.
+
+## التثبيت
+
+هذا المحول مضمّن مع `crewai-tools`. لا يلزم تثبيت إضافي.
+
+## متغيرات البيئة
+
+- `ZAPIER_API_KEY` (مطلوب): مفتاح API لـ Zapier. احصل على واحد من لوحة تحكم Zapier Actions على https://actions.zapier.com/ (أنشئ حساباً، ثم ولّد مفتاح API). يمكنك أيضاً تمرير `zapier_api_key` مباشرة عند إنشاء المحول.
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.adapters.zapier_adapter import ZapierActionsAdapter
+
+adapter = ZapierActionsAdapter(api_key="your_zapier_api_key")
+tools = adapter.tools()
+
+agent = Agent(
+    role="Automator",
+    goal="Execute Zapier actions",
+    backstory="Automation specialist",
+    tools=tools,
+    verbose=True,
+)
+
+task = Task(
+    description="Create a new Google Sheet and add a row using Zapier actions",
+    expected_output="Confirmation with created resource IDs",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## ملاحظات وحدود
+
+- يسرد المحول الإجراءات المتاحة لمفتاحك وينشئ أغلفة `BaseTool` ديناميكياً.
+- تعامل مع الحقول المطلوبة الخاصة بالإجراء في تعليمات المهمة أو استدعاء الأداة.
+- تعتمد حدود المعدل على خطة Zapier الخاصة بك؛ راجع وثائق Zapier Actions.
+
+## ملاحظات
+
+- يجلب المحول الإجراءات المتاحة وينشئ أغلفة `BaseTool` ديناميكياً.
+
+

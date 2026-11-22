@@ -199,7 +199,7 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "agent_format",
     type=click.Choice(["python", "json", "yaml"]),
     default=None,
-    show_default="yaml",
+    show_default="json",
     help="Experimental agent projects only: definition format.",
 )
 @click.option(
@@ -236,7 +236,7 @@ def create(
 ) -> None:
     """Create a new crew, flow, agent, tool, skill, or template.
 
-    Standalone agent support is experimental. Agents use YAML by default.
+    Standalone agent support is experimental. Agents use JSON by default.
     """
     if deprecated_skip_provider:
         warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
@@ -324,7 +324,7 @@ def create(
             )
         from crewai_cli.create_agent import create_agent
 
-        create_agent(name, format=agent_format or "yaml")
+        create_agent(name, format=agent_format or "json")
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
@@ -666,7 +666,7 @@ def memory(
     "-m",
     "--model",
     type=str,
-    default="gpt-5.4-mini",
+    default="gpt-6-luna",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
 @click.option(
@@ -712,7 +712,14 @@ def install(context: click.Context) -> None:
     """Install the Crew."""
     from crewai_cli.install_crew import install_crew
 
-    install_crew(context.args)
+    try:
+        install_crew(context.args, raise_on_error=True)
+    except subprocess.CalledProcessError as e:
+        # Reporting the failure is not enough: CI and scripts key off the exit
+        # status, and `uv sync` already printed the underlying error.
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        raise SystemExit(1) from e
 
 
 @crewai.command()
@@ -803,12 +810,18 @@ def run(
         "project id."
     ),
 )
+@click.option(
+    "--no-open",
+    is_flag=True,
+    help="Print the report link without opening a browser (SSH, CI, headless).",
+)
 @click.pass_context
 def eval_command(
     ctx: click.Context,
     run_id: str | None,
     models: str | None,
     deployment_id: str | None,
+    no_open: bool,
 ) -> None:
     """Evaluate this crew through CrewAI AMP, or compare models on the project's
     deployment (--models).
@@ -838,10 +851,15 @@ def eval_command(
     if ctx.invoked_subcommand is not None:
         # The subcommand does the work; an option meant for this body would
         # otherwise be dropped without a word.
-        if run_id is not None or models is not None or deployment_id is not None:
+        if (
+            run_id is not None
+            or models is not None
+            or deployment_id is not None
+            or no_open
+        ):
             raise click.UsageError(
-                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models "
-                "or --deployment; give those to `crewai eval` alone."
+                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models, "
+                "--deployment or --no-open; give those to `crewai eval` alone."
             )
         return
     if models is not None:
@@ -850,13 +868,13 @@ def eval_command(
                 "--run grades a run that already happened; --models runs the "
                 "deployment again. Give one of them."
             )
-        eval_models(models, deployment_id=deployment_id)
+        eval_models(models, deployment_id=deployment_id, open_report=not no_open)
         return
     if deployment_id is not None:
         raise click.UsageError(
             "--deployment names the deployment --models runs; add --models LIST."
         )
-    eval_crew(run_id=run_id)
+    eval_crew(run_id=run_id, open_report=not no_open)
 
 
 @eval_command.command(name="export")
@@ -1022,7 +1040,33 @@ def deploy_remove(uuid: str | None) -> None:
 
 @crewai.group()
 def tool() -> None:
-    """Tool Repository related commands."""
+    """Add tools to an agent project and manage Tool Repository tools."""
+
+
+@tool.command(name="add")
+@click.argument("tools", nargs=-1)
+def tool_add(tools: tuple[str, ...]) -> None:
+    """Add tools to the standalone agent project in the current directory.
+
+    Pass references such as SerperDevTool, platform:gmail, or custom:my_tool,
+    or omit them to pick from the same list as `crewai create`. CrewAI
+    Platform applications are validated on AMP before they are added.
+    """
+    from crewai_cli.agent_tools import add_tools
+
+    add_tools(Path.cwd(), list(tools))
+
+
+@tool.command(name="setup")
+def tool_setup() -> None:
+    """Connect the agent definition's CrewAI Platform applications.
+
+    Reads the platform tools listed in the agent definition, validates them on
+    AMP, and saves the Enterprise Action Auth Token to .env.
+    """
+    from crewai_cli.agent_tools import setup_tools
+
+    setup_tools(Path.cwd())
 
 
 @tool.command(name="create")

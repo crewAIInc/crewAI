@@ -19,7 +19,10 @@ from crewai.llms.base_llm import (
 )
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -2158,14 +2161,7 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             True if the model supports images and PDFs.
         """
-        model_lower = self.model.lower()
-        return (
-            "claude-3" in model_lower
-            or "claude-4" in model_lower
-            or "claude-sonnet-4" in model_lower
-            or "claude-opus-4" in model_lower
-            or "claude-haiku-4" in model_lower
-        )
+        return claude_supports_vision(self.model)
 
     def get_file_uploader(self) -> Any:
         """Get an Anthropic file uploader using this LLM's clients.

@@ -269,6 +269,10 @@ class Crew(FlowTrackable, BaseModel):
             "or a Memory/MemoryScope/MemorySlice instance for custom configuration."
         ),
     )
+    artifacts: bool = Field(
+        default=False,
+        description="Give every agent a save_artifact tool for files the user can view and share.",
+    )
     embedder: EmbedderConfig | None = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
@@ -532,6 +536,15 @@ class Crew(FlowTrackable, BaseModel):
                 task._original_expected_output = (
                     task.checkpoint_original_expected_output
                 )
+            # None only in a checkpoint from before 1.15.38, whose description
+            # can hold a plan or chat history: read spreadsheet URLs from the
+            # template the caller wrote alone. Remove once checkpoints from
+            # 1.15.37 and older are no longer resumed.
+            task._input_description = (
+                task.checkpoint_original_description or ""
+                if task.checkpoint_input_description is None
+                else task.checkpoint_input_description
+            )
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:
@@ -1484,7 +1497,7 @@ class Crew(FlowTrackable, BaseModel):
         for idx, task in enumerate(self.tasks):
             task_number = idx + 1
             if task_number in plan_map:
-                task.description += plan_map[task_number]
+                task._append_model_text(plan_map[task_number])
             else:
                 self._logger.log(
                     "warning",
@@ -1700,6 +1713,11 @@ class Crew(FlowTrackable, BaseModel):
         resolved_memory = getattr(agent, "memory", None) or self._memory
         if resolved_memory is not None:
             tools = self._add_memory_tools(tools, resolved_memory)
+
+        if self.artifacts or getattr(agent, "artifacts", False):
+            from crewai.artifacts import SaveArtifactTool
+
+            tools = self._merge_tools(tools, [SaveArtifactTool(agent=agent, task=task)])
 
         files = get_all_files(self.id, task.id)
         if files:

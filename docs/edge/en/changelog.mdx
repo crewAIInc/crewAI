@@ -4,6 +4,202 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Nov 19, 2026">
+  ## v1.15.44
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.44)
+
+  ## What's Changed
+
+  ### Features
+  - Add capability to save files as versioned, shareable artifacts.
+
+  ### Bug Fixes
+  - Fix inline agent and crew action references relative to the flow file.
+  - Stop duplicating kept separators when merging chunks.
+  - Isolate nested defaults from a shared flow declaration.
+  - Restrict Pillow to PNG, JPEG, GIF, and WEBP when opening images.
+  - Reset cache eviction order on clear.
+  - Treat a docs path on GitHub as a repository.
+  - Exit with the script's status when crewai train fails.
+  - Relax av pin to ensure current FFmpeg installs.
+  - Keep a deeply nested span that the run app cannot render as text in one step.
+  - Stop stamping cache_control on every anthropic file block.
+  - Detect vision for any Claude 3+ model and geo profile.
+  - Export structured output from non-str guardrail results.
+  - Enforce cwd containment for all FilePath paths.
+
+  ### Documentation
+  - Teach the flow skill to save and read artifacts.
+
+  ## Contributors
+
+  @HanYuanLu, @Kiko0301, @Vidit-Ostwal, @adityajai119, @anilkr09, @gabemilani, @joaomdmoura, @kuquert, @nurlanmnn, @willnhansen
+
+</Update>
+
+<Update label="Nov 18, 2026">
+  ## v1.15.43
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.43)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix detection of multimodal support for Claude 5.
+
+  ### Documentation
+  - Update snapshot and changelog for v1.15.42.
+
+  ## Contributors
+
+  @Vidit-Ostwal, @anubhavlal07, @joaomdmoura
+
+</Update>
+
+<Update label="Nov 18, 2026">
+  ## v1.15.42
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.42)
+
+  ## What's Changed
+
+  ### Features
+  - Make ChromaDB an optional extra
+  - Default Knowledge to local Qdrant and decouple storage from ChromaDB
+  - Pick tools for standalone agents and add them later
+
+  ### Bug Fixes
+  - Store output_json values as JSON to prevent date issues in .json and output_file
+  - Give each Flow its own ID from an initial_state instance
+  - Honor max_execution_time without waiting for the worker
+  - Save task outputs that hold URLs and other Pydantic types
+  - Read the experiment baseline as UTF-8
+  - Prefix sanitized tool names that start with a digit
+  - Count scoped LanceDB records exactly above 50,000 rows
+  - Report Serply's hybrid flag from its own field
+  - Let TavilyResearchTool's configured defaults apply
+  - Normalize flat Chroma metadata filters
+  - Handle CSV record newlines without translating cell values
+  - Load JSON crew and agent files saved with a UTF-8 BOM
+  - Preserve validated converter output in the configured format
+  - Read and write .env as UTF-8
+  - Keep a streamed delta when its chunk also carries usage
+  - Honor caller-provided Weaviate headers
+  - Exit with the UV status when crewai install fails
+  - Read pyproject.toml as UTF-8 in project helpers
+  - Accept an LLM mapping in agents.yaml
+  - Raise soupsieve floor to 4.0 for CVE-2026-126190
+
+  ### Documentation
+  - Align crew endpoint path with runtime example
+  - Update FAQ links to AMP headings
+
+  ## Contributors
+
+  @HhH666-ux, @Kiko0301, @Pranav-Singh-Devloper, @TejasLamba2006, @Varshith-Kali, @Vidit-Ostwal, @adityajai119, @ats3v, @bballhaus, @github-actions[bot], @iris-clawd, @jjhong011001, @lakers-abing, @lorenzejay, @lxcxjxhx, @xu-song
+
+</Update>
+
+<Update label="Nov 13, 2026">
+  ## v1.15.41
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.41)
+
+  ## What's Changed
+
+  ### Features
+  - Allow approved private URL hosts.
+
+  ### Bug Fixes
+  - Fix projects to depend on PyMuPDF 2.x.
+  - Drop a real storage URL from the URL read tests.
+  - Keep earlier step outputs across a human-feedback resume.
+  - Strip cache_breakpoint marker on the LiteLLM path.
+
+  ### Documentation
+  - Snapshot and changelog for v1.15.40.
+
+  ## Contributors
+
+  @Vidit-Ostwal, @gabemilani, @github-actions[bot], @lorenzejay
+
+</Update>
+
+<Update label="Nov 11, 2026">
+  ## v1.15.40
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.40)
+
+  ## What's Changed
+
+  ### Features
+  - Remove chromadb from the embedding function layer.
+  - Add exact historical state lookup by row id.
+  - Wire jsonl into rag data type discovery.
+  - Scaffold standalone agents as JSON by default.
+  - Add backend record lifecycle and pagination tests.
+
+  ### Bug Fixes
+  - Run after_llm_call hooks on async calls.
+  - Stop an agent whose apps CrewAI AMP cannot resolve.
+
+  ### Documentation
+  - Update Arize agent evaluation guide URL.
+
+  ## Contributors
+
+  @AadeshSalecha, @Kiko0301, @Vidit-Ostwal, @arizedatngo, @bballhaus, @chang-amy, @factory-droid[bot], @joaomdmoura, @lorenzejay, @sallyw02
+
+</Update>
+
+<Update label="Nov 08, 2026">
+  ## v1.15.39
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.39)
+
+  ## What's Changed
+
+  ### Documentation
+  - Document the `apps_not_connected` error on `/kickoff` and `/status`
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="Nov 08, 2026">
+  ## v1.15.38
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.38)
+
+  ## What's Changed
+
+  ### Features
+  - Make gpt-6-luna crewAI's default model everywhere
+  - Read spreadsheet URLs in an agent's input with tools over every row
+  - Tag eval usage spans with target and a per-evaluation id
+  - Add --no-open to crewai eval for headless use
+
+  ### Bug Fixes
+  - Count a crewai eval run that exits with an error as run_failed
+  - Create the project .env owner-only when crewai eval turns tracing on
+  - Upload a failed anonymous run that crewai eval started
+  - Check openai-compatible providers' API key on the first call
+  - Scope memoized crew methods to their instance
+  - Exit non-zero when crewai run's project script fails
+  - Eval asks to share the trace with Enter meaning yes, and explains why
+
+  ### Documentation
+  - Document required_inputs on GET /inputs and which flow fields are inputs
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
 <Update label="Nov 06, 2026">
   ## v1.15.37
 

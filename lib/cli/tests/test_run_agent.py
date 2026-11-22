@@ -409,3 +409,38 @@ def test_configured_api_key_is_not_asked_for(tmp_path, monkeypatch):
     )
     runner.run_agent()
     assert chats == [{"tui": True}]
+
+
+@pytest.mark.parametrize(
+    ("model", "key_name"),
+    [
+        ("openai/gpt-4o-mini", "OPENAI_API_KEY"),
+        ("deepseek/deepseek-chat", "DEEPSEEK_API_KEY"),
+        ("openrouter/anthropic/claude-3-opus", "OPENROUTER_API_KEY"),
+        ("cerebras/llama3.1-8b", "CEREBRAS_API_KEY"),
+        ("dashscope/qwen-turbo", "DASHSCOPE_API_KEY"),
+        ("deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct", "DEEPINFRA_API_KEY"),
+    ],
+)
+def test_a_real_agent_project_is_asked_for_its_models_key(
+    tmp_path, monkeypatch, model, key_name
+):
+    """An OpenAI-compatible model builds without its key, as a native one does,
+    so the loaded Agent reaches the prompt instead of failing as it loads."""
+    import crewai.agent
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "agent.yaml").write_text(
+        f"role: Greeter\ngoal: Say hi\nbackstory: You greet people.\nllm: {model}\n"
+    )
+    monkeypatch.delenv(key_name, raising=False)
+    monkeypatch.setattr(runner, "is_interactive", lambda: True)
+    monkeypatch.setattr(crewai.agent.Agent, "chat", lambda self, **kwargs: None)
+    asked = []
+    monkeypatch.setattr(
+        runner, "ask_for_api_key", lambda name, *_, **__: asked.append(name) or True
+    )
+
+    runner.run_agent()
+
+    assert asked == [key_name]
