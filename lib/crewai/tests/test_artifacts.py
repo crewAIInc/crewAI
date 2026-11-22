@@ -1030,3 +1030,35 @@ def test_declarative_artifact_input_that_is_missing_fails_the_step(store):
 def test_declarative_artifact_input_is_validated_when_loaded(reference):
     with pytest.raises(Exception, match="input_files"):
         Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW.replace("{artifact: board-report}", reference))
+
+
+# --- Regression tests for #9602: file_path branch must check image format ---
+
+PNG_HEADER = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
+
+
+def test_save_artifact_file_path_rejects_svg_as_image(store, tmp_path):
+    """An SVG saved via file_path with kind='image' must be rejected."""
+    svg_file = tmp_path / "chart.svg"
+    svg_file.write_text("<svg xmlns='http://www.w3.org/2000/svg'/>")
+    art = Artifact(identifier="chart", title="Chart", kind="image")
+    with pytest.raises(ValueError, match="image bytes must be"):
+        save_artifact(art, file_path=str(svg_file))
+
+
+def test_save_artifact_file_path_rejects_text_as_image(store, tmp_path):
+    """A plain text file with no extension must be rejected as kind='image'."""
+    txt_file = tmp_path / "notes"
+    txt_file.write_text("not an image")
+    art = Artifact(identifier="chart", title="Chart", kind="image")
+    with pytest.raises(ValueError, match="image bytes must be"):
+        save_artifact(art, file_path=str(txt_file))
+
+
+def test_save_artifact_file_path_accepts_valid_png(store, tmp_path):
+    """A valid PNG saved via file_path with kind='image' must succeed."""
+    png_file = tmp_path / "chart.png"
+    png_file.write_bytes(PNG_HEADER)
+    art = Artifact(identifier="chart", title="Chart", kind="image")
+    saved = save_artifact(art, file_path=str(png_file))
+    assert saved.content_type == "image/png"
