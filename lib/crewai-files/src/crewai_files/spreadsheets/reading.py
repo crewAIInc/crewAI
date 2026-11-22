@@ -41,6 +41,10 @@ _MAX_SHEETS: Final = 50
 _MAX_COLUMNS: Final = 2_000
 _HEADER_SCAN: Final = 20
 _SNIFF_BYTES: Final = 64 * 1024
+# A complete quoted field at a record boundary or beside a candidate delimiter.
+_QUOTED_CSV_FIELD: Final = re.compile(
+    r'(?<![^,;\t|\r\n])"(?:[^"]|"")*"(?=[,;\t|\r\n]|$)'
+)
 # Each parse of a large workbook holds hundreds of MB; more than two at once waits.
 _PARSE_SLOTS: Final = 2
 _PARSE_WAIT_SECONDS: Final = 120.0
@@ -603,6 +607,8 @@ def _sniff_delimiter(sample: str) -> str:
     """The candidate that splits the most lines into the same, largest number of
     fields, quotes respected. A ";" export's 1.234,56 amounts split by "," into
     fewer fields per line."""
+    # Mask field contents so their punctuation and newlines cannot skew the score.
+    sample = _QUOTED_CSV_FIELD.sub('""', sample)
     lines = sample.splitlines()[:-1] or sample.splitlines()
     best, best_score = ",", 0
     for candidate in (",", ";", "\t", "|"):
