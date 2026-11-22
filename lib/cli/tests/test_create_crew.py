@@ -2185,6 +2185,8 @@ def _crewai_dependency(project_root: Path) -> str:
         ("groq/llama-3.3-70b-versatile", "crewai[tools,litellm]"),
         ("anthropic/my-finetune", "crewai[tools,anthropic,litellm]"),
         ("openai/chatgpt-4o-latest", "crewai[tools,litellm]"),
+        ("acedatacloud/gpt-4.1-mini", "crewai[tools,anthropic]"),
+        ("acedatacloud/public/model-id", "crewai[tools,anthropic]"),
         ("mistral/mistral-large", "crewai[tools,litellm]"),
         ("custom/my-model", "crewai[tools,litellm]"),
     ],
@@ -2212,9 +2214,6 @@ def test_json_create_adds_the_provider_extra_to_the_crewai_dependency(
         "openai",
         "ollama",
         "cerebras/llama3.1-8b",
-        "acedatacloud",
-        "acedatacloud/gpt-4.1-mini",
-        "acedatacloud/public/model-id",
     ],
 )
 def test_json_create_keeps_the_tools_only_dependency_when_no_extra_is_needed(
@@ -2373,7 +2372,7 @@ def _pick_classic_provider(
         ("openai", "gpt-5.6-luna", ["sk-openai"], "crewai[tools]"),
         ("ollama", "ollama/llama3.1", [], "crewai[tools]"),
         ("cerebras", None, ["cerebras/llama3.1-8b", "csk"], "crewai[tools]"),
-        ("acedatacloud", "acedatacloud/gpt-4.1-mini", ["ace-key"], "crewai[tools]"),
+        ("acedatacloud", "acedatacloud/gpt-4.1-mini", ["ace-key"], "crewai[tools,anthropic]"),
     ],
 )
 def test_classic_create_adds_the_selected_provider_extra_to_the_crewai_dependency(
@@ -2479,7 +2478,7 @@ def _catalog_unreachable(*_args, **_kwargs):
     raise httpx.ConnectError("[Errno 8] nodename nor servname provided")
 
 
-@pytest.mark.parametrize("provider", list(MODELS))
+@pytest.mark.parametrize("provider", [provider for provider in MODELS if provider != "acedatacloud"])
 def test_classic_create_offers_curated_models_when_the_catalog_is_unreachable(
     provider, classic_create, tmp_path, monkeypatch
 ):
@@ -2495,6 +2494,15 @@ def test_classic_create_offers_curated_models_when_the_catalog_is_unreachable(
     project = tmp_path / "my_crew"
     assert f"MODEL={MODELS[provider][0]}" in (project / ".env").read_text()
     assert (project / "src" / "my_crew" / "crew.py").is_file()
+
+
+def test_classic_create_ace_requests_an_explicit_model_when_discovery_is_unavailable(classic_create, tmp_path, monkeypatch):
+    monkeypatch.setattr("crewai_cli.provider.httpx.stream", _catalog_unreachable)
+    monkeypatch.setattr("crewai_core.acedatacloud.get_ace_models", _catalog_unreachable)
+    result = classic_create([str(PROVIDERS.index("acedatacloud") + 1), "gpt-6.2-sol", "", "", ""])
+    assert result.exit_code == 0, result.output
+    assert "enter a model explicitly" in result.output
+    assert "MODEL=acedatacloud/gpt-6.2-sol" in (tmp_path / "my_crew" / ".env").read_text()
 
 
 def test_classic_create_other_lists_catalog_providers_when_the_catalog_loads(

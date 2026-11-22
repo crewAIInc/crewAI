@@ -148,6 +148,16 @@ def get_provider_models(
         Up to :data:`MAX_MODELS` ``(model_id, label)`` pairs. Falls back to
         ``fallback`` verbatim when no fresher list can be resolved.
     """
+    if provider_key == "acedatacloud":
+        from crewai_core.acedatacloud import get_ace_models
+
+        try:
+            # The public typed inventory is not subject to the generic top-eight
+            # truncation or name heuristics (gpt-4o-image is a chat model).
+            return [(model.id, model.label) for model in get_ace_models()]
+        except (httpx.HTTPError, ValueError):
+            return []
+
     cached = _read_catalog_cache(provider_key)
     if cached is not None:
         return cached

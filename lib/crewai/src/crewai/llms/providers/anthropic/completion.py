@@ -395,7 +395,7 @@ class AnthropicCompletion(BaseLLM):
 
             if _is_pydantic_model_class(effective_response_model):
                 schema = transform_schema(effective_response_model.model_json_schema())
-                if _supports_native_structured_outputs(self.model):
+                if self._supports_native_structured_output():
                     betas = [ANTHROPIC_STRUCTURED_OUTPUTS_BETA]
                     if uses_file_api:
                         betas.append(ANTHROPIC_FILES_API_BETA)
@@ -1121,7 +1121,7 @@ class AnthropicCompletion(BaseLLM):
         extra_body: dict[str, Any] | None = None
         if _is_pydantic_model_class(response_model):
             schema = transform_schema(response_model.model_json_schema())
-            if _supports_native_structured_outputs(self.model):
+            if self._supports_native_structured_output():
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
                 extra_body = {
@@ -1271,7 +1271,7 @@ class AnthropicCompletion(BaseLLM):
         extra_body: dict[str, Any] | None = None
         if _is_pydantic_model_class(response_model):
             schema = transform_schema(response_model.model_json_schema())
-            if _supports_native_structured_outputs(self.model):
+            if self._supports_native_structured_output():
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
                 extra_body = {
@@ -1679,7 +1679,7 @@ class AnthropicCompletion(BaseLLM):
         extra_body: dict[str, Any] | None = None
         if _is_pydantic_model_class(response_model):
             schema = transform_schema(response_model.model_json_schema())
-            if _supports_native_structured_outputs(self.model):
+            if self._supports_native_structured_output():
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
                 extra_body = {
@@ -1817,7 +1817,7 @@ class AnthropicCompletion(BaseLLM):
         extra_body: dict[str, Any] | None = None
         if _is_pydantic_model_class(response_model):
             schema = transform_schema(response_model.model_json_schema())
-            if _supports_native_structured_outputs(self.model):
+            if self._supports_native_structured_output():
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
                 extra_body = {
@@ -2092,6 +2092,9 @@ class AnthropicCompletion(BaseLLM):
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         return True  # All Claude models support stop sequences
+
+    def _supports_native_structured_output(self) -> bool:
+        return _supports_native_structured_outputs(self.model)
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""

@@ -93,7 +93,19 @@ def select_model(provider: str, provider_models: dict[str, list[str]]) -> str | 
     """
     predefined_providers = [p.lower() for p in PROVIDERS]
 
-    if provider in predefined_providers:
+    if provider == "acedatacloud":
+        from crewai_cli.model_catalog import get_provider_models
+
+        discovered = get_provider_models(provider, [])
+        available_models = [f"acedatacloud/{model}" for model, _ in discovered]
+        if not available_models:
+            click.secho(
+                "Ace model discovery is unavailable; enter a model explicitly.",
+                fg="yellow",
+            )
+            model = click.prompt("Ace Data Cloud model ID", type=str).strip()
+            return f"acedatacloud/{model}" if model else None
+    elif provider in predefined_providers:
         available_models = MODELS.get(provider, [])
     else:
         available_models = provider_models.get(provider, [])

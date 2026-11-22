@@ -332,6 +332,14 @@ class LLM(BaseLLM):
                 }
                 if route.custom_openai:
                     kwargs_copy["custom_openai"] = True
+                if route.provider == "acedatacloud":
+                    from crewai.llms.providers.acedatacloud.completion import (
+                        create_acedatacloud_completion,
+                    )
+
+                    return cast(
+                        Self, create_acedatacloud_completion(route.model, **kwargs_copy)
+                    )
                 return cast(
                     Self,
                     route.native_class(

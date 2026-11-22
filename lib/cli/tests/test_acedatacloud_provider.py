@@ -118,3 +118,16 @@ def test_existing_default_provider_is_not_replaced():
     assert _PROVIDERS[0] == ("openai", "OpenAI")
     assert PROVIDERS[-1] == "acedatacloud"
     assert _PROVIDERS[-1] == ("acedatacloud", "Ace Data Cloud")
+
+
+def test_ace_catalog_is_not_limited_to_eight_or_single_fallback():
+    from crewai_core.acedatacloud import AceModel
+    from crewai_cli.model_catalog import get_provider_models
+    from crewai_cli.provider import select_model
+
+    models = tuple(AceModel(f"model-{index}", f"Model {index}", ("chat_completions",), False) for index in range(103))
+    with patch("crewai_core.acedatacloud.get_ace_models", return_value=models):
+        assert len(get_provider_models("acedatacloud", [("gpt-4.1-mini", "Old default")])) == 103
+        with patch("crewai_cli.provider.select_choice", side_effect=lambda prompt, choices: choices[-1]) as choose:
+            assert select_model("acedatacloud", {}) == "acedatacloud/model-102"
+        assert len(choose.call_args.args[1]) == 103

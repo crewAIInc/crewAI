@@ -1123,3 +1123,7 @@ llm = LLM(model="acedatacloud/gpt-4.1-mini")
 ```
 
 [모델 목록](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_pricing)에서 현재 공개 채팅 모델 ID를 선택하세요. 접두사는 공급자를 선택하고 나머지 모델 ID는 그대로 전달됩니다. 호출 전에 가격과 잔액을 확인하세요. `ACEDATACLOUD_BASE_URL`로 주소를 재정의할 수 있으나 일반 사용에는 필요하지 않습니다.
+
+전체 Ace 공급자를 사용하려면 `crewai[anthropic]`을 설치하세요. 새로 생성하는 Ace 프로젝트에는 이 추가 항목이 자동으로 포함됩니다. 두 CLI 모델 선택기는 API 키 없이 전체 공개 채팅 카탈로그를 불러오며, 고정된 프리셋이나 일반적인 8개 모델 제한을 적용하지 않습니다. 검색할 수 없으면 모델 ID를 직접 입력하세요.
+
+기본 Ace 주소에서는 각 모델에 공개된 프로토콜에 따라 기본 Chat Completions, Responses 또는 Messages 어댑터를 선택합니다. Messages는 같은 Ace 키로 Bearer 인증을 사용하며 Anthropic 계정 키를 사용하지 않습니다. 사용자 지정 `ACEDATACLOUD_BASE_URL`은 기존 OpenAI 호환 동작을 유지하고 공식 Ace 메타데이터를 상속하지 않습니다. 컨텍스트 용량을 알 수 없으면 `context_window_size`를 지정하지 않는 한 CrewAI의 문서화된 기본 예산을 사용합니다. Messages의 `max_tokens=4096` 기본값은 출력 예산이며 모델의 최대 용량이 아닙니다. 모델 이름이 같다는 이유로 공급자 가격이나 실험적 구조화 출력 기능을 추정하지 않습니다.

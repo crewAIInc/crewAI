@@ -1615,3 +1615,7 @@ llm = LLM(model="acedatacloud/gpt-4.1-mini")
 ```
 
 Use a current public chat model ID from the [model catalog](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_pricing). The prefix selects the provider; the remaining model ID is sent unchanged. Check current pricing and balance before a model call. An optional `ACEDATACLOUD_BASE_URL` overrides the endpoint; it is not needed for normal use.
+
+Install `crewai[anthropic]` for the complete Ace provider; newly generated Ace projects include this extra automatically. Both CLI model pickers load the complete public chat catalog without an API key, rather than a fixed preset or the generic eight-model limit. If discovery is unavailable, enter an explicit model ID.
+
+With the default Ace endpoint, each model's published protocol selects native Chat Completions, Responses, or Messages. Messages uses Bearer authentication with the same Ace key; an Anthropic account key is not used. A custom `ACEDATACLOUD_BASE_URL` keeps the existing OpenAI-compatible behavior and does not inherit official Ace metadata. Unknown context capacity uses CrewAI's documented fallback request budget unless you set `context_window_size`; the Messages `max_tokens=4096` default is an output budget, not a model maximum. Vendor prices and experimental structured-output capabilities are not inferred from matching model names.

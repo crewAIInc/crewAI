@@ -153,6 +153,7 @@ PROVIDERS: list[str] = [
 # project's crewai dependency; a provider not listed here (openai, ollama,
 # cerebras) runs on what `crewai[tools]` installs.
 PROVIDER_EXTRAS: dict[str, str] = {
+    "acedatacloud": "anthropic",
     "anthropic": "anthropic",
     "gemini": "google-genai",
     "bedrock": "bedrock",
