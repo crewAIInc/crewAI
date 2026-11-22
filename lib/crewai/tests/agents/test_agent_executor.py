@@ -1501,6 +1501,31 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
 
+    @pytest.mark.parametrize("native_tool", [False, True])
+    def test_completed_todo_records_multimodal_tool_text(
+        self, mock_dependencies, native_tool
+    ):
+        executor = _build_executor(**mock_dependencies)
+        running = TodoItem(step_number=1, description="Read the report", status="running")
+        executor.state.todos = TodoList(items=[running])
+        executor.state.messages = [
+            {
+                "role": "tool",
+                "content": [
+                    {"type": "text", "text": "Total: 42"},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,example"}},
+                ],
+            },
+        ]
+        if not native_tool:
+            executor.state.current_answer = AgentAction(
+                thought="", tool="read_report", tool_input="{}", text=""
+            )
+
+        assert executor.mark_todo_complete() == "todo_marked"
+        assert running.result == "Total: 42"
+        assert executor.state.messages[-1]["content"] == "**Step 1 result:**\n\nTotal: 42"
+
     def test_check_native_todo_completion_requires_current_todo(
         self, mock_dependencies
     ):
