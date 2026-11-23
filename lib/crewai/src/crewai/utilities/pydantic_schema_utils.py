@@ -18,7 +18,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from copy import deepcopy
 import datetime
+import ipaddress
 import logging
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -45,6 +47,7 @@ from pydantic import (
     AfterValidator,
     AnyUrl,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     DirectoryPath,
     Field,
@@ -1213,14 +1216,42 @@ def _compile_rust_pattern(pattern: str) -> TypeAdapter[str]:
         raise ValueError(f"Unsupported or invalid schema pattern: {pattern!r}") from exc
 
 
+def _extract_string_value(value: Any) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, SecretStr):
+        return value.get_secret_value()
+    if isinstance(
+        value,
+        (
+            Path,
+            AnyUrl,
+            PostgresDsn,
+            MongoDsn,
+            uuid.UUID,
+            ipaddress.IPv4Address,
+            ipaddress.IPv6Address,
+            ipaddress.IPv4Interface,
+            ipaddress.IPv6Interface,
+            ipaddress.IPv4Network,
+            ipaddress.IPv6Network,
+        ),
+    ):
+        return str(value)
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat()
+    return None
+
+
 def _make_patterns_validator(
     adapters: tuple[TypeAdapter[str], ...],
 ) -> Callable[[Any], Any]:
     def _validate(value: Any) -> Any:
-        if isinstance(value, str):
+        text = _extract_string_value(value)
+        if text is not None:
             try:
                 for adapter in adapters:
-                    adapter.validate_python(value)
+                    adapter.validate_python(text)
             except ValidationError as exc:
                 raise ValueError("String does not match required pattern") from exc
         return value
@@ -1233,14 +1264,15 @@ def _make_string_length_validator(
     max_length: int | float | None,
 ) -> Callable[[Any], Any]:
     def _validate(value: Any) -> Any:
-        if isinstance(value, str):
-            if min_length is not None and len(value) < min_length:
+        text = _extract_string_value(value)
+        if text is not None:
+            if min_length is not None and len(text) < min_length:
                 raise ValueError(
-                    f"String length {len(value)} is less than minimum {min_length}"
+                    f"String length {len(text)} is less than minimum {min_length}"
                 )
-            if max_length is not None and len(value) > max_length:
+            if max_length is not None and len(text) > max_length:
                 raise ValueError(
-                    f"String length {len(value)} exceeds maximum {max_length}"
+                    f"String length {len(text)} exceeds maximum {max_length}"
                 )
         return value
 
@@ -1333,7 +1365,7 @@ def _apply_all_of_validators(
             pattern_list = (single_pat,)
     if pattern_list:
         adapters = tuple(_compile_rust_pattern(pat) for pat in pattern_list)
-        type_ = Annotated[type_, AfterValidator(_make_patterns_validator(adapters))]
+        type_ = Annotated[type_, BeforeValidator(_make_patterns_validator(adapters))]
 
     if include_single_str_constraints:
         raw_min_len = schema.get("minLength")
@@ -1343,7 +1375,7 @@ def _apply_all_of_validators(
         if min_length is not None or max_length is not None:
             type_ = Annotated[
                 type_,
-                AfterValidator(_make_string_length_validator(min_length, max_length)),
+                BeforeValidator(_make_string_length_validator(min_length, max_length)),
             ]
 
     if include_single_num_constraints:

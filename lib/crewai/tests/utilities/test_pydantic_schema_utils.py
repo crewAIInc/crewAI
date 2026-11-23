@@ -11,13 +11,14 @@ Covers:
 
 from __future__ import annotations
 
-import datetime
 from copy import deepcopy
+import datetime
+from pathlib import Path
 import time
 from typing import Any
 
+from pydantic import AnyUrl, BaseModel, SecretStr, ValidationError
 import pytest
-from pydantic import BaseModel, ValidationError
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -1113,6 +1114,78 @@ class TestAllOfMerging:
         for bad in (["a", "b"], []):
             with pytest.raises(ValidationError):
                 Model(payload=bad)
+
+    def test_all_of_uri_format_enforces_string_constraints(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "allOf": [
+                        {"type": "string", "format": "uri"},
+                        {"pattern": r"^https://allowed\.example\.com/"},
+                        {"minLength": 32},
+                    ]
+                }
+            },
+            "required": ["endpoint"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.model_json_schema()
+        ok = Model(endpoint="https://allowed.example.com/api/v1")
+        assert isinstance(ok.endpoint, AnyUrl)
+        assert isinstance(Model(endpoint=ok.endpoint).endpoint, AnyUrl)
+        for bad in (
+            "https://evil.example.com/api/v1",
+            AnyUrl("https://evil.example.com/api/v1"),
+            "https://allowed.example.com/x",
+            AnyUrl("https://allowed.example.com/x"),
+        ):
+            with pytest.raises(ValidationError):
+                Model(endpoint=bad)
+
+    def test_all_of_file_path_and_password_formats_enforce_string_constraints(
+        self, tmp_path: Path
+    ) -> None:
+        valid_file = tmp_path / "allowed_report.txt"
+        short_file = tmp_path / "allowed_a.txt"
+        blocked_file = tmp_path / "blocked_report.txt"
+        for path in (valid_file, short_file, blocked_file):
+            path.write_text("ok", encoding="utf-8")
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "report": {
+                    "allOf": [
+                        {"type": "string", "format": "file-path"},
+                        {"pattern": r"(^|[/\\])allowed_[^/\\]+\.txt$"},
+                        {"minLength": len(str(valid_file))},
+                    ]
+                },
+                "token": {
+                    "allOf": [
+                        {"type": "string", "format": "password"},
+                        {"pattern": r"^tok_"},
+                        {"minLength": 8},
+                    ]
+                },
+            },
+            "required": ["report", "token"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.model_json_schema()
+        ok = Model(report=str(valid_file), token="tok_1234")
+        assert ok.report == valid_file
+        assert isinstance(ok.token, SecretStr)
+        assert ok.token.get_secret_value() == "tok_1234"
+        assert Model(report=valid_file, token=SecretStr("tok_1234")).report == valid_file
+
+        for bad_report in (str(blocked_file), blocked_file, str(short_file), short_file):
+            with pytest.raises(ValidationError):
+                Model(report=bad_report, token="tok_1234")
+        for bad_token in ("bad_1234", "tok_1", SecretStr("bad_1234"), SecretStr("tok_1")):
+            with pytest.raises(ValidationError):
+                Model(report=str(valid_file), token=bad_token)
 
 
 # $ref resolution
