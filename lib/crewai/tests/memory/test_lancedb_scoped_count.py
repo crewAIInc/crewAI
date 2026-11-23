@@ -16,6 +16,7 @@ from pathlib import Path
 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 from crewai.memory.types import MemoryRecord
 
+
 DIM = 2
 SCAN_LIMIT = 50_000
 
@@ -60,16 +61,18 @@ def test_scoped_counts_match_scan_semantics(tmp_path: Path) -> None:
         ],
     )
 
-    assert storage.count("/team") == 3
+    # /teamwork is a sibling, so counts and scans must both exclude it.
+    assert {r.id for r in storage.list_records("/team")} == {"a", "b"}
+    assert storage.count("/team") == 2
     assert storage.count("/team/sub") == 1
     assert storage.count("/a_b") == 1
     assert storage.count("/missing") == 0
     assert storage.count("/") == 6
-    assert storage.count("team") == 3
-    assert storage.count("/team/") == 3
+    assert storage.count("team") == 2
+    assert storage.count("/team/") == 2
 
     info = storage.get_scope_info("/team")
-    assert info.record_count == 3
+    assert info.record_count == 2
     assert info.child_scopes == ["/team/sub"]
     assert storage.get_scope_info("/").record_count == 6
     assert storage.get_scope_info("/missing").record_count == 0

@@ -456,6 +456,40 @@ def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embed
     assert mem.list_records() == []
 
 
+@pytest.mark.parametrize("scope", ["/team/alphabet", "/team/beta", "/"])
+def test_memory_slice_rejects_writes_outside_its_roots(scope: str) -> None:
+    from crewai.memory.memory_scope import MemorySlice
+
+    memory = MagicMock()
+    view = MemorySlice(memory=memory, scopes=["/team/alpha"], read_only=False)
+
+    with pytest.raises(ValueError, match="outside the memory slice"):
+        view.remember("a fact", scope=scope)
+
+    memory.remember.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("roots", "scope"),
+    [
+        (["/team/alpha"], "/team/alpha"),
+        (["team/alpha/"], "team//alpha/notes/"),
+        (["/team/alpha", "/team/beta"], "/team/beta/notes"),
+        (["/"], "/team/beta"),
+    ],
+)
+def test_memory_slice_preserves_the_scope_of_allowed_writes(
+    roots: list[str], scope: str
+) -> None:
+    from crewai.memory.memory_scope import MemorySlice
+
+    memory = MagicMock()
+    view = MemorySlice(memory=memory, scopes=roots, read_only=False)
+
+    assert view.remember("a fact", scope=scope) is memory.remember.return_value
+    assert memory.remember.call_args.kwargs["scope"] == scope
+
+
 def test_update_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
     """A read-only Memory leaves stored records untouched when update() is called."""
     from crewai.memory.unified_memory import Memory

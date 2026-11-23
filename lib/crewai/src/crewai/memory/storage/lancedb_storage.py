@@ -53,14 +53,19 @@ def _id_in_filter(record_ids: list[str]) -> str:
 
 
 def _scope_prefix_filter(prefix: str) -> str:
-    r"""Build a predicate matching scopes that start with ``prefix``.
+    r"""Build a predicate matching ``prefix`` and everything under it.
 
-    ``\``, ``%`` and ``_`` in the prefix are escaped so they match literally;
-    only the appended trailing ``%`` acts as a wildcard. Lance supports only
-    ``\`` as the ``LIKE`` escape character.
+    Matches ``prefix`` itself plus scopes starting with ``prefix + '/'``. A
+    plain ``prefix%`` LIKE would also match sibling scopes that merely share
+    a string prefix (``/proj`` matching ``/project``). ``\``, ``%`` and ``_``
+    in the prefix are escaped so they match literally; only the appended
+    trailing ``%`` acts as a wildcard. Lance supports only ``\`` as the
+    ``LIKE`` escape character. The result is parenthesized so it can be
+    safely combined with other predicates via ``AND``.
     """
     pattern = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
+    literal = _sql_str(prefix)
+    return f"(scope = '{literal}' OR scope LIKE '{_sql_str(pattern)}/%' ESCAPE '\\')"
 
 
 class LanceDBStorage:
@@ -471,7 +476,7 @@ class LanceDBStorage:
                 prefix = scope_prefix.rstrip("/")
                 if not prefix.startswith("/"):
                     prefix = "/" + prefix
-                conditions.append(f"{_scope_prefix_filter(prefix)} OR scope = '/'")
+                conditions.append(_scope_prefix_filter(prefix))
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:

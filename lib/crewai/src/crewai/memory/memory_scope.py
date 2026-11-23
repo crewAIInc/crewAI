@@ -15,6 +15,7 @@ from crewai.memory.types import (
     ScopeInfo,
 )
 from crewai.memory.unified_memory import Memory
+from crewai.memory.utils import join_scope_paths, normalize_scope_path
 
 
 def _ensure_memory_kind(value: Any) -> Any:
@@ -269,6 +270,12 @@ class MemorySlice(BaseModel):
             )
         return self._memory
 
+    @staticmethod
+    def _scope_path(root: str, path: str | None) -> str:
+        """Join a child path while preserving an unanchored slice root."""
+        full = join_scope_paths(root, path)
+        return full if root.startswith("/") else full.lstrip("/")
+
     def remember(
         self,
         content: str,
@@ -279,9 +286,15 @@ class MemorySlice(BaseModel):
         source: str | None = None,
         private: bool = False,
     ) -> MemoryRecord | None:
-        """Remember into an explicit scope. No-op when read_only=True."""
+        """Remember within a slice root or its descendants; no-op if read-only."""
         if self.read_only:
             return None
+        path = normalize_scope_path(scope)
+        roots = (normalize_scope_path(root) for root in self.scopes)
+        if not any(
+            path == root or path.startswith(root.rstrip("/") + "/") for root in roots
+        ):
+            raise ValueError(f"Scope {path!r} is outside the memory slice")
         return self._require_memory().remember(
             content,
             scope=scope,
@@ -334,7 +347,7 @@ class MemorySlice(BaseModel):
         """List scopes across all slice roots."""
         out: list[str] = []
         for sc in self.scopes:
-            full = f"{sc.rstrip('/')}{path}" if sc != "/" else path
+            full = self._scope_path(sc, path)
             out.extend(self._require_memory().list_scopes(full))
         return sorted(set(out))
 
@@ -346,7 +359,7 @@ class MemorySlice(BaseModel):
         newest: datetime | None = None
         children: list[str] = []
         for sc in self.scopes:
-            full = f"{sc.rstrip('/')}{path}" if sc != "/" else path
+            full = self._scope_path(sc, path)
             inf = self._require_memory().info(full)
             total_records += inf.record_count
             all_categories.update(inf.categories)
@@ -376,7 +389,7 @@ class MemorySlice(BaseModel):
         """Categories and counts across slice scopes."""
         counts: dict[str, int] = {}
         for sc in self.scopes:
-            full = (f"{sc.rstrip('/')}{path}" if sc != "/" else path) if path else sc
+            full = self._scope_path(sc, path)
             for k, v in self._require_memory().list_categories(full).items():
                 counts[k] = counts.get(k, 0) + v
         return counts
