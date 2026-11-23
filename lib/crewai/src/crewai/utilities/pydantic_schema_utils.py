@@ -1680,13 +1680,18 @@ def _merge_all_of_schemas(
                 elif enum_vals is None:
                     enum_vals = list(sub_enum)
                 else:
-                    enum_vals = [
-                        v
-                        for v in enum_vals
-                        if any(
-                            _json_values_equal(v, candidate) for candidate in sub_enum
-                        )
-                    ]
+                    next_enum: list[Any] = []
+                    for v in enum_vals:
+                        for candidate in sub_enum:
+                            if budget[0] <= 0:
+                                raise ValueError(
+                                    "Schema allOf complexity limit exceeded"
+                                )
+                            budget[0] -= 1
+                            if _json_values_equal(v, candidate):
+                                next_enum.append(v)
+                                break
+                    enum_vals = next_enum
                     if not enum_vals:
                         unsatisfiable = True
 
@@ -1840,7 +1845,7 @@ def _merge_all_of_schemas(
             merged_items = _merge_all_of_schemas(
                 item_dicts,
                 root_schema,
-                _seen=set(seen),
+                _seen=set(),
                 _budget=budget,
                 _memo=memo,
             )
@@ -1854,10 +1859,17 @@ def _merge_all_of_schemas(
             tuple(_compile_rust_pattern(pat) for pat in patterns) if patterns else ()
         )
         if has_const:
-            if enum_vals is not None and not any(
-                _json_values_equal(const_val, e) for e in enum_vals
-            ):
-                return {_UNSATISFIABLE_KEY: True}
+            if enum_vals is not None:
+                enum_match = False
+                for e in enum_vals:
+                    if budget[0] <= 0:
+                        raise ValueError("Schema allOf complexity limit exceeded")
+                    budget[0] -= 1
+                    if _json_values_equal(const_val, e):
+                        enum_match = True
+                        break
+                if not enum_match:
+                    return {_UNSATISFIABLE_KEY: True}
             if not _value_matches_constraints(
                 const_val, merged, pattern_adapters, multiple_ofs, budget
             ):
@@ -1915,7 +1927,7 @@ def _merge_all_of_schemas(
                         pair = _merge_all_of_schemas(
                             [cand, alt_dict],
                             root_schema,
-                            _seen=set(seen),
+                            _seen=set(),
                             _budget=budget,
                             _memo=memo,
                         )

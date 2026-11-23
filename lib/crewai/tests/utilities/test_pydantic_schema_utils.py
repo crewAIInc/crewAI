@@ -1440,6 +1440,81 @@ class TestAllOfMerging:
             assert isinstance(ok_bytes.tok, SecretBytes)
             assert ok_bytes.tok.get_secret_value() == b"good123"
 
+    def test_all_of_large_disjoint_enum_intersection_respects_complexity_budget(
+        self,
+    ) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [
+                        {"type": "string", "enum": [f"a_{i}" for i in range(200)]},
+                        {"type": "string", "enum": [f"b_{i}" for i in range(200)]},
+                    ]
+                }
+            },
+            "required": ["code"],
+        }
+        with pytest.raises(ValueError, match="complexity limit exceeded"):
+            create_model_from_schema(schema)
+
+    def test_all_of_shared_ref_fragment_preserved_in_nested_items_and_anyof(
+        self,
+    ) -> None:
+        items_schema = {
+            "type": "object",
+            "properties": {
+                "cmds": {
+                    "allOf": [
+                        {"type": "array"},
+                        {"$ref": "#/$defs/SafeStr"},
+                        {"items": {"$ref": "#/$defs/SafeStr"}},
+                        {"items": {"type": "string", "minLength": 2}},
+                    ]
+                }
+            },
+            "required": ["cmds"],
+            "$defs": {
+                "SafeStr": {"pattern": "^[a-z]+$"},
+            },
+        }
+        ItemsModel = create_model_from_schema(items_schema)
+        assert ItemsModel.model_validate({"cmds": ["ok"]}).cmds == ["ok"]
+        for bad in (["rm -rf /"], ["a"], ["BAD"]):
+            with pytest.raises(ValidationError):
+                ItemsModel.model_validate({"cmds": bad})
+
+        anyof_schema = {
+            "type": "object",
+            "properties": {
+                "val": {
+                    "allOf": [
+                        {"$ref": "#/$defs/SafeStr"},
+                        {
+                            "anyOf": [
+                                {
+                                    "allOf": [
+                                        {"type": "string"},
+                                        {"$ref": "#/$defs/SafeStr"},
+                                    ]
+                                },
+                                {"type": "integer", "minimum": 1},
+                            ]
+                        },
+                    ]
+                }
+            },
+            "required": ["val"],
+            "$defs": {
+                "SafeStr": {"pattern": "^[a-z]+$"},
+            },
+        }
+        AnyOfModel = create_model_from_schema(anyof_schema)
+        assert AnyOfModel.model_validate({"val": "ok"}).val == "ok"
+        assert AnyOfModel.model_validate({"val": 2}).val == 2
+        with pytest.raises(ValidationError):
+            AnyOfModel.model_validate({"val": "rm -rf /"})
+
 
 # $ref resolution
 
