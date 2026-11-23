@@ -147,6 +147,35 @@ def _skip_string_literal(stmt: str, pos: int) -> int:
     return i  # Unterminated literal — return end
 
 
+_INTO_CLAUSE_RE = re.compile(
+    r"\bINTO\s+(?!@)(?P<target>OUTFILE|DUMPFILE)?", re.IGNORECASE
+)
+
+
+def _detect_into_clause(stmt: str) -> str | None:
+    """Return the ``INTO`` clause that writes data out of a read query, or None.
+
+    ``SELECT ... INTO OUTFILE`` / ``DUMPFILE`` write files on the database
+    host and ``SELECT ... INTO new_table`` creates a table, so none of them are
+    read-only even though the statement starts with ``SELECT``.  ``INTO @var``
+    (MySQL session variable) is harmless and allowed.  String literals are
+    blanked first so ``WHERE note = 'into outfile'`` is not a false positive.
+    """
+    cleaned: list[str] = []
+    i = 0
+    while i < len(stmt):
+        if stmt[i] == "'":
+            i = _skip_string_literal(stmt, i)
+            cleaned.append(" ")
+        else:
+            cleaned.append(stmt[i])
+            i += 1
+    match = _INTO_CLAUSE_RE.search("".join(cleaned))
+    if not match:
+        return None
+    return match.group("target").upper() if match.group("target") else "INTO"
+
+
 def _find_matching_close_paren(stmt: str, start: int) -> int:
     """Find the matching close paren, skipping string literals."""
     depth = 1
@@ -337,6 +366,14 @@ class NL2SQLTool(BaseTool):
                 "mode. Remove the comments and retry."
             )
         command = self._extract_command(stmt)
+
+        if not self.allow_dml and (command in _READ_ONLY_COMMANDS or command == "WITH"):
+            into_found = _detect_into_clause(stmt)
+            if into_found:
+                raise ValueError(
+                    f"NL2SQLTool blocked an 'INTO {into_found}' clause in "
+                    f"read-only mode."
+                )
 
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
         # query.  Resolve the real command so write operations are caught.
