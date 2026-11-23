@@ -1160,7 +1160,7 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        from crewai.tools.base_tool import _FIRST_PARTY_TOOL_PACKAGES
+        from crewai.tools.base_tool import _FIRST_PARTY_TOOL_PACKAGES, BaseTool
         from crewai.types.callback import _trusted_deserialize
 
         def build_default_client() -> Any:
@@ -1201,10 +1201,10 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 for tool in value:
                     try:
                         module_name = tool["module"]
-                        if not (
+                        first_party = module_name in ("crewai", "crewai_tools") or (
                             module_name.startswith(_FIRST_PARTY_TOOL_PACKAGES)
-                            or _trusted_deserialize()
-                        ):
+                        )
+                        if not (first_party or _trusted_deserialize()):
                             raise AgentRepositoryError(
                                 f"Tool module '{module_name}' is not a first-party CrewAI "
                                 "package; refusing to import third-party modules from agent "
@@ -1213,6 +1213,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                             )
                         module = importlib.import_module(module_name)
                         tool_class = getattr(module, tool["name"])
+                        if not (
+                            isinstance(tool_class, type)
+                            and issubclass(tool_class, BaseTool)
+                        ):
+                            raise AgentRepositoryError(
+                                f"Tool '{tool['name']}' from module '{module_name}' is "
+                                "not a BaseTool subclass; refusing to instantiate "
+                                "arbitrary callables from agent repository definitions."
+                            )
 
                         tool_value = tool_class(**tool["init_params"])
 
@@ -1225,6 +1234,26 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
                         ) from e
+            elif key == "mcps":
+                entries = value if isinstance(value, list) else [value]
+                if not _trusted_deserialize() and any(
+                    not isinstance(entry, str) for entry in entries
+                ):
+                    raise AgentRepositoryError(
+                        "Inline MCP server definitions from the agent repository can "
+                        "spawn local processes or contact arbitrary URLs; refusing "
+                        "them. Set CREWAI_DESERIALIZE_CALLBACKS=1 to allow trusted "
+                        "definitions."
+                    )
+                attributes[key] = value
+            elif key == "memory":
+                if isinstance(value, dict) and not _trusted_deserialize():
+                    raise AgentRepositoryError(
+                        "Agent repository definitions may not supply a custom memory "
+                        "configuration (embedder endpoint or storage path). Set "
+                        "CREWAI_DESERIALIZE_CALLBACKS=1 to allow trusted definitions."
+                    )
+                attributes[key] = value
             else:
                 attributes[key] = value
     return attributes
