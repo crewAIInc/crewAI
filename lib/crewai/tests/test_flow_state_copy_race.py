@@ -43,6 +43,42 @@ def test_copy_state_retries_after_concurrent_resize(monkeypatch):
     assert calls["count"] == 2
 
 
+def test_copy_state_does_not_retry_an_unrelated_runtime_error(monkeypatch):
+    """Only a concurrent dict resize is retried; custom copy failures surface once."""
+    flow = DictStateFlow(initial_state={"answer": 1})
+    calls = {"count": 0}
+
+    def failing_deepcopy(obj, *args, **kwargs):
+        calls["count"] += 1
+        raise RuntimeError("custom copy failed")
+
+    monkeypatch.setattr("crewai.flow.runtime.copy.deepcopy", failing_deepcopy)
+
+    with pytest.raises(RuntimeError, match="custom copy failed"):
+        flow._copy_state()
+
+    assert calls["count"] == 1
+
+
+def test_copy_state_does_not_retry_an_unrelated_error_after_a_resize(monkeypatch):
+    """A resize retry must not mask a different failure from the snapshot copy."""
+    flow = DictStateFlow(initial_state={"answer": 1})
+    calls = {"count": 0}
+
+    def flaky_deepcopy(obj, *args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("dictionary changed size during iteration")
+        raise RuntimeError("custom copy failed")
+
+    monkeypatch.setattr("crewai.flow.runtime.copy.deepcopy", flaky_deepcopy)
+
+    with pytest.raises(RuntimeError, match="custom copy failed"):
+        flow._copy_state()
+
+    assert calls["count"] == 2
+
+
 def test_copy_state_retry_keeps_shallow_fallback_for_unpickleable_values(monkeypatch):
     """If the retried deepcopy of the snapshot hits unpickleable values
     (TypeError), the shallow snapshot is returned instead of raising."""
