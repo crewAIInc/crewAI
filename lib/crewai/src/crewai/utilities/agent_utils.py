@@ -1144,6 +1144,40 @@ def _print_current_organization() -> None:
         )
 
 
+def _refuse_repository_import_strings(
+    tool_class: type, init_params: dict[str, Any], tool_name: str
+) -> None:
+    """Refuse repository-supplied dotted-import string parameters.
+
+    ImportString-typed tool fields (e.g. ``custom_embedding_fn`` on the
+    vector-search tools) and package-name fields later passed to
+    ``importlib.import_module`` (``qdrant_package``, ``db2_package``,
+    ``db2_dbi_package``) let a repository entry bind an arbitrary callable
+    into a first-party tool at construction. Refuse string values for those
+    fields unless ``CREWAI_DESERIALIZE_CALLBACKS`` is set.
+    """
+    from pydantic import ImportString
+    from typing import get_args
+
+    package_name_fields = ("qdrant_package", "db2_package", "db2_dbi_package")
+    fields = getattr(tool_class, "model_fields", {})
+    for field_name, value in init_params.items():
+        if not isinstance(value, str):
+            continue
+        fdef = fields.get(field_name)
+        is_import_string = False
+        if fdef is not None and fdef.annotation is not None:
+            annotations = [fdef.annotation, *get_args(fdef.annotation)]
+            is_import_string = any(a is ImportString for a in annotations)
+        if is_import_string or field_name in package_name_fields:
+            raise AgentRepositoryError(
+                f"Tool '{tool_name}' parameter '{field_name}' is a dotted "
+                "import path; refusing repository-supplied import strings "
+                "into first-party tools. Set CREWAI_DESERIALIZE_CALLBACKS=1 "
+                "to allow trusted definitions."
+            )
+
+
 def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     """Load an agent from the repository.
 
@@ -1230,7 +1264,13 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                                 "arbitrary callables from agent repository definitions."
                             )
 
-                        tool_value = tool_class(**tool["init_params"])
+                        init_params = dict(tool["init_params"])
+                        if not _trusted_deserialize():
+                            _refuse_repository_import_strings(
+                                tool_class, init_params, tool["name"]
+                            )
+
+                        tool_value = tool_class(**init_params)
 
                         if isinstance(tool_value, list):
                             attributes[key].extend(tool_value)
