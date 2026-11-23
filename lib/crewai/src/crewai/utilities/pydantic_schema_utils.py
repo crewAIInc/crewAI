@@ -19,6 +19,7 @@ from collections.abc import Callable
 from copy import deepcopy
 import datetime
 import logging
+import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -27,6 +28,7 @@ from typing import (
     ForwardRef,
     Literal,
     Optional,
+    TypeGuard,
     TypedDict,
     Union,
     cast,
@@ -41,6 +43,7 @@ from pydantic import (
     UUID3,
     UUID4,
     UUID5,
+    AfterValidator,
     AnyUrl,
     BaseModel,
     ConfigDict,
@@ -57,6 +60,7 @@ from pydantic import (
     SecretStr,
     StrictBytes,
     create_model as create_model_base,
+    model_validator,
 )
 from pydantic.networks import (  # type: ignore[attr-defined]
     IPv4Address,
@@ -953,13 +957,21 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     }
 
     effective_config = __config__ or ConfigDict(extra="forbid")
+    effective_validators: dict[str, Any] | None = __validators__
+    if json_schema.get(_UNSATISFIABLE_KEY):
+        effective_validators = {
+            **(__validators__ or {}),
+            "__crewai_unsatisfiable_validator__": model_validator(mode="before")(
+                _reject_unsatisfiable_model
+            ),
+        }
 
     model = create_model_base(
         effective_name,
         __config__=effective_config,
         __base__=__base__,
         __module__=__module__,
-        __validators__=__validators__,
+        __validators__=effective_validators,
         __cls_kwargs__=__cls_kwargs__,
         **field_definitions,
     )
@@ -1003,6 +1015,8 @@ def _json_schema_to_pydantic_field(
             root_schema,
             outer_schema=json_schema,
         )
+    if json_schema.get(_UNSATISFIABLE_KEY):
+        type_ = Annotated[Any, AfterValidator(_reject_unsatisfiable)]
     is_required = name in required
 
     field_params: dict[str, Any] = {}
@@ -1080,11 +1094,16 @@ def _json_schema_to_pydantic_field(
     # A field with an explicit default is already usable when omitted, so it
     # should not be made nullable unless the schema actually allows ``None``.
     # Only fields that fall back to a ``None`` default need the Optional wrap.
-    if not is_required and default is None:
+    if not is_required and default is None and not json_schema.get(_UNSATISFIABLE_KEY):
         type_ = Optional[type_]  # noqa: UP045 - ForwardRef does not support `|`
 
     if schema_extra:
         field_params["json_schema_extra"] = schema_extra
+
+    if json_schema.get(_ALL_OF_PATTERNS_KEY) or json_schema.get(
+        _ALL_OF_MULTIPLE_OF_KEY
+    ):
+        type_ = _apply_all_of_validators(type_, json_schema)
 
     return type_, Field(default, **field_params)
 
@@ -1113,6 +1132,13 @@ def _resolve_ref(ref: str, root_schema: dict[str, Any]) -> dict[str, Any]:
     return ref_schema
 
 
+_MAX_ALL_OF_MERGE_STEPS: Final[int] = 10_000
+_UNSATISFIABLE_KEY: Final[str] = "__crewai_unsatisfiable__"
+_ALL_OF_PATTERNS_KEY: Final[str] = "__crewai_all_of_patterns__"
+_ALL_OF_MULTIPLE_OF_KEY: Final[str] = "__crewai_all_of_multiple_of__"
+_TYPE_CONFLICT: Final[object] = object()
+_MISSING: Final[object] = object()
+
 _ALL_OF_LOWER_BOUNDS: Final[tuple[str, ...]] = (
     "minimum",
     "exclusiveMinimum",
@@ -1131,14 +1157,180 @@ _ALL_OF_SCALAR_METADATA_KEYS: Final[tuple[str, ...]] = (
     "default",
     "examples",
     "format",
-    "pattern",
-    "multipleOf",
     "writeOnly",
     "scheme",
+)
+_ALL_OF_STRUCTURAL_NON_EMPTY_KEYS: Final[tuple[str, ...]] = (
+    "enum",
     "const",
+    "items",
     "anyOf",
     "oneOf",
+    "$ref",
+    "type",
+    "pattern",
+    "minLength",
+    "maxLength",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
 )
+
+
+def _reject_unsatisfiable(_value: Any) -> Any:
+    raise ValueError("Schema constraints are unsatisfiable")
+
+
+def _reject_unsatisfiable_model(_cls: Any, _data: Any) -> Any:
+    raise ValueError("Schema constraints are unsatisfiable")
+
+
+def _make_patterns_validator(
+    patterns: tuple[re.Pattern[str], ...],
+) -> Callable[[Any], Any]:
+    def _validate(value: Any) -> Any:
+        if isinstance(value, str):
+            for pat in patterns:
+                if pat.search(value) is None:
+                    raise ValueError(
+                        f"String does not match required pattern: {pat.pattern!r}"
+                    )
+        return value
+
+    return _validate
+
+
+def _make_multiple_of_validator(
+    divisors: tuple[int | float, ...],
+) -> Callable[[Any], Any]:
+    def _validate(value: Any) -> Any:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            for divisor in divisors:
+                if divisor <= 0:
+                    raise ValueError("multipleOf divisor must be positive")
+                if isinstance(value, int) and isinstance(divisor, int):
+                    if value % divisor != 0:
+                        raise ValueError(
+                            f"Value {value} is not a multiple of {divisor}"
+                        )
+                else:
+                    quotient = value / divisor
+                    if abs(quotient - round(quotient)) > 1e-9:
+                        raise ValueError(
+                            f"Value {value} is not a multiple of {divisor}"
+                        )
+        return value
+
+    return _validate
+
+
+def _apply_all_of_validators(type_: Any, schema: dict[str, Any]) -> Any:
+    if schema.get(_UNSATISFIABLE_KEY):
+        return Annotated[Any, AfterValidator(_reject_unsatisfiable)]
+    patterns = schema.get(_ALL_OF_PATTERNS_KEY)
+    if isinstance(patterns, (tuple, list)) and patterns:
+        compiled = tuple(re.compile(p) for p in patterns if isinstance(p, str))
+        if compiled:
+            type_ = Annotated[type_, AfterValidator(_make_patterns_validator(compiled))]
+    divisors = schema.get(_ALL_OF_MULTIPLE_OF_KEY)
+    if isinstance(divisors, (tuple, list)) and divisors:
+        numeric = tuple(
+            d
+            for d in divisors
+            if isinstance(d, (int, float)) and not isinstance(d, bool)
+        )
+        if numeric:
+            type_ = Annotated[
+                type_, AfterValidator(_make_multiple_of_validator(numeric))
+            ]
+    return type_
+
+
+def _is_json_number(val: Any) -> TypeGuard[int | float]:
+    return isinstance(val, (int, float)) and not isinstance(val, bool)
+
+
+def _json_values_equal(a: Any, b: Any) -> bool:
+    if isinstance(a, bool) or isinstance(b, bool):
+        return isinstance(a, bool) and isinstance(b, bool) and a == b
+    if _is_json_number(a) and _is_json_number(b):
+        return bool(a == b)
+    if type(a) is not type(b):
+        return False
+    return bool(a == b)
+
+
+def _value_matches_json_type(value: Any, json_type: Any) -> bool:
+    if isinstance(json_type, list):
+        return any(_value_matches_json_type(value, member) for member in json_type)
+    if json_type == "null":
+        return value is None
+    if json_type == "boolean":
+        return isinstance(value, bool)
+    if json_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if json_type == "number":
+        return _is_json_number(value)
+    if json_type == "string":
+        return isinstance(value, str)
+    if json_type == "array":
+        return isinstance(value, list)
+    if json_type == "object":
+        return isinstance(value, dict)
+    return True
+
+
+def _value_matches_constraints(
+    value: Any,
+    merged: dict[str, Any],
+    patterns: list[str],
+    multiple_ofs: list[int | float],
+) -> bool:
+    if "type" in merged and not _value_matches_json_type(value, merged["type"]):
+        return False
+    if isinstance(value, str):
+        for pat in patterns:
+            if re.search(pat, value) is None:
+                return False
+        min_len = merged.get("minLength")
+        if _is_json_number(min_len) and len(value) < min_len:
+            return False
+        max_len = merged.get("maxLength")
+        if _is_json_number(max_len) and len(value) > max_len:
+            return False
+    if isinstance(value, list):
+        min_items = merged.get("minItems")
+        if _is_json_number(min_items) and len(value) < min_items:
+            return False
+        max_items = merged.get("maxItems")
+        if _is_json_number(max_items) and len(value) > max_items:
+            return False
+    if _is_json_number(value):
+        minimum = merged.get("minimum")
+        if _is_json_number(minimum) and value < minimum:
+            return False
+        excl_min = merged.get("exclusiveMinimum")
+        if _is_json_number(excl_min) and value <= excl_min:
+            return False
+        maximum = merged.get("maximum")
+        if _is_json_number(maximum) and value > maximum:
+            return False
+        excl_max = merged.get("exclusiveMaximum")
+        if _is_json_number(excl_max) and value >= excl_max:
+            return False
+        for divisor in multiple_ofs:
+            if divisor <= 0:
+                return False
+            if isinstance(value, int) and isinstance(divisor, int):
+                if value % divisor != 0:
+                    return False
+            else:
+                quotient = value / divisor
+                if abs(quotient - round(quotient)) > 1e-9:
+                    return False
+    return True
 
 
 def _merge_json_schema_types(existing: Any, new: Any) -> Any:
@@ -1152,7 +1344,7 @@ def _merge_json_schema_types(existing: Any, new: Any) -> Any:
             return existing
         if {existing, new} == {"integer", "number"}:
             return "integer"
-        return existing
+        return _TYPE_CONFLICT
     existing_list = existing if isinstance(existing, list) else [existing]
     new_list = new if isinstance(new, list) else [new]
     narrowed: list[Any] = []
@@ -1167,7 +1359,7 @@ def _merge_json_schema_types(existing: Any, new: Any) -> Any:
         return narrowed[0]
     if len(narrowed) > 1:
         return narrowed
-    return existing
+    return _TYPE_CONFLICT
 
 
 def _merge_all_of_schemas(
@@ -1176,23 +1368,55 @@ def _merge_all_of_schemas(
     *,
     outer_schema: dict[str, Any] | None = None,
     _seen: set[int] | None = None,
+    _budget: list[int] | None = None,
+    _memo: dict[tuple[int, ...], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Merge multiple ``allOf`` schemas (and optional outer sibling keywords).
+    """Merge multiple ``allOf`` schemas conjunctively with complexity bounds.
 
-    Preserves non-object types (scalar/array/enum), narrows bounds and enums,
-    flattens nested ``allOf`` chains, and overlays outer sibling keywords
-    (such as ``properties``, ``required``, ``title``, ``description``, and
-    constraints) onto the merged result without emitting ``allOf``.
+    Intersects overlapping properties and nested ``items``, ANDs multiple
+    ``pattern`` and ``multipleOf`` constraints, intersects ``enum`` / ``const`` /
+    ``type`` / ``anyOf`` / ``oneOf`` (failing closed on unsatisfiable
+    combinations), flattens nested ``allOf`` chains, and bounds total work with
+    shared memoization across DAG branches.
     """
     merged: dict[str, Any] = {}
     seen: set[int] = set() if _seen is None else _seen
+    budget: list[int] = [_MAX_ALL_OF_MERGE_STEPS] if _budget is None else _budget
+    memo: dict[tuple[int, ...], dict[str, Any]] = {} if _memo is None else _memo
 
-    def _is_number(val: Any) -> bool:
-        return isinstance(val, (int, float)) and not isinstance(val, bool)
+    unsatisfiable = False
+    prop_branches: dict[str, list[dict[str, Any]]] = {}
+    prop_branch_ids: dict[str, set[int]] = {}
+    prop_unsat: set[str] = set()
+    outer_props: dict[str, dict[str, Any]] = {}
+    item_false = False
+    item_dicts: list[dict[str, Any]] = []
+    item_dict_ids: set[int] = set()
+    item_other: Any = _MISSING
+    enum_vals: list[Any] | None = None
+    has_const = False
+    const_val: Any = None
+    patterns: list[str] = []
+    multiple_ofs: list[int | float] = []
+    union_groups: list[list[Any]] = []
 
     def _apply(sub: Any, *, is_outer: bool = False) -> None:
+        nonlocal unsatisfiable, item_false, item_other
+        nonlocal enum_vals, has_const, const_val
+
+        if sub is False:
+            unsatisfiable = True
+            return
         if not isinstance(sub, dict):
             return
+        if budget[0] <= 0:
+            raise ValueError("Schema allOf complexity limit exceeded")
+        budget[0] -= 1
+
+        if sub.get(_UNSATISFIABLE_KEY):
+            unsatisfiable = True
+            return
+
         if not is_outer:
             sub_id = id(sub)
             if sub_id in seen:
@@ -1209,11 +1433,25 @@ def _merge_all_of_schemas(
                 _apply(nested, is_outer=False)
 
         if "type" in sub:
-            merged["type"] = _merge_json_schema_types(merged.get("type"), sub["type"])
+            narrowed_type = _merge_json_schema_types(merged.get("type"), sub["type"])
+            if narrowed_type is _TYPE_CONFLICT:
+                unsatisfiable = True
+            else:
+                merged["type"] = narrowed_type
 
         sub_props = sub.get("properties")
         if isinstance(sub_props, dict) and sub_props:
-            merged.setdefault("properties", {}).update(sub_props)
+            for prop_name, prop_schema in sub_props.items():
+                if prop_schema is False:
+                    prop_unsat.add(prop_name)
+                elif isinstance(prop_schema, dict):
+                    if is_outer:
+                        outer_props[prop_name] = prop_schema
+                    else:
+                        b_ids = prop_branch_ids.setdefault(prop_name, set())
+                        if id(prop_schema) not in b_ids:
+                            b_ids.add(id(prop_schema))
+                            prop_branches.setdefault(prop_name, []).append(prop_schema)
 
         sub_required = sub.get("required")
         if isinstance(sub_required, list) and sub_required:
@@ -1222,35 +1460,68 @@ def _merge_all_of_schemas(
                 if field not in req_list:
                     req_list.append(field)
 
-        sub_enum = sub.get("enum")
-        if isinstance(sub_enum, list) and sub_enum:
-            if "enum" not in merged:
-                merged["enum"] = list(sub_enum)
-            else:
-                intersected = [v for v in merged["enum"] if v in sub_enum]
-                if intersected:
-                    merged["enum"] = intersected
+        if "enum" in sub:
+            sub_enum = sub["enum"]
+            if isinstance(sub_enum, list):
+                if not sub_enum:
+                    unsatisfiable = True
+                elif enum_vals is None:
+                    enum_vals = list(sub_enum)
+                else:
+                    enum_vals = [
+                        v
+                        for v in enum_vals
+                        if any(
+                            _json_values_equal(v, candidate) for candidate in sub_enum
+                        )
+                    ]
+                    if not enum_vals:
+                        unsatisfiable = True
+
+        if "const" in sub:
+            cand_const = sub["const"]
+            if not has_const:
+                has_const = True
+                const_val = cand_const
+            elif not _json_values_equal(const_val, cand_const):
+                unsatisfiable = True
 
         if "items" in sub:
             sub_items = sub["items"]
-            if "items" not in merged or (
-                merged["items"] is True and not isinstance(sub_items, bool)
-            ):
-                merged["items"] = sub_items
-            elif isinstance(merged["items"], dict) and isinstance(sub_items, dict):
-                merged["items"] = _merge_all_of_schemas(
-                    [merged["items"], sub_items],
-                    root_schema,
-                    _seen=set(seen),
-                )
-            elif is_outer:
-                merged["items"] = sub_items
+            if sub_items is False:
+                item_false = True
+            elif isinstance(sub_items, dict):
+                if id(sub_items) not in item_dict_ids:
+                    item_dict_ids.add(id(sub_items))
+                    item_dicts.append(sub_items)
+            elif item_other is _MISSING:
+                item_other = sub_items
+
+        internal_patterns = sub.get(_ALL_OF_PATTERNS_KEY)
+        if isinstance(internal_patterns, (tuple, list)):
+            for pat in internal_patterns:
+                if isinstance(pat, str) and pat not in patterns:
+                    patterns.append(pat)
+        else:
+            raw_pat = sub.get("pattern")
+            if isinstance(raw_pat, str) and raw_pat not in patterns:
+                patterns.append(raw_pat)
+
+        internal_multiples = sub.get(_ALL_OF_MULTIPLE_OF_KEY)
+        if isinstance(internal_multiples, (tuple, list)):
+            for div in internal_multiples:
+                if _is_json_number(div) and div not in multiple_ofs:
+                    multiple_ofs.append(div)
+        else:
+            raw_mult = sub.get("multipleOf")
+            if _is_json_number(raw_mult) and raw_mult not in multiple_ofs:
+                multiple_ofs.append(raw_mult)
 
         for key in _ALL_OF_LOWER_BOUNDS:
             if key in sub:
                 val = sub[key]
                 cur = merged.get(key)
-                if _is_number(val) and _is_number(cur):
+                if _is_json_number(val) and _is_json_number(cur):
                     merged[key] = max(cur, val)
                 elif is_outer or key not in merged:
                     merged[key] = val
@@ -1259,10 +1530,19 @@ def _merge_all_of_schemas(
             if key in sub:
                 val = sub[key]
                 cur = merged.get(key)
-                if _is_number(val) and _is_number(cur):
+                if _is_json_number(val) and _is_json_number(cur):
                     merged[key] = min(cur, val)
                 elif is_outer or key not in merged:
                     merged[key] = val
+
+        for union_key in ("anyOf", "oneOf"):
+            if union_key in sub:
+                u_list = sub[union_key]
+                if isinstance(u_list, list):
+                    if not u_list:
+                        unsatisfiable = True
+                    else:
+                        union_groups.append(u_list)
 
         for key in _ALL_OF_SCALAR_METADATA_KEYS:
             if key in sub:
@@ -1276,6 +1556,158 @@ def _merge_all_of_schemas(
 
     if outer_schema is not None:
         _apply(outer_schema, is_outer=True)
+
+    # Check inverted bounds after merging all branches
+    for low_key, high_key, strict in (
+        ("minLength", "maxLength", False),
+        ("minItems", "maxItems", False),
+        ("minimum", "maximum", False),
+        ("exclusiveMinimum", "maximum", True),
+        ("minimum", "exclusiveMaximum", True),
+        ("exclusiveMinimum", "exclusiveMaximum", True),
+    ):
+        low_val = merged.get(low_key)
+        high_val = merged.get(high_key)
+        if _is_json_number(low_val) and _is_json_number(high_val):
+            if (low_val >= high_val) if strict else (low_val > high_val):
+                unsatisfiable = True
+
+    if unsatisfiable:
+        return {_UNSATISFIABLE_KEY: True}
+
+    if patterns:
+        merged["pattern"] = patterns[0]
+        if len(patterns) > 1:
+            merged[_ALL_OF_PATTERNS_KEY] = tuple(patterns)
+
+    if multiple_ofs:
+        merged["multipleOf"] = multiple_ofs[0]
+        if len(multiple_ofs) > 1:
+            merged[_ALL_OF_MULTIPLE_OF_KEY] = tuple(multiple_ofs)
+
+    if prop_branches or outer_props or prop_unsat:
+        merged_props: dict[str, Any] = {}
+        all_prop_names = list(
+            dict.fromkeys([*prop_branches.keys(), *outer_props.keys(), *prop_unsat])
+        )
+        for prop_name in all_prop_names:
+            if prop_name in prop_unsat:
+                merged_props[prop_name] = {_UNSATISFIABLE_KEY: True}
+                continue
+            b_list = prop_branches.get(prop_name, [])
+            o_prop = outer_props.get(prop_name)
+            if o_prop is None:
+                merged_props[prop_name] = (
+                    b_list[0] if len(b_list) == 1 else {"allOf": b_list}
+                )
+            elif not b_list or (len(b_list) == 1 and b_list[0] is o_prop):
+                merged_props[prop_name] = o_prop
+            else:
+                o_all_of = o_prop.get("allOf")
+                o_rest = {pk: pv for pk, pv in o_prop.items() if pk != "allOf"}
+                combined_all_of = [*b_list]
+                if isinstance(o_all_of, list):
+                    for nested_branch in o_all_of:
+                        if nested_branch not in combined_all_of:
+                            combined_all_of.append(nested_branch)
+                merged_props[prop_name] = {**o_rest, "allOf": combined_all_of}
+        merged["properties"] = merged_props
+
+    if item_false:
+        merged["items"] = False
+    elif len(item_dicts) == 1:
+        merged["items"] = item_dicts[0]
+    elif len(item_dicts) > 1:
+        memo_key = tuple(id(d) for d in item_dicts)
+        if memo_key in memo:
+            merged["items"] = memo[memo_key]
+        else:
+            memo[memo_key] = {}
+            merged_items = _merge_all_of_schemas(
+                item_dicts,
+                root_schema,
+                _seen=set(seen),
+                _budget=budget,
+                _memo=memo,
+            )
+            memo[memo_key] = merged_items
+            merged["items"] = merged_items
+    elif item_other is not _MISSING:
+        merged["items"] = item_other
+
+    if has_const:
+        if enum_vals is not None and not any(
+            _json_values_equal(const_val, e) for e in enum_vals
+        ):
+            return {_UNSATISFIABLE_KEY: True}
+        if not _value_matches_constraints(const_val, merged, patterns, multiple_ofs):
+            return {_UNSATISFIABLE_KEY: True}
+        merged["const"] = const_val
+    elif enum_vals is not None:
+        filtered = [
+            v
+            for v in enum_vals
+            if _value_matches_constraints(v, merged, patterns, multiple_ofs)
+        ]
+        if not filtered:
+            return {_UNSATISFIABLE_KEY: True}
+        merged["enum"] = filtered
+
+    if union_groups:
+        structural_keys = (
+            "type",
+            "enum",
+            "const",
+            "pattern",
+            _ALL_OF_PATTERNS_KEY,
+            "multipleOf",
+            _ALL_OF_MULTIPLE_OF_KEY,
+            "properties",
+            "required",
+            "items",
+            *_ALL_OF_LOWER_BOUNDS,
+            *_ALL_OF_UPPER_BOUNDS,
+        )
+        has_base_structural = any(k in merged for k in structural_keys)
+        if len(union_groups) == 1 and not has_base_structural:
+            merged["anyOf"] = union_groups[0]
+        else:
+            meta = {k: merged[k] for k in _ALL_OF_SCALAR_METADATA_KEYS if k in merged}
+            base_only = {
+                k: v for k, v in merged.items() if k not in _ALL_OF_SCALAR_METADATA_KEYS
+            }
+            candidates: list[dict[str, Any]] = (
+                [base_only] if has_base_structural else [{}]
+            )
+            for group in union_groups:
+                if len(candidates) * len(group) > budget[0]:
+                    raise ValueError("Schema allOf complexity limit exceeded")
+                next_candidates: list[dict[str, Any]] = []
+                for cand in candidates:
+                    for alt in group:
+                        if alt is False:
+                            continue
+                        alt_dict = {} if alt is True else alt
+                        if not isinstance(alt_dict, dict):
+                            continue
+                        pair = _merge_all_of_schemas(
+                            [cand, alt_dict],
+                            root_schema,
+                            _seen=set(seen),
+                            _budget=budget,
+                            _memo=memo,
+                        )
+                        if not pair.get(_UNSATISFIABLE_KEY):
+                            next_candidates.append(pair)
+                candidates = next_candidates
+                if not candidates:
+                    return {_UNSATISFIABLE_KEY: True}
+            if len(candidates) == 1:
+                result = {**candidates[0], **meta}
+                if "type" not in result and result.get("properties"):
+                    result["type"] = "object"
+                return result
+            return {**meta, "anyOf": candidates}
 
     if "type" not in merged and merged.get("properties"):
         merged["type"] = "object"
@@ -1315,6 +1747,48 @@ def _json_schema_to_pydantic_type(
         if cached is not None:
             return cached
 
+    if json_schema.get(_UNSATISFIABLE_KEY):
+        return Annotated[Any, AfterValidator(_reject_unsatisfiable)]
+
+    all_of_schemas = json_schema.get("allOf")
+    if all_of_schemas:
+        has_structural_siblings = bool(
+            json_schema.get("properties")
+            or json_schema.get("required")
+            or any(key in json_schema for key in _ALL_OF_STRUCTURAL_NON_EMPTY_KEYS)
+        )
+        if len(all_of_schemas) == 1 and not has_structural_siblings:
+            return _json_schema_to_pydantic_type(
+                all_of_schemas[0],
+                root_schema,
+                name_=name_,
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
+        merged = _merge_all_of_schemas(
+            all_of_schemas,
+            root_schema,
+            outer_schema=json_schema,
+        )
+        if merged.get(_UNSATISFIABLE_KEY):
+            return Annotated[Any, AfterValidator(_reject_unsatisfiable)]
+        if merged.get("type") == "object" and merged.get("properties"):
+            if in_progress is not None:
+                return _build_model_from_schema(
+                    json_schema,
+                    root_schema,
+                    model_name=name_,
+                    enrich_descriptions=enrich_descriptions,
+                    in_progress=in_progress,
+                )
+        return _json_schema_to_pydantic_type(
+            merged,
+            root_schema,
+            name_=name_,
+            enrich_descriptions=enrich_descriptions,
+            in_progress=in_progress,
+        )
+
     ref = json_schema.get("$ref")
     if ref:
         ref_schema = _resolve_ref(ref, root_schema)
@@ -1338,56 +1812,21 @@ def _json_schema_to_pydantic_type(
         any_of_schemas = json_schema.get("anyOf", []) + json_schema.get("oneOf", [])
     if any_of_schemas:
         any_of_types = [
-            _json_schema_to_pydantic_type(
+            _apply_all_of_validators(
+                _json_schema_to_pydantic_type(
+                    schema,
+                    root_schema,
+                    name_=f"{name_ or 'Union'}Option{i}",
+                    enrich_descriptions=enrich_descriptions,
+                    in_progress=in_progress,
+                ),
                 schema,
-                root_schema,
-                name_=f"{name_ or 'Union'}Option{i}",
-                enrich_descriptions=enrich_descriptions,
-                in_progress=in_progress,
             )
+            if isinstance(schema, dict)
+            else Any
             for i, schema in enumerate(any_of_schemas)
         ]
         return Union[tuple(any_of_types)]  # noqa: UP007
-
-    all_of_schemas = json_schema.get("allOf")
-    if all_of_schemas:
-        has_structural_siblings = bool(
-            json_schema.get("properties")
-            or json_schema.get("required")
-            or any(
-                key in json_schema
-                for key in ("enum", "const", "items", "anyOf", "oneOf", "$ref")
-            )
-        )
-        if len(all_of_schemas) == 1 and not has_structural_siblings:
-            return _json_schema_to_pydantic_type(
-                all_of_schemas[0],
-                root_schema,
-                name_=name_,
-                enrich_descriptions=enrich_descriptions,
-                in_progress=in_progress,
-            )
-        merged = _merge_all_of_schemas(
-            all_of_schemas,
-            root_schema,
-            outer_schema=json_schema,
-        )
-        if merged.get("type") == "object" and merged.get("properties"):
-            if in_progress is not None:
-                return _build_model_from_schema(
-                    json_schema,
-                    root_schema,
-                    model_name=name_,
-                    enrich_descriptions=enrich_descriptions,
-                    in_progress=in_progress,
-                )
-        return _json_schema_to_pydantic_type(
-            merged,
-            root_schema,
-            name_=name_,
-            enrich_descriptions=enrich_descriptions,
-            in_progress=in_progress,
-        )
 
     type_ = json_schema.get("type")
 
@@ -1423,6 +1862,20 @@ def _json_schema_to_pydantic_type(
         return bool
     if type_ == "array":
         items_schema = json_schema.get("items")
+        if items_schema is False:
+            return list[Annotated[Any, AfterValidator(_reject_unsatisfiable)]]
+        if isinstance(items_schema, dict):
+            item_type = _apply_all_of_validators(
+                _json_schema_to_pydantic_type(
+                    items_schema,
+                    root_schema,
+                    name_=name_,
+                    enrich_descriptions=enrich_descriptions,
+                    in_progress=in_progress,
+                ),
+                items_schema,
+            )
+            return list[item_type]  # type: ignore[valid-type]
         if items_schema:
             item_type = _json_schema_to_pydantic_type(
                 items_schema,

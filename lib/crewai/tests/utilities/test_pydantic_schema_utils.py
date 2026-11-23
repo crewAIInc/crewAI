@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime
 from copy import deepcopy
+import time
 from typing import Any
 
 import pytest
@@ -719,6 +720,195 @@ class TestAllOfMerging:
         assert obj.label == "root"
         assert obj.parent is not None
         assert obj.parent.label == "top"
+
+    def test_description_only_sibling_property_preserves_allof_constraints(self) -> None:
+        schema = {
+            "type": "object",
+            "allOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "cmd": {
+                            "type": "string",
+                            "pattern": "^(ls|pwd)$",
+                            "minLength": 2,
+                        }
+                    },
+                    "required": ["cmd"],
+                }
+            ],
+            "properties": {
+                "cmd": {"description": "Allowed shell command"},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.model_fields["cmd"].description == "Allowed shell command"
+        assert Model(cmd="ls").cmd == "ls"
+        for forbidden in ("rm -rf /", "a", "ls -la"):
+            with pytest.raises(ValidationError):
+                Model(cmd=forbidden)
+
+    def test_multiple_patterns_in_allof_are_conjunctive(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$",
+                    "allOf": [
+                        {"pattern": "^safe_"},
+                        {"pattern": "_v[0-9]+$"},
+                    ],
+                }
+            },
+            "required": ["token"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(token="safe_item_v2").token == "safe_item_v2"
+        for invalid in ("unsafe_item_v2", "safe_item", "safe_BAD_v2"):
+            with pytest.raises(ValidationError):
+                Model(token=invalid)
+
+    def test_disjoint_enums_conflicting_const_and_incompatible_types_fail_closed(
+        self,
+    ) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "disjoint_enum": {
+                    "allOf": [{"enum": ["read"]}, {"enum": ["write"]}]
+                },
+                "conflicting_const": {
+                    "allOf": [{"const": 1}, {"const": True}]
+                },
+                "incompatible_type": {
+                    "allOf": [{"type": "string"}, {"type": "integer"}]
+                },
+                "inverted_bounds": {
+                    "allOf": [{"type": "string", "minLength": 5}, {"maxLength": 2}]
+                },
+            },
+            "required": [
+                "disjoint_enum",
+                "conflicting_const",
+                "incompatible_type",
+                "inverted_bounds",
+            ],
+        }
+        Model = create_model_from_schema(schema)
+        for vals in [
+            {
+                "disjoint_enum": "read",
+                "conflicting_const": 1,
+                "incompatible_type": "x",
+                "inverted_bounds": "abc",
+            },
+            {
+                "disjoint_enum": "write",
+                "conflicting_const": True,
+                "incompatible_type": 1,
+                "inverted_bounds": None,
+            },
+        ]:
+            with pytest.raises(ValidationError):
+                Model(**vals)
+
+        top_conflict = {
+            "type": "object",
+            "properties": {"a": {"type": "string"}},
+            "allOf": [{"type": "string"}],
+        }
+        TopConflictModel = create_model_from_schema(top_conflict)
+        with pytest.raises(ValidationError):
+            TopConflictModel(a="x")
+
+    def test_enum_and_const_enforce_merged_string_pattern_and_length(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["cmd_ok", "bad_123"],
+                    "allOf": [{"pattern": "^[a-z_]+$", "minLength": 5}],
+                },
+                "pinned": {
+                    "allOf": [
+                        {"const": "safe_cmd"},
+                        {"type": "string", "pattern": "^safe_[a-z]+$"},
+                    ]
+                },
+                "unsat_const": {
+                    "allOf": [{"const": "a"}, {"type": "string", "minLength": 3}]
+                },
+            },
+            "required": ["action", "pinned"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(action="cmd_ok", pinned="safe_cmd").action == "cmd_ok"
+        with pytest.raises(ValidationError):
+            Model(action="bad_123", pinned="safe_cmd")
+        with pytest.raises(ValidationError):
+            Model(action="cmd_ok", pinned="other")
+        with pytest.raises(ValidationError):
+            Model(action="cmd_ok", pinned="safe_cmd", unsat_const="a")
+
+    def test_anyof_branches_intersect_across_allof(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "allOf": [
+                        {
+                            "anyOf": [
+                                {"type": "string", "pattern": "^foo"},
+                                {"type": "integer", "minimum": 10},
+                            ]
+                        },
+                        {
+                            "anyOf": [
+                                {"type": "string", "pattern": "bar$"},
+                                {"type": "string", "pattern": "^baz"},
+                            ]
+                        },
+                    ]
+                }
+            },
+            "required": ["value"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="foobar").value == "foobar"
+        for forbidden in (15, "foo", "bar", "baz"):
+            with pytest.raises(ValidationError):
+                Model(value=forbidden)
+
+    def test_deep_diamond_allof_items_dag_completes_linearly(self) -> None:
+        defs: dict[str, Any] = {
+            "Leaf": {"type": "string", "minLength": 1},
+        }
+        depth = 30
+        prev = "Leaf"
+        for i in range(depth):
+            left = f"L{i}_A"
+            right = f"L{i}_B"
+            defs[left] = {"type": "array", "items": {"$ref": f"#/$defs/{prev}"}}
+            defs[right] = {"type": "array", "items": {"$ref": f"#/$defs/{prev}"}}
+            node = f"N{i}"
+            defs[node] = {"allOf": [{"$ref": f"#/$defs/{left}"}, {"$ref": f"#/$defs/{right}"}]}
+            prev = node
+        schema = {
+            "$defs": defs,
+            "type": "object",
+            "properties": {"payload": {"$ref": f"#/$defs/{prev}"}},
+            "required": ["payload"],
+        }
+        start = time.monotonic()
+        Model = create_model_from_schema(schema)
+        elapsed = time.monotonic() - start
+        assert elapsed < 2.0
+        nested: Any = "ok"
+        for _ in range(depth):
+            nested = [nested]
+        assert Model(payload=nested).payload == nested
 
 
 # $ref resolution
