@@ -13,6 +13,10 @@ from crewai.hooks import (
     get_after_tool_call_hooks,
     get_before_llm_call_hooks,
     get_before_tool_call_hooks,
+    unregister_after_llm_call_hook,
+    unregister_after_tool_call_hook,
+    unregister_before_llm_call_hook,
+    unregister_before_tool_call_hook,
 )
 from crewai.hooks.llm_hooks import LLMCallHookContext
 from crewai.hooks.tool_hooks import ToolCallHookContext
@@ -348,3 +352,61 @@ class TestMultipleDecorators:
         hooks = get_before_tool_call_hooks()
 
         assert len(hooks) == 2
+
+
+class TestUnregisterDecoratedHooks:
+    """Test unregistering hooks registered via decorators (with and without filters)."""
+
+    def test_unregister_filtered_before_tool_call_hook(self):
+        @before_tool_call(tools=["delete_file"])
+        def guarded(context):
+            return False
+
+        assert len(get_before_tool_call_hooks()) == 1
+        assert unregister_before_tool_call_hook(guarded) is True
+        assert get_before_tool_call_hooks() == []
+        assert unregister_before_tool_call_hook(guarded) is False
+
+    def test_unregister_filtered_after_tool_call_hook(self):
+        @after_tool_call(tools=["web_search"], agents=["Researcher"])
+        def sanitize(context):
+            return None
+
+        assert len(get_after_tool_call_hooks()) == 1
+        assert unregister_after_tool_call_hook(sanitize) is True
+        assert get_after_tool_call_hooks() == []
+        assert unregister_after_tool_call_hook(sanitize) is False
+
+    def test_unregister_filtered_before_llm_call_hook(self):
+        @before_llm_call(agents=["Researcher"])
+        def audit(context):
+            return None
+
+        assert len(get_before_llm_call_hooks()) == 1
+        assert unregister_before_llm_call_hook(audit) is True
+        assert get_before_llm_call_hooks() == []
+        assert unregister_before_llm_call_hook(audit) is False
+
+    def test_unregister_filtered_after_llm_call_hook(self):
+        @after_llm_call(agents=["Researcher"])
+        def redact(context):
+            return None
+
+        assert len(get_after_llm_call_hooks()) == 1
+        assert unregister_after_llm_call_hook(redact) is True
+        assert get_after_llm_call_hooks() == []
+        assert unregister_after_llm_call_hook(redact) is False
+
+    def test_unregister_unfiltered_decorated_hooks(self):
+        @before_tool_call
+        def tool_hook(context):
+            return None
+
+        @before_llm_call
+        def llm_hook(context):
+            return None
+
+        assert unregister_before_tool_call_hook(tool_hook) is True
+        assert get_before_tool_call_hooks() == []
+        assert unregister_before_llm_call_hook(llm_hook) is True
+        assert get_before_llm_call_hooks() == []

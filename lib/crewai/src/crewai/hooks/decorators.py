@@ -70,6 +70,7 @@ def _create_hook_decorator(
 
                 if not is_method:
                     register_function(filtered_hook)
+                    f._registered_hook = filtered_hook  # type: ignore[attr-defined]
 
                 return f
 
