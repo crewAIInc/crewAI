@@ -612,3 +612,87 @@ class TestSignatureDetection:
 
         hooks = get_before_llm_call_hooks()
         assert len(hooks) >= 1
+
+
+class TestCrewScopedFilterEdgeCases:
+    """Crew-scoped hooks must not fail open on missing agent/tool or empty allowlists."""
+
+    def test_crew_scoped_agent_filter_skips_none_agent(self):
+        seen: list[str] = []
+
+        @CrewBase
+        class TestCrew:
+            @before_llm_call(agents=["Researcher"])
+            def llm_hook(self, context):
+                seen.append(f"llm:{context.agent.role}")
+
+            @before_tool_call(tools=["delete_file"], agents=["Researcher"])
+            def tool_hook(self, context):
+                seen.append(f"tool:{context.agent.role}")
+
+            @agent
+            def researcher(self):
+                return Agent(role="Researcher", goal="Research", backstory="Expert")
+
+            @crew
+            def crew(self):
+                return Crew(agents=self.agents, tasks=[], verbose=False)
+
+        TestCrew()
+
+        get_before_llm_call_hooks()[-1](
+            LLMCallHookContext(executor=None, messages=[], agent=None)
+        )
+        get_before_tool_call_hooks()[-1](
+            ToolCallHookContext(
+                tool_name="delete_file",
+                tool_input={},
+                tool=Mock(),
+                agent=None,
+            )
+        )
+
+        assert seen == []
+
+    def test_crew_scoped_empty_filters_match_nothing(self):
+        seen: list[str] = []
+
+        @CrewBase
+        class TestCrew:
+            @before_llm_call(agents=[])
+            def llm_hook(self, context):
+                seen.append("llm")
+
+            @before_tool_call(tools=[])
+            def tool_hook(self, context):
+                seen.append("tool")
+
+            @agent
+            def researcher(self):
+                return Agent(role="Researcher", goal="Research", backstory="Expert")
+
+            @crew
+            def crew(self):
+                return Crew(agents=self.agents, tasks=[], verbose=False)
+
+        TestCrew()
+
+        mock_executor = Mock(
+            messages=[],
+            agent=Mock(role="Researcher"),
+            task=Mock(),
+            crew=Mock(),
+            llm=Mock(),
+            iterations=0,
+        )
+        get_before_llm_call_hooks()[-1](LLMCallHookContext(executor=mock_executor))
+        get_before_tool_call_hooks()[-1](
+            ToolCallHookContext(
+                tool_name="delete_file",
+                tool_input={},
+                tool=Mock(),
+                agent=Mock(role="Researcher"),
+            )
+        )
+
+        assert seen == []

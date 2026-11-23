@@ -377,20 +377,20 @@ def _wrap_with_filters(
     agents: list[str] | None,
     tools: list[str] | None,
 ) -> HookFn:
-    """Wrap a hook so it only runs for matching agents/tools (context-shape aware)."""
+    """Wrap a hook so it only runs for matching agents/tools."""
 
     @wraps(func)
     def filtered(ctx: Any) -> Any:
-        if tools:
+        if tools is not None:
             tool_name = getattr(ctx, "tool_name", None)
-            if tool_name is not None and tool_name not in tools:
+            if tool_name is None or tool_name not in tools:
                 return None
-        if agents:
+        if agents is not None:
             agent = getattr(ctx, "agent", None)
             role = getattr(agent, "role", None) if agent is not None else None
             if role is None:
                 role = getattr(ctx, "agent_role", None)
-            if role is not None and role not in agents:
+            if role is None or role not in agents:
                 return None
         return func(ctx)
 
@@ -415,13 +415,15 @@ def on(
         ... def guard(ctx):
         ...     raise HookAborted("deletion not allowed")
     """
-    normalized_tools = [sanitize_tool_name(t) for t in tools] if tools else None
+    normalized_tools = (
+        [sanitize_tool_name(t) for t in tools] if tools is not None else None
+    )
 
     def decorator(func: HookFn) -> HookFn:
         func._interception_point = point  # type: ignore[attr-defined]
-        if normalized_tools:
+        if normalized_tools is not None:
             func._filter_tools = normalized_tools  # type: ignore[attr-defined]
-        if agents:
+        if agents is not None:
             func._filter_agents = agents  # type: ignore[attr-defined]
 
         params = list(inspect.signature(func).parameters.keys())
@@ -430,7 +432,7 @@ def on(
         if not is_method:
             hook = (
                 _wrap_with_filters(func, agents, normalized_tools)
-                if (agents or normalized_tools)
+                if (agents is not None or normalized_tools is not None)
                 else func
             )
             register(point, hook)

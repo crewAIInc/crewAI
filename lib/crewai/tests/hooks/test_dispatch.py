@@ -157,6 +157,36 @@ class TestOnDecorator:
         dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(agent_role="Researcher"))
         assert seen == ["Researcher"]
 
+    def test_agent_and_tool_filters_skip_contexts_with_missing_values(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_MODEL_CALL, agents=["Researcher"])
+        def agent_hook(ctx):
+            seen.append("agent")
+
+        @on(InterceptionPoint.PRE_TOOL_CALL, tools=["allowed_tool"])
+        def tool_hook(ctx):
+            seen.append("tool")
+
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(agent=None, agent_role=None))
+        dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(tool_name=None))
+        assert seen == []
+
+    def test_empty_allowlist_filters_match_nothing(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_MODEL_CALL, agents=[])
+        def empty_agent_hook(ctx):
+            seen.append("agent")
+
+        @on(InterceptionPoint.PRE_TOOL_CALL, tools=[])
+        def empty_tool_hook(ctx):
+            seen.append("tool")
+
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(agent_role="Researcher"))
+        dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(tool_name="allowed_tool"))
+        assert seen == []
+
     def test_unregister_resolves_filtered_wrapper(self):
         @on(InterceptionPoint.PRE_TOOL_CALL, tools=["allowed_tool"])
         def hook(ctx):

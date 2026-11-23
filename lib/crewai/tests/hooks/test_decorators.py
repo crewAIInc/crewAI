@@ -124,6 +124,41 @@ class TestLLMHookDecorators:
 
         assert len(execution_log) == 1
 
+    def test_before_llm_call_agent_filter_skips_direct_calls_without_agent(self):
+        """An agents= filter must not fire on direct LLM calls where agent is None."""
+        execution_log = []
+
+        @before_llm_call(agents=["Researcher"])
+        def filtered_hook(context):
+            execution_log.append(context.agent.role)
+
+        hooks = get_before_llm_call_hooks()
+        direct_context = LLMCallHookContext(executor=None, messages=[], agent=None)
+        hooks[0](direct_context)
+
+        assert execution_log == []
+
+    def test_before_llm_call_empty_agent_filter_matches_nothing(self):
+        """An explicit empty agents=[] allowlist must match no agents."""
+        execution_log = []
+
+        @before_llm_call(agents=[])
+        def filtered_hook(context):
+            execution_log.append(context.agent.role)
+
+        hooks = get_before_llm_call_hooks()
+        mock_executor = Mock(
+            messages=[],
+            agent=Mock(role="Researcher"),
+            task=Mock(),
+            crew=Mock(),
+            llm=Mock(),
+            iterations=0,
+        )
+        hooks[0](LLMCallHookContext(executor=mock_executor))
+
+        assert execution_log == []
+
 
 class TestToolHookDecorators:
     """Test tool hook decorators."""
@@ -246,6 +281,35 @@ class TestToolHookDecorators:
         hooks[0](context2)
 
         assert len(execution_log) == 1
+
+        # Missing agent must not satisfy agents=["Developer"]
+        context3 = ToolCallHookContext(
+            tool_name="write_file",
+            tool_input={},
+            tool=mock_tool,
+            agent=None,
+        )
+        hooks[0](context3)
+
+        assert len(execution_log) == 1
+
+    def test_before_tool_call_empty_tool_filter_matches_nothing(self):
+        """An explicit empty tools=[] allowlist must match no tools."""
+        execution_log = []
+
+        @before_tool_call(tools=[])
+        def filtered_hook(context):
+            execution_log.append(context.tool_name)
+
+        hooks = get_before_tool_call_hooks()
+        context = ToolCallHookContext(
+            tool_name="delete_file",
+            tool_input={},
+            tool=Mock(),
+        )
+        hooks[0](context)
+
+        assert execution_log == []
 
     def test_after_tool_call_with_filter(self):
         """Test that after_tool_call decorator with filter works."""

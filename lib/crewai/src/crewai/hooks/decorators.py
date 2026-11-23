@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from functools import wraps
 import inspect
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from crewai.hooks.dispatch import _wrap_with_filters
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -39,7 +39,7 @@ def _create_hook_decorator(
         tools: list[str] | None = None,
         agents: list[str] | None = None,
     ) -> Callable[..., Any]:
-        if tools:
+        if tools is not None:
             tools = [sanitize_tool_name(t) for t in tools]
 
         def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
@@ -49,24 +49,13 @@ def _create_hook_decorator(
             params = list(sig.parameters.keys())
             is_method = len(params) >= 2 and params[0] == "self"
 
-            if tools:
+            if tools is not None:
                 f._filter_tools = tools  # type: ignore[attr-defined]
-            if agents:
+            if agents is not None:
                 f._filter_agents = agents  # type: ignore[attr-defined]
 
-            if tools or agents:
-
-                @wraps(f)
-                def filtered_hook(context: Any) -> Any:
-                    if tools and hasattr(context, "tool_name"):
-                        if context.tool_name not in tools:
-                            return None
-
-                    if agents and hasattr(context, "agent"):
-                        if context.agent and context.agent.role not in agents:
-                            return None
-
-                    return f(context)
+            if tools is not None or agents is not None:
+                filtered_hook = _wrap_with_filters(f, agents, tools)
 
                 if not is_method:
                     register_function(filtered_hook)
