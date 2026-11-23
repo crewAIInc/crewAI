@@ -580,16 +580,16 @@ def test_concurrent_structured_tool_calls_claim_usage_atomically(monkeypatch):
     base_tool = LimitedBaseTool(max_usage_count=5)
     converted_tool = base_tool.to_structured_tool()
 
+    original_check = CrewStructuredTool.has_reached_max_usage_count
     for tool in (direct_tool, converted_tool):
         executions.clear()
         check_barrier = threading.Barrier(16)
-        original_check = CrewStructuredTool.has_reached_max_usage_count
 
-        def synchronized_check(instance):
+        def synchronized_check(instance, target=tool, barrier=check_barrier):
             reached = original_check(instance)
-            if instance is tool:
+            if instance is target:
                 # Force all callers to observe the same pre-increment count.
-                check_barrier.wait(timeout=5)
+                barrier.wait(timeout=5)
             return reached
 
         monkeypatch.setattr(
