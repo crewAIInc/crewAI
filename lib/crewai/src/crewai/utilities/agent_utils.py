@@ -1277,6 +1277,10 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                         else:
                             attributes[key].append(tool_value)
 
+                    except AgentRepositoryError:
+                        # Gate refusals are deliberate, distinct outcomes; let them
+                        # surface as-is instead of looking like a broken entry.
+                        raise
                     except Exception as e:  # noqa: PERF203
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
