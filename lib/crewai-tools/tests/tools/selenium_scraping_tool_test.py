@@ -240,6 +240,24 @@ class RedirectingDriver:
 @pytest.mark.parametrize(
     "url",
     [
+        "http://127.0.0.1:8765\\@example.com/",
+        "https://example.com\\@169.254.169.254/",
+    ],
+)
+def test_backslash_urls_are_blocked_before_navigation(url):
+    """urlparse and Chrome disagree on the host when a backslash is present."""
+    driver = RedirectingDriver()
+    tool = SeleniumScrapingTool(driver=driver, wait_time=0)
+
+    result = tool._run(website_url=url)
+
+    assert "backslash" in result
+    assert driver.visited == []
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
         "http://169.254.169.254/latest/meta-data/",
         "http://127.0.0.1:8080/admin",
         "http://localhost/",

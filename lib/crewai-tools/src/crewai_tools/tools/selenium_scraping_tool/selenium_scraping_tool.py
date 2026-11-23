@@ -200,6 +200,12 @@ class SeleniumScrapingTool(BaseTool):
 
         if self.driver is None:
             raise RuntimeError("Driver not initialized. Call _run first.")
+        # urlparse (used by validate_url) splits the netloc at the last "@", but
+        # Chrome ends the authority at the first "\". With a backslash the host
+        # that is checked differs from the host that is navigated to.
+        if "\\" in url:
+            raise ValueError("URL cannot contain backslashes")
+
         validate_url(url)
 
         sleep_time = wait_time or 0
