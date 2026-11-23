@@ -17,7 +17,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from pydantic import AnyUrl, BaseModel, SecretStr, ValidationError
+from pydantic import AnyUrl, BaseModel, SecretBytes, SecretStr, ValidationError
 import pytest
 
 from crewai.utilities.pydantic_schema_utils import (
@@ -1249,6 +1249,196 @@ class TestAllOfMerging:
         for bad_token in ("bad_1234", "tok_1", SecretStr("bad_1234"), SecretStr("tok_1")):
             with pytest.raises(ValidationError):
                 Model(report=str(valid_file), token=bad_token)
+
+    def test_all_of_invalid_default_rejected_on_omitted_field(self) -> None:
+        pattern_schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [
+                        {"type": "string", "default": "bad"},
+                        {"pattern": "^[A-Z]{3}$"},
+                    ]
+                }
+            },
+        }
+        PatternModel = create_model_from_schema(pattern_schema)
+        with pytest.raises(ValidationError):
+            PatternModel.model_validate({})
+        assert PatternModel.model_validate({"code": "ABC"}).code == "ABC"
+
+        enum_schema = {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "allOf": [
+                        {"type": "string", "default": "legacy"},
+                        {"enum": ["fast", "safe"]},
+                    ]
+                }
+            },
+        }
+        EnumModel = create_model_from_schema(enum_schema)
+        with pytest.raises(ValidationError):
+            EnumModel.model_validate({})
+        assert EnumModel.model_validate({"mode": "fast"}).mode == "fast"
+
+        numeric_schema = {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "allOf": [
+                        {"type": "integer", "default": 0},
+                        {"minimum": 1},
+                    ]
+                }
+            },
+        }
+        NumericModel = create_model_from_schema(numeric_schema)
+        with pytest.raises(ValidationError):
+            NumericModel.model_validate({})
+        assert NumericModel.model_validate({"count": 2}).count == 2
+
+        none_default_schema = {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "allOf": [
+                        {"type": "string", "default": None},
+                        {"pattern": "^[a-z]+$"},
+                    ]
+                }
+            },
+        }
+        NoneDefaultModel = create_model_from_schema(none_default_schema)
+        with pytest.raises(ValidationError):
+            NoneDefaultModel.model_validate({})
+        assert NoneDefaultModel.model_validate({"name": "ok"}).name == "ok"
+
+        array_schema = {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "allOf": [
+                        {"type": "array", "default": [], "items": {"type": "string"}},
+                        {"minItems": 1},
+                    ]
+                }
+            },
+        }
+        ArrayModel = create_model_from_schema(array_schema)
+        with pytest.raises(ValidationError):
+            ArrayModel.model_validate({})
+        assert ArrayModel.model_validate({"items": ["a"]}).items == ["a"]
+
+        valid_default_schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [
+                        {"type": "string", "default": "ABC"},
+                        {"pattern": "^[A-Z]{3}$"},
+                    ]
+                }
+            },
+        }
+        ValidDefaultModel = create_model_from_schema(valid_default_schema)
+        assert ValidDefaultModel.model_validate({}).code == "ABC"
+
+        nested_default_schema = {
+            "type": "object",
+            "properties": {
+                "cfg": {
+                    "type": "object",
+                    "default": {"n": 0},
+                    "properties": {
+                        "n": {
+                            "allOf": [
+                                {"type": "integer"},
+                                {"minimum": 1},
+                            ]
+                        }
+                    },
+                }
+            },
+        }
+        NestedDefaultModel = create_model_from_schema(nested_default_schema)
+        with pytest.raises(ValidationError):
+            NestedDefaultModel.model_validate({})
+        assert NestedDefaultModel.model_validate({"cfg": {"n": 2}}).cfg.n == 2
+
+    def test_all_of_string_constraints_reject_bytes_and_secret_bytes(self) -> None:
+        conj_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"type": "string", "pattern": "^[a-z0-9]+$"},
+                        {"pattern": "^tok"},
+                    ]
+                }
+            },
+            "required": ["tok"],
+        }
+        ConjModel = create_model_from_schema(conj_schema)
+        for bad in (b"bad123", bytearray(b"bad123")):
+            with pytest.raises(ValidationError):
+                ConjModel.model_validate({"tok": bad})
+        assert ConjModel.model_validate({"tok": b"tok123"}).tok == "tok123"
+
+        lookahead_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {"allOf": [{"type": "string", "pattern": "(?=a)b"}]}
+            },
+            "required": ["tok"],
+        }
+        LookaheadModel = create_model_from_schema(lookahead_schema)
+        with pytest.raises(ValidationError):
+            LookaheadModel.model_validate({"tok": b"ab"})
+
+        secret_str_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"type": "string", "format": "password"},
+                        {"pattern": "^good"},
+                        {"minLength": 7},
+                    ]
+                }
+            },
+            "required": ["tok"],
+        }
+        SecretStrModel = create_model_from_schema(secret_str_schema)
+        for bad in (b"bad1234", b"a", b"\xff\xfe"):
+            with pytest.raises(ValidationError):
+                SecretStrModel.model_validate({"tok": bad})
+        ok_str = SecretStrModel.model_validate({"tok": b"good123"})
+        assert isinstance(ok_str.tok, SecretStr)
+        assert ok_str.tok.get_secret_value() == "good123"
+
+        secret_bytes_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"type": "string", "format": "password", "writeOnly": True},
+                        {"pattern": "^good"},
+                        {"minLength": 7},
+                    ]
+                }
+            },
+            "required": ["tok"],
+        }
+        SecretBytesModel = create_model_from_schema(secret_bytes_schema)
+        for bad in (b"bad1234", SecretBytes(b"bad1234"), b"a", b"\xff\xfe"):
+            with pytest.raises(ValidationError):
+                SecretBytesModel.model_validate({"tok": bad})
+        for good in (b"good123", SecretBytes(b"good123")):
+            ok_bytes = SecretBytesModel.model_validate({"tok": good})
+            assert isinstance(ok_bytes.tok, SecretBytes)
+            assert ok_bytes.tok.get_secret_value() == b"good123"
 
 
 # $ref resolution

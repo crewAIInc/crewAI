@@ -1014,7 +1014,8 @@ def _json_schema_to_pydantic_field(
         enrich_descriptions=enrich_descriptions,
         in_progress=in_progress,
     )
-    if json_schema.get("allOf"):
+    from_all_of = bool(json_schema.get("allOf"))
+    if from_all_of:
         json_schema = _merge_all_of_schemas(
             json_schema["allOf"],
             root_schema,
@@ -1040,11 +1041,8 @@ def _json_schema_to_pydantic_field(
     if examples:
         schema_extra["examples"] = examples
 
-    default = (
-        json_schema["default"]
-        if "default" in json_schema
-        else (... if is_required else None)
-    )
+    has_default = "default" in json_schema
+    default = json_schema["default"] if has_default else (... if is_required else None)
 
     applied_num_field_params = isinstance(type_, type) and issubclass(
         type_, (int, float)
@@ -1109,7 +1107,12 @@ def _json_schema_to_pydantic_field(
     # A field with an explicit default is already usable when omitted, so it
     # should not be made nullable unless the schema actually allows ``None``.
     # Only fields that fall back to a ``None`` default need the Optional wrap.
-    if not is_required and default is None and not json_schema.get(_UNSATISFIABLE_KEY):
+    if (
+        not is_required
+        and default is None
+        and not (from_all_of and has_default)
+        and not json_schema.get(_UNSATISFIABLE_KEY)
+    ):
         type_ = Optional[type_]  # noqa: UP045 - ForwardRef does not support `|`
 
     if schema_extra:
@@ -1122,6 +1125,9 @@ def _json_schema_to_pydantic_field(
         include_single_pattern=not applied_str_pattern,
         include_single_num_constraints=not applied_num_field_params,
     )
+
+    if has_default:
+        field_params["validate_default"] = True
 
     return type_, Field(default, **field_params)
 
@@ -1228,6 +1234,15 @@ def _extract_string_value(value: Any) -> str | None:
         return value
     if isinstance(value, SecretStr):
         return value.get_secret_value()
+    if isinstance(value, SecretBytes):
+        value = value.get_secret_value()
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        try:
+            return bytes(value).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError(
+                "Bytes value is not valid UTF-8 for string constraint"
+            ) from exc
     if isinstance(
         value,
         (
