@@ -50,7 +50,7 @@ Pick the simplest action that does the job.
 - Repository-backed agents may set `from_repository` and omit inline `role`, `goal`, and `backstory`. Explicitly provided fields override repository values.
 - Use `call: crew` for coordinated AI work with multiple agents or tasks. Define the crew under `with`. Pass runtime values with the action-level `inputs` map.
 {% if include_artifacts %}
-- Save an agent's output as an artifact when people should open, download or share it (a report, a chart, a CSV). Set `artifact: true` under `with` to name it after the method and pick the kind from the output, or `artifact: {identifier: weekly-report, title: Weekly report, kind: html}` to set them. For a file the agent's tools write, add `file_path`; `image`, `pdf` and `file` kinds need it. Read its link later as `${outputs.method_name.artifact.url}`.
+- Save an agent's output as an artifact when people should open, download or share it (a report, a chart, a CSV). Set `artifact: true` under `with` to name it after the method and pick the kind from the output, or `artifact: {identifier: weekly-report, title: Weekly report, kind: html}` to set them. For a file the agent's tools write, add `file_path`; `image` and `file` kinds need it. For a PDF, set `kind: pdf` without `file_path` and have the agent write one full HTML page or markdown; it is rendered into the PDF without running scripts, so ask for charts as inline SVG. Read its link later as `${outputs.method_name.artifact.url}`.
 - Give an agent an artifact the run saved earlier with `input_files: {current_report: {artifact: <identifier>}}` under `with`, adding `version` for an older one. Use it when a resumed flow revises what it saved before a human review.
 {% endif %}
 {% if include_each_action %}

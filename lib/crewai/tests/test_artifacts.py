@@ -1,4 +1,7 @@
 import json
+import re
+import sys
+import zlib
 from pathlib import Path
 import uuid
 from typing import Any
@@ -193,7 +196,7 @@ def test_task_output_exposes_saved_artifact(store, tmp_path):
     assert seen == [output.artifact.url]
 
 
-@pytest.mark.parametrize("kind", ["image", "pdf", "file"])
+@pytest.mark.parametrize("kind", ["image", "file"])
 def test_task_rejects_kinds_text_output_cannot_fill(kind):
     with pytest.raises(ValueError, match=f"{kind}.*file_path"):
         Task(
@@ -618,7 +621,7 @@ def test_artifact_can_point_at_the_task_output_file(store, tmp_path):
     assert (tmp_path / "artifacts" / "exec-1" / "r" / "v1.html").read_text() == "<html>x</html>"
 
 
-@pytest.mark.parametrize("kind", ["image", "pdf", "file"])
+@pytest.mark.parametrize("kind", ["image", "file"])
 def test_tool_refuses_text_for_file_kinds(store, kind):
     result = SaveArtifactTool().run(identifier="p", title="P", kind=kind, content="# text")
 
@@ -1030,3 +1033,118 @@ def test_declarative_artifact_input_that_is_missing_fails_the_step(store):
 def test_declarative_artifact_input_is_validated_when_loaded(reference):
     with pytest.raises(Exception, match="input_files"):
         Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW.replace("{artifact: board-report}", reference))
+
+
+class _FakeWeasyPrint:
+    """Stands in for weasyprint, which needs Pango from the system."""
+
+    def __init__(self):
+        self.rendered: list[str] = []
+        self.protocols: set[str] | None = None
+        fake = self
+
+        class URLFetcher:
+            def __init__(self, allowed_protocols=None):
+                fake.protocols = allowed_protocols
+
+        class HTML:
+            def __init__(self, string, url_fetcher):
+                fake.rendered.append(string)
+
+            def write_pdf(self):
+                return b"%PDF-1.7 rendered"
+
+        self.module = type(sys)("weasyprint")
+        self.module.HTML = HTML
+        self.module.URLFetcher = URLFetcher
+
+
+@pytest.fixture
+def weasyprint(monkeypatch):
+    fake = _FakeWeasyPrint()
+    monkeypatch.setitem(sys.modules, "weasyprint", fake.module)
+    return fake
+
+
+def test_html_text_is_rendered_into_a_pdf(store, weasyprint):
+    html = "<!doctype html><h1>Q3</h1>"
+    saved = save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content=html)
+
+    assert weasyprint.rendered == [html]
+    assert saved.content_type == "application/pdf"
+    assert (store.root / "exec-1" / "r" / "v1.pdf").read_bytes() == b"%PDF-1.7 rendered"
+
+
+def test_markdown_text_becomes_html_before_rendering(store, weasyprint):
+    save_artifact(
+        Artifact(identifier="r", title="R", kind="pdf"),
+        content="# Q3\n\n| a | b |\n|---|---|\n| 1 | 2 |",
+    )
+
+    assert "<h1>Q3</h1>" in weasyprint.rendered[0]
+    assert "<table>" in weasyprint.rendered[0]
+
+
+def test_pdf_render_never_fetches_local_files(store, weasyprint):
+    save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content="# Q3")
+
+    assert weasyprint.protocols == {"http", "https", "data"}
+
+
+def test_tool_saves_html_as_a_pdf(store, weasyprint):
+    result = SaveArtifactTool().run(
+        identifier="report", title="Report", kind="pdf", content="<html><p>hi</p></html>"
+    )
+
+    assert json.loads(result)["version"] == 1
+    assert (store.root / "exec-1" / "report" / "v1.pdf").exists()
+
+
+def test_task_saves_its_output_as_a_pdf(store, weasyprint):
+    task = Task(
+        description="d",
+        expected_output="o",
+        agent=_agent(),
+        artifact=Artifact(identifier="report", title="Report", kind="pdf"),
+    )
+    with patch.object(Agent, "execute_task", return_value="# Report"):
+        output = task.execute_sync()
+
+    assert output.artifact.content_type == "application/pdf"
+    assert "<h1>Report</h1>" in weasyprint.rendered[0]
+
+
+def test_pdf_without_the_engine_names_the_fix(store, monkeypatch):
+    monkeypatch.setitem(sys.modules, "weasyprint", None)
+
+    with pytest.raises(RuntimeError, match=r"crewai\[pdf\].*Pango"):
+        save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content="# Q3")
+
+    assert not (store.root / "exec-1" / "r").exists()
+
+
+def test_real_pdf_render_leaves_out_local_files(store, tmp_path):
+    try:
+        import weasyprint  # noqa: F401
+    except (ImportError, OSError):
+        pytest.skip("weasyprint and Pango are not installed")
+    secret = tmp_path / "secret.txt"
+    secret.write_text("TOP-SECRET-VALUE")
+    html = (
+        f'<html><head><link rel="attachment" href="{secret.as_uri()}"></head>'
+        f'<body><h1>Q3</h1><img src="{secret.as_uri()}"></body></html>'
+    )
+
+    saved = save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content=html)
+
+    data = (store.root / "exec-1" / "r" / "v1.pdf").read_bytes()
+    assert data.startswith(b"%PDF")
+    # Embedded files are compressed, so search the inflated streams too.
+    inflated = data
+    for stream in re.findall(rb"stream\r?\n(.*?)endstream", data, re.S):
+        try:
+            inflated += zlib.decompress(stream)
+        except zlib.error:
+            pass
+    assert b"TOP-SECRET-VALUE" not in inflated
+    assert saved.size == len(data)

@@ -131,6 +131,12 @@ spreadsheets = [
     "crewai-files[spreadsheets]==1.15.44",
     "crewai-tools==1.15.44",
 ]
+# Renders HTML or markdown into a pdf artifact. WeasyPrint also needs Pango
+# from the system (apt-get install libpango-1.0-0 libpangoft2-1.0-0).
+pdf = [
+    "weasyprint~=70.0",
+    "markdown-it-py>=3.0.0,<5",
+]
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]

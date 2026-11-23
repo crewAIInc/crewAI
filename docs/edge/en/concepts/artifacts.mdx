@@ -102,7 +102,7 @@ Without `version`, the latest version is used. If the artifact does not exist, t
 
 ### Save a file the agent writes
 
-For a chart, a PDF or any other file the agent's tools write to disk, set `file_path` to where the file will be. CrewAI saves that file instead of the text output. `image`, `pdf` and `file` kinds need `file_path`.
+For a chart, a PDF or any other file the agent's tools write to disk, set `file_path` to where the file will be. CrewAI saves that file instead of the text output. `image` and `file` kinds need `file_path`.
 
 ```python
 chart = Task(
@@ -121,6 +121,24 @@ chart = Task(
 - Tell the agent where to write the file, for example in the task description.
 - On a task, `{placeholders}` in `file_path` are filled from the kickoff inputs, like `output_file`. In a flow declaration, use `${...}` expressions, such as `output/${state.quarter}.png`.
 - The file must be inside the working directory. Paths outside it are refused, so write charts and PDFs into the project directory.
+
+### Save a PDF
+
+Set `kind="pdf"` without `file_path`, and ask the agent for one full HTML page or for markdown. CrewAI renders the text into the PDF when it saves it.
+
+```python
+report = Task(
+    description="Write the {quarter} report as one full HTML page. Draw charts as inline SVG.",
+    expected_output="An HTML page",
+    agent=writer,
+    artifact=Artifact(identifier="q3-report", title="Q3 report", kind="pdf"),
+)
+```
+
+- Install the extra: `uv add 'crewai[pdf]'`. It uses WeasyPrint, which also needs the Pango library from your system (on Debian or Ubuntu, `apt-get install libpango-1.0-0 libpangoft2-1.0-0`).
+- Scripts do not run, so charts drawn with JavaScript come out blank. Ask for inline SVG or images instead.
+- Images and stylesheets load only from `http`, `https` and `data` URLs. Local files are never read into the PDF.
+- The same works with the `save_artifact` tool and with `save_artifact()` in code: pass HTML or markdown as `content` with `kind="pdf"`.
 
 ### Use the saved artifact
 
@@ -218,7 +236,7 @@ This matters most in a flow that pauses for human feedback. The flow can resume 
 | `text` | `.txt` | |
 | `csv` | `.csv` | |
 | `image` | the file's extension | Needs `file_path`. AMP accepts PNG, JPEG, GIF and WebP |
-| `pdf` | `.pdf` | Needs `file_path` on a task or agent |
+| `pdf` | `.pdf` | A file from `file_path`, or HTML or markdown text rendered with `crewai[pdf]` |
 | `file` | the file's extension | Needs `file_path`. Download only |
 
 ## Where artifacts are stored

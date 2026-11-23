@@ -41,7 +41,7 @@ _KIND_FORMATS: dict[str, tuple[str | None, str | None]] = {
 }
 
 # Kinds whose bytes come from a file, so text output can never fill them.
-FILE_KINDS = frozenset({"image", "pdf", "file"})
+FILE_KINDS = frozenset({"image", "file"})
 
 
 def guess_kind(content: str) -> ArtifactKind:
@@ -156,7 +156,8 @@ class Artifact(BaseModel):
         default=None,
         description=(
             "Save the file the agent writes here instead of its text output. "
-            "Needed for image, pdf and file."
+            "Needed for image and file. A pdf without it is rendered from the "
+            "HTML or markdown output."
         ),
     )
 
@@ -301,6 +302,28 @@ def _image_format(data: bytes) -> tuple[str, str]:
     raise ValueError("image bytes must be PNG, JPEG, GIF or WebP")
 
 
+def _render_pdf(text: str) -> bytes:
+    """Render HTML, or markdown, into PDF bytes. JavaScript never runs."""
+    try:
+        from markdown_it import MarkdownIt
+        from weasyprint import HTML, URLFetcher  # type: ignore[import-untyped]
+    # WeasyPrint raises OSError when Pango is missing from the system.
+    except (ImportError, OSError) as e:
+        raise RuntimeError(
+            "Saving a PDF from text needs crewai[pdf] and the Pango library: "
+            "uv add 'crewai[pdf]', then install Pango "
+            "(apt-get install libpango-1.0-0 libpangoft2-1.0-0)."
+        ) from e
+
+    html = text
+    if guess_kind(text) != "html":
+        html = MarkdownIt("commonmark", {"html": True}).enable("table").render(text)
+    # No file: URLs, so HTML an agent wrote cannot pull local files into the PDF.
+    fetcher = URLFetcher(allowed_protocols={"http", "https", "data"})
+    pdf: bytes = HTML(string=html, url_fetcher=fetcher).write_pdf()
+    return pdf
+
+
 def save_artifact(
     artifact: Artifact,
     content: str | bytes | None = None,
@@ -328,10 +351,13 @@ def save_artifact(
             or "application/octet-stream"
         )
     elif content is not None:
-        # Text can never be an image, PDF or file; bytes from code can.
+        # Text can never be an image or file; bytes from code can.
         if artifact.kind in FILE_KINDS and isinstance(content, str):
             raise ValueError(f"kind '{artifact.kind}' needs file_path, not content.")
-        data = content.encode("utf-8") if isinstance(content, str) else content
+        if artifact.kind == "pdf" and isinstance(content, str):
+            data = _render_pdf(content)
+        else:
+            data = content.encode("utf-8") if isinstance(content, str) else content
         if artifact.kind == "image":
             extension, content_type = _image_format(data)
         elif artifact.kind == "file":
@@ -404,7 +430,12 @@ class SaveArtifactSchema(Artifact):
     """Arguments for :class:`SaveArtifactTool`."""
 
     content: str | None = Field(
-        default=None, description="Text content (HTML, markdown, JSON, CSV, ...)."
+        default=None,
+        description=(
+            "Text content (HTML, markdown, JSON, CSV, ...). For kind pdf, pass "
+            "HTML or markdown and it is rendered into the PDF; draw charts as "
+            "inline SVG, because scripts do not run."
+        ),
     )
     file_path: str | None = Field(
         default=None,
