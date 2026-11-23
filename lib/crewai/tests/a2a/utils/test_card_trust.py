@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from a2a.types import AgentCapabilities, AgentCard
+from a2a.types import AgentCapabilities, AgentCard, AgentInterface
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest
@@ -52,12 +52,34 @@ def _keys() -> tuple[str, str]:
         ("https://evil.example.net/a2a", False),
         ("http://agent.example.com/a2a", False),
         ("https://agent.example.com:8443/a2a", False),
-        ("agent.example.com:50051", True),
+        ("grpcs://agent.example.com:50051", True),
         ("evil.example.net:50051", False),
+        # Cleartext or non-TLS gRPC is refused when the endpoint is HTTPS.
+        ("agent.example.com:50051", False),
+        ("grpc://agent.example.com:50051", False),
+        ("dns:///agent.example.com:50051", False),
+        # Userinfo, dns authorities and unknown schemes never match.
+        ("grpcs://agent.example.com@evil.example.net:443", False),
+        ("dns://10.0.0.1/agent.example.com:443", False),
+        ("unix:///var/run/agent.sock", False),
     ],
 )
 def test_is_same_origin(url: str, expected: bool) -> None:
     assert is_same_origin(url, ENDPOINT) is expected
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("localhost:50051", True),
+        ("grpc://localhost:50051", True),
+        ("dns:///localhost:50051", True),
+        ("dns:///other.example.net:50051", False),
+        ("grpc://other.example.net:50051", False),
+    ],
+)
+def test_grpc_targets_on_cleartext_endpoint(url: str, expected: bool) -> None:
+    assert is_same_origin(url, "http://localhost:8000") is expected
 
 
 @pytest.mark.asyncio
@@ -128,3 +150,50 @@ async def test_delegation_never_builds_client_for_foreign_card_url() -> None:
                 updates=None,
             )
     create_client.assert_not_called()
+
+
+def _delegate(card: AgentCard) -> object:
+    return delegation._aexecute_a2a_delegation_impl(
+        endpoint=ENDPOINT,
+        auth=None,
+        timeout=5,
+        task_description="t",
+        context=None,
+        context_id=None,
+        task_id=None,
+        reference_task_ids=None,
+        metadata=None,
+        extensions=None,
+        conversation_history=[],
+        is_multiturn=False,
+        turn_number=1,
+        agent_branch=None,
+        agent_id=None,
+        agent_role=None,
+        response_model=None,
+        updates=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_off_origin_additional_interface_never_reaches_client() -> None:
+    """A card repeating a transport off-origin must not override the safe URL."""
+    card = _card()
+    card.additional_interfaces = [
+        AgentInterface(transport="JSONRPC", url="https://evil.example.net/a2a"),
+        AgentInterface(transport="GRPC", url="grpcs://agent.example.com:50051"),
+    ]
+    seen: dict[str, AgentCard] = {}
+
+    def fake_client(**kwargs: object) -> None:
+        seen["card"] = kwargs["agent_card"]  # type: ignore[assignment]
+        raise RuntimeError("stop")
+
+    with patch.object(
+        delegation, "_afetch_agent_card_cached", AsyncMock(return_value=card)
+    ), patch.object(delegation, "_create_a2a_client", side_effect=fake_client):
+        with pytest.raises(RuntimeError, match="stop"):
+            await _delegate(card)  # type: ignore[misc]
+
+    urls = [i.url for i in seen["card"].additional_interfaces or []]
+    assert urls == ["grpcs://agent.example.com:50051"]

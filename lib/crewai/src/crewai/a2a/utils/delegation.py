@@ -388,6 +388,32 @@ async def aexecute_a2a_delegation(
     return result
 
 
+async def _is_safe_interface(interface: Any, endpoint: str) -> bool:
+    try:
+        await validate_card_url(interface.url, endpoint)
+    except ValueError as e:
+        logger.warning(
+            "Ignoring AgentCard interface: %s",
+            e,
+            extra={"transport": interface.transport, "url": interface.url},
+        )
+        return False
+    return True
+
+
+async def _drop_unsafe_interfaces(agent_card: Any, endpoint: str) -> Any:
+    """Drop ``additional_interfaces`` the client must not send credentials to.
+
+    ``ClientFactory`` builds its transport targets from every entry on the card,
+    so entries that fail the origin check must not reach it.
+    """
+    interfaces = agent_card.additional_interfaces or []
+    safe = [i for i in interfaces if await _is_safe_interface(i, endpoint)]
+    if len(safe) == len(interfaces):
+        return agent_card
+    return agent_card.model_copy(update={"additional_interfaces": safe})
+
+
 def _verify_card_signature(
     agent_card: Any, public_key: str, algorithms: list[str] | None
 ) -> None:
@@ -462,6 +488,8 @@ async def _aexecute_a2a_delegation_impl(
         raise ValueError(
             f"Agent requires extensions not supported by client: {ext_uris}"
         )
+
+    agent_card = await _drop_unsafe_interfaces(agent_card, endpoint)
 
     negotiated: NegotiatedTransport | None = None
     effective_transport: TransportType = transport.preferred or _DEFAULT_TRANSPORT

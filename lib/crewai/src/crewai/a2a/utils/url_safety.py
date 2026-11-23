@@ -14,34 +14,61 @@ from urllib.parse import urlsplit
 
 
 _DEFAULT_PORTS = {"http": 80, "https": 443}
+_HTTP_SCHEMES = frozenset(_DEFAULT_PORTS)
+_TLS_SCHEMES = frozenset({"https", "grpcs"})
+_GRPC_SCHEMES = frozenset({"grpc", "grpcs"})
 
 
-def _split(url: str) -> tuple[str, str, int | None]:
-    """Return (scheme, host, port) for a URL, tolerating ``host:port`` forms."""
-    parts = urlsplit(url if "://" in url else f"//{url}")
-    scheme = parts.scheme.lower()
-    host = (parts.hostname or "").lower()
+def _split(url: str) -> tuple[str, str, int | None] | None:
+    """Return (scheme, host, port) of the host a client would dial, or None.
+
+    Understands the forms the gRPC channel factory accepts: ``http(s)://``,
+    ``grpc(s)://``, ``dns:///host:port`` and bare ``host:port`` (scheme ""). Any
+    other scheme, userinfo, or a ``dns://`` authority yields None.
+    """
+    scheme, sep, rest = url.partition("://")
+    if not sep:
+        scheme, rest = "", url
+    scheme = scheme.lower()
+    if scheme == "dns":
+        rest = rest.removeprefix("/")
+        if rest.startswith("/"):
+            return None
+        rest = f"//{rest}"
+    elif scheme in _HTTP_SCHEMES | _GRPC_SCHEMES or scheme == "":
+        rest = f"//{rest}"
+    else:
+        return None
+    parts = urlsplit(rest)
+    if "@" in parts.netloc or not parts.hostname:
+        return None
     try:
         port = parts.port
     except ValueError:
-        port = None
-    return scheme, host, port or _DEFAULT_PORTS.get(scheme)
+        return None
+    return scheme, parts.hostname.lower(), port or _DEFAULT_PORTS.get(scheme)
 
 
 def is_same_origin(url: str, endpoint: str) -> bool:
-    """Whether ``url`` stays on the origin of the configured ``endpoint``.
+    """Whether a client dialing ``url`` stays on the configured ``endpoint``.
 
-    HTTP(S) URLs must match scheme, host and port. URLs without an HTTP scheme
-    (for example a gRPC ``host:port`` target) cannot share the HTTP origin, so
-    only the host is compared.
+    HTTP(S) URLs must match scheme, host and port. gRPC targets
+    (``grpc(s)://``, ``dns:///``, bare ``host:port``) must match the host, and
+    when the endpoint is HTTPS must use TLS (``grpcs://``) so the connection is
+    authenticated to that host. The port may differ: gRPC is commonly served on
+    its own port.
     """
-    scheme, host, port = _split(url)
-    e_scheme, e_host, e_port = _split(endpoint)
-    if not host or host != e_host:
+    target = _split(url)
+    origin = _split(endpoint)
+    if target is None or origin is None:
         return False
-    if scheme in _DEFAULT_PORTS:
+    scheme, host, port = target
+    e_scheme, e_host, e_port = origin
+    if host != e_host:
+        return False
+    if scheme in _HTTP_SCHEMES:
         return scheme == e_scheme and port == e_port
-    return True
+    return e_scheme != "https" or scheme in _TLS_SCHEMES
 
 
 def _is_internal(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -83,8 +110,8 @@ async def validate_card_url(url: str, endpoint: str) -> None:
             f"AgentCard advertises URL '{url}' which does not match the "
             f"configured endpoint '{endpoint}'. Refusing to send credentials."
         )
-    _, host, _ = _split(url)
-    _, endpoint_host, _ = _split(endpoint)
+    host = _split(url)[1]  # type: ignore[index]
+    endpoint_host = _split(endpoint)[1]  # type: ignore[index]
     if await is_internal_host(host) and not await is_internal_host(endpoint_host):
         raise ValueError(
             f"AgentCard URL '{url}' resolves to an internal address while the "
