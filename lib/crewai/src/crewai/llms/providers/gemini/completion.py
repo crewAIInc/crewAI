@@ -566,6 +566,8 @@ class GeminiCompletion(BaseLLM):
             config_params["top_k"] = self.top_k
         if self.max_output_tokens is not None:
             config_params["max_output_tokens"] = self.max_output_tokens
+        elif self.max_tokens is not None:
+            config_params["max_output_tokens"] = self.max_tokens
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
 
