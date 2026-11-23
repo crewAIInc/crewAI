@@ -639,11 +639,20 @@ def _parse_duration(value: str) -> timedelta:
         )
     amount: int = int(match.group(1))
     unit: str = match.group(2)
-    if unit == "d":
-        return timedelta(days=amount)
-    if unit == "h":
-        return timedelta(hours=amount)
-    return timedelta(minutes=amount)
+    try:
+        if unit == "d":
+            duration = timedelta(days=amount)
+        elif unit == "h":
+            duration = timedelta(hours=amount)
+        else:
+            duration = timedelta(minutes=amount)
+        # The prune cutoff is now - duration; reject it here, before anything is touched.
+        datetime.now(timezone.utc) - duration
+    except OverflowError:
+        raise click.BadParameter(
+            f"Invalid duration: {value!r} reaches back past the earliest representable date."
+        ) from None
+    return duration
 
 
 def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -> int:

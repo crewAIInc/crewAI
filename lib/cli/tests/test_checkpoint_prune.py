@@ -66,6 +66,30 @@ def test_prune_rejects_negative_keep(checkpoint_location: Path, dry_run: bool) -
     record_usage.assert_not_called()
 
 
+@pytest.mark.parametrize("older_than", ["3000000d", "10000000000h"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_prune_rejects_unrepresentable_duration(
+    checkpoint_location: Path, older_than: str, dry_run: bool
+) -> None:
+    args = [
+        "checkpoint",
+        "--location",
+        str(checkpoint_location),
+        "prune",
+        "--older-than",
+        older_than,
+    ]
+    if dry_run:
+        args.append("--dry-run")
+
+    with patch("crewai_cli.checkpoint_cli._record_checkpoint_usage"):
+        result = CliRunner().invoke(crewai, args)
+
+    assert result.exit_code == 2
+    assert older_than in result.output
+    assert _checkpoint_ids(checkpoint_location) == set(_CHECKPOINT_IDS)
+
+
 @pytest.mark.parametrize("keep", [0, 2])
 def test_prune_keeps_most_recent_checkpoints(
     checkpoint_location: Path, keep: int
