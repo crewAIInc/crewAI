@@ -15,6 +15,8 @@ from crewai.agents.agent_adapters.openai_agents.protocols import (
     OpenAITool,
 )
 from crewai.tools import BaseTool
+from crewai.tools.base_tool import Tool as CrewTool
+from crewai.tools.structured_tool import _reject_partial_keyword_overrides
 from crewai.utilities.import_utils import require
 from crewai.utilities.pydantic_schema_utils import force_additional_properties_false
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -79,11 +81,12 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
         if not tools:
             return []
 
-        def create_tool_wrapper(tool: BaseTool) -> Any:
+        def create_tool_wrapper(tool: BaseTool, properties: dict[str, Any]) -> Any:
             """Create a wrapper function that handles the OpenAI function tool interface.
 
             Args:
                 tool: The CrewAI tool to wrap.
+                properties: The argument properties published to OpenAI.
 
             Returns:
                 Async wrapper function for OpenAI agent integration.
@@ -99,9 +102,12 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                 Returns:
                     Tool execution result.
                 """
-                param_name: str = next(
-                    iter(tool.args_schema.model_json_schema()["properties"].keys())
-                )
+
+                def single_argument(value: str) -> dict[str, str]:
+                    param_name = next(iter(properties), None)
+                    if param_name is None:
+                        raise ValueError(f"Tool '{tool.name}' does not take arguments.")
+                    return {param_name: value}
 
                 args_dict: dict[str, Any]
                 if isinstance(arguments, dict):
@@ -110,9 +116,20 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                     try:
                         args_dict = json.loads(arguments)
                     except json.JSONDecodeError:
-                        args_dict = {param_name: arguments}
+                        args_dict = single_argument(arguments)
                 else:
-                    args_dict = {param_name: str(arguments)}
+                    args_dict = single_argument(str(arguments))
+
+                if not isinstance(args_dict, dict):
+                    raise ValueError(f"Tool '{tool.name}' requires a JSON object.")
+                if isinstance(tool, CrewTool):
+                    _reject_partial_keyword_overrides(tool.func, args_dict)
+                unexpected = args_dict.keys() - properties.keys()
+                if unexpected:
+                    names = ", ".join(sorted(unexpected))
+                    raise ValueError(
+                        f"Unexpected arguments for tool '{tool.name}': {names}"
+                    )
 
                 output: Any | Awaitable[Any] = tool._run(**args_dict)
 
@@ -141,7 +158,9 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                     name=sanitize_tool_name(tool.name),
                     description=tool.description,
                     params_json_schema=schema,
-                    on_invoke_tool=create_tool_wrapper(tool),
+                    on_invoke_tool=create_tool_wrapper(
+                        tool, schema.get("properties", {})
+                    ),
                 ),
             )
             openai_tools.append(openai_tool)

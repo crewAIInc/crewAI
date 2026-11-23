@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
+from functools import partial
 import importlib
 from inspect import Parameter, signature
 import threading
@@ -34,6 +35,7 @@ from crewai.tools.structured_tool import (
     _deserialize_schema,
     _format_tool_output_for_agent,
     _infer_result_schema_from_callable,
+    _reject_partial_keyword_overrides,
     _serialize_schema,
     build_schema_hint,
     format_description_for_llm,
@@ -556,6 +558,23 @@ class Tool(BaseTool, Generic[P, R]):
 
     func: Callable[P, R | Awaitable[R]]
 
+    def model_post_init(self, __context: Any) -> None:
+        if isinstance(self.func, partial):
+            structured = CrewStructuredTool.from_function(
+                self.func,
+                name=self.name,
+                description=self.description,
+                args_schema=(
+                    self.args_schema if "args_schema" in self.model_fields_set else None
+                ),
+            )
+            if structured.args_schema is not None:
+                self.args_schema = structured.args_schema
+        super().model_post_init(__context)
+
+    def _reject_registered_partial_overrides(self, kwargs: dict[str, Any]) -> None:
+        _reject_partial_keyword_overrides(self.func, kwargs)
+
     def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the tool synchronously.
 
@@ -566,6 +585,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        self._reject_registered_partial_overrides(kwargs)
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
@@ -573,6 +593,7 @@ class Tool(BaseTool, Generic[P, R]):
         if limit_error:
             return limit_error  # type: ignore[return-value]
 
+        self._reject_registered_partial_overrides(kwargs)
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
@@ -590,6 +611,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the function execution.
         """
+        self._reject_registered_partial_overrides(kwargs)
         return self.func(*args, **kwargs)  # type: ignore[return-value]
 
     async def arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -602,6 +624,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        self._reject_registered_partial_overrides(kwargs)
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
@@ -624,6 +647,7 @@ class Tool(BaseTool, Generic[P, R]):
         Raises:
             NotImplementedError: If the wrapped function is not async.
         """
+        self._reject_registered_partial_overrides(kwargs)
         result = self.func(*args, **kwargs)
         if _is_awaitable(result):
             return await result
