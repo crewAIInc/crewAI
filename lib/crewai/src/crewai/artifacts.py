@@ -318,8 +318,9 @@ def _render_pdf(text: str) -> bytes:
     html = text
     if guess_kind(text) != "html":
         html = MarkdownIt("commonmark", {"html": True}).enable("table").render(text)
-    # No file: URLs, so HTML an agent wrote cannot pull local files into the PDF.
-    fetcher = URLFetcher(allowed_protocols={"http", "https", "data"})
+    # Only inline data: URLs. HTML an agent wrote must not make the host read
+    # local files or call its internal network (SSRF).
+    fetcher = URLFetcher(allowed_protocols={"data"})
     pdf: bytes = HTML(string=html, url_fetcher=fetcher).write_pdf()
     return pdf
 

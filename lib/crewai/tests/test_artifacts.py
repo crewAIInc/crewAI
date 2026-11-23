@@ -1085,10 +1085,10 @@ def test_markdown_text_becomes_html_before_rendering(store, weasyprint):
     assert "<table>" in weasyprint.rendered[0]
 
 
-def test_pdf_render_never_fetches_local_files(store, weasyprint):
+def test_pdf_render_fetches_only_inline_data(store, weasyprint):
     save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content="# Q3")
 
-    assert weasyprint.protocols == {"http", "https", "data"}
+    assert weasyprint.protocols == {"data"}
 
 
 def test_tool_saves_html_as_a_pdf(store, weasyprint):
@@ -1148,3 +1148,39 @@ def test_real_pdf_render_leaves_out_local_files(store, tmp_path):
             pass
     assert b"TOP-SECRET-VALUE" not in inflated
     assert saved.size == len(data)
+
+
+def test_real_pdf_render_never_calls_the_network(store):
+    try:
+        import weasyprint  # noqa: F401
+    except (ImportError, OSError):
+        pytest.skip("weasyprint and Pango are not installed")
+    import http.server
+    import threading
+
+    requests: list[str] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_port}"
+    html = (
+        f'<html><head><link rel="attachment" href="{url}/meta">'
+        f'<link rel="stylesheet" href="{url}/s.css"></head>'
+        f'<body><h1>Q3</h1><img src="{url}/i.png"></body></html>'
+    )
+    try:
+        save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content=html)
+    finally:
+        server.shutdown()
+
+    assert (store.root / "exec-1" / "r" / "v1.pdf").read_bytes().startswith(b"%PDF")
+    assert requests == []

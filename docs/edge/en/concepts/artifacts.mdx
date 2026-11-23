@@ -137,7 +137,7 @@ report = Task(
 
 - Install the extra: `uv add 'crewai[pdf]'`. It uses WeasyPrint, which also needs the Pango library from your system (on Debian or Ubuntu, `apt-get install libpango-1.0-0 libpangoft2-1.0-0`).
 - Scripts do not run, so charts drawn with JavaScript come out blank. Ask for inline SVG or images instead.
-- Images and stylesheets load only from `http`, `https` and `data` URLs. Local files are never read into the PDF.
+- Images and stylesheets load only from inline `data:` URLs. Remote URLs and local files are never fetched, so embed images as `data:` URLs or inline SVG.
 - The same works with the `save_artifact` tool and with `save_artifact()` in code: pass HTML or markdown as `content` with `kind="pdf"`.
 
 ### Use the saved artifact
