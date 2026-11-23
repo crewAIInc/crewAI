@@ -112,6 +112,14 @@ The `A2AClientConfig` class accepts the following parameters:
   Client-side processing hooks for tool injection, prompt augmentation, and response modification.
 </ParamField>
 
+<ParamField path="card_public_key" type="str" default="None">
+  PEM public key used to verify the remote agent's AgentCard. When set, the card must carry a valid JWS signature, otherwise delegation is refused.
+</ParamField>
+
+<ParamField path="card_signature_algorithms" type="list[str]" default="None">
+  Allowed JWS algorithms for card verification. Defaults to the common asymmetric algorithms (RS/ES/PS 256-512).
+</ParamField>
+
 <ParamField path="transport" type="ClientTransportConfig" default="ClientTransportConfig()">
   Transport configuration including preferred transport, supported transports for negotiation, and protocol-specific settings (gRPC message sizes, keepalive, etc.).
 </ParamField>
@@ -123,6 +131,10 @@ The `A2AClientConfig` class accepts the following parameters:
 <ParamField path="supported_transports" type="list[str]" default="None">
   **Deprecated**: Use `transport=ClientTransportConfig(supported=...)` instead.
 </ParamField>
+
+<Note>
+  The URL advertised by the remote AgentCard must stay on the origin of the configured `endpoint`. A card that points elsewhere is rejected before any credentials are sent. If the configured endpoint is public, a card URL that resolves to an internal address is also rejected.
+</Note>
 
 ## Authentication
 

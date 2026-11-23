@@ -56,6 +56,7 @@ from crewai.a2a.utils.agent_card import (
     _get_tls_verify,
     _prepare_auth_headers,
 )
+from crewai.a2a.utils.agent_card_signing import verify_agent_card_signature
 from crewai.a2a.utils.content_type import (
     DEFAULT_CLIENT_OUTPUT_MODES,
     negotiate_content_types,
@@ -65,6 +66,7 @@ from crewai.a2a.utils.transport import (
     TransportNegotiationError,
     negotiate_transport,
 )
+from crewai.a2a.utils.url_safety import validate_card_url
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationStartedEvent,
@@ -157,6 +159,8 @@ def execute_a2a_delegation(
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
     input_files: dict[str, Any] | None = None,
+    card_public_key: str | None = None,
+    card_signature_algorithms: list[str] | None = None,
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent synchronously.
 
@@ -193,6 +197,9 @@ def execute_a2a_delegation(
         transport: Transport configuration (preferred, supported transports, gRPC settings).
         accepted_output_modes: MIME types the client can accept in responses.
         input_files: Optional dictionary of files to send to remote agent.
+        card_public_key: PEM public key. When set, the AgentCard must carry a
+            valid JWS signature or delegation is refused.
+        card_signature_algorithms: Allowed JWS algorithms for card verification.
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
@@ -222,6 +229,8 @@ def execute_a2a_delegation(
         transport=transport,
         accepted_output_modes=accepted_output_modes,
         input_files=input_files,
+        card_public_key=card_public_key,
+        card_signature_algorithms=card_signature_algorithms,
     )
     try:
         asyncio.get_running_loop()
@@ -261,6 +270,8 @@ async def aexecute_a2a_delegation(
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
     input_files: dict[str, Any] | None = None,
+    card_public_key: str | None = None,
+    card_signature_algorithms: list[str] | None = None,
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent asynchronously.
 
@@ -292,6 +303,9 @@ async def aexecute_a2a_delegation(
         transport: Transport configuration (preferred, supported transports, gRPC settings).
         accepted_output_modes: MIME types the client can accept in responses.
         input_files: Optional dictionary of files to send to remote agent.
+        card_public_key: PEM public key. When set, the AgentCard must carry a
+            valid JWS signature or delegation is refused.
+        card_signature_algorithms: Allowed JWS algorithms for card verification.
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
@@ -330,6 +344,8 @@ async def aexecute_a2a_delegation(
             transport=transport,
             accepted_output_modes=accepted_output_modes,
             input_files=input_files,
+            card_public_key=card_public_key,
+            card_signature_algorithms=card_signature_algorithms,
         )
     except Exception as e:
         crewai_event_bus.emit(
@@ -372,6 +388,20 @@ async def aexecute_a2a_delegation(
     return result
 
 
+def _verify_card_signature(
+    agent_card: Any, public_key: str, algorithms: list[str] | None
+) -> None:
+    """Require a valid JWS signature on the card, or raise ValueError."""
+    if not any(
+        verify_agent_card_signature(agent_card, sig, public_key, algorithms)
+        for sig in agent_card.signatures or []
+    ):
+        raise ValueError(
+            "AgentCard signature is missing or invalid for the configured "
+            "card_public_key. Refusing to delegate."
+        )
+
+
 async def _aexecute_a2a_delegation_impl(
     endpoint: str,
     auth: ClientAuthScheme | None,
@@ -398,6 +428,8 @@ async def _aexecute_a2a_delegation_impl(
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
     input_files: dict[str, Any] | None = None,
+    card_public_key: str | None = None,
+    card_signature_algorithms: list[str] | None = None,
 ) -> TaskStateResult:
     """Internal async implementation of A2A delegation."""
     if transport is None:
@@ -418,6 +450,9 @@ async def _aexecute_a2a_delegation_impl(
     agent_card = await _afetch_agent_card_cached(
         endpoint=endpoint, auth_hash=auth_hash, timeout=timeout
     )
+
+    if card_public_key:
+        _verify_card_signature(agent_card, card_public_key, card_signature_algorithms)
 
     validate_auth_against_agent_card(agent_card, auth)
 
@@ -446,6 +481,7 @@ async def _aexecute_a2a_delegation_impl(
         )
         effective_transport = negotiated.transport  # type: ignore[assignment]
         effective_url = negotiated.url
+        await validate_card_url(effective_url, endpoint)
     except TransportNegotiationError as e:
         logger.warning(
             "Transport negotiation failed, using fallback",
