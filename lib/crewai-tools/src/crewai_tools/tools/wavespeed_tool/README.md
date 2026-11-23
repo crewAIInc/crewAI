@@ -33,4 +33,4 @@ video_tool = WaveSpeedVideoTool(duration=5, resolution="720p")
 other_tool = WaveSpeedImageTool(model="vendor/model-id", extra_params={"seed": 42})
 ```
 
-Optional settings such as `aspect_ratio`, `resolution` or `duration` are sent only when set; otherwise the model defaults apply. `timeout` (300 s for images, 900 s for videos) bounds how long a call waits for its result.
+Optional settings such as `aspect_ratio`, `resolution` or `duration` are sent only when set; otherwise the model defaults apply. `timeout` (300 s for images, 900 s for videos) bounds how long a call waits for its result, submit request included. Result checks that get 429 or a server error are retried with backoff (and `Retry-After`); the submit request is never retried. Errors raised after the prediction was created (`WaveSpeedPredictionError`, `WaveSpeedTimeoutError`) carry its `prediction_id`.

@@ -55,7 +55,10 @@ class WaveSpeedVideoTool(WaveSpeedBaseTool):
     )
     timeout: float = Field(
         default=900.0,
-        description="Maximum seconds to wait for a prediction to finish.",
+        description=(
+            "Maximum seconds to wait for a prediction to finish, including the "
+            "submit request."
+        ),
     )
 
     def _run(self, prompt: str, image: str | None = None) -> str:

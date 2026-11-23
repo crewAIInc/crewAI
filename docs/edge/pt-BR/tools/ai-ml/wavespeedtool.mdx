@@ -91,3 +91,5 @@ Qualquer modelo disponível na WaveSpeed AI pode ser usado passando seu id como 
 ## Tratamento de erros
 
 As ferramentas lançam um erro quando `WAVESPEED_API_KEY` não está definida, quando a API rejeita uma requisição, quando uma predição falha ou é cancelada, ou quando nenhum resultado chega dentro de `timeout`. Uma requisição é enviada apenas uma vez por chamada e nunca é reenviada automaticamente.
+
+Consultas de resultado limitadas por taxa (429) ou com erro de servidor são repetidas com esperas crescentes, seguindo `Retry-After` quando a API o envia, e `timeout` inclui a requisição de envio. Depois que uma predição existe, o erro é um `WaveSpeedPredictionError` ou `WaveSpeedTimeoutError` com seu `prediction_id`, para que o resultado possa ser lido depois em vez de pagar por uma nova execução. Se a requisição de envio expirar ou receber um erro de servidor, a predição pode já existir: verifique seu histórico na WaveSpeed antes de chamar a ferramenta novamente.

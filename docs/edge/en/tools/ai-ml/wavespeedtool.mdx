@@ -91,3 +91,5 @@ Any model available on WaveSpeed AI can be used by passing its id as `model`. Th
 ## Error handling
 
 The tools raise an error when `WAVESPEED_API_KEY` is not set, when the API rejects a request, when a prediction fails or is cancelled, or when no result arrives within `timeout`. A request is submitted only once per call and is never resubmitted automatically.
+
+Result checks that are rate limited (429) or hit a server error are retried with increasing waits, following `Retry-After` when the API sends it, and `timeout` includes the submit request. Once a prediction exists, the error is a `WaveSpeedPredictionError` or `WaveSpeedTimeoutError` with its `prediction_id`, so the result can be read later instead of paying for a new run. If the submit request times out or gets a server error, the prediction may already exist: check your WaveSpeed history before calling the tool again.

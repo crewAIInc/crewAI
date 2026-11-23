@@ -29381,7 +29381,7 @@
           },
           "timeout": {
             "default": 300.0,
-            "description": "Maximum seconds to wait for a prediction to finish.",
+            "description": "Maximum seconds to wait for a prediction to finish, including the submit request.",
             "title": "Timeout",
             "type": "number"
           }
@@ -29562,7 +29562,7 @@
           },
           "timeout": {
             "default": 900.0,
-            "description": "Maximum seconds to wait for a prediction to finish.",
+            "description": "Maximum seconds to wait for a prediction to finish, including the submit request.",
             "title": "Timeout",
             "type": "number"
           }
