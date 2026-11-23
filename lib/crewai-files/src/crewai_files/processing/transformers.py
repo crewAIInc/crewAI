@@ -35,10 +35,14 @@ def resize_image(
         A new ImageFile with the resized image data.
 
     Raises:
+        ValueError: If either maximum dimension is not positive.
         ProcessingDependencyError: If Pillow is not installed.
         UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
             image.
     """
+    if max_width <= 0 or max_height <= 0:
+        raise ValueError("Maximum image dimensions must be greater than 0")
+
     try:
         from PIL import Image
     except ImportError as e:
@@ -63,8 +67,8 @@ def resize_image(
             height_ratio = max_height / original_height
             scale_factor = min(width_ratio, height_ratio)
 
-            new_width = int(original_width * scale_factor)
-            new_height = int(original_height * scale_factor)
+            new_width = max(1, int(original_width * scale_factor))
+            new_height = max(1, int(original_height * scale_factor))
         else:
             new_width = min(original_width, max_width)
             new_height = min(original_height, max_height)
