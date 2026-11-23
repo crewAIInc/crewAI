@@ -1266,3 +1266,117 @@ class TestCreateModelFromSchemaRecursive:
         model = create_model_from_schema(deepcopy(MUTUAL_RECURSION_SCHEMA), model_name="A")
         instance = model(val="hello", b={"val": 42})
         assert instance.val == "hello"
+
+
+class TestUntrustedSchemaSafety:
+    """Schemas from MCP servers / A2A peers are untrusted input."""
+
+    @staticmethod
+    def _root_cycle_schema(title: str | None = None) -> dict[str, Any]:
+        """Schema whose root refers back to itself.
+
+        The unresolvable ``$ref`` in an unused ``$defs`` entry makes
+        ``jsonref`` raise, which sends ``create_model_from_schema`` down its
+        fallback path. There the ``#`` back-edge resolves to the root dict
+        itself, so the root's name becomes a ``ForwardRef`` target.
+        """
+        schema: dict[str, Any] = {
+            "type": "object",
+            "$defs": {"Unused": {"$ref": "#/$defs/DoesNotExist"}},
+            "properties": {
+                "name": {"type": "string"},
+                "parent": {"$ref": "#"},
+            },
+        }
+        if title is not None:
+            schema["title"] = title
+        return schema
+
+    @staticmethod
+    def _eval_payload(marker: str) -> str:
+        return f"__import__('builtins').__setattr__('{marker}', True) or int"
+
+    @pytest.mark.parametrize("via", ["title", "model_name"])
+    def test_malicious_name_is_not_evaluated_on_cycle(self, via: str) -> None:
+        import builtins
+
+        marker = "_crewai_name_rce_marker"
+        payload = self._eval_payload(marker)
+        assert not hasattr(builtins, marker)
+        try:
+            try:
+                if via == "title":
+                    create_model_from_schema(self._root_cycle_schema(title=payload))
+                else:  # MCP tool names reach create_model_from_schema this way
+                    create_model_from_schema(
+                        self._root_cycle_schema(), model_name=payload
+                    )
+            except Exception:
+                pass  # rejecting the schema is an acceptable outcome
+            assert not hasattr(builtins, marker), (
+                f"schema {via} was evaluated as code during model_rebuild"
+            )
+        finally:
+            if hasattr(builtins, marker):
+                delattr(builtins, marker)
+
+    def test_title_is_reduced_to_a_plain_identifier(self) -> None:
+        model = create_model_from_schema(
+            {
+                "title": "Evil Name(); import os",
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            }
+        )
+        assert model.__name__.isidentifier()
+
+    @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+    def test_http_ref_is_not_fetched(self) -> None:
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        hits: list[str] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                hits.append(self.path)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"type": "integer"}')
+
+            def log_message(self, *args: Any) -> None:
+                pass
+
+        server = HTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            url = f"http://127.0.0.1:{server.server_port}/secret.json"
+            schema = {
+                "type": "object",
+                "properties": {"value": {"$ref": url}},
+            }
+            try:
+                create_model_from_schema(schema)
+            except Exception:
+                pass  # rejecting the schema is an acceptable outcome
+        finally:
+            server.shutdown()
+            server.server_close()
+        assert hits == [], f"remote $ref was fetched: {hits}"
+
+    def test_file_ref_is_not_loaded(self, tmp_path: Any) -> None:
+        target = tmp_path / "secret.json"
+        target.write_text('{"type": "integer"}')
+        schema = {
+            "type": "object",
+            "properties": {"value": {"$ref": target.as_uri()}},
+            "required": ["value"],
+        }
+        try:
+            model = create_model_from_schema(schema)
+        except Exception:
+            return  # rejecting the schema is an acceptable outcome
+        # If the file had been loaded, "value" would be constrained to int.
+        assert model(value="not an int").value == "not an int"

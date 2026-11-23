@@ -18,7 +18,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from copy import deepcopy
 import datetime
+import keyword
 import logging
+import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -775,6 +777,31 @@ def build_rich_field_description(prop_schema: dict[str, Any]) -> str:
     return ". ".join(parts) if parts else ""
 
 
+def _reject_non_local_ref(uri: str) -> Any:
+    """``jsonref`` loader that refuses every non-local ``$ref``.
+
+    Schemas come from untrusted MCP servers and A2A peers, so ``http(s)`` and
+    ``file:`` references must never be fetched. Local ``#/...`` pointers are
+    resolved by ``jsonref`` without calling the loader.
+    """
+    raise ValueError(f"Refusing to resolve non-local $ref: {uri!r}")
+
+
+def _safe_model_name(name: str) -> str:
+    """Reduce an untrusted name to a plain Python identifier.
+
+    Model names can become ``ForwardRef`` targets, which Pydantic evaluates
+    as Python source in ``model_rebuild``. Restricting them to identifiers
+    makes that evaluation a harmless name lookup.
+    """
+    safe = re.sub(r"\W", "_", name)
+    if not safe or safe[0].isdigit():
+        safe = f"_{safe}"
+    if keyword.iskeyword(safe):
+        safe = f"{safe}_"
+    return safe
+
+
 def _inline_top_level_ref(schema: dict[str, Any]) -> dict[str, Any]:
     """Resolve only the top-level ``$ref``, preserving ``$defs`` for lazy inner resolution.
 
@@ -863,7 +890,11 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         'John'
     """
     try:
-        json_schema = dict(jsonref.replace_refs(json_schema, proxies=False))
+        json_schema = dict(
+            jsonref.replace_refs(
+                json_schema, proxies=False, loader=_reject_non_local_ref
+            )
+        )
     except (jsonref.JsonRefError, RecursionError):
         json_schema = _inline_top_level_ref(json_schema)
 
@@ -929,7 +960,9 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     if "allOf" in json_schema:
         json_schema = _merge_all_of_schemas(json_schema["allOf"], effective_root)
 
-    effective_name = model_name or json_schema.get("title") or "DynamicModel"
+    effective_name = _safe_model_name(
+        str(model_name or json_schema.get("title") or "DynamicModel")
+    )
 
     schema_id = id(json_schema)
     in_progress[original_id] = effective_name
@@ -1091,6 +1124,8 @@ def _resolve_ref(ref: str, root_schema: dict[str, Any]) -> dict[str, Any]:
     """
     from typing import cast
 
+    if not ref.startswith("#"):
+        raise ValueError(f"Refusing to resolve non-local $ref: {ref!r}")
     ref_path = ref.split("/")
     if ref.startswith("#/$defs/"):
         ref_schema: dict[str, Any] = root_schema["$defs"]
