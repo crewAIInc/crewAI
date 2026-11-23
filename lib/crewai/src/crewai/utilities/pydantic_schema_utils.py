@@ -1179,6 +1179,7 @@ _ALL_OF_STRUCTURAL_NON_EMPTY_KEYS: Final[tuple[str, ...]] = (
     "$ref",
     "type",
     "pattern",
+    _ALL_OF_PATTERNS_KEY,
     "minLength",
     "maxLength",
     "minimum",
@@ -1186,6 +1187,9 @@ _ALL_OF_STRUCTURAL_NON_EMPTY_KEYS: Final[tuple[str, ...]] = (
     "exclusiveMinimum",
     "exclusiveMaximum",
     "multipleOf",
+    _ALL_OF_MULTIPLE_OF_KEY,
+    "minItems",
+    "maxItems",
 )
 
 
@@ -2000,7 +2004,12 @@ def _json_schema_to_pydantic_type(
             else Any
             for i, schema in enumerate(any_of_schemas)
         ]
-        return Union[tuple(any_of_types)]  # noqa: UP007
+        union_type: Any = Union[tuple(any_of_types)]  # noqa: UP007
+        return (
+            _apply_all_of_validators(union_type, json_schema)
+            if enforce_constraints
+            else union_type
+        )
 
     type_ = json_schema.get("type")
 

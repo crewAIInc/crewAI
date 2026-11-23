@@ -1067,6 +1067,53 @@ class TestAllOfMerging:
             with pytest.raises(ValidationError):
                 Model(val=bad)
 
+    def test_single_member_all_of_array_bounds_enforced_in_items(self) -> None:
+        schema = {
+            "type": "object",
+            "$defs": {"Row": {"type": "array", "items": {"type": "string"}}},
+            "properties": {
+                "matrix": {
+                    "type": "array",
+                    "items": {
+                        "minItems": 1,
+                        "maxItems": 1,
+                        "allOf": [{"$ref": "#/$defs/Row"}],
+                    },
+                }
+            },
+            "required": ["matrix"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(matrix=[["ok"]]).matrix == [["ok"]]
+        for bad in ([["a", "b"]], [[]]):
+            with pytest.raises(ValidationError):
+                Model(matrix=bad)
+
+    def test_single_member_all_of_array_bounds_enforced_in_any_of(self) -> None:
+        schema = {
+            "type": "object",
+            "$defs": {"Row": {"type": "array", "items": {"type": "string"}}},
+            "properties": {
+                "payload": {
+                    "anyOf": [
+                        {
+                            "minItems": 1,
+                            "maxItems": 1,
+                            "allOf": [{"$ref": "#/$defs/Row"}],
+                        },
+                        {"type": "null"},
+                    ]
+                }
+            },
+            "required": ["payload"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(payload=["ok"]).payload == ["ok"]
+        assert Model(payload=None).payload is None
+        for bad in (["a", "b"], []):
+            with pytest.raises(ValidationError):
+                Model(payload=bad)
+
 
 # $ref resolution
 
