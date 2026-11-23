@@ -6,7 +6,7 @@ from crewai.events.event_bus import crewai_event_bus
 
 
 class TestEvent(BaseEvent):
-    pass
+    __test__ = False  # helper class, not a pytest test class
 
 
 def test_specific_event_handler():

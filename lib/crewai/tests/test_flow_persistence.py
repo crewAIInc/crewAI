@@ -15,6 +15,8 @@ from pydantic import BaseModel
 class TestState(FlowState):
     """Test state model with required id field."""
 
+    __test__ = False  # helper class, not a pytest test class
+
     counter: int = 0
     message: str = ""
 

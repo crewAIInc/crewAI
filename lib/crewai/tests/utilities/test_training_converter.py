@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 
 class TestModel(BaseModel):
+    __test__ = False  # helper class, not a pytest test class
+
     string_field: str = Field(description="A simple string field")
     list_field: List[str] = Field(description="A list of strings")
     number_field: float = Field(description="A number field")

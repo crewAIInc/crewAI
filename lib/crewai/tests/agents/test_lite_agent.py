@@ -272,6 +272,8 @@ async def test_lite_agent_returns_usage_metrics_async():
 class TestFlow(Flow):
     """A test flow that creates and runs an agent."""
 
+    __test__ = False  # helper class, not a pytest test class
+
     def __init__(self, llm, tools):
         self.llm = llm
         self.tools = tools
