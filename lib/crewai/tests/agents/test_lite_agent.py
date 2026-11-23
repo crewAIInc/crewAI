@@ -269,7 +269,7 @@ async def test_lite_agent_returns_usage_metrics_async():
     assert result.usage_metrics["total_tokens"] > 0
 
 
-class TestFlow(Flow):
+class FlowStub(Flow):
     """A test flow that creates and runs an agent."""
 
     def __init__(self, llm, tools):
