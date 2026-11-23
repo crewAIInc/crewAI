@@ -32,7 +32,7 @@ from enum import Enum
 from functools import wraps
 import inspect
 import time
-from typing import Any
+from typing import Any, Literal
 
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -89,6 +89,8 @@ class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
 
 HookFn = Callable[[Any], Any]
 
+OnErrorPolicy = Literal["ignore", "abort"]
+
 # (ctx, result) -> modified?  A reducer maps a hook's return value onto the
 # context using point-specific semantics. It may raise HookAborted.
 Reducer = Callable[[Any, Any], bool]
@@ -116,9 +118,32 @@ def get_global_hook_list(point: InterceptionPoint) -> list[HookFn]:
     return _global_hooks[point]
 
 
-def register(point: InterceptionPoint, hook: HookFn) -> None:
+def _apply_on_error(hook: HookFn, on_error: OnErrorPolicy) -> HookFn:
+    """Wrap ``hook`` with an error-handling policy when ``on_error="abort"``."""
+    if on_error not in ("ignore", "abort"):
+        raise ValueError(
+            f"Invalid on_error policy {on_error!r}; expected 'ignore' or 'abort'."
+        )
+    if on_error == "ignore":
+        return hook
+
+    @wraps(hook)
+    def fail_closed_hook(ctx: Any) -> Any:
+        return hook(ctx)
+
+    fail_closed_hook._hook_on_error = "abort"  # type: ignore[attr-defined]
+    hook._registered_hook = fail_closed_hook  # type: ignore[attr-defined]
+    return fail_closed_hook
+
+
+def register(
+    point: InterceptionPoint,
+    hook: HookFn,
+    *,
+    on_error: OnErrorPolicy = "ignore",
+) -> None:
     """Register a global hook for an interception point."""
-    _global_hooks[point].append(hook)
+    _global_hooks[point].append(_apply_on_error(hook, on_error))
 
 
 def unregister(point: InterceptionPoint, hook: HookFn) -> bool:
@@ -174,14 +199,19 @@ def scoped_hooks(
         _scoped_hooks_var.reset(token)
 
 
-def register_scoped(point: InterceptionPoint, hook: HookFn) -> None:
+def register_scoped(
+    point: InterceptionPoint,
+    hook: HookFn,
+    *,
+    on_error: OnErrorPolicy = "ignore",
+) -> None:
     """Register a hook scoped to the current :func:`scoped_hooks` context."""
     scope = _scoped_hooks_var.get()
     if scope is None:
         raise RuntimeError(
             "register_scoped() called outside of a scoped_hooks() context"
         )
-    scope.setdefault(point, []).append(hook)
+    scope.setdefault(point, []).append(_apply_on_error(hook, on_error))
 
 
 def get_scoped_hooks(point: InterceptionPoint) -> list[HookFn]:
@@ -282,6 +312,11 @@ def _invoke_hook(
             aborted.source = hook
         raise
     except Exception as error:
+        if getattr(hook, "_hook_on_error", "ignore") == "abort":
+            raise HookAborted(
+                reason=f"Hook raised an exception: {error}",
+                source=hook,
+            ) from error
         if verbose:
             from crewai_core.printer import PRINTER
 
@@ -402,6 +437,7 @@ def on(
     *,
     agents: list[str] | None = None,
     tools: list[str] | None = None,
+    on_error: OnErrorPolicy = "ignore",
 ) -> Callable[[HookFn], HookFn]:
     """Register a function as a hook for an interception point.
 
@@ -423,6 +459,8 @@ def on(
             func._filter_tools = normalized_tools  # type: ignore[attr-defined]
         if agents:
             func._filter_agents = agents  # type: ignore[attr-defined]
+        if on_error != "ignore":
+            func._hook_on_error = on_error  # type: ignore[attr-defined]
 
         params = list(inspect.signature(func).parameters.keys())
         is_method = len(params) >= 2 and params[0] == "self"
@@ -433,10 +471,10 @@ def on(
                 if (agents or normalized_tools)
                 else func
             )
-            register(point, hook)
+            register(point, hook, on_error=on_error)
             # Remember the actually-registered callable so unregister_hook(func)
-            # can resolve the filter wrapper.
-            func._registered_hook = hook  # type: ignore[attr-defined]
+            # can resolve any filter or on_error wrapper.
+            func._registered_hook = _global_hooks[point][-1]  # type: ignore[attr-defined]
 
         return func
 
