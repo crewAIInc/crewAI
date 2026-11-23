@@ -58,8 +58,10 @@ class Converter(OutputConverter):
         ``ato_pydantic`` so the validation/partial-JSON fallback logic stays in
         a single place.
         """
-        if isinstance(response, BaseModel):
+        if isinstance(response, self.model):
             return response
+        if isinstance(response, BaseModel):
+            response = response.model_dump_json()
         try:
             return self.model.model_validate_json(response)
         except ValidationError:
