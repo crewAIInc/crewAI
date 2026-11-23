@@ -302,6 +302,7 @@
                         "pages": [
                           "edge/en/tools/ai-ml/overview",
                           "edge/en/tools/ai-ml/dalletool",
+                          "edge/en/tools/ai-ml/wavespeedtool",
                           "edge/en/tools/ai-ml/visiontool",
                           "edge/en/tools/ai-ml/aimindtool",
                           "edge/en/tools/ai-ml/llamaindextool",
@@ -24542,6 +24543,7 @@
                         "pages": [
                           "edge/pt-BR/tools/ai-ml/overview",
                           "edge/pt-BR/tools/ai-ml/dalletool",
+                          "edge/pt-BR/tools/ai-ml/wavespeedtool",
                           "edge/pt-BR/tools/ai-ml/visiontool",
                           "edge/pt-BR/tools/ai-ml/aimindtool",
                           "edge/pt-BR/tools/ai-ml/llamaindextool",
@@ -46775,6 +46777,7 @@
                         "pages": [
                           "edge/ko/tools/ai-ml/overview",
                           "edge/ko/tools/ai-ml/dalletool",
+                          "edge/ko/tools/ai-ml/wavespeedtool",
                           "edge/ko/tools/ai-ml/visiontool",
                           "edge/ko/tools/ai-ml/aimindtool",
                           "edge/ko/tools/ai-ml/llamaindextool",
@@ -69740,6 +69743,7 @@
                         "pages": [
                           "edge/ar/tools/ai-ml/overview",
                           "edge/ar/tools/ai-ml/dalletool",
+                          "edge/ar/tools/ai-ml/wavespeedtool",
                           "edge/ar/tools/ai-ml/visiontool",
                           "edge/ar/tools/ai-ml/aimindtool",
                           "edge/ar/tools/ai-ml/llamaindextool",

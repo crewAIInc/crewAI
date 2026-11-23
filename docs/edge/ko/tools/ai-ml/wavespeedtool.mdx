@@ -1,0 +1,93 @@
+---
+title: WaveSpeed 도구
+description: WaveSpeedImageTool과 WaveSpeedVideoTool은 WaveSpeed AI에서 호스팅되는 모델로 이미지와 비디오를 생성합니다.
+icon: image
+mode: "wide"
+---
+
+# `WaveSpeedImageTool` 및 `WaveSpeedVideoTool`
+
+## 설명
+
+이 도구들은 Agent가 [WaveSpeed AI](https://wavespeed.ai)에서 호스팅되는 모델로 이미지와 비디오를 생성할 수 있는 기능을 제공합니다.
+
+- `WaveSpeedImageTool`은 텍스트 프롬프트로부터 이미지를 생성합니다. 참조 이미지 URL이 주어지면 프롬프트에 따라 해당 이미지들을 편집하거나 합성합니다.
+- `WaveSpeedVideoTool`은 텍스트 프롬프트로부터 비디오를 생성합니다. 이미지 URL이 주어지면 해당 이미지를 애니메이션으로 만듭니다.
+
+각 호출은 하나의 예측(prediction)을 제출하고 완료될 때까지 기다린 뒤, 생성된 파일의 URL을 JSON으로 반환합니다.
+
+## 설치
+
+crewai_tools 패키지를 설치하세요
+```shell
+pip install 'crewai[tools]'
+```
+
+WaveSpeed AI API 키를 환경 변수로 설정하세요:
+```shell
+export WAVESPEED_API_KEY="your-api-key"
+```
+
+## 예시
+
+이 도구들을 사용할 때는 프롬프트가 반드시 Agent 자체에 의해 생성되어야 합니다. 프롬프트는 생성하려는 이미지나 비디오를 설명해야 합니다.
+
+```python Code
+from crewai_tools import WaveSpeedImageTool, WaveSpeedVideoTool
+
+Agent(
+    ...
+    tools=[WaveSpeedImageTool(), WaveSpeedVideoTool()],
+)
+```
+
+이미지 도구는 `{"image_urls": [...], "model": "...", "prediction_id": "..."}`를, 비디오 도구는 `{"video_url": "...", "model": "...", "prediction_id": "..."}`를 반환합니다.
+
+## 매개변수
+
+### 실행 매개변수
+
+`WaveSpeedImageTool`:
+- **prompt**: 생성할 이미지에 대한 설명입니다.
+- **images**: 편집하거나 합성할 참조 이미지 URL 목록입니다(선택 사항).
+
+`WaveSpeedVideoTool`:
+- **prompt**: 생성할 비디오에 대한 설명입니다.
+- **image**: 첫 프레임으로 사용할 이미지의 URL입니다(선택 사항).
+
+### 초기화 매개변수
+
+`WaveSpeedImageTool`:
+- **model**: 텍스트-이미지 생성에 사용할 모델입니다. 기본값은 `bytedance/seedream-v5.5`입니다.
+- **edit_model**: 참조 이미지가 주어졌을 때 사용할 모델입니다. 기본값은 `bytedance/seedream-v5.5/edit`입니다.
+- **aspect_ratio**, **resolution**, **output_format**: 선택 사항입니다. 설정한 경우에만 전송되며, 그렇지 않으면 모델의 기본값이 적용됩니다.
+
+`WaveSpeedVideoTool`:
+- **model**: 텍스트-비디오 생성에 사용할 모델입니다. 기본값은 `alibaba/wan-3.0/text-to-video`입니다.
+- **image_model**: 이미지가 주어졌을 때 사용할 모델입니다. 기본값은 `alibaba/wan-3.0/image-to-video`입니다.
+- **aspect_ratio**, **duration**, **resolution**: 선택 사항입니다. 설정한 경우에만 전송되며, 그렇지 않으면 모델의 기본값이 적용됩니다.
+
+두 도구 공통:
+- **extra_params**: 도구가 직접 노출하지 않는 선택한 모델의 매개변수를 위해 모든 요청에 함께 전송되는 추가 모델 입력입니다.
+- **timeout**: 결과를 기다리는 최대 시간(초)입니다. 기본값은 이미지 300, 비디오 900입니다.
+- **poll_interval**: 결과 확인 사이의 간격(초)입니다. 기본값은 2입니다.
+
+예시:
+
+```python Code
+from crewai_tools import WaveSpeedImageTool, WaveSpeedVideoTool
+
+image_tool = WaveSpeedImageTool(aspect_ratio="16:9", resolution="2k")
+video_tool = WaveSpeedVideoTool(duration=5, resolution="720p")
+
+Agent(
+    ...
+    tools=[image_tool, video_tool]
+)
+```
+
+WaveSpeed AI에서 사용할 수 있는 모든 모델은 해당 id를 `model`로 전달하여 사용할 수 있습니다. 각 모델이 받는 입력은 [WaveSpeed AI 문서](https://wavespeed.ai/docs)에 나와 있습니다.
+
+## 오류 처리
+
+`WAVESPEED_API_KEY`가 설정되지 않은 경우, API가 요청을 거부한 경우, 예측이 실패하거나 취소된 경우, 또는 `timeout` 내에 결과가 도착하지 않은 경우 도구는 오류를 발생시킵니다. 요청은 호출당 한 번만 제출되며 자동으로 다시 제출되지 않습니다.

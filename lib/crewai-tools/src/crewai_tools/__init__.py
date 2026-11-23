@@ -223,6 +223,10 @@ from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.url_read_tool.url_read_tool import URLReadTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
 from crewai_tools.tools.wait_tool.wait_tool import WaitTool
+from crewai_tools.tools.wavespeed_tool import (
+    WaveSpeedImageTool,
+    WaveSpeedVideoTool,
+)
 from crewai_tools.tools.weaviate_tool.vector_search import WeaviateVectorSearchTool
 from crewai_tools.tools.website_search.website_search_tool import WebsiteSearchTool
 from crewai_tools.tools.xml_search_tool.xml_search_tool import XMLSearchTool
@@ -349,6 +353,8 @@ __all__ = [
     "URLReadTool",
     "VisionTool",
     "WaitTool",
+    "WaveSpeedImageTool",
+    "WaveSpeedVideoTool",
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
     "XMLSearchTool",

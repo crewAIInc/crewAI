@@ -1,0 +1,93 @@
+---
+title: أدوات WaveSpeed
+description: الأداتان `WaveSpeedImageTool` و`WaveSpeedVideoTool` تولّدان الصور ومقاطع الفيديو باستخدام نماذج مستضافة على WaveSpeed AI.
+icon: image
+mode: "wide"
+---
+
+# `WaveSpeedImageTool` و`WaveSpeedVideoTool`
+
+## الوصف
+
+تمنح هذه الأدوات الوكيل القدرة على توليد الصور ومقاطع الفيديو باستخدام نماذج مستضافة على [WaveSpeed AI](https://wavespeed.ai).
+
+- تولّد `WaveSpeedImageTool` صورة من موجّه نصي. وعند تمرير روابط صور مرجعية، تقوم بتعديل هذه الصور أو دمجها وفقًا للموجّه.
+- تولّد `WaveSpeedVideoTool` مقطع فيديو من موجّه نصي. وعند تمرير رابط صورة، تقوم بتحريك تلك الصورة.
+
+يرسل كل استدعاء تنبؤًا واحدًا، وينتظر اكتماله، ثم يعيد روابط الملفات المولّدة بصيغة JSON.
+
+## التثبيت
+
+ثبّت حزمة crewai_tools
+```shell
+pip install 'crewai[tools]'
+```
+
+عيّن مفتاح API الخاص بـ WaveSpeed AI كمتغير بيئة:
+```shell
+export WAVESPEED_API_KEY="your-api-key"
+```
+
+## مثال
+
+تذكّر أنه عند استخدام هذه الأدوات يجب أن يولّد الوكيل الموجّه بنفسه. ويجب أن يصف الموجّه الصورة أو الفيديو الذي تريد توليده.
+
+```python Code
+from crewai_tools import WaveSpeedImageTool, WaveSpeedVideoTool
+
+Agent(
+    ...
+    tools=[WaveSpeedImageTool(), WaveSpeedVideoTool()],
+)
+```
+
+تعيد أداة الصور `{"image_urls": [...], "model": "...", "prediction_id": "..."}` وتعيد أداة الفيديو `{"video_url": "...", "model": "...", "prediction_id": "..."}`.
+
+## المعاملات
+
+### معاملات التشغيل
+
+`WaveSpeedImageTool`:
+- **prompt**: وصف الصورة المراد توليدها.
+- **images**: قائمة اختيارية بروابط صور مرجعية لتعديلها أو دمجها.
+
+`WaveSpeedVideoTool`:
+- **prompt**: وصف الفيديو المراد توليده.
+- **image**: رابط اختياري لصورة تُستخدم كإطار أول.
+
+### معاملات التهيئة
+
+`WaveSpeedImageTool`:
+- **model**: النموذج المستخدم لتوليد الصور من النص. القيمة الافتراضية هي `bytedance/seedream-v5.5`.
+- **edit_model**: النموذج المستخدم عند تمرير صور مرجعية. القيمة الافتراضية هي `bytedance/seedream-v5.5/edit`.
+- **aspect_ratio** و**resolution** و**output_format**: اختيارية. تُرسل فقط عند تعيينها، وإلا تُطبّق القيم الافتراضية للنموذج.
+
+`WaveSpeedVideoTool`:
+- **model**: النموذج المستخدم لتوليد الفيديو من النص. القيمة الافتراضية هي `alibaba/wan-3.0/text-to-video`.
+- **image_model**: النموذج المستخدم عند تمرير صورة. القيمة الافتراضية هي `alibaba/wan-3.0/image-to-video`.
+- **aspect_ratio** و**duration** و**resolution**: اختيارية. تُرسل فقط عند تعيينها، وإلا تُطبّق القيم الافتراضية للنموذج.
+
+كلتا الأداتين:
+- **extra_params**: مدخلات إضافية للنموذج تُرسل مع كل طلب، للمعاملات الخاصة بالنموذج المختار التي لا تعرضها الأداة مباشرة.
+- **timeout**: أقصى عدد من الثواني لانتظار النتيجة. القيمة الافتراضية 300 للصور و900 للفيديو.
+- **poll_interval**: عدد الثواني بين عمليات التحقق من النتيجة. القيمة الافتراضية 2.
+
+على سبيل المثال:
+
+```python Code
+from crewai_tools import WaveSpeedImageTool, WaveSpeedVideoTool
+
+image_tool = WaveSpeedImageTool(aspect_ratio="16:9", resolution="2k")
+video_tool = WaveSpeedVideoTool(duration=5, resolution="720p")
+
+Agent(
+    ...
+    tools=[image_tool, video_tool]
+)
+```
+
+يمكن استخدام أي نموذج متاح على WaveSpeed AI بتمرير معرّفه كقيمة لـ `model`. وتجد المدخلات التي يقبلها كل نموذج في [توثيق WaveSpeed AI](https://wavespeed.ai/docs).
+
+## معالجة الأخطاء
+
+تُطلق الأدوات خطأً عندما لا يكون `WAVESPEED_API_KEY` معيّنًا، أو عندما ترفض الـ API الطلب، أو عندما يفشل التنبؤ أو يُلغى، أو عندما لا تصل نتيجة خلال `timeout`. يُرسل الطلب مرة واحدة فقط لكل استدعاء ولا يُعاد إرساله تلقائيًا.

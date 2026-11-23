@@ -1,0 +1,93 @@
+---
+title: Ferramentas WaveSpeed
+description: As ferramentas `WaveSpeedImageTool` e `WaveSpeedVideoTool` geram imagens e vídeos com modelos hospedados na WaveSpeed AI.
+icon: image
+mode: "wide"
+---
+
+# `WaveSpeedImageTool` e `WaveSpeedVideoTool`
+
+## Descrição
+
+Estas ferramentas dão ao Agente a capacidade de gerar imagens e vídeos com modelos hospedados na [WaveSpeed AI](https://wavespeed.ai).
+
+- `WaveSpeedImageTool` gera uma imagem a partir de um prompt de texto. Quando URLs de imagens de referência são fornecidas, ela edita ou combina essas imagens de acordo com o prompt.
+- `WaveSpeedVideoTool` gera um vídeo a partir de um prompt de texto. Quando a URL de uma imagem é fornecida, ela anima essa imagem.
+
+Cada chamada envia uma predição, aguarda sua conclusão e retorna as URLs dos arquivos gerados em JSON.
+
+## Instalação
+
+Instale o pacote crewai_tools
+```shell
+pip install 'crewai[tools]'
+```
+
+Defina sua chave de API da WaveSpeed AI como variável de ambiente:
+```shell
+export WAVESPEED_API_KEY="your-api-key"
+```
+
+## Exemplo
+
+Lembre-se de que, ao usar estas ferramentas, o prompt deve ser gerado pelo próprio Agente. Ele deve descrever a imagem ou o vídeo que você deseja gerar.
+
+```python Code
+from crewai_tools import WaveSpeedImageTool, WaveSpeedVideoTool
+
+Agent(
+    ...
+    tools=[WaveSpeedImageTool(), WaveSpeedVideoTool()],
+)
+```
+
+A ferramenta de imagem retorna `{"image_urls": [...], "model": "...", "prediction_id": "..."}` e a ferramenta de vídeo retorna `{"video_url": "...", "model": "...", "prediction_id": "..."}`.
+
+## Parâmetros
+
+### Parâmetros de execução
+
+`WaveSpeedImageTool`:
+- **prompt**: Descrição da imagem a ser gerada.
+- **images**: Lista opcional de URLs de imagens de referência para editar ou combinar.
+
+`WaveSpeedVideoTool`:
+- **prompt**: Descrição do vídeo a ser gerado.
+- **image**: URL opcional de uma imagem a ser usada como primeiro quadro.
+
+### Parâmetros de inicialização
+
+`WaveSpeedImageTool`:
+- **model**: Modelo usado para geração de texto para imagem. O padrão é `bytedance/seedream-v5.5`.
+- **edit_model**: Modelo usado quando imagens de referência são fornecidas. O padrão é `bytedance/seedream-v5.5/edit`.
+- **aspect_ratio**, **resolution**, **output_format**: Opcionais. Enviados apenas quando definidos; caso contrário, aplicam-se os padrões do modelo.
+
+`WaveSpeedVideoTool`:
+- **model**: Modelo usado para geração de texto para vídeo. O padrão é `alibaba/wan-3.0/text-to-video`.
+- **image_model**: Modelo usado quando uma imagem é fornecida. O padrão é `alibaba/wan-3.0/image-to-video`.
+- **aspect_ratio**, **duration**, **resolution**: Opcionais. Enviados apenas quando definidos; caso contrário, aplicam-se os padrões do modelo.
+
+Ambas as ferramentas:
+- **extra_params**: Entradas adicionais do modelo enviadas em todas as requisições, para parâmetros do modelo escolhido que a ferramenta não expõe diretamente.
+- **timeout**: Tempo máximo, em segundos, de espera por um resultado. O padrão é 300 para imagens e 900 para vídeos.
+- **poll_interval**: Segundos entre as verificações de resultado. O padrão é 2.
+
+Por exemplo:
+
+```python Code
+from crewai_tools import WaveSpeedImageTool, WaveSpeedVideoTool
+
+image_tool = WaveSpeedImageTool(aspect_ratio="16:9", resolution="2k")
+video_tool = WaveSpeedVideoTool(duration=5, resolution="720p")
+
+Agent(
+    ...
+    tools=[image_tool, video_tool]
+)
+```
+
+Qualquer modelo disponível na WaveSpeed AI pode ser usado passando seu id como `model`. As entradas aceitas por cada modelo estão listadas na [documentação da WaveSpeed AI](https://wavespeed.ai/docs).
+
+## Tratamento de erros
+
+As ferramentas lançam um erro quando `WAVESPEED_API_KEY` não está definida, quando a API rejeita uma requisição, quando uma predição falha ou é cancelada, ou quando nenhum resultado chega dentro de `timeout`. Uma requisição é enviada apenas uma vez por chamada e nunca é reenviada automaticamente.

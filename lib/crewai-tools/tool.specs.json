@@ -29244,6 +29244,365 @@
       }
     },
     {
+      "description": "Generates an image from a text prompt using WaveSpeed AI. Optionally takes reference image URLs to edit or combine. Returns the URLs of the generated images.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for WaveSpeed AI",
+          "name": "WAVESPEED_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "WaveSpeed Image Generation",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Generate or edit images with a model hosted on WaveSpeed AI.",
+        "properties": {
+          "aspect_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Aspect ratio such as '1:1' or '16:9'. Uses the model default if unset.",
+            "title": "Aspect Ratio"
+          },
+          "base_url": {
+            "default": "https://api.wavespeed.ai",
+            "description": "Base URL of the WaveSpeed AI API.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "edit_model": {
+            "default": "bytedance/seedream-v5.5/edit",
+            "description": "WaveSpeed model id used when reference images are given.",
+            "title": "Edit Model",
+            "type": "string"
+          },
+          "extra_params": {
+            "additionalProperties": true,
+            "description": "Additional model inputs sent with every request, for parameters of the chosen model that the tool does not expose directly.",
+            "title": "Extra Params",
+            "type": "object"
+          },
+          "model": {
+            "default": "bytedance/seedream-v5.5",
+            "description": "WaveSpeed model id used for text-to-image generation.",
+            "title": "Model",
+            "type": "string"
+          },
+          "output_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Output format such as 'png' or 'jpeg'. Uses the model default if unset.",
+            "title": "Output Format"
+          },
+          "poll_interval": {
+            "default": 2.0,
+            "description": "Seconds to wait between result polls.",
+            "title": "Poll Interval",
+            "type": "number"
+          },
+          "request_timeout": {
+            "default": 30.0,
+            "description": "Timeout in seconds for each HTTP request.",
+            "title": "Request Timeout",
+            "type": "number"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Output resolution such as '1k' or '2k'. Uses the model default if unset.",
+            "title": "Resolution"
+          },
+          "timeout": {
+            "default": 300.0,
+            "description": "Maximum seconds to wait for a prediction to finish.",
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "WaveSpeedImageTool",
+        "type": "object"
+      },
+      "name": "WaveSpeedImageTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for WaveSpeedImageTool.",
+        "properties": {
+          "images": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional URLs of reference images. When given, the image is produced by editing or combining these images according to the prompt.",
+            "title": "Images"
+          },
+          "prompt": {
+            "description": "Description of the image to generate.",
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "WaveSpeedImageToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Generates a video from a text prompt using WaveSpeed AI, optionally animating a starting image given by URL. Returns the URL of the generated video.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for WaveSpeed AI",
+          "name": "WAVESPEED_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "WaveSpeed Video Generation",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Generate videos with a model hosted on WaveSpeed AI.",
+        "properties": {
+          "aspect_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Aspect ratio such as '16:9' or '9:16'. Uses the model default if unset.",
+            "title": "Aspect Ratio"
+          },
+          "base_url": {
+            "default": "https://api.wavespeed.ai",
+            "description": "Base URL of the WaveSpeed AI API.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Video length in seconds. Uses the model default if unset.",
+            "title": "Duration"
+          },
+          "extra_params": {
+            "additionalProperties": true,
+            "description": "Additional model inputs sent with every request, for parameters of the chosen model that the tool does not expose directly.",
+            "title": "Extra Params",
+            "type": "object"
+          },
+          "image_model": {
+            "default": "alibaba/wan-3.0/image-to-video",
+            "description": "WaveSpeed model id used when a starting image is given.",
+            "title": "Image Model",
+            "type": "string"
+          },
+          "model": {
+            "default": "alibaba/wan-3.0/text-to-video",
+            "description": "WaveSpeed model id used for text-to-video generation.",
+            "title": "Model",
+            "type": "string"
+          },
+          "poll_interval": {
+            "default": 2.0,
+            "description": "Seconds to wait between result polls.",
+            "title": "Poll Interval",
+            "type": "number"
+          },
+          "request_timeout": {
+            "default": 30.0,
+            "description": "Timeout in seconds for each HTTP request.",
+            "title": "Request Timeout",
+            "type": "number"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Output resolution such as '720p'. Uses the model default if unset.",
+            "title": "Resolution"
+          },
+          "timeout": {
+            "default": 900.0,
+            "description": "Maximum seconds to wait for a prediction to finish.",
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "WaveSpeedVideoTool",
+        "type": "object"
+      },
+      "name": "WaveSpeedVideoTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for WaveSpeedVideoTool.",
+        "properties": {
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional URL of an image to animate. When given, it is used as the first frame of the video.",
+            "title": "Image"
+          },
+          "prompt": {
+            "description": "Description of the video to generate.",
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "WaveSpeedVideoToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool to search the Weaviate database for relevant information on internal documents.",
       "env_vars": [
         {
