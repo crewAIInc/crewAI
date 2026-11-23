@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'tests/**/*.py'
+      - 'lib/**/tests/**/*.py'
   workflow_dispatch:
 
 permissions:
