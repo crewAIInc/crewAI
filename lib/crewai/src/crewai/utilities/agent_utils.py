@@ -1160,6 +1160,9 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
+        from crewai.tools.base_tool import _FIRST_PARTY_TOOL_PACKAGES
+        from crewai.types.callback import _trusted_deserialize
+
         def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
             from crewai.plus_api import PlusAPI
@@ -1197,7 +1200,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module(tool["module"])
+                        module_name = tool["module"]
+                        if not (
+                            module_name.startswith(_FIRST_PARTY_TOOL_PACKAGES)
+                            or _trusted_deserialize()
+                        ):
+                            raise AgentRepositoryError(
+                                f"Tool module '{module_name}' is not a first-party CrewAI "
+                                "package; refusing to import third-party modules from agent "
+                                "repository definitions. Set CREWAI_DESERIALIZE_CALLBACKS=1 "
+                                "to allow trusted third-party modules."
+                            )
+                        module = importlib.import_module(module_name)
                         tool_class = getattr(module, tool["name"])
 
                         tool_value = tool_class(**tool["init_params"])
