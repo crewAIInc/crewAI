@@ -926,8 +926,12 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     degrades to a ``ForwardRef`` back-edge instead of blowing the stack.
     """
     original_id = id(json_schema)
-    if "allOf" in json_schema:
-        json_schema = _merge_all_of_schemas(json_schema["allOf"], effective_root)
+    if json_schema.get("allOf"):
+        json_schema = _merge_all_of_schemas(
+            json_schema["allOf"],
+            effective_root,
+            outer_schema=json_schema,
+        )
 
     effective_name = model_name or json_schema.get("title") or "DynamicModel"
 
@@ -993,6 +997,12 @@ def _json_schema_to_pydantic_field(
         enrich_descriptions=enrich_descriptions,
         in_progress=in_progress,
     )
+    if json_schema.get("allOf"):
+        json_schema = _merge_all_of_schemas(
+            json_schema["allOf"],
+            root_schema,
+            outer_schema=json_schema,
+        )
     is_required = name in required
 
     field_params: dict[str, Any] = {}
@@ -1103,37 +1113,172 @@ def _resolve_ref(ref: str, root_schema: dict[str, Any]) -> dict[str, Any]:
     return ref_schema
 
 
+_ALL_OF_LOWER_BOUNDS: Final[tuple[str, ...]] = (
+    "minimum",
+    "exclusiveMinimum",
+    "minLength",
+    "minItems",
+)
+_ALL_OF_UPPER_BOUNDS: Final[tuple[str, ...]] = (
+    "maximum",
+    "exclusiveMaximum",
+    "maxLength",
+    "maxItems",
+)
+_ALL_OF_SCALAR_METADATA_KEYS: Final[tuple[str, ...]] = (
+    "title",
+    "description",
+    "default",
+    "examples",
+    "format",
+    "pattern",
+    "multipleOf",
+    "writeOnly",
+    "scheme",
+    "const",
+    "anyOf",
+    "oneOf",
+)
+
+
+def _merge_json_schema_types(existing: Any, new: Any) -> Any:
+    """Narrow two JSON Schema ``type`` declarations for ``allOf``."""
+    if existing is None:
+        return new
+    if new is None:
+        return existing
+    if isinstance(existing, str) and isinstance(new, str):
+        if existing == new:
+            return existing
+        if {existing, new} == {"integer", "number"}:
+            return "integer"
+        return existing
+    existing_list = existing if isinstance(existing, list) else [existing]
+    new_list = new if isinstance(new, list) else [new]
+    narrowed: list[Any] = []
+    for member in existing_list:
+        if member in new_list or (member == "integer" and "number" in new_list):
+            if member not in narrowed:
+                narrowed.append(member)
+        elif member == "number" and "integer" in new_list:
+            if "integer" not in narrowed:
+                narrowed.append("integer")
+    if len(narrowed) == 1:
+        return narrowed[0]
+    if len(narrowed) > 1:
+        return narrowed
+    return existing
+
+
 def _merge_all_of_schemas(
     schemas: list[dict[str, Any]],
     root_schema: dict[str, Any],
+    *,
+    outer_schema: dict[str, Any] | None = None,
+    _seen: set[int] | None = None,
 ) -> dict[str, Any]:
-    """Merge multiple allOf schemas into a single schema.
+    """Merge multiple ``allOf`` schemas (and optional outer sibling keywords).
 
-    Combines properties and required fields from all schemas.
-
-    Args:
-        schemas: List of schemas to merge.
-        root_schema: The root schema for resolving $ref.
-
-    Returns:
-        Merged schema with combined properties and required fields.
+    Preserves non-object types (scalar/array/enum), narrows bounds and enums,
+    flattens nested ``allOf`` chains, and overlays outer sibling keywords
+    (such as ``properties``, ``required``, ``title``, ``description``, and
+    constraints) onto the merged result without emitting ``allOf``.
     """
-    merged: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+    merged: dict[str, Any] = {}
+    seen: set[int] = set() if _seen is None else _seen
+
+    def _is_number(val: Any) -> bool:
+        return isinstance(val, (int, float)) and not isinstance(val, bool)
+
+    def _apply(sub: Any, *, is_outer: bool = False) -> None:
+        if not isinstance(sub, dict):
+            return
+        if not is_outer:
+            sub_id = id(sub)
+            if sub_id in seen:
+                return
+            seen.add(sub_id)
+
+        ref = sub.get("$ref")
+        if isinstance(ref, str):
+            _apply(_resolve_ref(ref, root_schema), is_outer=False)
+
+        nested_all_of = sub.get("allOf")
+        if not is_outer and isinstance(nested_all_of, list):
+            for nested in nested_all_of:
+                _apply(nested, is_outer=False)
+
+        if "type" in sub:
+            merged["type"] = _merge_json_schema_types(merged.get("type"), sub["type"])
+
+        sub_props = sub.get("properties")
+        if isinstance(sub_props, dict) and sub_props:
+            merged.setdefault("properties", {}).update(sub_props)
+
+        sub_required = sub.get("required")
+        if isinstance(sub_required, list) and sub_required:
+            req_list: list[Any] = merged.setdefault("required", [])
+            for field in sub_required:
+                if field not in req_list:
+                    req_list.append(field)
+
+        sub_enum = sub.get("enum")
+        if isinstance(sub_enum, list) and sub_enum:
+            if "enum" not in merged:
+                merged["enum"] = list(sub_enum)
+            else:
+                intersected = [v for v in merged["enum"] if v in sub_enum]
+                if intersected:
+                    merged["enum"] = intersected
+
+        if "items" in sub:
+            sub_items = sub["items"]
+            if "items" not in merged or (
+                merged["items"] is True and not isinstance(sub_items, bool)
+            ):
+                merged["items"] = sub_items
+            elif isinstance(merged["items"], dict) and isinstance(sub_items, dict):
+                merged["items"] = _merge_all_of_schemas(
+                    [merged["items"], sub_items],
+                    root_schema,
+                    _seen=set(seen),
+                )
+            elif is_outer:
+                merged["items"] = sub_items
+
+        for key in _ALL_OF_LOWER_BOUNDS:
+            if key in sub:
+                val = sub[key]
+                cur = merged.get(key)
+                if _is_number(val) and _is_number(cur):
+                    merged[key] = max(cur, val)
+                elif is_outer or key not in merged:
+                    merged[key] = val
+
+        for key in _ALL_OF_UPPER_BOUNDS:
+            if key in sub:
+                val = sub[key]
+                cur = merged.get(key)
+                if _is_number(val) and _is_number(cur):
+                    merged[key] = min(cur, val)
+                elif is_outer or key not in merged:
+                    merged[key] = val
+
+        for key in _ALL_OF_SCALAR_METADATA_KEYS:
+            if key in sub:
+                if is_outer:
+                    merged[key] = sub[key]
+                else:
+                    merged.setdefault(key, sub[key])
 
     for schema in schemas:
-        if "$ref" in schema:
-            schema = _resolve_ref(schema["$ref"], root_schema)
+        _apply(schema, is_outer=False)
 
-        if "properties" in schema:
-            merged["properties"].update(schema["properties"])
+    if outer_schema is not None:
+        _apply(outer_schema, is_outer=True)
 
-        if "required" in schema:
-            for field in schema["required"]:
-                if field not in merged["required"]:
-                    merged["required"].append(field)
-
-        if "title" in schema and "title" not in merged:
-            merged["title"] = schema["title"]
+    if "type" not in merged and merged.get("properties"):
+        merged["type"] = "object"
 
     return merged
 
@@ -1206,7 +1351,15 @@ def _json_schema_to_pydantic_type(
 
     all_of_schemas = json_schema.get("allOf")
     if all_of_schemas:
-        if len(all_of_schemas) == 1:
+        has_structural_siblings = bool(
+            json_schema.get("properties")
+            or json_schema.get("required")
+            or any(
+                key in json_schema
+                for key in ("enum", "const", "items", "anyOf", "oneOf", "$ref")
+            )
+        )
+        if len(all_of_schemas) == 1 and not has_structural_siblings:
             return _json_schema_to_pydantic_type(
                 all_of_schemas[0],
                 root_schema,
@@ -1214,15 +1367,20 @@ def _json_schema_to_pydantic_type(
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
             )
-        if in_progress is not None:
-            return _build_model_from_schema(
-                json_schema,
-                root_schema,
-                model_name=name_,
-                enrich_descriptions=enrich_descriptions,
-                in_progress=in_progress,
-            )
-        merged = _merge_all_of_schemas(all_of_schemas, root_schema)
+        merged = _merge_all_of_schemas(
+            all_of_schemas,
+            root_schema,
+            outer_schema=json_schema,
+        )
+        if merged.get("type") == "object" and merged.get("properties"):
+            if in_progress is not None:
+                return _build_model_from_schema(
+                    json_schema,
+                    root_schema,
+                    model_name=name_,
+                    enrich_descriptions=enrich_descriptions,
+                    in_progress=in_progress,
+                )
         return _json_schema_to_pydantic_type(
             merged,
             root_schema,

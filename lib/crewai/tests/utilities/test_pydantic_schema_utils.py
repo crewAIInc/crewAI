@@ -16,7 +16,7 @@ from copy import deepcopy
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -509,6 +509,216 @@ class TestAllOfMerging:
         Model = create_model_from_schema(schema)
         obj = Model(item={"id": 1})
         assert obj.item.id == 1
+
+    def test_allof_preserves_outer_properties_required_and_title(self) -> None:
+        schema = {
+            "title": "AdminUser",
+            "type": "object",
+            "allOf": [{"$ref": "#/$defs/BaseUser"}],
+            "properties": {
+                "role": {"type": "string"},
+            },
+            "required": ["role"],
+            "$defs": {
+                "BaseUser": {
+                    "title": "BaseUser",
+                    "type": "object",
+                    "properties": {
+                        "username": {"type": "string"},
+                    },
+                    "required": ["username"],
+                }
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.__name__ == "AdminUser"
+        assert set(Model.model_fields) == {"username", "role"}
+        obj = Model(username="alice", role="admin")
+        assert obj.username == "alice"
+        assert obj.role == "admin"
+        with pytest.raises(ValidationError):
+            Model(username="alice")
+        with pytest.raises(ValidationError):
+            Model(role="admin")
+
+    def test_nested_single_allof_preserves_sibling_properties(self) -> None:
+        schema = {
+            "type": "object",
+            "$defs": {
+                "Base": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                    "required": ["id"],
+                }
+            },
+            "properties": {
+                "admin": {
+                    "type": "object",
+                    "allOf": [{"$ref": "#/$defs/Base"}],
+                    "properties": {"role": {"type": "string"}},
+                    "required": ["role"],
+                }
+            },
+            "required": ["admin"],
+        }
+        Model = create_model_from_schema(schema)
+        obj = Model(admin={"id": 7, "role": "owner"})
+        assert obj.admin.id == 7
+        assert obj.admin.role == "owner"
+        with pytest.raises(ValidationError):
+            Model(admin={"id": 7})
+
+    def test_nested_multilevel_allof_inheritance(self) -> None:
+        schema = {
+            "type": "object",
+            "$defs": {
+                "Base": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                    "required": ["id"],
+                },
+                "Admin": {
+                    "allOf": [{"$ref": "#/$defs/Base"}],
+                    "properties": {"role": {"type": "string"}},
+                    "required": ["role"],
+                },
+            },
+            "title": "SuperAdmin",
+            "allOf": [{"$ref": "#/$defs/Admin"}],
+            "properties": {"level": {"type": "integer"}},
+            "required": ["level"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.__name__ == "SuperAdmin"
+        obj = Model(id=1, role="root", level=99)
+        assert (obj.id, obj.role, obj.level) == (1, "root", 99)
+
+    def test_scalar_string_allof_preserves_type_and_constraints(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "title": "Code",
+                    "allOf": [
+                        {"type": "string", "minLength": 2},
+                        {"type": "string", "maxLength": 5, "pattern": "^[a-z]+$"},
+                    ],
+                }
+            },
+            "required": ["code"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.model_fields["code"].annotation is str
+        assert Model(code="abc").code == "abc"
+        for invalid in ("a", "abcdef", "123"):
+            with pytest.raises(ValidationError):
+                Model(code=invalid)
+
+    def test_scalar_integer_allof_tightens_bounds(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "score": {
+                    "allOf": [
+                        {"type": "integer", "minimum": 0},
+                        {"type": "integer", "minimum": 5, "maximum": 100},
+                        {"maximum": 10},
+                    ]
+                }
+            },
+            "required": ["score"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.model_fields["score"].annotation is int
+        assert Model(score=7).score == 7
+        for invalid in (4, 11):
+            with pytest.raises(ValidationError):
+                Model(score=invalid)
+
+    def test_scalar_array_and_enum_allof(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "allOf": [
+                        {"type": "array", "items": {"type": "string"}},
+                        {"minItems": 1},
+                    ]
+                },
+                "status": {
+                    "allOf": [
+                        {"type": "string", "enum": ["open", "closed", "pending"]},
+                        {"enum": ["closed", "pending"]},
+                    ]
+                },
+                "meta": {
+                    "allOf": [
+                        {"type": "object"},
+                        {"description": "Free-form metadata"},
+                    ]
+                },
+            },
+            "required": ["tags", "status", "meta"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model.model_fields["tags"].annotation == list[str]
+        assert Model.model_fields["meta"].annotation is dict
+        obj = Model(tags=["v1"], status="closed", meta={"k": "v"})
+        assert obj.tags == ["v1"]
+        assert obj.status == "closed"
+        assert obj.meta == {"k": "v"}
+        with pytest.raises(ValidationError):
+            Model(tags=["v1"], status="open", meta={})
+
+    def test_single_allof_ref_preserves_format_and_outer_description(self) -> None:
+        schema = {
+            "type": "object",
+            "$defs": {
+                "Timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Generic timestamp",
+                }
+            },
+            "properties": {
+                "created_at": {
+                    "allOf": [{"$ref": "#/$defs/Timestamp"}],
+                    "description": "Created at",
+                }
+            },
+            "required": ["created_at"],
+        }
+        Model = create_model_from_schema(schema)
+        field_info = Model.model_fields["created_at"]
+        assert field_info.annotation is datetime.datetime
+        assert field_info.description == "Created at"
+        obj = Model(created_at="2026-11-23T12:00:00Z")
+        assert isinstance(obj.created_at, datetime.datetime)
+
+    def test_recursive_ref_inside_allof_does_not_recurse_infinitely(self) -> None:
+        schema = {
+            "$defs": {
+                "Node": {
+                    "type": "object",
+                    "title": "Node",
+                    "properties": {
+                        "label": {"type": "string"},
+                        "parent": {
+                            "allOf": [{"$ref": "#/$defs/Node"}],
+                            "description": "Parent node",
+                        },
+                    },
+                    "required": ["label"],
+                }
+            },
+            "$ref": "#/$defs/Node",
+        }
+        Model = create_model_from_schema(deepcopy(schema), model_name="Node")
+        assert Model.model_fields["parent"].description == "Parent node"
+        obj = Model(label="root", parent={"label": "top"})
+        assert obj.label == "root"
+        assert obj.parent is not None
+        assert obj.parent.label == "top"
 
 
 # $ref resolution
