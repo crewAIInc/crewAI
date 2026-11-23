@@ -1612,7 +1612,10 @@ def checkpoint_diff(ctx: click.Context, id1: str, id2: str) -> None:
 
 @checkpoint.command("prune")
 @click.option(
-    "--keep", type=int, default=None, help="Keep the N most recent checkpoints."
+    "--keep",
+    type=click.IntRange(min=0),
+    default=None,
+    help="Keep the N most recent checkpoints.",
 )
 @click.option(
     "--older-than",
