@@ -8,7 +8,11 @@ portalocker to handle actual locking mechanics.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from hashlib import md5
+import os
+from pathlib import Path
 import sys
+import tempfile
 from unittest import mock
 
 import pytest
@@ -58,7 +62,30 @@ def test_uses_file_lock_when_redis_unavailable():
             pass
 
     mock_lock.assert_called_once()
-    assert "crewai:" in mock_lock.call_args.args[0]
+    lock_path = mock_lock.call_args.args[0]
+    basename = os.path.basename(lock_path)
+    expected_digest = md5(b"file_test", usedforsecurity=False).hexdigest()
+    assert basename == f"crewai_{expected_digest}.lock"
+    assert ":" not in basename
+
+
+def test_file_lock_creates_distinct_regular_lock_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+
+    with lock("portable_file_lock_a"):
+        pass
+    with lock("portable_file_lock_b"):
+        pass
+
+    expected_names = sorted(
+        f"crewai_{md5(name.encode(), usedforsecurity=False).hexdigest()}.lock"
+        for name in ("portable_file_lock_a", "portable_file_lock_b")
+    )
+    assert sorted(os.listdir(tmp_path)) == expected_names
+    for name in expected_names:
+        assert (tmp_path / name).is_file()
 
 
 def test_uses_redis_lock_when_redis_available(monkeypatch):

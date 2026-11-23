@@ -94,18 +94,18 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
             yield
         return
 
-    channel = f"crewai:{md5(name.encode(), usedforsecurity=False).hexdigest()}"
+    digest = md5(name.encode(), usedforsecurity=False).hexdigest()
 
     if _redis_available():
         with portalocker.RedisLock(
-            channel=channel,
+            channel=f"crewai:{digest}",
             connection=_redis_connection(),
             timeout=timeout,
         ):
             yield
     else:
         lock_dir = tempfile.gettempdir()
-        lock_path = os.path.join(lock_dir, f"{channel}.lock")
+        lock_path = os.path.join(lock_dir, f"crewai_{digest}.lock")
         try:
             pl = portalocker.Lock(lock_path, timeout=timeout)
             pl.acquire()
