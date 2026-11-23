@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.base_llm import MissingAPIKeyError
 from crewai.llms.context_window import AZURE_CONTEXT_WINDOWS, CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -98,14 +99,15 @@ def test_azure_tool_use_conversation_flow():
         assert mock_complete.called
 
 @pytest.mark.usefixtures("mock_azure_credentials")
-def test_azure_completion_module_is_imported():
+def test_azure_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using Azure provider
     """
     module_name = "crewai.llms.providers.azure.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    # monkeypatch puts the original module back afterwards. Otherwise later tests
+    # get a second AzureCompletion class and fail their isinstance checks.
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="azure/gpt-4")
 
@@ -371,7 +373,9 @@ def test_azure_raises_error_when_api_key_missing_without_azure_identity():
             llm = AzureCompletion(
                 model="gpt-4", endpoint="https://test.openai.azure.com"
             )
-            with pytest.raises(ValueError, match="Azure API key is required"):
+            with pytest.raises(
+                MissingAPIKeyError, match="AZURE_API_KEY is required for model 'gpt-4'"
+            ):
                 llm._get_sync_client()
 
 

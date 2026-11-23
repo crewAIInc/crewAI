@@ -9,7 +9,7 @@ from {{folder_name}}.crews.content_crew.content_crew import ContentCrew
 
 
 class ContentState(BaseModel):
-    topic: str = ""
+    topic: str = "AI Agents"
     outline: str = ""
     draft: str = ""
     final_post: str = ""
@@ -22,10 +22,8 @@ class ContentFlow(Flow[ContentState]):
         print("Planning content")
 
         if crewai_trigger_payload:
-            self.state.topic = crewai_trigger_payload.get("topic", "AI Agents")
+            self.state.topic = crewai_trigger_payload.get("topic", self.state.topic)
             print(f"Using trigger payload: {crewai_trigger_payload}")
-        else:
-            self.state.topic = "AI Agents"
 
         print(f"Topic: {self.state.topic}")
 

@@ -1,8 +1,12 @@
 """Tests for FileResolver."""
 
+import sys
+from types import ModuleType
+
 from crewai_files import FileBytes, ImageFile
 from crewai_files.cache.upload_cache import UploadCache
 from crewai_files.core.resolved import InlineBase64, InlineBytes
+from crewai_files.processing.constraints import BEDROCK_CONSTRAINTS
 from crewai_files.processing.exceptions import UploaderConfigurationError
 from crewai_files.resolution.resolver import (
     FileResolver,
@@ -233,3 +237,45 @@ class TestBatchUploaderErrors:
 
         assert set(resolved) == {"good"}
         assert isinstance(resolved["good"], InlineBase64)
+
+
+def _bedrock_image(monkeypatch: pytest.MonkeyPatch) -> ImageFile:
+    """Build an image whose content type is detected without libmagic."""
+    magic_module = ModuleType("magic")
+
+    def fake_from_buffer(*args: object, **kwargs: object) -> str:
+        return "image/png"
+
+    magic_module.from_buffer = fake_from_buffer  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "magic", magic_module)
+    return ImageFile(source=FileBytes(data=b"x" * 1024, filename="chart.png"))
+
+
+class TestBedrockUploadPreference:
+    """A configured S3 bucket must enable Bedrock's S3 upload path."""
+
+    def test_s3_bucket_enables_upload(self, monkeypatch):
+        """CREWAI_BEDROCK_S3_BUCKET makes the resolver prefer an upload."""
+        from crewai_files.formatting.api import _get_resolver_config
+
+        monkeypatch.setenv("CREWAI_BEDROCK_S3_BUCKET", "my-bucket")
+        image = _bedrock_image(monkeypatch)
+
+        config = _get_resolver_config("bedrock")
+        resolver = FileResolver(config=config)
+
+        assert config.prefer_upload is True
+        assert resolver._should_upload(image, "bedrock", BEDROCK_CONSTRAINTS, 1024)
+
+    def test_no_bucket_stays_inline(self, monkeypatch):
+        """Without a bucket, Bedrock keeps using inline bytes."""
+        from crewai_files.formatting.api import _get_resolver_config
+
+        monkeypatch.delenv("CREWAI_BEDROCK_S3_BUCKET", raising=False)
+        image = _bedrock_image(monkeypatch)
+
+        config = _get_resolver_config("bedrock")
+        resolver = FileResolver(config=config)
+
+        assert config.prefer_upload is False
+        assert not resolver._should_upload(image, "bedrock", BEDROCK_CONSTRAINTS, 1024)

@@ -20,6 +20,10 @@ uv add 'crewai[file-processing]'
 واجهة معالجة الملفات حاليًا في مرحلة الوصول المبكر.
 </Note>
 
+<Tip>
+لكي يعمل الوكيل على جدول بيانات يتلقاه كرابط، راجع [جداول البيانات](/ar/concepts/agents).
+</Tip>
+
 ## أنواع الملفات
 
 يدعم CrewAI خمسة أنواع ملفات محددة بالإضافة إلى فئة `File` العامة التي تكتشف النوع تلقائيًا:
@@ -173,9 +177,9 @@ Flow input_files < Crew input_files < Task input_files
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
 | **OpenAI** (completions API) | ✓ | | | | |
 | **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
-| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Anthropic** (claude-3 والأحدث) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3 والأحدث, nova) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="Gemini لأقصى دعم للملفات">
@@ -210,6 +214,24 @@ Flow input_files < Crew input_files < Task input_files
 لا تحتاج لإدارة هذا بنفسك. يستخدم CrewAI تلقائيًا الطريقة الأكثر كفاءة بناءً على حجم الملف وقدرات المزود. المزودات بدون واجهات رفع الملفات تستخدم inline base64 لجميع الملفات.
 </Note>
 
+## تنسيق الملفات بنفسك
+
+تتولى استدعاءات LLM تنسيق الملفات نيابةً عنك. لبناء كتل المحتوى بنفسك، مثلًا لاستدعاء SDK الخاص بالمزود مباشرةً، استخدم `format_multimodal_content` (أو `aformat_multimodal_content`) من `crewai_files`. تُعيد الدالة الكتل بالتنسيق الذي يتوقعه المزود.
+
+لا تحمل كتل ملفات Anthropic الحقل `cache_control` (منذ crewai 1.15.44). تسمح Anthropic بأربع نقاط توقف للتخزين المؤقت كحد أقصى في كل طلب، ويضعها مزود Anthropic في CrewAI على الرسائل التي يحددها. إذا أرسلت الكتل بنفسك وأردت التخزين المؤقت للموجّه، فأضف نقطة توقف إلى آخر كتلة في الرسالة: فهي تخزّن مؤقتًا كل ما قبلها، بما في ذلك الملفات.
+
+```python
+from crewai_files import ImageFile, format_multimodal_content
+
+blocks = format_multimodal_content(
+    {"chart": ImageFile(source="chart.png")},
+    "anthropic",
+    text="What does this chart show?",
+)
+blocks[-1]["cache_control"] = {"type": "ephemeral"}
+message = {"role": "user", "content": blocks}
+```
+
 ## أوضاع معالجة الملفات
 
 تحكم في كيفية معالجة الملفات عندما تتجاوز حدود المزود:
@@ -222,6 +244,10 @@ image = ImageFile(source="large.png", mode="auto")
 image = ImageFile(source="large.png", mode="warn")
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
+
+<Note type="warning" title="صيغ الصور المدعومة">
+عندما يحتاج CrewAI إلى قراءة أبعاد صورة أو تغيير حجمها أو ضغطها، فإنه يفتح صور PNG وJPEG وGIF وWEBP فقط. تُحدَّد الصيغة من محتوى الملف، وليس من نوع المحتوى المُعلَن. أي صورة أخرى تُطلق `UnsupportedImageFormatError` (فئة فرعية من `UnsupportedFileTypeError`) في جميع الأوضاع، بما في ذلك `warn` و`auto`. عند إرسال عدة ملفات معًا، تُستبعد تلك الصورة فقط ويُسجَّل خطأ.
+</Note>
 
 ## قيود المزودين
 

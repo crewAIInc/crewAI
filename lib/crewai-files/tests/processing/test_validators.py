@@ -571,7 +571,7 @@ class TestRealVideoFile:
         """Path to sample video fixture."""
         from pathlib import Path
 
-        path = Path(__file__).parent.parent.parent / "fixtures" / "sample_video.mp4"
+        path = Path(__file__).parent.parent / "fixtures" / "sample_video.mp4"
         if not path.exists():
             pytest.skip("sample_video.mp4 fixture not found")
         return path

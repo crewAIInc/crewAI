@@ -6,7 +6,8 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+import re
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -14,7 +15,10 @@ from typing_extensions import Required
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -222,6 +226,13 @@ class BedrockConverseStreamRequestBody(TypedDict, total=False):
     guardrailConfig: GuardrailStreamConfigurationTypeDef
     additionalModelRequestFields: dict[str, Any]
     additionalModelResponseFieldPaths: list[str]
+
+
+# GPT-6 IDs include point releases (``openai.gpt-6.1-*``), so the family ends at
+# ``.`` or ``-``; Nova IDs carry a ``-v<n>`` version.
+_BEDROCK_VISION_MODEL: Final[re.Pattern[str]] = re.compile(
+    r"openai\.gpt-6[.-]|amazon\.nova-(?:lite|pro|premier|2-lite)-v\d"
+)
 
 
 class BedrockCompletion(BaseLLM):
@@ -2245,38 +2256,30 @@ class BedrockCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, BEDROCK_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+            self.model,
+            BEDROCK_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
         )
 
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+, Nova Lite/Pro/Premier and OpenAI GPT-6 (Sol, Luna, Astra)
-        on Bedrock support vision.
+        Claude 3+, Nova Lite/Pro/Premier/2 Lite and OpenAI GPT-6 (Sol, Luna,
+        Astra) on Bedrock support vision, also behind a geo inference profile
+        prefix (``us.``, ``eu.``, ``global.``, ...).
 
         Returns:
             True if the model supports images.
         """
+        from crewai.llms.context_window import _REGION_PREFIXES
+
         model_lower = self.model.lower()
-        vision_models = (
-            "anthropic.claude-3",
-            "anthropic.claude-sonnet-4",
-            "anthropic.claude-opus-4",
-            "anthropic.claude-haiku-4",
-            "openai.gpt-6",
-            "us.openai.gpt-6",
-            "global.openai.gpt-6",
-            "amazon.nova-lite",
-            "amazon.nova-pro",
-            "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
-        )
-        return any(model_lower.startswith(m) for m in vision_models)
+        if model_lower.startswith(_REGION_PREFIXES):
+            model_lower = model_lower.split(".", 1)[1]
+        if model_lower.startswith("anthropic."):
+            return claude_supports_vision(model_lower.removeprefix("anthropic."))
+        return _BEDROCK_VISION_MODEL.match(model_lower) is not None
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.

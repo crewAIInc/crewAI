@@ -1,26 +1,30 @@
 """Shared test configuration for CrewAI's core package."""
 
-import builtins
-import sys
+from collections.abc import Generator
+from importlib.util import find_spec
 
 import pytest
+from crewai.rag.config.utils import clear_rag_config
 
 
 @pytest.fixture(autouse=True)
-def skip_litellm_paths_on_python_310(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Skip LiteLLM paths unsupported by patched LiteLLM releases on Python 3.10."""
-    if sys.version_info >= (3, 11):
+def reset_global_rag_client() -> Generator[None, None, None]:
+    """Drop the cached global RAG client before and after every test.
+
+    It lives in a context variable; without a reset, a client built by one test
+    (real storage, real embedder) would bypass the patches of the next test that
+    runs in the same worker.
+    """
+    clear_rag_config()
+    yield
+    clear_rag_config()
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Skip ``requires_chromadb`` tests when chromadb is not installed."""
+    if find_spec("chromadb") is not None:
         return
-
-    original_import = builtins.__import__
-
-    def skip_litellm() -> bool:
-        pytest.skip("Patched LiteLLM releases support this path only on Python 3.11+.")
-
-    def skip_litellm_import(name: str, *args: object, **kwargs: object) -> object:
-        if name == "litellm" or name.startswith("litellm."):
-            skip_litellm()
-        return original_import(name, *args, **kwargs)
-
-    monkeypatch.setattr("crewai.llm._ensure_litellm", skip_litellm)
-    monkeypatch.setattr(builtins, "__import__", skip_litellm_import)
+    skip = pytest.mark.skip(reason="chromadb is not installed (crewai[chromadb])")
+    for item in items:
+        if "requires_chromadb" in item.keywords:
+            item.add_marker(skip)

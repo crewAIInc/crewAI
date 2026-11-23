@@ -281,9 +281,15 @@ For a local terminal chat, use `chat()`:
 ```python
 def kickoff() -> None:
     SupportFlow().chat()
+    # Or open the full terminal UI:
+    SupportFlow().chat(tui=True)
 ```
 
-`chat()` wraps `handle_turn()` in a REPL, exits on `exit` / `quit`, and skips blank lines by default. With `trace_scope="turn"`, each turn finishes its trace automatically. Without a scope, the existing session-wide lifecycle and automatic cleanup at REPL exit are unchanged.
+`chat()` wraps `stream_turn()` in a REPL, exits on `exit` / `quit`, and skips blank lines by default. With `trace_scope="turn"`, each turn finishes its trace automatically. Without a scope, the existing session-wide lifecycle and automatic cleanup at REPL exit are unchanged.
+
+`chat(tui=True)` opens the same terminal UI used by `crewai run` and requires an interactive terminal. It preserves `session_id`, `exit_commands`, trace deferral, and options forwarded to `handle_turn()`. Custom prompts, input/output callables, and `skip_empty` are REPL-only options and are rejected in TUI mode. Conversational Agents expose the same `agent.chat()` and `agent.chat(tui=True)` methods.
+
+Token streaming defaults on in both the plain REPL and TUI when the LLM does not explicitly disable it. Use `flow.chat(stream=False)` (also supported with `tui=True`) or `LLM(stream=False)` to opt out; an explicit chat `stream=True` takes precedence. Both modes consume `stream_turn()` frames and retain the completed turn result. Streaming overrides are scoped to the turn and leave shared LLM settings unchanged. For custom transports, `stream_turn(message, stream=None)` applies the same automatic default; its existing `stream=True` default still explicitly requests token streaming. `stream=False` keeps lifecycle/message frames while disabling LLM token chunks. The plain REPL prints text chunks as they arrive, excluding thinking and tool-call argument chunks. A custom `output_fn` continues to receive one completed response per turn. Live text is rendered from the `converse_turn` and `answer_from_history_turn` responder methods; other handlers fall back to their completed public result.
 
 ### `ConversationConfig`
 

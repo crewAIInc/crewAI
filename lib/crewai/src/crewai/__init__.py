@@ -12,6 +12,7 @@ from pydantic import Field, PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.artifacts import Artifact, load_artifact, save_artifact
 from crewai.context import ExecutionContext
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -53,9 +54,10 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.32"
+__version__ = "1.15.44"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "CrewBase": ("crewai.project", "CrewBase"),
     "Memory": ("crewai.memory.unified_memory", "Memory"),
 }
 
@@ -193,8 +195,10 @@ except (ImportError, PydanticUserError):
 __all__ = [
     "LLM",
     "Agent",
+    "Artifact",
     "BaseLLM",
     "Crew",
+    "CrewBase",
     "CrewOutput",
     "Entity",
     "ExecutionContext",
@@ -208,4 +212,6 @@ __all__ = [
     "Task",
     "TaskOutput",
     "__version__",
+    "load_artifact",
+    "save_artifact",
 ]

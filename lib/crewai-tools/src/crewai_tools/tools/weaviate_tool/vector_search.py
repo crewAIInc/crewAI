@@ -86,12 +86,13 @@ class WeaviateVectorSearchTool(BaseTool):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if WEAVIATE_AVAILABLE:
-            openai_api_key = os.environ.get("OPENAI_API_KEY")
-            if not openai_api_key:
-                raise ValueError(
-                    "OPENAI_API_KEY environment variable is required for WeaviateVectorSearchTool and it is mandatory to use the tool."
-                )
-            self.headers = {"X-OpenAI-Api-Key": openai_api_key}
+            if self.headers is None:
+                openai_api_key = os.environ.get("OPENAI_API_KEY")
+                if not openai_api_key:
+                    raise ValueError(
+                        "OPENAI_API_KEY environment variable is required for WeaviateVectorSearchTool and it is mandatory to use the tool."
+                    )
+                self.headers = {"X-OpenAI-Api-Key": openai_api_key}
         else:
             if click.confirm(
                 "You are missing the 'weaviate-client' package. Would you like to install it?"
