@@ -2353,6 +2353,55 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         Agent(from_repository="test_agent")
 
 
+@pytest.mark.parametrize(
+    "module,name",
+    [
+        ("os", "system"),
+        ("subprocess", "Popen"),
+        ("builtins", "eval"),
+        ("crewai_evil", "Tool"),  # lookalike top-level package
+        ("crewai_tools.x", "not an identifier"),
+    ],
+)
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_rejects_non_first_party_tools(
+    mock_get_agent, mock_get_auth_token, module, name
+):
+    """The tool module/name come from the API response, so they must not be
+    able to import or call arbitrary code."""
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "tools": [{"name": name, "module": module, "init_params": {}}],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    with patch("importlib.import_module") as mock_import:
+        with pytest.raises(AgentRepositoryError, match="could not be loaded"):
+            Agent(from_repository="test_agent")
+    mock_import.assert_not_called()
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_rejects_reexported_stdlib_object(
+    mock_get_agent, mock_get_auth_token
+):
+    """A first-party module that merely imports ``os`` must not expose it."""
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "tools": [
+            {"name": "os", "module": "crewai.utilities.env", "init_params": {}}
+        ],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    with pytest.raises(AgentRepositoryError, match="not defined in a first-party"):
+        Agent(from_repository="test_agent")
+
+
 @patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_token):
     mock_get_response = MagicMock()
