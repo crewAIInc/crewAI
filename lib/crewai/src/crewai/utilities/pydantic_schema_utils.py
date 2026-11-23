@@ -1091,6 +1091,7 @@ def _json_schema_to_pydantic_field(
                 )
             ]
 
+    applied_str_pattern = False
     applied_str_field_params = isinstance(type_, type) and issubclass(type_, str)
     if applied_str_field_params:
         if "minLength" in json_schema:
@@ -1098,7 +1099,12 @@ def _json_schema_to_pydantic_field(
         if "maxLength" in json_schema:
             field_params["max_length"] = json_schema["maxLength"]
         if "pattern" in json_schema:
-            field_params["pattern"] = json_schema["pattern"]
+            raw_pat = json_schema["pattern"]
+            if isinstance(raw_pat, str) and isinstance(
+                _compile_rust_pattern(raw_pat), TypeAdapter
+            ):
+                field_params["pattern"] = raw_pat
+                applied_str_pattern = True
 
     # A field with an explicit default is already usable when omitted, so it
     # should not be made nullable unless the schema actually allows ``None``.
@@ -1113,6 +1119,7 @@ def _json_schema_to_pydantic_field(
         type_,
         json_schema,
         include_single_str_constraints=not applied_str_field_params,
+        include_single_pattern=not applied_str_pattern,
         include_single_num_constraints=not applied_num_field_params,
     )
 
@@ -1204,16 +1211,16 @@ def _reject_unsatisfiable_model(_cls: Any, _data: Any) -> Any:
     raise ValueError("Schema constraints are unsatisfiable")
 
 
-def _compile_rust_pattern(pattern: str) -> TypeAdapter[str]:
+def _compile_rust_pattern(pattern: str) -> TypeAdapter[str] | str:
     if len(pattern) > _MAX_PATTERN_LENGTH:
-        raise ValueError("Schema pattern exceeds maximum length")
+        return "Schema pattern exceeds maximum length"
     try:
         return TypeAdapter(
             Annotated[str, Field(pattern=pattern)],
             config=ConfigDict(regex_engine="rust-regex"),
         )
-    except (SchemaError, ValueError) as exc:
-        raise ValueError(f"Unsupported or invalid schema pattern: {pattern!r}") from exc
+    except (SchemaError, ValueError):
+        return f"Unsupported or invalid schema pattern: {pattern!r}"
 
 
 def _extract_string_value(value: Any) -> str | None:
@@ -1244,16 +1251,18 @@ def _extract_string_value(value: Any) -> str | None:
 
 
 def _make_patterns_validator(
-    adapters: tuple[TypeAdapter[str], ...],
+    adapters: tuple[TypeAdapter[str] | str, ...],
 ) -> Callable[[Any], Any]:
     def _validate(value: Any) -> Any:
         text = _extract_string_value(value)
         if text is not None:
-            try:
-                for adapter in adapters:
+            for adapter in adapters:
+                if isinstance(adapter, str):
+                    raise ValueError(adapter)
+                try:
                     adapter.validate_python(text)
-            except ValidationError as exc:
-                raise ValueError("String does not match required pattern") from exc
+                except ValidationError as exc:
+                    raise ValueError("String does not match required pattern") from exc
         return value
 
     return _validate
@@ -1350,16 +1359,22 @@ def _apply_all_of_validators(
     schema: dict[str, Any],
     *,
     include_single_str_constraints: bool = True,
+    include_single_pattern: bool | None = None,
     include_single_num_constraints: bool = True,
 ) -> Any:
     if schema.get(_UNSATISFIABLE_KEY):
         return Annotated[Any, AfterValidator(_reject_unsatisfiable)]
 
+    check_single_pattern = (
+        include_single_str_constraints
+        if include_single_pattern is None
+        else include_single_pattern
+    )
     raw_patterns = schema.get(_ALL_OF_PATTERNS_KEY)
     pattern_list: tuple[str, ...] = ()
     if isinstance(raw_patterns, (tuple, list)):
         pattern_list = tuple(p for p in raw_patterns if isinstance(p, str))
-    elif include_single_str_constraints:
+    elif check_single_pattern:
         single_pat = schema.get("pattern")
         if isinstance(single_pat, str):
             pattern_list = (single_pat,)
@@ -1456,7 +1471,7 @@ def _value_matches_json_type(value: Any, json_type: Any) -> bool:
 def _value_matches_constraints(
     value: Any,
     merged: dict[str, Any],
-    pattern_adapters: tuple[TypeAdapter[str], ...],
+    pattern_adapters: tuple[TypeAdapter[str] | str, ...],
     multiple_ofs: list[int | float],
     budget: list[int],
 ) -> bool:
@@ -1465,11 +1480,13 @@ def _value_matches_constraints(
     if isinstance(value, str):
         if pattern_adapters:
             if len(value) > _MAX_ENUM_PATTERN_SUBJECT_LENGTH:
-                raise ValueError("Schema pattern subject exceeds maximum length")
+                return False
             for adapter in pattern_adapters:
                 if budget[0] <= 0:
                     raise ValueError("Schema allOf complexity limit exceeded")
                 budget[0] -= 1
+                if isinstance(adapter, str):
+                    return False
                 try:
                     adapter.validate_python(value)
                 except ValidationError:
@@ -1680,18 +1697,12 @@ def _merge_all_of_schemas(
         internal_patterns = sub.get(_ALL_OF_PATTERNS_KEY)
         if isinstance(internal_patterns, (tuple, list)):
             for pat in internal_patterns:
-                if isinstance(pat, str):
-                    if len(pat) > _MAX_PATTERN_LENGTH:
-                        raise ValueError("Schema pattern exceeds maximum length")
-                    if pat not in patterns:
-                        patterns.append(pat)
+                if isinstance(pat, str) and pat not in patterns:
+                    patterns.append(pat)
         else:
             raw_pat = sub.get("pattern")
-            if isinstance(raw_pat, str):
-                if len(raw_pat) > _MAX_PATTERN_LENGTH:
-                    raise ValueError("Schema pattern exceeds maximum length")
-                if raw_pat not in patterns:
-                    patterns.append(raw_pat)
+            if isinstance(raw_pat, str) and raw_pat not in patterns:
+                patterns.append(raw_pat)
 
         internal_multiples = sub.get(_ALL_OF_MULTIPLE_OF_KEY)
         if isinstance(internal_multiples, (tuple, list)):
@@ -1762,8 +1773,10 @@ def _merge_all_of_schemas(
         return {_UNSATISFIABLE_KEY: True}
 
     if patterns:
-        merged["pattern"] = patterns[0]
-        if len(patterns) > 1:
+        first_compiled = _compile_rust_pattern(patterns[0])
+        if isinstance(first_compiled, TypeAdapter):
+            merged["pattern"] = patterns[0]
+        if len(patterns) > 1 or not isinstance(first_compiled, TypeAdapter):
             merged[_ALL_OF_PATTERNS_KEY] = tuple(patterns)
 
     if multiple_ofs:
@@ -1909,6 +1922,30 @@ def _merge_all_of_schemas(
     return merged
 
 
+def _lower_union_arm(
+    arm: Any,
+    root_schema: dict[str, Any],
+    *,
+    name_: str,
+    enrich_descriptions: bool,
+    in_progress: dict[int, Any] | None,
+) -> Any:
+    if isinstance(arm, dict):
+        return _json_schema_to_pydantic_type(
+            arm,
+            root_schema,
+            name_=name_,
+            enrich_descriptions=enrich_descriptions,
+            in_progress=in_progress,
+            enforce_constraints=True,
+        )
+    if arm is True:
+        return Any
+    if arm is False:
+        return Annotated[Any, AfterValidator(_reject_unsatisfiable)]
+    raise ValueError(f"Unsupported schema in union arm: {arm!r}")
+
+
 def _json_schema_to_pydantic_type(
     json_schema: dict[str, Any],
     root_schema: dict[str, Any],
@@ -2024,16 +2061,13 @@ def _json_schema_to_pydantic_type(
         any_of_schemas = json_schema.get("anyOf", []) + json_schema.get("oneOf", [])
     if any_of_schemas:
         any_of_types = [
-            _json_schema_to_pydantic_type(
+            _lower_union_arm(
                 schema,
                 root_schema,
                 name_=f"{name_ or 'Union'}Option{i}",
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
-                enforce_constraints=True,
             )
-            if isinstance(schema, dict)
-            else Any
             for i, schema in enumerate(any_of_schemas)
         ]
         union_type: Any = Union[tuple(any_of_types)]  # noqa: UP007

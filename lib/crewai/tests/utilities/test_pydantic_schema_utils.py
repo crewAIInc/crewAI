@@ -1024,30 +1024,93 @@ class TestAllOfMerging:
         lookaround_schema = {
             "type": "object",
             "properties": {
+                "cmd": {"type": "string", "enum": ["ls", "cat"]},
                 "tok": {
                     "allOf": [
                         {"type": "string", "pattern": "^(?!bad).*$"},
                         {"pattern": "^[a-z]+$"},
                     ]
-                }
+                },
             },
+            "required": ["cmd"],
         }
-        with pytest.raises(ValueError, match="Unsupported or invalid schema pattern"):
-            create_model_from_schema(lookaround_schema)
+        LookaroundModel = create_model_from_schema(lookaround_schema)
+        assert LookaroundModel(cmd="ls").cmd == "ls"
+        with pytest.raises(ValidationError):
+            LookaroundModel(cmd="rm")
+        with pytest.raises(ValidationError, match="Unsupported or invalid schema pattern"):
+            LookaroundModel(cmd="ls", tok="good")
 
         oversized_schema = {
             "type": "object",
             "properties": {
+                "cmd": {"type": "string", "enum": ["ls", "cat"]},
                 "tok": {
                     "allOf": [
                         {"type": "string", "pattern": "a" * 1025},
                         {"minLength": 1},
                     ]
-                }
+                },
             },
+            "required": ["cmd"],
         }
-        with pytest.raises(ValueError, match="exceeds maximum length"):
-            create_model_from_schema(oversized_schema)
+        OversizedModel = create_model_from_schema(oversized_schema)
+        assert OversizedModel(cmd="cat").cmd == "cat"
+        with pytest.raises(ValidationError):
+            OversizedModel(cmd="rm")
+        with pytest.raises(ValidationError, match="exceeds maximum length"):
+            OversizedModel(cmd="cat", tok="aaa")
+
+    def test_union_boolean_false_arm_fails_closed(self) -> None:
+        any_of_schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "anyOf": [False, {"type": "string", "enum": ["read"]}],
+                },
+            },
+            "required": ["action"],
+        }
+        AnyOfModel = create_model_from_schema(any_of_schema)
+        assert AnyOfModel(action="read").action == "read"
+        for bad in ("write", 123):
+            with pytest.raises(ValidationError):
+                AnyOfModel(action=bad)
+
+        one_of_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "oneOf": [False, {"type": "string", "pattern": "^ok$"}],
+                },
+            },
+            "required": ["tok"],
+        }
+        OneOfModel = create_model_from_schema(one_of_schema)
+        assert OneOfModel(tok="ok").tok == "ok"
+        with pytest.raises(ValidationError):
+            OneOfModel(tok="bad")
+
+        all_false_schema = {
+            "type": "object",
+            "properties": {"blocked": {"anyOf": [False]}},
+            "required": ["blocked"],
+        }
+        BlockedModel = create_model_from_schema(all_false_schema)
+        with pytest.raises(ValidationError):
+            BlockedModel(blocked="anything")
+
+        true_arm_schema = {
+            "type": "object",
+            "properties": {
+                "permissive": {
+                    "anyOf": [True, {"type": "string", "enum": ["read"]}],
+                },
+            },
+            "required": ["permissive"],
+        }
+        TrueModel = create_model_from_schema(true_arm_schema)
+        assert TrueModel(permissive="arbitrary").permissive == "arbitrary"
 
     def test_all_of_typeless_scalar_constraints_enforced(self) -> None:
         schema = {
