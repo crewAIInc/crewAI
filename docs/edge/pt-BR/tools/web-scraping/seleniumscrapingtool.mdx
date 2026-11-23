@@ -18,6 +18,8 @@ O `SeleniumScrapingTool` foi criado para tarefas de raspagem web de alta eficiê
 Permite a extração precisa de conteúdo de páginas web utilizando seletores CSS para direcionar elementos específicos.
 Seu design atende a uma ampla gama de necessidades de scraping, oferecendo flexibilidade para trabalhar com qualquer URL de site fornecida.
 
+A ferramenta não navega para endereços privados ou reservados (incluindo endpoints de metadados de nuvem, como `169.254.169.254`). A URL solicitada é verificada antes de o navegador carregá-la, e a URL final é verificada novamente após qualquer redirecionamento.
+
 ## Instalação
 
 Para utilizar esta ferramenta, é necessário instalar o pacote CrewAI tools e o Selenium:
@@ -92,7 +94,7 @@ O `SeleniumScrapingTool` aceita os seguintes parâmetros durante a inicializaç�
 
 - **website_url**: Opcional. A URL do site a ser raspado. Se fornecido durante a inicialização, o agente não precisará especificá-lo ao utilizar a ferramenta.
 - **css_element**: Opcional. O seletor CSS dos elementos a serem extraídos. Se fornecido durante a inicialização, o agente não precisará especificá-lo ao utilizar a ferramenta.
-- **cookie**: Opcional. Um dicionário contendo informações de cookies, útil para simular uma sessão logada e acessar conteúdo restrito.
+- **cookie**: Opcional. Um dicionário contendo informações de cookies, útil para simular uma sessão logada e acessar conteúdo restrito. O cookie só é enviado para uma página cujo host corresponda ao `domain` do cookie (ou a um subdomínio dele). Se o cookie não tiver `domain`, ele fica vinculado ao host do `website_url` definido na inicialização; se nenhum dos dois estiver disponível, o cookie não é enviado.
 - **wait_time**: Opcional. Especifica o atraso (em segundos) antes da raspagem, permitindo que o site e qualquer conteúdo dinâmico carreguem totalmente. O padrão é `3` segundos.
 - **return_html**: Opcional. Indica se o conteúdo HTML deve ser retornado em vez do texto simples. O padrão é `False`.
 
