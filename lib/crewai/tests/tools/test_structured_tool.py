@@ -545,3 +545,72 @@ def test_structured_tool_invoke_exception_handling():
         tool.invoke({"should_fail": True})
 
     assert call_count == 1
+
+
+def test_concurrent_structured_tool_calls_claim_usage_atomically(monkeypatch):
+    """Sync and async calls must share one atomic usage limit."""
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+
+    from crewai.tools import BaseTool
+    from crewai.tools.structured_tool import ToolUsageLimitExceededError
+
+    executions = []
+
+    def execute(value: int) -> int:
+        """Record one execution."""
+        executions.append(value)
+        return value
+
+    direct_tool = CrewStructuredTool.from_function(
+        func=execute,
+        name="limited_direct_tool",
+        max_usage_count=5,
+    )
+
+    class LimitedBaseTool(BaseTool):
+        name: str = "limited_base_tool"
+        description: str = "A tool used to test shared usage limits."
+
+        def _run(self, value: int) -> int:
+            executions.append(value)
+            return value
+
+    base_tool = LimitedBaseTool(max_usage_count=5)
+    converted_tool = base_tool.to_structured_tool()
+
+    for tool in (direct_tool, converted_tool):
+        executions.clear()
+        check_barrier = threading.Barrier(16)
+        original_check = CrewStructuredTool.has_reached_max_usage_count
+
+        def synchronized_check(instance):
+            reached = original_check(instance)
+            if instance is tool:
+                # Force all callers to observe the same pre-increment count.
+                check_barrier.wait(timeout=5)
+            return reached
+
+        monkeypatch.setattr(
+            CrewStructuredTool, "has_reached_max_usage_count", synchronized_check
+        )
+
+        def invoke(index: int):
+            try:
+                if index % 2:
+                    return asyncio.run(tool.ainvoke({"value": index}))
+                return tool.invoke({"value": index})
+            except ToolUsageLimitExceededError:
+                return None
+
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            results = list(executor.map(invoke, range(16)))
+
+        assert sum(result is not None for result in results) == 5
+        assert len(executions) == 5
+        assert tool.current_usage_count == 5
+
+        if tool is converted_tool:
+            assert base_tool.current_usage_count == 5
+            assert tool._usage_lock is base_tool._usage_lock
