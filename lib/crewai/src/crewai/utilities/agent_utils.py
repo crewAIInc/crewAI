@@ -1212,6 +1212,13 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                                 "to allow trusted third-party modules."
                             )
                         module = importlib.import_module(module_name)
+                        if module.__name__.split(".")[0] not in ("crewai", "crewai_tools"):
+                            raise AgentRepositoryError(
+                                f"Module '{module_name}' resolved to '{module.__name__}' "
+                                "(import shim or alias); refusing repository tool "
+                                "definitions that resolve outside the crewai / "
+                                "crewai_tools packages."
+                            )
                         tool_class = getattr(module, tool["name"])
                         if not (
                             isinstance(tool_class, type)
