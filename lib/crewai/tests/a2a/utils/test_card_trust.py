@@ -82,27 +82,13 @@ def test_grpc_targets_on_cleartext_endpoint(url: str, expected: bool) -> None:
     assert is_same_origin(url, "http://localhost:8000") is expected
 
 
-@pytest.mark.asyncio
-async def test_cross_origin_card_url_is_rejected() -> None:
+def test_cross_origin_card_url_is_rejected() -> None:
     with pytest.raises(ValueError, match="does not match"):
-        await validate_card_url("https://169.254.169.254/latest", ENDPOINT)
+        validate_card_url("https://169.254.169.254/latest", ENDPOINT)
 
 
-@pytest.mark.asyncio
-async def test_public_endpoint_resolving_internal_is_rejected() -> None:
-    with patch(
-        "crewai.a2a.utils.url_safety.is_internal_host",
-        new=AsyncMock(side_effect=lambda h: h == "agent.example.com"),
-    ), patch(
-        "crewai.a2a.utils.url_safety.is_same_origin", return_value=True
-    ):
-        with pytest.raises(ValueError, match="internal"):
-            await validate_card_url(ENDPOINT, "https://other.example.com")
-
-
-@pytest.mark.asyncio
-async def test_local_endpoint_is_allowed() -> None:
-    await validate_card_url("http://127.0.0.1:9000/a", "http://127.0.0.1:9000")
+def test_local_endpoint_is_allowed() -> None:
+    validate_card_url("http://127.0.0.1:9000/a", "http://127.0.0.1:9000")
 
 
 def test_valid_signature_passes_and_tampering_fails() -> None:

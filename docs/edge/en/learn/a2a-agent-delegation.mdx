@@ -133,7 +133,7 @@ The `A2AClientConfig` class accepts the following parameters:
 </ParamField>
 
 <Note>
-  The URL advertised by the remote AgentCard must stay on the origin of the configured `endpoint`. A card that points elsewhere is rejected before any credentials are sent. If the configured endpoint is public, a card URL that resolves to an internal address is also rejected. Interfaces listed in `additional_interfaces` are held to the same rule, and are ignored if they fail it. gRPC targets must use the same host as the endpoint and, when the endpoint is HTTPS, a TLS scheme (`grpcs://`).
+  The URL advertised by the remote AgentCard must stay on the origin of the configured `endpoint`. A card that points elsewhere is rejected before any credentials are sent. Interfaces listed in `additional_interfaces` are held to the same rule, and are ignored if they fail it. gRPC targets must use the same host as the endpoint and, when the endpoint is HTTPS, a TLS scheme (`grpcs://`).
 </Note>
 
 ## Authentication

@@ -61,7 +61,7 @@ result = crew.kickoff()
 Consulte o arquivo original em inglês para a lista completa de parâmetros de `A2AClientConfig`, opções de autenticação, mecanismos de atualização e configuração do servidor.
 
 <Note>
-  A URL anunciada pelo AgentCard do Agente remoto deve permanecer na origem (origin) do `endpoint` configurado. Um cartão que aponte para outro lugar é rejeitado antes de qualquer credencial ser enviada. Se o `endpoint` for público, um cartão cuja URL resolva para um endereço interno também é rejeitado. As interfaces listadas em `additional_interfaces` seguem a mesma regra e são ignoradas se não a cumprirem. Alvos gRPC devem usar o mesmo host do `endpoint` e, quando ele for HTTPS, um esquema TLS (`grpcs://`).
+  A URL anunciada pelo AgentCard do Agente remoto deve permanecer na origem (origin) do `endpoint` configurado. Um cartão que aponte para outro lugar é rejeitado antes de qualquer credencial ser enviada. As interfaces listadas em `additional_interfaces` seguem a mesma regra e são ignoradas se não a cumprirem. Alvos gRPC devem usar o mesmo host do `endpoint` e, quando ele for HTTPS, um esquema TLS (`grpcs://`).
 </Note>
 
 Para verificar o cartão, defina `card_public_key` (uma chave pública em formato PEM) em `A2AClientConfig`. Quando definida, o cartão deve conter uma assinatura JWS válida, caso contrário a delegação é recusada. Use `card_signature_algorithms` para restringir os algoritmos permitidos.

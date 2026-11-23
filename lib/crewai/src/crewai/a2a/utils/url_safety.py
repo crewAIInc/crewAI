@@ -7,9 +7,6 @@ not point at internal infrastructure.
 
 from __future__ import annotations
 
-import asyncio
-import ipaddress
-import socket
 from urllib.parse import urlsplit
 
 
@@ -71,49 +68,18 @@ def is_same_origin(url: str, endpoint: str) -> bool:
     return e_scheme != "https" or scheme in _TLS_SCHEMES
 
 
-def _is_internal(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
-        ip = ip.ipv4_mapped
-    return (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_multicast
-        or ip.is_reserved
-        or ip.is_unspecified
-    )
-
-
-async def is_internal_host(host: str) -> bool:
-    """Whether ``host`` is, or resolves to, a private/loopback/link-local address."""
-    try:
-        return _is_internal(ipaddress.ip_address(host))
-    except ValueError:
-        pass
-    loop = asyncio.get_running_loop()
-    try:
-        infos = await loop.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-    except OSError:
-        return False
-    return any(_is_internal(ipaddress.ip_address(i[4][0])) for i in infos)
-
-
-async def validate_card_url(url: str, endpoint: str) -> None:
+def validate_card_url(url: str, endpoint: str) -> None:
     """Reject a card-advertised URL that is unsafe to send credentials to.
 
+    The card is untrusted input, so the client may only talk to the endpoint the
+    user configured. This does not pin the resolved IP: a hostname that rebinds
+    between lookups is out of scope here.
+
     Raises:
-        ValueError: If the URL leaves the configured endpoint's origin, or, when
-            the endpoint itself is public, resolves to an internal address.
+        ValueError: If the URL leaves the configured endpoint's origin.
     """
     if not is_same_origin(url, endpoint):
         raise ValueError(
             f"AgentCard advertises URL '{url}' which does not match the "
             f"configured endpoint '{endpoint}'. Refusing to send credentials."
-        )
-    host = _split(url)[1]  # type: ignore[index]
-    endpoint_host = _split(endpoint)[1]  # type: ignore[index]
-    if await is_internal_host(host) and not await is_internal_host(endpoint_host):
-        raise ValueError(
-            f"AgentCard URL '{url}' resolves to an internal address while the "
-            f"configured endpoint '{endpoint}' does not."
         )
