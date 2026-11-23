@@ -445,6 +445,7 @@ class BaseTool(BaseModel, ABC):
             tool_failure_policy=self.tool_failure_policy,
         )
         structured_tool._original_tool = self
+        structured_tool._usage_lock = self._usage_lock
         return structured_tool
 
     @classmethod
