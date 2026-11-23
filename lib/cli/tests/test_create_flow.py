@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 import importlib
 import io
+import locale
 from pathlib import Path
 import sys
 from types import ModuleType
@@ -113,6 +114,27 @@ def test_create_flow_returns_none_when_the_folder_already_exists(
     assert create_flow("Research Flow", declarative=declarative) is None
     assert "Error: Folder research_flow already exists." in capsys.readouterr().out
     assert list((tmp_path / "research_flow").iterdir()) == []
+
+
+def test_create_flow_writes_project_files_as_utf8(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Scaffolded files stay UTF-8 whatever the default encoding is, so they load."""
+    monkeypatch.chdir(tmp_path)
+    saved_locale = locale.setlocale(locale.LC_CTYPE)
+    locale.setlocale(locale.LC_CTYPE, "C")
+    try:
+        project = create_flow("News Flow")
+    finally:
+        locale.setlocale(locale.LC_CTYPE, saved_locale)
+
+    assert project is not None
+    # config/tasks.yaml carries an em dash. Written with the locale encoding it
+    # is not UTF-8, and crew_base.load_yaml -- which opens the config as UTF-8 --
+    # cannot read the project back.
+    for path in sorted(project.rglob("*")):
+        if path.is_file():
+            path.read_bytes().decode("utf-8")
 
 
 SONNET = "anthropic/claude-sonnet-5-5"
