@@ -147,9 +147,12 @@ def _skip_string_literal(stmt: str, pos: int) -> int:
     return i  # Unterminated literal — return end
 
 
-_INTO_CLAUSE_RE = re.compile(
-    r"\bINTO\s+(?!@)(?P<target>OUTFILE|DUMPFILE)?", re.IGNORECASE
-)
+_INTO_CLAUSE_RE = re.compile(r"\bINTO\s+(?!@)", re.IGNORECASE)
+_INTO_FILE_RE = re.compile(r"\bINTO\s+(?P<target>OUTFILE|DUMPFILE)\b", re.IGNORECASE)
+# Quote forms whose escaping differs by dialect (MySQL ``"..."`` and ``\'``,
+# PostgreSQL ``E'\''``, backtick identifiers).  _skip_string_literal only knows
+# ``''`` doubling, so statements containing these are scanned unblanked.
+_AMBIGUOUS_QUOTING_CHARS = ("\\", '"', "`")
 
 
 def _detect_into_clause(stmt: str) -> str | None:
@@ -158,22 +161,32 @@ def _detect_into_clause(stmt: str) -> str | None:
     ``SELECT ... INTO OUTFILE`` / ``DUMPFILE`` write files on the database
     host and ``SELECT ... INTO new_table`` creates a table, so none of them are
     read-only even though the statement starts with ``SELECT``.  ``INTO @var``
-    (MySQL session variable) is harmless and allowed.  String literals are
-    blanked first so ``WHERE note = 'into outfile'`` is not a false positive.
+    (MySQL session variable) is harmless and allowed.
+
+    ``INTO OUTFILE`` / ``DUMPFILE`` are matched on the raw statement, so no
+    quoting trick can hide them.  A plain ``INTO`` is matched after blanking
+    ``'...'`` literals (so ``WHERE note = 'go into town'`` is allowed) unless
+    the statement uses quoting our scanner may read differently from the
+    database, in which case it fails closed and scans the raw text.
     """
-    cleaned: list[str] = []
-    i = 0
-    while i < len(stmt):
-        if stmt[i] == "'":
-            i = _skip_string_literal(stmt, i)
-            cleaned.append(" ")
-        else:
-            cleaned.append(stmt[i])
-            i += 1
-    match = _INTO_CLAUSE_RE.search("".join(cleaned))
-    if not match:
-        return None
-    return match.group("target").upper() if match.group("target") else "INTO"
+    file_match = _INTO_FILE_RE.search(stmt)
+    if file_match:
+        return file_match.group("target").upper()
+
+    if any(ch in stmt for ch in _AMBIGUOUS_QUOTING_CHARS):
+        scanned = stmt
+    else:
+        cleaned: list[str] = []
+        i = 0
+        while i < len(stmt):
+            if stmt[i] == "'":
+                i = _skip_string_literal(stmt, i)
+                cleaned.append(" ")
+            else:
+                cleaned.append(stmt[i])
+                i += 1
+        scanned = "".join(cleaned)
+    return "INTO" if _INTO_CLAUSE_RE.search(scanned) else None
 
 
 def _find_matching_close_paren(stmt: str, start: int) -> int:

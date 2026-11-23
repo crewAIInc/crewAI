@@ -692,6 +692,15 @@ class TestSelectIntoBlocked:
             "SELECT * INTO new_table FROM t",
             "WITH c AS (SELECT 1) SELECT * FROM c INTO OUTFILE '/tmp/x'",
             "EXPLAIN SELECT * FROM t INTO OUTFILE '/tmp/x'",
+            "SELECT 'foo\\'bar' INTO OUTFILE '/tmp/x'",
+            "SELECT col FROM t WHERE 'foo\\'bar' != '' INTO OUTFILE '/tmp/x'",
+            "SELECT \"it's\" INTO OUTFILE '/tmp/x'",
+            "SELECT \"it's\" INTO new_table",
+            "SELECT E'it\\'s' INTO new_table",
+            "SELECT `it's` INTO DUMPFILE '/tmp/x'",
+            "SELECT 'a' AS \"it's\" FROM t INTO new_table",
+            # Literals mentioning OUTFILE fail closed rather than risk a mis-parse.
+            "SELECT * FROM t WHERE note = 'into outfile'",
         ],
     )
     def test_into_clause_blocked_in_read_only_mode(self, stmt: str):
@@ -702,8 +711,7 @@ class TestSelectIntoBlocked:
     @pytest.mark.parametrize(
         "stmt",
         [
-            "SELECT * FROM t WHERE note = 'into outfile'",
-            "SELECT 'INTO OUTFILE' AS s",
+            "SELECT 'go into town' AS s",
             "SELECT id FROM t LIMIT 1 INTO @v",
         ],
     )
