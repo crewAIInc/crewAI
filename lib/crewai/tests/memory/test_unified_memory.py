@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -818,6 +818,22 @@ def test_composite_score_custom_config() -> None:
     score, reasons = compute_composite_score(record, 0.73, config)
     assert score == pytest.approx(0.73, rel=1e-5)
     assert "semantic" in reasons
+
+
+def test_composite_score_accepts_a_timezone_aware_created_at() -> None:
+    """A record stored with an aware timestamp scores like the same instant in UTC."""
+    config = MemoryConfig()
+    instant = datetime.now(timezone.utc) - timedelta(days=10)
+
+    aware = MemoryRecord(content="aware", created_at=instant)
+    naive = MemoryRecord(
+        content="naive", created_at=instant.astimezone(timezone.utc).replace(tzinfo=None)
+    )
+
+    aware_score, _ = compute_composite_score(aware, 0.8, config)
+    naive_score, _ = compute_composite_score(naive, 0.8, config)
+
+    assert aware_score == pytest.approx(naive_score, rel=1e-6)
 
 
 # --- LLM fallback ---
