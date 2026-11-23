@@ -910,6 +910,163 @@ class TestAllOfMerging:
             nested = [nested]
         assert Model(payload=nested).payload == nested
 
+    def test_all_of_array_items_enforces_scalar_allowlist(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "cmds": {
+                    "type": "array",
+                    "items": {
+                        "allOf": [
+                            {"type": "string", "pattern": "^ls$", "minLength": 2},
+                            {"description": "Allowed command"},
+                        ]
+                    },
+                },
+                "single_cmds": {
+                    "type": "array",
+                    "items": {
+                        "allOf": [
+                            {"type": "string", "pattern": "^safe_[0-9]+$"},
+                        ]
+                    },
+                },
+                "even_ints": {
+                    "type": "array",
+                    "items": {
+                        "allOf": [
+                            {"type": "integer", "minimum": 2, "maximum": 10},
+                            {"multipleOf": 2},
+                        ]
+                    },
+                },
+            },
+            "required": ["cmds", "single_cmds", "even_ints"],
+        }
+        Model = create_model_from_schema(schema)
+        obj = Model(cmds=["ls"], single_cmds=["safe_1"], even_ints=[2, 10])
+        assert obj.cmds == ["ls"]
+        assert obj.single_cmds == ["safe_1"]
+        assert obj.even_ints == [2, 10]
+        for bad in (
+            {"cmds": ["rm -rf /"], "single_cmds": ["safe_1"], "even_ints": [2]},
+            {"cmds": ["x"], "single_cmds": ["safe_1"], "even_ints": [2]},
+            {"cmds": ["ls"], "single_cmds": ["rm -rf /"], "even_ints": [2]},
+            {"cmds": ["ls"], "single_cmds": ["safe_1"], "even_ints": [3]},
+            {"cmds": ["ls"], "single_cmds": ["safe_1"], "even_ints": [12]},
+        ):
+            with pytest.raises(ValidationError):
+                Model(**bad)
+
+    def test_all_of_intersecting_single_pattern_any_of_arms(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "cmd": {
+                    "allOf": [
+                        {"type": "string"},
+                        {
+                            "anyOf": [
+                                {"pattern": "^ls$"},
+                                {"pattern": "^pwd$"},
+                            ]
+                        },
+                    ]
+                }
+            },
+            "required": ["cmd"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(cmd="ls").cmd == "ls"
+        assert Model(cmd="pwd").cmd == "pwd"
+        with pytest.raises(ValidationError):
+            Model(cmd="rm")
+
+    def test_all_of_redos_pattern_uses_linear_engine(self) -> None:
+        near_miss = "a" * 40 + "!"
+        const_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"const": near_miss},
+                        {"type": "string", "pattern": "^(a+)+$"},
+                    ]
+                }
+            },
+            "required": ["tok"],
+        }
+        t0 = time.monotonic()
+        ConstModel = create_model_from_schema(const_schema)
+        assert time.monotonic() - t0 < 1.0
+        with pytest.raises(ValidationError):
+            ConstModel(tok=near_miss)
+
+        multi_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"type": "string", "pattern": "^(a+)+$"},
+                        {"pattern": "^(a*)*b$"},
+                    ]
+                }
+            },
+            "required": ["tok"],
+        }
+        MultiModel = create_model_from_schema(multi_schema)
+        t1 = time.monotonic()
+        with pytest.raises(ValidationError):
+            MultiModel(tok=near_miss)
+        assert time.monotonic() - t1 < 1.0
+
+        lookaround_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"type": "string", "pattern": "^(?!bad).*$"},
+                        {"pattern": "^[a-z]+$"},
+                    ]
+                }
+            },
+        }
+        with pytest.raises(ValueError, match="Unsupported or invalid schema pattern"):
+            create_model_from_schema(lookaround_schema)
+
+        oversized_schema = {
+            "type": "object",
+            "properties": {
+                "tok": {
+                    "allOf": [
+                        {"type": "string", "pattern": "a" * 1025},
+                        {"minLength": 1},
+                    ]
+                }
+            },
+        }
+        with pytest.raises(ValueError, match="exceeds maximum length"):
+            create_model_from_schema(oversized_schema)
+
+    def test_all_of_typeless_scalar_constraints_enforced(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "val": {
+                    "allOf": [
+                        {"pattern": "^ok_[0-9]+$"},
+                        {"minLength": 4},
+                    ]
+                }
+            },
+            "required": ["val"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(val="ok_1").val == "ok_1"
+        for bad in ("bad", "ok_"):
+            with pytest.raises(ValidationError):
+                Model(val=bad)
+
 
 # $ref resolution
 

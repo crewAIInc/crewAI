@@ -19,7 +19,6 @@ from collections.abc import Callable
 from copy import deepcopy
 import datetime
 import logging
-import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -59,6 +58,8 @@ from pydantic import (
     SecretBytes,
     SecretStr,
     StrictBytes,
+    TypeAdapter,
+    ValidationError,
     create_model as create_model_base,
     model_validator,
 )
@@ -69,6 +70,7 @@ from pydantic.networks import (  # type: ignore[attr-defined]
     IPvAnyInterface,
     IPvAnyNetwork,
 )
+from pydantic_core import SchemaError
 
 
 logger = logging.getLogger(__name__)
@@ -1041,7 +1043,10 @@ def _json_schema_to_pydantic_field(
         else (... if is_required else None)
     )
 
-    if isinstance(type_, type) and issubclass(type_, (int, float)):
+    applied_num_field_params = isinstance(type_, type) and issubclass(
+        type_, (int, float)
+    )
+    if applied_num_field_params:
         if "minimum" in json_schema:
             field_params["ge"] = json_schema["minimum"]
         if "exclusiveMinimum" in json_schema:
@@ -1083,7 +1088,8 @@ def _json_schema_to_pydantic_field(
                 )
             ]
 
-    if isinstance(type_, type) and issubclass(type_, str):
+    applied_str_field_params = isinstance(type_, type) and issubclass(type_, str)
+    if applied_str_field_params:
         if "minLength" in json_schema:
             field_params["min_length"] = json_schema["minLength"]
         if "maxLength" in json_schema:
@@ -1100,10 +1106,12 @@ def _json_schema_to_pydantic_field(
     if schema_extra:
         field_params["json_schema_extra"] = schema_extra
 
-    if json_schema.get(_ALL_OF_PATTERNS_KEY) or json_schema.get(
-        _ALL_OF_MULTIPLE_OF_KEY
-    ):
-        type_ = _apply_all_of_validators(type_, json_schema)
+    type_ = _apply_all_of_validators(
+        type_,
+        json_schema,
+        include_single_str_constraints=not applied_str_field_params,
+        include_single_num_constraints=not applied_num_field_params,
+    )
 
     return type_, Field(default, **field_params)
 
@@ -1133,6 +1141,8 @@ def _resolve_ref(ref: str, root_schema: dict[str, Any]) -> dict[str, Any]:
 
 
 _MAX_ALL_OF_MERGE_STEPS: Final[int] = 10_000
+_MAX_PATTERN_LENGTH: Final[int] = 1024
+_MAX_ENUM_PATTERN_SUBJECT_LENGTH: Final[int] = 1024
 _UNSATISFIABLE_KEY: Final[str] = "__crewai_unsatisfiable__"
 _ALL_OF_PATTERNS_KEY: Final[str] = "__crewai_all_of_patterns__"
 _ALL_OF_MULTIPLE_OF_KEY: Final[str] = "__crewai_all_of_multiple_of__"
@@ -1187,16 +1197,89 @@ def _reject_unsatisfiable_model(_cls: Any, _data: Any) -> Any:
     raise ValueError("Schema constraints are unsatisfiable")
 
 
+def _compile_rust_pattern(pattern: str) -> TypeAdapter[str]:
+    if len(pattern) > _MAX_PATTERN_LENGTH:
+        raise ValueError("Schema pattern exceeds maximum length")
+    try:
+        return TypeAdapter(
+            Annotated[str, Field(pattern=pattern)],
+            config=ConfigDict(regex_engine="rust-regex"),
+        )
+    except (SchemaError, ValueError) as exc:
+        raise ValueError(f"Unsupported or invalid schema pattern: {pattern!r}") from exc
+
+
 def _make_patterns_validator(
-    patterns: tuple[re.Pattern[str], ...],
+    adapters: tuple[TypeAdapter[str], ...],
 ) -> Callable[[Any], Any]:
     def _validate(value: Any) -> Any:
         if isinstance(value, str):
-            for pat in patterns:
-                if pat.search(value) is None:
-                    raise ValueError(
-                        f"String does not match required pattern: {pat.pattern!r}"
-                    )
+            try:
+                for adapter in adapters:
+                    adapter.validate_python(value)
+            except ValidationError as exc:
+                raise ValueError("String does not match required pattern") from exc
+        return value
+
+    return _validate
+
+
+def _make_string_length_validator(
+    min_length: int | float | None,
+    max_length: int | float | None,
+) -> Callable[[Any], Any]:
+    def _validate(value: Any) -> Any:
+        if isinstance(value, str):
+            if min_length is not None and len(value) < min_length:
+                raise ValueError(
+                    f"String length {len(value)} is less than minimum {min_length}"
+                )
+            if max_length is not None and len(value) > max_length:
+                raise ValueError(
+                    f"String length {len(value)} exceeds maximum {max_length}"
+                )
+        return value
+
+    return _validate
+
+
+def _make_numeric_bounds_validator(
+    minimum: int | float | None,
+    exclusive_minimum: int | float | None,
+    maximum: int | float | None,
+    exclusive_maximum: int | float | None,
+) -> Callable[[Any], Any]:
+    def _validate(value: Any) -> Any:
+        if _is_json_number(value):
+            if minimum is not None and value < minimum:
+                raise ValueError(f"Value {value} is less than minimum {minimum}")
+            if exclusive_minimum is not None and value <= exclusive_minimum:
+                raise ValueError(
+                    f"Value {value} must be greater than {exclusive_minimum}"
+                )
+            if maximum is not None and value > maximum:
+                raise ValueError(f"Value {value} exceeds maximum {maximum}")
+            if exclusive_maximum is not None and value >= exclusive_maximum:
+                raise ValueError(f"Value {value} must be less than {exclusive_maximum}")
+        return value
+
+    return _validate
+
+
+def _make_array_length_validator(
+    min_items: int | float | None,
+    max_items: int | float | None,
+) -> Callable[[Any], Any]:
+    def _validate(value: Any) -> Any:
+        if isinstance(value, list):
+            if min_items is not None and len(value) < min_items:
+                raise ValueError(
+                    f"Array length {len(value)} is less than minimum {min_items}"
+                )
+            if max_items is not None and len(value) > max_items:
+                raise ValueError(
+                    f"Array length {len(value)} exceeds maximum {max_items}"
+                )
         return value
 
     return _validate
@@ -1206,7 +1289,7 @@ def _make_multiple_of_validator(
     divisors: tuple[int | float, ...],
 ) -> Callable[[Any], Any]:
     def _validate(value: Any) -> Any:
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if _is_json_number(value):
             for divisor in divisors:
                 if divisor <= 0:
                     raise ValueError("multipleOf divisor must be positive")
@@ -1226,25 +1309,77 @@ def _make_multiple_of_validator(
     return _validate
 
 
-def _apply_all_of_validators(type_: Any, schema: dict[str, Any]) -> Any:
+def _apply_all_of_validators(
+    type_: Any,
+    schema: dict[str, Any],
+    *,
+    include_single_str_constraints: bool = True,
+    include_single_num_constraints: bool = True,
+) -> Any:
     if schema.get(_UNSATISFIABLE_KEY):
         return Annotated[Any, AfterValidator(_reject_unsatisfiable)]
-    patterns = schema.get(_ALL_OF_PATTERNS_KEY)
-    if isinstance(patterns, (tuple, list)) and patterns:
-        compiled = tuple(re.compile(p) for p in patterns if isinstance(p, str))
-        if compiled:
-            type_ = Annotated[type_, AfterValidator(_make_patterns_validator(compiled))]
-    divisors = schema.get(_ALL_OF_MULTIPLE_OF_KEY)
-    if isinstance(divisors, (tuple, list)) and divisors:
-        numeric = tuple(
-            d
-            for d in divisors
-            if isinstance(d, (int, float)) and not isinstance(d, bool)
-        )
-        if numeric:
+
+    raw_patterns = schema.get(_ALL_OF_PATTERNS_KEY)
+    pattern_list: tuple[str, ...] = ()
+    if isinstance(raw_patterns, (tuple, list)):
+        pattern_list = tuple(p for p in raw_patterns if isinstance(p, str))
+    elif include_single_str_constraints:
+        single_pat = schema.get("pattern")
+        if isinstance(single_pat, str):
+            pattern_list = (single_pat,)
+    if pattern_list:
+        adapters = tuple(_compile_rust_pattern(pat) for pat in pattern_list)
+        type_ = Annotated[type_, AfterValidator(_make_patterns_validator(adapters))]
+
+    if include_single_str_constraints:
+        raw_min_len = schema.get("minLength")
+        raw_max_len = schema.get("maxLength")
+        min_length = raw_min_len if _is_json_number(raw_min_len) else None
+        max_length = raw_max_len if _is_json_number(raw_max_len) else None
+        if min_length is not None or max_length is not None:
             type_ = Annotated[
-                type_, AfterValidator(_make_multiple_of_validator(numeric))
+                type_,
+                AfterValidator(_make_string_length_validator(min_length, max_length)),
             ]
+
+    if include_single_num_constraints:
+        raw_min = schema.get("minimum")
+        raw_excl_min = schema.get("exclusiveMinimum")
+        raw_max = schema.get("maximum")
+        raw_excl_max = schema.get("exclusiveMaximum")
+        minimum = raw_min if _is_json_number(raw_min) else None
+        excl_min = raw_excl_min if _is_json_number(raw_excl_min) else None
+        maximum = raw_max if _is_json_number(raw_max) else None
+        excl_max = raw_excl_max if _is_json_number(raw_excl_max) else None
+        if any(b is not None for b in (minimum, excl_min, maximum, excl_max)):
+            type_ = Annotated[
+                type_,
+                AfterValidator(
+                    _make_numeric_bounds_validator(minimum, excl_min, maximum, excl_max)
+                ),
+            ]
+
+    raw_divisors = schema.get(_ALL_OF_MULTIPLE_OF_KEY)
+    divisors: tuple[int | float, ...] = ()
+    if isinstance(raw_divisors, (tuple, list)):
+        divisors = tuple(d for d in raw_divisors if _is_json_number(d))
+    elif include_single_num_constraints:
+        single_div = schema.get("multipleOf")
+        if _is_json_number(single_div):
+            divisors = (single_div,)
+    if divisors:
+        type_ = Annotated[type_, AfterValidator(_make_multiple_of_validator(divisors))]
+
+    raw_min_items = schema.get("minItems")
+    raw_max_items = schema.get("maxItems")
+    min_items = raw_min_items if _is_json_number(raw_min_items) else None
+    max_items = raw_max_items if _is_json_number(raw_max_items) else None
+    if min_items is not None or max_items is not None:
+        type_ = Annotated[
+            type_,
+            AfterValidator(_make_array_length_validator(min_items, max_items)),
+        ]
+
     return type_
 
 
@@ -1285,15 +1420,24 @@ def _value_matches_json_type(value: Any, json_type: Any) -> bool:
 def _value_matches_constraints(
     value: Any,
     merged: dict[str, Any],
-    patterns: list[str],
+    pattern_adapters: tuple[TypeAdapter[str], ...],
     multiple_ofs: list[int | float],
+    budget: list[int],
 ) -> bool:
     if "type" in merged and not _value_matches_json_type(value, merged["type"]):
         return False
     if isinstance(value, str):
-        for pat in patterns:
-            if re.search(pat, value) is None:
-                return False
+        if pattern_adapters:
+            if len(value) > _MAX_ENUM_PATTERN_SUBJECT_LENGTH:
+                raise ValueError("Schema pattern subject exceeds maximum length")
+            for adapter in pattern_adapters:
+                if budget[0] <= 0:
+                    raise ValueError("Schema allOf complexity limit exceeded")
+                budget[0] -= 1
+                try:
+                    adapter.validate_python(value)
+                except ValidationError:
+                    return False
         min_len = merged.get("minLength")
         if _is_json_number(min_len) and len(value) < min_len:
             return False
@@ -1500,12 +1644,18 @@ def _merge_all_of_schemas(
         internal_patterns = sub.get(_ALL_OF_PATTERNS_KEY)
         if isinstance(internal_patterns, (tuple, list)):
             for pat in internal_patterns:
-                if isinstance(pat, str) and pat not in patterns:
-                    patterns.append(pat)
+                if isinstance(pat, str):
+                    if len(pat) > _MAX_PATTERN_LENGTH:
+                        raise ValueError("Schema pattern exceeds maximum length")
+                    if pat not in patterns:
+                        patterns.append(pat)
         else:
             raw_pat = sub.get("pattern")
-            if isinstance(raw_pat, str) and raw_pat not in patterns:
-                patterns.append(raw_pat)
+            if isinstance(raw_pat, str):
+                if len(raw_pat) > _MAX_PATTERN_LENGTH:
+                    raise ValueError("Schema pattern exceeds maximum length")
+                if raw_pat not in patterns:
+                    patterns.append(raw_pat)
 
         internal_multiples = sub.get(_ALL_OF_MULTIPLE_OF_KEY)
         if isinstance(internal_multiples, (tuple, list)):
@@ -1635,23 +1785,31 @@ def _merge_all_of_schemas(
     elif item_other is not _MISSING:
         merged["items"] = item_other
 
-    if has_const:
-        if enum_vals is not None and not any(
-            _json_values_equal(const_val, e) for e in enum_vals
-        ):
-            return {_UNSATISFIABLE_KEY: True}
-        if not _value_matches_constraints(const_val, merged, patterns, multiple_ofs):
-            return {_UNSATISFIABLE_KEY: True}
-        merged["const"] = const_val
-    elif enum_vals is not None:
-        filtered = [
-            v
-            for v in enum_vals
-            if _value_matches_constraints(v, merged, patterns, multiple_ofs)
-        ]
-        if not filtered:
-            return {_UNSATISFIABLE_KEY: True}
-        merged["enum"] = filtered
+    if has_const or enum_vals is not None:
+        pattern_adapters = (
+            tuple(_compile_rust_pattern(pat) for pat in patterns) if patterns else ()
+        )
+        if has_const:
+            if enum_vals is not None and not any(
+                _json_values_equal(const_val, e) for e in enum_vals
+            ):
+                return {_UNSATISFIABLE_KEY: True}
+            if not _value_matches_constraints(
+                const_val, merged, pattern_adapters, multiple_ofs, budget
+            ):
+                return {_UNSATISFIABLE_KEY: True}
+            merged["const"] = const_val
+        elif enum_vals is not None:
+            filtered = [
+                v
+                for v in enum_vals
+                if _value_matches_constraints(
+                    v, merged, pattern_adapters, multiple_ofs, budget
+                )
+            ]
+            if not filtered:
+                return {_UNSATISFIABLE_KEY: True}
+            merged["enum"] = filtered
 
     if union_groups:
         structural_keys = (
@@ -1722,6 +1880,7 @@ def _json_schema_to_pydantic_type(
     name_: str | None = None,
     enrich_descriptions: bool = False,
     in_progress: dict[int, Any] | None = None,
+    enforce_constraints: bool = False,
 ) -> Any:
     """Convert a JSON schema to a Python/Pydantic type.
 
@@ -1736,6 +1895,10 @@ def _json_schema_to_pydantic_type(
             Populated by :func:`_build_model_from_schema`. Enables cycle
             detection so a self-referential ``$ref`` graph resolves to a
             :class:`ForwardRef` back-edge rather than recursing forever.
+        enforce_constraints: When True, attach surviving scalar/array constraint
+            validators directly to nested leaf/union types (e.g., inside ``items``
+            or ``anyOf``/``oneOf`` arms) that do not pass through
+            :func:`_json_schema_to_pydantic_field`.
 
     Returns:
         A Python type corresponding to the JSON schema.
@@ -1764,6 +1927,7 @@ def _json_schema_to_pydantic_type(
                 name_=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                enforce_constraints=enforce_constraints,
             )
         merged = _merge_all_of_schemas(
             all_of_schemas,
@@ -1787,6 +1951,7 @@ def _json_schema_to_pydantic_type(
             name_=name_,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            enforce_constraints=enforce_constraints,
         )
 
     ref = json_schema.get("$ref")
@@ -1798,29 +1963,38 @@ def _json_schema_to_pydantic_type(
             name_=name_,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            enforce_constraints=enforce_constraints,
         )
 
     enum_values = json_schema.get("enum")
     if enum_values:
-        return Literal[tuple(enum_values)]
+        lit_type: Any = Literal[tuple(enum_values)]
+        return (
+            _apply_all_of_validators(lit_type, json_schema)
+            if enforce_constraints
+            else lit_type
+        )
 
     if "const" in json_schema:
-        return Literal[json_schema["const"]]
+        const_type: Any = Literal[json_schema["const"]]
+        return (
+            _apply_all_of_validators(const_type, json_schema)
+            if enforce_constraints
+            else const_type
+        )
 
     any_of_schemas = []
     if "anyOf" in json_schema or "oneOf" in json_schema:
         any_of_schemas = json_schema.get("anyOf", []) + json_schema.get("oneOf", [])
     if any_of_schemas:
         any_of_types = [
-            _apply_all_of_validators(
-                _json_schema_to_pydantic_type(
-                    schema,
-                    root_schema,
-                    name_=f"{name_ or 'Union'}Option{i}",
-                    enrich_descriptions=enrich_descriptions,
-                    in_progress=in_progress,
-                ),
+            _json_schema_to_pydantic_type(
                 schema,
+                root_schema,
+                name_=f"{name_ or 'Union'}Option{i}",
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+                enforce_constraints=True,
             )
             if isinstance(schema, dict)
             else Any
@@ -1847,45 +2021,60 @@ def _json_schema_to_pydantic_type(
                 name_=f"{name_ or 'Union'}Option{i}",
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                enforce_constraints=enforce_constraints,
             )
             for i, member in enumerate(type_)
         ]
         return Union[tuple(member_types)]  # noqa: UP007
 
     if type_ == "string":
-        return str
+        return (
+            _apply_all_of_validators(str, json_schema) if enforce_constraints else str
+        )
     if type_ == "integer":
-        return int
+        return (
+            _apply_all_of_validators(int, json_schema) if enforce_constraints else int
+        )
     if type_ == "number":
-        return float
+        return (
+            _apply_all_of_validators(float, json_schema)
+            if enforce_constraints
+            else float
+        )
     if type_ == "boolean":
         return bool
     if type_ == "array":
         items_schema = json_schema.get("items")
+        array_type: Any
         if items_schema is False:
-            return list[Annotated[Any, AfterValidator(_reject_unsatisfiable)]]
-        if isinstance(items_schema, dict):
-            item_type = _apply_all_of_validators(
-                _json_schema_to_pydantic_type(
-                    items_schema,
-                    root_schema,
-                    name_=name_,
-                    enrich_descriptions=enrich_descriptions,
-                    in_progress=in_progress,
-                ),
-                items_schema,
-            )
-            return list[item_type]  # type: ignore[valid-type]
-        if items_schema:
+            array_type = list[Annotated[Any, AfterValidator(_reject_unsatisfiable)]]
+        elif isinstance(items_schema, dict):
             item_type = _json_schema_to_pydantic_type(
                 items_schema,
                 root_schema,
                 name_=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                enforce_constraints=True,
             )
-            return list[item_type]  # type: ignore[valid-type]
-        return list
+            array_type = list[item_type]  # type: ignore[valid-type]
+        elif items_schema:
+            item_type = _json_schema_to_pydantic_type(
+                items_schema,
+                root_schema,
+                name_=name_,
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+                enforce_constraints=True,
+            )
+            array_type = list[item_type]  # type: ignore[valid-type]
+        else:
+            array_type = list
+        return (
+            _apply_all_of_validators(array_type, json_schema)
+            if enforce_constraints
+            else array_type
+        )
     if type_ == "object":
         properties = json_schema.get("properties")
         if properties:
@@ -1909,5 +2098,7 @@ def _json_schema_to_pydantic_type(
     if type_ == "null":
         return None
     if type_ is None:
-        return Any
+        return (
+            _apply_all_of_validators(Any, json_schema) if enforce_constraints else Any
+        )
     raise ValueError(f"Unsupported JSON schema type: {type_} from {json_schema}")
