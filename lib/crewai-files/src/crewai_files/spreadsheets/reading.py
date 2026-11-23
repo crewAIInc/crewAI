@@ -604,13 +604,16 @@ def _sniff_delimiter(sample: str) -> str:
     fields, quotes respected. A ";" export's 1.234,56 amounts split by "," into
     fewer fields per line."""
     lines = sample.splitlines()[:-1] or sample.splitlines()
-    best, best_score = ",", 0
+    best, best_score = ",", (0, 0)
     for candidate in (",", ";", "\t", "|"):
         widths = [len(r) for r in csv.reader(lines, delimiter=candidate) if len(r) > 1]
         if not widths:
             continue
         modal = max(set(widths), key=widths.count)
-        score = widths.count(modal) * modal
+        consistency = widths.count(modal)
+        # Prefer consistency (number of rows with modal width) first,
+        # then use field count as tiebreaker
+        score = (consistency, modal)
         if score > best_score:
             best, best_score = candidate, score
     return best
