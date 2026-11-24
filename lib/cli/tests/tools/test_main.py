@@ -283,6 +283,56 @@ def test_publish_when_not_in_sync_and_force(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch(
+    "crewai_cli.tools.main.git.Repository",
+    side_effect=ValueError("not a Git repository"),
+)
+@patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch(
+    "crewai.utilities.project_utils.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch(
+    "crewai.utilities.project_utils.extract_tools_metadata",
+    return_value=[],
+)
+@patch("crewai_cli.tools.main.ToolCommand._print_current_organization")
+def test_publish_force_skips_git_validation(
+    mock_print_org,
+    mock_tools_metadata,
+    mock_available_exports,
+    mock_publish,
+    mock_repository,
+    mock_open,
+    mock_listdir,
+    mock_subprocess_run,
+    mock_get_project_description,
+    mock_get_project_version,
+    mock_get_project_name,
+    tool_command,
+):
+    """--force bypasses the git check even with no repository to validate."""
+    mock_publish_response = MagicMock()
+    mock_publish_response.status_code = 200
+    mock_publish_response.json.return_value = {"handle": "sample-tool"}
+    mock_publish.return_value = mock_publish_response
+
+    tool_command.publish(is_public=True, force=True)
+
+    mock_repository.assert_not_called()
+    mock_publish.assert_called_once()
+
+
+@patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")
+@patch("crewai_cli.tools.main.get_project_version", return_value="1.0.0")
+@patch("crewai_cli.tools.main.get_project_description", return_value="A sample tool")
+@patch("crewai_cli.tools.main.subprocess.run")
+@patch("crewai_cli.tools.main.os.listdir", return_value=["sample-tool-1.0.0.tar.gz"])
+@patch(
+    "crewai_cli.tools.main.open",
+    new_callable=unittest.mock.mock_open,
+    read_data=b"sample tarball content",
+)
 @patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)

@@ -101,7 +101,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             os.chdir(old_directory)
 
     def publish(self, is_public: bool, force: bool = False) -> None:
-        if not git.Repository().is_synced() and not force:
+        # Check force first: building a Repository runs git checks and a fetch,
+        # which is exactly what --force is documented to bypass.
+        if not force and not git.Repository().is_synced():
             console.print(
                 "[bold red]Failed to publish tool.[/bold red]\n"
                 "Local changes need to be resolved before publishing. Please do the following:\n"
