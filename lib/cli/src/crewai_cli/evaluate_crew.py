@@ -17,15 +17,15 @@ def evaluate_crew(
         trained_agents_file: Optional trained-agents pickle path forwarded to
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
+    if n_iterations <= 0:
+        raise click.UsageError("The number of iterations must be a positive integer.")
+
     command = ["uv", "run", "test", str(n_iterations), model]
     env = build_env_with_all_tool_credentials()
     if trained_agents_file:
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
     try:
-        if n_iterations <= 0:
-            raise ValueError("The number of iterations must be a positive integer.")
-
         result = subprocess.run(  # noqa: S603
             command, capture_output=False, text=True, check=True, env=env
         )
@@ -36,6 +36,8 @@ def evaluate_crew(
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while testing the crew: {e}", err=True)
         click.echo(e.output, err=True)
+        raise SystemExit(e.returncode) from None
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise SystemExit(1) from None
