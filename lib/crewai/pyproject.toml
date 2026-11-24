@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.15.44",
-    "crewai-cli==1.15.44",
+    "crewai-core==1.15.45",
+    "crewai-cli==1.15.45",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -58,7 +58,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.15.44",
+    "crewai-tools==1.15.45",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
@@ -123,13 +123,19 @@ a2a = [
      "aiocache[redis,memcached]~=0.12.3",
 ]
 file-processing = [
-    "crewai-files==1.15.44",
+    "crewai-files==1.15.45",
 ]
 # crewai-tools carries the SSRF-guarded download an agent fetches its
 # spreadsheet URLs through.
 spreadsheets = [
-    "crewai-files[spreadsheets]==1.15.44",
-    "crewai-tools==1.15.44",
+    "crewai-files[spreadsheets]==1.15.45",
+    "crewai-tools==1.15.45",
+]
+# Renders HTML or markdown into a pdf artifact. WeasyPrint also needs Pango
+# from the system (apt-get install libpango-1.0-0 libpangoft2-1.0-0).
+pdf = [
+    "weasyprint~=70.0",
+    "markdown-it-py>=3.0.0,<5",
 ]
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",

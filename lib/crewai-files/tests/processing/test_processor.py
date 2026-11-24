@@ -188,6 +188,21 @@ class TestFileProcessorProcess:
 
         assert result == file
 
+    def test_auto_process_resizes_a_narrow_image(self) -> None:
+        buffer = io.BytesIO()
+        Image.new("RGB", (1, 16000), color="red").save(buffer, format="PNG")
+        file = ImageFile(
+            source=FileBytes(data=buffer.getvalue(), filename="narrow.png")
+        )
+        processor = FileProcessor(constraints=ANTHROPIC_CONSTRAINTS)
+
+        result = processor.process(file)
+
+        assert isinstance(result, ImageFile)
+        with Image.open(io.BytesIO(result.read())) as image:
+            assert image.size == (1, 8000)
+        assert processor.validate(result) == []
+
     def test_process_without_constraints(self):
         """Test processing without constraints returns file unchanged."""
         processor = FileProcessor(constraints=None)

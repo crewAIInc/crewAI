@@ -4,6 +4,44 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 11월 23일">
+  ## v1.15.45
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.45)
+
+  ## 변경 사항
+
+  ### 기능
+  - HTML 또는 마크다운 출력을 PDF 아티팩트로 저장하는 기능 추가.
+
+  ### 버그 수정
+  - 패치된 wcmatch를 가져오기 위해 Python >=3.11에 대해 e2b 의존성 문제 수정.
+  - `normalize_input_files`에서 파일과 유사한 입력을 감싸기.
+  - 음수 체크포인트 가지치기 유지 수를 거부.
+  - MongoDB 도구의 실제 환경 변수를 보고.
+  - `prefer_upload`로 Bedrock S3 업로드 활성화.
+  - 외부 모델을 대상 스키마에 대해 검증.
+  - 이미지 크기 조정 시 좁은 차원 유지.
+  - 빈 자격 증명을 거부하고 서버 인증에서 상수 시간 비교 사용.
+  - `HyperbrowserLoadTool`의 매개변수를 스키마에서 선택적으로 설정.
+  - 명시적인 널이 아님 기본값을 가진 필드를 널이 아님으로 유지.
+  - 청크가 사용량을 포함할 때 스트리밍된 Azure 델타 유지.
+  - 비양수 텍스트 청크 크기 거부.
+  - 교차 출처 리디렉션에서 자격 증명 삭제.
+  - 청크가 텍스트 끝에 도달하면 청크 중단.
+  - `CrewJSONEncoder`에서 값을 기준으로 열거형 직렬화.
+  - `save_artifact` 도구 결과를 캐시하지 않음.
+  - 네이티브 도구 완료 이벤트에서 `from_cache` 설정.
+
+  ### 문서
+  - 인류 파일 블록이 캐시 제어를 수행하지 않음을 문서화.
+
+  ## 기여자
+
+  @Ayushraj06-bit, @Kelvin-Waititu, @Kiko0301, @MaiAditya, @SDLSY, @Sakura-798, @Vidit-Ostwal, @YeChenglin8888, @gabemilani, @houyunsun, @jjhong011001, @joaomdmoura, @kushagra0526, @lkuko, @nazek52, @nurlanmnn
+
+</Update>
+
 <Update label="2026년 11월 19일">
   ## v1.15.44
 

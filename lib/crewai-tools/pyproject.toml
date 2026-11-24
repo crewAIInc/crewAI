@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.44",
+    "crewai==1.15.45",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4>=4.13.4,<5",
     # soupsieve <=2.9.2 has GHSA-4j63-6c4x-wfg4 (quadratic :has()); fixed in 2.10.
@@ -195,7 +195,11 @@ daytona = [
 ]
 
 e2b = [
-    "e2b~=2.20.0",
+    # wcmatch <11.2 has a ReDoS (GHSA-53pm-wgxf-c6qf); the fix needs Python
+    # >=3.11 and e2b >=2.37.1, so Python 3.10 stays on the older e2b.
+    "e2b~=2.20.0; python_version < '3.11'",
+    "e2b~=2.64.0; python_version >= '3.11'",
+    "wcmatch>=11.2; python_version >= '3.11'",
     "e2b-code-interpreter~=2.6.0",
 ]
 
