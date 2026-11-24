@@ -3,7 +3,7 @@
 from functools import lru_cache
 import json
 import os
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
@@ -27,31 +27,64 @@ class I18N(BaseModel):
     def load_prompts(self) -> Self:
         """Load prompts from a JSON file.
 
+        A custom ``prompt_file`` is merged over the built-in English prompts,
+        so it only needs the entries it overrides.
+
         Returns:
             The I18N instance with loaded prompts.
 
         Raises:
             Exception: If the prompt file is not found or cannot be decoded.
         """
-        try:
-            if self.prompt_file:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        prompts_path = os.path.join(dir_path, "../translations/en.json")
+
+        with open(prompts_path, encoding="utf-8") as f:
+            prompts: Any = json.load(f)
+
+        if self.prompt_file:
+            try:
                 with open(self.prompt_file, encoding="utf-8") as f:
-                    self._prompts = json.load(f)
-            else:
-                dir_path = os.path.dirname(os.path.realpath(__file__))
-                prompts_path = os.path.join(dir_path, "../translations/en.json")
+                    overrides = json.load(f)
+            except FileNotFoundError as e:
+                raise Exception(f"Prompt file '{self.prompt_file}' not found.") from e
+            except json.JSONDecodeError as e:
+                raise Exception("Error decoding JSON from the prompts file.") from e
 
-                with open(prompts_path, encoding="utf-8") as f:
-                    self._prompts = json.load(f)
-        except FileNotFoundError as e:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.") from e
-        except json.JSONDecodeError as e:
-            raise Exception("Error decoding JSON from the prompts file.") from e
+            if not isinstance(overrides, dict):
+                raise Exception(
+                    f"Prompt file '{self.prompt_file}' must contain a JSON object."
+                )
+            prompts = self._merge_prompts(prompts, overrides)
 
+        self._prompts = prompts
         if not self._prompts:
             self._prompts = {}
 
         return self
+
+    @staticmethod
+    def _merge_prompts(defaults: Any, overrides: dict[str, Any]) -> Any:
+        """Merge a custom prompt file over the built-in prompts.
+
+        Merges one level down, per prompt kind, so a file that customizes a
+        single ``slices`` entry keeps every other default prompt.
+
+        Args:
+            defaults: The built-in prompts.
+            overrides: The prompts loaded from the custom file.
+
+        Returns:
+            The merged prompts.
+        """
+        merged = dict(defaults)
+        for kind, value in overrides.items():
+            default_value = merged.get(kind)
+            if isinstance(value, dict) and isinstance(default_value, dict):
+                merged[kind] = {**default_value, **value}
+            else:
+                merged[kind] = value
+        return merged
 
     def slice(self, slice: str) -> str:
         """Retrieve a prompt slice by key.
