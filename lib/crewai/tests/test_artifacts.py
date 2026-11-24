@@ -253,6 +253,35 @@ def _capture_events(run):
     return events
 
 
+def test_event_names_the_flow_method_that_saved_it(store):
+    from crewai.events.event_context import event_scope
+    from crewai.flow import listen
+
+    class ReportFlow(Flow):
+        @start()
+        def research(self):
+            return "notes"
+
+        @listen(research)
+        def write_report(self):
+            # An agent inside the method opens its own scope; the artifact still
+            # belongs to the method.
+            with event_scope("agent-1", "agent_execution_started"):
+                save_artifact(
+                    Artifact(identifier="report", title="Report", kind="html"),
+                    content="<h1>Q3</h1>",
+                )
+
+    events = _capture_events(lambda: ReportFlow(tracing=False).kickoff())
+    events += _capture_events(
+        lambda: save_artifact(
+            Artifact(identifier="loose", title="Loose", kind="text"), content="x"
+        )
+    )
+
+    assert [e.method_name for e in events] == ["write_report", None]
+
+
 def test_task_artifact_event_names_task_and_agent(store):
     agent = _agent()
     task = Task(

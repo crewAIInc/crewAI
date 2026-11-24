@@ -376,11 +376,15 @@ def save_artifact(
         extension,
         content_type or "application/octet-stream",
     )
+    from crewai.flow.flow_context import current_flow_method_name
+
+    method_name = current_flow_method_name.get()
     crewai_event_bus.emit(
         from_task or from_agent,
         ArtifactCreatedEvent(
             from_agent=from_agent,
             from_task=from_task,
+            method_name=method_name if method_name != "unknown" else None,
             id=saved.id,
             identifier=saved.identifier,
             version=saved.version,
@@ -457,8 +461,9 @@ class SaveArtifactTool(BaseTool):
     description: str = (
         "Save a file the user can view, download and share, such as an HTML "
         "report, a markdown doc, a chart image, a PDF or a CSV. Saving the same "
-        "identifier again creates a new version. Returns the artifact url, which "
-        "you can send onward (for example in a message)."
+        "identifier again creates a new version. Returns the artifact url, a "
+        "download link to attach the file (it expires on CrewAI AMP), and "
+        "share_url, the page people open, to put in a message."
     )
     args_schema: type[BaseModel] = SaveArtifactSchema
     # Never cached: each call saves a new version, and a file at the same path
