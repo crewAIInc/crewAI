@@ -275,10 +275,15 @@ def get_artifact_store() -> ArtifactStore:
 
 
 def _check_readable(file_path: str) -> Path:
-    """Resolve ``file_path`` and refuse anything outside the working directory."""
+    """Resolve ``file_path`` and refuse anything outside the working directory or hidden files."""
     path = Path(file_path).expanduser().resolve()
-    if not path.is_relative_to(Path.cwd().resolve()):
+    workdir = Path.cwd().resolve()
+    if not path.is_relative_to(workdir):
         raise ValueError(f"file_path must be inside the working directory: {file_path}")
+    if any(part.startswith(".") for part in path.relative_to(workdir).parts):
+        raise ValueError(
+            f"file_path cannot be a hidden file or inside a hidden folder: {file_path}"
+        )
     if not path.is_file():
         raise ValueError(f"file_path is not a file: {file_path}")
     return path
