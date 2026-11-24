@@ -62,6 +62,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
+import re
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field, Secret, SecretBytes, SecretStr
@@ -85,19 +86,54 @@ class HumanFeedbackCollapseError(ValueError):
     """Raised when human feedback cannot be mapped to an emit outcome."""
 
 
+_NEGATION_WORDS = frozenset(
+    {"cannot", "neither", "never", "no", "nor", "not", "without"}
+)
+_CLAUSE_BOUNDARY_PATTERN = re.compile(r"[.;:!?\n]")
+_WORD_PATTERN = re.compile(r"[\w\u2019']+")
+
+
+def _is_negated(response_text: str, outcome_start: int) -> bool:
+    """Return whether the outcome at ``outcome_start`` is negated.
+
+    Only the words of the clause containing the match are considered, so an
+    approval after an earlier negative sentence (``"Not good. Approved."``)
+    still counts. The check is deliberately conservative: a negated match is
+    not treated as that outcome, and classification fails closed instead of
+    routing feedback to the opposite label.
+    """
+    clause_start = 0
+    for boundary in _CLAUSE_BOUNDARY_PATTERN.finditer(response_text, 0, outcome_start):
+        clause_start = boundary.end()
+
+    words = _WORD_PATTERN.findall(response_text[clause_start:outcome_start].lower())
+    return any(
+        word in _NEGATION_WORDS or word.endswith(("n't", "n\u2019t"))
+        for word in words[-3:]
+    )
+
+
 def _match_collapse_outcome(response_text: str, outcomes: Sequence[str]) -> str | None:
-    """Return the emit label that best matches ``response_text``, or None."""
+    """Return the emit label that best matches ``response_text``, or None.
+
+    Matches are whole-word only, so ``"no"`` does not match ``"know"`` and
+    ``"approved"`` does not match ``"disapproved"``. A negated mention is not a
+    match: ``"not approved"`` must not route to ``"approved"``.
+    """
     response_clean = response_text.strip()
     for outcome in outcomes:
         if outcome.lower() == response_clean.lower():
             return outcome
-    response_lower = response_clean.lower()
+
     best_outcome: str | None = None
-    best_len = -1
     for outcome in outcomes:
-        if outcome.lower() in response_lower and len(outcome) > best_len:
-            best_outcome = outcome
-            best_len = len(outcome)
+        pattern = re.compile(rf"(?<!\w){re.escape(outcome)}(?!\w)", re.IGNORECASE)
+        for match in pattern.finditer(response_clean):
+            if _is_negated(response_clean, match.start()):
+                continue
+            if best_outcome is None or len(outcome) > len(best_outcome):
+                best_outcome = outcome
+            break
     return best_outcome
 
 
