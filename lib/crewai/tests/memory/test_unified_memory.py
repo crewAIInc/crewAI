@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -707,6 +707,27 @@ def test_flow_extract_memories_delegates_when_memory_present() -> None:
     assert result == ["Flow fact 1.", "Flow fact 2."]
 
 
+
+
+def test_composite_score_accepts_timezone_aware_timestamp() -> None:
+    """An aware created_at must score like the same naive UTC instant, not raise."""
+    config = MemoryConfig()
+    now = datetime.now(timezone.utc)
+    naive = MemoryRecord(
+        content="test",
+        scope="/",
+        importance=0.7,
+        created_at=now.replace(tzinfo=None),
+    )
+    aware = MemoryRecord(
+        content="test",
+        scope="/",
+        importance=0.7,
+        created_at=now,
+    )
+    naive_score, _ = compute_composite_score(naive, 0.8, config)
+    aware_score, _ = compute_composite_score(aware, 0.8, config)
+    assert abs(naive_score - aware_score) < 1e-9
 
 
 def test_composite_score_brand_new_memory() -> None:

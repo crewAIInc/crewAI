@@ -361,7 +361,15 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
+    # created_at is naive UTC by default, but callers and storage backends
+    # may provide an offset-aware datetime. Use a matching now() so the
+    # subtraction never mixes naive and aware values.
+    now = (
+        datetime.now(tz=record.created_at.tzinfo)
+        if record.created_at.tzinfo is not None
+        else datetime.utcnow()
+    )
+    age_seconds = (now - record.created_at).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
