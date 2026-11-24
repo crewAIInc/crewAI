@@ -5,25 +5,21 @@ icon: image
 mode: "wide"
 ---
 
-يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من GPT Image أو CrewAI. الإصدار [0.1.0 متاح على PyPI](https://pypi.org/project/crewai-gpt-image/0.1.0/). ثبّته باسم الحزمة، أو استخدم المصدر المثبّت وملف wheel المرتبط بـ SHA256 أدناه. النشر على PyPI لا يعني الإدراج في كتالوج AMP.
+تتولى Ace Data Cloud صيانة هذه الحزمة لاستخدام GPT Image مع CrewAI.
+
+## التثبيت
 
 ```bash
 uv add crewai-gpt-image==0.1.0
 ```
 
-```bash
-uv add 'crewai-gpt-image @ git+https://github.com/AceDataCloud/GPTImageCrewAI.git@0eea3c3c57067d82680ba54680db29ddce08eb51'
-```
+أنشئ [رمز API للتطبيق](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_api_key) يتيح الوصول إلى GPT Image واحفظه في متغير البيئة `ACEDATACLOUD_API_KEY`. راجع [الأسعار الحالية](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_pricing) قبل توليد الوسائط.
 
-```bash
-uv add 'crewai-gpt-image @ https://github.com/AceDataCloud/GPTImageCrewAI/releases/download/v0.1.0/crewai_gpt_image-0.1.0-py3-none-any.whl#sha256=6051bd70f833e1c05dc9bae405a23ee6316818efc50deeb38e95a4926b37068e'
-```
-
-سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_api_key) وافتح General application، ثم انسخ Token لاستهلاك API أو أنشئ مفتاحًا مخصصًا عبر Manage Keys → Create. تحقّق من صلاحية GPT Image والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_pricing). عند تقييد APIs اسمح بـ `/openai/images/generations` و`/openai/tasks`. اضبط Token الخام في `ACEDATACLOUD_API_KEY` دون Bearer أو مسافات، ولا تضعه في prompt أو ملفات مودعة.
+## الاستخدام
 
 يستخدم GPT Image حقول size/quality/n وخيارات الخلفية والتنسيق. المسار /openai/images/generations مع response_format=url. ليس DallETool أو Nano Banana. النتيجة data[].url؛ تحرير multipart غير مشمول.
 
-لأول فحص مجاني، استرجع مهمة موجودة تملكها بالمفتاح نفسه. لا ينشئ ذلك وسائط:
+أضف `GPTImageGenerateImageTool()` و`GPTImageRetrieveTaskTool()` إلى قائمة `tools` الخاصة بالوكيل. تُعيد أداة التوليد معرّف المهمة. لمتابعة تقدمها، استعلم عن المعرّف نفسه باستخدام المفتاح الذي أرسل المهمة.
 
 ```python
 from gpt_image_crewai import GPTImageRetrieveTaskTool
@@ -32,10 +28,4 @@ result = GPTImageRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_se
 print(result)
 ```
 
-بعد الموافقة على النموذج والميزانية، أضف `GPTImageGenerateImageTool()` و`GPTImageRetrieveTaskTool()` إلى أدوات Agent. هما BaseTool أصليتان بأسماء ومخططات واضحة، دون إعداد MCP. يرسل الإنشاء طلبًا غير متزامن مدفوعًا مرة واحدة؛ احفظ task_id واستعلم عن المعرّف نفسه. accepted/pending ليس نجاحًا. لا تُعد الإنشاء للاستعلام أو بعد مهلة مجهولة النتيجة.
-
-تعيد المهمة المخزنة الناجحة status=succeeded وsuccess=true وmedia_urls والتكلفة الأصلية بوحدة Credits إن توفّرت. الحالات الفاشلة المتداخلة أو غياب الوسائط النهائية ينتج ToolFailure. يُحفظ معنى HTTP دون عرض استجابات خاصة. لا توجد إعادة محاولة مدفوعة تلقائية أو معالج دفع أو نموذج بديل. الاستخدام الواحد لكل مثيل ليس حدًا ماليًا أو نظام إذن.
-
-راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/GPTImageCrewAI/tree/0eea3c3c57067d82680ba54680db29ddce08eb51) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و21 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
-
-إصدار Ace الثابت وتثبيت مرتبط بـSHA256: [GPT Image0.1.0](https://github.com/AceDataCloud/GPTImageCrewAI/releases/tag/v0.1.0).
+[وثائق الحزمة](https://github.com/AceDataCloud/GPTImageCrewAI/tree/0eea3c3c57067d82680ba54680db29ddce08eb51)
