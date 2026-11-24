@@ -2,7 +2,14 @@
 
 import asyncio
 from collections.abc import Callable, Coroutine
+import sys
 from typing import Any
+
+
+if sys.version_info >= (3, 11):
+    from builtins import BaseExceptionGroup
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 from crewai.mcp.content import content_blocks_to_text
 from crewai.tools import BaseTool
@@ -204,11 +211,18 @@ class MCPToolWrapper(BaseTool):
 
         except asyncio.CancelledError as e:
             raise asyncio.TimeoutError("MCP operation was cancelled") from e
-        except Exception as e:
+        except (Exception, BaseExceptionGroup) as e:
             leaves = _leaf_exceptions(e)
+            if any(isinstance(leaf, (KeyboardInterrupt, SystemExit)) for leaf in leaves):
+                raise
+            if all(isinstance(leaf, asyncio.CancelledError) for leaf in leaves):
+                raise asyncio.TimeoutError("MCP operation was cancelled") from e
             if any(isinstance(leaf, asyncio.TimeoutError) for leaf in leaves):
                 raise asyncio.TimeoutError(f"MCP connection error: {e}") from e
             if len(leaves) == 1 and leaves[0] is e:
                 raise
-            details = "; ".join(f"{type(leaf).__name__}: {leaf}" for leaf in leaves)
+            details = "; ".join(
+                f"{type(leaf).__name__}: {leaf}" if str(leaf) else type(leaf).__name__
+                for leaf in leaves
+            )
             raise MCPExecutionError(details) from e

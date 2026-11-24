@@ -67,3 +67,37 @@ def test_group_with_timeout_is_still_reported_as_timeout() -> None:
 
     assert "timed out" in message.lower()
     assert call_tool.await_count == 3
+
+
+def test_mixed_base_exception_group_with_cancelled_error_reports_leaf_errors() -> None:
+    group = BaseExceptionGroup(
+        "unhandled errors in a TaskGroup",
+        [
+            HTTPStatusError("Client error '401 Unauthorized' for url 'https://x.test'"),
+            asyncio.CancelledError(),
+        ],
+    )
+    assert not isinstance(group, Exception)
+
+    message, call_tool = _run_with_error(group)
+
+    assert "HTTPStatusError" in message
+    assert "401" in message
+    assert "CancelledError" in message
+    assert "timed out" not in message.lower()
+    assert call_tool.await_count == 1
+
+
+def test_base_exception_group_with_only_cancelled_errors_is_reported_as_timeout() -> (
+    None
+):
+    group = BaseExceptionGroup(
+        "unhandled errors in a TaskGroup",
+        [asyncio.CancelledError()],
+    )
+    assert not isinstance(group, Exception)
+
+    message, call_tool = _run_with_error(group)
+
+    assert "timed out" in message.lower()
+    assert call_tool.await_count == 3
