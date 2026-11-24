@@ -57,6 +57,19 @@ def _resolve_api_key(api_key: str | None) -> str | None:
     return next(iter(real or candidates), None)
 
 
+def _with_http_options(http_options: Any, **updates: Any) -> Any:
+    """Return ``http_options`` with ``updates`` set, keeping everything else.
+
+    ``client_params["http_options"]`` may be a ``types.HttpOptions`` or a dict,
+    so both are merged rather than replaced.
+    """
+    if http_options is None:
+        return types.HttpOptions(**updates)
+    if isinstance(http_options, types.HttpOptions):
+        return http_options.model_copy(update=updates)
+    return {**http_options, **updates}
+
+
 class GeminiCompletion(BaseLLM):
     """Google Gemini native completion implementation.
 
@@ -71,6 +84,7 @@ class GeminiCompletion(BaseLLM):
     top_p: float | None = None
     top_k: int | None = None
     max_output_tokens: int | None = None
+    timeout: float | None = None
     stream: bool = False
     safety_settings: dict[str, Any] = Field(default_factory=dict)
     client_params: dict[str, Any] = Field(default_factory=dict)
@@ -230,6 +244,8 @@ class GeminiCompletion(BaseLLM):
             config["top_k"] = self.top_k
         if self.max_output_tokens is not None:
             config["max_output_tokens"] = self.max_output_tokens
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
         if self.safety_settings:
             config["safety_settings"] = [
                 {"category": str(s.category), "threshold": str(s.threshold)}
@@ -261,6 +277,12 @@ class GeminiCompletion(BaseLLM):
         if self.client_params:
             client_params.update(self.client_params)
 
+        if self.timeout is not None:
+            # The SDK takes the request timeout in milliseconds.
+            client_params["http_options"] = _with_http_options(
+                client_params.get("http_options"), timeout=int(self.timeout * 1000)
+            )
+
         has_api_key = bool(_without_placeholder(self.api_key))
         has_project = bool(self.project)
 
@@ -290,7 +312,9 @@ class GeminiCompletion(BaseLLM):
             # See: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey
             if use_vertexai:
                 client_params["vertexai"] = True
-                client_params["http_options"] = types.HttpOptions(api_version="v1")
+                client_params["http_options"] = _with_http_options(
+                    client_params.get("http_options"), api_version="v1"
+                )
             else:
                 # This ensures we use the Gemini API (generativelanguage.googleapis.com)
                 client_params["vertexai"] = False

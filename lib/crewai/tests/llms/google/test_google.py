@@ -1474,3 +1474,37 @@ def test_gemini_no_thinking_tokens_defaults_to_zero():
     usage = llm._extract_token_usage(mock_response)
     assert usage["reasoning_tokens"] == 0
     assert usage["cached_prompt_tokens"] == 0
+
+
+def test_gemini_timeout_is_passed_to_client():
+    """A timeout in seconds reaches the Gen AI client as http_options in ms."""
+    from google.genai import types as genai_types
+
+    with patch("crewai.llms.providers.gemini.completion.genai") as mock_genai:
+        llm = LLM(model="google/gemini-2.0-flash-001", timeout=30)
+
+        assert llm.timeout == 30
+        http_options = mock_genai.Client.call_args.kwargs["http_options"]
+        assert isinstance(http_options, genai_types.HttpOptions)
+        assert http_options.timeout == 30_000
+        assert llm.to_config_dict()["timeout"] == 30
+
+
+def test_gemini_timeout_keeps_vertex_express_api_version():
+    """Vertex AI Express mode keeps api_version v1 alongside the timeout."""
+    with (
+        patch.dict(os.environ, {"GOOGLE_GENAI_USE_VERTEXAI": "true"}),
+        patch("crewai.llms.providers.gemini.completion.genai") as mock_genai,
+    ):
+        LLM(
+            model="google/gemini-2.0-flash-001",
+            timeout=1.5,
+            client_params={"http_options": {"headers": {"x-test": "1"}}},
+        )
+
+        http_options = mock_genai.Client.call_args.kwargs["http_options"]
+        assert http_options == {
+            "headers": {"x-test": "1"},
+            "timeout": 1500,
+            "api_version": "v1",
+        }
