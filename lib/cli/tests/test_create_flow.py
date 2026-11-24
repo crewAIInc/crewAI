@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 import importlib
 import io
+import os
 from pathlib import Path
+import subprocess
 import sys
 from types import ModuleType
 
@@ -810,3 +812,49 @@ def test_scaffolded_flow_docs_tell_how_to_pass_inputs(
     assert "`crewai run --inputs '{\"topic\":\"...\"}'`" in agents_md
     assert "crewai run --inputs '{\"topic\": \"Quantum Computing\"}'" in readme
     assert "uv run kickoff '" not in agents_md + readme
+
+
+def test_create_python_flow_writes_templates_as_utf8_under_c_locale(
+    tmp_path: Path,
+) -> None:
+    """Regression test for #9689: template files must be written as UTF-8
+    even when the interpreter's locale encoding is ASCII (a POSIX box under
+    LANG=C, or a Windows install without the UTF-8 code page). The flow
+    templates are UTF-8 and not ASCII-only: tasks.yaml contains an em dash.
+    """
+    snippet = (
+        "from pathlib import Path\n"
+        "from crewai_cli.create_flow import _create_python_flow\n"
+        "_create_python_flow(\n"
+        '    "My Flow", "MyFlow", "my_flow", Path("my_flow"),\n'
+        '    "crewai-tools==1.0.0",\n'
+        ")\n"
+    )
+    env = {
+        **os.environ,
+        "PYTHONUTF8": "0",
+        "PYTHONCOERCECLOCALE": "0",
+        "LC_ALL": "C",
+        "LANG": "C",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", snippet],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    tasks_yaml = (
+        tmp_path
+        / "my_flow"
+        / "src"
+        / "my_flow"
+        / "crews"
+        / "content_crew"
+        / "config"
+        / "tasks.yaml"
+    )
+    text = tasks_yaml.read_bytes().decode("utf-8")
+    assert "\u2014" in text

@@ -180,7 +180,7 @@ def _create_python_flow(
         content = content.replace("{{folder_name}}", folder_name)
         content = content.replace("{{crewai_tools_dependency}}", crewai_dependency)
 
-        with open(dst_file, "w") as file:
+        with open(dst_file, "w", encoding="utf-8") as file:
             file.write(content)
 
     for file_name in root_template_files:
