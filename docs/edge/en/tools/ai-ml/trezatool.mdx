@@ -1,0 +1,67 @@
+---
+title: Treza Tools
+description: Make AI pictures and video clips (Veo, Kling, Seedance and more) with Treza, priced before they run.
+icon: video
+mode: "wide"
+---
+
+# `TrezaImageTool`, `TrezaVideoTool`, `TrezaGetRunTool`
+
+## Description
+
+These tools let an agent make pictures and short video clips with [Treza](https://www.trezalabs.com), which runs many image and video models (Veo, Kling, Seedance and others) behind one API key. Treza prices every render first. When you set `max_cost_usd`, a render that costs more is refused and nothing is spent.
+
+- `TrezaImageTool`: a picture from a description.
+- `TrezaVideoTool`: a video clip from a description. Clips take one to five minutes.
+- `TrezaGetRunTool`: looks up a render that was still going when its tool stopped waiting. Free.
+
+Each tool returns JSON with the finished file's `url`, the `price_usd` and the `model`.
+
+## Installation
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Make an API key at [trezalabs.com/platform/api-keys](https://www.trezalabs.com/platform/api-keys) with the pipelines read, write and run permissions, and set it:
+
+```shell
+export TREZA_API_KEY="your-key"
+```
+
+Renders are paid from the account's prepaid Treza credits.
+
+## Example
+
+```python Code
+from crewai import Agent
+from crewai_tools import TrezaGetRunTool, TrezaImageTool, TrezaVideoTool
+
+producer = Agent(
+    role="Video producer",
+    goal="Make short clips for social posts",
+    backstory="You turn ideas into finished vertical clips.",
+    tools=[
+        TrezaImageTool(max_cost_usd=0.10),
+        TrezaVideoTool(max_cost_usd=1.00),
+        TrezaGetRunTool(),
+    ],
+)
+```
+
+## Parameters
+
+Set these when you build a tool. The agent cannot change them.
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `api_key` | `TREZA_API_KEY` | The Treza API key. |
+| `max_cost_usd` | `None` (no cap) | The most one render may cost. Set a cap on tools you give to an agent. |
+| `wait_seconds` | `300` | How long to wait for a render. One still going comes back with `"status": "running"` and its `run_id` and `pipeline_id` for `TrezaGetRunTool`. |
+
+What the agent fills in:
+
+- **Image:** `prompt`, `aspect_ratio` (`1:1`, `16:9`, `9:16`, `4:5`, `3:4`, `4:3`, `2:3`, `3:2`), optional `model`.
+- **Video:** `prompt`, `aspect_ratio` (`16:9`, `9:16`, `1:1`), optional `duration_sec`, `with_audio` and `model`.
+
+A refusal (over the cap, a low balance, a bad key) comes back to the agent as text starting with `Error:`, and nothing is spent.
