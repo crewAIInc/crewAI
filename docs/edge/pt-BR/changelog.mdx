@@ -4,6 +4,44 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="23 nov 2026">
+  ## v1.15.45
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.45)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionada a capacidade de salvar a saída em HTML ou markdown como um artefato PDF.
+
+  ### Correções de Bugs
+  - Corrigido problema de dependência aumentando e2b para Python >=3.11 para puxar wcmatch corrigido.
+  - Envolver entradas semelhantes a arquivos em `normalize_input_files`.
+  - Rejeitar contagens de retenção de poda de ponto de verificação negativas.
+  - Relatar as variáveis de ambiente reais da ferramenta MongoDB.
+  - Habilitar uploads do Bedrock S3 com `prefer_upload`.
+  - Validar modelos estrangeiros em relação ao esquema de destino.
+  - Preservar dimensões estreitas ao redimensionar imagens.
+  - Rejeitar credenciais vazias e usar comparação em tempo constante na autenticação do servidor.
+  - Tornar os parâmetros de `HyperbrowserLoadTool` opcionais em seu esquema.
+  - Manter campos com valores padrão explícitos não nulos como não nulos.
+  - Manter um delta Azure transmitido quando seu bloco também carrega uso.
+  - Rejeitar tamanhos de bloco de texto não positivos.
+  - Descartar credenciais em redirecionamentos de origem cruzada.
+  - Parar a fragmentação uma vez que um bloco atinge o final do texto.
+  - Serializar enums por valor em `CrewJSONEncoder`.
+  - Nunca armazenar em cache os resultados da ferramenta `save_artifact`.
+  - Definir `from_cache` no evento de finalização da ferramenta nativa.
+
+  ### Documentação
+  - Documentar que blocos de arquivos antropicos não possuem controle de cache.
+
+  ## Contribuidores
+
+  @Ayushraj06-bit, @Kelvin-Waititu, @Kiko0301, @MaiAditya, @SDLSY, @Sakura-798, @Vidit-Ostwal, @YeChenglin8888, @gabemilani, @houyunsun, @jjhong011001, @joaomdmoura, @kushagra0526, @lkuko, @nazek52, @nurlanmnn
+
+</Update>
+
 <Update label="19 nov 2026">
   ## v1.15.44
 
