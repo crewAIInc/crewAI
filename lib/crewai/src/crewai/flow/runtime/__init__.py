@@ -13,11 +13,13 @@ from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
+import dataclasses
 from datetime import datetime, timezone
 import enum
 import inspect
 import logging
 from pathlib import Path
+import sys
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -42,6 +44,7 @@ from pydantic import (
     PlainSerializer,
     PrivateAttr,
     SerializeAsAny,
+    TypeAdapter,
     ValidationError,
 )
 from pydantic._internal._model_construction import ModelMetaclass
@@ -446,6 +449,48 @@ class FlowMeta(ModelMetaclass):
         return super().__new__(mcs, name, bases, namespace)
 
 
+def _serialize_method_output_entry(entry: Any) -> Any:
+    """Attach module:qualname metadata for BaseModel or dataclass method outputs."""
+    if not (isinstance(entry, dict) and "method" in entry and "output" in entry):
+        return entry
+    output = entry["output"]
+    if isinstance(output, BaseModel) or (
+        dataclasses.is_dataclass(output) and not isinstance(output, type)
+    ):
+        cls = type(output)
+        return {**entry, "output_type": f"{cls.__module__}:{cls.__qualname__}"}
+    return entry
+
+
+def _restore_method_output_entry(entry: Any) -> dict[str, Any]:
+    """Normalize a checkpointed method-output entry and rebuild structured outputs."""
+    if not (isinstance(entry, dict) and "method" in entry and "output" in entry):
+        return {"method": "", "output": entry}
+
+    output = entry["output"]
+    output_type = entry.get("output_type")
+    if isinstance(output_type, str) and isinstance(output, dict):
+        mod_name, sep, qualname = output_type.partition(":")
+        if sep and mod_name in sys.modules:
+            obj: Any = sys.modules[mod_name]
+            try:
+                for attr in qualname.split("."):
+                    obj = getattr(obj, attr)
+                if isinstance(obj, type) and issubclass(obj, BaseModel):
+                    output = obj.model_validate(output)
+                elif isinstance(obj, type) and dataclasses.is_dataclass(obj):
+                    output = TypeAdapter(obj).validate_python(output)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to restore structured output for method %r (%s): %s",
+                    entry.get("method"),
+                    output_type,
+                    exc,
+                )
+
+    return {"method": entry["method"], "output": output}
+
+
 class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
@@ -755,9 +800,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
             self._method_outputs = [
-                entry
-                if isinstance(entry, dict) and "method" in entry and "output" in entry
-                else {"method": "", "output": entry}
+                _restore_method_output_entry(entry)
                 for entry in self.checkpoint_method_outputs
             ]
         if self.checkpoint_method_counts is not None:
@@ -1322,7 +1365,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
-        instance._method_outputs = list(pending_context.method_outputs or [])
+        instance._method_outputs = [
+            _restore_method_output_entry(entry)
+            for entry in (pending_context.method_outputs or [])
+        ]
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
