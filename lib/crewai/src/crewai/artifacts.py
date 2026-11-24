@@ -376,11 +376,15 @@ def save_artifact(
         extension,
         content_type or "application/octet-stream",
     )
+    from crewai.flow.flow_context import current_flow_method_name
+
+    method_name = current_flow_method_name.get()
     crewai_event_bus.emit(
         from_task or from_agent,
         ArtifactCreatedEvent(
             from_agent=from_agent,
             from_task=from_task,
+            method_name=method_name if method_name != "unknown" else None,
             id=saved.id,
             identifier=saved.identifier,
             version=saved.version,
