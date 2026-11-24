@@ -156,7 +156,7 @@ class TestInternalCrewPlanner:
         assert task.description in tasks_summary
         assert task.expected_output in tasks_summary
         assert '"agent_tools": [tool1, tool2]' in tasks_summary
-        assert '"agent_knowledge": "[\\"Test knowledge content\\"]"' in tasks_summary
+        assert '"agent_knowledge": ["Test knowledge content"]' in tasks_summary
         assert task.agent.role in tasks_summary
         assert task.agent.goal in tasks_summary
 

@@ -3,6 +3,7 @@ Tests for verifying the integration of knowledge sources in the planning process
 This module ensures that agent knowledge is properly included during task planning.
 """
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -81,3 +82,55 @@ def test_knowledge_included_in_planning(mock_get_client):
         "Expected output should be present in task summary"
     )
     assert agent.role in task_summary, "Agent role should be present in task summary"
+
+
+@patch("crewai.rag.config.utils.get_rag_client")
+def test_all_knowledge_sources_included_in_planning(mock_get_client):
+    """Every knowledge source reaches the planner, not only the first one."""
+    mock_client = mock_get_client.return_value
+    mock_client.get_or_create_collection.return_value = None
+    mock_client.add_documents.return_value = None
+
+    agent = Agent(
+        role="AI Researcher",
+        goal="Research and explain AI concepts",
+        backstory="Expert in artificial intelligence",
+        knowledge_sources=[
+            StringKnowledgeSource(content="first fact"),
+            StringKnowledgeSource(content="second fact"),
+        ],
+    )
+    task = Task(
+        description="Explain the basics of AI systems",
+        expected_output="A clear explanation of AI fundamentals",
+        agent=agent,
+    )
+
+    task_summary = CrewPlanner([task], None)._create_tasks_summary()
+
+    assert '"agent_knowledge": ["first fact", "second fact"]' in task_summary
+
+
+@patch("crewai.rag.config.utils.get_rag_client")
+def test_knowledge_is_json_escaped_in_planning(mock_get_client):
+    """Quotes and newlines in a source cannot break the planner summary."""
+    mock_client = mock_get_client.return_value
+    mock_client.get_or_create_collection.return_value = None
+    mock_client.add_documents.return_value = None
+
+    content = 'He said "hello"\nand left.'
+    agent = Agent(
+        role="AI Researcher",
+        goal="Research and explain AI concepts",
+        backstory="Expert in artificial intelligence",
+        knowledge_sources=[StringKnowledgeSource(content=content)],
+    )
+    task = Task(
+        description="Explain the basics of AI systems",
+        expected_output="A clear explanation of AI fundamentals",
+        agent=agent,
+    )
+
+    task_summary = CrewPlanner([task], None)._create_tasks_summary()
+
+    assert json.dumps([content]) in task_summary
