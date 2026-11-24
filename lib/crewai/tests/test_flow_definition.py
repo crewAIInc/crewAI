@@ -1531,6 +1531,7 @@ def test_skill_explains_saving_and_reading_artifacts():
     assert "`artifact: true`" in skill
     assert "{artifact: <identifier>}" in skill
     assert "outputs.method_name.artifact.url" in skill
+    assert "outputs.method_name.artifact.share_url" in skill
 
 
 def test_skill_artifacts_skip_drops_the_guidance():

@@ -457,8 +457,9 @@ class SaveArtifactTool(BaseTool):
     description: str = (
         "Save a file the user can view, download and share, such as an HTML "
         "report, a markdown doc, a chart image, a PDF or a CSV. Saving the same "
-        "identifier again creates a new version. Returns the artifact url, which "
-        "you can send onward (for example in a message)."
+        "identifier again creates a new version. Returns the artifact url, a "
+        "download link to attach the file (it expires on CrewAI AMP), and "
+        "share_url, the page people open, to put in a message."
     )
     args_schema: type[BaseModel] = SaveArtifactSchema
     # Never cached: each call saves a new version, and a file at the same path

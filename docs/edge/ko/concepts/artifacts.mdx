@@ -124,17 +124,18 @@ chart = Task(
 
 ### 저장된 아티팩트 사용
 
-저장된 버전은 출력의 `artifact`에 있으므로, 콜백이나 이후 Flow 단계, 직접 작성한 코드에서 링크를 전달할 수 있습니다.
+저장된 버전은 출력의 `artifact`에 있으므로, 콜백이나 이후 Flow 단계, 직접 작성한 코드에서 사용할 수 있습니다. 파일은 `url`로 첨부하고, 사람들에게는 `share_url` 링크를 보냅니다.
 
 ```python
 output = report.execute_sync()
-print(output.artifact.url)
+print(output.artifact.url)        # 파일을 첨부할 다운로드 링크
+print(output.artifact.share_url)  # 사람들이 여는 페이지
 
 result = analyst.kickoff("...", artifact=True)
 print(result.artifact.url)
 ```
 
-Flow 선언에서는 `${outputs.write_report.artifact.url}`로 읽습니다.
+Flow 선언에서는 `${outputs.write_report.artifact.url}`로 파일을 첨부하고, `${outputs.write_report.artifact.share_url}`로 사람들에게 링크를 보냅니다.
 
 ## Agent가 아티팩트를 저장하게 하기
 
@@ -154,7 +155,7 @@ analyst = Agent(role="Analyst", goal="...", backstory="...", artifacts=True)
 {"id": "0b9e6c1e-...", "identifier": "q3-report", "version": 1, "url": "file:///.../v1.html", "share_url": null}
 ```
 
-이후 Task는 이 `url`을 사용할 수 있습니다. 예를 들어 Slack에 올리거나 이메일에 첨부할 수 있습니다.
+이후 Task는 `url`로 파일을 첨부할 수 있습니다. 예를 들어 이메일에 첨부합니다. 사람들이 읽는 메시지(예: Slack 게시물)에는 `share_url`을 넣습니다.
 
 ## 코드에서 저장
 
@@ -231,7 +232,7 @@ first = load_artifact("board-report", version=1)    # b"<h1>Draft</h1>"
 
 `url`은 `file://` URL이고 `share_url`은 비어 있습니다.
 
-CrewAI AMP에서는 플랫폼이 시작할 때 자체 store를 등록하므로, 같은 코드가 아티팩트를 실행에 업로드합니다. Crew 코드는 바꿀 필요가 없습니다.
+CrewAI AMP에서는 플랫폼이 시작할 때 자체 store를 등록하므로, 같은 코드가 아티팩트를 실행에 업로드합니다. Crew 코드는 바꿀 필요가 없습니다. 이때 `url`은 하루 뒤 만료되는 다운로드 링크이고, `share_url`은 CrewAI 로그인이 필요한 뷰어 페이지입니다.
 
 ## 실패
 
