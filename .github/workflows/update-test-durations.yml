@@ -1,11 +1,6 @@
 name: Update Test Durations
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'lib/**/tests/**/*.py'
   schedule:
     - cron: '0 3 * * 0'  # weekly refresh so durations don't go stale
   workflow_dispatch:
