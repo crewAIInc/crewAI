@@ -36,3 +36,35 @@ def test_concurrent_settings_instances_keep_configured_enterprise_url(
 
     assert [item.enterprise_base_url for item in settings] == [enterprise_url] * 2
     assert not list(config_path.parent.glob(".crewai_write_test.*"))
+
+
+@pytest.mark.parametrize("content", ["[]", "null", '"text"', "42"])
+def test_non_object_settings_file_does_not_break_loading(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str
+) -> None:
+    """A settings file whose JSON is not an object is ignored, not fatal."""
+    config_path = tmp_path / "config" / "settings.json"
+    config_path.parent.mkdir()
+    config_path.write_text(content)
+    monkeypatch.setattr(settings_module, "DEFAULT_CONFIG_PATH", config_path)
+
+    settings = settings_module.Settings()
+
+    assert settings.enterprise_base_url == "https://app.crewai.com"
+
+
+def test_dump_replaces_non_object_settings_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Saving settings must not silently fail because the file is not an object."""
+    config_path = tmp_path / "config" / "settings.json"
+    config_path.parent.mkdir()
+    config_path.write_text("[]")
+    monkeypatch.setattr(settings_module, "DEFAULT_CONFIG_PATH", config_path)
+
+    settings = settings_module.Settings()
+    settings.enterprise_base_url = "https://enterprise.example.com"
+    settings.dump()
+
+    saved = json.loads(config_path.read_text())
+    assert saved == {"enterprise_base_url": "https://enterprise.example.com"}

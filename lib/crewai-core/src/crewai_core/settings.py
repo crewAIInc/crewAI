@@ -224,9 +224,11 @@ class Settings(BaseModel):
         if config_path.is_file():
             try:
                 with config_path.open("r") as f:
-                    file_data = json.load(f)
+                    loaded_data = json.load(f)
             except Exception:
-                file_data = {}
+                loaded_data = {}
+            if isinstance(loaded_data, dict):
+                file_data = loaded_data
 
         merged_data = {**file_data, **data}
         super().__init__(config_path=config_path, **merged_data)
@@ -249,11 +251,12 @@ class Settings(BaseModel):
             return
 
         try:
+            existing_data = {}
             if self.config_path.is_file():
                 with self.config_path.open("r") as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {}
+                    loaded_data = json.load(f)
+                if isinstance(loaded_data, dict):
+                    existing_data = loaded_data
 
             updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
             _write_secure_json(self.config_path, updated_data)
