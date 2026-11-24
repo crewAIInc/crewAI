@@ -182,3 +182,24 @@ def test_head_commit_is_the_short_hash_of_head(tmp_path):
 
     assert head == _git(tmp_path, "rev-parse", "--short", "HEAD")
     assert head != _git(tmp_path, "rev-parse", "--short", "HEAD~1")
+
+
+def test_deployable_files_skips_names_that_are_not_utf8(tmp_path, caplog):
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "ok.txt").write_text("x")
+    blob = _git(tmp_path, "hash-object", "-w", "ok.txt")
+    entries = [b"ok.txt", b"caf\xe9.txt", "한글.md".encode()]
+    # The index can hold a name the filesystem may refuse, like a Latin-1 one.
+    tree = subprocess.run(
+        ["git", "mktree", "-z"],
+        cwd=tmp_path,
+        input=b"".join(b"100644 blob %s\t%s\0" % (blob.encode(), e) for e in entries),
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+    _git(tmp_path, "read-tree", tree.decode())
+
+    files = Repository(path=str(tmp_path), fetch=False).deployable_files()
+
+    assert sorted(files) == ["ok.txt", "한글.md"]
+    assert "caf\\xe9.txt" in caplog.text
