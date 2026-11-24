@@ -146,10 +146,29 @@ def parse_www_authenticate(header_value: str) -> dict[str, dict[str, str]]:
     return challenges
 
 
+def _auth_classes_for_scheme(
+    scheme: object,
+) -> tuple[type[ClientAuthScheme], ...] | None:
+    """Return the client auth classes that satisfy a security scheme."""
+    if allowed_classes := _SCHEME_AUTH_MAPPING.get(type(scheme)):
+        return allowed_classes
+
+    if isinstance(scheme, HTTPAuthSecurityScheme):
+        scheme_key = cast(_HTTPSchemeType, scheme.scheme.lower())
+        if required_class := _HTTP_SCHEME_MAPPING.get(scheme_key):
+            return (required_class,)
+
+    return None
+
+
 def validate_auth_against_agent_card(
     agent_card: AgentCard, auth: ClientAuthScheme | None
 ) -> None:
     """Validate that provided auth matches AgentCard security requirements.
+
+    ``security`` is a list of alternatives (OR): satisfying any one requirement
+    is enough. The scheme names inside a single requirement are all required
+    (AND), so every scheme in that requirement must match the provided auth.
 
     Args:
         agent_card: The A2A AgentCard containing security requirements.
@@ -163,29 +182,37 @@ def validate_auth_against_agent_card(
         return
 
     if not auth:
+        if any(not requirement for requirement in agent_card.security):
+            return
         msg = "AgentCard requires authentication but no auth scheme provided"
         raise A2AClientHTTPError(401, msg)
 
-    first_security_req = agent_card.security[0] if agent_card.security else {}
+    expected_classes: tuple[type[ClientAuthScheme], ...] | None = None
 
-    for scheme_name in first_security_req:
-        security_scheme_wrapper = agent_card.security_schemes.get(scheme_name)
-        if not security_scheme_wrapper:
-            continue
-
-        scheme = security_scheme_wrapper.root
-
-        if allowed_classes := _SCHEME_AUTH_MAPPING.get(type(scheme)):
-            if not isinstance(auth, allowed_classes):
-                _raise_auth_mismatch(allowed_classes, auth)
+    for requirement in agent_card.security:
+        if not requirement:
             return
 
-        if isinstance(scheme, HTTPAuthSecurityScheme):
-            scheme_key = cast(_HTTPSchemeType, scheme.scheme.lower())
-            if required_class := _HTTP_SCHEME_MAPPING.get(scheme_key):
-                if not isinstance(auth, required_class):
-                    _raise_auth_mismatch(required_class, auth)
-            return
+        requirement_classes: list[tuple[type[ClientAuthScheme], ...]] = []
+        for scheme_name in requirement:
+            security_scheme_wrapper = agent_card.security_schemes.get(scheme_name)
+            if security_scheme_wrapper is None:
+                break
+
+            allowed_classes = _auth_classes_for_scheme(security_scheme_wrapper.root)
+            if allowed_classes is None:
+                break
+            requirement_classes.append(allowed_classes)
+        else:
+            for allowed_classes in requirement_classes:
+                if not isinstance(auth, allowed_classes):
+                    expected_classes = allowed_classes
+                    break
+            else:
+                return
+
+    if expected_classes is not None:
+        _raise_auth_mismatch(expected_classes, auth)
 
     msg = "Could not validate auth against AgentCard security requirements"
     raise A2AClientHTTPError(401, msg)
