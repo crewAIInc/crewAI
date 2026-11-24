@@ -138,6 +138,49 @@ class TestSkillInstall:
             assert (skill_dir / "SKILL.md").exists()
             assert not stale_file.exists()
 
+    def test_install_in_project_replaces_regular_file(self, skill_command):
+        import base64
+
+        archive = self._zip_skill("my-skill")
+        encoded = "data:application/zip;base64," + base64.b64encode(archive).decode()
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"file": encoded, "version": "2.0.0"}
+        skill_command.plus_api_client.get_skill = MagicMock(return_value=mock_resp)
+
+        with in_temp_dir():
+            Path("pyproject.toml").write_text("[tool]\n")
+            Path("skills").mkdir(parents=True)
+            skill_dest = Path("skills/my-skill")
+            skill_dest.write_text("not a directory")
+
+            skill_command.install("@acme/my-skill")
+            assert skill_dest.is_dir()
+            assert (skill_dest / "SKILL.md").exists()
+
+    def test_install_in_project_warns_on_overwrite(self, skill_command):
+        import base64
+
+        archive = self._zip_skill("my-skill")
+        encoded = "data:application/zip;base64," + base64.b64encode(archive).decode()
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"file": encoded, "version": "2.0.0"}
+        skill_command.plus_api_client.get_skill = MagicMock(return_value=mock_resp)
+
+        with in_temp_dir():
+            Path("pyproject.toml").write_text("[tool]\n")
+            skill_dir = Path("skills/my-skill")
+            skill_dir.mkdir(parents=True)
+
+            with patch("crewai_cli.skills.main.console.print") as mock_print:
+                skill_command.install("@acme/my-skill")
+                assert any(
+                    "will be overwritten" in str(call) for call in mock_print.call_args_list
+                )
+
 
 class TestSkillPublish:
     def test_publish_no_skill_md(self, skill_command):
