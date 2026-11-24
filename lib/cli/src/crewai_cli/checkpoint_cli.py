@@ -64,8 +64,6 @@ DELETE FROM checkpoints WHERE rowid NOT IN (
 )
 """
 
-_COUNT_CHECKPOINTS = "SELECT COUNT(*) FROM checkpoints"
-
 _SELECT_LIKE = """
 SELECT id, created_at, json(data)
 FROM checkpoints
@@ -646,7 +644,12 @@ def _parse_duration(value: str) -> timedelta:
     return timedelta(minutes=amount)
 
 
-def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -> int:
+def _prune_json(
+    location: str,
+    keep: int | None,
+    older_than: timedelta | None,
+    dry_run: bool = False,
+) -> int:
     pattern: str = os.path.join(glob.escape(location), "**", "*.json")
     files: list[str] = sorted(
         glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
@@ -668,6 +671,9 @@ def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -
             if mtime < cutoff:
                 to_delete.add(path)
 
+    if dry_run:
+        return len(to_delete)
+
     deleted: int = 0
     for path in to_delete:
         try:
@@ -686,7 +692,12 @@ def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -
     return deleted
 
 
-def _prune_sqlite(db_path: str, keep: int | None, older_than: timedelta | None) -> int:
+def _prune_sqlite(
+    db_path: str,
+    keep: int | None,
+    older_than: timedelta | None,
+    dry_run: bool = False,
+) -> int:
     deleted: int = 0
     with sqlite3.connect(db_path) as conn:
         if older_than is not None:
@@ -700,7 +711,10 @@ def _prune_sqlite(db_path: str, keep: int | None, older_than: timedelta | None) 
             cursor = conn.execute(_DELETE_KEEP_N, (keep,))
             deleted += cursor.rowcount
 
-        conn.commit()
+        if dry_run:
+            conn.rollback()
+        else:
+            conn.commit()
     return deleted
 
 
@@ -716,21 +730,13 @@ def prune_checkpoints(
 
     deleted: int
     if _is_sqlite(location):
-        if dry_run:
-            with sqlite3.connect(location) as conn:
-                total: int = conn.execute(_COUNT_CHECKPOINTS).fetchone()[0]
-            click.echo(f"Would prune from {total} checkpoint(s) in {location}")
-            return
-        deleted = _prune_sqlite(location, keep, duration)
+        deleted = _prune_sqlite(location, keep, duration, dry_run)
     elif os.path.isdir(location):
-        if dry_run:
-            files: list[str] = glob.glob(
-                os.path.join(glob.escape(location), "**", "*.json"), recursive=True
-            )
-            click.echo(f"Would prune from {len(files)} checkpoint(s) in {location}")
-            return
-        deleted = _prune_json(location, keep, duration)
+        deleted = _prune_json(location, keep, duration, dry_run)
     else:
         click.echo(f"Not a directory or SQLite database: {location}")
+        return
+    if dry_run:
+        click.echo(f"Would prune {deleted} checkpoint(s) from {location}")
         return
     click.echo(f"Pruned {deleted} checkpoint(s) from {location}")

@@ -87,3 +87,26 @@ def test_prune_keeps_most_recent_checkpoints(
     assert _checkpoint_ids(checkpoint_location) == set(
         _CHECKPOINT_IDS[len(_CHECKPOINT_IDS) - keep :]
     )
+
+
+@pytest.mark.parametrize("keep", [0, 2])
+def test_prune_dry_run_reports_what_would_be_pruned(
+    checkpoint_location: Path, keep: int
+) -> None:
+    with patch("crewai_cli.checkpoint_cli._record_checkpoint_usage"):
+        result = CliRunner().invoke(
+            crewai,
+            [
+                "checkpoint",
+                "--location",
+                str(checkpoint_location),
+                "prune",
+                "--keep",
+                str(keep),
+                "--dry-run",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    assert f"Would prune {len(_CHECKPOINT_IDS) - keep} checkpoint(s)" in result.output
+    assert _checkpoint_ids(checkpoint_location) == set(_CHECKPOINT_IDS)
