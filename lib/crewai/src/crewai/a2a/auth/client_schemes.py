@@ -289,7 +289,14 @@ class APIKeyAuth(ClientAuthScheme):
         if self.location == "header":
             headers[self.name] = self.api_key
         elif self.location == "cookie":
-            headers["Cookie"] = f"{self.name}={self.api_key}"
+            cookie_pair = f"{self.name}={self.api_key}"
+            cookie_header = next(
+                (key for key in headers if key.lower() == "cookie"), None
+            )
+            if cookie_header is None:
+                headers["Cookie"] = cookie_pair
+            else:
+                headers[cookie_header] = f"{headers[cookie_header]}; {cookie_pair}"
         return headers
 
     def configure_client(self, client: httpx.AsyncClient) -> None:
