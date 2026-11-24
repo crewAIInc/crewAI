@@ -308,6 +308,18 @@ def _input_msg(raw: Any) -> dict[str, Any]:
     if isinstance(content, str):
         if content:
             parts.append(_text(content))
+    elif isinstance(content, list):
+        # OpenAI-compatible multimodal messages carry text as
+        # ``{"type": "text", "text": ...}`` blocks. Serializing the whole
+        # list as one text part records provider JSON instead of the prompt
+        # text and violates the OTel text-part shape, so extract the text
+        # blocks and drop non-text provider blocks (e.g. image_url).
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "text":
+                continue
+            text = block.get("text", block.get("content"))
+            if isinstance(text, str):
+                parts.append(_text(text))
     elif content is not None:
         parts.append(_text(_to_str(content)))
     parts.extend(_tool_call(tc) for tc in raw.get("tool_calls") or [])
