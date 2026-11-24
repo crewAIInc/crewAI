@@ -1538,6 +1538,8 @@ def test_skill_artifacts_skip_drops_the_guidance():
     skill = flow_definition.FlowDefinition.skill(skips=["artifacts"])
 
     assert "Save an agent's output as an artifact" not in skill
+    assert "`artifact`" not in skill
+    assert "`input_files`" not in skill
 
 
 def test_skill_can_render_json_examples():
