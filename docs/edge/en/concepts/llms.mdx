@@ -1156,6 +1156,15 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="Ace Data Cloud">
+    Set `ACEDATACLOUD_API_KEY` to an [application API token](https://platform.acedata.cloud/console/applications). Choose a model that supports Chat Completions in the [Ace Data Cloud model catalog](https://platform.acedata.cloud/models).
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(model="acedatacloud/gpt-4.1-mini")
+    ```
+  </Accordion>
   <Accordion title="DeepInfra">
     CrewAI talks to DeepInfra through its native OpenAI client, so no LiteLLM install is needed.
 

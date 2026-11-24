@@ -91,6 +91,11 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "acedatacloud": ProviderConfig(
+        base_url="https://api.acedata.cloud/v1",
+        api_key_env="ACEDATACLOUD_API_KEY",
+        base_url_env="ACEDATACLOUD_BASE_URL",
+    ),
     "deepinfra": ProviderConfig(
         base_url="https://api.deepinfra.com/v1/openai",
         api_key_env="DEEPINFRA_API_KEY",

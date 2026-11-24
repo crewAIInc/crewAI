@@ -1013,6 +1013,15 @@ mode: "wide"
     ```
   </Accordion>
 
+  <Accordion title="Ace Data Cloud">
+    اضبط `ACEDATACLOUD_API_KEY` على [مفتاح التطبيق](https://platform.acedata.cloud/console/applications)، واختر نموذجًا يدعم Chat Completions من [دليل النماذج](https://platform.acedata.cloud/models).
+
+    ```python
+    from crewai import LLM
+
+    llm = LLM(model="acedatacloud/gpt-4.1-mini")
+    ```
+  </Accordion>
   <Accordion title="DeepInfra">
     يتصل CrewAI بـ DeepInfra عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
 

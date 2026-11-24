@@ -69,6 +69,7 @@ _PROVIDER_KEY_ENV: dict[str, tuple[str, ...]] = {
     "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     "groq": ("GROQ_API_KEY",),
     "cerebras": ("CEREBRAS_API_KEY",),
+    "acedatacloud": ("ACEDATACLOUD_API_KEY",),
     "ollama": (),
 }
 
@@ -216,6 +217,27 @@ def _fetch_groq(api_key: str | None) -> list[dict[str, Any]]:
     return _fetch_openai_compatible("https://api.groq.com/openai/v1", api_key)
 
 
+def _fetch_acedatacloud(api_key: str | None) -> list[dict[str, Any]]:
+    base = os.environ.get(
+        "ACEDATACLOUD_BASE_URL", "https://api.acedata.cloud/v1"
+    ).rstrip("/")
+    if base != "https://api.acedata.cloud/v1":
+        return _fetch_openai_compatible(base, api_key) if api_key else []
+    catalog = _http_get_json(
+        "https://platform.acedata.cloud/api/v1/models/", params={"type": "chat"}
+    )
+    return [
+        _entry(item["id"], item.get("label") or item["id"])
+        for item in catalog.get("data", [])
+        if item.get("id")
+        and item.get("type") == "chat"
+        and any(
+            endpoint.get("protocol") == "chat_completions"
+            for endpoint in item.get("endpoints", [])
+        )
+    ]
+
+
 def _fetch_cerebras(api_key: str | None) -> list[dict[str, Any]]:
     return _fetch_openai_compatible("https://api.cerebras.ai/v1", api_key)
 
@@ -331,6 +353,7 @@ _VENDOR_FETCHERS: dict[str, Callable[[str | None], list[dict[str, Any]]]] = {
     "gemini": _fetch_gemini,
     "groq": _fetch_groq,
     "cerebras": _fetch_cerebras,
+    "acedatacloud": _fetch_acedatacloud,
     "ollama": _fetch_ollama,
 }
 

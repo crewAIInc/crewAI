@@ -145,6 +145,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "DASHSCOPE_API_KEY",
         }
     ],
+    "acedatacloud": [
+        {
+            "prompt": "Enter your Ace Data Cloud API key (press Enter to skip)",
+            "key_name": "ACEDATACLOUD_API_KEY",
+        }
+    ],
     "deepinfra": [
         {
             "prompt": "Enter your DEEPINFRA API key (press Enter to skip)",
@@ -167,6 +173,7 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "acedatacloud",
 ]
 
 # The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
@@ -254,6 +261,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
         "cerebras",
         "dashscope",
         "deepinfra",
+        "acedatacloud",
         "hosted_vllm",
         "ollama",
         "ollama_chat",
@@ -293,6 +301,11 @@ def crewai_extras_for_model(model: str) -> set[str]:
 
 
 MODELS: dict[str, list[str]] = {
+    "acedatacloud": [
+        "acedatacloud/gpt-4.1-mini",
+        "acedatacloud/gpt-6.2-sol",
+        "acedatacloud/gemini-4-argon",
+    ],
     "openai": [
         "gpt-6-luna",
         "gpt-6.1-sol",
