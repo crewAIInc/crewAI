@@ -110,7 +110,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "* [bold]Pull[/bold] the latest changes from the remote.\n"
                 "\nOnce your repository is up-to-date, retry publishing the tool."
             )
-            raise SystemExit()
+            raise SystemExit(1)
 
         project_name = get_project_name(require=True)
         assert isinstance(project_name, str)  # noqa: S101

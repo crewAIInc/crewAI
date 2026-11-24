@@ -197,9 +197,11 @@ def test_install_api_error(mock_get, capsys, tool_command):
 def test_publish_when_not_in_sync(mock_repository, capsys, tool_command):
     mock_repository.return_value.is_synced.return_value = False
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc_info:
         tool_command.publish(is_public=True)
 
+    # A refused publish must not look like a success to scripts and CI.
+    assert exc_info.value.code == 1
     output = capsys.readouterr().out
     assert "Local changes need to be resolved before publishing" in output
     mock_repository.return_value.is_synced.assert_called_once_with()
