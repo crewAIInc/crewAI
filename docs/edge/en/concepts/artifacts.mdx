@@ -142,17 +142,18 @@ report = Task(
 
 ### Use the saved artifact
 
-The saved version is on the output's `artifact`, so a callback, a later flow step or your own code can send the link on:
+The saved version is on the output's `artifact`, so a callback, a later flow step or your own code can use it. Attach the file from `url`, and link people to it with `share_url`:
 
 ```python
 output = report.execute_sync()
-print(output.artifact.url)
+print(output.artifact.url)        # download link, to attach the file
+print(output.artifact.share_url)  # the page people open
 
 result = analyst.kickoff("...", artifact=True)
 print(result.artifact.url)
 ```
 
-In a flow declaration, read it with `${outputs.write_report.artifact.url}`.
+In a flow declaration, attach the file from `${outputs.write_report.artifact.url}` and link people to it with `${outputs.write_report.artifact.share_url}`.
 
 ## Let agents save artifacts
 
@@ -172,7 +173,7 @@ The tool takes `identifier`, `title`, `kind`, and either `content` (text) or `fi
 {"id": "0b9e6c1e-...", "identifier": "q3-report", "version": 1, "url": "file:///.../v1.html", "share_url": null}
 ```
 
-A later task can use the `url`, for example to post it to Slack or attach it to an email.
+A later task can attach the file from `url`, for example to an email, and put `share_url` in a message people read, such as a Slack post.
 
 ## Save from code
 
@@ -249,7 +250,7 @@ Locally, artifacts go to:
 
 `url` is a `file://` URL and `share_url` is empty.
 
-On CrewAI AMP, the platform registers its own store at startup, so the same code uploads artifacts to the run instead. Nothing in your crew changes.
+On CrewAI AMP, the platform registers its own store at startup, so the same code uploads artifacts to the run instead. Nothing in your crew changes. There, `url` is a download link that expires after one day, and `share_url` is the viewer page, which needs a CrewAI sign-in.
 
 ## Failures
 

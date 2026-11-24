@@ -124,17 +124,18 @@ chart = Task(
 
 ### Usar o artefato salvo
 
-A versão salva fica em `artifact` na saída, então um callback, um passo posterior do flow ou o seu próprio código pode enviar o link adiante:
+A versão salva fica em `artifact` na saída, então um callback, um passo posterior do flow ou o seu próprio código pode usá-la. Anexe o arquivo pela `url` e envie às pessoas o link `share_url`:
 
 ```python
 output = report.execute_sync()
-print(output.artifact.url)
+print(output.artifact.url)        # link de download, para anexar o arquivo
+print(output.artifact.share_url)  # a página que as pessoas abrem
 
 result = analyst.kickoff("...", artifact=True)
 print(result.artifact.url)
 ```
 
-Em uma declaração de flow, leia com `${outputs.write_report.artifact.url}`.
+Em uma declaração de flow, anexe o arquivo com `${outputs.write_report.artifact.url}` e envie às pessoas o link `${outputs.write_report.artifact.share_url}`.
 
 ## Deixar os agents salvarem artefatos
 
@@ -154,7 +155,7 @@ A tool recebe `identifier`, `title`, `kind` e `content` (texto) ou `file_path` (
 {"id": "0b9e6c1e-...", "identifier": "q3-report", "version": 1, "url": "file:///.../v1.html", "share_url": null}
 ```
 
-Uma task posterior pode usar a `url`, por exemplo para publicá-la no Slack ou anexá-la a um e-mail.
+Uma task posterior pode anexar o arquivo pela `url`, por exemplo a um e-mail, e colocar a `share_url` em uma mensagem que as pessoas leem, como um post no Slack.
 
 ## Salvar a partir do código
 
@@ -231,7 +232,7 @@ Localmente, os artefatos vão para:
 
 `url` é uma URL `file://` e `share_url` fica vazio.
 
-No CrewAI AMP, a plataforma registra seu próprio store na inicialização, então o mesmo código envia os artefatos para a execução. Nada muda na sua crew.
+No CrewAI AMP, a plataforma registra seu próprio store na inicialização, então o mesmo código envia os artefatos para a execução. Nada muda na sua crew. Lá, a `url` é um link de download que expira após um dia, e a `share_url` é a página de visualização, que exige login no CrewAI.
 
 ## Falhas
 
