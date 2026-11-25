@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
+from crewai.llms._finish_reason_utils import warn_if_truncated
 from crewai.llms.base_llm import (
     BaseLLM,
     LLMCallBlockedError,
@@ -973,6 +974,7 @@ class GeminiCompletion(BaseLLM):
             Final response content or function call result
         """
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
+        warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
