@@ -420,6 +420,7 @@ def test_configured_api_key_is_not_asked_for(tmp_path, monkeypatch):
         ("cerebras/llama3.1-8b", "CEREBRAS_API_KEY"),
         ("dashscope/qwen-turbo", "DASHSCOPE_API_KEY"),
         ("deepinfra/meta-llama/Meta-Llama-3.1-8B-Instruct", "DEEPINFRA_API_KEY"),
+        ("wiro/openai/gpt-5-4-nano", "WIRO_API_KEY"),
     ],
 )
 def test_a_real_agent_project_is_asked_for_its_models_key(

@@ -1045,6 +1045,39 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Wiro AI">
+    يتصل CrewAI بـ Wiro AI عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    WIRO_API_KEY=<your-api-key>
+
+    # Optional, overrides the default base URL
+    WIRO_BASE_URL=https://llm.wiro.ai/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="wiro/openai/gpt-5-4-nano"
+    )
+    ```
+
+    <Info>
+      ميزات Wiro AI:
+      - نماذج GPT وClaude وGemini وGrok وDeepSeek وQwen وغيرها خلف API واحد متوافق مع OpenAI وبمفتاح API واحد
+      - استدعاء الأدوات والبث والمخرجات المنظمة بمخطط JSON
+      - Chat Completions افتراضيًا، و Responses API عبر `api="responses"`
+    </Info>
+
+    معرّفات النماذج بصيغة `owner/model` أصلًا، لذا يتكوّن المرجع الكامل من ثلاثة أجزاء،
+    مثل `wiro/claude/sonnet-5`. راجع [كتالوج النماذج](https://wiro.ai/models?categories=llm-tool-call)
+    أو استدعِ `GET https://llm.wiro.ai/v1/models` بمفتاحك للحصول على المعرّفات الحالية.
+    أنشئ مشروعًا عبر [wiro.ai/panel/project/new](https://wiro.ai/panel/project/new) للحصول على مفتاح API.
+    راجع [وثائق البوابة](https://wiro.ai/docs/completions-api) لتفاصيل الـ API.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

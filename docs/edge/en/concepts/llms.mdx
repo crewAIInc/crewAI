@@ -1188,6 +1188,39 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Wiro AI">
+    CrewAI talks to Wiro AI through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    WIRO_API_KEY=<your-api-key>
+
+    # Optional, overrides the default base URL
+    WIRO_BASE_URL=https://llm.wiro.ai/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="wiro/openai/gpt-5-4-nano"
+    )
+    ```
+
+    <Info>
+      Wiro AI features:
+      - GPT, Claude, Gemini, Grok, DeepSeek, Qwen and other models behind one OpenAI-compatible API, with one API key
+      - Tool calling, streaming and JSON schema structured outputs
+      - Chat Completions by default, and the Responses API with `api="responses"`
+    </Info>
+
+    Model ids are already in `owner/model` form, so a full reference carries three segments,
+    for example `wiro/claude/sonnet-5`. See the [model catalog](https://wiro.ai/models?categories=llm-tool-call)
+    or call `GET https://llm.wiro.ai/v1/models` with your key for current ids.
+    Create a project at [wiro.ai/panel/project/new](https://wiro.ai/panel/project/new) to get an API key.
+    The [gateway docs](https://wiro.ai/docs/completions-api) describe the API.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
