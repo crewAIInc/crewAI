@@ -23,6 +23,8 @@ Ensure your Tavily API key is set as an environment variable:
 export TAVILY_API_KEY='your_tavily_api_key'
 ```
 
+To route requests through a proxy or a Tavily-compatible endpoint, set `TAVILY_API_BASE_URL` (or pass `api_base_url` when creating the tool). If it is not set, the tool uses Tavily's default API URL.
+
 Get an API key at https://app.tavily.com/ (sign up, then create a key).
 
 ## Example Usage

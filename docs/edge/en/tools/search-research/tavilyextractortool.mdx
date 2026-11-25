@@ -21,6 +21,8 @@ You also need to set your Tavily API key as an environment variable:
 export TAVILY_API_KEY='your-tavily-api-key'
 ```
 
+To route requests through a proxy or a Tavily-compatible endpoint, set `TAVILY_API_BASE_URL` (or pass `api_base_url` when creating the tool). If it is not set, the tool uses Tavily's default API URL.
+
 ## Example Usage
 
 Here's how to initialize and use the `TavilyExtractorTool` within a CrewAI agent:
