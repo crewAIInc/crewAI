@@ -1123,6 +1123,18 @@ def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
     line.append(url, style=f"{teal} underline")
     console.print(line)
 
+    from crewai_cli.crew_run_tui import _recorded_run
+    from crewai_cli.experimental.eval_crew import _report_url, what_next
+
+    execution_id = str(evaluation.get("execution_id") or "")
+    record = (_recorded_run(execution_id) if execution_id else None) or {}
+    trace_url = _report_url(record.get("trace_url"))
+    if trace_url:
+        trace = Text("  ")
+        trace.append("Trace: ", style="dim")
+        trace.append(trace_url, style=f"{teal} underline")
+        console.print(trace)
+
     wrote = evaluation.get("wrote_config")
     if wrote:
         note = Text("  ")
@@ -1132,6 +1144,9 @@ def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
             style="dim",
         )
         console.print(note)
+
+    if state == "done":
+        console.print(Text(f"  {what_next()}", style="bold"))
 
 
 def run_crew(
