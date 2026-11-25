@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from crewai import Agent
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -14,6 +15,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
 from crewai.agents.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
+from crewai.hooks.tool_hooks import ToolCallHookContext
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool
 from crewai.tools.base_tool import to_langchain
@@ -102,6 +104,53 @@ def test_post_tool_abort_reaches_caller_without_another_model_call(
     assert llm.calls == 1
 
 
+@pytest.mark.parametrize("batch_size", [1, 2], ids=["serial", "parallel"])
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+def test_kickoff_history_records_input_applied_by_pre_tool_hooks(
+    batch_size: int, async_entry: bool
+) -> None:
+    class LookupWithExecutionNote(LookupTool):
+        execution_notes: list[str] = []
+
+        def _run(self, term: str = "default", execution_note: str = "") -> str:
+            self.execution_notes.append(execution_note)
+            return super()._run(term)
+
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def rewrite(context: ToolCallHookContext) -> None:
+        context.tool_input["term"] = f"effective-{context.tool_input['term']}"
+        context.tool_input["execution_note"] = "for the tool only"
+
+    @on(InterceptionPoint.POST_TOOL_CALL)
+    def edit_context_after_execution(context: ToolCallHookContext) -> None:
+        context.tool_input["term"] = "after-execution"
+
+    tool = LookupWithExecutionNote()
+    agent = Agent(
+        role="Tester",
+        goal="Look up values",
+        backstory="Test hooks",
+        llm=ScriptedLLM(batch_size),
+        tools=[tool],
+        verbose=False,
+    )
+
+    output = (
+        asyncio.run(agent.kickoff_async("Look up values"))
+        if async_entry
+        else agent.kickoff("Look up values")
+    )
+
+    expected = [f"effective-{i}" for i in range(batch_size)]
+    assert sorted(tool.calls) == expected
+    assert tool.execution_notes == ["for the tool only"] * batch_size
+    calls = [call for message in output.messages for call in message.get("tool_calls", [])]
+    assert [call["id"] for call in calls] == [f"call_{i}" for i in range(batch_size)]
+    assert [json.loads(call["function"]["arguments"]) for call in calls] == [
+        {"term": term} for term in expected
+    ]
+
+
 def native_call(backend, tool, cache, args):
     structured = to_langchain([tool])
     _, functions, _ = convert_tools_to_openai_schema([tool])
@@ -130,6 +179,11 @@ def native_call(backend, tool, cache, args):
     executor._setup_native_tools()
     result = executor._execute_single_native_tool_call(call)
     return result["result"], result["from_cache"]
+
+
+def test_non_object_tool_arguments_still_fail_event_validation() -> None:
+    with pytest.raises(ValidationError, match="ToolUsageStartedEvent"):
+        native_call("agent", LookupTool(), CacheHandler(), 5)
 
 
 @pytest.mark.parametrize("backend", ["agent", "shared"])
