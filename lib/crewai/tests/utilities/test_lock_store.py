@@ -8,6 +8,7 @@ portalocker to handle actual locking mechanics.
 from __future__ import annotations
 
 from contextlib import contextmanager
+import os
 import sys
 from unittest import mock
 
@@ -58,7 +59,9 @@ def test_uses_file_lock_when_redis_unavailable():
             pass
 
     mock_lock.assert_called_once()
-    assert "crewai:" in mock_lock.call_args.args[0]
+    lock_path = mock_lock.call_args.args[0]
+    assert "crewai-" in lock_path
+    assert ":" not in os.path.basename(lock_path)
 
 
 def test_uses_redis_lock_when_redis_available(monkeypatch):

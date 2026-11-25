@@ -94,7 +94,10 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
             yield
         return
 
-    channel = f"crewai:{md5(name.encode(), usedforsecurity=False).hexdigest()}"
+    digest = md5(name.encode(), usedforsecurity=False).hexdigest()
+    # Colons are valid in a Redis channel but not in a Windows filename, so the
+    # file backend uses a separate, filesystem-safe name.
+    channel = f"crewai:{digest}"
 
     if _redis_available():
         with portalocker.RedisLock(
@@ -105,7 +108,7 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
             yield
     else:
         lock_dir = tempfile.gettempdir()
-        lock_path = os.path.join(lock_dir, f"{channel}.lock")
+        lock_path = os.path.join(lock_dir, f"crewai-{digest}.lock")
         try:
             pl = portalocker.Lock(lock_path, timeout=timeout)
             pl.acquire()
