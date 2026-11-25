@@ -395,7 +395,9 @@ _AWAITING_TOKEN = re.compile(r"[0-9a-f]{32}")
 def _awaiting_dir() -> Path:
     """This user's crewAI data directory, found from the account's home in the
     account database, never from `HOME` or `XDG_DATA_HOME`: a project's `.env`
-    can set those, and a token file it planted there must not count."""
+    can set those, and a token file it planted there must not count. Raises
+    `OSError` when the account database has no entry for this uid, rather than
+    falling back to `$HOME`."""
     if os.name == "nt":
         import appdirs
 
@@ -404,8 +406,10 @@ def _awaiting_dir() -> Path:
         import pwd
 
         home = Path(pwd.getpwuid(os.getuid()).pw_dir)
-    except (ImportError, KeyError, OSError):
-        home = Path.home()
+    except (ImportError, KeyError, OSError) as exc:
+        raise OSError(
+            "cannot determine this account's home from the account database"
+        ) from exc
     base = (
         home / "Library" / "Application Support"
         if sys.platform == "darwin"

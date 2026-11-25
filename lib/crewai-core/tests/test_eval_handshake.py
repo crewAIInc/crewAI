@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import sys
+import types
 
 from crewai_core import eval_handshake
 import pytest
@@ -126,3 +128,58 @@ def test_an_older_commands_empty_file_is_a_request_that_trusts_no_amp() -> None:
         assert eval_handshake.evaluation_trusts_amp("https://app.crewai.com") is False
     finally:
         del os.environ[eval_handshake.AWAITING_ENV]
+
+
+def _unknown_account(monkeypatch: pytest.MonkeyPatch, uid: int = 4242) -> None:
+    """Simulate a POSIX account the account database has no entry for."""
+    fake_pwd = types.ModuleType("pwd")
+
+    def _missing(uid: int) -> None:
+        raise KeyError(uid)
+
+    fake_pwd.getpwuid = _missing  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "pwd", fake_pwd)
+    monkeypatch.setattr(eval_handshake.os, "name", "posix")
+    monkeypatch.setattr(eval_handshake.os, "getuid", lambda: uid, raising=False)
+
+
+def test_an_account_without_a_passwd_entry_has_no_trusted_home(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Falling back to `Path.home()` would let `$HOME` (a `.env`) pick the folder."""
+    monkeypatch.undo()  # the real folder, not the per-test one
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "planted"))
+    _unknown_account(monkeypatch)
+
+    with pytest.raises(OSError):
+        eval_handshake.awaiting_dir()
+
+
+def test_a_token_planted_under_home_is_not_read_for_an_unknown_account(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.undo()  # the real folder, not the per-test one
+    planted = tmp_path / "planted-home"
+    token = "a" * 32
+    marker = planted / ".local" / "share" / "crewai" / "eval-awaiting" / token
+    marker.parent.mkdir(parents=True)
+    marker.write_text('{"trusted_amp_origins": ["https://evil.example"]}', encoding="utf-8")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: planted))
+    monkeypatch.setenv(eval_handshake.AWAITING_ENV, token)
+    _unknown_account(monkeypatch)
+
+    assert eval_handshake.awaited_evaluation() is None
+    assert eval_handshake.run_awaited_by_evaluation() is False
+
+
+def test_an_unknown_account_marks_no_run_awaited(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.undo()  # the real folder, not the per-test one
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "planted"))
+    _unknown_account(monkeypatch)
+
+    with eval_handshake.awaiting_evaluation() as told:
+        assert told is False
+
+    assert eval_handshake.AWAITING_ENV not in os.environ
