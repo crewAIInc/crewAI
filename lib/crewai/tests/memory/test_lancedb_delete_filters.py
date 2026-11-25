@@ -20,13 +20,19 @@ CUTOFF = NOW - timedelta(days=30)
 
 
 def _record(
-    record_id: str, scope: str, created_at: datetime = NOW
+    record_id: str,
+    scope: str,
+    created_at: datetime = NOW,
+    categories: list[str] | None = None,
+    metadata: dict[str, str] | None = None,
 ) -> MemoryRecord:
     return MemoryRecord(
         id=record_id,
         content=f"content of {record_id}",
         scope=scope,
         created_at=created_at,
+        categories=categories or [],
+        metadata=metadata or {},
         embedding=[0.1] * DIM,
     )
 
@@ -113,3 +119,59 @@ def test_delete_without_filters_removes_everything(tmp_path: Path) -> None:
     )
 
     assert storage.delete() == 2
+
+
+def test_record_ids_with_categories_only_delete_listed_ids(tmp_path: Path) -> None:
+    storage = _new_storage(
+        tmp_path,
+        [
+            _record("rec1", "/tenant1", categories=["catA"]),
+            _record("rec2", "/tenant2", categories=["catA"]),
+            _record("rec3", "/tenant1", categories=["catA"]),
+            _record("rec4", "/tenant1", categories=["catB"]),
+        ],
+    )
+
+    deleted = storage.delete(
+        scope_prefix="/tenant1", record_ids=["rec1", "rec4"], categories=["catA"]
+    )
+
+    assert deleted == 1
+    assert not _exists(storage, "rec1")
+    assert _exists(storage, "rec2")
+    assert _exists(storage, "rec3")
+    assert _exists(storage, "rec4")
+
+
+def test_record_ids_with_metadata_filter_only_delete_listed_ids(
+    tmp_path: Path,
+) -> None:
+    storage = _new_storage(
+        tmp_path,
+        [
+            _record("a", "/t", metadata={"env": "prod"}),
+            _record("b", "/t", metadata={"env": "prod"}),
+            _record("c", "/t", metadata={"env": "dev"}),
+        ],
+    )
+
+    assert storage.delete(record_ids=["a", "c"], metadata_filter={"env": "prod"}) == 1
+    assert not _exists(storage, "a")
+    assert _exists(storage, "b")
+    assert _exists(storage, "c")
+
+
+def test_categories_without_record_ids_still_delete_all_matches(
+    tmp_path: Path,
+) -> None:
+    storage = _new_storage(
+        tmp_path,
+        [
+            _record("a", "/t", categories=["catA"]),
+            _record("b", "/t", categories=["catA"]),
+            _record("c", "/t", categories=["catB"]),
+        ],
+    )
+
+    assert storage.delete(categories=["catA"]) == 2
+    assert _exists(storage, "c")

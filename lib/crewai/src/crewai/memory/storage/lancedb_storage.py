@@ -468,10 +468,13 @@ class LanceDBStorage:
             return 0
         with store_lock(self._lock_name):
             if categories or metadata_filter:
+                allowed_ids = set(record_ids) if record_ids else None
                 rows = self._scan_rows(scope_prefix)
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
+                    if allowed_ids is not None and record.id not in allowed_ids:
+                        continue
                     if categories and not any(
                         c in record.categories for c in categories
                     ):
