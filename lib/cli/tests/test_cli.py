@@ -45,7 +45,7 @@ def runner():
 def test_train_default_iterations(train_crew, runner):
     result = runner.invoke(train)
 
-    train_crew.assert_called_once_with(5, "trained_agents_data.pkl")
+    train_crew.assert_called_once_with(5, "trained_agents_data.json")
     assert result.exit_code == 0
     assert "Training the Crew for 5 iterations" in result.output
 
@@ -54,7 +54,7 @@ def test_train_default_iterations(train_crew, runner):
 def test_train_custom_iterations(train_crew, runner):
     result = runner.invoke(train, ["--n-iterations", "10"])
 
-    train_crew.assert_called_once_with(10, "trained_agents_data.pkl")
+    train_crew.assert_called_once_with(10, "trained_agents_data.json")
     assert result.exit_code == 0
     assert "Training the Crew for 10 iterations" in result.output
 
@@ -63,7 +63,7 @@ def test_train_custom_iterations(train_crew, runner):
 def test_train_custom_iterations_snake_case_alias(train_crew, runner):
     result = runner.invoke(train, ["--n_iterations", "10"])
 
-    train_crew.assert_called_once_with(10, "trained_agents_data.pkl")
+    train_crew.assert_called_once_with(10, "trained_agents_data.json")
     assert result.exit_code == 0
     assert "Training the Crew for 10 iterations" in result.output
     assert (
@@ -286,7 +286,7 @@ def test_run_inputs_without_definition_calls_run_crew(run_crew, runner):
 
 @mock.patch("crewai_cli.cli.run_crew")
 def test_run_rejects_filename_with_definition(run_crew, runner):
-    result = runner.invoke(run, ["--definition", "flow.yaml", "--filename", "x.pkl"])
+    result = runner.invoke(run, ["--definition", "flow.yaml", "--filename", "x.json"])
 
     assert result.exit_code == 2
     assert "Error: --filename can only be used when running crews" in result.output
@@ -295,11 +295,11 @@ def test_run_rejects_filename_with_definition(run_crew, runner):
 
 @mock.patch("crewai_cli.cli.run_crew")
 def test_run_passes_filename_to_project_runner(run_crew, runner):
-    result = runner.invoke(run, ["--filename", "trained.pkl"])
+    result = runner.invoke(run, ["--filename", "trained.json"])
 
     assert result.exit_code == 0
     run_crew.assert_called_once_with(
-        trained_agents_file="trained.pkl",
+        trained_agents_file="trained.json",
         definition=None,
         inputs=None,
     )
@@ -1069,3 +1069,18 @@ def test_crewai_drops_a_paste_marker_it_inherited(monkeypatch):
     CliRunner().invoke(crewai, ["version"])
 
     assert "CREWAI_PASTED_API_KEYS" not in os.environ
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["replay", "-t", "abc", "-f", "old.pkl"],
+        ["run", "-f", "old.pkl"],
+        ["test", "-f", "old.pkl"],
+    ],
+)
+def test_trained_agents_file_rejects_pickle(runner, args):
+    result = runner.invoke(crewai, args)
+
+    assert result.exit_code != 0
+    assert "pickle format" in result.output

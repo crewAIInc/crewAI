@@ -1,10 +1,10 @@
 import os
 from typing import Any
 
-from crewai.utilities.file_handler import PickleHandler
+from crewai.utilities.file_handler import JSONHandler
 
 
-class CrewTrainingHandler(PickleHandler):
+class CrewTrainingHandler(JSONHandler):
     def save_trained_data(self, agent_id: str, trained_data: dict[str, Any]) -> None:
         """Save the trained data for a specific agent.
 

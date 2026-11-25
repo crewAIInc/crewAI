@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import json
 import os
 import threading
 from unittest import mock
@@ -1139,7 +1140,7 @@ def test_agent_training_handler(crew_training_handler):
     assert result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n good"
 
     crew_training_handler.assert_has_calls(
-        [mock.call("training_data.pkl"), mock.call().load()]
+        [mock.call("training_data.json"), mock.call().load()]
     )
 
 
@@ -1168,13 +1169,11 @@ def test_agent_use_trained_data(crew_training_handler):
         " - The result of the math operation must be right.\n - Result must be better than 1."
     )
     crew_training_handler.assert_has_calls(
-        [mock.call("trained_agents_data.pkl"), mock.call().load()]
+        [mock.call("trained_agents_data.json"), mock.call().load()]
     )
-
-
 @patch("crewai.agent.core.CrewTrainingHandler")
 def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatch):
-    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "my_custom_trained.pkl")
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "my_custom_trained.json")
     agent = Agent(
         role="researcher",
         goal="test goal",
@@ -1185,7 +1184,7 @@ def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatc
     agent._use_trained_data(task_prompt="What is 1 + 1?")
 
     crew_training_handler.assert_has_calls(
-        [mock.call("my_custom_trained.pkl"), mock.call().load()]
+        [mock.call("my_custom_trained.json"), mock.call().load()]
     )
 
 
@@ -1193,7 +1192,7 @@ def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatc
 def test_agent_use_trained_data_prefers_crew_trained_agents_file(
     crew_training_handler, monkeypatch
 ):
-    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "env_trained.pkl")
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "env_trained.json")
     agent = Agent(
         role="researcher",
         goal="test goal",
@@ -1204,14 +1203,14 @@ def test_agent_use_trained_data_prefers_crew_trained_agents_file(
         expected_output="A short report",
         agent=agent,
     )
-    crew = Crew(agents=[agent], tasks=[task], trained_agents_file="crew_trained.pkl")
+    crew = Crew(agents=[agent], tasks=[task], trained_agents_file="crew_trained.json")
     agent.crew = crew
     crew_training_handler.return_value.load.return_value = {}
 
     agent._use_trained_data(task_prompt="What is 1 + 1?")
 
     crew_training_handler.assert_has_calls(
-        [mock.call("crew_trained.pkl"), mock.call().load()]
+        [mock.call("crew_trained.json"), mock.call().load()]
     )
 
 
@@ -1229,7 +1228,7 @@ def test_agent_use_trained_data_accepts_crew_trained_agents_file_path(
         expected_output="A short report",
         agent=agent,
     )
-    trained_agents_file = tmp_path / "crew_trained.pkl"
+    trained_agents_file = tmp_path / "crew_trained.json"
     crew = Crew(
         agents=[agent],
         tasks=[task],
@@ -1247,7 +1246,7 @@ def test_agent_use_trained_data_accepts_crew_trained_agents_file_path(
 
 def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypatch):
     monkeypatch.setenv(
-        "CREWAI_TRAINED_AGENTS_FILE", str(tmp_path / "does_not_exist.pkl")
+        "CREWAI_TRAINED_AGENTS_FILE", str(tmp_path / "does_not_exist.json")
     )
     agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
 
@@ -1258,6 +1257,45 @@ def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypat
         result = agent._use_trained_data(task_prompt="What is 1 + 1?")
 
     assert result == "What is 1 + 1?"
+
+
+@pytest.mark.parametrize("bad_entry", [{"suggestions": "do x"}, {"quality": 1}, ["x"]])
+def test_agent_use_trained_data_rejects_malformed_suggestions(
+    tmp_path, monkeypatch, bad_entry
+):
+    trained_file = tmp_path / "trained.json"
+    trained_file.write_text(json.dumps({"researcher": bad_entry}), encoding="utf-8")
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", str(trained_file))
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with pytest.raises(ValueError, match="list of string suggestions"):
+        agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+
+def test_agent_use_trained_data_warns_about_legacy_pickle_file(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_TRAINED_AGENTS_FILE", raising=False)
+    (tmp_path / "trained_agents_data.pkl").write_bytes(b"not loaded")
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with pytest.warns(UserWarning, match="pickle format.*Re-run `crewai train"):
+        result = agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    assert result == "What is 1 + 1?"
+
+
+def test_agent_use_trained_data_no_warning_without_legacy_pickle_file(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_TRAINED_AGENTS_FILE", raising=False)
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        agent._use_trained_data(task_prompt="What is 1 + 1?")
 
 
 def test_agent_max_retry_limit():

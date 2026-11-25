@@ -25,7 +25,7 @@ Para utilizar o recurso de treinamento, siga estes passos:
 crewai train -n <n_iterations> <filename> (optional)
 ```
 <Tip>
-  Substitua `<n_iterations>` pelo número desejado de iterações de treinamento e `<filename>` pelo nome de arquivo apropriado terminando com `.pkl`.
+  Substitua `<n_iterations>` pelo número desejado de iterações de treinamento e `<filename>` pelo nome de arquivo apropriado terminando com `.json`.
 </Tip>
 
 ### Treinando sua Crew Programaticamente
@@ -39,7 +39,7 @@ Para treinar sua crew de forma programática, siga estes passos:
 ```python Code
 n_iteracoes = 2
 entradas = {"topic": "Treinamento CrewAI"}
-nome_arquivo = "seu_modelo.pkl"
+nome_arquivo = "seu_modelo.json"
 
 try:
     SuaCrew().crew().train(
@@ -51,10 +51,18 @@ except Exception as e:
     raise Exception(f"Ocorreu um erro ao treinar a crew: {e}")
 ```
 
+<Warning>
+  **Migrando do pickle:** Os dados de treinamento agora são armazenados como JSON (`training_data.json` e `trained_agents_data.json`). Versões anteriores usavam arquivos pickle (`.pkl`). O CrewAI não carrega mais arquivos pickle, pois desserializar um arquivo pickle pode executar código arbitrário; um arquivo `.pkl` não confiável poderia executar código na sua máquina assim que uma crew fosse iniciada.
+
+  - Arquivos `.pkl` existentes são ignorados. Se `trained_agents_data.pkl` existir e `trained_agents_data.json` não existir, os agentes são executados sem as sugestões treinadas e um aviso é registrado.
+  - Passar um arquivo `.pkl` para `crewai train -f`, `--trained-agents-file`, `CREWAI_TRAINED_AGENTS_FILE` ou `Crew(trained_agents_file=...)` gera um erro.
+  - Para migrar, execute novamente `crewai train -n <n_iterations> -f trained_agents_data.json`. Não carregue arquivos pickle de fontes não confiáveis.
+</Warning>
+
 ### Pontos Importantes
 
 - **Requisito de Número Inteiro Positivo:** Certifique-se de que o número de iterações (`n_iterations`) seja um inteiro positivo. O código lançará um `ValueError` se essa condição não for atendida.
-- **Requisito de Nome de Arquivo:** Certifique-se de que o nome do arquivo termine com `.pkl`. O código lançará um `ValueError` se essa condição não for atendida.
+- **Requisito de Nome de Arquivo:** Certifique-se de que o nome do arquivo termine com `.json`. O código lançará um `ValueError` se essa condição não for atendida.
 - **Tratamento de Erros:** O código trata erros de subprocessos e exceções inesperadas, fornecendo mensagens de erro ao usuário.
 
 É importante observar que o processo de treinamento pode levar algum tempo, dependendo da complexidade dos seus agentes e também exigirá seu feedback em cada iteração.

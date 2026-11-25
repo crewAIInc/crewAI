@@ -104,10 +104,10 @@ def test_evaluate_crew_sets_trained_agents_env_var(mock_subprocess_run):
     mock_subprocess_run.return_value = subprocess.CompletedProcess(
         args=["uv", "run", "test", "1", "gpt-4o"], returncode=0
     )
-    evaluate_crew.evaluate_crew(1, "gpt-4o", trained_agents_file="my_custom.pkl")
+    evaluate_crew.evaluate_crew(1, "gpt-4o", trained_agents_file="my_custom.json")
 
     _, kwargs = mock_subprocess_run.call_args
-    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom.pkl"
+    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom.json"
 
 
 @mock.patch("crewai_cli.evaluate_crew.subprocess.run")

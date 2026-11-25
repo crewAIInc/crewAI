@@ -14,7 +14,7 @@ def evaluate_crew(
     Args:
         n_iterations: The number of iterations to test the crew.
         model: The model to test the crew with.
-        trained_agents_file: Optional trained-agents pickle path forwarded to
+        trained_agents_file: Optional trained-agents JSON path forwarded to
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
     command = ["uv", "run", "test", str(n_iterations), model]
