@@ -196,7 +196,9 @@ responder, como CI, um servidor ou qualquer processo sem terminal interativo,
 não armazena o rastreamento no buffer, não envia nada e não salva nada, então
 sua primeira execução em um terminal ainda pergunta. Um "não" salvo por uma
 versão anterior do CrewAI sem perguntar não pode ser distinguido de um real,
-então um terminal pergunta mais uma vez.
+então um terminal pergunta mais uma vez. Isso inclui um "não" salvo por
+`crewai traces disable` em uma versão anterior: execute-o novamente, ou defina
+`CREWAI_TRACING_ENABLED=false`, para não ser perguntado.
 
 Você pode alterar o rastreamento depois com `crewai traces enable` ou
 `crewai traces disable`, ou definindo `tracing` no Crew ou Flow.

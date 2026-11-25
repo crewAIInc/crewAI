@@ -229,6 +229,11 @@ def _append_highlighted(t: Text, content: str, indent: str, max_lines: int = 50)
     return total
 
 
+# How long the end-of-run question waits; no answer by then is "Not now", as at
+# the terminal prompt, and is saved like one.
+_TRACE_CONSENT_TIMEOUT_SECONDS = 20
+
+
 class TraceConsentScreen(ModalScreen[bool]):
     CSS = """
     TraceConsentScreen {
@@ -309,7 +314,11 @@ class TraceConsentScreen(ModalScreen[bool]):
         t = Text()
         t.append(f"{TRACE_PROMPT_HEADLINE}\n\n", style=f"bold {_C_TEXT}")
         t.append(f"{TRACE_PROMPT_BODY}\n\n", style=_C_DIM)
-        t.append(TRACE_LINK_NOTICE, style=_C_MUTED)
+        t.append(f"{TRACE_LINK_NOTICE}\n", style=_C_MUTED)
+        t.append(
+            f"No answer in {_TRACE_CONSENT_TIMEOUT_SECONDS} seconds is Not now.",
+            style=_C_MUTED,
+        )
         return t
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -1369,7 +1378,7 @@ FooterKey .footer-key--key {
 
         try:
             self.call_from_thread(show)
-            answered = done.wait(timeout=20)
+            answered = done.wait(timeout=_TRACE_CONSENT_TIMEOUT_SECONDS)
             if self._discard_trace_on_exit:
                 return None
             return answered and bool(decision) and decision[0]

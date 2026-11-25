@@ -195,7 +195,9 @@ View trace? [y/N] (20s timeout):
 물어볼 사람이 없는 실행은 추적을 버퍼에 저장하지 않고, 아무것도 업로드하지
 않으며, 아무것도 저장하지 않으므로 터미널에서의 첫 실행에서는 여전히 질문합니다.
 이전 CrewAI 버전이 묻지 않고 저장한 "아니요"는 실제 답변과 구별할 수 없으므로
-터미널에서 한 번 더 질문합니다.
+터미널에서 한 번 더 질문합니다. 이전 버전에서 `crewai traces disable`로 저장한
+"아니요"도 마찬가지입니다: 질문을 받지 않으려면 이 명령을 다시 실행하거나
+`CREWAI_TRACING_ENABLED=false`를 설정하세요.
 
 나중에 `crewai traces enable` 또는 `crewai traces disable`을 사용하거나 Crew
 또는 Flow에서 `tracing`을 설정하여 추적 설정을 변경할 수 있습니다.

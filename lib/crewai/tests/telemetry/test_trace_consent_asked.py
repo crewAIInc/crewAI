@@ -6,7 +6,9 @@ first run at a terminal still asks. An answer given at a terminal is final.
 """
 
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from pathlib import Path
+import threading
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -237,6 +239,29 @@ def test_an_answer_at_the_terminal_is_recorded_as_asked(
 
 
 @pytest.mark.usefixtures("person_at_terminal")
+def test_a_question_left_to_time_out_is_not_now(monkeypatch, grants) -> None:
+    """The question was shown and nobody typed: uploads nothing and, as the
+    "(20s timeout)" prompt and the docs say, is saved as Not now."""
+    typing = threading.Event()
+    monkeypatch.setattr("builtins.input", lambda: "y" if typing.wait(10) else "")
+    monkeypatch.setattr(
+        ephemeral,
+        "prompt_user_for_trace_viewing",
+        partial(utils.prompt_user_for_trace_viewing, 1),
+    )
+
+    try:
+        _first_run_traced()
+    finally:
+        typing.set()
+
+    assert grants == []
+    assert user_data._load_user_data() == ASKED_NO
+    assert user_data.has_user_declined_tracing() is True
+    assert utils.is_first_execution() is False
+
+
+@pytest.mark.usefixtures("person_at_terminal")
 def test_a_no_at_the_terminal_is_final(monkeypatch, grants, terminal_answer) -> None:
     _record(ASKED_NO)
 
@@ -327,6 +352,33 @@ def test_mark_first_execution_done_keeps_an_earlier_answer() -> None:
     _record(ASKED_YES)
     utils.mark_first_execution_done(user_consented=False)
     assert user_data._load_user_data() == ASKED_YES
+
+
+@pytest.mark.parametrize("enable", [False, True])
+@pytest.mark.usefixtures("person_at_terminal")
+def test_the_public_first_run_confirmation_saves_the_answer_given(
+    monkeypatch, enable
+) -> None:
+    monkeypatch.setattr(utils.click, "confirm", Mock(return_value=enable))
+
+    assert utils.on_first_execution_tracing_confirmation() is enable
+
+    data = user_data._load_user_data()
+    assert (data["trace_consent"], data["trace_consent_asked"]) == (enable, True)
+    assert user_data.has_user_declined_tracing() is (not enable)
+    assert utils.on_first_execution_tracing_confirmation() is False
+
+
+def test_the_public_first_run_confirmation_needs_someone_to_ask(monkeypatch) -> None:
+    monkeypatch.setattr(
+        utils.click,
+        "confirm",
+        Mock(side_effect=AssertionError("asked with nobody there")),
+    )
+
+    assert utils.on_first_execution_tracing_confirmation() is False
+    assert user_data._load_user_data() == {}
+    assert utils.is_first_execution() is True
 
 
 # -- the question itself ----------------------------------------------------------

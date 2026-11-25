@@ -195,7 +195,9 @@ Only an answer from a person is saved. A run with nobody to ask, such as CI, a
 server, or any process without an interactive terminal, does not buffer the
 trace, uploads nothing, and saves nothing, so your first run in a terminal still
 asks. A "no" saved by an earlier CrewAI version without asking cannot be told
-apart from a real one, so a terminal asks once more.
+apart from a real one, so a terminal asks once more. This includes a no saved
+by `crewai traces disable` on an earlier version: run it again, or set
+`CREWAI_TRACING_ENABLED=false`, so you are not asked.
 
 You can change tracing later with `crewai traces enable` or
 `crewai traces disable`, or by setting `tracing` on the Crew or Flow.

@@ -2881,7 +2881,8 @@ async def test_evaluate_consent_screen_shares_on_enter_and_says_why(key, shared)
 @pytest.mark.parametrize(("key", "shared"), [("y", True), ("n", False), ("escape", False)])
 async def test_the_end_of_run_sharing_screen_offers_a_link(key, shared) -> None:
     """Sharing a finished run's trace asks on its own screen what the upload
-    gives and who can open it; y views the trace, n or Esc is Not now."""
+    gives, who can open it, and that waiting is Not now; y views the trace, n
+    or Esc is Not now."""
     screen = crew_run_tui.TraceConsentScreen()
     app = _ScreenHost(screen)
     async with app.run_test() as pilot:
@@ -2898,7 +2899,8 @@ async def test_the_end_of_run_sharing_screen_offers_a_link(key, shared) -> None:
         "See this run step by step? "
         "Upload it to CrewAI AMP for a link showing every agent decision, "
         "tool call and LLM call. "
-        "Anyone with the link can open it for 24 hours."
+        "Anyone with the link can open it for 24 hours. "
+        "No answer in 20 seconds is Not now."
     )
 
 

@@ -214,16 +214,17 @@ def is_tracing_enabled_in_context() -> bool:
 
 
 def on_first_execution_tracing_confirmation() -> bool:
-    if _is_test_environment():
+    if not _prompt_can_be_shown():
         return False
 
     if is_first_execution():
-        mark_first_execution_done()
-        return click.confirm(
+        enable = click.confirm(
             "This is the first execution of CrewAI. Do you want to enable tracing?",
             default=True,
             show_default=True,
         )
+        mark_first_execution_done(user_consented=enable)
+        return enable
     return False
 
 
@@ -425,19 +426,21 @@ def get_user_id() -> str:
         return uid
 
 
-def _trace_question_answered(data: dict[str, Any]) -> bool:
-    """A person answered on this machine: a yes from anywhere, or any answer
-    recorded with ``trace_consent_asked`` (see ``has_user_declined_tracing``)."""
+def _trace_question_asked(data: dict[str, Any]) -> bool:
+    """The question was put to a person on this machine: a yes from anywhere, or
+    any answer recorded with ``trace_consent_asked`` (see
+    ``has_user_declined_tracing``)."""
     return data.get("trace_consent") is True or data.get("trace_consent_asked") is True
 
 
 def is_first_execution() -> bool:
-    """True until a person on this machine has answered whether to share traces.
+    """True until the trace question was put to a person on this machine.
 
     A run where nobody could be asked records nothing, so it does not end the
-    first execution: the first run at a terminal still asks.
+    first execution: the first run at a terminal still asks. A question shown
+    and left to time out is "Not now", and is recorded like one.
     """
-    return not _trace_question_answered(_load_user_data())
+    return not _trace_question_asked(_load_user_data())
 
 
 def mark_first_execution_done(user_consented: bool = False) -> None:
@@ -450,7 +453,7 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
     """
     with store_lock(_user_data_lock_name()):
         data = _load_user_data()
-        if _trace_question_answered(data):
+        if _trace_question_asked(data):
             return
 
         uid = data.get("user_id") or _generate_user_id()
