@@ -1045,6 +1045,38 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Straitly">
+    يتصل CrewAI بـ Straitly عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    STRAITLY_API_KEY=<your-api-key>
+
+    # Optional, override the default gateway endpoint
+    STRAITLY_BASE_URL=https://api.straitly.ai/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="straitly/claude-sonnet-5-5",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Straitly:
+      - مفتاح API واحد متوافق مع OpenAI لأكثر من 150 نموذجًا، بما في ذلك Claude وGPT وGemini وGrok وDeepSeek
+      - استدعاء الأدوات والبث والمخرجات المنظمة
+      - تحويل تلقائي إلى مزوّد آخر يخدم النموذج نفسه عند تعطل أحد المزوّدين
+    </Info>
+
+    مرّر أي معرّف نموذج من [كتالوج نماذج Straitly](https://straitly.ai/models) بعد البادئة `straitly/`
+    (مثل `straitly/claude-sonnet-5-5` أو `straitly/deepseek/deepseek-v4-1-flash-1017`). راجع
+    [دليل البدء السريع لـ Straitly](https://straitly.ai/docs/quickstart) لإعداد المفتاح ونقاط النهاية.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

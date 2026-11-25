@@ -105,6 +105,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_straitly_config(self):
+        """Test Straitly provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["straitly"]
+        assert config.base_url == "https://api.straitly.ai/v1"
+        assert config.api_key_env == "STRAITLY_API_KEY"
+        assert config.base_url_env == "STRAITLY_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -178,6 +186,15 @@ class TestOpenAICompatibleCompletion:
                 model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
             )
             with pytest.raises(MissingAPIKeyError, match="DEEPINFRA_API_KEY"):
+                llm.call("Say hi")
+
+    def test_straitly_missing_api_key_names_env_var(self):
+        """Straitly requires a key; the error tells the user which env var to set."""
+        with patch.dict(os.environ, {}, clear=True):
+            llm = OpenAICompatibleCompletion(
+                model="claude-sonnet-5-5", provider="straitly"
+            )
+            with pytest.raises(MissingAPIKeyError, match="STRAITLY_API_KEY"):
                 llm.call("Say hi")
 
     def test_api_key_from_env(self):
@@ -410,6 +427,46 @@ class TestLLMIntegration:
     def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
         """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
+
+    def test_llm_creates_openai_compatible_for_straitly(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Straitly."""
+        with patch.dict(os.environ, {"STRAITLY_API_KEY": "test-key"}):
+            llm = LLM(model="straitly/claude-sonnet-5-5")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "straitly"
+            assert llm.model == "claude-sonnet-5-5"
+            assert llm.base_url == "https://api.straitly.ai/v1"
+
+    def test_llm_creates_openai_compatible_for_straitly_org_model(self):
+        """Straitly preserves org/model ids after the straitly/ prefix."""
+        with patch.dict(os.environ, {"STRAITLY_API_KEY": "test-key"}):
+            llm = LLM(model="straitly/deepseek/deepseek-v4-1-flash-1017")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "straitly"
+            assert llm.model == "deepseek/deepseek-v4-1-flash-1017"
+            assert llm.base_url == "https://api.straitly.ai/v1"
+
+    def test_straitly_base_url_env_override(self):
+        """STRAITLY_BASE_URL redirects Straitly to a custom endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "STRAITLY_API_KEY": "test-key",
+                "STRAITLY_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="straitly/claude-sonnet-5-5")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_straitly_explicit_provider(self):
+        """Explicit provider="straitly" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"STRAITLY_API_KEY": "test-key"}):
+            llm = LLM(model="claude-sonnet-5-5", provider="straitly")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "straitly"
+            assert llm.model == "claude-sonnet-5-5"
+            assert llm.base_url == "https://api.straitly.ai/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

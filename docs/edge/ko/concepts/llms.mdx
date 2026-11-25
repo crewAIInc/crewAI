@@ -788,6 +788,38 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Straitly">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Straitly에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    STRAITLY_API_KEY=<your-api-key>
+
+    # Optional, override the default gateway endpoint
+    STRAITLY_BASE_URL=https://api.straitly.ai/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="straitly/claude-sonnet-5-5",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Straitly 특징:
+      - 하나의 OpenAI 호환 API 키로 Claude, GPT, Gemini, Grok, DeepSeek 등 150개 이상의 모델 지원
+      - 도구 호출, 스트리밍, 구조화 출력 지원
+      - 공급자 장애 시 동일한 모델을 제공하는 다른 공급자로 자동 장애 조치
+    </Info>
+
+    `straitly/` 접두사 뒤에 [Straitly 모델 카탈로그](https://straitly.ai/models)의 모델 ID를 전달하세요
+    (예: `straitly/claude-sonnet-5-5` 또는 `straitly/deepseek/deepseek-v4-1-flash-1017`). 키 설정 및 엔드포인트는
+    [Straitly 빠른 시작 가이드](https://straitly.ai/docs/quickstart)를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

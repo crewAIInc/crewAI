@@ -1188,6 +1188,38 @@ In this section, you'll find detailed examples that help you select, configure, 
     [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
     which is public and needs no authentication, for current ids, context lengths and pricing.
   </Accordion>
+
+  <Accordion title="Straitly">
+    CrewAI talks to Straitly through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    STRAITLY_API_KEY=<your-api-key>
+
+    # Optional, override the default gateway endpoint
+    STRAITLY_BASE_URL=https://api.straitly.ai/v1
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="straitly/claude-sonnet-5-5",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Straitly features:
+      - One OpenAI-compatible API key for 150+ models, including Claude, GPT, Gemini, Grok and DeepSeek
+      - Tool calling, streaming and structured outputs
+      - Automatic failover to another provider serving the same model if one goes down
+    </Info>
+
+    Pass any model ID from the [Straitly model catalog](https://straitly.ai/models) after the `straitly/` prefix
+    (for example `straitly/claude-sonnet-5-5` or `straitly/deepseek/deepseek-v4-1-flash-1017`). See the
+    [Straitly quickstart](https://straitly.ai/docs/quickstart) for key setup and endpoints.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
