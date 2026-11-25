@@ -309,3 +309,152 @@ def test_interrupted_write_acquire_does_not_clear_writer():
     finally:
         lock.r_release()
     assert lock._readers == 0
+
+
+def test_interrupted_last_writer_unblocks_waiting_reader():
+    """An interrupted writer must release readers blocked only by its priority."""
+    lock = RWLock()
+    writer_waiting = threading.Event()
+    reader_waiting = threading.Event()
+    interrupt_writer = threading.Event()
+    writer_interrupted = threading.Event()
+    reader_acquired = threading.Event()
+    wait = lock._cond.wait
+
+    def writer() -> None:
+        try:
+            with lock.w_locked():
+                raise AssertionError("writer entered while the first reader held the lock")
+        except KeyboardInterrupt:
+            writer_interrupted.set()
+
+    def reader() -> None:
+        with lock.r_locked():
+            reader_acquired.set()
+
+    writing = threading.Thread(target=writer, daemon=True)
+    reading = threading.Thread(target=reader, daemon=True)
+
+    def wait_with_interruption() -> bool:
+        if threading.current_thread() is writing:
+            writer_waiting.set()
+            # Like Condition.wait(), release the mutex while waiting and
+            # reacquire it before propagating an interruption.
+            lock._cond.release()
+            try:
+                assert interrupt_writer.wait(5)
+            finally:
+                lock._cond.acquire()
+            raise KeyboardInterrupt
+        reader_waiting.set()
+        return wait()
+
+    with patch.object(lock._cond, "wait", side_effect=wait_with_interruption):
+        try:
+            with lock.r_locked():
+                writing.start()
+                assert writer_waiting.wait(5)
+                reading.start()
+                assert reader_waiting.wait(5)
+                # Interrupt only the writer; do not wake the second reader.
+                interrupt_writer.set()
+                assert writer_interrupted.wait(5)
+                assert reader_acquired.wait(2), "reader stayed asleep after the writer withdrew"
+        finally:
+            interrupt_writer.set()
+            writing.join(5)
+            if reading.ident is not None:
+                reading.join(5)
+
+
+def test_waiting_writer_blocks_new_readers():
+    """A reader must not jump ahead of a writer that is already waiting."""
+    lock = RWLock()
+    reader_holding = threading.Event()
+    release_reader = threading.Event()
+
+    def first_reader() -> None:
+        with lock.r_locked():
+            reader_holding.set()
+            release_reader.wait(5)
+
+    first = threading.Thread(target=first_reader, daemon=True)
+    first.start()
+    assert reader_holding.wait(5)
+
+    writer_started = threading.Event()
+
+    def writer() -> None:
+        writer_started.set()
+        with lock.w_locked():
+            pass
+
+    writing = threading.Thread(target=writer, daemon=True)
+    writing.start()
+    assert writer_started.wait(5)
+    time.sleep(0.2)
+
+    second_reader_acquired = threading.Event()
+
+    def second_reader() -> None:
+        with lock.r_locked():
+            second_reader_acquired.set()
+
+    second = threading.Thread(target=second_reader, daemon=True)
+    second.start()
+    time.sleep(0.2)
+
+    try:
+        assert not second_reader_acquired.is_set(), (
+            "a reader that arrives while a writer waits must not acquire the lock"
+        )
+    finally:
+        release_reader.set()
+        first.join(5)
+        writing.join(5)
+        second.join(5)
+
+    assert second_reader_acquired.is_set()
+
+
+def test_nested_read_locks_work_while_a_writer_waits():
+    """Writer priority must not deadlock a thread that re-enters its read lock."""
+    lock = RWLock()
+    reader_holding = threading.Event()
+    writer_queued = threading.Event()
+    nested_done = threading.Event()
+    release_reader = threading.Event()
+
+    def first_reader() -> None:
+        with lock.r_locked():
+            reader_holding.set()
+            writer_queued.wait(5)
+            with lock.r_locked():
+                nested_done.set()
+            release_reader.wait(5)
+
+    first = threading.Thread(target=first_reader, daemon=True)
+    first.start()
+    assert reader_holding.wait(5)
+
+    writer_started = threading.Event()
+
+    def writer() -> None:
+        writer_started.set()
+        with lock.w_locked():
+            pass
+
+    writing = threading.Thread(target=writer, daemon=True)
+    writing.start()
+    assert writer_started.wait(5)
+    time.sleep(0.1)
+
+    writer_queued.set()
+    time.sleep(0.2)
+
+    try:
+        assert nested_done.is_set(), "nested read acquisition deadlocked"
+    finally:
+        release_reader.set()
+        first.join(5)
+        writing.join(5)
