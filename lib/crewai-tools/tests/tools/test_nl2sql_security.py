@@ -679,3 +679,46 @@ class TestSQLCommentInjection:
 
         with engine.connect() as conn:
             assert conn.execute(text("SELECT id FROM items")).fetchall() == []
+
+
+class TestSelectIntoBlocked:
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "SELECT * FROM t INTO OUTFILE '/tmp/x'",
+            "SELECT * FROM t INTO DUMPFILE '/tmp/x'",
+            "select * from t into outfile '/tmp/x'",
+            "SELECT * FROM t INTO\n\tOUTFILE '/tmp/x'",
+            "SELECT * INTO new_table FROM t",
+            "WITH c AS (SELECT 1) SELECT * FROM c INTO OUTFILE '/tmp/x'",
+            "EXPLAIN SELECT * FROM t INTO OUTFILE '/tmp/x'",
+            "SELECT 'foo\\'bar' INTO OUTFILE '/tmp/x'",
+            "SELECT col FROM t WHERE 'foo\\'bar' != '' INTO OUTFILE '/tmp/x'",
+            "SELECT \"it's\" INTO OUTFILE '/tmp/x'",
+            "SELECT \"it's\" INTO new_table",
+            "SELECT E'it\\'s' INTO new_table",
+            "SELECT `it's` INTO DUMPFILE '/tmp/x'",
+            "SELECT 'a' AS \"it's\" FROM t INTO new_table",
+            # Literals mentioning OUTFILE fail closed rather than risk a mis-parse.
+            "SELECT * FROM t WHERE note = 'into outfile'",
+        ],
+    )
+    def test_into_clause_blocked_in_read_only_mode(self, stmt: str):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="INTO"):
+            tool._validate_query(stmt)
+
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "SELECT 'go into town' AS s",
+            "SELECT id FROM t LIMIT 1 INTO @v",
+        ],
+    )
+    def test_benign_queries_allowed(self, stmt: str):
+        _make_tool(allow_dml=False)._validate_query(stmt)
+
+    def test_into_clause_allowed_when_dml_allowed(self):
+        _make_tool(allow_dml=True)._validate_query(
+            "SELECT * FROM t INTO OUTFILE '/tmp/x'"
+        )
