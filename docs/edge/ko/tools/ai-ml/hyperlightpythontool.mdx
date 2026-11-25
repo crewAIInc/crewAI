@@ -1,0 +1,100 @@
+---
+title: Hyperlight Python 도구
+description: "`HyperlightPythonTool`은 에이전트가 작성한 Python을 하드웨어로 격리된 로컬 Hyperlight 마이크로 VM에서 실행하며, 계정이나 API 키가 필요 없습니다."
+icon: microchip
+mode: "wide"
+---
+
+# `HyperlightPythonTool`
+
+## 설명
+
+`HyperlightPythonTool`을 사용하면 CrewAI 에이전트가 [`hluk`](https://github.com/hyperlight-dev/hyperlight-unikraft) CLI를 통해 [Unikraft](https://unikraft.org) 게스트 커널과 [Hyperlight](https://github.com/hyperlight-dev/hyperlight)를 사용하는 마이크로 VM에서, 사용자의 컴퓨터 위에서 Python을 실행할 수 있습니다.
+
+- 각 호출은 웜 스냅샷에서 복원된 새 마이크로 VM에서 수십 밀리초 안에 실행됩니다.
+- 코드는 하이퍼바이저에 의해 호스트와 격리됩니다: Linux에서는 KVM, Windows에서는 WHP, Apple silicon macOS에서는 Hypervisor.framework.
+- `net_allow`로 호스트를 허용하지 않는 한 게스트는 네트워크에 접근할 수 없습니다.
+- 호출 간에 아무것도 유지되지 않습니다: 호출이 끝나면 변수, import, 파일이 사라집니다. 단, `hluk_args`로 마운트한 호스트 디렉터리는 예외입니다.
+
+## 설치
+
+`crewai-tools`와 `hluk` 바이너리를 설치하세요:
+
+```shell
+uv add crewai-tools
+```
+
+```shell
+# Linux, macOS
+curl -fsSL https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.sh | sh
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/hyperlight-dev/hyperlight-unikraft/main/install.ps1 | iex
+```
+
+Linux에서는 사용자에게 `/dev/kvm` 접근 권한이 필요합니다. 첫 호출은 런타임 이미지를 받아 웜 스냅샷을 저장하므로 1분 정도 걸릴 수 있으며, 이후 호출은 밀리초 단위로 시작됩니다.
+
+## 예제
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import HyperlightPythonTool
+
+analyst = Agent(
+    role="Data analyst",
+    goal="Answer questions by running Python",
+    backstory="You check every number by computing it.",
+    tools=[HyperlightPythonTool()],
+)
+
+task = Task(
+    description="What is the standard deviation of the first 100 prime numbers?",
+    expected_output="The value, rounded to two decimals.",
+    agent=analyst,
+)
+
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+도구를 직접 호출할 수도 있습니다:
+
+```python Code
+tool = HyperlightPythonTool()
+result = tool.run(code="import numpy as np\nprint(np.arange(10).sum())")
+```
+
+## 인자
+
+- `code: str` — 필수. 실행할 Python 스크립트.
+
+## 반환값
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "45\n",
+  "stderr": "",
+  "timed_out": false
+}
+```
+
+코드가 `timeout`보다 오래 실행되면 `exit_code`는 `null`, `timed_out`은 `true`입니다.
+
+## 매개변수
+
+- `hluk_path: str | None` — `hluk` 바이너리 경로. 기본값은 `PATH`에 있는 `hluk`.
+- `runtime: str` — 런타임 이미지의 이름 또는 전체 이미지 참조. 기본값 `"agent"`: numpy, pandas, scipy, scikit-learn, matplotlib, pillow, requests가 포함된 CPython 3.12.
+- `net_allow: tuple[str, ...]` — 게스트가 연결할 수 있는 호스트 또는 IP. 기본값: 없음.
+- `envs: dict[str, str] | None` — 샌드박스 안에 설정할 환경 변수. 호스트의 다른 프로세스가 읽을 수 있는 `hluk` 명령줄로 전달되므로 비밀 값을 넣지 마세요.
+- `scratch_mb: int | None` — 게스트 메모리(MiB). 기본값은 런타임 이미지가 테스트된 크기.
+- `hluk_args: tuple[str, ...]` — `hluk run`에 전달할 추가 인자. 예: `["--mount", "/data:/data:ro"]`.
+- `timeout: float` — 한 호출의 코드가 실행될 수 있는 시간(초). 기본값 `60`.
+- `startup_timeout: float` — 첫 호출이 이미지를 받고 스냅샷을 저장하는 데 쓸 수 있는 시간(초). 기본값 `300`.
+- `max_output_bytes: int` — 호출마다 보존되는 stdout과 stderr의 바이트 수. 더 긴 출력은 앞부분과 끝부분을 보존합니다. 기본값 1 MiB.
+
+## 네트워크 접근 허용
+
+```python Code
+tool = HyperlightPythonTool(net_allow=["api.github.com"])
+```
+
+다른 호스트로의 연결은 거부됩니다.
