@@ -65,6 +65,7 @@ from crewai.llms.context_window import (
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
+from crewai.utilities.env import auto_dotenv_enabled
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -87,7 +88,11 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
-load_dotenv()
+# Import-time .env autoloading is opt-out via CREWAI_NO_AUTO_DOTENV (#9744):
+# hosts that manage env vars themselves must not have a project's .env
+# choose their transport settings.
+if auto_dotenv_enabled():
+    load_dotenv()
 logger = logging.getLogger(__name__)
 
 # litellm is lazy-loaded to avoid its module-level dotenv.load_dotenv()

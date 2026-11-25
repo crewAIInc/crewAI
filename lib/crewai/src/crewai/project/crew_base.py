@@ -21,6 +21,7 @@ import yaml
 
 from crewai.project.wrappers import CrewClass, CrewMetadata
 from crewai.tools import BaseTool
+from crewai.utilities.env import auto_dotenv_enabled
 
 
 if TYPE_CHECKING:
@@ -127,7 +128,10 @@ class TaskConfig(TypedDict, total=False):
     allow_crewai_trigger_context: bool
 
 
-load_dotenv()
+# See crewai.llm: import-time .env autoloading is opt-out via
+# CREWAI_NO_AUTO_DOTENV (#9744).
+if auto_dotenv_enabled():
+    load_dotenv()
 
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 

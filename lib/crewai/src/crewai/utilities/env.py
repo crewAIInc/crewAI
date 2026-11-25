@@ -40,3 +40,25 @@ def get_env_context() -> None:
             return
 
     crewai_event_bus.emit(None, DefaultEnvEvent())
+
+
+# Env var that opts out of the automatic `load_dotenv()` calls in
+# `crewai.llm` and `crewai.project.crew_base` (see #9744). Hosts that manage
+# env vars themselves set it to a truthy value before the first import.
+AUTO_DOTENV_OPT_OUT_ENV_VAR = "CREWAI_NO_AUTO_DOTENV"
+
+
+def auto_dotenv_enabled() -> bool:
+    """Whether import-time `.env` autoloading is enabled.
+
+    Returns False only when `CREWAI_NO_AUTO_DOTENV` is set to a truthy value
+    ("1", "true", "yes", "on", case-insensitive). Anything else, including
+    unset, keeps the historical default of loading the nearest `.env` on
+    import.
+    """
+    return os.getenv(AUTO_DOTENV_OPT_OUT_ENV_VAR, "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
