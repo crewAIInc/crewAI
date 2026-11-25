@@ -775,3 +775,64 @@ def test_load_state_still_returns_latest_after_history_lookup(tmp_path):
         "step": 1,
     }
     assert persistence.load_state("flow-1") == {"id": "flow-1", "step": 2}
+
+
+def test_assigning_persistence_after_init_does_not_mark_instance_supplied(tmp_path):
+    class_db = os.path.join(tmp_path, "class.db")
+    other_db = os.path.join(tmp_path, "other.db")
+    class_store = SQLiteFlowPersistence(class_db)
+    other_store = SQLiteFlowPersistence(other_db)
+
+    @persist(class_store)
+    class DecoratedFlow(Flow[StateStub]):
+        @start()
+        def step(self):
+            self.state.counter = 1
+
+    flow = DecoratedFlow()
+    assert flow._instance_persistence is False
+    flow.persistence = other_store
+    assert flow._instance_persistence is False
+
+
+def test_install_persistence_marks_backend_as_instance_supplied(tmp_path):
+    class_db = os.path.join(tmp_path, "class.db")
+    installed_db = os.path.join(tmp_path, "installed.db")
+    class_store = SQLiteFlowPersistence(class_db)
+    installed = SQLiteFlowPersistence(installed_db)
+
+    @persist(class_store)
+    class DecoratedFlow(Flow[StateStub]):
+        @start()
+        def step(self):
+            self.state.counter = 1
+
+    flow = DecoratedFlow()
+    assert flow._instance_persistence is False
+    flow.install_persistence(installed)
+    assert flow._instance_persistence is True
+    assert flow.persistence is installed
+
+
+def test_install_persistence_routes_persist_saves_to_installed_backend(tmp_path):
+    class_db = os.path.join(tmp_path, "class.db")
+    installed_db = os.path.join(tmp_path, "installed.db")
+    class_store = SQLiteFlowPersistence(class_db)
+    installed = SQLiteFlowPersistence(installed_db)
+
+    @persist(class_store)
+    class DecoratedFlow(Flow[StateStub]):
+        @start()
+        def step(self):
+            self.state.counter = 7
+            self.state.message = "via-installed"
+
+    flow = DecoratedFlow()
+    flow.install_persistence(installed)
+    flow.kickoff()
+
+    assert class_store.load_state(flow.state.id) is None
+    saved = installed.load_state(flow.state.id)
+    assert saved is not None
+    assert saved["counter"] == 7
+    assert saved["message"] == "via-installed"
