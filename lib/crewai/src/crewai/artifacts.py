@@ -41,7 +41,7 @@ _KIND_FORMATS: dict[str, tuple[str | None, str | None]] = {
 }
 
 # Kinds whose bytes come from a file, so text output can never fill them.
-FILE_KINDS = frozenset({"image", "pdf", "file"})
+FILE_KINDS = frozenset({"image", "file"})
 
 
 def guess_kind(content: str) -> ArtifactKind:
@@ -156,7 +156,8 @@ class Artifact(BaseModel):
         default=None,
         description=(
             "Save the file the agent writes here instead of its text output. "
-            "Needed for image, pdf and file."
+            "Needed for image and file. A pdf without it is rendered from the "
+            "HTML or markdown output."
         ),
     )
 
@@ -274,10 +275,15 @@ def get_artifact_store() -> ArtifactStore:
 
 
 def _check_readable(file_path: str) -> Path:
-    """Resolve ``file_path`` and refuse anything outside the working directory."""
+    """Resolve ``file_path`` and refuse anything outside the working directory or hidden files."""
     path = Path(file_path).expanduser().resolve()
-    if not path.is_relative_to(Path.cwd().resolve()):
+    workdir = Path.cwd().resolve()
+    if not path.is_relative_to(workdir):
         raise ValueError(f"file_path must be inside the working directory: {file_path}")
+    if any(part.startswith(".") for part in path.relative_to(workdir).parts):
+        raise ValueError(
+            f"file_path cannot be a hidden file or inside a hidden folder: {file_path}"
+        )
     if not path.is_file():
         raise ValueError(f"file_path is not a file: {file_path}")
     return path
@@ -299,6 +305,29 @@ def _image_format(data: bytes) -> tuple[str, str]:
         if data.startswith(signature):
             return extension, content_type
     raise ValueError("image bytes must be PNG, JPEG, GIF or WebP")
+
+
+def _render_pdf(text: str) -> bytes:
+    """Render HTML, or markdown, into PDF bytes. JavaScript never runs."""
+    try:
+        from markdown_it import MarkdownIt
+        from weasyprint import HTML, URLFetcher  # type: ignore[import-untyped]
+    # WeasyPrint raises OSError when Pango is missing from the system.
+    except (ImportError, OSError) as e:
+        raise RuntimeError(
+            "Saving a PDF from text needs crewai[pdf] and the Pango library: "
+            "uv add 'crewai[pdf]', then install Pango "
+            "(apt-get install libpango-1.0-0 libpangoft2-1.0-0)."
+        ) from e
+
+    html = text
+    if guess_kind(text) != "html":
+        html = MarkdownIt("commonmark", {"html": True}).enable("table").render(text)
+    # Only inline data: URLs. HTML an agent wrote must not make the host read
+    # local files or call its internal network (SSRF).
+    fetcher = URLFetcher(allowed_protocols={"data"})
+    pdf: bytes = HTML(string=html, url_fetcher=fetcher).write_pdf()
+    return pdf
 
 
 def save_artifact(
@@ -328,10 +357,13 @@ def save_artifact(
             or "application/octet-stream"
         )
     elif content is not None:
-        # Text can never be an image, PDF or file; bytes from code can.
+        # Text can never be an image or file; bytes from code can.
         if artifact.kind in FILE_KINDS and isinstance(content, str):
             raise ValueError(f"kind '{artifact.kind}' needs file_path, not content.")
-        data = content.encode("utf-8") if isinstance(content, str) else content
+        if artifact.kind == "pdf" and isinstance(content, str):
+            data = _render_pdf(content)
+        else:
+            data = content.encode("utf-8") if isinstance(content, str) else content
         if artifact.kind == "image":
             extension, content_type = _image_format(data)
         elif artifact.kind == "file":
@@ -349,11 +381,15 @@ def save_artifact(
         extension,
         content_type or "application/octet-stream",
     )
+    from crewai.flow.flow_context import current_flow_method_name
+
+    method_name = current_flow_method_name.get()
     crewai_event_bus.emit(
         from_task or from_agent,
         ArtifactCreatedEvent(
             from_agent=from_agent,
             from_task=from_task,
+            method_name=method_name if method_name != "unknown" else None,
             id=saved.id,
             identifier=saved.identifier,
             version=saved.version,
@@ -404,7 +440,12 @@ class SaveArtifactSchema(Artifact):
     """Arguments for :class:`SaveArtifactTool`."""
 
     content: str | None = Field(
-        default=None, description="Text content (HTML, markdown, JSON, CSV, ...)."
+        default=None,
+        description=(
+            "Text content (HTML, markdown, JSON, CSV, ...). For kind pdf, pass "
+            "HTML or markdown and it is rendered into the PDF; draw charts as "
+            "inline SVG, because scripts do not run."
+        ),
     )
     file_path: str | None = Field(
         default=None,
@@ -425,8 +466,9 @@ class SaveArtifactTool(BaseTool):
     description: str = (
         "Save a file the user can view, download and share, such as an HTML "
         "report, a markdown doc, a chart image, a PDF or a CSV. Saving the same "
-        "identifier again creates a new version. Returns the artifact url, which "
-        "you can send onward (for example in a message)."
+        "identifier again creates a new version. Returns the artifact url, a "
+        "download link to attach the file (it expires on CrewAI AMP), and "
+        "share_url, the page people open, to put in a message."
     )
     args_schema: type[BaseModel] = SaveArtifactSchema
     # Never cached: each call saves a new version, and a file at the same path

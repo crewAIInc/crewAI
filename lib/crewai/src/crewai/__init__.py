@@ -54,7 +54,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.44"
+__version__ = "1.15.45"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "CrewBase": ("crewai.project", "CrewBase"),

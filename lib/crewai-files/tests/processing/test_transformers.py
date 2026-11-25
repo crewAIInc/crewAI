@@ -97,6 +97,32 @@ class TestResizeImage:
         assert width == 50
         assert height == 50
 
+    @pytest.mark.parametrize(
+        ("width", "height", "expected"),
+        [(1, 1000, (1, 100)), (1000, 1, (100, 1))],
+    )
+    def test_resize_narrow_image(
+        self, width: int, height: int, expected: tuple[int, int]
+    ) -> None:
+        png_bytes = create_test_png(width, height)
+        image = ImageFile(source=FileBytes(data=png_bytes, filename="narrow.png"))
+
+        result = resize_image(image, max_width=100, max_height=100)
+
+        assert get_image_dimensions(result) == expected
+
+    @pytest.mark.parametrize(
+        ("max_width", "max_height"), [(0, 100), (100, 0), (-1, 100), (100, -1)]
+    )
+    def test_resize_rejects_nonpositive_bounds(
+        self, max_width: int, max_height: int
+    ) -> None:
+        png_bytes = create_test_png()
+        image = ImageFile(source=FileBytes(data=png_bytes, filename="test.png"))
+
+        with pytest.raises(ValueError, match="Maximum image dimensions"):
+            resize_image(image, max_width=max_width, max_height=max_height)
+
     def test_resize_returns_image_file(self) -> None:
         """Test that resize returns an ImageFile instance."""
         png_bytes = create_test_png(200, 200)
