@@ -206,3 +206,115 @@ def test_structured_output_emits_completed_event_with_usage(mock_emit):
     assert event.usage["prompt_tokens"] == 11
     assert event.usage["completion_tokens"] == 7
     assert llm.get_token_usage_summary().total_tokens == 18
+
+
+DETAILED_USAGE = {
+    "prompt_tokens": 11,
+    "completion_tokens": 7,
+    "total_tokens": 18,
+    "prompt_tokens_details": {"cached_tokens": 4},
+    "completion_tokens_details": {"reasoning_tokens": 3},
+}
+
+
+def _text_response(usage: dict[str, Any]) -> Any:
+    from litellm import ModelResponse
+
+    return ModelResponse(
+        id="chatcmpl-text-1",
+        choices=[
+            {
+                "finish_reason": "stop",
+                "message": {"role": "assistant", "content": "hello"},
+            }
+        ],
+        usage=usage,
+    )
+
+
+def _text_stream(usage: dict[str, Any]) -> list[Any]:
+    from litellm.types.utils import ModelResponseStream
+
+    return [
+        {
+            "id": "chatcmpl-stream-text",
+            "choices": [{"delta": {"content": "hello"}, "finish_reason": "stop"}],
+        },
+        ModelResponseStream(id="chatcmpl-stream-text", choices=[], usage=usage),
+    ]
+
+
+def _assert_summary(llm: LLM, cached: int, reasoning: int) -> None:
+    summary = llm.get_token_usage_summary()
+    assert summary.prompt_tokens == 11
+    assert summary.completion_tokens == 7
+    assert summary.cached_prompt_tokens == cached
+    assert summary.reasoning_tokens == reasoning
+
+
+@pytest.mark.parametrize(
+    ("usage", "cached", "reasoning"),
+    [(DETAILED_USAGE, 4, 3), (USAGE, 0, 0)],
+)
+def test_summary_reports_cached_and_reasoning_tokens(usage, cached, reasoning):
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.completion", return_value=_text_response(usage)):
+        llm.call("hi")
+
+    _assert_summary(llm, cached, reasoning)
+
+
+@pytest.mark.asyncio
+async def test_async_summary_reports_cached_and_reasoning_tokens():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch(
+        "crewai.llm.litellm.acompletion",
+        new=AsyncMock(return_value=_text_response(DETAILED_USAGE)),
+    ):
+        await llm.acall("hi")
+
+    _assert_summary(llm, 4, 3)
+
+
+def test_streaming_summary_reports_cached_and_reasoning_tokens():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    with patch(
+        "crewai.llm.litellm.completion",
+        return_value=iter(_text_stream(DETAILED_USAGE)),
+    ):
+        llm.call("hi")
+
+    _assert_summary(llm, 4, 3)
+
+
+@pytest.mark.asyncio
+async def test_async_streaming_summary_reports_cached_and_reasoning_tokens():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    async def _aiter():
+        for chunk in _text_stream(DETAILED_USAGE):
+            yield chunk
+
+    async def _acompletion(*_args, **_kwargs):
+        return _aiter()
+
+    with patch("crewai.llm.litellm.acompletion", side_effect=_acompletion):
+        await llm.acall("hi")
+
+    _assert_summary(llm, 4, 3)
+
+
+def test_structured_output_summary_reports_cached_and_reasoning_tokens():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch(
+        "litellm.completion",
+        return_value=_tool_call_response("Brief", '{"title": "x"}'),
+    ) as completion:
+        completion.return_value.usage = _text_response(DETAILED_USAGE).usage
+        llm.call("Write a brief", response_model=Brief)
+
+    _assert_summary(llm, 4, 3)
