@@ -41,6 +41,22 @@ _MAX_RETRIES = 5
 _RETRY_BASE_DELAY = 0.2  # seconds; doubles on each retry
 
 
+# Every stored column except ``vector``. Scans that only inspect record
+# metadata select these so the (large) embedding is never loaded into memory.
+_NON_VECTOR_COLUMNS = [
+    "id",
+    "content",
+    "scope",
+    "categories_str",
+    "metadata_str",
+    "importance",
+    "created_at",
+    "last_accessed",
+    "source",
+    "private",
+]
+
+
 def _sql_str(value: str) -> str:
     """Escape a value for use inside a single-quoted SQL string literal."""
     return value.replace("'", "''")
@@ -469,7 +485,7 @@ class LanceDBStorage:
         with store_lock(self._lock_name):
             if categories or metadata_filter:
                 allowed_ids = set(record_ids) if record_ids else None
-                rows = self._scan_rows(scope_prefix)
+                rows = self._scan_rows(scope_prefix, columns=_NON_VECTOR_COLUMNS)
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)

@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 from crewai.memory.types import MemoryRecord
@@ -175,3 +178,31 @@ def test_categories_without_record_ids_still_delete_all_matches(
 
     assert storage.delete(categories=["catA"]) == 2
     assert _exists(storage, "c")
+
+
+def test_filtered_delete_does_not_load_embeddings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = _new_storage(
+        tmp_path,
+        [
+            _record("a", "/t", categories=["catA"]),
+            _record("b", "/t", categories=["catB"]),
+        ],
+    )
+    scanned: list[dict[str, Any]] = []
+    original_scan_rows = storage._scan_rows
+
+    def spy(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        rows = original_scan_rows(*args, **kwargs)
+        scanned.extend(rows)
+        return rows
+
+    monkeypatch.setattr(storage, "_scan_rows", spy)
+
+    assert storage.delete(categories=["catA"]) == 1
+
+    assert scanned
+    assert all("vector" not in row for row in scanned)
+    assert not _exists(storage, "a")
+    assert _exists(storage, "b")
