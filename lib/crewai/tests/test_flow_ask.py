@@ -615,6 +615,56 @@ class TestInputHistory:
         assert len(flow._input_history) == 1
         assert flow._input_history[0]["method_name"] == "gather_info"
 
+    def test_input_history_property_exposes_entries_and_metadata(self) -> None:
+        """Flow.input_history returns ask() entries, including provider metadata."""
+
+        class ScriptedProvider:
+            def request_input(self, message, flow, metadata=None):
+                return InputResponse(
+                    text="vector databases", metadata={"answered_by": "script"}
+                )
+
+        class TestFlow(Flow):
+            input_provider = ScriptedProvider()
+
+            @start()
+            def gather(self):
+                return self.ask(
+                    "What should we research?", metadata={"channel": "#research"}
+                )
+
+        flow = TestFlow()
+        assert flow.input_history == []
+
+        assert flow.kickoff() == "vector databases"
+
+        assert len(flow.input_history) == 1
+        entry = flow.input_history[0]
+        assert entry["message"] == "What should we research?"
+        assert entry["response"] == "vector databases"
+        assert entry["method_name"] == "gather"
+        assert entry["metadata"] == {"channel": "#research"}
+        assert entry["response_metadata"] == {"answered_by": "script"}
+
+    def test_input_history_property_returns_a_copy(self) -> None:
+        """Mutating the returned list leaves the flow's record unchanged."""
+
+        class TestFlow(Flow):
+            input_provider = MockInputProvider(["AI"])
+
+            @start()
+            def gather(self):
+                self.ask("Topic?")
+                return "done"
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        flow.input_history.clear()
+
+        assert len(flow.input_history) == 1
+        assert flow.input_history[0]["response"] == "AI"
+
     def test_input_history_includes_timestamp(self) -> None:
         """Input history records timestamps."""
 
