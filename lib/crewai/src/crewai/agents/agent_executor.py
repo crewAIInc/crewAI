@@ -162,6 +162,25 @@ def _fit_response_model(model: type[BaseModel], text: str) -> BaseModel | None:
         return None
 
 
+def _record_effective_tool_args(
+    report: dict[str, Any] | None, tool_args: dict[str, Any] | None
+) -> None:
+    """Put the arguments the tool ran with into its reported call.
+
+    A before_tool_call hook can change them in place. Without this the history
+    keeps the model's original arguments, and a later turn reasons from those.
+    """
+    if report is None or tool_args is None:
+        return
+    reported = report["function"]["arguments"]
+    try:
+        unchanged = json.loads(reported) == tool_args
+    except (json.JSONDecodeError, TypeError):
+        unchanged = False
+    if not unchanged:
+        report["function"]["arguments"] = json.dumps(tool_args)
+
+
 class AgentExecutorState(BaseModel):
     """Structured state for agent executor flow.
 
@@ -2046,6 +2065,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 }
             )
 
+        reported_calls = {report["id"]: report for report in tool_calls_to_report}
         if tool_calls_to_report:
             assistant_message: LLMMessage = {
                 "role": "assistant",
@@ -2115,6 +2135,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 execution_result = self._execute_single_native_tool_call(tool_call)
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
+                _record_effective_tool_args(
+                    reported_calls.get(call_id), execution_result.get("tool_args")
+                )
                 result = self._prepare_tool_result_for_context(execution_result)
                 result += check_repeated_tool_call(
                     self._tool_call_counts,
@@ -2155,6 +2178,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
+            _record_effective_tool_args(
+                reported_calls.get(call_id), execution_result.get("tool_args")
+            )
             result = self._prepare_tool_result_for_context(execution_result)
             # Here rather than in the worker threads, so the streak follows the
             # order the model made the calls in, not the order they finished.

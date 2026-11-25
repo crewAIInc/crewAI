@@ -205,3 +205,32 @@ def test_finished_event_reports_a_cache_hit(backend):
     assert tool.calls == []
     assert [event.from_cache for event in finished] == [True]
     assert finished[0].output == result
+
+
+@pytest.mark.parametrize("batch_size", [1, 2], ids=["serial", "parallel"])
+def test_history_reports_arguments_after_hooks(batch_size):
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def rewrite(context):
+        if context.tool_input.get("term") == "0":
+            context.tool_input["term"] = "effective"
+
+    agent = Agent(
+        role="Tester",
+        goal="Look up values",
+        backstory="Test hooks",
+        llm=ScriptedLLM(batch_size),
+        tools=[LookupTool()],
+        verbose=False,
+    )
+
+    result = agent.kickoff("Look up values")
+
+    reported = [
+        call["function"]["arguments"]
+        for message in result.messages
+        if message.get("tool_calls")
+        for call in message["tool_calls"]
+    ]
+    expected = [json.dumps({"term": "effective"})]
+    expected += [json.dumps({"term": str(i)}) for i in range(1, batch_size)]
+    assert reported == expected
