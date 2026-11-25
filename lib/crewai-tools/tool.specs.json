@@ -6273,7 +6273,7 @@
       }
     },
     {
-      "description": "Search IBM DB2 vector database for relevant documents. Uses a custom embedding function if supplied, otherwise OpenAI embeddings.",
+      "description": "",
       "env_vars": [
         {
           "default": null,
@@ -6458,45 +6458,7 @@
         "ibm_db",
         "openai"
       ],
-      "run_params_schema": {
-        "description": "Input schema for DB2 vector search.",
-        "properties": {
-          "filter_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Column name used for metadata filtering. Must be used together with filter_value.",
-            "title": "Filter By"
-          },
-          "filter_value": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Value used for metadata filtering. Must be used together with filter_by.",
-            "title": "Filter Value"
-          },
-          "query": {
-            "description": "Query to search in IBM DB2 vector database - always required.",
-            "title": "Query",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "title": "DB2ToolSchema",
-        "type": "object"
-      }
+      "run_params_schema": {}
     },
     {
       "description": "A tool that can be used to semantic search a query from a DOCX's content.",
@@ -13154,6 +13116,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "description": "Optional params for scrape or crawl. For more information on the supported params, visit https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait or https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait",
             "title": "Params"
           },
@@ -13165,8 +13128,7 @@
         },
         "required": [
           "url",
-          "operation",
-          "params"
+          "operation"
         ],
         "title": "HyperbrowserLoadToolSchema",
         "type": "object"
@@ -15977,14 +15939,26 @@
       "env_vars": [
         {
           "default": null,
-          "description": "API key for Browserbase services",
-          "name": "BROWSERBASE_API_KEY",
+          "description": "OpenAI key for embeddings (not required when using Azure OpenAI).",
+          "name": "OPENAI_API_KEY",
           "required": false
         },
         {
           "default": null,
-          "description": "Project ID for Browserbase services",
-          "name": "BROWSERBASE_PROJECT_ID",
+          "description": "Set to use Azure OpenAI for embeddings.",
+          "name": "AZURE_OPENAI_ENDPOINT",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Azure OpenAI key when using Azure OpenAI.",
+          "name": "AZURE_OPENAI_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Azure OpenAI API version when using Azure OpenAI.",
+          "name": "OPENAI_API_VERSION",
           "required": false
         }
       ],
