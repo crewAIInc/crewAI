@@ -171,8 +171,10 @@ def test_install_tool_not_found(mock_get, capsys, tool_command):
     mock_get_response.status_code = 404
     mock_get.return_value = mock_get_response
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc_info:
         tool_command.install("non-existent-tool")
+    # A tool that cannot be installed must not look like a success to scripts.
+    assert exc_info.value.code == 1
     output = capsys.readouterr().out
     assert "No tool found with this name" in output
 
@@ -185,8 +187,9 @@ def test_install_api_error(mock_get, capsys, tool_command):
     mock_get_response.status_code = 500
     mock_get.return_value = mock_get_response
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc_info:
         tool_command.install("error-tool")
+    assert exc_info.value.code == 1
     output = capsys.readouterr().out
     assert "Failed to get tool details" in output
 
@@ -608,3 +611,76 @@ def test_print_current_organization_without_org(mock_settings, capsys, tool_comm
     output = capsys.readouterr().out
     assert "No organization currently set" in output
     assert "org switch <org_id>" in output
+
+
+def test_create_tool_when_the_folder_exists_exits_with_status_1(
+    tool_command, capsys
+):
+    """A refused scaffold must not look like a success to scripts and CI."""
+    with in_temp_dir():
+        os.makedirs("test_tool")
+
+        with raises(SystemExit) as exc_info:
+            tool_command.create("test-tool")
+
+    assert exc_info.value.code == 1
+    assert "Folder test_tool already exists." in capsys.readouterr().out
+
+
+def test_create_tool_inside_a_project_exits_with_status_1(tool_command, capsys):
+    with in_temp_dir():
+        Path("pyproject.toml").write_text("", encoding="utf-8")
+
+        with raises(SystemExit) as exc_info:
+            tool_command.create("test-tool")
+
+    assert exc_info.value.code == 1
+    assert "inside a project" in capsys.readouterr().out
+
+
+@patch("crewai_cli.tools.main.build_env_with_tool_repository_credentials")
+@patch("crewai_cli.tools.main.subprocess.run")
+def test_add_package_with_stderr_exits_with_status_1(
+    mock_run, _mock_build_env, tool_command, capsys
+):
+    """`uv add` writing to stderr on the tool-repository path is a failure."""
+    mock_run.return_value = MagicMock(stderr="uv failed to add the package")
+
+    with raises(SystemExit) as exc_info:
+        tool_command._add_package(
+            {
+                "source": "pypi",
+                "handle": "sample-tool",
+                "repository": {"handle": "repo", "url": "https://example.com"},
+            }
+        )
+
+    assert exc_info.value.code == 1
+
+
+def test_login_failure_exits_with_status_1(capsys):
+    """A failed tool-repository login must not look like a success."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with patch.object(
+            TokenManager, "_get_secure_storage_path", return_value=Path(temp_dir)
+        ):
+            TokenManager().save_tokens(
+                "test-token", (datetime.now() + timedelta(seconds=36000)).timestamp()
+            )
+            command = ToolCommand()
+
+    response = MagicMock()
+    response.status_code = 401
+    response.json.return_value = {"message": "no access"}
+    command.plus_api_client.login_to_tool_repository = MagicMock(
+        return_value=response
+    )
+
+    with (
+        patch("crewai_cli.tools.main._require_get_user_id", return_value=lambda: "u"),
+        patch("crewai_cli.tools.main.get_project_id", return_value="pid"),
+    ):
+        with raises(SystemExit) as exc_info:
+            command.login()
+
+    assert exc_info.value.code == 1
