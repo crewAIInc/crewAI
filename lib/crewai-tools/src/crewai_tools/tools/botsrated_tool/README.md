@@ -2,9 +2,9 @@
 
 ## Description
 
-[BotsRated](https://botsrated.com) (beta) probes about 4,800 x402 seller hosts on Base without paying
-them. The hosts come from the CDP Bazaar, Agentic.Market, 402index and x402-list. Each probe records the
-HTTP status, whether the 402 challenge was valid, latency, and the quoted price and payTo. Each probe is a
+[BotsRated](https://botsrated.com) probes x402 seller hosts (Base and Solana mainnet), MPP catalog
+services, and remote MCP servers without paying them. Each probe records the HTTP status, whether the
+402 challenge or MCP handshake was valid, latency, and the quoted price and payTo. Each probe is a
 signed receipt.
 
 These tools let an agent check a seller before it pays.
@@ -12,12 +12,14 @@ These tools let an agent check a seller before it pays.
 - `BotsRatedPreflightTool`: free, no API key, no wallet. If you pass the `pay_to` of the 402 option the agent
   is about to pay, `pay_to_check` is `matches_observed` only when BotsRated's own unpaid probe saw that payTo
   on that network. `listing_only` means only the seller's directory listing has it; `not_seen` means neither.
-- `BotsRatedCheckTool`: $0.001 USDC on Base per call; the first 100 per day are free (`charged: false`, budget
-  untouched). It is opt-in and needs a budget and an `x402ClientSync`. It reads the quote unpaid (no
-  redirects) and accepts it only if **every** payment option is exact Base USDC to BotsRated at $0.001 or less.
-  It then signs that validated quote with your client and sends the signature itself, so no other payment can
-  be signed. Once signed, the amount stays counted even if the call fails (it may have settled), so the budget
-  is a hard ceiling.
+- `BotsRatedCheckTool`: paid Base USDC per-call check (free daily quota applies; current limits and price are
+  published in [botsrated.com/pricing.json](https://botsrated.com/pricing.json)). Answers within the free daily
+  quota return `charged: false` with the budget untouched. It is opt-in and needs a budget and an
+  `x402ClientSync`. It reads the quote unpaid (no redirects), reads the published `/pricing.json` price, and
+  accepts the quote only if **every** payment option is exact Base USDC to BotsRated at or below that published
+  price. It then signs that validated quote with your client and sends the signature itself, so no other
+  payment can be signed. Once signed, the amount stays counted even if the call fails (it may have settled),
+  so the budget is a hard ceiling.
 
 ## Installation
 
