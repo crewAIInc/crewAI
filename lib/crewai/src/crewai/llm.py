@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
@@ -68,6 +69,9 @@ from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.exceptions.structured_response_exception import (
+    StructuredResponseConversionError,
+)
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -133,6 +137,17 @@ else:
     Function = None
     ModelResponse = None
     supports_response_schema = None
+
+
+def _response_model_conversion_message(
+    response_model: Any, conversion_error: Exception
+) -> str:
+    """Describe a failed ``response_model`` conversion for the caller."""
+    model_name = getattr(response_model, "__name__", None) or str(response_model)
+    return (
+        f"The response could not be converted to response_model '{model_name}': "
+        f"{conversion_error!s}"
+    )
 
 
 def _ensure_litellm() -> bool:
@@ -1818,6 +1833,63 @@ class LLM(BaseLLM):
                         )
                         return tool_calls_list
 
+            if response_model and self.is_litellm:
+                # Mirrors the sync path: an instruct-backed response model has
+                # to be applied to the accumulated stream, otherwise the async
+                # caller silently receives plain text where it asked for a
+                # validated model.
+                from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+                instructor_instance = InternalInstructor(
+                    content=full_response,
+                    model=response_model,
+                    llm=self,
+                )
+                with model_call_hooks_dispatched():
+                    try:
+                        # `to_pydantic()` drives the instructor client with a
+                        # synchronous completion call, so it runs off the event
+                        # loop: converting inline would freeze every other
+                        # coroutine until that round trip returns.
+                        result = await asyncio.to_thread(
+                            instructor_instance.to_pydantic
+                        )
+                    except Exception as conversion_error:
+                        # `to_pydantic()` runs a completion of its own, so a
+                        # context-length failure keeps its own type: callers
+                        # retry on that, they do not fall back to raw text.
+                        from litellm.exceptions import ContextWindowExceededError
+
+                        if isinstance(
+                            conversion_error,
+                            (
+                                LLMContextLengthExceededError,
+                                ContextWindowExceededError,
+                            ),
+                        ):
+                            raise LLMContextLengthExceededError(
+                                str(conversion_error)
+                            ) from conversion_error
+                        # Deliberately not the fail-open path below, which would
+                        # return the unvalidated text as a successful result.
+                        raise StructuredResponseConversionError(
+                            _response_model_conversion_message(
+                                response_model, conversion_error
+                            )
+                        ) from conversion_error
+                structured_response = result.model_dump_json()
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params.get("messages"),
+                    usage=self._usage_to_dict(usage_info),
+                    finish_reason=stream_finish_reason,
+                    response_id=stream_response_id,
+                )
+                return structured_response
+
             usage_dict = self._usage_to_dict(usage_info)
             finish_reason, response_id_last = (
                 stream_finish_reason,
@@ -1835,7 +1907,7 @@ class LLM(BaseLLM):
             )
             return full_response
 
-        except LLMContextLengthExceededError:
+        except (LLMContextLengthExceededError, StructuredResponseConversionError):
             raise
         except Exception as e:
             error_msg = str(e)
