@@ -206,3 +206,35 @@ def test_filtered_delete_does_not_load_embeddings(
     assert all("vector" not in row for row in scanned)
     assert not _exists(storage, "a")
     assert _exists(storage, "b")
+
+
+def test_record_ids_are_found_beyond_the_scan_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = _new_storage(
+        tmp_path,
+        [_record(f"rec{i}", "/t", categories=["catA"]) for i in range(5)],
+    )
+    original_scan_rows = storage._scan_rows
+
+    def capped_scan(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        return original_scan_rows(*args, **{**kwargs, "limit": 2})
+
+    monkeypatch.setattr(storage, "_scan_rows", capped_scan)
+
+    assert storage.delete(record_ids=["rec4"], categories=["catA"]) == 1
+    assert not _exists(storage, "rec4")
+
+
+def test_older_than_with_categories_only_deletes_old_records(tmp_path: Path) -> None:
+    storage = _new_storage(
+        tmp_path,
+        [
+            _record("old", "/t", NOW - timedelta(days=90), categories=["catA"]),
+            _record("new", "/t", NOW, categories=["catA"]),
+        ],
+    )
+
+    assert storage.delete(categories=["catA"], older_than=CUTOFF) == 1
+    assert not _exists(storage, "old")
+    assert _exists(storage, "new")

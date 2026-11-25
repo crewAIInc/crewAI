@@ -484,13 +484,14 @@ class LanceDBStorage:
             return 0
         with store_lock(self._lock_name):
             if categories or metadata_filter:
-                allowed_ids = set(record_ids) if record_ids else None
-                rows = self._scan_rows(scope_prefix, columns=_NON_VECTOR_COLUMNS)
+                rows = self._scan_rows(
+                    scope_prefix,
+                    columns=_NON_VECTOR_COLUMNS,
+                    where=_delete_filter(None, record_ids, older_than),
+                )
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
-                    if allowed_ids is not None and record.id not in allowed_ids:
-                        continue
                     if categories and not any(
                         c in record.categories for c in categories
                     ):
@@ -498,8 +499,6 @@ class LanceDBStorage:
                     if metadata_filter and not all(
                         record.metadata.get(k) == v for k, v in metadata_filter.items()
                     ):
-                        continue
-                    if older_than and record.created_at >= older_than:
                         continue
                     to_delete.append(record.id)
                 if not to_delete:
@@ -517,6 +516,7 @@ class LanceDBStorage:
         scope_prefix: str | None = None,
         limit: int = _SCAN_ROWS_LIMIT,
         columns: list[str] | None = None,
+        where: str | None = None,
     ) -> list[dict[str, Any]]:
         """Scan rows optionally filtered by scope prefix.
 
@@ -529,12 +529,16 @@ class LanceDBStorage:
             columns: Optional list of column names to fetch.  Pass only the
                 columns you need for metadata operations to avoid reading the
                 heavy ``vector`` column unnecessarily.
+            where: Optional extra SQL predicate, ANDed with the scope filter.
+                Applied before ``limit`` so it narrows the rows scanned.
         """
         if self._table is None:
             return []
         q = self._table.search()
         if scope_prefix is not None and scope_prefix.strip("/"):
             q = q.where(_scope_prefix_filter(scope_prefix.rstrip("/")))
+        if where is not None:
+            q = q.where(where)
         if columns is not None:
             q = q.select(columns)
         result: list[dict[str, Any]] = q.limit(limit).to_list()
