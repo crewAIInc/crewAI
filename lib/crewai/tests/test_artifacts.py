@@ -135,6 +135,22 @@ def test_tool_refuses_files_outside_workdir(store):
     assert not (store.root / "exec-1" / "secret").exists()
 
 
+@pytest.mark.parametrize("file_path", [".env", ".git/config", "link.txt"])
+def test_tool_refuses_hidden_files(store, tmp_path, file_path):
+    (tmp_path / ".env").write_text("OPENAI_API_KEY=sk-secret")
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "config").write_text("[remote]")
+    # A visible name that points at a hidden file is refused too.
+    (tmp_path / "link.txt").symlink_to(tmp_path / ".env")
+
+    result = SaveArtifactTool().run(
+        identifier="secret", title="x", kind="text", file_path=file_path
+    )
+
+    assert result.startswith("Error saving artifact")
+    assert not (store.root / "exec-1" / "secret").exists()
+
+
 def test_rejects_bad_identifier():
     with pytest.raises(ValueError):
         Artifact(identifier="Bad Id", title="x", kind="text")

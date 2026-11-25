@@ -120,7 +120,7 @@ chart = Task(
 
 - Diga ao agent onde gravar o arquivo, por exemplo na descrição da task.
 - Em uma task, os `{placeholders}` em `file_path` são preenchidos com os inputs do kickoff, como em `output_file`. Em uma declaração de flow, use expressões `${...}`, como `output/${state.quarter}.png`.
-- O arquivo deve estar dentro do diretório de trabalho. Caminhos fora dele são recusados, então grave gráficos e PDFs no diretório do projeto.
+- O arquivo deve estar dentro do diretório de trabalho. Caminhos fora dele são recusados, então grave gráficos e PDFs no diretório do projeto. Arquivos ocultos e qualquer coisa dentro de uma pasta oculta (`.env`, `.git/`) também são recusados.
 
 ### Usar o artefato salvo
 
