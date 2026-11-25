@@ -72,6 +72,7 @@ class AzureCompletionParams(TypedDict, total=False):
     frequency_penalty: float
     presence_penalty: float
     max_tokens: int
+    seed: int
     stop: list[str]
     tools: list[ChatCompletionsToolDefinition]
     tool_choice: str
@@ -230,6 +231,8 @@ class AzureCompletion(BaseLLM):
             delegate_kwargs["top_p"] = self.top_p
         if self.max_tokens is not None:
             delegate_kwargs["max_tokens"] = self.max_tokens
+        if self.seed is not None:
+            delegate_kwargs["seed"] = self.seed
         if self.max_completion_tokens is not None:
             delegate_kwargs["max_completion_tokens"] = self.max_completion_tokens
         if self.stop:
@@ -399,6 +402,8 @@ class AzureCompletion(BaseLLM):
             config["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             config["max_tokens"] = self.max_tokens
+        if self.seed is not None:
+            config["seed"] = self.seed
         if self.api != "completions":
             config["api"] = self.api
         if self.reasoning_effort is not None:
@@ -719,6 +724,8 @@ class AzureCompletion(BaseLLM):
             params["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             params["max_tokens"] = self.max_tokens
+        if self.seed is not None:
+            params["seed"] = self.seed
         stops = self.stop_sequences
         if stops and self.supports_stop_words():
             params["stop"] = stops
