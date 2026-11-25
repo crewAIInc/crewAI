@@ -169,6 +169,13 @@ from crewai.utilities.streaming import (
 # module is imported through ``crewai.__init__`` (circular).
 ExecutionContext = Any  # type: ignore[assignment,misc]
 
+_STATE_COPY_RETRIES = 8
+_DICT_RESIZE_ERROR = "dictionary changed size during iteration"
+
+
+def _is_dict_resize_error(error: RuntimeError) -> bool:
+    return _DICT_RESIZE_ERROR in str(error)
+
 
 logger = logging.getLogger(__name__)
 
@@ -1866,6 +1873,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return cast(T, copy.deepcopy(self._state))
             except (TypeError, AttributeError):
                 return cast(T, self._state.copy())
+            except RuntimeError as error:
+                if not _is_dict_resize_error(error):
+                    raise
+                # A plain-dict state is mutated in place by plain (``def``)
+                # flow methods running on worker threads, while this copy
+                # runs on the event loop. ``copy.deepcopy`` raises
+                # "dictionary changed size during iteration" when the dict
+                # grows mid-copy. The window is tiny, so retrying on a
+                # shallow snapshot succeeds almost immediately.
+                attempts = 0
+                while True:
+                    try:
+                        attempts += 1
+                        snapshot = dict(self._state)
+                        return cast(T, copy.deepcopy(snapshot))
+                    except (TypeError, AttributeError):  # noqa: PERF203 - retry loop for a tiny race window
+                        # The snapshot may also hold unpickleable values; keep
+                        # the shallow snapshot, matching the fallback of the
+                        # first attempt above.
+                        return cast(T, snapshot)
+                    except RuntimeError as retry_error:
+                        if not _is_dict_resize_error(retry_error):
+                            raise
+                        if attempts >= _STATE_COPY_RETRIES:
+                            raise
 
     @property
     def state(self) -> T:
