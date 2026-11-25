@@ -228,7 +228,7 @@ def _get_project_attribute(
     The file must declare ``crewai`` in ``[project].dependencies`` for the
     lookup to succeed (a guard against running these helpers outside a crewai
     project directory). When ``require=True``, missing attributes raise
-    ``SystemExit`` after printing a friendly error.
+    ``SystemExit(1)`` after printing a friendly error.
     """
     attribute = None
 
@@ -266,7 +266,7 @@ def _get_project_attribute(
             "Please verify that the file exists and contains the specified attribute.",
             style="bold red",
         )
-        raise SystemExit
+        raise SystemExit(1)
 
     return attribute
 
