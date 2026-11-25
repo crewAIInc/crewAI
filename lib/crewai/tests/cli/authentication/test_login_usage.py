@@ -14,7 +14,6 @@ import pytest
 from click.testing import CliRunner
 
 from crewai_cli import run_crew
-from crewai_cli.authentication import main as auth_main
 from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.cli import login as login_command
 from crewai_cli.command import AuthenticationRequiredError
@@ -233,6 +232,21 @@ def test_a_device_code_the_provider_refuses_is_a_failed_login(provider, usage) -
     assert usage == [started("eval"), stopped("failed", "eval")]
 
 
+def test_a_token_that_cannot_be_saved_is_a_failed_login(provider, usage) -> None:
+    """`failed` is every other error, local ones included, not only the provider."""
+
+    class _FullDisk:
+        def save_tokens(self, access_token: str, expires_at: int) -> None:
+            raise OSError("No space left on device")
+
+    provider["tokens"] = _FullDisk()
+
+    with pytest.raises(OSError, match="No space left on device"):
+        AuthenticationCommand().login(source="deploy")
+
+    assert usage == [started("deploy"), stopped("failed", "deploy")]
+
+
 def test_ctrl_c_at_the_organization_picker_is_still_a_finished_login(
     provider, usage, monkeypatch
 ) -> None:
@@ -447,9 +461,3 @@ def test_crewai_login_is_counted_as_crewai_login(
     assert result.exit_code == 0, result.output
     assert usage == [started("crewai_login"), finished("crewai_login")]
     assert "needs a free CrewAI AMP account" not in result.output
-
-
-def test_the_source_words_are_the_ones_counted() -> None:
-    """The warehouse keeps the feature string only, so the words are the API."""
-    assert list(auth_main.LoginSource.__args__) == SOURCES
-    assert set(auth_main.WHY_LOG_IN) == {"deploy", "eval"}

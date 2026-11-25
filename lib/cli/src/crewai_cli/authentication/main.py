@@ -49,7 +49,8 @@ class AuthenticationCommand(_BaseAuthenticationCommand):
 
         Counts the login's start and how it ended (`cli_usage:login_*`), so the
         people who quit at the browser are visible with their reason: abandoned
-        (Ctrl-C), timed out (the code expired), or failed (the provider refused).
+        (Ctrl-C), timed out (the code expired), or failed (any other error, such
+        as the provider refusing or being unreachable).
         Only the source and the reason are sent, never a code, token or email.
         """
         from crewai_cli.run_crew import _count_usage
