@@ -141,7 +141,7 @@ crewai deploy create
 استخدم مزيّن `@persist` لحفظ حالة تدفقك في قاعدة بيانات. يتيح لك هذا استئناف التنفيذ إذا تعطلت العملية أو إذا كنت بحاجة لانتظار مدخلات بشرية.
 
 ```python
-@persist
+@persist()
 class ProductionFlow(Flow[AppState]):
     # ...
 ```
