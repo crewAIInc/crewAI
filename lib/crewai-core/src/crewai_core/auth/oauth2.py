@@ -21,6 +21,9 @@ console = Console()
 # self-hosted provider that omits it anyway.
 _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS = 600
 
+# Renew a little before expiry so a request started on the old token still lands.
+REFRESH_MARGIN_SECONDS = 60
+
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
@@ -183,8 +186,62 @@ class AuthenticationCommand:
         )
         raise SystemExit(1)
 
+    def refresh_access_token(self) -> str | None:
+        """Exchange the saved refresh token for a new access token and save it.
+
+        Returns:
+            The new access token, or None when there is nothing to refresh or the
+            refresh failed. A refresh token the provider rejects is discarded with
+            the rest of the login, so the user is logged out; a network or server
+            error keeps it for the next attempt.
+        """
+        with self.token_manager.lock():
+            # Another process may have refreshed while this one waited for the lock.
+            if access_token := self.token_manager.get_token(REFRESH_MARGIN_SECONDS):
+                return access_token
+
+            saved = self.token_manager.get_refresh_token()
+            if saved is None:
+                return None
+            refresh_token, token_url = saved
+            # The refresh token only goes back to the endpoint that issued it, never
+            # to one a changed or project-local settings file now names.
+            if token_url != self.oauth2_provider.get_token_url():
+                return None
+
+            try:
+                response = httpx.post(
+                    token_url,
+                    data={
+                        "grant_type": "refresh_token",
+                        "refresh_token": refresh_token,
+                        "client_id": self.oauth2_provider.get_client_id(),
+                    },
+                    # Short: this runs inside `import crewai` via the tracing listener.
+                    timeout=5,
+                )
+            except httpx.HTTPError:
+                return None
+
+            # RFC 6749 section 5.2: invalid_grant and friends come back as 400/401.
+            if response.status_code in (400, 401):
+                self.token_manager.clear_tokens()
+                return None
+            if response.status_code != 200:
+                return None
+
+            token_data = response.json()
+            # Providers that do not rotate refresh tokens omit it from the response.
+            token_data.setdefault("refresh_token", refresh_token)
+            try:
+                self._validate_and_save_token(token_data)
+            # validate_jwt_token raises a bare Exception for every invalid token.
+            except Exception:
+                return None
+            return cast(str, token_data["access_token"])
+
     def _validate_and_save_token(self, token_data: dict[str, Any]) -> None:
-        """Validate the JWT and persist it via the token manager."""
+        """Validate the JWT and persist it, with any refresh token, via the token manager."""
         jwt_token = token_data["access_token"]
         issuer = self.oauth2_provider.get_issuer()
         jwt_token_data = {
@@ -197,7 +254,12 @@ class AuthenticationCommand:
         decoded_token = validate_jwt_token(**jwt_token_data)
 
         expires_at = decoded_token.get("exp", 0)
-        self.token_manager.save_tokens(jwt_token, expires_at)
+        self.token_manager.save_tokens(
+            jwt_token,
+            expires_at,
+            refresh_token=token_data.get("refresh_token"),
+            token_url=self.oauth2_provider.get_token_url(),
+        )
 
     def _post_login(self) -> None:
         """Hook called after a successful login. Override to extend behavior."""

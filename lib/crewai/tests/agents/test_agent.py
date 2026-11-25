@@ -2566,6 +2566,10 @@ def test_agent_from_repository_in_config_requires_login(mock_get_agent):
 
     with (
         patch("crewai_core.token_manager.TokenManager.get_token", return_value=None),
+        patch(
+            "crewai_core.token_manager.TokenManager.get_refresh_token",
+            return_value=None,
+        ),
         pytest.raises(AuthError, match="No token found, make sure you are logged in"),
     ):
         Agent(

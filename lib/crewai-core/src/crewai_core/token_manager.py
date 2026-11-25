@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from contextlib import AbstractContextManager
+from datetime import datetime, timedelta
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,8 @@ import tempfile
 from typing import Final, Literal, cast
 
 from cryptography.fernet import Fernet
+
+from crewai_core.lock_store import lock as store_lock
 
 
 _FERNET_KEY_LENGTH: Final[Literal[44]] = 44
@@ -47,39 +50,77 @@ class TokenManager:
 
         raise RuntimeError("Failed to create or read encryption key")
 
-    def save_tokens(self, access_token: str, expires_at: int) -> None:
-        """Save the access token and its expiration time.
+    def save_tokens(
+        self,
+        access_token: str,
+        expires_at: int,
+        refresh_token: str | None = None,
+        token_url: str | None = None,
+    ) -> None:
+        """Save the access token, its expiration time and an optional refresh token.
 
         Args:
             access_token: The access token to save.
             expires_at: The UNIX timestamp of the expiration time.
+            refresh_token: The refresh token issued with the access token, if any.
+            token_url: The token endpoint that issued ``refresh_token``, the only
+                URL it is ever sent to. Required with ``refresh_token``.
+
+        Raises:
+            ValueError: If ``refresh_token`` is given without ``token_url``.
         """
         expiration_time = datetime.fromtimestamp(expires_at)
         data = {
             "access_token": access_token,
             "expiration": expiration_time.isoformat(),
         }
+        if refresh_token is not None:
+            if token_url is None:
+                raise ValueError("token_url is required to save a refresh token")
+            data["refresh_token"] = refresh_token
+            data["token_url"] = token_url
         encrypted_data = self.fernet.encrypt(json.dumps(data).encode())
         self._atomic_write_secure_file(self.file_path, encrypted_data)
 
-    def get_token(self) -> str | None:
-        """Return the access token if valid and not expired, else None."""
-        encrypted_data = self._read_secure_file(self.file_path)
-        if encrypted_data is None:
+    def get_token(self, min_remaining_seconds: float = 0) -> str | None:
+        """Return the access token if it is valid for ``min_remaining_seconds`` more, else None."""
+        data = self._load_tokens()
+        if data is None:
             return None
-
-        decrypted_data = self.fernet.decrypt(encrypted_data)
-        data = json.loads(decrypted_data)
 
         expiration = datetime.fromisoformat(data["expiration"])
-        if expiration <= datetime.now():
+        if expiration <= datetime.now() + timedelta(seconds=min_remaining_seconds):
             return None
 
-        return cast(str | None, data.get("access_token"))
+        return data.get("access_token")
+
+    def get_refresh_token(self) -> tuple[str, str] | None:
+        """Return the saved refresh token and the token endpoint it may be sent to.
+
+        Logins saved before refresh tokens were stored, or by a provider that did
+        not issue one, return None.
+        """
+        data = self._load_tokens()
+        if data is None or "refresh_token" not in data:
+            return None
+        return data["refresh_token"], data["token_url"]
+
+    def lock(self) -> AbstractContextManager[None]:
+        """Hold a cross-process lock on the token file, so only one process
+        spends a rotating refresh token at a time."""
+        token_file = self._get_secure_storage_path() / self.file_path
+        return store_lock(f"file:{os.path.realpath(token_file)}")
 
     def clear_tokens(self) -> None:
         """Remove the stored token file (no-op if absent)."""
         self._delete_secure_file(self.file_path)
+
+    def _load_tokens(self) -> dict[str, str] | None:
+        """Decrypt the token file, or return None if absent."""
+        encrypted_data = self._read_secure_file(self.file_path)
+        if encrypted_data is None:
+            return None
+        return cast(dict[str, str], json.loads(self.fernet.decrypt(encrypted_data)))
 
     @staticmethod
     def _get_secure_storage_path() -> Path:
