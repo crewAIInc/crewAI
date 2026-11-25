@@ -91,7 +91,7 @@ def _has_sql_comment(sql: str, db_uri: str) -> bool:
     return any(marker in sql for marker in markers)
 
 
-_AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
+_AS_PAREN_RE = re.compile(r"\bAS\s*(?:(?:NOT\s+)?MATERIALIZED\s*)?\(", re.IGNORECASE)
 
 
 def _iter_as_paren_matches(stmt: str) -> Iterator[re.Match[str]]:
@@ -117,9 +117,12 @@ def _detect_writable_cte(stmt: str) -> str | None:
 
     Instead of tokenizing the whole statement (which falsely matches column
     names like ``comment``), this walks through parenthesized CTE bodies and
-    checks only the *first keyword after* an opening ``AS (`` for a write
-    command.  Uses a regex to handle any whitespace (spaces, tabs, newlines)
-    between ``AS`` and ``(``.  Skips matches inside string literals.
+    checks only the *first keyword after* an opening ``AS (`` (including the
+    PostgreSQL ``AS MATERIALIZED (`` and ``AS NOT MATERIALIZED (`` spellings)
+    for a write command.  The regex treats whitespace (spaces, tabs, newlines)
+    as optional around ``AS``, the materialization modifier and ``(``, so
+    compact spellings such as ``AS(`` are inspected too.  Skips matches inside
+    string literals.
     """
     for m in _iter_as_paren_matches(stmt):
         body = stmt[m.end() :].lstrip()
