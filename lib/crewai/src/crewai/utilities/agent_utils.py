@@ -1144,6 +1144,40 @@ def _print_current_organization() -> None:
         )
 
 
+def _refuse_repository_import_strings(
+    tool_class: type, init_params: dict[str, Any], tool_name: str
+) -> None:
+    """Refuse repository-supplied dotted-import string parameters.
+
+    ImportString-typed tool fields (e.g. ``custom_embedding_fn`` on the
+    vector-search tools) and package-name fields later passed to
+    ``importlib.import_module`` (``qdrant_package``, ``db2_package``,
+    ``db2_dbi_package``) let a repository entry bind an arbitrary callable
+    into a first-party tool at construction. Refuse string values for those
+    fields unless ``CREWAI_DESERIALIZE_CALLBACKS`` is set.
+    """
+    from pydantic import ImportString
+    from typing import get_args
+
+    package_name_fields = ("qdrant_package", "db2_package", "db2_dbi_package")
+    fields = getattr(tool_class, "model_fields", {})
+    for field_name, value in init_params.items():
+        if not isinstance(value, str):
+            continue
+        fdef = fields.get(field_name)
+        is_import_string = False
+        if fdef is not None and fdef.annotation is not None:
+            annotations = [fdef.annotation, *get_args(fdef.annotation)]
+            is_import_string = any(a is ImportString for a in annotations)
+        if is_import_string or field_name in package_name_fields:
+            raise AgentRepositoryError(
+                f"Tool '{tool_name}' parameter '{field_name}' is a dotted "
+                "import path; refusing repository-supplied import strings "
+                "into first-party tools. Set CREWAI_DESERIALIZE_CALLBACKS=1 "
+                "to allow trusted definitions."
+            )
+
+
 def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     """Load an agent from the repository.
 
@@ -1159,6 +1193,9 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     attributes: dict[str, Any] = {}
     if from_repository:
         import importlib
+
+        from crewai.tools.base_tool import _FIRST_PARTY_TOOL_PACKAGES, BaseTool
+        from crewai.types.callback import _trusted_deserialize
 
         def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
@@ -1197,20 +1234,77 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module(tool["module"])
+                        module_name = tool["module"]
+                        first_party = module_name in ("crewai", "crewai_tools") or (
+                            module_name.startswith(_FIRST_PARTY_TOOL_PACKAGES)
+                        )
+                        if not (first_party or _trusted_deserialize()):
+                            raise AgentRepositoryError(
+                                f"Tool module '{module_name}' is not a first-party CrewAI "
+                                "package; refusing to import third-party modules from agent "
+                                "repository definitions. Set CREWAI_DESERIALIZE_CALLBACKS=1 "
+                                "to allow trusted third-party modules."
+                            )
+                        module = importlib.import_module(module_name)
+                        if module.__name__.split(".")[0] not in ("crewai", "crewai_tools"):
+                            raise AgentRepositoryError(
+                                f"Module '{module_name}' resolved to '{module.__name__}' "
+                                "(import shim or alias); refusing repository tool "
+                                "definitions that resolve outside the crewai / "
+                                "crewai_tools packages."
+                            )
                         tool_class = getattr(module, tool["name"])
+                        if not (
+                            isinstance(tool_class, type)
+                            and issubclass(tool_class, BaseTool)
+                        ):
+                            raise AgentRepositoryError(
+                                f"Tool '{tool['name']}' from module '{module_name}' is "
+                                "not a BaseTool subclass; refusing to instantiate "
+                                "arbitrary callables from agent repository definitions."
+                            )
 
-                        tool_value = tool_class(**tool["init_params"])
+                        init_params = dict(tool["init_params"])
+                        if not _trusted_deserialize():
+                            _refuse_repository_import_strings(
+                                tool_class, init_params, tool["name"]
+                            )
+
+                        tool_value = tool_class(**init_params)
 
                         if isinstance(tool_value, list):
                             attributes[key].extend(tool_value)
                         else:
                             attributes[key].append(tool_value)
 
+                    except AgentRepositoryError:
+                        # Gate refusals are deliberate, distinct outcomes; let them
+                        # surface as-is instead of looking like a broken entry.
+                        raise
                     except Exception as e:  # noqa: PERF203
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
                         ) from e
+            elif key == "mcps":
+                entries = value if isinstance(value, list) else [value]
+                if not _trusted_deserialize() and any(
+                    not isinstance(entry, str) for entry in entries
+                ):
+                    raise AgentRepositoryError(
+                        "Inline MCP server definitions from the agent repository can "
+                        "spawn local processes or contact arbitrary URLs; refusing "
+                        "them. Set CREWAI_DESERIALIZE_CALLBACKS=1 to allow trusted "
+                        "definitions."
+                    )
+                attributes[key] = value
+            elif key == "memory":
+                if isinstance(value, dict) and not _trusted_deserialize():
+                    raise AgentRepositoryError(
+                        "Agent repository definitions may not supply a custom memory "
+                        "configuration (embedder endpoint or storage path). Set "
+                        "CREWAI_DESERIALIZE_CALLBACKS=1 to allow trusted definitions."
+                    )
+                attributes[key] = value
             else:
                 attributes[key] = value
     return attributes
