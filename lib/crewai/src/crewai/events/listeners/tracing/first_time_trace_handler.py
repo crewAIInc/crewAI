@@ -8,6 +8,7 @@ from rich.panel import Panel
 
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.utils import (
+    _prompt_can_be_shown,
     mark_first_execution_completed,
     prompt_user_for_trace_viewing,
     should_auto_collect_first_time_traces,
@@ -49,8 +50,14 @@ class FirstTimeTraceHandler:
         if not self.is_first_time or not self.collected_events:
             return
 
+        # Nobody to ask (a host's own consent screen is not this prompt):
+        # record nothing, so the first run at a terminal still asks.
+        if not _prompt_can_be_shown():
+            return
+
         try:
             user_wants_traces = prompt_user_for_trace_viewing()
+            mark_first_execution_completed(user_consented=user_wants_traces)
 
             if user_wants_traces:
                 self._initialize_backend_and_send_events()
@@ -60,11 +67,8 @@ class FirstTimeTraceHandler:
             else:
                 self._show_tracing_declined_message()
 
-            mark_first_execution_completed(user_consented=user_wants_traces)
-
         except Exception as e:
             self._gracefully_fail(f"Error in trace handling: {e}")
-            mark_first_execution_completed(user_consented=False)
 
     def _initialize_backend_and_send_events(self) -> None:
         """Initialize backend batch and send collected events."""

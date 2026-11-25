@@ -425,21 +425,32 @@ def get_user_id() -> str:
         return uid
 
 
+def _trace_question_answered(data: dict[str, Any]) -> bool:
+    """A person answered on this machine: a yes from anywhere, or any answer
+    recorded with ``trace_consent_asked`` (see ``has_user_declined_tracing``)."""
+    return data.get("trace_consent") is True or data.get("trace_consent_asked") is True
+
+
 def is_first_execution() -> bool:
-    """True if this is the first execution for this user."""
-    data = _load_user_data()
-    return not data.get("first_execution_done", False)
+    """True until a person on this machine has answered whether to share traces.
+
+    A run where nobody could be asked records nothing, so it does not end the
+    first execution: the first run at a terminal still asks.
+    """
+    return not _trace_question_answered(_load_user_data())
 
 
 def mark_first_execution_done(user_consented: bool = False) -> None:
-    """Mark that the first execution has been completed.
+    """Record a person's answer to the first-execution trace question.
+
+    Call it only after somebody was asked: the answer is final.
 
     Args:
         user_consented: Whether the user consented to trace collection.
     """
     with store_lock(_user_data_lock_name()):
         data = _load_user_data()
-        if data.get("first_execution_done", False):
+        if _trace_question_answered(data):
             return
 
         uid = data.get("user_id") or _generate_user_id()
@@ -450,6 +461,7 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
                 "user_id": uid,
                 "machine_id": _get_machine_id(),
                 "trace_consent": user_consented,
+                "trace_consent_asked": True,
             }
         )
         p = _user_data_file()
@@ -505,7 +517,20 @@ def should_auto_collect_first_time_traces() -> bool:
     if is_tracing_enabled_in_context():
         return False
 
-    return is_first_execution()
+    if not is_first_execution():
+        return False
+
+    # Buffer only where somebody can answer. A server or CI job has nobody to
+    # ask, and would otherwise buffer every run's spans and discard them.
+    return _prompt_can_be_shown() or _host_asks_for_trace_consent()
+
+
+def _host_asks_for_trace_consent() -> bool:
+    """A host such as the terminal UI asks with its own screen
+    (``crewai.telemetry.tracing.ephemeral.trace_consent``)."""
+    from crewai.telemetry.tracing.ephemeral import _trace_consent
+
+    return _trace_consent.get() is not None
 
 
 def _is_interactive_terminal() -> bool:
@@ -526,6 +551,18 @@ def _is_interactive_terminal() -> bool:
         return bool(isatty())
     except Exception:
         return False
+
+
+# The first-run question, shared by this prompt and the terminal UI's screen.
+# Every upload it authorizes is anonymous — a first run is never sent with a
+# saved login (`crewai.execution._start_tracing`) — so the link notice holds
+# whether or not the CLI is logged in.
+TRACE_PROMPT_HEADLINE = "See this run step by step?"
+TRACE_PROMPT_BODY = (
+    "Upload it to CrewAI AMP for a link showing every agent decision, "
+    "tool call and LLM call."
+)
+TRACE_LINK_NOTICE = "Anyone with the link can open it for 24 hours."
 
 
 def _prompt_can_be_shown() -> bool:
@@ -550,10 +587,11 @@ def _prompt_can_be_shown() -> bool:
 def prompt_user_for_trace_viewing(
     timeout_seconds: int = 20, *, sharing: bool = False
 ) -> bool:
-    """
-    Prompt user if they want to see their traces with timeout.
-    Returns True if user agrees, False otherwise. ``sharing`` explicitly asks
-    permission to upload locally buffered spans rather than merely view a trace.
+    """Ask the person at the terminal whether to upload this run's trace.
+
+    Returns True only for an explicit yes; no, Enter, and the timeout are
+    "Not now". ``sharing`` no longer changes the question: both callers upload
+    the trace, and the question says so.
     """
     if not _prompt_can_be_shown():
         return False
@@ -564,37 +602,21 @@ def prompt_user_for_trace_viewing(
         console = Console()
 
         content = Text()
-        content.append("🔍 ", style="cyan bold")
-        content.append(
-            "Detailed execution traces are available!\n\n", style="cyan bold"
-        )
-        content.append("View insights including:\n", style="white")
-        content.append("  • Agent decision-making process\n", style="bright_blue")
-        content.append("  • Task execution flow and timing\n", style="bright_blue")
-        content.append("  • Tool usage details", style="bright_blue")
-        if sharing:
-            content.append(
-                "\n\nThese traces are stored locally and may contain prompts, inputs, "
-                "and outputs. Sharing uploads them to CrewAI.",
-                style="white",
-            )
+        content.append(f"{TRACE_PROMPT_HEADLINE}\n\n", style="cyan bold")
+        content.append(TRACE_PROMPT_BODY, style="white")
+        content.append(f"\n\n{TRACE_LINK_NOTICE}", style="bright_black")
 
         panel = Panel(
             content,
-            title="[bold cyan]Execution Traces[/bold cyan]",
+            title="[bold cyan]Execution trace[/bold cyan]",
             border_style="cyan",
             padding=(1, 2),
         )
         console.print("\n")
         console.print(panel)
 
-        question = (
-            "Share this execution trace with CrewAI?"
-            if sharing
-            else "Would you like to view your execution traces?"
-        )
         prompt_text = click.style(
-            f"{question} [y/N] ({timeout_seconds}s timeout): ",
+            f"View trace? [y/N] ({timeout_seconds}s timeout): ",
             fg="white",
             bold=True,
         )

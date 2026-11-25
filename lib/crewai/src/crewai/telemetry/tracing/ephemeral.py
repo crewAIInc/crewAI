@@ -21,6 +21,7 @@ from opentelemetry.sdk.trace.export import (
 )
 
 from crewai.events.listeners.tracing.utils import (
+    _prompt_can_be_shown,
     prompt_user_for_trace_viewing,
     tracing_asked_for,
 )
@@ -34,18 +35,20 @@ from crewai.telemetry.tracing.session import TraceSession
 
 logger = logging.getLogger(__name__)
 
-_trace_consent: ContextVar[Callable[[], bool] | None] = ContextVar(
+_trace_consent: ContextVar[Callable[[], bool | None] | None] = ContextVar(
     "crewai_trace_consent", default=None
 )
 
 
 @contextmanager
-def trace_consent(callback: Callable[[], bool]) -> Iterator[None]:
+def trace_consent(callback: Callable[[], bool | None]) -> Iterator[None]:
     """Choose how executions in this context ask permission to share traces.
 
     The callback runs once after a successful execution has finished, or after
     a failed one that ``crewai eval`` started to grade. It receives no trace
     data and must return ``True`` to authorize uploading. This lets hosts such as the terminal UI present their own consent prompt.
+    It returns ``None`` when nobody answered (the host closed before asking):
+    nothing is uploaded, and a first run records no answer.
     """
     token = _trace_consent.set(callback)
     try:
@@ -133,16 +136,22 @@ class EphemeralSpanBuffer(SpanExporter):
             # the yes. (A callback that opens its own prompt — the TUI's modal —
             # asks `tracing_asked_for()` for itself.)
             consent = self._consent or _trace_consent.get()
-            approved = (
-                consent()
-                if consent is not None
-                else True
-                if tracing_asked_for()
-                else prompt_user_for_trace_viewing(sharing=True)
-            )
-            if first_time:
+            approved: bool | None
+            if consent is not None:
+                approved = consent()
+            elif tracing_asked_for():
+                approved = True
+            else:
+                approved = prompt_user_for_trace_viewing(sharing=True)
+                if not approved and not _prompt_can_be_shown():
+                    approved = None  # nobody was there to ask, so nobody answered
+            if first_time and approved is not None:
                 update_user_data(
-                    {"first_execution_done": True, "trace_consent": approved is True}
+                    {
+                        "first_execution_done": True,
+                        "trace_consent": approved is True,
+                        "trace_consent_asked": True,
+                    }
                 )
             if approved is not True:
                 logger.info("Ephemeral trace discarded without uploading")

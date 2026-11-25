@@ -172,17 +172,33 @@ When this environment variable is set, all Crews and Flows will automatically ha
 
 ## Viewing traces after your first run
 
-The first time you run a Crew or Flow, an interactive terminal may ask:
+The first time you run a Crew or Flow in an interactive terminal, CrewAI asks:
 
 ```text
-Share this execution trace with CrewAI? [y/N]
+See this run step by step?
+
+Upload it to CrewAI AMP for a link showing every agent decision, tool call and LLM call.
+
+Anyone with the link can open it for 24 hours.
+
+View trace? [y/N] (20s timeout):
 ```
 
-Choose **yes** to upload the buffered trace to CrewAI. Traces may contain
-prompts, inputs, and outputs. Declining, timing out, or running without an
-interactive consent prompt discards the buffer. You can change tracing later
-with `crewai traces enable` or `crewai traces disable`, or by setting `tracing`
-on the Crew or Flow.
+Answer **y** (View trace) to upload the buffered trace to CrewAI AMP. Traces may
+contain prompts, inputs, and outputs. **N**, Enter, or letting the 20 seconds
+run out means **Not now**: the buffer is discarded and nothing is uploaded. The
+terminal UI asks the same question with **View trace** and **Not now** buttons.
+Your answer is saved. After **Not now**, runs are not traced and the question
+is not asked again.
+
+Only an answer from a person is saved. A run with nobody to ask, such as CI, a
+server, or any process without an interactive terminal, does not buffer the
+trace, uploads nothing, and saves nothing, so your first run in a terminal still
+asks. A "no" saved by an earlier CrewAI version without asking cannot be told
+apart from a real one, so a terminal asks once more.
+
+You can change tracing later with `crewai traces enable` or
+`crewai traces disable`, or by setting `tracing` on the Crew or Flow.
 
 ### Local buffering and authenticated export
 

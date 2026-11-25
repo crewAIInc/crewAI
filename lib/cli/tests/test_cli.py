@@ -29,11 +29,16 @@ from crewai_cli.cli import (
     reset_memories,
     run,
     test,
+    traces_disable,
     traces_status,
     train,
     version,
 )
-from crewai_core.user_data import update_user_data
+from crewai_core.user_data import (
+    _load_user_data,
+    has_user_declined_tracing,
+    update_user_data,
+)
 
 
 @pytest.fixture
@@ -1011,6 +1016,66 @@ def test_traces_status_shows_disabled_when_env_false_overrides_consent(
     assert "not set" in unset.output
     assert "ENABLED" in unset.output
     assert "DISABLED" not in unset.output
+
+
+@pytest.fixture
+def isolated_user_data(tmp_path, monkeypatch):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_trace_consent")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+
+
+@pytest.mark.usefixtures("isolated_user_data")
+@pytest.mark.parametrize(
+    ("recorded", "says"),
+    [
+        (None, "Not set (first-time user)"),
+        (
+            {
+                "trace_consent": False,
+                "first_execution_done": True,
+                "trace_consent_asked": True,
+            },
+            "Disabled (user declined)",
+        ),
+        # Written by older versions for runs where nobody could be asked too:
+        # not a decline, so the next terminal run asks.
+        (
+            {"trace_consent": False, "first_execution_done": True},
+            "Not set (first-time user)",
+        ),
+        (
+            {"trace_consent": True, "first_execution_done": True},
+            "Enabled (user consented)",
+        ),
+    ],
+)
+def test_traces_status_says_declined_only_when_someone_was_asked(
+    runner, recorded, says
+):
+    if recorded is not None:
+        update_user_data(recorded)
+
+    result = runner.invoke(traces_status)
+
+    assert result.exit_code == 0
+    assert says in result.output
+    assert "DISABLED" in result.output or "Enabled" in says
+
+
+@pytest.mark.usefixtures("isolated_user_data")
+def test_traces_disable_is_a_final_answer(runner):
+    update_user_data({"trace_consent": False, "first_execution_done": True})
+
+    result = runner.invoke(traces_disable)
+
+    assert result.exit_code == 0
+    assert _load_user_data()["trace_consent_asked"] is True
+    assert has_user_declined_tracing() is True
+    assert "Disabled (user declined)" in runner.invoke(traces_status).output
 
 
 @mock.patch("crewai_cli.task_outputs.load_task_outputs")

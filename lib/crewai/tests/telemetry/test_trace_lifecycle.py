@@ -299,7 +299,11 @@ def test_first_time_uses_local_session_even_with_saved_login(
         assert ExampleFlow().kickoff() == "hello world"
     assert len(issued) == int(approved)
     persist.assert_called_once_with(
-        {"first_execution_done": True, "trace_consent": approved}
+        {
+            "first_execution_done": True,
+            "trace_consent": approved,
+            "trace_consent_asked": True,
+        }
     )
     legacy.assert_not_called()
     assert get_trace_session() is None and get_execution_uuid() is None

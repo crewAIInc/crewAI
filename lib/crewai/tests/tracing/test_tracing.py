@@ -517,7 +517,11 @@ class TestTraceListenerSetup:
         assert trace_transport.grants == []
         assert trace_transport.exporter.get_finished_spans() == ()
         persisted.assert_called_once_with(
-            {"first_execution_done": True, "trace_consent": False}
+            {
+                "first_execution_done": True,
+                "trace_consent": False,
+                "trace_consent_asked": True,
+            }
         )
 
     def test_first_time_user_trace_collection_user_accepts(
@@ -540,7 +544,11 @@ class TestTraceListenerSetup:
         assert [tier for tier, _ in trace_transport.grants] == ["ephemeral"]
         assert trace_transport.exporter.get_finished_spans()
         persisted.assert_called_once_with(
-            {"first_execution_done": True, "trace_consent": True}
+            {
+                "first_execution_done": True,
+                "trace_consent": True,
+                "trace_consent_asked": True,
+            }
         )
 
     def test_first_time_user_trace_consolidation_logic(
@@ -604,11 +612,11 @@ class TestTraceListenerSetup:
             mock_thread_instance.is_alive.assert_called_once()
 
     def test_first_time_handler_graceful_error_handling(self):
-        """Test graceful error handling in first-time trace logic"""
+        """A prompt that fails before anyone answers records no answer."""
 
         with (
             patch(
-                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+                "crewai.events.listeners.tracing.first_time_trace_handler._prompt_can_be_shown",
                 return_value=True,
             ),
             patch(
@@ -625,7 +633,7 @@ class TestTraceListenerSetup:
 
             handler.handle_execution_completion()
 
-            mock_mark_completed.assert_called_once()
+            mock_mark_completed.assert_not_called()
 
     def test_trace_batch_marked_as_failed_on_finalize_error(self):
         """Test that trace batch is marked as failed when finalization returns non-200 status"""

@@ -172,18 +172,34 @@ Quando esta variável de ambiente estiver definida, todos os Crews e Flows terã
 
 ## Visualizando rastreamentos após a primeira execução
 
-Na primeira vez que você executa um Crew ou Flow, um terminal interativo pode perguntar:
+Na primeira vez que você executa um Crew ou Flow em um terminal interativo, o CrewAI pergunta:
 
 ```text
-Share this execution trace with CrewAI? [y/N]
+See this run step by step?
+
+Upload it to CrewAI AMP for a link showing every agent decision, tool call and LLM call.
+
+Anyone with the link can open it for 24 hours.
+
+View trace? [y/N] (20s timeout):
 ```
 
-Escolha **yes** para enviar o rastreamento armazenado no buffer ao CrewAI.
-Os rastreamentos podem conter prompts, entradas e saídas. Recusar, deixar o
-prazo expirar ou executar sem uma solicitação interativa de consentimento
-descarta o buffer. Você pode alterar o rastreamento depois com
-`crewai traces enable` ou `crewai traces disable`, ou definindo `tracing`
-no Crew ou Flow.
+Responda **y** (View trace) para enviar o rastreamento armazenado no buffer ao
+CrewAI AMP. Os rastreamentos podem conter prompts, entradas e saídas. **N**,
+Enter ou deixar os 20 segundos expirarem significa **Not now**: o buffer é
+descartado e nada é enviado. A interface de terminal faz a mesma pergunta com os
+botões **View trace** e **Not now**. Sua resposta é salva. Depois de **Not now**,
+as execuções não são rastreadas e a pergunta não é feita novamente.
+
+Somente a resposta de uma pessoa é salva. Uma execução sem ninguém para
+responder, como CI, um servidor ou qualquer processo sem terminal interativo,
+não armazena o rastreamento no buffer, não envia nada e não salva nada, então
+sua primeira execução em um terminal ainda pergunta. Um "não" salvo por uma
+versão anterior do CrewAI sem perguntar não pode ser distinguido de um real,
+então um terminal pergunta mais uma vez.
+
+Você pode alterar o rastreamento depois com `crewai traces enable` ou
+`crewai traces disable`, ou definindo `tracing` no Crew ou Flow.
 
 ### Buffer local e exportação autenticada
 

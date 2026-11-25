@@ -2878,19 +2878,45 @@ async def test_evaluate_consent_screen_shares_on_enter_and_says_why(key, shared)
 
 
 @pytest.mark.asyncio
-async def test_the_end_of_run_sharing_screen_is_unchanged() -> None:
-    """Sharing a finished run's trace still asks on its own screen, which a
-    20-second wait dismisses (its caller times out): only Evaluate changed."""
+@pytest.mark.parametrize(("key", "shared"), [("y", True), ("n", False), ("escape", False)])
+async def test_the_end_of_run_sharing_screen_offers_a_link(key, shared) -> None:
+    """Sharing a finished run's trace asks on its own screen what the upload
+    gives and who can open it; y views the trace, n or Esc is Not now."""
     screen = crew_run_tui.TraceConsentScreen()
     app = _ScreenHost(screen)
     async with app.run_test() as pilot:
         await pilot.pause()
-        text = str(screen.query_one("#consent-text", Static).render())
-        label = str(screen.query_one("#btn-consent-yes", Button).label)
+        text = " ".join(screen._build_content().plain.split())
+        yes = str(screen.query_one("#btn-consent-yes", Button).label)
+        no = str(screen.query_one("#btn-consent-no", Button).label)
+        await pilot.press(key)
+        await pilot.pause()
 
-    assert label == "Share Trace"
-    assert "Share this execution trace with CrewAI?" in text
-    assert "Cancel or wait 20 seconds" in text
+    assert app.answers == [shared]
+    assert (yes, no) == ("View trace", "Not now")
+    assert text == (
+        "See this run step by step? "
+        "Upload it to CrewAI AMP for a link showing every agent decision, "
+        "tool call and LLM call. "
+        "Anyone with the link can open it for 24 hours."
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "screen_type",
+    [crew_run_tui.EvaluateConsentScreen, crew_run_tui.TurnTracingOnScreen],
+)
+async def test_the_evaluate_screens_keep_cancel(screen_type) -> None:
+    """Evaluate's screens say "Cancel runs nothing", so their button stays
+    Cancel; only the end-of-run question says Not now."""
+    screen = screen_type()
+    app = _ScreenHost(screen)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        no = str(screen.query_one("#btn-consent-no", Button).label)
+
+    assert no == "Cancel"
 
 
 @pytest.mark.parametrize("tracing", ["turned off", "never turned on", "on"])

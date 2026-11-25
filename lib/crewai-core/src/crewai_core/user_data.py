@@ -67,11 +67,19 @@ def update_user_data(updates: dict[str, Any]) -> None:
 
 
 def has_user_declined_tracing() -> bool:
-    """Return True if the user has explicitly declined trace collection."""
+    """Return True if a person was asked about sharing traces and said no.
+
+    Only a record with ``trace_consent_asked`` counts. Versions before it also
+    wrote ``trace_consent: False`` for runs where nobody could be asked (CI, a
+    server, a coding agent with no terminal), and such a record cannot be told
+    apart from a real no, so it is treated as not asked: the next run at a
+    terminal asks once more.
+    """
     data = _load_user_data()
-    if data.get("first_execution_done", False):
-        return data.get("trace_consent", False) is False
-    return False
+    return (
+        data.get("trace_consent_asked") is True
+        and data.get("trace_consent", False) is False
+    )
 
 
 def is_tracing_enabled() -> bool:

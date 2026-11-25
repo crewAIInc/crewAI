@@ -679,7 +679,7 @@ def test_terminal_consent_explicitly_requests_sharing(collector, approved):
 
 
 @pytest.mark.parametrize("approved", [False, True])
-def test_first_time_preference_contains_only_completion_and_consent(
+def test_first_time_preference_records_the_answer_as_asked(
     collector, monkeypatch, approved
 ):
     save = Mock()
@@ -691,7 +691,11 @@ def test_first_time_preference_contains_only_completion_and_consent(
         record(session)
         save.assert_not_called()
     save.assert_called_once_with(
-        {"first_execution_done": True, "trace_consent": approved}
+        {
+            "first_execution_done": True,
+            "trace_consent": approved,
+            "trace_consent_asked": True,
+        }
     )
     assert len(collector.grants) == int(approved)
 
@@ -741,7 +745,11 @@ def test_first_time_execution_uses_local_session_even_with_saved_credentials(
     assert get_trace_session() is None and get_execution_uuid() is None
     assert session._closed
     save.assert_called_once_with(
-        {"first_execution_done": True, "trace_consent": approved}
+        {
+            "first_execution_done": True,
+            "trace_consent": approved,
+            "trace_consent_asked": True,
+        }
     )
     assert len(collector.grants) == int(approved)
 

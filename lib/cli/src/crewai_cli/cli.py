@@ -20,6 +20,7 @@ from crewai_cli.config import Settings
 from crewai_cli.input_prompt import is_interactive
 from crewai_cli.user_data import (
     _load_user_data,
+    has_user_declined_tracing,
     is_tracing_enabled,
     update_user_data,
 )
@@ -1481,7 +1482,13 @@ def traces_disable() -> None:
 
     console = Console()
 
-    update_user_data({"trace_consent": False, "first_execution_done": True})
+    update_user_data(
+        {
+            "trace_consent": False,
+            "first_execution_done": True,
+            "trace_consent_asked": True,
+        }
+    )
 
     panel = Panel(
         "❌ Trace collection disabled.\n\n"
@@ -1517,7 +1524,7 @@ def traces_status() -> None:
     trace_consent = user_data.get("trace_consent")
     if trace_consent is True:
         consent_status = "✅ Enabled (user consented)"
-    elif trace_consent is False:
+    elif has_user_declined_tracing():
         consent_status = "❌ Disabled (user declined)"
     else:
         consent_status = "⚪ Not set (first-time user)"

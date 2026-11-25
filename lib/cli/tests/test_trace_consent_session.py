@@ -63,11 +63,11 @@ async def test_session_consent_buttons_and_keys_resolve_execution_worker(
     async with app.run_test(size=(100, 40)) as pilot:
         result = asyncio.create_task(asyncio.to_thread(app._request_trace_consent))
         screen = await wait_for_consent(app, pilot)
-        assert str(screen.query_one("#btn-consent-yes", Button).label) == "Share Trace"
+        assert str(screen.query_one("#btn-consent-yes", Button).label) == "View trace"
+        assert str(screen.query_one("#btn-consent-no", Button).label) == "Not now"
         content = screen._build_content().plain
-        assert "stored locally" in content and "Sharing uploads it" in content
-        assert "prompts, inputs, outputs, and tool calls" in content
-        assert "20 seconds" in content
+        assert "See this run step by step?" in content
+        assert "Upload it to CrewAI AMP" in content
         assert not result.done()
         if action.startswith("click-"):
             assert await pilot.click(f"#btn-consent-{action.removeprefix('click-')}")
@@ -160,7 +160,7 @@ async def test_consent_timeout_returns_false_and_dismisses_modal(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_quit_rejects_pending_consent_and_releases_worker(monkeypatch):
+async def test_quit_answers_nothing_and_releases_worker(monkeypatch):
     app = ConsentApp()
     legacy = Mock(side_effect=AssertionError("Quit invoked legacy upload"))
     monkeypatch.setattr(app, "_send_traces_worker", legacy, raising=False)
@@ -168,7 +168,7 @@ async def test_quit_rejects_pending_consent_and_releases_worker(monkeypatch):
         result = asyncio.create_task(asyncio.to_thread(app._request_trace_consent))
         await wait_for_consent(app, pilot)
         await app.action_quit()
-        assert await asyncio.wait_for(result, timeout=5) is False
+        assert await asyncio.wait_for(result, timeout=5) is None
     assert app._trace_consent_pending is None
     legacy.assert_not_called()
 
@@ -256,7 +256,7 @@ async def test_quit_during_turn_discards_trace_after_worker_finishes(
         try:
             await app.action_quit()
             assert completions == []
-            assert app._request_trace_consent() is False
+            assert app._request_trace_consent() is None
         finally:
             release.set()
         await asyncio.wait_for(worker, timeout=5)
@@ -300,7 +300,7 @@ async def test_quit_during_execution_rejects_late_consent(monkeypatch, kind):
         finally:
             release.set()
         await asyncio.wait_for(worker, timeout=5)
-    assert decisions == [False]
+    assert decisions == [None]
     assert app._trace_consent_pending is None
     prompt.assert_not_called()
     completed.assert_not_called()
