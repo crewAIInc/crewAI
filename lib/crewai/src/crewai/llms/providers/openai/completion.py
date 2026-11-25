@@ -2662,6 +2662,10 @@ class OpenAICompletion(BaseLLM):
                 if k not in ("response_format", "stream")
             }
 
+            usage: dict[str, Any] | None = None
+            parsed_finish_reason: str | None = None
+            parsed_response_id: str | None = None
+
             stream: ChatCompletionStream[BaseModel]
             with self._get_sync_client().beta.chat.completions.stream(
                 **parse_params, response_format=response_model
@@ -2672,6 +2676,7 @@ class OpenAICompletion(BaseLLM):
                     if chunk.type == "content.delta":
                         delta_content = chunk.delta
                         if delta_content:
+                            full_response += delta_content
                             self._emit_stream_chunk_event(
                                 chunk=delta_content,
                                 from_task=from_task,
@@ -2702,7 +2707,17 @@ class OpenAICompletion(BaseLLM):
                             return parsed_result
 
             logging.error("Failed to get parsed result from stream")
-            return ""
+            self._emit_call_completed_event(
+                response=full_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=usage,
+                finish_reason=parsed_finish_reason,
+                response_id=parsed_response_id,
+            )
+            return full_response
 
         completion_stream: Stream[ChatCompletionChunk] = (
             self._get_sync_client().chat.completions.create(**params)

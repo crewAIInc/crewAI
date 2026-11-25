@@ -717,6 +717,83 @@ def test_openai_streaming_with_response_model():
         assert "text_format" not in call_kwargs
 
 
+def _mock_response_model_stream(llm, deltas, parsed):
+    chunks = []
+    for index, delta in enumerate(deltas):
+        chunk = MagicMock()
+        chunk.type = "content.delta"
+        chunk.delta = delta
+        chunk.id = f"response-{index}"
+        chunks.append(chunk)
+
+    message = MagicMock()
+    message.parsed = parsed
+    choice = MagicMock()
+    choice.message = message
+    final_completion = MagicMock()
+    final_completion.choices = [choice]
+
+    stream_obj = MagicMock()
+    stream_obj.__enter__ = MagicMock(return_value=stream_obj)
+    stream_obj.__exit__ = MagicMock(return_value=None)
+    stream_obj.__iter__ = MagicMock(return_value=iter(chunks))
+    stream_obj.get_final_completion = MagicMock(return_value=final_completion)
+    return patch.object(
+        llm._client.beta.chat.completions, "stream", return_value=stream_obj
+    )
+
+
+def _completed_events(mock_emit):
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+    return [
+        call.kwargs["event"]
+        for call in mock_emit.call_args_list
+        if isinstance(call.kwargs.get("event"), LLMCallCompletedEvent)
+    ]
+
+
+def test_openai_streaming_with_response_model_unparsed_returns_text_and_completes():
+    from pydantic import BaseModel
+    from crewai.events.event_bus import crewai_event_bus
+
+    class TestResponse(BaseModel):
+        answer: str
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+
+    with _mock_response_model_stream(
+        llm, ["streamed ", "text"], None
+    ), patch.object(crewai_event_bus, "emit") as mock_emit:
+        result = llm.call("Test question", response_model=TestResponse)
+
+    assert result == "streamed text"
+    events = _completed_events(mock_emit)
+    assert len(events) == 1
+    assert events[0].response == "streamed text"
+
+
+def test_openai_streaming_with_response_model_parsed_emits_single_completion():
+    from pydantic import BaseModel
+    from crewai.events.event_bus import crewai_event_bus
+
+    class TestResponse(BaseModel):
+        answer: str
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    parsed = TestResponse(answer="ok")
+
+    with _mock_response_model_stream(
+        llm, ['{"answer": ', '"ok"}'], parsed
+    ), patch.object(crewai_event_bus, "emit") as mock_emit:
+        result = llm.call("Test question", response_model=TestResponse)
+
+    assert result == parsed
+    events = _completed_events(mock_emit)
+    assert len(events) == 1
+    assert events[0].response == parsed.model_dump_json()
+
+
 @pytest.mark.vcr()
 def test_openai_response_format_with_pydantic_model():
     """
