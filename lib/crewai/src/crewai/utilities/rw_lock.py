@@ -75,6 +75,9 @@ class RWLock:
                 self._writer = True
             finally:
                 self._waiting_writers -= 1
+                if self._waiting_writers == 0 and not self._writer:
+                    # The last queued writer left without acquiring the lock.
+                    self._cond.notify_all()
 
     def w_release(self) -> None:
         """Release a write lock and notify all waiting threads."""
