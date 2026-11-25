@@ -2305,6 +2305,11 @@ class LLM(BaseLLM):
 
         return data
 
+    def _track_token_usage_internal(self, usage_data: dict[str, Any]) -> None:
+        super()._track_token_usage_internal(
+            self._usage_to_dict(usage_data) or usage_data
+        )
+
     def _handle_emit_call_events(
         self,
         response: Any,
