@@ -1,4 +1,7 @@
 import json
+import re
+import sys
+import zlib
 from pathlib import Path
 import uuid
 from typing import Any
@@ -80,9 +83,68 @@ def test_tool_saves_file_and_returns_link(store, tmp_path):
     assert saved.read_bytes() == b"\x89PNG"
 
 
+def test_tool_saves_a_rewritten_file_again_when_tool_caching_is_on(store, tmp_path):
+    from types import SimpleNamespace
+
+    from crewai.agents.cache.cache_handler import CacheHandler
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+    tool = SaveArtifactTool()
+    handler = ToolsHandler(cache=CacheHandler())
+    agent = _agent()
+    chart = tmp_path / "chart.svg"
+    tool_call = SimpleNamespace(
+        id="c1",
+        function=SimpleNamespace(
+            name="save_artifact",
+            arguments=json.dumps(
+                {"identifier": "chart", "title": "Chart", "kind": "svg", "file_path": "chart.svg"}
+            ),
+        ),
+    )
+
+    results = []
+    for label in ("draft", "final"):
+        chart.write_text(f"<svg>{label}</svg>")
+        results.append(
+            execute_single_native_tool_call(
+                tool_call,
+                available_functions={"save_artifact": tool.run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=handler,
+                agent=agent,
+                task=None,
+                crew=None,
+                event_source=agent,
+            )
+        )
+
+    directory = tmp_path / "artifacts" / "exec-1" / "chart"
+    assert [json.loads(r.result)["version"] for r in results] == [1, 2]
+    assert (directory / "v2.svg").read_text() == "<svg>final</svg>"
+
+
 def test_tool_refuses_files_outside_workdir(store):
     result = SaveArtifactTool().run(
         identifier="secret", title="x", kind="file", file_path="/etc/hosts"
+    )
+
+    assert result.startswith("Error saving artifact")
+    assert not (store.root / "exec-1" / "secret").exists()
+
+
+@pytest.mark.parametrize("file_path", [".env", ".git/config", "link.txt"])
+def test_tool_refuses_hidden_files(store, tmp_path, file_path):
+    (tmp_path / ".env").write_text("OPENAI_API_KEY=sk-secret")
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "config").write_text("[remote]")
+    # A visible name that points at a hidden file is refused too.
+    (tmp_path / "link.txt").symlink_to(tmp_path / ".env")
+
+    result = SaveArtifactTool().run(
+        identifier="secret", title="x", kind="text", file_path=file_path
     )
 
     assert result.startswith("Error saving artifact")
@@ -150,7 +212,7 @@ def test_task_output_exposes_saved_artifact(store, tmp_path):
     assert seen == [output.artifact.url]
 
 
-@pytest.mark.parametrize("kind", ["image", "pdf", "file"])
+@pytest.mark.parametrize("kind", ["image", "file"])
 def test_task_rejects_kinds_text_output_cannot_fill(kind):
     with pytest.raises(ValueError, match=f"{kind}.*file_path"):
         Task(
@@ -205,6 +267,35 @@ def _capture_events(run):
         run()
         crewai_event_bus.flush()
     return events
+
+
+def test_event_names_the_flow_method_that_saved_it(store):
+    from crewai.events.event_context import event_scope
+    from crewai.flow import listen
+
+    class ReportFlow(Flow):
+        @start()
+        def research(self):
+            return "notes"
+
+        @listen(research)
+        def write_report(self):
+            # An agent inside the method opens its own scope; the artifact still
+            # belongs to the method.
+            with event_scope("agent-1", "agent_execution_started"):
+                save_artifact(
+                    Artifact(identifier="report", title="Report", kind="html"),
+                    content="<h1>Q3</h1>",
+                )
+
+    events = _capture_events(lambda: ReportFlow(tracing=False).kickoff())
+    events += _capture_events(
+        lambda: save_artifact(
+            Artifact(identifier="loose", title="Loose", kind="text"), content="x"
+        )
+    )
+
+    assert [e.method_name for e in events] == ["write_report", None]
 
 
 def test_task_artifact_event_names_task_and_agent(store):
@@ -575,7 +666,7 @@ def test_artifact_can_point_at_the_task_output_file(store, tmp_path):
     assert (tmp_path / "artifacts" / "exec-1" / "r" / "v1.html").read_text() == "<html>x</html>"
 
 
-@pytest.mark.parametrize("kind", ["image", "pdf", "file"])
+@pytest.mark.parametrize("kind", ["image", "file"])
 def test_tool_refuses_text_for_file_kinds(store, kind):
     result = SaveArtifactTool().run(identifier="p", title="P", kind=kind, content="# text")
 
@@ -987,3 +1078,154 @@ def test_declarative_artifact_input_that_is_missing_fails_the_step(store):
 def test_declarative_artifact_input_is_validated_when_loaded(reference):
     with pytest.raises(Exception, match="input_files"):
         Flow.from_declaration(contents=ARTIFACT_INPUT_FLOW.replace("{artifact: board-report}", reference))
+
+
+class _FakeWeasyPrint:
+    """Stands in for weasyprint, which needs Pango from the system."""
+
+    def __init__(self):
+        self.rendered: list[str] = []
+        self.protocols: set[str] | None = None
+        fake = self
+
+        class URLFetcher:
+            def __init__(self, allowed_protocols=None):
+                fake.protocols = allowed_protocols
+
+        class HTML:
+            def __init__(self, string, url_fetcher):
+                fake.rendered.append(string)
+
+            def write_pdf(self):
+                return b"%PDF-1.7 rendered"
+
+        self.module = type(sys)("weasyprint")
+        self.module.HTML = HTML
+        self.module.URLFetcher = URLFetcher
+
+
+@pytest.fixture
+def weasyprint(monkeypatch):
+    fake = _FakeWeasyPrint()
+    monkeypatch.setitem(sys.modules, "weasyprint", fake.module)
+    return fake
+
+
+def test_html_text_is_rendered_into_a_pdf(store, weasyprint):
+    html = "<!doctype html><h1>Q3</h1>"
+    saved = save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content=html)
+
+    assert weasyprint.rendered == [html]
+    assert saved.content_type == "application/pdf"
+    assert (store.root / "exec-1" / "r" / "v1.pdf").read_bytes() == b"%PDF-1.7 rendered"
+
+
+def test_markdown_text_becomes_html_before_rendering(store, weasyprint):
+    save_artifact(
+        Artifact(identifier="r", title="R", kind="pdf"),
+        content="# Q3\n\n| a | b |\n|---|---|\n| 1 | 2 |",
+    )
+
+    assert "<h1>Q3</h1>" in weasyprint.rendered[0]
+    assert "<table>" in weasyprint.rendered[0]
+
+
+def test_pdf_render_fetches_only_inline_data(store, weasyprint):
+    save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content="# Q3")
+
+    assert weasyprint.protocols == {"data"}
+
+
+def test_tool_saves_html_as_a_pdf(store, weasyprint):
+    result = SaveArtifactTool().run(
+        identifier="report", title="Report", kind="pdf", content="<html><p>hi</p></html>"
+    )
+
+    assert json.loads(result)["version"] == 1
+    assert (store.root / "exec-1" / "report" / "v1.pdf").exists()
+
+
+def test_task_saves_its_output_as_a_pdf(store, weasyprint):
+    task = Task(
+        description="d",
+        expected_output="o",
+        agent=_agent(),
+        artifact=Artifact(identifier="report", title="Report", kind="pdf"),
+    )
+    with patch.object(Agent, "execute_task", return_value="# Report"):
+        output = task.execute_sync()
+
+    assert output.artifact.content_type == "application/pdf"
+    assert "<h1>Report</h1>" in weasyprint.rendered[0]
+
+
+def test_pdf_without_the_engine_names_the_fix(store, monkeypatch):
+    monkeypatch.setitem(sys.modules, "weasyprint", None)
+
+    with pytest.raises(RuntimeError, match=r"crewai\[pdf\].*Pango"):
+        save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content="# Q3")
+
+    assert not (store.root / "exec-1" / "r").exists()
+
+
+def test_real_pdf_render_leaves_out_local_files(store, tmp_path):
+    try:
+        import weasyprint  # noqa: F401
+    except (ImportError, OSError):
+        pytest.skip("weasyprint and Pango are not installed")
+    secret = tmp_path / "secret.txt"
+    secret.write_text("TOP-SECRET-VALUE")
+    html = (
+        f'<html><head><link rel="attachment" href="{secret.as_uri()}"></head>'
+        f'<body><h1>Q3</h1><img src="{secret.as_uri()}"></body></html>'
+    )
+
+    saved = save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content=html)
+
+    data = (store.root / "exec-1" / "r" / "v1.pdf").read_bytes()
+    assert data.startswith(b"%PDF")
+    # Embedded files are compressed, so search the inflated streams too.
+    inflated = data
+    for stream in re.findall(rb"stream\r?\n(.*?)endstream", data, re.S):
+        try:
+            inflated += zlib.decompress(stream)
+        except zlib.error:
+            pass
+    assert b"TOP-SECRET-VALUE" not in inflated
+    assert saved.size == len(data)
+
+
+def test_real_pdf_render_never_calls_the_network(store):
+    try:
+        import weasyprint  # noqa: F401
+    except (ImportError, OSError):
+        pytest.skip("weasyprint and Pango are not installed")
+    import http.server
+    import threading
+
+    requests: list[str] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_port}"
+    html = (
+        f'<html><head><link rel="attachment" href="{url}/meta">'
+        f'<link rel="stylesheet" href="{url}/s.css"></head>'
+        f'<body><h1>Q3</h1><img src="{url}/i.png"></body></html>'
+    )
+    try:
+        save_artifact(Artifact(identifier="r", title="R", kind="pdf"), content=html)
+    finally:
+        server.shutdown()
+
+    assert (store.root / "exec-1" / "r" / "v1.pdf").read_bytes().startswith(b"%PDF")
+    assert requests == []

@@ -19,6 +19,7 @@ class ArtifactCreatedEvent(BaseEvent):
     content_type: str
     size: int
     url: str
+    method_name: str | None = None
     from_agent: Any | None = None
     from_task: Any | None = None
 

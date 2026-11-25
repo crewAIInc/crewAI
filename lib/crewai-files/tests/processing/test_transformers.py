@@ -1,6 +1,7 @@
 """Unit tests for file transformers."""
 
 import io
+from typing import cast
 from unittest.mock import patch
 
 from crewai_files import ImageFile, PDFFile, TextFile
@@ -95,6 +96,32 @@ class TestResizeImage:
         width, height = dims
         assert width == 50
         assert height == 50
+
+    @pytest.mark.parametrize(
+        ("width", "height", "expected"),
+        [(1, 1000, (1, 100)), (1000, 1, (100, 1))],
+    )
+    def test_resize_narrow_image(
+        self, width: int, height: int, expected: tuple[int, int]
+    ) -> None:
+        png_bytes = create_test_png(width, height)
+        image = ImageFile(source=FileBytes(data=png_bytes, filename="narrow.png"))
+
+        result = resize_image(image, max_width=100, max_height=100)
+
+        assert get_image_dimensions(result) == expected
+
+    @pytest.mark.parametrize(
+        ("max_width", "max_height"), [(0, 100), (100, 0), (-1, 100), (100, -1)]
+    )
+    def test_resize_rejects_nonpositive_bounds(
+        self, max_width: int, max_height: int
+    ) -> None:
+        png_bytes = create_test_png()
+        image = ImageFile(source=FileBytes(data=png_bytes, filename="test.png"))
+
+        with pytest.raises(ValueError, match="Maximum image dimensions"):
+            resize_image(image, max_width=max_width, max_height=max_height)
 
     def test_resize_returns_image_file(self) -> None:
         """Test that resize returns an ImageFile instance."""
@@ -302,6 +329,22 @@ class TestChunkText:
 
         assert len(result) > 1
         # Should still complete without hanging
+
+    @pytest.mark.parametrize("max_chars", [0, -1])
+    def test_non_positive_max_chars_is_rejected(self, max_chars: int) -> None:
+        """A non-positive limit cannot produce a chunk; fail instead of yielding empties."""
+
+        class _Text:
+            filename = "data.txt"
+
+            @staticmethod
+            def read() -> bytes:
+                return b"hello"
+
+        text = cast(TextFile, _Text())
+
+        with pytest.raises(ValueError, match="max_chars"):
+            list(chunk_text(text, max_chars=max_chars))
 
 
 class TestGetImageDimensions:
