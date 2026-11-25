@@ -9,9 +9,14 @@ import types
 
 import pytest
 
+from crewai import Crew
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import JSONProjectError, JSONProjectValidationError
-from crewai.project.crew_loader import load_crew, load_crew_from_definition
+from crewai.project.crew_loader import (
+    load_crew,
+    load_crew_and_kickoff,
+    load_crew_from_definition,
+)
 
 
 def _write_python_defs(tmp_path: Path) -> None:
@@ -963,3 +968,39 @@ class TestLoadCrew:
 
         crew, _ = load_crew(crew_file)
         assert crew.verbose is True
+
+    def test_kickoff_input_overrides_win_over_default_inputs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "researcher")
+
+        crew_def = {
+            "name": "test_crew",
+            "agents": ["researcher"],
+            "tasks": [
+                {
+                    "name": "research",
+                    "description": "Research {topic} for {audience}",
+                    "expected_output": "Findings about {topic}",
+                    "agent": "researcher",
+                }
+            ],
+            "inputs": {"topic": "AI", "audience": "engineers"},
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        received: list[dict] = []
+
+        def fake_kickoff(self, inputs=None, **kwargs):
+            received.append(inputs)
+            return "done"
+
+        monkeypatch.setattr(Crew, "kickoff", fake_kickoff)
+
+        assert (
+            load_crew_and_kickoff(crew_file, input_overrides={"topic": "Robotics"})
+            == "done"
+        )
+        assert received == [{"topic": "Robotics", "audience": "engineers"}]
