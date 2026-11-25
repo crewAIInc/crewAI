@@ -190,6 +190,7 @@ class CrewAIRagAdapter(Adapter):
             ".docx",
             ".mdx",
             ".md",
+            ".ipynb",
         }
 
         for arg in content_items:
@@ -315,6 +316,7 @@ class CrewAIRagAdapter(Adapter):
                     DataType.JSONL,
                     DataType.XML,
                     DataType.MDX,
+                    DataType.NOTEBOOK,
                 ]:
                     if not source_content.is_url() and not source_content.path_exists():
                         raise FileNotFoundError(f"File does not exist: {source_ref}")
