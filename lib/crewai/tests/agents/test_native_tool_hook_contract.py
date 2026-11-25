@@ -6,14 +6,11 @@ import asyncio
 import json
 from typing import Any
 
-import pytest
-from pydantic import ValidationError
-
 from crewai import Agent
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
-from crewai.agents.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.hooks.tool_hooks import ToolCallHookContext
 from crewai.llms.base_llm import BaseLLM
@@ -23,12 +20,14 @@ from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
 )
+from pydantic import Field, ValidationError
+import pytest
 
 
 class LookupTool(BaseTool):
     name: str = "lookup"
     description: str = "Look up a value."
-    calls: list[str] = []
+    calls: list[str] = Field(default_factory=list)
 
     def _run(self, term: str = "default") -> str:
         self.calls.append(term)
@@ -110,7 +109,7 @@ def test_kickoff_history_records_input_applied_by_pre_tool_hooks(
     batch_size: int, async_entry: bool
 ) -> None:
     class LookupWithExecutionNote(LookupTool):
-        execution_notes: list[str] = []
+        execution_notes: list[str] = Field(default_factory=list)
 
         def _run(self, term: str = "default", execution_note: str = "") -> str:
             self.execution_notes.append(execution_note)
@@ -144,7 +143,9 @@ def test_kickoff_history_records_input_applied_by_pre_tool_hooks(
     expected = [f"effective-{i}" for i in range(batch_size)]
     assert sorted(tool.calls) == expected
     assert tool.execution_notes == ["for the tool only"] * batch_size
-    calls = [call for message in output.messages for call in message.get("tool_calls", [])]
+    calls = [
+        call for message in output.messages for call in message.get("tool_calls", [])
+    ]
     assert [call["id"] for call in calls] == [f"call_{i}" for i in range(batch_size)]
     assert [json.loads(call["function"]["arguments"]) for call in calls] == [
         {"term": term} for term in expected
