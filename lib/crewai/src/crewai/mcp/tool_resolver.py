@@ -11,7 +11,9 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import contextvars
+import inspect
 import sys
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -332,6 +334,91 @@ class MCPToolResolver:
             raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
         return transport, server_name
 
+    @staticmethod
+    def _tool_filter_arguments(
+        tool_filter: Callable[..., bool],
+        context: Any,
+        tool: dict[str, Any],
+    ) -> tuple[Any, ...] | None:
+        """Work out how to call a filter, which takes ``(context, tool)`` or ``(tool)``.
+
+        The arity is read from the signature instead of being probed by retrying
+        on ``TypeError``: a filter that raises ``TypeError`` from its own body
+        would otherwise be called a second time with the wrong arity, hiding the
+        real failure and running the filter's side effects twice.
+
+        Returns ``None`` when the signature cannot be introspected, so the caller
+        can fall back to trial calls.
+        """
+        try:
+            signature = inspect.signature(tool_filter)
+        except (TypeError, ValueError):
+            return None
+        try:
+            signature.bind(context, tool)
+        except TypeError:
+            return (tool,)
+        return (context, tool)
+
+    def _run_tool_filter(
+        self,
+        tool_filter: Callable[..., bool],
+        tool: dict[str, Any],
+        server_name: str,
+    ) -> bool:
+        """Invoke a tool filter and return its keep/drop verdict.
+
+        Filters may take ``(context, tool)`` or ``(tool)``; the arity is resolved
+        from the signature by :meth:`_tool_filter_arguments`.
+
+        Async filters are a documented pattern (see
+        :func:`crewai.mcp.filters.create_dynamic_tool_filter`), but calling
+        one returns a coroutine, which is always truthy unless awaited --
+        silently disabling the filter. Awaitable results are therefore
+        resolved before the verdict is used.
+        """
+        from crewai.mcp.filters import ToolFilterContext
+
+        context = ToolFilterContext(
+            agent=self._agent,
+            server_name=server_name,
+            run_context=None,
+        )
+        args = self._tool_filter_arguments(tool_filter, context, tool)
+        if args is None:
+            try:
+                result = tool_filter(context, tool)
+            except (TypeError, AttributeError):
+                result = tool_filter(tool)
+        else:
+            result = tool_filter(*args)
+
+        if not inspect.isawaitable(result):
+            return bool(result)
+
+        async def _await_filter_result() -> bool:
+            # A filter can hand back an awaitable that resolves to another
+            # awaitable; `bool` of the inner one would be True regardless of the
+            # verdict it eventually produces, so unwrap until a plain value shows.
+            verdict: Any = result
+            while inspect.isawaitable(verdict):
+                verdict = await verdict
+            return bool(verdict)
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(_await_filter_result())
+
+        # An event loop is already running in this thread; resolve the
+        # coroutine on a worker thread like the discovery path above.
+        import concurrent.futures
+
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(ctx.run, asyncio.run, _await_filter_result())
+            return future.result()
+
     def _resolve_native(
         self, mcp_config: MCPServerConfig, server_reference: str | None = None
     ) -> tuple[list[BaseTool], list[Any]]:
@@ -422,21 +509,10 @@ class MCPToolResolver:
             if mcp_config.tool_filter:
                 filtered_tools = []
                 for tool in tools_list:
-                    if callable(mcp_config.tool_filter):
-                        try:
-                            from crewai.mcp.filters import ToolFilterContext
-
-                            context = ToolFilterContext(
-                                agent=self._agent,
-                                server_name=server_name,
-                                run_context=None,
-                            )
-                            if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                        except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                    else:
+                    if not callable(mcp_config.tool_filter):
+                        filtered_tools.append(tool)
+                        continue
+                    if self._run_tool_filter(mcp_config.tool_filter, tool, server_name):
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
 
