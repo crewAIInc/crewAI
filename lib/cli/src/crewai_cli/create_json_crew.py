@@ -1117,7 +1117,7 @@ def _get_platform_token_from_login() -> str:
         click.secho(
             "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
         )
-        AuthenticationCommand().login()
+        AuthenticationCommand().login(source="integrations")
     except httpx.HTTPStatusError as error:
         status_code = getattr(error.response, "status_code", None)
         if status_code == 403:
@@ -1131,7 +1131,7 @@ def _get_platform_token_from_login() -> str:
             "  Your CrewAI login has expired; sign in again to configure integrations.",
             fg="cyan",
         )
-        AuthenticationCommand().login()
+        AuthenticationCommand().login(source="integrations")
     except _NoOrganizationSelectedError:
         click.secho(
             "  Select a CrewAI organization to configure integrations.", fg="cyan"

@@ -998,7 +998,7 @@ def _chain_deploy() -> None:
         _record_deploy_button("deploy_login_prompted")
         console.print()
         try:
-            AuthenticationCommand().login()
+            AuthenticationCommand().login(source="deploy")
         except KeyboardInterrupt:
             _record_deploy_button("deploy_stopped:login_abandoned")
             raise

@@ -2374,7 +2374,8 @@ def logins(monkeypatch):
     outcome: dict[str, BaseException | None] = {"raise": None}
 
     class FakeLogin:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "eval"
             calls.append("login")
             if outcome["raise"] is not None:
                 raise outcome["raise"]

@@ -877,7 +877,7 @@ def test_get_platform_token_from_login_signs_in_then_retries(monkeypatch) -> Non
 
     assert json_crew._get_platform_token_from_login() == "integration-token"
 
-    authentication_command.login.assert_called_once_with()
+    authentication_command.login.assert_called_once_with(source="integrations")
 
 
 def test_get_platform_token_from_login_stops_when_the_login_times_out(
@@ -931,7 +931,7 @@ def test_get_platform_token_from_login_reauthenticates_an_expired_login(
 
     assert json_crew._get_platform_token_from_login() == "integration-token"
 
-    authentication_command.login.assert_called_once_with()
+    authentication_command.login.assert_called_once_with(source="integrations")
 
 
 def test_get_platform_token_from_login_reports_forbidden_organization(monkeypatch) -> None:

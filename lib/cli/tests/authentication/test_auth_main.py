@@ -120,8 +120,12 @@ class TestAuthenticationCommand:
         self.auth_command._display_auth_instructions(device_code_data)
 
         expected_calls = [
-            call("1. Navigate to: ", "https://example.com/auth"),
-            call("2. Enter the following code: ", "123456"),
+            call(
+                "1. Open this page (your browser should open it for you):",
+                "https://example.com/auth",
+            ),
+            call("2. Check that it shows this code, already filled in:", "123456"),
+            call("The code expires in 10 minutes. Press Ctrl-C to cancel."),
         ]
         mock_console_print.assert_has_calls(expected_calls)
         mock_webbrowser.open.assert_called_once_with("https://example.com/auth")

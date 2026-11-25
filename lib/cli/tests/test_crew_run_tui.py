@@ -112,7 +112,8 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
                 raise AuthenticationRequiredError
 
     class FakeAuthenticationCommand:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "deploy"
             login_calls.append(True)
 
     monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
@@ -140,7 +141,8 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
             raise SystemExit(42)
 
     class FakeAuthenticationCommand:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "deploy"
             login_calls.append(True)
 
     monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
@@ -2575,7 +2577,8 @@ def _deploy_doubles(monkeypatch, *, creates, login):
                 raise outcome
 
     class FakeAuthenticationCommand:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "deploy"
             calls.append("login")
             if login is not None:
                 raise login
@@ -2689,7 +2692,8 @@ def _amp_deploy_doubles(monkeypatch, *, statuses):
                 )
 
     class FakeAuthenticationCommand:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "deploy"
             calls.append("login")
 
     monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
@@ -2751,7 +2755,8 @@ def test_the_real_logged_out_deploy_still_prompts_a_login_then_says_so(
         raise AuthError("No token")
 
     class FakeAuthenticationCommand:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "deploy"
             calls.append("login")
 
     monkeypatch.setattr("crewai_cli.command.get_auth_token", no_saved_login)
@@ -3079,7 +3084,8 @@ def rejected_login(monkeypatch, tmp_path, stops):
             return _DONE
 
     class FakeLogin:
-        def login(self) -> None:
+        def login(self, source: str) -> None:
+            assert source == "eval"
             logins.append("login")
             if outcome["raise"] is not None:
                 raise outcome["raise"]
