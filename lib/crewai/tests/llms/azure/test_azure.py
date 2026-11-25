@@ -534,6 +534,23 @@ def test_azure_completion_params_preparation():
         assert params["max_tokens"] == 1000
 
 
+@pytest.mark.parametrize("seed", [42, 0])
+def test_azure_completion_params_include_seed(seed):
+    llm = LLM(model="azure/gpt-4", seed=seed)
+
+    params = llm._prepare_completion_params([{"role": "user", "content": "Hello"}])
+
+    assert params["seed"] == seed
+
+
+def test_azure_completion_params_omit_seed_when_unset():
+    llm = LLM(model="azure/gpt-4")
+
+    params = llm._prepare_completion_params([{"role": "user", "content": "Hello"}])
+
+    assert "seed" not in params
+
+
 def test_azure_model_detection():
     """
     Test that various Azure model formats are properly detected
