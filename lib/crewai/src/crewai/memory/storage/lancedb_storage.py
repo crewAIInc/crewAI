@@ -63,6 +63,32 @@ def _scope_prefix_filter(prefix: str) -> str:
     return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
 
 
+def _delete_filter(
+    scope_prefix: str | None,
+    record_ids: list[str] | None,
+    older_than: datetime | None,
+) -> str | None:
+    """Combine the SQL-expressible delete criteria into one ``where`` clause.
+
+    Criteria containing ``OR`` are parenthesised and everything is joined with
+    ``AND`` so the criteria narrow each other instead of widening the match.
+    Returns ``None`` when no criterion applies.
+    """
+    conditions: list[str] = []
+    if record_ids:
+        conditions.append(_id_in_filter(record_ids))
+    if scope_prefix is not None and scope_prefix.strip("/"):
+        prefix = scope_prefix.rstrip("/")
+        if not prefix.startswith("/"):
+            prefix = "/" + prefix
+        conditions.append(f"({_scope_prefix_filter(prefix)} OR scope = '/')")
+    if older_than is not None:
+        conditions.append(f"created_at < '{older_than.isoformat()}'")
+    if not conditions:
+        return None
+    return " AND ".join(conditions)
+
+
 class LanceDBStorage:
     """LanceDB-backed storage for the unified memory system."""
 
@@ -441,10 +467,6 @@ class LanceDBStorage:
         if self._table is None:
             return 0
         with store_lock(self._lock_name):
-            if record_ids and not (categories or metadata_filter):
-                before = int(self._table.count_rows())
-                self._do_write("delete", _id_in_filter(record_ids))
-                return before - int(self._table.count_rows())
             if categories or metadata_filter:
                 rows = self._scan_rows(scope_prefix)
                 to_delete: list[str] = []
@@ -466,21 +488,9 @@ class LanceDBStorage:
                 before = int(self._table.count_rows())
                 self._do_write("delete", _id_in_filter(to_delete))
                 return before - int(self._table.count_rows())
-            conditions = []
-            if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                if not prefix.startswith("/"):
-                    prefix = "/" + prefix
-                conditions.append(f"{_scope_prefix_filter(prefix)} OR scope = '/'")
-            if older_than is not None:
-                conditions.append(f"created_at < '{older_than.isoformat()}'")
-            if not conditions:
-                before = int(self._table.count_rows())
-                self._do_write("delete", "id != ''")
-                return before - int(self._table.count_rows())
-            where_expr = " AND ".join(conditions)
+            where_expr = _delete_filter(scope_prefix, record_ids, older_than)
             before = int(self._table.count_rows())
-            self._do_write("delete", where_expr)
+            self._do_write("delete", where_expr or "id != ''")
             return before - int(self._table.count_rows())
 
     def _scan_rows(
