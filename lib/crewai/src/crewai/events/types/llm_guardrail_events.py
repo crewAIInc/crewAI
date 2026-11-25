@@ -34,12 +34,17 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
     retry_count: int
 
     def __init__(self, **data: Any) -> None:
+        from crewai.tasks.decision_guardrail import DecisionGuardrail
         from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
         from crewai.tasks.llm_guardrail import LLMGuardrail
 
         super().__init__(**data)
 
-        if isinstance(self.guardrail, HallucinationGuardrail):
+        if isinstance(self.guardrail, DecisionGuardrail):
+            self.guardrail_type = "decision"
+            self.guardrail_name = self.guardrail.name
+            self.guardrail = self.guardrail.description
+        elif isinstance(self.guardrail, HallucinationGuardrail):
             self.guardrail_type = "hallucination"
             self.guardrail_name = self.guardrail.description.strip()
             self.guardrail = self.guardrail.description.strip()
