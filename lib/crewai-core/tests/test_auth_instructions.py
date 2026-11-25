@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from typing import Any
+import webbrowser
 
-from crewai_core.auth import oauth2
 from crewai_core.auth.oauth2 import AuthenticationCommand
 import pytest
 
@@ -12,7 +12,7 @@ import pytest
 @pytest.fixture
 def opened(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     urls: list[str] = []
-    monkeypatch.setattr(oauth2.webbrowser, "open", urls.append)
+    monkeypatch.setattr(webbrowser, "open", urls.append)
     return urls
 
 
@@ -24,7 +24,9 @@ def _instructions(capsys: pytest.CaptureFixture[str], data: dict[str, Any]) -> s
     return " ".join(capsys.readouterr().out.split())
 
 
-def test_a_prefilled_link_says_the_code_is_already_filled_in(capsys, opened) -> None:
+def test_a_prefilled_link_says_the_code_is_already_filled_in(
+    capsys: pytest.CaptureFixture[str], opened: list[str]
+) -> None:
     said = _instructions(
         capsys,
         {
@@ -45,7 +47,9 @@ def test_a_prefilled_link_says_the_code_is_already_filled_in(capsys, opened) -> 
     assert opened == ["https://login.example/activate?code=ABCD-EFGH"]
 
 
-def test_a_bare_link_asks_for_the_code_to_be_entered(capsys, opened) -> None:
+def test_a_bare_link_asks_for_the_code_to_be_entered(
+    capsys: pytest.CaptureFixture[str], opened: list[str]
+) -> None:
     said = _instructions(
         capsys,
         {
@@ -71,7 +75,12 @@ def test_a_bare_link_asks_for_the_code_to_be_entered(capsys, opened) -> None:
         ({"expires_in": 1799}, "The code expires in 30 minutes."),
     ],
 )
-def test_the_time_left_is_said_in_minutes(capsys, opened, data, expiry) -> None:
+def test_the_time_left_is_said_in_minutes(
+    capsys: pytest.CaptureFixture[str],
+    opened: list[str],
+    data: dict[str, Any],
+    expiry: str,
+) -> None:
     """Without `expires_in`, the same ten minutes the poll waits for."""
     said = _instructions(
         capsys,
