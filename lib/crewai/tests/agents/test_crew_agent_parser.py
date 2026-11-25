@@ -213,6 +213,18 @@ def test_valid_final_answer_parsing():
     assert result.output == "The temperature is 100 degrees"
 
 
+def test_final_answer_parsing_uses_the_last_final_answer():
+    text = (
+        "Thought: I have a draft\n"
+        "Final Answer: The temperature is about 90 degrees\n"
+        "Thought: I checked again and corrected it\n"
+        "Final Answer: The temperature is 100 degrees"
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert result.output == "The temperature is 100 degrees"
+
+
 def test_missing_action_error():
     text = "Thought: Let's find the temperature\nAction Input: what is the temperature in SF?"
     with pytest.raises(OutputParserException) as exc_info:

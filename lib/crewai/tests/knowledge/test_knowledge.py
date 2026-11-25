@@ -447,6 +447,21 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
+def test_csv_knowledge_source_loads_every_row(tmpdir):
+    """Every CSV row, not only the last one, reaches the content to embed."""
+    csv_path = Path(tmpdir.join("data.csv"))
+    csv_path.write_text(
+        "Name,Age,City\nBrandon,30,New York\nAlice,25,Los Angeles\n",
+        encoding="utf-8",
+    )
+
+    csv_source = CSVKnowledgeSource(file_paths=[csv_path])
+
+    assert csv_source.content[csv_path] == (
+        "Name Age City\nBrandon 30 New York\nAlice 25 Los Angeles\n"
+    )
+
+
 def test_json_knowledge_source(mock_vector_db, tmpdir):
     """Test JSONKnowledgeSource with a simple JSON file."""
 

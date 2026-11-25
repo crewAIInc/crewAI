@@ -502,6 +502,30 @@ def test_json_property_is_none_when_output_json_was_not_produced():
     assert crew_output.json is None
 
 
+def test_json_property_reads_the_final_task_output_format():
+    from crewai.crews.crew_output import CrewOutput
+    from crewai.tasks.output_format import OutputFormat
+
+    research = TaskOutput(
+        description="Research the title",
+        agent="Researcher",
+        raw="Some notes",
+        output_format=OutputFormat.RAW,
+    )
+    score = TaskOutput(
+        description="Score the title",
+        agent="Scorer",
+        raw='{"score": 4}',
+        json_dict={"score": 4},
+        output_format=OutputFormat.JSON,
+    )
+    crew_output = CrewOutput(
+        raw='{"score": 4}', json_dict={"score": 4}, tasks_output=[research, score]
+    )
+
+    assert crew_output.json == '{"score": 4}'
+
+
 @pytest.mark.vcr()
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):

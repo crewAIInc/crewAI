@@ -19,6 +19,14 @@ class _StructuredProviderError(Exception):
         super().__init__(code)
 
 
+class _RetryAfterError(Exception):
+    status_code = 429
+
+    def __init__(self, retry_after: str) -> None:
+        self.headers = {"retry-after": retry_after}
+        super().__init__("busy")
+
+
 class _RetryingLLM(BaseLLM):
     model: str = "test-model"
     outcomes: list[Any]
@@ -100,6 +108,18 @@ def test_run_with_rate_limit_retry_retries_with_backoff() -> None:
 
     assert result == "complete"
     assert delays == [pytest.approx(1, abs=0.2)]
+
+
+def test_run_with_rate_limit_retry_waits_the_retry_after_seconds() -> None:
+    outcomes: list[str | Exception] = [_RetryAfterError("7"), "complete"]
+    delays: list[float] = []
+
+    result = run_with_rate_limit_retry(
+        lambda: _pop_outcome(outcomes), sleep=delays.append
+    )
+
+    assert result == "complete"
+    assert delays == [7.0]
 
 
 @pytest.mark.asyncio
