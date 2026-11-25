@@ -266,7 +266,7 @@ def _get_project_attribute(
             "Please verify that the file exists and contains the specified attribute.",
             style="bold red",
         )
-        raise SystemExit
+        raise SystemExit(1)
 
     return attribute
 
