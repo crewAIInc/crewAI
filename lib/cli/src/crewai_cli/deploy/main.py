@@ -843,11 +843,15 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("Listing all Crews\n", style="bold blue")
 
         response = self.plus_api_client.list_crews()
+        # Route errors (including 401 and non-JSON bodies) through the shared
+        # validator like every other crewai+ command, instead of parsing first
+        # and silently reporting "no Crews" on a failing status code.
+        self._validate_response(response)
         json_response = response.json()
-        if response.status_code == 200:
-            self._display_crews(json_response)
-        else:
+        if not json_response:
             self._display_no_crews_message()
+        else:
+            self._display_crews(json_response)
 
     def _display_crews(self, crews_data: list[dict[str, Any]]) -> None:
         """

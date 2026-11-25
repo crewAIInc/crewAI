@@ -1841,6 +1841,39 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("Crew1 (uuid1) active", fake_out.getvalue())
             self.assertIn("Crew2 (uuid2) inactive", fake_out.getvalue())
 
+    def test_list_crews_empty_reports_no_crews(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = []
+        self.mock_client.list_crews.return_value = mock_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.list_crews()
+            self.assertIn("don't have any Crews", fake_out.getvalue())
+
+    def test_list_crews_api_error_exits_nonzero(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.is_success = False
+        self.mock_client.list_crews.return_value = mock_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit):
+                self.deploy_command.list_crews()
+            self.assertNotIn("don't have any Crews", fake_out.getvalue())
+
+    def test_list_crews_non_json_error_exits(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 502
+        mock_response.is_success = False
+        mock_response.json.side_effect = json.JSONDecodeError("bad", "", 0)
+        mock_response.content = b"<html>bad gateway</html>"
+        self.mock_client.list_crews.return_value = mock_response
+
+        with patch("sys.stdout", new=StringIO()):
+            with self.assertRaises(SystemExit):
+                self.deploy_command.list_crews()
+
     def test_get_crew_status(self):
         mock_response = MagicMock()
         mock_response.status_code = 200
