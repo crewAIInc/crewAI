@@ -1018,14 +1018,22 @@ def _json_schema_to_pydantic_field(
     )
 
     if isinstance(type_, type) and issubclass(type_, (int, float)):
+        # Draft 4 and OpenAPI 3.0 write `exclusiveMinimum`/`exclusiveMaximum`
+        # as a boolean that modifies `minimum`/`maximum`; later drafts use a
+        # number that is the bound itself. A boolean must never reach
+        # `gt`/`lt`, where it would be compared as 0 or 1.
+        exclusive_min = json_schema.get("exclusiveMinimum")
+        exclusive_max = json_schema.get("exclusiveMaximum")
         if "minimum" in json_schema:
-            field_params["ge"] = json_schema["minimum"]
-        if "exclusiveMinimum" in json_schema:
-            field_params["gt"] = json_schema["exclusiveMinimum"]
+            min_key = "gt" if exclusive_min is True else "ge"
+            field_params[min_key] = json_schema["minimum"]
+        if exclusive_min is not None and not isinstance(exclusive_min, bool):
+            field_params["gt"] = exclusive_min
         if "maximum" in json_schema:
-            field_params["le"] = json_schema["maximum"]
-        if "exclusiveMaximum" in json_schema:
-            field_params["lt"] = json_schema["exclusiveMaximum"]
+            max_key = "lt" if exclusive_max is True else "le"
+            field_params[max_key] = json_schema["maximum"]
+        if exclusive_max is not None and not isinstance(exclusive_max, bool):
+            field_params["lt"] = exclusive_max
         if "multipleOf" in json_schema:
             field_params["multiple_of"] = json_schema["multipleOf"]
 
