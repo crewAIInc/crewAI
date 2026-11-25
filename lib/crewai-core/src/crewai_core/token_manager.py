@@ -18,6 +18,9 @@ from crewai_core.lock_store import lock as store_lock
 
 _FERNET_KEY_LENGTH: Final[Literal[44]] = 44
 
+# Long enough for another process's refresh: a 5s token request plus a 5s key fetch.
+_LOCK_TIMEOUT_SECONDS: Final[int] = 15
+
 
 class TokenManager:
     """Manages encrypted token storage on disk under platform-appropriate paths."""
@@ -105,11 +108,16 @@ class TokenManager:
             return None
         return data["refresh_token"], data["token_url"]
 
+    @property
+    def token_path(self) -> str:
+        """The resolved path of the token file, which names this login."""
+        return os.path.realpath(self._get_secure_storage_path() / self.file_path)
+
     def lock(self) -> AbstractContextManager[None]:
         """Hold a cross-process lock on the token file, so only one process
-        spends a rotating refresh token at a time."""
-        token_file = self._get_secure_storage_path() / self.file_path
-        return store_lock(f"file:{os.path.realpath(token_file)}")
+        spends a rotating refresh token at a time. Raises the lock backend's
+        error when another process holds it longer than a refresh takes."""
+        return store_lock(f"file:{self.token_path}", timeout=_LOCK_TIMEOUT_SECONDS)
 
     def clear_tokens(self) -> None:
         """Remove the stored token file (no-op if absent)."""

@@ -11,7 +11,7 @@ from crewai_core.auth.constants import ALGORITHMS
 
 
 def validate_jwt_token(
-    jwt_token: str, jwks_url: str, issuer: str, audience: str
+    jwt_token: str, jwks_url: str, issuer: str, audience: str, timeout: float = 30
 ) -> Any:
     """Verify a JWT's signature and claims using PyJWT.
 
@@ -20,6 +20,7 @@ def validate_jwt_token(
         jwks_url: The URL of the JWKS endpoint.
         issuer: The expected issuer of the token.
         audience: The expected audience of the token.
+        timeout: Seconds to wait for the JWKS endpoint.
 
     Returns:
         The decoded token.
@@ -28,7 +29,7 @@ def validate_jwt_token(
         Exception: If the token is invalid for any reason.
     """
     try:
-        jwk_client = PyJWKClient(jwks_url)
+        jwk_client = PyJWKClient(jwks_url, timeout=timeout)
         signing_key = jwk_client.get_signing_key_from_jwt(jwt_token)
 
         _unverified_decoded_token = jwt.decode(

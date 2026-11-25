@@ -283,6 +283,8 @@ crew 또는 flow를 [CrewAI AMP](https://app.crewai.com)에 배포하세요.
   crewai login
   ```
 
+  기본 제공자를 사용하면 로그인이 유지됩니다. 액세스 토큰이 만료되면 CLI가 그 옆에 암호화되어 저장된 리프레시 토큰으로 갱신합니다. 갱신이 거부되면 `crewai login`을 다시 실행하세요. `crewai logout`은 이 컴퓨터에서만 저장된 로그인을 삭제합니다. 로그인 제공자의 세션을 종료하지 않으므로, 저장된 로그인의 사본은 리프레시 토큰이 만료될 때까지 유효합니다.
+
 - **배포 생성**: 인증이 완료되면, 로컬 프로젝트의 루트에서 crew 또는 flow에 대한 배포를 생성할 수 있습니다.
   ```shell Terminal
   crewai deploy create

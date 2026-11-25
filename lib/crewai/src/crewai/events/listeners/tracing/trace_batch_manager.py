@@ -81,8 +81,10 @@ class TraceBatchManager:
         self.ephemeral_trace_url: str | None = None
         self._telemetry: Telemetry = Telemetry()
         try:
+            # Built while `import crewai` runs, so it must not send the saved
+            # refresh token anywhere; a kickoff renews the login when it traces.
             self.plus_api = PlusAPI(
-                api_key=get_auth_token(),
+                api_key=get_auth_token(refresh=False),
             )
         except AuthError:
             self.plus_api = PlusAPI()

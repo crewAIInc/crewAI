@@ -24,6 +24,9 @@ _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS = 600
 # Renew a little before expiry so a request started on the old token still lands.
 REFRESH_MARGIN_SECONDS = 60
 
+# Short: a refresh runs on its caller's way to AMP, inside a crew run or a CLI command.
+_REFRESH_TIMEOUT_SECONDS = 5
+
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
@@ -192,8 +195,11 @@ class AuthenticationCommand:
         Returns:
             The new access token, or None when there is nothing to refresh or the
             refresh failed. A refresh token the provider rejects is discarded with
-            the rest of the login, so the user is logged out; a network or server
-            error keeps it for the next attempt.
+            the rest of the login, so the user is logged out. A network error, a
+            server error or an unreadable reply keeps it for the next attempt, and
+            a rotated refresh token is kept even when its access token fails
+            validation. A reply lost after the provider rotated the token cannot
+            be recovered: the next attempt is rejected and the user logs in again.
         """
         with self.token_manager.lock():
             # Another process may have refreshed while this one waited for the lock.
@@ -217,8 +223,7 @@ class AuthenticationCommand:
                         "refresh_token": refresh_token,
                         "client_id": self.oauth2_provider.get_client_id(),
                     },
-                    # Short: this runs inside `import crewai` via the tracing listener.
-                    timeout=5,
+                    timeout=_REFRESH_TIMEOUT_SECONDS,
                 )
             except httpx.HTTPError:
                 return None
@@ -230,17 +235,37 @@ class AuthenticationCommand:
             if response.status_code != 200:
                 return None
 
-            token_data = response.json()
-            # Providers that do not rotate refresh tokens omit it from the response.
-            token_data.setdefault("refresh_token", refresh_token)
             try:
-                self._validate_and_save_token(token_data)
+                token_data = response.json()
+            # A captive portal or proxy page can answer 200 with HTML.
+            except ValueError:
+                return None
+            if not isinstance(token_data, dict):
+                return None
+            # Providers that do not rotate refresh tokens omit it from the response.
+            rotated = token_data.get("refresh_token")
+            if not isinstance(rotated, str):
+                rotated = refresh_token
+            try:
+                self._validate_and_save_token(
+                    {**token_data, "refresh_token": rotated},
+                    jwks_timeout=_REFRESH_TIMEOUT_SECONDS,
+                )
             # validate_jwt_token raises a bare Exception for every invalid token.
             except Exception:
+                if rotated != refresh_token:
+                    # WorkOS rotates a public client's refresh token on every
+                    # exchange, so the one just sent is spent. Keep the new one,
+                    # with no usable access token beside it.
+                    self.token_manager.save_tokens(
+                        "", 0, refresh_token=rotated, token_url=token_url
+                    )
                 return None
             return cast(str, token_data["access_token"])
 
-    def _validate_and_save_token(self, token_data: dict[str, Any]) -> None:
+    def _validate_and_save_token(
+        self, token_data: dict[str, Any], jwks_timeout: float = 30
+    ) -> None:
         """Validate the JWT and persist it, with any refresh token, via the token manager."""
         jwt_token = token_data["access_token"]
         issuer = self.oauth2_provider.get_issuer()
@@ -251,7 +276,7 @@ class AuthenticationCommand:
             "audience": self.oauth2_provider.get_audience(),
         }
 
-        decoded_token = validate_jwt_token(**jwt_token_data)
+        decoded_token = validate_jwt_token(**jwt_token_data, timeout=jwks_timeout)
 
         expires_at = decoded_token.get("exp", 0)
         self.token_manager.save_tokens(

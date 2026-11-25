@@ -39,7 +39,7 @@ class TestUtils(unittest.TestCase):
                 "require": ["exp", "iat", "iss", "aud", "sub"],
             },
         )
-        mock_pyjwkclient.assert_called_once_with("https://mock_jwks_url")
+        mock_pyjwkclient.assert_called_once_with("https://mock_jwks_url", timeout=30)
         self.assertEqual(decoded_token, {"exp": 1719859200})
 
     def test_validate_jwt_token_expired(self, mock_jwt, mock_pyjwkclient):

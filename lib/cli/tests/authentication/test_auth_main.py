@@ -180,6 +180,7 @@ class TestAuthenticationCommand:
             jwks_url=jwt_config["jwks_url"],
             issuer=jwt_config["issuer"],
             audience=jwt_config["audience"],
+            timeout=30,
         )
 
         mock_save_tokens.assert_called_once_with(

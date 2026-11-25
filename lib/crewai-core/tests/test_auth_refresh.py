@@ -7,9 +7,10 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from crewai_core import lock_store
+from crewai_core.auth import token as token_module
 from crewai_core.auth.oauth2 import AuthenticationCommand, Oauth2Settings
 from crewai_core.auth.providers.auth0 import Auth0Provider
 from crewai_core.auth.providers.base_provider import BaseProvider
@@ -70,13 +71,39 @@ class FakeJwtValidator:
 
     def __init__(self) -> None:
         self.expirations: dict[str, int] = {}
-        self.calls: list[dict[str, str]] = []
+        self.calls: list[dict[str, str | float]] = []
 
-    def __call__(self, **kwargs: str) -> dict[str, int]:
-        self.calls.append(kwargs)
-        if kwargs["jwt_token"].startswith("bad-"):
+    def __call__(
+        self,
+        *,
+        jwt_token: str,
+        jwks_url: str,
+        issuer: str,
+        audience: str,
+        timeout: float,
+    ) -> dict[str, int]:
+        self.calls.append(
+            {
+                "jwt_token": jwt_token,
+                "jwks_url": jwks_url,
+                "issuer": issuer,
+                "audience": audience,
+                "timeout": timeout,
+            }
+        )
+        if jwt_token.startswith("bad-"):
             raise Exception("Invalid token audience.")
-        return {"exp": self.expirations.get(kwargs["jwt_token"], _in(8 * 3600))}
+        return {"exp": self.expirations.get(jwt_token, _in(8 * 3600))}
+
+
+class FakeClock:
+    """Stands in for the ``time`` module ``get_auth_token`` reads its clock from."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def monotonic(self) -> float:
+        return self.now
 
 
 @pytest.fixture
@@ -114,14 +141,31 @@ def validator(monkeypatch: pytest.MonkeyPatch) -> FakeJwtValidator:
     return fake
 
 
+@pytest.fixture
+def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
+    fake = FakeClock()
+    monkeypatch.setattr(token_module, "time", fake)
+    return fake
+
+
 @pytest.fixture(autouse=True)
 def _env(
     storage: Path,
     configured: Callable[[Oauth2Settings], None],
     endpoint: FakeTokenEndpoint,
     validator: FakeJwtValidator,
+    clock: FakeClock,
 ) -> None:
-    """Every test gets isolated storage, fixed settings and no network."""
+    """Every test gets isolated storage, fixed settings, a fixed clock and no network."""
+
+
+@contextmanager
+def _lock_backend(backend: lock_store.LockBackend) -> Iterator[None]:
+    lock_store.set_lock_backend(backend)
+    try:
+        yield
+    finally:
+        lock_store.set_lock_backend(None)
 
 
 def _save_login(
@@ -197,6 +241,7 @@ class TestSilentRefresh:
                 "jwks_url": f"https://{DOMAIN}/oauth2/jwks",
                 "issuer": f"https://{DOMAIN}",
                 "audience": AUDIENCE,
+                "timeout": 5,
             }
         ]
 
@@ -273,7 +318,10 @@ class TestRefreshFailure:
         ],
     )
     def test_network_or_server_error_keeps_the_refresh_token_for_later(
-        self, endpoint: FakeTokenEndpoint, outcome: httpx.Response | Exception
+        self,
+        endpoint: FakeTokenEndpoint,
+        clock: FakeClock,
+        outcome: httpx.Response | Exception,
     ) -> None:
         _save_login()
         endpoint.responses.append(outcome)
@@ -282,6 +330,7 @@ class TestRefreshFailure:
             get_auth_token()
 
         assert TokenManager().get_refresh_token() == ("refresh-1", TOKEN_URL)
+        clock.now += 301
         endpoint.reply(200, {"access_token": "new-access"})
         assert get_auth_token() == "new-access"
 
@@ -293,8 +342,8 @@ class TestRefreshFailure:
 
         assert get_auth_token() == "old-access"
 
-    def test_refreshed_token_that_fails_validation_is_not_saved(
-        self, endpoint: FakeTokenEndpoint
+    def test_rotated_refresh_token_is_kept_when_its_access_token_fails_validation(
+        self, endpoint: FakeTokenEndpoint, clock: FakeClock
     ) -> None:
         _save_login()
         endpoint.reply(
@@ -303,8 +352,150 @@ class TestRefreshFailure:
 
         with pytest.raises(AuthError, match="make sure you are logged in"):
             get_auth_token()
+        assert TokenManager().get_token() is None
 
+        clock.now += 301
+        endpoint.reply(
+            200, {"access_token": "new-access", "refresh_token": "refresh-3"}
+        )
+        assert get_auth_token() == "new-access"
+        # The provider spent refresh-1 on the first exchange; the retry sends refresh-2.
+        assert [data["refresh_token"] for _, data in endpoint.requests] == [
+            "refresh-1",
+            "refresh-2",
+        ]
+
+    def test_unrotated_refresh_token_survives_a_failed_validation(
+        self, endpoint: FakeTokenEndpoint
+    ) -> None:
+        _save_login(expires_at=_in(30))
+        endpoint.reply(200, {"access_token": "bad-access"})
+
+        assert get_auth_token() == "old-access"
         assert TokenManager().get_refresh_token() == ("refresh-1", TOKEN_URL)
+
+    @pytest.mark.parametrize(
+        "reply",
+        [
+            httpx.Response(200, text="<html>Sign in to the Wi-Fi</html>"),
+            httpx.Response(200, json=["access_token"]),
+            httpx.Response(200, json={"refresh_token": "refresh-2"}),
+        ],
+        ids=["html", "not-an-object", "no-access-token"],
+    )
+    def test_unreadable_refresh_reply_reads_as_logged_out(
+        self, endpoint: FakeTokenEndpoint, reply: httpx.Response
+    ) -> None:
+        _save_login()
+        endpoint.responses.append(reply)
+
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+
+    def test_lock_that_cannot_be_taken_reads_as_logged_out(
+        self, endpoint: FakeTokenEndpoint
+    ) -> None:
+        def unreachable(name: str, *, timeout: float) -> NoReturn:
+            raise ConnectionError("Error 61 connecting to 127.0.0.1:1.")
+
+        _save_login()
+
+        with (
+            _lock_backend(unreachable),
+            pytest.raises(AuthError, match="make sure you are logged in"),
+        ):
+            get_auth_token()
+        assert endpoint.requests == []
+        assert TokenManager().get_refresh_token() == ("refresh-1", TOKEN_URL)
+
+    def test_settings_that_no_longer_load_read_as_logged_out(
+        self, monkeypatch: pytest.MonkeyPatch, endpoint: FakeTokenEndpoint
+    ) -> None:
+        _save_login()
+        monkeypatch.setattr(
+            Oauth2Settings,
+            "from_settings",
+            classmethod(
+                lambda cls: Oauth2Settings(
+                    provider="no_such_provider", client_id="c", domain="d"
+                )
+            ),
+        )
+
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+        assert endpoint.requests == []
+
+
+class TestRetryAfterFailure:
+    def test_failed_refresh_is_not_retried_by_later_calls_in_the_same_run(
+        self, endpoint: FakeTokenEndpoint
+    ) -> None:
+        _save_login()
+        endpoint.fail(httpx.ConnectTimeout("dropped"))
+
+        for _ in range(3):
+            with pytest.raises(AuthError, match="make sure you are logged in"):
+                get_auth_token()
+
+        assert len(endpoint.requests) == 1
+
+    def test_refresh_is_retried_once_the_wait_is_over(
+        self, endpoint: FakeTokenEndpoint, clock: FakeClock
+    ) -> None:
+        _save_login()
+        endpoint.fail(httpx.ConnectTimeout("dropped"))
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+
+        clock.now += 299
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+        clock.now += 2
+        endpoint.reply(200, {"access_token": "new-access"})
+
+        assert get_auth_token() == "new-access"
+        assert len(endpoint.requests) == 2
+
+    def test_a_failure_for_one_login_does_not_hold_back_another(
+        self,
+        endpoint: FakeTokenEndpoint,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        _save_login()
+        endpoint.fail(httpx.ConnectTimeout("dropped"))
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+
+        other = tmp_path / "other-user"
+        other.mkdir()
+        monkeypatch.setattr(
+            TokenManager, "_get_secure_storage_path", staticmethod(lambda: other)
+        )
+        _save_login()
+        endpoint.reply(200, {"access_token": "new-access"})
+
+        assert get_auth_token() == "new-access"
+
+
+class TestNoRefresh:
+    def test_expired_login_is_not_renewed_when_refresh_is_off(
+        self, endpoint: FakeTokenEndpoint
+    ) -> None:
+        _save_login()
+
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token(refresh=False)
+        assert endpoint.requests == []
+
+    def test_token_inside_the_margin_is_returned_when_refresh_is_off(
+        self, endpoint: FakeTokenEndpoint
+    ) -> None:
+        _save_login(expires_at=_in(30))
+
+        assert get_auth_token(refresh=False) == "old-access"
+        assert endpoint.requests == []
 
 
 class TestLegacyTokens:
@@ -375,11 +566,8 @@ class TestConcurrentRefresh:
             )
             yield
 
-        lock_store.set_lock_backend(backend)
-        try:
+        with _lock_backend(backend):
             yield
-        finally:
-            lock_store.set_lock_backend(None)
 
     @pytest.mark.usefixtures("other_process_refreshes_first")
     def test_refresh_reuses_the_token_another_process_just_saved(
@@ -390,22 +578,36 @@ class TestConcurrentRefresh:
         assert get_auth_token() == "access-from-other-process"
         assert endpoint.requests == []
 
-    def test_lock_is_scoped_to_this_users_token_file(self, storage: Path) -> None:
-        names: list[str] = []
+    def test_logins_in_different_stores_do_not_share_a_lock(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        held: set[str] = set()
 
         @contextmanager
-        def backend(name: str, *, timeout: float) -> Iterator[None]:
-            names.append(name)
-            yield
+        def exclusive(name: str, *, timeout: float) -> Iterator[None]:
+            if name in held:
+                raise TimeoutError("lock already held")
+            held.add(name)
+            try:
+                yield
+            finally:
+                held.discard(name)
 
-        lock_store.set_lock_backend(backend)
-        try:
-            with TokenManager().lock():
+        def manager_in(directory: Path) -> TokenManager:
+            manager = TokenManager()
+            monkeypatch.setattr(manager, "_get_secure_storage_path", lambda: directory)
+            return manager
+
+        first = manager_in(tmp_path / "a")
+        same_store = manager_in(tmp_path / "a")
+        other_store = manager_in(tmp_path / "b")
+
+        with _lock_backend(exclusive), first.lock():
+            with other_store.lock():
                 pass
-        finally:
-            lock_store.set_lock_backend(None)
-
-        assert names == [f"file:{(storage / 'tokens.enc').resolve()}"]
+            with pytest.raises(TimeoutError, match="lock already held"):
+                with same_store.lock():
+                    pass
 
 
 class TestLogout:
