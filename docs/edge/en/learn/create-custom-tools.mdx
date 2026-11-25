@@ -225,5 +225,52 @@ class WebFetcherTool(BaseTool):
                 return await response.text()
 ```
 
+### Policy-Guarded Tools (Agent Control Room)
+
+When agents execute sensitive actions (financial operations, database writes, or external APIs), you can govern execution through [Agent Control Room](https://agent-cr.com) using the open-source companion [`complyee-agent-guard`](https://github.com/complyee/agent-guard-python).
+
+The `GuardedCrewAITool` wrapper intercepts tool execution, requests an authorization decision from Agent Control Room, handles policy-required human approval when configured, and verifies ACR's cryptographically signed grant before invoking the wrapped tool:
+
+```bash Code
+pip install "complyee-agent-guard[crewai]"
+```
+
+```python Code
+import os
+from complyee_agent_guard import create_guard
+from complyee_agent_guard.crewai import GuardedCrewAITool
+from crewai import Agent
+from crewai.tools import tool
+
+@tool("Issue Refund")
+def refund_tool(customer_id: str, amount_cents: int) -> str:
+    """Issue a refund to a customer account (illustrative stub)."""
+    return f"Refunded {amount_cents} cents to {customer_id}"
+
+# Policy guard connected to your Agent Control Room workspace
+guard = create_guard(
+    workspace_url=os.environ.get("ACR_WORKSPACE_URL", "https://your-workspace.agent-cr.com"),
+    api_key=os.environ["ACR_API_KEY"],
+    agent="customer-support-agent",
+)
+
+# Wrap the tool — execution fails closed if policy refuses or holds
+guarded_refund = GuardedCrewAITool(
+    tool=refund_tool,
+    guard=guard,
+    action="payments.refund",
+)
+
+# Hand the guarded tool directly to your agent
+agent = Agent(
+    role="Customer Support Lead",
+    goal="Handle billing inquiries and refunds",
+    tools=[guarded_refund],
+    backstory="You resolve customer accounts according to enterprise billing policy.",
+)
+```
+
+See the [Agent Control Room CrewAI Recipe](https://agent-cr.com/plugins#crewai) for details on human-in-the-loop workflows, cryptographic grant verification, and error handling.
+
 By adhering to these guidelines and incorporating new functionalities and collaboration tools into your tool creation and management processes,
 you can leverage the full capabilities of the CrewAI framework, enhancing both the development experience and the efficiency of your AI agents.
