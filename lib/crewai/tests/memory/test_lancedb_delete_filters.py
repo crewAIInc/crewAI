@@ -55,7 +55,9 @@ def test_record_ids_only_deletes_across_scopes(tmp_path: Path) -> None:
         tmp_path, [_record("a", "/tenant1"), _record("b", "/tenant2")]
     )
 
-    assert storage.delete(record_ids=["a", "b"]) == 2
+    deleted_count = storage.delete(record_ids=["a", "b"])
+
+    assert deleted_count == 2
     assert not _exists(storage, "a")
     assert not _exists(storage, "b")
 
@@ -65,7 +67,9 @@ def test_record_ids_do_not_delete_records_outside_scope(tmp_path: Path) -> None:
         tmp_path, [_record("rec1", "/tenant1"), _record("rec2", "/tenant2")]
     )
 
-    assert storage.delete(scope_prefix="/tenant1", record_ids=["rec2"]) == 0
+    deleted_count = storage.delete(scope_prefix="/tenant1", record_ids=["rec2"])
+
+    assert deleted_count == 0
     assert _exists(storage, "rec2")
 
 
@@ -79,7 +83,9 @@ def test_record_ids_delete_records_inside_scope(tmp_path: Path) -> None:
         ],
     )
 
-    assert storage.delete(scope_prefix="/tenant1", record_ids=["rec1", "rec3"]) == 1
+    deleted_count = storage.delete(scope_prefix="/tenant1", record_ids=["rec1", "rec3"])
+
+    assert deleted_count == 1
     assert not _exists(storage, "rec1")
     assert _exists(storage, "rec2")
     assert _exists(storage, "rec3")
@@ -94,7 +100,9 @@ def test_record_ids_respect_older_than(tmp_path: Path) -> None:
         ],
     )
 
-    assert storage.delete(record_ids=["fresh", "stale"], older_than=CUTOFF) == 1
+    deleted_count = storage.delete(record_ids=["fresh", "stale"], older_than=CUTOFF)
+
+    assert deleted_count == 1
     assert _exists(storage, "fresh")
     assert not _exists(storage, "stale")
 
@@ -110,7 +118,9 @@ def test_scope_and_older_than_do_not_delete_other_records(tmp_path: Path) -> Non
         ],
     )
 
-    assert storage.delete(scope_prefix="/tenant1", older_than=CUTOFF) == 1
+    deleted_count = storage.delete(scope_prefix="/tenant1", older_than=CUTOFF)
+
+    assert deleted_count == 1
     assert not _exists(storage, "old-in-scope")
     assert _exists(storage, "new-in-scope")
     assert _exists(storage, "old-other-scope")
@@ -121,7 +131,9 @@ def test_delete_without_filters_removes_everything(tmp_path: Path) -> None:
         tmp_path, [_record("a", "/tenant1"), _record("b", "/tenant2")]
     )
 
-    assert storage.delete() == 2
+    deleted_count = storage.delete()
+
+    assert deleted_count == 2
 
 
 def test_record_ids_with_categories_only_delete_listed_ids(tmp_path: Path) -> None:
@@ -158,7 +170,9 @@ def test_record_ids_with_metadata_filter_only_delete_listed_ids(
         ],
     )
 
-    assert storage.delete(record_ids=["a", "c"], metadata_filter={"env": "prod"}) == 1
+    deleted_count = storage.delete(record_ids=["a", "c"], metadata_filter={"env": "prod"})
+
+    assert deleted_count == 1
     assert not _exists(storage, "a")
     assert _exists(storage, "b")
     assert _exists(storage, "c")
@@ -176,7 +190,9 @@ def test_categories_without_record_ids_still_delete_all_matches(
         ],
     )
 
-    assert storage.delete(categories=["catA"]) == 2
+    deleted_count = storage.delete(categories=["catA"])
+
+    assert deleted_count == 2
     assert _exists(storage, "c")
 
 
@@ -200,7 +216,9 @@ def test_filtered_delete_does_not_load_embeddings(
 
     monkeypatch.setattr(storage, "_scan_rows", spy)
 
-    assert storage.delete(categories=["catA"]) == 1
+    deleted_count = storage.delete(categories=["catA"])
+
+    assert deleted_count == 1
 
     assert scanned
     assert all("vector" not in row for row in scanned)
@@ -222,7 +240,9 @@ def test_record_ids_are_found_beyond_the_scan_limit(
 
     monkeypatch.setattr(storage, "_scan_rows", capped_scan)
 
-    assert storage.delete(record_ids=["rec4"], categories=["catA"]) == 1
+    deleted_count = storage.delete(record_ids=["rec4"], categories=["catA"])
+
+    assert deleted_count == 1
     assert not _exists(storage, "rec4")
 
 
@@ -235,6 +255,8 @@ def test_older_than_with_categories_only_deletes_old_records(tmp_path: Path) -> 
         ],
     )
 
-    assert storage.delete(categories=["catA"], older_than=CUTOFF) == 1
+    deleted_count = storage.delete(categories=["catA"], older_than=CUTOFF)
+
+    assert deleted_count == 1
     assert not _exists(storage, "old")
     assert _exists(storage, "new")
