@@ -103,6 +103,15 @@ def test_instantiation_with_explicit_key(tool_cls):
     assert tool.api_key == "explicit-key"
 
 
+def test_brave_search_tool_accepts_explicit_api_key():
+    """BraveSearchTool honours api_key even without BRAVE_API_KEY in the env."""
+    from crewai_tools import BraveSearchTool
+
+    with patch.dict(os.environ, {}, clear=True):
+        tool = BraveSearchTool(api_key="explicit-key")
+    assert tool.api_key == "explicit-key"
+
+
 def test_missing_api_key_raises():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="BRAVE_API_KEY"):
