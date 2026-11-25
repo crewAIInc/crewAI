@@ -2890,6 +2890,10 @@ def test_evaluate_logged_in_is_the_consent_and_runs_it_again_without_a_question(
     assert pushed == []
     assert app._want_traced_rerun is True and exits == [app._crew_result]
     assert stops == []
+    # The app turns nothing on itself: were tracing on already, `crewai eval`
+    # would not say it turned it on, nor tell the next run app to say so.
+    assert not (tmp_path / ".env").exists()
+    assert os.environ.get("CREWAI_TRACING_ENABLED") != "true"
 
 
 @pytest.mark.parametrize("answer", [True, False])

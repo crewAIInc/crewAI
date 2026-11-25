@@ -1556,7 +1556,8 @@ FooterKey .footer-key--key {
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
                 return
             # Never turned on: logged out, asked first. Logged in, the press is
-            # the consent: `crewai eval` turns tracing on and says so in one line.
+            # the consent: `crewai eval` turns tracing on and says so in one line
+            # (or asks, in the terminal, when AMP refuses the login).
             if not tracing_already_on() and not logged_in_to_trusted_amp(trusted):
                 self.push_screen(EvaluateConsentScreen(), self._tracing_on_answered)
                 return

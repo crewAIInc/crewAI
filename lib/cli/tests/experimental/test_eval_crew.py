@@ -98,6 +98,16 @@ class FakeAMP:
         self.sent_config = None
         self.api_key = None
         self.headers: dict[str, str] = {"X-Crewai-Organization-Id": "org-42"}
+        # What AMP says of the saved login before a question is skipped, and
+        # which login and AMP each check was sent with.
+        self.login_answer: httpx.Response | Exception = httpx.Response(200, json=[])
+        self.login_checks: list[tuple[str | None, str]] = []
+
+    def get_organizations(self):
+        self.login_checks.append((self.api_key, self.base_url))
+        if isinstance(self.login_answer, Exception):
+            raise self.login_answer
+        return self.login_answer
 
     def create_evaluation(self, execution_id, *, eval_config=None, project_id=None):
         self.calls.append(("create", execution_id))
@@ -2937,6 +2947,7 @@ def test_a_run_that_left_no_trace_counts_as_untraced_once(
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(run_crew_module, "run_crew", lambda: None)
+    install(monkeypatch, FakeAMP())  # AMP takes the saved login
 
     @contextlib.contextmanager
     def watched(**_decided):
@@ -3887,6 +3898,7 @@ def test_logged_in_at_a_terminal_the_crew_runs_traced_without_a_question(
     assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
     assert f"{eval_module.RUNNING_THE_CREW[why]} {eval_module.TRACING_NOW_ON}" in out
     assert eval_module.BEFORE_ASKING[why] not in out
+    assert amp.login_checks == [("login-token", "https://amp.test")]  # AMP took it first
     assert amp.calls[0] == ("create", "the-new-run") and amp.api_key == "login-token"
     assert usage[:2] == ["cli_usage:eval_consent:logged_in", f"cli_usage:eval_ran_crew:{why}"]
     assert "cli_usage:eval_stopped:declined" not in usage
@@ -3909,6 +3921,79 @@ def test_an_expired_login_is_no_login_and_the_person_is_asked(
     assert ran == [("true", not asked)]  # the run app says it only when nobody was asked
     assert ("cli_usage:eval_consent:logged_in" in usage) is (not asked)
     assert amp.api_key == (None if asked else "saved-token")
+
+
+@pytest.mark.parametrize(
+    "login_answer",
+    [
+        httpx.Response(401, json={"error": "Bad credentials - User not found"}),
+        httpx.Response(403),
+        httpx.Response(502),
+        httpx.ConnectError("unreachable"),
+    ],
+    ids=["401 user not found", "403", "502", "unreachable"],
+)
+def test_a_login_amp_refuses_is_no_consent_and_the_person_is_asked(
+    project, monkeypatch, capsys, usage, consent_screen, login_answer
+):
+    """A login that has not expired here but that AMP refuses would send the
+    run's trace up anonymously, not to the login's organization: the person
+    is asked, as one logged out is, and a no runs and turns on nothing. So is
+    one whose AMP did not answer."""
+    directory, _ = project  # logged in on this machine: the fixture's saved login
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = FakeAMP(statuses=[done()])
+    amp.login_answer = login_answer
+    install(monkeypatch, amp)
+    consent_screen.answer["yes"] = False
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert exited.value.code == 0
+    assert amp.login_checks == [("login-token", "https://amp.test")]
+    assert consent_screen.asked == [{"default": True}]
+    assert eval_module.BEFORE_ASKING["no_traced_run"] in out
+    assert eval_module.TRACING_NOW_ON not in out
+    assert ran == [] and amp.calls == []
+    assert not (directory / ".env").exists()
+    assert usage == ["cli_usage:eval_stopped:declined"]
+
+
+def test_a_login_amp_refuses_and_a_yes_runs_the_crew_as_logged_out(
+    project, monkeypatch, usage, consent_screen
+):
+    """The yes is the person's, so the run app is not told this command turned
+    tracing on, and the skipped-question count stays at zero."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = FakeAMP(statuses=[done()])
+    amp.login_answer = httpx.Response(401, json={"error": "Bad credentials - User not found"})
+    install(monkeypatch, amp)
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == [{"default": True}]
+    assert ran == [("true", False)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
+
+
+def test_amp_is_not_asked_about_a_login_when_nobody_is_at_the_terminal(
+    project, monkeypatch, usage
+):
+    """With no terminal the command is the yes whatever the login: nothing is
+    asked, of the person or of AMP."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.login_checks == []
+    assert ran == [("true", True)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
 
 
 def test_an_unreadable_login_is_no_consent_and_the_person_is_asked(

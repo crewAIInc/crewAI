@@ -34,6 +34,15 @@ class _FakeAMP:
         self.api_key: str | None = None
         self.base_url = "https://amp.test"
         self.headers: dict[str, str] = {}
+        # What AMP says of the saved login, and which login each check carried.
+        self.login_answer: httpx.Response | Exception = httpx.Response(200, json=[])
+        self.login_checks: list[str | None] = []
+
+    def get_organizations(self):
+        self.login_checks.append(self.api_key)
+        if isinstance(self.login_answer, Exception):
+            raise self.login_answer
+        return self.login_answer
 
     def create_evaluation(self, execution_id, *, eval_config=None, project_id=None):
         self.created.append(execution_id)
@@ -131,7 +140,33 @@ def test_logged_in_the_crew_runs_traced_and_one_line_says_so(project, capsys) ->
     assert "CREWAI_TRACING_ENABLED=true" in _env(project.directory)
     assert eval_module.TRACING_NOW_ON in out
     assert project.amp.created == ["the-new-run"]
+    assert project.amp.login_checks == ["login-token"]
     assert project.usage[0] == "cli_usage:eval_consent:logged_in"
+
+
+@pytest.mark.parametrize(
+    "login_answer",
+    [
+        httpx.Response(401, json={"error": "Bad credentials - User not found"}),
+        httpx.ConnectError("unreachable"),
+    ],
+    ids=["401 user not found", "unreachable"],
+)
+def test_a_login_amp_refuses_is_asked_as_logged_out(project, capsys, login_answer) -> None:
+    """Its trace would go up anonymously, not to the login's organization."""
+    project.amp.login_answer = login_answer
+    project.answer["yes"] = False
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert exited.value.code == 0
+    assert project.asked == ["Run your crew and grade it?"]
+    assert eval_module.TRACING_NOW_ON not in out
+    assert project.ran == [] and project.amp.created == []
+    assert _env(project.directory) == ""
+    assert project.usage == ["cli_usage:eval_stopped:declined"]
 
 
 @pytest.mark.parametrize("yes", [True, False])
@@ -227,6 +262,9 @@ def test_the_run_apps_evaluate_asks_only_when_logged_out(project, monkeypatch, l
 
     if logged_in:
         assert pushed == [] and exits == [app._crew_result]
+        # The app turns nothing on: `crewai eval` does, and says so.
+        assert _env(project.directory) == ""
+        assert os.environ.get("CREWAI_TRACING_ENABLED") != "true"
     else:
         assert [type(screen) for screen in pushed] == [crew_run_tui.EvaluateConsentScreen]
         assert exits == []
@@ -234,3 +272,55 @@ def test_the_run_apps_evaluate_asks_only_when_logged_out(project, monkeypatch, l
             crew_run_tui.EvaluateConsentScreen.YES_LABEL,
             crew_run_tui.EvaluateConsentScreen.NO_LABEL,
         ) == ("Evaluate", "Not now")
+
+
+def test_the_run_apps_evaluate_logged_in_hands_crewai_eval_the_line_to_say(
+    project, monkeypatch, capsys
+) -> None:
+    """Pressed logged in, Evaluate closes the app and `crewai eval` runs the
+    crew again: that command turns tracing on, says so in one line, and tells
+    the run app it opens to say so too."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    app.exit = lambda result=None: None  # type: ignore[method-assign]
+    app.push_screen = lambda screen, callback=None: pytest.fail("nothing is asked")  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+    assert app._want_traced_rerun is True
+    run_crew_module._chain_traced_rerun()  # what `crewai run` does once the app closed
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert project.asked == []
+    assert project.ran == [("true", True)]
+    assert f"{eval_module.RUNNING_THE_CREW['run_again']} {eval_module.TRACING_NOW_ON}" in out
+    assert project.amp.created == ["the-new-run"]
+
+
+def test_the_run_apps_evaluate_with_a_login_amp_refuses_is_asked_in_the_terminal(
+    project, monkeypatch, capsys
+) -> None:
+    """The app reads the login on this machine only; `crewai eval` asks AMP
+    before it skips the question, and asks the person when AMP refuses."""
+    project.amp.login_answer = httpx.Response(401, json={"error": "Bad credentials - User not found"})
+    project.answer["yes"] = False
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    app.exit = lambda result=None: None  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+    with pytest.raises(SystemExit) as exited:
+        run_crew_module._chain_traced_rerun()
+
+    assert exited.value.code == 0
+    assert project.asked == ["Run your crew and grade it?"]
+    assert project.ran == [] and _env(project.directory) == ""

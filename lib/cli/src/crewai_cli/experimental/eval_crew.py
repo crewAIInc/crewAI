@@ -1077,15 +1077,29 @@ def logged_in_to_trusted_amp(trusted: set[str]) -> bool:
     """Is this machine logged in (a saved `crewai login` that has not expired)
     to the AMP the run traces to, one TRUSTED with that login?
 
-    Then asking for the evaluation is the consent: the run's trace goes to the
-    login's own organization, so nobody is asked first. A login that cannot be
-    read is not one: the person is asked, and the evaluation says why it
-    cannot use it (`saved_login`)."""
+    Read on this machine alone, so the run app can decide at once whether to
+    ask. A login that cannot be read is not one: the person is asked, and the
+    evaluation says why it cannot use it (`saved_login`). Before the question
+    is skipped, `crewai eval` also asks AMP (`_amp_accepts_the_login`)."""
     if untrusted_amp_stop(trusted) is not None:
         return False
     try:
         return saved_login() is not None
     except EvaluationStoppedError:
+        return False
+
+
+def _amp_accepts_the_login() -> bool:
+    """Does the AMP the run traces to take the saved login right now?
+
+    A login that has not expired here can still be one AMP refuses (401 "User
+    not found"). The run's trace would then go up anonymously — the tracing
+    falls back to an ephemeral batch — not to the login's organization, so
+    that login is nobody's yes: the person is asked. No answer, or any answer
+    but 200, reads as a refusal."""
+    try:
+        return PlusAPI(api_key=saved_login()).get_organizations().status_code == 200
+    except (EvaluationStoppedError, httpx.HTTPError):
         return False
 
 
@@ -1189,9 +1203,9 @@ def _at_a_terminal() -> bool:
 
 
 def _ask_before_the_first_enable(why: RunReason) -> None:
-    """Nobody turned tracing on yet, and a person who is not logged in is
-    here: say why the crew runs, then ask before turning tracing on. Enter
-    means yes; a no runs nothing."""
+    """Nobody turned tracing on yet, and a person who is not logged in (or
+    whose login AMP refuses) is here: say why the crew runs, then ask before
+    turning tracing on. Enter means yes; a no runs nothing."""
     console.print(Text(BEFORE_ASKING[why]), style="bold")
     if not click.confirm(SHARE_TO_EVALUATE_QUESTION, default=True):
         record_stop("declined")
@@ -1228,7 +1242,8 @@ def _run_the_crew_to_evaluate(
 
     Running `crewai eval` asked for the run to be graded, and the grade is read
     off its trace; the only question is the first enable of tracing, put to a
-    person at a terminal who is not logged in (`_ask_before_the_first_enable`).
+    person at a terminal who is not logged in, or whose login AMP refuses
+    (`_ask_before_the_first_enable`).
     A project that turned tracing off is asked whether to turn it back on,
     logged in or not (`_ask_to_turn_tracing_on`). The run app
     evaluates what it ran, on its own screen, so this returns no run when it
@@ -1259,16 +1274,17 @@ def _run_the_crew_to_evaluate(
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
     # Nobody turned tracing on. Logged out at a terminal, the person is asked
-    # first (Enter means yes). Logged in, or with nobody there (a coding agent,
-    # a script), the yes is inferred from this command and tracing is turned on
-    # for the project — said once, plainly, here and in the run app. From
-    # then on the project traces, and nothing more is asked or said.
+    # first (Enter means yes), and so is one whose login AMP refuses. Logged
+    # in, or with nobody there (a coding agent, a script), the yes is inferred
+    # from this command and tracing is turned on for the project — said once,
+    # plainly, here and in the run app. From then on the project traces, and
+    # nothing more is asked or said.
     turned_on_now = asked = False
     if not tracing_already_on():
         if not _at_a_terminal():
             turn_tracing_on()
             turned_on_now = True
-        elif logged_in_to_trusted_amp(trusted or set()):
+        elif logged_in_to_trusted_amp(trusted or set()) and _amp_accepts_the_login():
             # Counted apart from the unattended yes: it is the question a
             # login answers, and without it a skipped question reads as a
             # project that traced already.
