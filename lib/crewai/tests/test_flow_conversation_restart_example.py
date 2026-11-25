@@ -105,12 +105,14 @@ class TestPersistenceRestartExample:
 
         other = SupportBot()
         try:
-            other.handle_turn("Where is my order?", session_id=OTHER_SESSION_ID)
+            other.handle_turn(
+                "What are your opening hours?", session_id=OTHER_SESSION_ID
+            )
             assert _roles(other.state.messages) == [
-                ("user", "Where is my order?"),
+                ("user", "What are your opening hours?"),
                 (
                     "assistant",
-                    "Order update: 'Where is my order?' is on its way.",
+                    "I can check order status. Ask me about your order.",
                 ),
             ]
         finally:
