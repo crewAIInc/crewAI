@@ -74,6 +74,7 @@ class GeminiCompletion(BaseLLM):
     stream: bool = False
     safety_settings: dict[str, Any] = Field(default_factory=dict)
     client_params: dict[str, Any] = Field(default_factory=dict)
+    timeout: float | None = None
     interceptor: BaseInterceptor[Any, Any] | None = None
     use_vertexai: bool = False
     response_format: type[BaseModel] | None = None
@@ -230,6 +231,8 @@ class GeminiCompletion(BaseLLM):
             config["top_k"] = self.top_k
         if self.max_output_tokens is not None:
             config["max_output_tokens"] = self.max_output_tokens
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
         if self.safety_settings:
             config["safety_settings"] = [
                 {"category": str(s.category), "threshold": str(s.threshold)}
@@ -261,6 +264,11 @@ class GeminiCompletion(BaseLLM):
         if self.client_params:
             client_params.update(self.client_params)
 
+        if self.timeout is not None and "http_options" not in client_params:
+            client_params["http_options"] = types.HttpOptions(
+                timeout=int(self.timeout * 1000)
+            )
+
         has_api_key = bool(_without_placeholder(self.api_key))
         has_project = bool(self.project)
 
@@ -290,7 +298,14 @@ class GeminiCompletion(BaseLLM):
             # See: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey
             if use_vertexai:
                 client_params["vertexai"] = True
-                client_params["http_options"] = types.HttpOptions(api_version="v1")
+                existing_opts = client_params.get("http_options")
+                if isinstance(existing_opts, types.HttpOptions):
+                    existing_opts.api_version = "v1"
+                else:
+                    client_params["http_options"] = types.HttpOptions(
+                        api_version="v1",
+                        timeout=int(self.timeout * 1000) if self.timeout is not None else None,
+                    )
             else:
                 # This ensures we use the Gemini API (generativelanguage.googleapis.com)
                 client_params["vertexai"] = False
