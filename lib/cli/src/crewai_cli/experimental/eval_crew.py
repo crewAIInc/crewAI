@@ -899,7 +899,7 @@ def log_in_again(*, saying: str | None = LOGGING_IN_AGAIN) -> None:
     if saying:
         console.print(Text(saying), style="yellow")
     try:
-        AuthenticationCommand().login()
+        AuthenticationCommand().login(source="eval")
     except KeyboardInterrupt as error:
         raise EvaluationStoppedError(
             LOGIN_ABANDONED, reason="login_abandoned"

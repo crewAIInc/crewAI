@@ -123,14 +123,39 @@ class AuthenticationCommand:
         response.raise_for_status()
         return cast(dict[str, Any], response.json())
 
-    def _display_auth_instructions(self, device_code_data: dict[str, str]) -> None:
+    def _display_auth_instructions(self, device_code_data: dict[str, Any]) -> None:
         """Print and open the verification URL the user must visit."""
+        prefilled = "verification_uri_complete" in device_code_data
         verification_uri = device_code_data.get(
             "verification_uri_complete", device_code_data.get("verification_uri", "")
         )
+        minutes = max(
+            1,
+            round(
+                device_code_data.get(
+                    "expires_in", _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS
+                )
+                / 60
+            ),
+        )
 
-        console.print("1. Navigate to: ", verification_uri)
-        console.print("2. Enter the following code: ", device_code_data["user_code"])
+        console.print(
+            "1. Open this page (your browser should open it for you):",
+            verification_uri,
+        )
+        if prefilled:
+            console.print(
+                "2. Check that it shows this code, already filled in:",
+                device_code_data["user_code"],
+            )
+        else:
+            console.print(
+                "2. Enter this code on that page:", device_code_data["user_code"]
+            )
+        console.print(
+            f"The code expires in {minutes} minute{'s' if minutes != 1 else ''}. "
+            "Press Ctrl-C to cancel."
+        )
         webbrowser.open(verification_uri)
 
     def _poll_for_token(self, device_code_data: dict[str, Any]) -> None:
