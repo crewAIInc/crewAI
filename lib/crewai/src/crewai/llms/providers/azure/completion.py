@@ -72,6 +72,7 @@ class AzureCompletionParams(TypedDict, total=False):
     frequency_penalty: float
     presence_penalty: float
     max_tokens: int
+    seed: int
     stop: list[str]
     tools: list[ChatCompletionsToolDefinition]
     tool_choice: str
@@ -719,6 +720,8 @@ class AzureCompletion(BaseLLM):
             params["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             params["max_tokens"] = self.max_tokens
+        if self.seed is not None:
+            params["seed"] = self.seed
         stops = self.stop_sequences
         if stops and self.supports_stop_words():
             params["stop"] = stops
