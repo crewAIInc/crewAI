@@ -60,11 +60,14 @@ class FileResolverConfig:
         upload_threshold_bytes: Size threshold above which to use upload.
             If None, uses provider-specific threshold.
         use_bytes_for_bedrock: If True, use raw bytes instead of base64 for Bedrock.
+        allow_upload: If False, files are always inlined, whatever their size
+            (for providers reached through a gateway that serves no Files API).
     """
 
     prefer_upload: bool = False
     upload_threshold_bytes: int | None = None
     use_bytes_for_bedrock: bool = True
+    allow_upload: bool = True
 
 
 @dataclass
@@ -249,7 +252,7 @@ class FileResolver:
         Returns:
             True if the file should be uploaded, False otherwise.
         """
-        if constraints is None:
+        if not self.config.allow_upload or constraints is None:
             return False
 
         if self.config.prefer_upload:

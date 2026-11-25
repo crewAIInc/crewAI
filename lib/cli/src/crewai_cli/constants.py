@@ -151,6 +151,21 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "DEEPINFRA_API_KEY",
         }
     ],
+    # Databricks Unity Gateway with Databricks unified auth. The token is
+    # optional: leave it blank to use OAuth (a `databricks auth login` profile or
+    # DATABRICKS_CLIENT_ID/SECRET), and never set both, which the SDK rejects.
+    "databricks": [
+        {
+            "prompt": "Enter your Databricks workspace URL, e.g. https://<workspace>.cloud.databricks.com",
+            "key_name": "DATABRICKS_HOST",
+            "secret": False,
+        },
+        {
+            "prompt": "Enter a Databricks personal access token, or press Enter to use OAuth (a CLI profile or DATABRICKS_CLIENT_ID/SECRET)",
+            "key_name": "DATABRICKS_TOKEN",
+            "optional": True,
+        },
+    ],
 }
 
 
@@ -167,6 +182,7 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "databricks",
 ]
 
 # The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
@@ -177,6 +193,7 @@ PROVIDER_EXTRAS: dict[str, str] = {
     "gemini": "google-genai",
     "bedrock": "bedrock",
     "azure": "azure-ai-inference",
+    "databricks": "databricks",
     # crewAI has no native provider for these and falls back to LiteLLM.
     "groq": "litellm",
     "huggingface": "litellm",
@@ -253,6 +270,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
         "azure",
         "cerebras",
         "dashscope",
+        "databricks",
         "deepinfra",
         "hosted_vllm",
         "ollama",
@@ -339,6 +357,11 @@ MODELS: dict[str, list[str]] = {
         "huggingface/zai-org/GLM-5.3-Flash",
         "huggingface/deepseek-ai/DeepSeek-V4.1-Flash",
         "huggingface/zai-org/GLM-5.3",
+    ],
+    "databricks": [
+        "databricks/system.ai.claude-sonnet-5",
+        "databricks/system.ai.gpt-6-sol",
+        "databricks/system.ai.gemini-3-5-flash",
     ],
     "sambanova": [
         "sambanova/gpt-oss-120b",

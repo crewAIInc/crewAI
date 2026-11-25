@@ -98,7 +98,7 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
 </Tabs>
 
 <Info>
-  O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock e Snowflake Cortex — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
+  O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, Snowflake Cortex e Databricks — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
 
   Todos os outros provedores são alimentados pelo **LiteLLM**. Se você planeja usar algum deles, adicione-o como dependência ao seu projeto:
   ```bash
@@ -253,6 +253,88 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     - Remoção automática de prefill final de assistant inválido para modelos Claude no Snowflake
   </Accordion>
 
+  <Accordion title="Databricks">
+    O CrewAI oferece integração nativa com os model services do [Databricks Unity Gateway](https://docs.databricks.com/aws/en/ai-gateway/query-model-services). Use `model="databricks/<model-service>"` com um serviço fornecido pela Databricks (`system.ai.<model>`) ou com um que você configurou no Unity Catalog (`<catalog>.<schema>.<service>`).
+
+    ```bash
+    uv add "crewai[databricks]"
+    ```
+
+    **Escolhendo a API:** o Databricks Unity Gateway atende cada model service por uma API nativa ou pelas APIs unificadas. O CrewAI escolhe a API pelo nome do model service ou por `api=`:
+
+    | Model service | API do Databricks Unity Gateway |
+    |---|---|
+    | `system.ai.*claude*` | API nativa Anthropic Messages (`/ai-gateway/anthropic`) |
+    | `system.ai.*gemini*` | API nativa do Gemini (`/ai-gateway/gemini`) |
+    | Qualquer outro serviço `system.ai.*` ou um serviço que você configurou | API unificada Responses (`/ai-gateway/mlflow/v1`) |
+    | Qualquer serviço com `api="completions"` | API unificada Chat Completions (`/ai-gateway/mlflow/v1`) |
+
+    As APIs unificadas atendem todos os modelos. Para um serviço que você configurou e que usa Claude ou Gemini, defina `api="anthropic"` ou `api="gemini"` para usar a API nativa — o Gemini precisa da API nativa para chamadas de ferramentas em vários turnos.
+
+    **Autenticação:** o CrewAI usa a autenticação unificada da Databricks, então qualquer método suportado pelo Databricks SDK funciona, e os tokens OAuth são renovados automaticamente em crews de longa duração. As credenciais são resolvidas na primeira requisição, então criar um `LLM` nunca faz uma chamada de rede.
+
+    ```toml Code
+    # Personal access token
+    DATABRICKS_HOST=https://<workspace>.cloud.databricks.com
+    DATABRICKS_TOKEN=<personal-access-token>
+
+    # OAuth machine-to-machine (service principal)
+    DATABRICKS_HOST=https://<workspace>.cloud.databricks.com
+    DATABRICKS_CLIENT_ID=<service-principal-client-id>
+    DATABRICKS_CLIENT_SECRET=<service-principal-secret>
+
+    # OAuth user-to-machine: a profile created by `databricks auth login`
+    DATABRICKS_CONFIG_PROFILE=<profile-name>
+    ```
+
+    Um `api_key=` explícito (um personal access token) tem precedência. Caso contrário, configure um único método no ambiente ou no perfil; o Databricks SDK rejeita configurações conflitantes ali, como um token e um client secret ao mesmo tempo.
+
+    **Uso básico:**
+    ```python Code
+    from crewai import LLM
+
+    claude = LLM(model="databricks/system.ai.claude-sonnet-5")   # native Anthropic API
+    gemini = LLM(model="databricks/system.ai.gemini-3-5-flash")  # native Gemini API
+    gpt = LLM(model="databricks/system.ai.gpt-6-sol")            # unified Responses API
+
+    # Model services you configured in Unity Catalog
+    support = LLM(model="databricks/main.ai_services.support_assistant")              # unified Responses API
+    gemini_svc = LLM(model="databricks/main.ai_services.gemini_service", api="gemini")  # native Gemini API
+    ```
+
+    **Credenciais explícitas e opções:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="databricks/system.ai.claude-sonnet-5",
+        profile="my-profile",            # or host= with api_key= (a PAT), or client_id=/client_secret=
+        # auth_type="external-browser",  # interactive OAuth sign-in
+        # api="responses",               # choose an API: "anthropic", "gemini", "responses", "completions"
+        # base_url="https://<host>",     # another workspace host, or a full Databricks Unity Gateway URL (api_base= also works)
+    )
+    ```
+
+    Você também pode passar um cliente existente do Databricks SDK com `workspace_client=` ou um `databricks_config=` (um `databricks.sdk.core.Config`). As credenciais são fixadas quando o `LLM` é criado e compartilhadas pelas suas cópias; para usar outras credenciais, crie um novo `LLM`.
+
+    **Permissões:** a identidade que faz a chamada precisa de `USE CATALOG` e `USE SCHEMA` no catálogo e no schema do serviço, e de `EXECUTE` no model service. O Unity Catalog informa um serviço que a identidade não pode acessar como inexistente, então um `404` geralmente indica uma permissão ausente.
+
+    **Rede:** os proxies são respeitados como no cliente padrão do httpx: `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY` e `NO_PROXY`, ou as configurações de proxy do sistema macOS/Windows quando nenhuma está definida. Como nos outros provedores, um `interceptor=` substitui esse tratamento de proxy pelo próprio transporte. Hosts e `base_url` devem usar `https://`.
+
+    **Migrando da rota LiteLLM:** versões anteriores enviavam modelos `databricks/...` pelo LiteLLM. Agora o CrewAI chama o Databricks Unity Gateway para todo modelo `databricks/`, que é a forma recomendada de acessar modelos na Databricks. Use um nome de model service (`system.ai.<model>` ou o seu próprio serviço). Para manter o comportamento anterior via LiteLLM, passe `is_litellm=True`.
+
+    **Recursos:**
+    - Function calling nativo, streaming, chamadas assíncronas, saída estruturada e acompanhamento de uso de tokens em todas as APIs do Databricks Unity Gateway
+    - Chamadas de ferramentas em vários turnos para o Gemini pela API nativa do Gemini, que preserva as thought signatures
+    - Nova tentativa automática sem `temperature` para modelos que não a aceitam
+    - Imagens e outros arquivos (`input_files`) são enviados inline, no formato de cada API
+    - Agentes e crews restaurados de um estado salvo (checkpoints) recriam o modelo da Databricks; segredos nunca são salvos, então o modelo restaurado usa credenciais do ambiente ou de um perfil
+    - As requisições à Databricks feitas por este provedor enviam o User-Agent `crewai_oss/<version>`; outros provedores e seus próprios clientes do Databricks SDK não são afetados
+
+    <Note>
+      O Gemini conta os tokens de raciocínio em `max_tokens`. Defina um orçamento que cubra o raciocínio e a resposta, ou as respostas podem ser cortadas.
+    </Note>
+  </Accordion>
   <Accordion title="Anthropic">
     ```toml Code
     # Obrigatório

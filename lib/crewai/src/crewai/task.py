@@ -1056,7 +1056,7 @@ class Task(BaseModel):
                     isinstance(self.agent.llm, BaseLLM)
                     and self.agent.llm.supports_multimodal()
                 ):
-                    provider: str = self.agent.llm.provider or self.agent.llm.model
+                    provider: str = self.agent.llm.file_constraints_provider()
                     api: str | None = (
                         self.agent.llm.api
                         if isinstance(self.agent.llm, OpenAICompletion)

@@ -1716,6 +1716,11 @@ bedrock = [
 chromadb = [
     { name = "chromadb" },
 ]
+databricks = [
+    { name = "anthropic" },
+    { name = "databricks-sdk" },
+    { name = "google-genai" },
+]
 docling = [
     { name = "docling" },
     { name = "docling-core", extra = ["chunking"] },
@@ -1774,6 +1779,7 @@ requires-dist = [
     { name = "aiofiles", specifier = "~=24.1.0" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = "~=0.73.0" },
+    { name = "anthropic", marker = "extra == 'databricks'", specifier = "~=0.73.0" },
     { name = "appdirs", specifier = "~=1.4.4" },
     { name = "azure-ai-inference", marker = "extra == 'azure-ai-inference'", specifier = "~=1.0.0b9" },
     { name = "azure-identity", marker = "extra == 'azure-ai-inference'", specifier = ">=1.17.0,<2" },
@@ -1788,8 +1794,10 @@ requires-dist = [
     { name = "crewai-files", extras = ["spreadsheets"], marker = "extra == 'spreadsheets'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'spreadsheets'", editable = "lib/crewai-tools" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
+    { name = "databricks-sdk", marker = "extra == 'databricks'", specifier = ">=0.46.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.132.0" },
     { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling'", specifier = ">=2.98.0,<3" },
+    { name = "google-genai", marker = "extra == 'databricks'", specifier = "~=1.65.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.65.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "httpx-auth", marker = "extra == 'a2a'", specifier = "~=0.23.1" },
@@ -1830,7 +1838,7 @@ requires-dist = [
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
     { name = "weasyprint", marker = "extra == 'pdf'", specifier = "~=70.0" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "chromadb", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "pdf", "qdrant", "qdrant-edge", "spreadsheets", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "chromadb", "databricks", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "pdf", "qdrant", "qdrant-edge", "spreadsheets", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"

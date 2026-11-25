@@ -110,6 +110,15 @@ def _validate_llm_ref(value: Any) -> Any:
             llm_kwargs.pop("deployment_name", None)
             return LLM(**llm_kwargs)
 
+        if value.get("provider") == "databricks":
+            # The Databricks classes share llm_type with the vendor classes
+            # they extend; rebuilding through LLM() routes to the right one.
+            from crewai.llm import LLM
+
+            return LLM(
+                **{k: v for k, v in value.items() if v is not None and k != "llm_type"}
+            )
+
         if llm_type not in _LLM_TYPE_REGISTRY:
             raise ValueError(
                 f"Unknown llm_type: {llm_type!r}. "
