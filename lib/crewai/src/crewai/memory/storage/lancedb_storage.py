@@ -79,7 +79,7 @@ def _scope_prefix_filter(prefix: str) -> str:
     return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
 
 
-def _delete_filter(
+def _make_filter_condition(
     scope_prefix: str | None,
     record_ids: list[str] | None,
     older_than: datetime | None,
@@ -487,7 +487,7 @@ class LanceDBStorage:
                 rows = self._scan_rows(
                     scope_prefix,
                     columns=_NON_VECTOR_COLUMNS,
-                    where=_delete_filter(None, record_ids, older_than),
+                    where=_make_filter_condition(None, record_ids, older_than),
                 )
                 to_delete: list[str] = []
                 for row in rows:
@@ -506,7 +506,7 @@ class LanceDBStorage:
                 before = int(self._table.count_rows())
                 self._do_write("delete", _id_in_filter(to_delete))
                 return before - int(self._table.count_rows())
-            where_expr = _delete_filter(scope_prefix, record_ids, older_than)
+            where_expr = _make_filter_condition(scope_prefix, record_ids, older_than)
             before = int(self._table.count_rows())
             self._do_write("delete", where_expr or "id != ''")
             return before - int(self._table.count_rows())
