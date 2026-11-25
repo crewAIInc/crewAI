@@ -1857,6 +1857,50 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("Crew1 (uuid1) active", fake_out.getvalue())
             self.assertIn("Crew2 (uuid2) inactive", fake_out.getvalue())
 
+    def test_list_crews_reports_api_errors_instead_of_no_crews(self):
+        cases = (
+            (
+                httpx.Response(500, json={"error": "boom"}),
+                "Request to Enterprise API failed",
+            ),
+            (
+                httpx.Response(500, content=b"<html>bad gateway</html>"),
+                "Failed to parse response",
+            ),
+        )
+        for response, expected in cases:
+            self.mock_client.list_crews.return_value = response
+
+            with patch("sys.stdout", new=StringIO()) as fake_out:
+                with pytest.raises(SystemExit):
+                    self.deploy_command.list_crews()
+            output = fake_out.getvalue()
+
+            assert expected in output, response
+            assert "You don't have any Crews yet" not in output, response
+
+    def test_list_crews_401_asks_to_log_in(self):
+        response = httpx.Response(
+            401, json={"error": "bad_credentials", "message": "Bad credentials"}
+        )
+        self.mock_client.list_crews.return_value = response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(AuthenticationRequiredError):
+                self.deploy_command.list_crews()
+        output = fake_out.getvalue()
+
+        assert "Run 'crewai login'" in output
+        assert "You don't have any Crews yet" not in output
+
+    def test_list_crews_with_no_deployments_says_there_are_none(self):
+        self.mock_client.list_crews.return_value = httpx.Response(200, json=[])
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.list_crews()
+
+        assert "You don't have any Crews yet" in fake_out.getvalue()
+
     def test_get_crew_status(self):
         mock_response = MagicMock()
         mock_response.status_code = 200
