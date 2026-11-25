@@ -604,3 +604,23 @@ def test_dynamic_cache_expires_after_catalog_ttl(monkeypatch):
     )
 
     assert mc._read_catalog_cache("anthropic") is None
+
+
+def test_ace_catalog_uses_shared_picker_limits_and_filters_protocols(monkeypatch):
+    monkeypatch.setenv("ACEDATACLOUD_API_KEY", "test-key")
+    monkeypatch.delenv("ACEDATACLOUD_BASE_URL", raising=False)
+    models = [
+        {"id": f"chat-{i}", "type": "chat", "endpoints": [{"protocol": "chat_completions"}]}
+        for i in range(mc.MAX_MODELS + 1)
+    ]
+    models.append({"id": "messages-only", "type": "chat", "endpoints": [{"protocol": "messages"}]})
+
+    def public_catalog(url, *, params):
+        assert url == "https://platform.acedata.cloud/api/v1/models/"
+        assert params == {"type": "chat"}
+        return {"data": models}
+
+    monkeypatch.setattr(mc, "_http_get_json", public_catalog)
+    discovered = mc.get_provider_models("acedatacloud", [])
+    assert len(discovered) == mc.MAX_MODELS
+    assert all(model.startswith("chat-") for model, _label in discovered)

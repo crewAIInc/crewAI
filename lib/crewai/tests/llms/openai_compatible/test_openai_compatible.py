@@ -330,6 +330,14 @@ class TestLLMIntegration:
             assert llm.provider == "dashscope"
             assert llm.base_url == "https://my-dashscope.example.com/v1"
 
+    def test_llm_creates_openai_compatible_for_acedatacloud(self):
+        with patch.dict(os.environ, {"ACEDATACLOUD_API_KEY": "test-key"}, clear=True):
+            llm = LLM(model="acedatacloud/gpt-6.2-sol")
+            assert type(llm) is OpenAICompatibleCompletion
+            assert llm.provider == "acedatacloud"
+            assert llm.model == "gpt-6.2-sol"
+            assert llm.base_url == "https://api.acedata.cloud/v1"
+
     def test_llm_creates_openai_compatible_for_deepinfra(self):
         """Test LLM factory creates OpenAICompatibleCompletion for DeepInfra."""
         with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}):
