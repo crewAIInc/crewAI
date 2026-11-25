@@ -1,6 +1,6 @@
 import json
 
-from crewai.telemetry.tracing.gen_ai_shapes import truncate_attr
+from crewai.telemetry.tracing.gen_ai_shapes import to_input_messages, truncate_attr
 import pytest
 
 
@@ -35,3 +35,64 @@ def test_truncation_preserves_json_and_respects_byte_cap(payload, cap):
         assert result is not None
         assert len(result.encode("utf-8")) <= cap
         assert json.loads(result)["_truncated"] is True
+
+
+def test_multimodal_input_records_text_instead_of_provider_json():
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Describe this image"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "data:image/png;base64,abc"},
+                },
+            ],
+        },
+    ]
+
+    assert to_input_messages(messages) == [
+        {
+            "role": "user",
+            "parts": [{"type": "text", "content": "Describe this image"}],
+        },
+    ]
+
+
+def test_multimodal_input_with_multiple_text_blocks():
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "First"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                {"type": "text", "text": "Second"},
+                {"type": "text", "text": 42},  # non-string text is skipped
+            ],
+        },
+    ]
+
+    assert to_input_messages(messages) == [
+        {
+            "role": "user",
+            "parts": [
+                {"type": "text", "content": "First"},
+                {"type": "text", "content": "Second"},
+            ],
+        },
+    ]
+
+
+def test_multimodal_input_with_no_text_blocks_keeps_empty_part():
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+            ],
+        },
+    ]
+
+    assert to_input_messages(messages) == [
+        {"role": "user", "parts": [{"type": "text", "content": ""}]},
+    ]
