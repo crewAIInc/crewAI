@@ -503,9 +503,13 @@ class MCPClient:
         )
 
         try:
+            # Send tools/call once: after a timeout or transport error the
+            # server may already have run the tool, so resending it could run
+            # a non-idempotent tool twice.
             tool_result: _MCPToolResult = await self._retry_operation(
                 lambda: self._call_tool_impl(tool_name, cleaned_arguments),
                 timeout=self.execution_timeout,
+                max_attempts=1,
             )
 
             finished_at = datetime.now()
@@ -703,20 +707,23 @@ class MCPClient:
         self,
         operation: Callable[[], Coroutine[Any, Any, _T]],
         timeout: int | None = None,
+        max_attempts: int | None = None,
     ) -> _T:
         """Retry an operation with exponential backoff.
 
         Args:
             operation: Async operation to retry.
             timeout: Operation timeout in seconds.
+            max_attempts: Attempts to make; defaults to ``max_retries``.
 
         Returns:
             Operation result.
         """
         last_error = None
         timeout = timeout or self.execution_timeout
+        attempts = max_attempts or self.max_retries
 
-        for attempt in range(self.max_retries):
+        for attempt in range(attempts):
             try:
                 if timeout:
                     return await asyncio.wait_for(operation(), timeout=timeout)
@@ -724,7 +731,7 @@ class MCPClient:
 
             except asyncio.TimeoutError as e:  # noqa: PERF203
                 last_error = f"Operation timed out after {timeout} seconds"
-                if attempt < self.max_retries - 1:
+                if attempt < attempts - 1:
                     wait_time = 2**attempt
                     await asyncio.sleep(wait_time)
                 else:
@@ -750,12 +757,12 @@ class MCPClient:
 
                 # Retryable errors
                 last_error = str(e)
-                if attempt < self.max_retries - 1:
+                if attempt < attempts - 1:
                     wait_time = 2**attempt
                     await asyncio.sleep(wait_time)
                 else:
                     raise ConnectionError(
-                        f"Operation failed after {self.max_retries} attempts: {last_error}"
+                        f"Operation failed after {attempts} attempts: {last_error}"
                     ) from e
 
         raise ConnectionError(f"Operation failed: {last_error}")
