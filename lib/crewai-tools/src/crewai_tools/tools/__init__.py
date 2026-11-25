@@ -89,6 +89,13 @@ from crewai_tools.tools.firecrawl_scrape_website_tool.firecrawl_scrape_website_t
 from crewai_tools.tools.firecrawl_search_tool.firecrawl_search_tool import (
     FirecrawlSearchTool,
 )
+from crewai_tools.tools.geekflare_tool import (
+    GeekflareBrandTool,
+    GeekflareScrapeWebsiteTool,
+    GeekflareScreenshotTool,
+    GeekflareSearchTool,
+    GeekflareWebsiteDiagnosticsTool,
+)
 from crewai_tools.tools.generate_crewai_automation_tool.generate_crewai_automation_tool import (
     GenerateCrewaiAutomationTool,
 )
@@ -271,6 +278,11 @@ __all__ = [
     "FirecrawlCrawlWebsiteTool",
     "FirecrawlScrapeWebsiteTool",
     "FirecrawlSearchTool",
+    "GeekflareBrandTool",
+    "GeekflareScrapeWebsiteTool",
+    "GeekflareScreenshotTool",
+    "GeekflareSearchTool",
+    "GeekflareWebsiteDiagnosticsTool",
     "GenerateCrewaiAutomationTool",
     "GithubSearchTool",
     "HyperbrowserLoadTool",
