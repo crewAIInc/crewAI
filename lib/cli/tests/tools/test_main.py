@@ -171,8 +171,9 @@ def test_install_tool_not_found(mock_get, capsys, tool_command):
     mock_get_response.status_code = 404
     mock_get.return_value = mock_get_response
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc:
         tool_command.install("non-existent-tool")
+    assert exc.value.code == 1
     output = capsys.readouterr().out
     assert "No tool found with this name" in output
 
@@ -185,8 +186,9 @@ def test_install_api_error(mock_get, capsys, tool_command):
     mock_get_response.status_code = 500
     mock_get.return_value = mock_get_response
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc:
         tool_command.install("error-tool")
+    assert exc.value.code == 1
     output = capsys.readouterr().out
     assert "Failed to get tool details" in output
 
