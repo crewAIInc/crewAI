@@ -226,7 +226,6 @@ class CrewAIRagAdapter(Adapter):
                     ".ico",
                     ".svg",
                     ".webp",
-                    ".pdf",
                     ".zip",
                     ".tar",
                     ".gz",
@@ -263,7 +262,11 @@ class CrewAIRagAdapter(Adapter):
 
                         file_path: str = os.path.join(root, filename)
                         try:
-                            file_data_type: DataType = DataTypes.from_content(file_path)
+                            file_data_type = (
+                                DataType.PDF_FILE
+                                if file_ext == ".pdf"
+                                else DataTypes.from_content(file_path)
+                            )
                             file_loader = file_data_type.get_loader()
                             file_chunker = file_data_type.get_chunker()
 

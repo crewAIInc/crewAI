@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, Mock, patch
 
+import pymupdf
 import pytest
 
 from crewai_tools.rag.data_types import DataType
@@ -553,3 +554,30 @@ class TestJSONLIngestion:
             if line.strip()
         ] == ['{"first": 1}', '{"second": 2}']
         assert all(doc["metadata"]["record_count"] == 2 for doc in documents)
+
+
+@pytest.mark.parametrize("extension", [".pdf", ".PDF"])
+def test_directory_ingests_pdf_and_text(
+    rag_tool: RagTool, mock_rag_client: MagicMock, tmp_path: Path, extension: str
+) -> None:
+    """Send supported PDFs and text files through the directory ingestion path."""
+    pdf_path = tmp_path / f"lesson{extension}"
+    with pymupdf.open() as pdf:
+        pdf.new_page().insert_text((72, 72), "PDF lesson body")
+        pdf.save(str(pdf_path))
+
+    text_path = tmp_path / "notes.txt"
+    text_path.write_text("Text lesson notes", encoding="utf-8")
+    (tmp_path / "image.png").write_bytes(b"image data")
+
+    rag_tool.add(data_type="directory", path=tmp_path)
+
+    mock_rag_client.add_documents.assert_called_once()
+    records = {
+        item["metadata"]["file_path"]: item
+        for item in mock_rag_client.add_documents.call_args.kwargs["documents"]
+    }
+    assert set(records) == {str(pdf_path), str(text_path)}
+    assert "PDF lesson body" in records[str(pdf_path)]["content"]
+    assert records[str(pdf_path)]["metadata"]["data_type"] == str(DataType.PDF_FILE)
+    assert records[str(text_path)]["content"] == "Text lesson notes"
