@@ -1,0 +1,31 @@
+---
+title: "Seedance by Ace Data Cloud"
+description: "أدوات CrewAI أصلية لإنشاء Seedance واسترجاع المهمة غير المتزامنة نفسها عبر Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+تتولى Ace Data Cloud صيانة هذه الحزمة لاستخدام Seedance مع CrewAI.
+
+## التثبيت
+
+```bash
+uv add crewai-seedance==0.1.0
+```
+
+أنشئ [رمز API للتطبيق](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_api_key) يتيح الوصول إلى Seedance واحفظه في متغير البيئة `ACEDATACLOUD_API_KEY`. راجع [الأسعار الحالية](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_pricing) قبل توليد الوسائط.
+
+## الاستخدام
+
+الإدخال content منظم لنص/صورة/صوت/فيديو وليس prompt عامًا. الدقة بحروف صغيرة 480p/720p/1080p/4k وخيارات ratio والمدة/الصوت حسب النموذج. النتيجة data.video_url أو data.content.video_url.
+
+أضف `SeedanceGenerateVideoTool()` و`SeedanceRetrieveTaskTool()` إلى قائمة `tools` الخاصة بالوكيل. تُعيد أداة التوليد معرّف المهمة. لمتابعة تقدمها، استعلم عن المعرّف نفسه باستخدام المفتاح الذي أرسل المهمة.
+
+```python
+from seedance_crewai import SeedanceRetrieveTaskTool
+
+result = SeedanceRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[وثائق الحزمة](https://github.com/AceDataCloud/SeedanceCrewAI/tree/8c5ed37d28f2110987d478ed5010df39907b929e)

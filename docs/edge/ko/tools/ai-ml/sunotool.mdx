@@ -1,0 +1,29 @@
+---
+title: "Suno by Ace Data Cloud"
+description: "독립 CrewAI 도구 패키지로 Suno 음악을 생성하고 같은 작업을 조회합니다."
+icon: music
+mode: "wide"
+---
+
+Ace Data Cloud에서 제공하는 이 패키지로 CrewAI에서 Suno 서비스를 사용할 수 있습니다.
+
+## 설치
+
+```bash
+uv add crewai-suno==0.1.0
+```
+
+Suno 서비스에 접근할 수 있는 [애플리케이션 API 토큰](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key)을 발급하고 환경 변수 `ACEDATACLOUD_API_KEY`에 저장하세요. 미디어를 생성하기 전에 [현재 요금](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_pricing)을 확인하세요.
+
+## 사용법
+
+에이전트의 `tools` 목록에 `SunoGenerateMusicTool()` 및 `SunoRetrieveTaskTool()`를 추가하세요. 생성 도구는 작업 ID를 반환합니다. 진행 상황을 확인하려면 작업을 제출한 키로 같은 ID를 조회하세요.
+
+```python
+from suno_crewai import SunoRetrieveTaskTool
+
+result = SunoRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[패키지 문서](https://github.com/AceDataCloud/SunoCrewAI/tree/5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb)

@@ -1,0 +1,31 @@
+---
+title: "GPT Image by Ace Data Cloud"
+description: "Native CrewAI tools for GPT Image generation and same-ID asynchronous retrieval through Ace Data Cloud."
+icon: image
+mode: "wide"
+---
+
+Ace Data Cloud maintains this package for using GPT Image from CrewAI.
+
+## Installation
+
+```bash
+uv add crewai-gpt-image==0.1.0
+```
+
+Create an [application API token](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_api_key) with access to GPT Image and set it as `ACEDATACLOUD_API_KEY` in your environment. Check the [current price](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_pricing) before generating media.
+
+## Usage
+
+GPT Image has size/quality/n (1..10), background and output-format options; generation uses /openai/images/generations with response_format=url. It is not DallETool or Nano Banana. Results are data[].url; editing/multipart is not included.
+
+Pass `GPTImageGenerateImageTool()` and `GPTImageRetrieveTaskTool()` to your agent’s `tools` list. Generation returns a task ID. To check its progress, query the same ID with the key that submitted the task.
+
+```python
+from gpt_image_crewai import GPTImageRetrieveTaskTool
+
+result = GPTImageRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[Package documentation](https://github.com/AceDataCloud/GPTImageCrewAI/tree/0eea3c3c57067d82680ba54680db29ddce08eb51)

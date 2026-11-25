@@ -1,0 +1,31 @@
+---
+title: "HappyHorse by Ace Data Cloud"
+description: "أدوات CrewAI أصلية لإنشاء HappyHorse واسترجاع المهمة غير المتزامنة نفسها عبر Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+تتولى Ace Data Cloud صيانة هذه الحزمة لاستخدام HappyHorse مع CrewAI.
+
+## التثبيت
+
+```bash
+uv add crewai-happyhorse==0.1.0
+```
+
+أنشئ [رمز API للتطبيق](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key) يتيح الوصول إلى HappyHorse واحفظه في متغير البيئة `ACEDATACLOUD_API_KEY`. راجع [الأسعار الحالية](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing) قبل توليد الوسائط.
+
+## الاستخدام
+
+احتفظ بأفعال generate/image_to_video/reference_to_video/video_edit ومراجع image_url/image_urls/video_url المطلوبة. الدقة 720P/1080P والمدة3..15. النتيجة قائمة data من video_url/state.
+
+أضف `HappyHorseGenerateVideoTool()` و`HappyHorseRetrieveTaskTool()` إلى قائمة `tools` الخاصة بالوكيل. تُعيد أداة التوليد معرّف المهمة. لمتابعة تقدمها، استعلم عن المعرّف نفسه باستخدام المفتاح الذي أرسل المهمة.
+
+```python
+from happyhorse_crewai import HappyHorseRetrieveTaskTool
+
+result = HappyHorseRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[وثائق الحزمة](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/700945e95b53786329f16e722d61b6af4b3d1c1b)

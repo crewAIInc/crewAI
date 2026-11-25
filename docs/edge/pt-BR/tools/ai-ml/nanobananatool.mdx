@@ -1,0 +1,31 @@
+---
+title: "Nano Banana by Ace Data Cloud"
+description: "Ferramentas nativas CrewAI para gerar Nano Banana e consultar a mesma tarefa assíncrona pela Ace Data Cloud."
+icon: image
+mode: "wide"
+---
+
+A Ace Data Cloud mantém este pacote para usar Nano Banana com o CrewAI.
+
+## Instalação
+
+```bash
+uv add crewai-nano-banana==0.1.0
+```
+
+Crie um [token de API de aplicativo](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_api_key) com acesso a Nano Banana e defina `ACEDATACLOUD_API_KEY` no ambiente. Consulte o [preço atual](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_pricing) antes de gerar mídia.
+
+## Uso
+
+/nano-banana/images usa generate/edit, count1..4, aspect_ratio, resolution1K/2K/4K e image_urls; edit exige referências. Não usa size/quality/n de GPT Image. Saída data[].image_url.
+
+Adicione `NanoBananaGenerateImageTool()` e `NanoBananaRetrieveTaskTool()` à lista `tools` do agente. A geração retorna um ID de tarefa. Para acompanhar o progresso, consulte o mesmo ID com a chave que enviou a tarefa.
+
+```python
+from nano_banana_crewai import NanoBananaRetrieveTaskTool
+
+result = NanoBananaRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[Documentação do pacote](https://github.com/AceDataCloud/NanoBananaCrewAI/tree/3763986239aafa19083d9130bf71059da087584f)

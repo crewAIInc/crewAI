@@ -1,0 +1,31 @@
+---
+title: "HappyHorse by Ace Data Cloud"
+description: "Native CrewAI tools for HappyHorse generation and same-ID asynchronous retrieval through Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+Ace Data Cloud maintains this package for using HappyHorse from CrewAI.
+
+## Installation
+
+```bash
+uv add crewai-happyhorse==0.1.0
+```
+
+Create an [application API token](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key) with access to HappyHorse and set it as `ACEDATACLOUD_API_KEY` in your environment. Check the [current price](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing) before generating media.
+
+## Usage
+
+Preserve explicit generate/image_to_video/reference_to_video/video_edit actions and their required image_url/image_urls/video_url. Resolution is uppercase 720P/1080P, duration3..15. Results are a data list of video_url/state.
+
+Pass `HappyHorseGenerateVideoTool()` and `HappyHorseRetrieveTaskTool()` to your agent’s `tools` list. Generation returns a task ID. To check its progress, query the same ID with the key that submitted the task.
+
+```python
+from happyhorse_crewai import HappyHorseRetrieveTaskTool
+
+result = HappyHorseRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[Package documentation](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/700945e95b53786329f16e722d61b6af4b3d1c1b)

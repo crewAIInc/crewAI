@@ -1,0 +1,31 @@
+---
+title: "HappyHorse by Ace Data Cloud"
+description: "Ace Data Cloud를 통해 HappyHorse 생성과 같은 ID의 비동기 결과 조회를 제공하는 네이티브 CrewAI 도구입니다."
+icon: video
+mode: "wide"
+---
+
+Ace Data Cloud에서 제공하는 이 패키지로 CrewAI에서 HappyHorse 서비스를 사용할 수 있습니다.
+
+## 설치
+
+```bash
+uv add crewai-happyhorse==0.1.0
+```
+
+HappyHorse 서비스에 접근할 수 있는 [애플리케이션 API 토큰](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key)을 발급하고 환경 변수 `ACEDATACLOUD_API_KEY`에 저장하세요. 미디어를 생성하기 전에 [현재 요금](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing)을 확인하세요.
+
+## 사용법
+
+generate/image_to_video/reference_to_video/video_edit와 각 필수 image_url/image_urls/video_url을 구분합니다. 대문자720P/1080P, 길이3..15를 사용하며 data 목록의 video_url/state를 읽습니다.
+
+에이전트의 `tools` 목록에 `HappyHorseGenerateVideoTool()` 및 `HappyHorseRetrieveTaskTool()`를 추가하세요. 생성 도구는 작업 ID를 반환합니다. 진행 상황을 확인하려면 작업을 제출한 키로 같은 ID를 조회하세요.
+
+```python
+from happyhorse_crewai import HappyHorseRetrieveTaskTool
+
+result = HappyHorseRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[패키지 문서](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/700945e95b53786329f16e722d61b6af4b3d1c1b)

@@ -1,0 +1,31 @@
+---
+title: "Nano Banana by Ace Data Cloud"
+description: "Ace Data Cloud를 통해 Nano Banana 생성과 같은 ID의 비동기 결과 조회를 제공하는 네이티브 CrewAI 도구입니다."
+icon: image
+mode: "wide"
+---
+
+Ace Data Cloud에서 제공하는 이 패키지로 CrewAI에서 Nano Banana 서비스를 사용할 수 있습니다.
+
+## 설치
+
+```bash
+uv add crewai-nano-banana==0.1.0
+```
+
+Nano Banana 서비스에 접근할 수 있는 [애플리케이션 API 토큰](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_api_key)을 발급하고 환경 변수 `ACEDATACLOUD_API_KEY`에 저장하세요. 미디어를 생성하기 전에 [현재 요금](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_pricing)을 확인하세요.
+
+## 사용법
+
+/nano-banana/images는 generate/edit, count1..4, aspect_ratio, resolution1K/2K/4K와 image_urls를 사용합니다. edit는 참조가 필수이며 GPT Image의 size/quality/n과 다릅니다. 결과는 data[].image_url입니다.
+
+에이전트의 `tools` 목록에 `NanoBananaGenerateImageTool()` 및 `NanoBananaRetrieveTaskTool()`를 추가하세요. 생성 도구는 작업 ID를 반환합니다. 진행 상황을 확인하려면 작업을 제출한 키로 같은 ID를 조회하세요.
+
+```python
+from nano_banana_crewai import NanoBananaRetrieveTaskTool
+
+result = NanoBananaRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[패키지 문서](https://github.com/AceDataCloud/NanoBananaCrewAI/tree/3763986239aafa19083d9130bf71059da087584f)

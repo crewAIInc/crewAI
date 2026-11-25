@@ -1,0 +1,29 @@
+---
+title: "Suno بواسطة Ace Data Cloud"
+description: "أنشئ موسيقى Suno واسترجع المهمة نفسها بحزمة أدوات مستقلة لـ CrewAI."
+icon: music
+mode: "wide"
+---
+
+تتولى Ace Data Cloud صيانة هذه الحزمة لاستخدام Suno مع CrewAI.
+
+## التثبيت
+
+```bash
+uv add crewai-suno==0.1.0
+```
+
+أنشئ [رمز API للتطبيق](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key) يتيح الوصول إلى Suno واحفظه في متغير البيئة `ACEDATACLOUD_API_KEY`. راجع [الأسعار الحالية](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_pricing) قبل توليد الوسائط.
+
+## الاستخدام
+
+أضف `SunoGenerateMusicTool()` و`SunoRetrieveTaskTool()` إلى قائمة `tools` الخاصة بالوكيل. تُعيد أداة التوليد معرّف المهمة. لمتابعة تقدمها، استعلم عن المعرّف نفسه باستخدام المفتاح الذي أرسل المهمة.
+
+```python
+from suno_crewai import SunoRetrieveTaskTool
+
+result = SunoRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+[وثائق الحزمة](https://github.com/AceDataCloud/SunoCrewAI/tree/5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb)
