@@ -11,17 +11,15 @@ This module tests the async/non-blocking human feedback flow, including:
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import os
+from pathlib import Path
 import tempfile
-from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-from pydantic import BaseModel
-
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import Flow, HumanFeedbackResult, human_feedback, listen, start
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -29,6 +27,8 @@ from crewai.flow.async_feedback import (
     PendingFeedbackContext,
 )
 from crewai.flow.persistence import SQLiteFlowPersistence
+from pydantic import BaseModel
+import pytest
 
 
 # PendingFeedbackContext Tests
@@ -894,7 +894,7 @@ class TestAsyncHumanFeedbackIntegration:
                 return "content"
 
         flow = TestFlow()
-        method = getattr(flow, "review")
+        method = flow.review
         assert hasattr(method, "__human_feedback_config__")
         assert method.__human_feedback_config__.provider is not None
 
@@ -1820,3 +1820,209 @@ class TestLearnOnResume:
             ["Lead with the customer outcome"], source="hitl"
         )
         assert "first draft" in llm.call.call_args.args[0][1]["content"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for Issue #8441: Execution history preservation across from_pending()
+# ---------------------------------------------------------------------------
+
+
+def test_from_pending_preserves_completed_methods_on_later_checkpoint_restore(tmp_path: Path) -> None:
+    """Regression test for issue #8441:
+    A flow resumed via from_pending() must retain methods completed before the pause,
+    preventing duplicate execution when recovering from a later checkpoint.
+    """
+    from crewai import CheckpointConfig
+
+    execution_log: list[str] = []
+
+    class MockAsyncProvider(HumanFeedbackProvider):
+        def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class OrderFlow(Flow):
+        @start()
+        def reserve_inventory(self) -> None:
+            execution_log.append("reserve_inventory")
+            self.state["reserved"] = True
+
+        @listen(reserve_inventory)
+        @human_feedback(message="Approve order?", provider=MockAsyncProvider())
+        def review_order(self) -> None:
+            execution_log.append("review_order")
+
+        @listen(review_order)
+        def charge_payment(self, result: Any) -> None:
+            execution_log.append("charge_payment")
+            if execution_log.count("charge_payment") == 1:
+                raise RuntimeError("payment gateway timeout")
+            self.state["charged"] = True
+
+    checkpoint_dir = str(tmp_path / "checkpoints")
+    db_file = str(tmp_path / "order_flow.db")
+    cp_config = CheckpointConfig(location=checkpoint_dir, on_events=["method_execution_finished"])
+    persistence = SQLiteFlowPersistence(db_file)
+
+    # 1. Kickoff flow - runs reserve_inventory, pauses at review_order
+    flow1 = OrderFlow(checkpoint=cp_config, persistence=persistence)
+    pending = flow1.kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+    assert execution_log == ["reserve_inventory", "review_order"]
+
+    # 2. Restore via from_pending and resume - review_order completes, charge_payment fails
+    flow2 = OrderFlow.from_pending(pending.context.flow_id, persistence, checkpoint=cp_config)
+    with pytest.raises(RuntimeError, match="payment gateway timeout"):
+        flow2.resume("approved")
+
+    assert execution_log == ["reserve_inventory", "review_order", "charge_payment"]
+
+    # 3. Locate the latest checkpoint written after resume
+    checkpoint_files = list(Path(checkpoint_dir).glob("**/*.json"))
+    assert len(checkpoint_files) > 0
+    latest_cp = max(checkpoint_files, key=os.path.getmtime)
+
+    # 4. Restore from checkpoint and resume execution
+    flow3 = OrderFlow(persistence=persistence)
+    flow3.kickoff(
+        from_checkpoint=CheckpointConfig(
+            restore_from=str(latest_cp),
+            location=checkpoint_dir,
+            on_events=["method_execution_finished"],
+        )
+    )
+
+    # Assert reserve_inventory and review_order did NOT run a second time
+    assert execution_log == [
+        "reserve_inventory",
+        "review_order",
+        "charge_payment",
+        "charge_payment",
+    ]
+    assert execution_log.count("reserve_inventory") == 1
+    assert execution_log.count("review_order") == 1
+    assert execution_log.count("charge_payment") == 2
+
+
+def test_from_pending_preserves_method_outputs_and_execution_counts(tmp_path: Path) -> None:
+    """Test that from_pending restores pre-pause method outputs and execution counts,
+    and updates them properly when resume() finishes the paused method.
+    """
+    class MockAsyncProvider(HumanFeedbackProvider):
+        def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class MultiStepFlow(Flow):
+        @start()
+        def step_one(self) -> str:
+            return "output_one"
+
+        @listen(step_one)
+        @human_feedback(message="Approve step one?", provider=MockAsyncProvider())
+        def step_two(self) -> str:
+            return "output_two"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "flow.db"))
+    flow = MultiStepFlow(persistence=persistence)
+    pending = flow.kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    # Context snapshot before resume must contain step_one
+    assert pending.context.completed_methods == ["step_one"]
+    assert len(pending.context.method_outputs or []) == 1
+    assert pending.context.method_execution_counts == {"step_one": 1}
+
+    # Restored instance before resume has pre-pause trackers restored
+    resumed_flow = MultiStepFlow.from_pending(pending.context.flow_id, persistence)
+    assert "step_one" in resumed_flow._completed_methods
+    assert resumed_flow._method_execution_counts.get("step_one") == 1
+
+    # After resume, step_two is also recorded and its execution count is incremented
+    resumed_flow.resume("approved")
+    assert "step_one" in resumed_flow._completed_methods
+    assert "step_two" in resumed_flow._completed_methods
+    assert resumed_flow._method_execution_counts.get("step_two") == 1
+
+
+def test_from_pending_multiple_pauses_retains_cumulative_history(tmp_path: Path) -> None:
+    """Test that a flow with multiple sequential feedback pauses preserves
+    the cumulative execution history across successive pauses.
+    """
+    class MockAsyncProvider(HumanFeedbackProvider):
+        def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class TwoPauseFlow(Flow):
+        @start()
+        def first_step(self) -> str:
+            return "first"
+
+        @listen(first_step)
+        @human_feedback(message="Pause 1", provider=MockAsyncProvider())
+        def pause_one(self) -> str:
+            return "p1"
+
+        @listen(pause_one)
+        def middle_step(self) -> str:
+            return "mid"
+
+        @listen(middle_step)
+        @human_feedback(message="Pause 2", provider=MockAsyncProvider())
+        def pause_two(self) -> str:
+            return "p2"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "two_pause.db"))
+
+    # Initial run pauses at pause_one
+    flow = TwoPauseFlow(persistence=persistence)
+    p1 = flow.kickoff()
+    assert isinstance(p1, HumanFeedbackPending)
+    assert p1.context.completed_methods == ["first_step"]
+
+    # Resume first pause, executes middle_step, pauses at pause_two
+    resumed1 = TwoPauseFlow.from_pending(p1.context.flow_id, persistence)
+    p2 = resumed1.resume("continue1")
+    assert isinstance(p2, HumanFeedbackPending)
+
+    # Second pause snapshot must include first_step, pause_one, and middle_step
+    completed = p2.context.completed_methods or []
+    assert "first_step" in completed
+    assert "pause_one" in completed
+    assert "middle_step" in completed
+    assert p2.context.method_execution_counts.get("pause_one") == 1
+
+
+def test_from_pending_legacy_record_compatibility(tmp_path: Path) -> None:
+    """Test backward compatibility: restoring a legacy pending feedback record
+    persisted without completed_methods, method_outputs, or method_execution_counts
+    initializes cleanly with empty default trackers.
+    """
+    class SimpleFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "started"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "legacy.db"))
+
+    # Simulate a legacy record by creating a context without the new fields
+    legacy_context = PendingFeedbackContext(
+        flow_id="legacy-123",
+        flow_class=f"{SimpleFlow.__module__}.{SimpleFlow.__name__}",
+        method_name="begin",
+        method_output="started",
+        message="Legacy review",
+        completed_methods=None,
+        method_outputs=None,
+        method_execution_counts=None,
+    )
+
+    persistence.save_pending_feedback(
+        flow_uuid="legacy-123",
+        context=legacy_context,
+        state_data={"id": "legacy-123"},
+    )
+
+    # Restore from legacy record
+    restored = SimpleFlow.from_pending("legacy-123", persistence)
+    assert restored._completed_methods == set()
+    assert restored._method_outputs == []
+    assert restored._method_execution_counts == {}
