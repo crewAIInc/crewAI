@@ -661,9 +661,10 @@ def test_create_runs_the_flow_it_just_created_from_its_folder(
         _create(["flow", "News v2.0", "--declarative"])
 
     [run_started] = runs
-    # A flow folder keeps the ".", which a crew folder would drop.
-    assert run_started.cwd == Path("news_v2.0")
-    assert (tmp_path / "news_v2.0" / "pyproject.toml").is_file()
+    # A flow folder drops characters a Python module name cannot hold, like a
+    # crew folder: the generated main.py imports the folder as its package.
+    assert run_started.cwd == Path("news_v20")
+    assert (tmp_path / "news_v20" / "pyproject.toml").is_file()
 
 
 @mock.patch("crewai_cli.cli.AuthenticationCommand")

@@ -95,9 +95,26 @@ def test_create_flow_returns_the_folder_it_created(
 
     project = create_flow("News v2.0", declarative=declarative)
 
-    # A flow folder keeps the ".", which a crew folder would drop.
-    assert project == Path("news_v2.0")
-    assert (tmp_path / "news_v2.0" / "pyproject.toml").is_file()
+    # Like a crew folder, a flow folder drops characters a Python module name
+    # cannot hold: the folder is the package the generated main.py imports.
+    assert project == Path("news_v20")
+    assert (tmp_path / "news_v20" / "pyproject.toml").is_file()
+    if not declarative:
+        main = tmp_path / "news_v20" / "src" / "news_v20" / "main.py"
+        compile(main.read_text(encoding="utf-8"), str(main), "exec")
+
+
+@pytest.mark.parametrize("declarative", [False, True])
+@pytest.mark.parametrize("name", ["!!!", "123bad", "class", "   "])
+def test_create_flow_rejects_a_name_that_cannot_be_a_module(
+    tmp_path: Path, monkeypatch: MonkeyPatch, declarative: bool, name: str
+):
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(click.BadParameter):
+        create_flow(name, declarative=declarative, skip_provider=True)
+
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize("declarative", [False, True])
