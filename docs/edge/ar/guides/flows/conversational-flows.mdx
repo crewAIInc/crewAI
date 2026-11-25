@@ -583,7 +583,7 @@ flow.chat(session_id=session_id)
 from crewai.flow import ConversationConfig, ConversationState, Flow, listen
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
-DB_PATH = "support_chat.db"  # explicit SQLite file, created next to this script
+DB_PATH = "support_chat.db"  # explicit SQLite file, created next to this script; delete it before a full re-run so the demo starts clean
 SESSION_ID = "support-session-001"  # stable session id for the conversation
 
 
@@ -618,7 +618,7 @@ def show_history(flow, label):
 
 
 # Turn 1 on the first instance.
-bot = SupportBot()
+bot = SupportBot(suppress_flow_events=True)
 try:
     bot.handle_turn("Where is my order?", session_id=SESSION_ID)
     show_history(bot, "after turn 1")
@@ -626,7 +626,7 @@ finally:
     bot.finalize_session_traces()
 
 # Simulate a restart: a FRESH instance, same DB file, same session id.
-bot2 = SupportBot()
+bot2 = SupportBot(suppress_flow_events=True)
 try:
     bot2.handle_turn("What about the delivery date?", session_id=SESSION_ID)
     show_history(bot2, "after turn 2 (restored history + new turn)")
@@ -634,9 +634,9 @@ finally:
     bot2.finalize_session_traces()
 
 # A different session id starts a separate conversation.
-bot3 = SupportBot()
+bot3 = SupportBot(suppress_flow_events=True)
 try:
-    bot3.handle_turn("Where is my order?", session_id="support-session-002")
+    bot3.handle_turn("What are your opening hours?", session_id="support-session-002")
     show_history(bot3, "different session id")
 finally:
     bot3.finalize_session_traces()
@@ -648,27 +648,34 @@ finally:
 python persist_restart_example.py
 ```
 
-المخرجات المتوقعة (بدون لوحات تحكم الـ flow):
+ابدأ كل تشغيل كامل من قاعدة بيانات نظيفة: احذف `support_chat.db` أولاً، وإلا ستلتقط الجولة الأولى ما تركته أي تشغيلات سابقة. أما داخل التشغيل الواحد، فاترك الملف كما هو — فالنسخ الثلاث تشتركه، والنسخة الثانية تسترجع منه تاريخ النسخة الأولى.
+
+المخرجات المتوقعة:
 
 ```text
+No flow state found for UUID: support-session-001
 --- after turn 1 ---
 user: Where is my order?
 assistant: Order update: 'Where is my order?' is on its way.
+Loading flow state from memory for UUID: support-session-001
 --- after turn 2 (restored history + new turn) ---
 user: Where is my order?
 assistant: Order update: 'Where is my order?' is on its way.
 user: What about the delivery date?
 assistant: I can check order status. Ask me about your order.
+No flow state found for UUID: support-session-002
 --- different session id ---
-user: Where is my order?
-assistant: Order update: 'Where is my order?' is on its way.
+user: What are your opening hours?
+assistant: I can check order status. Ask me about your order.
 ```
+
+تفتتح كل جولة بسطر من طبقة الثبات — `No flow state found` في جلسة جديدة، و`Loading flow state from memory` في جلسة مسترجعة. الخيار `suppress_flow_events=True` يُسكت لوحات تحكم الـ flow، لا هذه السطور، لذا تبقى في المخرجات المتوقعة.
 
 ### ما الذي تسترجعه إعادة التشغيل — وما الذي لا تسترجعه
 
 النسخة الجديدة التي تستخدم ملف `SQLiteFlowPersistence` نفسه ومعرّف الجلسة `session_id` نفسه تسترجع **حالة المحادثة المحفوظة**: `state.messages` (جولة المستخدم ورد المساعد، بالترتيب، وبدون تكرار)، وأعلام الحالة، ومعرّف الجلسة نفسه. يحمّل `handle_turn()` أحدث لقطة قبل إلحاق سطر المستخدم الجديد، فتواصل الجولة الثانية من حيث توقفت الأولى تماماً. أما معرّف الجلسة المختلف `session_id` فلا يجد لقطة ويبدأ محادثة منفصلة.
 
-ما **لا** يُسترجع: العمل الخلفي الجاري. الثبات هو استرجاع للحالة وليس إحياءً للعملية — الخيوط (threads)، وبثوث LLM الجارية، والمؤقتات، والاتصالات المفتوحة، وأي موارد تنفيذ حية أخرى تختفي عند التخلص من النسخة القديمة. كل `handle_turn()` هو تشغيل جديد للرسم البياني فوق الحالة المسترجعة. إذا ألغيت جلسة بدل إنهائها، أغلق الـ trace المؤجل صراحةً عبر `finalize_session_traces(discard=True)` حتى يُتجاهَل دفعة الـ trace المفتوحة بدل تركها معلقة.
+ما **لا** يُسترجع: العمل الخلفي الجاري. الثبات هو استرجاع للحالة وليس إحياءً للعملية. عند إعادة تشغيل العملية بأكملها، تموت الخيوط (threads) وبثوث LLM الجارية والمؤقتات والاتصالات المفتوحة وأي موارد تنفيذ حية أخرى مع العملية القديمة. أما استبدال النسخة داخل العملية نفسها فمختلف: العمل الذي بدأته النسخة القديمة من تلقاء نفسها يستمر حتى يُلغى، لذا ألغِه ونظّف بعده صراحةً قبل التخلص من النسخة. كل `handle_turn()` هو تشغيل جديد للرسم البياني فوق الحالة المسترجعة. إذا ألغيت جلسة بدل إنهائها، أغلق الـ trace المؤجل صراحةً عبر `finalize_session_traces(discard=True)` حتى يُتجاهَل دفعة الـ trace المفتوحة بدل تركها معلقة.
 
 بما أن المثال يضبط `defer_trace_finalization=True` (القيمة الافتراضية)، تُبقي كل نسخة دفعة trace واحدة مفتوحة عبر جولاتها؛ وتستدعي كتل `try/finally` الدالة `finalize_session_traces()` لتنتهي كل جلسة بحدث `FlowFinished` واحد. يقوم `flow.chat()` بذلك نيابة عنك في REPL؛ أما عندما تملك الحلقة بنفسك عبر `handle_turn()`، فأنهِها صراحةً.
 
