@@ -3,7 +3,7 @@ import os
 import sys
 import types
 from typing import Any
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 import openai
 import pytest
 
@@ -715,6 +715,72 @@ def test_openai_streaming_with_response_model():
 
         assert "input" not in call_kwargs
         assert "text_format" not in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_openai_async_streaming_with_response_model_sends_response_format():
+    from pydantic import BaseModel
+
+    from crewai.utilities.pydantic_schema_utils import generate_model_description
+
+    class TestResponse(BaseModel):
+        answer: str
+        confidence: float
+
+    def make_chunk(content):
+        chunk = MagicMock()
+        chunk.id = "chatcmpl-1"
+        chunk.usage = None
+        chunk.choices = [MagicMock()]
+        chunk.choices[0].delta.content = content
+        chunk.choices[0].finish_reason = None
+        return chunk
+
+    async def chunk_stream():
+        for piece in ('{"answer": "test", ', '"confidence": 0.95}'):
+            yield make_chunk(piece)
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    mock_create = AsyncMock(return_value=chunk_stream())
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = mock_create
+
+    with patch.object(llm, "_get_async_client", return_value=mock_client):
+        result = await llm.acall("Test question", response_model=TestResponse)
+
+    assert isinstance(result, TestResponse)
+    assert result.answer == "test"
+    assert result.confidence == 0.95
+
+    call_kwargs = mock_create.call_args.kwargs
+    assert call_kwargs["stream"] is True
+    assert call_kwargs["response_format"] == generate_model_description(TestResponse)
+    assert call_kwargs["response_format"]["json_schema"]["name"] == "TestResponse"
+
+
+@pytest.mark.asyncio
+async def test_openai_async_streaming_without_response_model_omits_response_format():
+    chunk = MagicMock()
+    chunk.id = "chatcmpl-1"
+    chunk.usage = None
+    chunk.choices = [MagicMock()]
+    chunk.choices[0].delta.content = "hello"
+    chunk.choices[0].delta.tool_calls = None
+    chunk.choices[0].finish_reason = None
+
+    async def chunk_stream():
+        yield chunk
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    mock_create = AsyncMock(return_value=chunk_stream())
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = mock_create
+
+    with patch.object(llm, "_get_async_client", return_value=mock_client):
+        result = await llm.acall("Test question")
+
+    assert result == "hello"
+    assert "response_format" not in mock_create.call_args.kwargs
 
 
 @pytest.mark.vcr()

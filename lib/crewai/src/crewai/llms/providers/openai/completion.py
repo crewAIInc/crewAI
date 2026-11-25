@@ -2996,7 +2996,12 @@ class OpenAICompletion(BaseLLM):
         if response_model:
             completion_stream: AsyncIterator[
                 ChatCompletionChunk
-            ] = await self._get_async_client().chat.completions.create(**params)
+            ] = await self._get_async_client().chat.completions.create(
+                **{
+                    **params,
+                    "response_format": generate_model_description(response_model),
+                }
+            )
 
             accumulated_content = ""
             usage_data: dict[str, Any] | None = None
