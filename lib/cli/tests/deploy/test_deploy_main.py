@@ -337,6 +337,22 @@ class TestDeployCommand(unittest.TestCase):
             assert "Request to Enterprise API failed. Details:" in output
             assert "Details:\nSomething went wrong" in output
 
+    def test_validate_response_failures_exit_with_status_1(self):
+        """A rejected API response fails the command; a bare SystemExit exits 0."""
+        responses = (
+            httpx.Response(500, json={"error": "boom"}),
+            httpx.Response(422, json={"field": ["bad"]}),
+            httpx.Response(500, content=b"<html>bad gateway</html>"),
+        )
+
+        for response in responses:
+            with patch("sys.stdout", new=StringIO()):
+                with pytest.raises(SystemExit) as exc_info:
+                    self.deploy_command._validate_response(response)
+
+            assert not isinstance(exc_info.value, AuthenticationRequiredError)
+            assert exc_info.value.code == 1, response
+
     def test_validate_response_401_shows_amps_reason_and_asks_for_login(self):
         response = httpx.Response(
             401,
