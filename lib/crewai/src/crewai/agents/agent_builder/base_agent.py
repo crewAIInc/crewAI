@@ -742,8 +742,8 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             existing_knowledge_sources = []
             for source in self.knowledge_sources:
                 copied_source = (
-                    source.model_copy()
-                    if hasattr(source, "model_copy")
+                    source.clone_for_copy(storage=shared_storage)
+                    if hasattr(source, "clone_for_copy")
                     else shallow_copy(source)
                 )
                 copied_source.storage = shared_storage

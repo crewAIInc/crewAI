@@ -40,6 +40,7 @@ from crewai.events.types.memory_events import (
 from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.memory.unified_memory import Memory
@@ -4900,13 +4901,36 @@ def test_crew_with_knowledge_sources_works_with_copy(researcher, writer):
         tasks=[Task(description="test", expected_output="test", agent=researcher)],
         knowledge_sources=[string_source],
     )
+    before = list(string_source.chunks)
     crew_copy = crew.copy()
 
-    assert crew_copy.knowledge_sources == crew.knowledge_sources
+    assert crew_copy.knowledge_sources is not None
+    assert crew_copy.knowledge_sources[0] is not string_source
+    assert crew_copy.knowledge_sources[0].chunks is not string_source.chunks
+    assert string_source.chunks == before
+    assert crew_copy.knowledge_sources[0].content == string_source.content
     assert len(crew_copy.agents) == len(crew.agents)
     assert len(crew_copy.tasks) == len(crew.tasks)
 
     assert len(crew_copy.tasks) == len(crew.tasks)
+
+
+def test_crew_copy_does_not_duplicate_knowledge_chunks(researcher):
+    source = StringKnowledgeSource(content="hello world")
+    with patch.object(KnowledgeStorage, "save", lambda self, documents: None):
+        crew = Crew(
+            agents=[researcher],
+            tasks=[Task(description="test", expected_output="test", agent=researcher)],
+            knowledge_sources=[source],
+        )
+        before = list(source.chunks)
+        copied = crew.copy()
+
+    assert before == ["hello world"]
+    assert source.chunks == before
+    assert copied.knowledge_sources[0] is not source
+    assert copied.knowledge_sources[0].chunks is not source.chunks
+    assert copied.knowledge_sources[0].chunks == ["hello world"]
 
 
 def test_crew_kickoff_for_each_works_with_manager_agent_copy():
