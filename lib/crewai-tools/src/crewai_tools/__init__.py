@@ -10,6 +10,15 @@ from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.asyntai_tool import (
+    AsyntaiAddTextTool,
+    AsyntaiAddUrlTool,
+    AsyntaiAskWebsiteTool,
+    AsyntaiGetConversationTool,
+    AsyntaiGetLeadsTool,
+    AsyntaiListKnowledgeTool,
+    AsyntaiListWebsitesTool,
+)
 from crewai_tools.tools.azure_documentdb_vector_search_tool import (
     AzureDocumentDBToolSchema,
     AzureDocumentDBVectorSearchConfig,
@@ -239,6 +248,13 @@ __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
+    "AsyntaiAddTextTool",
+    "AsyntaiAddUrlTool",
+    "AsyntaiAskWebsiteTool",
+    "AsyntaiGetConversationTool",
+    "AsyntaiGetLeadsTool",
+    "AsyntaiListKnowledgeTool",
+    "AsyntaiListWebsitesTool",
     "AzureDocumentDBToolSchema",
     "AzureDocumentDBVectorSearchConfig",
     "AzureDocumentDBVectorSearchTool",

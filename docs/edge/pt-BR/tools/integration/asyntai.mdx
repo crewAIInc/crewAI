@@ -1,0 +1,74 @@
+---
+title: Ferramentas Asyntai
+description: Permita que agentes CrewAI respondam a partir da base de conhecimento de um site e leiam seus chats e leads pela Asyntai
+icon: comments
+mode: "wide"
+---
+
+# Ferramentas Asyntai
+
+A [Asyntai](https://asyntai.com) é um chatbot de IA para sites. Ela responde aos visitantes com base nas páginas, nos documentos e na base de conhecimento do próprio site, e captura leads. Estas ferramentas permitem que um agente CrewAI consulte essa base de conhecimento, adicione conteúdo a ela e leia os leads e as conversas coletados.
+
+## Instalação
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## Requisitos
+
+- Uma conta [Asyntai](https://asyntai.com) no plano Starter ou superior
+- Uma chave de API da Asyntai, disponível no painel em Settings > API
+
+```bash
+export ASYNTAI_API_KEY='your-key-here'
+```
+
+## Ferramentas Disponíveis
+
+| Ferramenta | O que faz |
+| --- | --- |
+| `AsyntaiAskWebsiteTool` | Responde a uma pergunta com base na base de conhecimento do site |
+| `AsyntaiListWebsitesTool` | Lista os sites da conta, com seus IDs |
+| `AsyntaiAddTextTool` | Adiciona um título e um texto à base de conhecimento |
+| `AsyntaiAddUrlTool` | Lê uma página da web e adiciona seu conteúdo à base de conhecimento |
+| `AsyntaiListKnowledgeTool` | Lista as entradas da base de conhecimento |
+| `AsyntaiGetLeadsTool` | Lê os visitantes que deixaram dados de contato |
+| `AsyntaiGetConversationTool` | Lê as mensagens de um chat do site |
+
+## Exemplo
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AsyntaiAskWebsiteTool, AsyntaiGetLeadsTool
+
+agent = Agent(
+    role="Customer success assistant",
+    goal="Answer from our website and follow up with new leads",
+    backstory="You know our website and our customers.",
+    tools=[AsyntaiAskWebsiteTool(), AsyntaiGetLeadsTool()],
+)
+
+task = Task(
+    description="Read the 5 newest leads and find what our website says about the return policy.",
+    expected_output="The leads and the return policy.",
+    agent=agent,
+)
+
+print(Crew(agents=[agent], tasks=[task]).kickoff())
+```
+
+## Parâmetros
+
+Todas as ferramentas aceitam estes parâmetros de construtor:
+
+- `api_key`: chave de API da Asyntai. O padrão é a variável de ambiente `ASYNTAI_API_KEY`.
+- `website_id`: site padrão da Asyntai. Sem ele, é usado o site principal.
+- `api_base_url`: URL base da API da Asyntai. O padrão é `https://asyntai.com/api/v1`.
+- `timeout`: tempo limite em segundos para cada requisição à API. O padrão é 60.
+
+## Observações
+
+- `AsyntaiAskWebsiteTool` retorna um `session_id`. Passe-o na próxima chamada para fazer uma pergunta de acompanhamento.
+- As ferramentas retornam ao agente um texto de erro legível e não lançam exceções.
+- Consulte a [documentação da Asyntai](https://asyntai.com/documentation/integrations/crewai/) para mais detalhes.
