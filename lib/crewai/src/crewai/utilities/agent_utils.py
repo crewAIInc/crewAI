@@ -7,11 +7,14 @@ import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
+import importlib.util
 import inspect
 import json
 import logging
+import os
 import re
-from typing import TYPE_CHECKING, Any, Final
+import sys
+from typing import TYPE_CHECKING, Any, Final, get_args
 import warnings
 
 from crewai_core.printer import ColoredText, Printer
@@ -71,7 +74,575 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
 
+try:
+    from pydantic import ImportString as _ImportString
+except ImportError:  # pragma: no cover - crewai requires pydantic v2
+    _ImportString = None  # type: ignore[misc]
+
+try:
+    from pydantic import BeforeValidator as _BeforeValidator
+except ImportError:  # pragma: no cover - crewai requires pydantic v2
+    _BeforeValidator = None  # type: ignore[assignment, misc]
+
+try:
+    from crewai.types.callback import string_to_callable as _string_to_callable
+except ImportError:  # pragma: no cover - defensive; base_tool imports it too
+    _string_to_callable = None  # type: ignore[assignment]
+
+
+_ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
+    {
+        "crewai.tools",
+        "crewai_tools",
+        "crewai.tools.base_tool",
+        "crewai.tools.structured_tool",
+        "crewai.tools.tool_usage",
+    }
+)
+
+
+def _is_within_directory(path: str, directory: str) -> bool:
+    """True when ``path`` is ``directory`` itself or sits inside it.
+
+    Compares real paths, so symlinks cannot smuggle a path outside the
+    directory past the check.
+    """
+    real_path = os.path.realpath(path)
+    real_directory = os.path.realpath(directory)
+    return real_path == real_directory or real_path.startswith(real_directory + os.sep)
+
+
+def _is_within_working_directory(path: str) -> bool:
+    """True when ``path`` sits inside the current working directory tree.
+
+    The tree includes ``<cwd>/src``: crew chat and ``get_crews``/
+    ``get_flows`` put it first on ``sys.path``, so a distribution whose
+    files live anywhere under the project directory must never be pinned.
+    """
+    return _is_within_directory(path, os.path.realpath(os.getcwd()))
+
+
+def _direct_url_source_root(dist: Distribution) -> str | None:
+    """Return the file:// source root from a distribution's direct_url.json.
+
+    Editable installs record their source tree there. Read it with
+    ``read_text``: ``locate_file`` resolves installed files relative to
+    the install root, so for direct_url.json it points at
+    ``<site-packages>/direct_url.json`` instead of the file inside the
+    dist-info directory, and the editable branch silently never fires.
+    """
+    try:
+        text = dist.read_text("direct_url.json")
+    except Exception:
+        return None
+    if not text:
+        return None
+    try:
+        url = json.loads(text).get("url", "")
+    except Exception:
+        return None
+    if isinstance(url, str) and url.startswith("file://"):
+        return url[len("file://") :]
+    return None
+
+
+def _distribution_is_under_working_directory(dist: Distribution) -> bool:
+    """True when the ``crewai_tools`` package a distribution resolves to
+    lives inside the working directory tree.
+
+    Checks the ``crewai_tools/__init__.py`` the distribution metadata
+    locates, and the ``direct_url.json`` file:// source root for editable
+    installs. Either signal inside the working directory means the
+    distribution is a workspace tree, not an install. This is applied
+    only to the ``distribution("crewai-tools")`` fallback, which walks
+    ``sys.path``: the site/user/sysconfig scan is trusted on its own,
+    because a distribution whose dist-info sits in a site directory is
+    an install even when the environment itself lives under the working
+    directory (for example a ``.venv`` inside the project checkout).
+    A distribution that cannot be located either way is not treated as
+    under the working directory here; the pin step fails closed on its
+    own when its files do not exist.
+    """
+    try:
+        init_path = str(dist.locate_file("crewai_tools/__init__.py"))
+    except Exception:
+        init_path = None
+    if init_path is not None and _is_within_working_directory(init_path):
+        return True
+    source_root = _direct_url_source_root(dist)
+    if source_root is not None and _is_within_working_directory(source_root):
+        return True
+    return False
+
+
+def _crewai_tools_distribution() -> Distribution | None:
+    """Find the installed ``crewai-tools`` distribution without trusting
+    ``sys.path``.
+
+    ``importlib.metadata`` searches ``sys.path``, which repository loading
+    cannot trust: crew chat and ``get_crews``/``get_flows`` put ``<cwd>/src``
+    first, and callers may restrict ``sys.path`` further. Search the
+    interpreter's own site directories explicitly instead, falling back to
+    the default search. The fallback is filtered: a distribution whose
+    files live inside the working directory tree is ignored, because the
+    fallback would otherwise bind a workspace ``*.dist-info`` planted
+    under ``<cwd>`` or ``<cwd>/src``, and the allowlist stays fail-closed
+    when that is the only candidate. The site scan itself is not
+    filtered: a distribution whose dist-info sits in a site directory is
+    an install, even when the environment lives under the working
+    directory (for example a ``.venv`` inside the project checkout).
+    """
+    try:
+        from importlib.metadata import distributions
+    except ImportError:  # pragma: no cover - Python 3.8 fallback
+        return None
+    search_paths: list[str] = []
+    with contextlib.suppress(Exception):
+        import site
+
+        search_paths.extend(site.getsitepackages())
+        user_site = site.getusersitepackages()
+        if user_site:
+            search_paths.append(user_site)
+    with contextlib.suppress(Exception):
+        import sysconfig
+
+        for key in ("purelib", "platlib"):
+            path = sysconfig.get_path(key)
+            if path:
+                search_paths.append(path)
+    try:
+        candidates = list(distributions(path=search_paths)) if search_paths else []
+    except Exception:
+        candidates = []
+    for dist in candidates:
+        with contextlib.suppress(Exception):
+            name = dist.metadata["Name"]
+            if name and name.replace("-", "_").lower() == "crewai_tools":
+                return dist
+    try:
+        from importlib.metadata import distribution
+
+        fallback = distribution("crewai-tools")
+    except Exception:
+        return None
+    if _distribution_is_under_working_directory(fallback):
+        return None
+    return fallback
+
+
+def _pinned_crewai_tools_dir() -> str | None:
+    """Return the real directory of the installed ``crewai_tools`` package.
+
+    The directory is pinned from the installed distribution's own metadata,
+    never from ``sys.path`` order or from ``find_spec``: a ``crewai_tools``
+    tree planted under the project working directory sorts earlier on
+    ``sys.path`` and would otherwise be mistaken for the install, and
+    ``find_spec`` would execute the planted parent package before any origin
+    could be checked. ``importlib.metadata`` locates the package for regular
+    installs; ``direct_url.json`` covers editable installs, whose files live
+    outside site-packages. The distribution search already ignores a
+    ``sys.path`` fallback distribution under the working directory tree,
+    and a distribution found by the site scan is an install by
+    construction, so neither path can pin a workspace tree here.
+    As a last resort, an already-imported
+    ``crewai_tools`` counts only when its origin sits outside the working
+    directory tree, and a ``sys.path`` entry counts only when it is outside
+    that tree and holds the package on disk. Returns ``None`` when no
+    install can be pinned, which fails the allowlist closed.
+    """
+    dist = _crewai_tools_distribution()
+    if dist is not None:
+        try:
+            # locate_file returns SimplePath, not a concrete path type.
+            init_path = str(dist.locate_file("crewai_tools/__init__.py"))
+        except Exception:
+            init_path = None
+        if init_path is not None and os.path.isfile(init_path):
+            return os.path.dirname(os.path.realpath(init_path))
+        # Editable install: direct_url.json points at the source tree.
+        source_root = _direct_url_source_root(dist)
+        if source_root is not None:
+            for candidate in (
+                os.path.join(source_root, "crewai_tools", "__init__.py"),
+                os.path.join(source_root, "src", "crewai_tools", "__init__.py"),
+            ):
+                if os.path.isfile(candidate):
+                    return os.path.dirname(os.path.realpath(candidate))
+    working_directory = os.path.realpath(os.getcwd())
+    module = sys.modules.get("crewai_tools")
+    origin: str | None = getattr(
+        getattr(module, "__spec__", None), "origin", None
+    ) or getattr(module, "__file__", None)
+    if origin and not _is_within_directory(origin, working_directory):
+        return os.path.dirname(os.path.realpath(origin))
+    for entry in sys.path:
+        if not entry or _is_within_directory(entry, working_directory):
+            continue
+        candidate = os.path.join(os.path.realpath(entry), "crewai_tools", "__init__.py")
+        if os.path.isfile(candidate):
+            return os.path.dirname(candidate)
+    return None
+
+
+def _crewai_tools_module_origin(module_name: str, pinned_dir: str) -> str | None:
+    """Resolve a ``crewai_tools`` module to a file inside the pinned directory.
+
+    Pure path math, no import and no ``find_spec``: the file must exist
+    under the pinned install directory, either as ``<parts>.py`` or as a
+    package ``<parts>/__init__.py``. A name that does not resolve there is
+    not the installed module, whatever ``sys.path`` order says. Returns the
+    real path of the file, or ``None``.
+    """
+    parts = module_name.split(".")
+    if not parts or parts[0] != "crewai_tools":
+        return None
+    if not all(part.isidentifier() for part in parts):
+        return None
+    relative = os.path.join(*parts[1:]) if len(parts) > 1 else ""
+    candidates: tuple[str, ...]
+    if relative:
+        candidates = (
+            os.path.join(pinned_dir, relative + ".py"),
+            os.path.join(pinned_dir, relative, "__init__.py"),
+        )
+    else:
+        candidates = (os.path.join(pinned_dir, "__init__.py"),)
+    for candidate in candidates:
+        if os.path.isfile(candidate) and _is_within_directory(candidate, pinned_dir):
+            return os.path.realpath(candidate)
+    return None
+
+
+def _load_module_from_file(module_name: str, origin: str) -> Any:
+    """Load a module from a file path, reusing ``sys.modules`` when the module
+    already loaded came from that same file.
+
+    Raises:
+        AgentRepositoryError: If the module is already imported from a
+            different file (a shadowed or planted copy).
+    """
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        existing_origin = getattr(getattr(existing, "__spec__", None), "origin", None)
+        if existing_origin and os.path.realpath(existing_origin) == os.path.realpath(
+            origin
+        ):
+            return existing
+        raise AgentRepositoryError(
+            f"Tool module {module_name!r} is already imported from "
+            f"{existing_origin!r}, not from the installed crewai_tools "
+            "package. Refusing to load a shadowed module."
+        )
+    spec = importlib.util.spec_from_file_location(module_name, origin)
+    if spec is None or spec.loader is None:
+        raise AgentRepositoryError(
+            f"Tool module {module_name!r} could not be loaded from {origin!r}."
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_allowlisted_tool_module(module_name: str) -> Any:
+    """Import an allowlisted repository tool module from the pinned install.
+
+    ``crewai.*`` members resolve inside the already-imported ``crewai``
+    package, so a plain import is safe for those. ``crewai_tools`` modules
+    are loaded from their pinned file locations only: each parent package is
+    loaded from the pinned directory first (so relative imports inside the
+    tool module resolve against the install), then the recorded module
+    itself. Nothing under the working directory tree is ever executed by
+    this path, even when ``<cwd>/src`` sits at ``sys.path[0]``.
+
+    Raises:
+        AgentRepositoryError: If the install cannot be pinned, the module
+            does not resolve inside it, or a shadowed copy is already
+            imported.
+    """
+    if module_name in _ALLOWED_TOOL_MODULES and module_name.startswith("crewai."):
+        return importlib.import_module(module_name)
+    pinned_dir = _pinned_crewai_tools_dir()
+    if pinned_dir is None:
+        raise AgentRepositoryError(
+            "Installed crewai_tools package could not be located; refusing "
+            f"to load tool module {module_name!r}."
+        )
+    parts = module_name.split(".")
+    for depth in range(1, len(parts)):
+        parent = ".".join(parts[:depth])
+        parent_origin = _crewai_tools_module_origin(parent, pinned_dir)
+        if parent_origin is None:
+            raise AgentRepositoryError(
+                f"Tool module {module_name!r} does not resolve inside the "
+                "installed crewai_tools package."
+            )
+        _load_module_from_file(parent, parent_origin)
+    origin = _crewai_tools_module_origin(module_name, pinned_dir)
+    if origin is None:
+        raise AgentRepositoryError(
+            f"Tool module {module_name!r} does not resolve inside the "
+            "installed crewai_tools package."
+        )
+    return _load_module_from_file(module_name, origin)
+
+
+def _is_allowlisted_tool_module(module_name: str) -> bool:
+    """Check whether a repository tool record's module may be imported.
+
+    Repository records store the tool class's defining module as produced by
+    ``extract_tools_metadata``. For crewai-tools that is the tool's own
+    submodule (e.g. ``"crewai_tools.tools.csv_search_tool.csv_search_tool"``),
+    never the bare ``"crewai_tools"`` package. Accept only submodules that
+    resolve inside the installed ``crewai_tools`` package directory, so the
+    check remains a pinned-package membership test rather than a loose prefix
+    match that would bless any dotted name starting with the package name.
+
+    The install directory is pinned from the distribution metadata (see
+    ``_pinned_crewai_tools_dir``) and the module is resolved against it by
+    path alone: no ``find_spec``, which would import a planted parent
+    package before any origin could be verified, and no trust in
+    ``find_spec``'s own submodule search locations, which a planted tree
+    satisfies against itself. Names under the ``crewai`` package itself are
+    exact members that resolve inside the already-imported crewai package,
+    so the working directory cannot shadow them and exact membership is the
+    whole check for those.
+    """
+    if module_name in _ALLOWED_TOOL_MODULES and module_name.startswith("crewai."):
+        return True
+    if module_name != "crewai_tools" and not module_name.startswith("crewai_tools."):
+        return False
+    pinned_dir = _pinned_crewai_tools_dir()
+    if pinned_dir is None:
+        return False
+    return _crewai_tools_module_origin(module_name, pinned_dir) is not None
+
+
+def _is_import_string(tp: Any) -> bool:
+    """Match pydantic's ImportString as a class, an instance, or by name.
+
+    ``ImportString[Callable]`` is ``Annotated[Callable, ImportString()]``: an
+    *instance* in Annotated metadata, which ``field.annotation`` may carry
+    directly or pydantic may strip into ``field.metadata``, depending on the
+    version. The bare class and the "ImportString" forward-reference string
+    are matched too; anything unrecognized fails closed by name.
+    """
+    if _ImportString is not None and (
+        # No isinstance: ImportString is a parameterized generic, which
+        # mypy forbids in class/instance checks. An MRO membership test
+        # is equivalent here (ImportString defines no __instancecheck__).
+        tp is _ImportString or _ImportString in type(tp).__mro__
+    ):
+        return True
+    return (
+        getattr(tp, "__name__", "") == "ImportString"
+        or type(tp).__name__ == "ImportString"
+    )
+
+
+def _is_string_to_callable_validator(tp: Any) -> bool:
+    """Match a validator that resolves dotted-path strings into callables.
+
+    ``SerializableCallable`` is
+    ``Annotated[Callable, BeforeValidator(string_to_callable), ...]``: its
+    validator imports a string like ``"os.system"`` into a live callable at
+    validation time, and ``BaseTool`` pre-resolves ``cache_function`` strings
+    through the same importer before validation. A field carrying this
+    validator is import-resolving, exactly like ``ImportString``.
+    """
+    return (
+        _BeforeValidator is not None
+        and _string_to_callable is not None
+        and isinstance(tp, _BeforeValidator)
+        and tp.func is _string_to_callable
+    )
+
+
+def _annotation_resolves_import(
+    annotation: Any, metadata: Sequence[Any] | None = None
+) -> bool:
+    """Detect annotations that turn a string into an imported Python object.
+
+    ``pydantic.ImportString`` (including inside ``Optional``/``Union`` or
+    containers such as ``list[ImportString]``, and in its parameterized
+    ``ImportString[Callable]`` form) and ``SerializableCallable`` (via its
+    ``string_to_callable`` validator) resolve a dotted-path string to the
+    referenced object at validation time. Depending on the pydantic version,
+    ``Annotated`` metadata may live inside ``field.annotation`` or be
+    stripped into ``field.metadata`` — both are scanned. A repository record
+    is remote JSON, so a string init_param for such a field becomes an
+    arbitrary callable (e.g. ``"os.system"``) on the loader's host.
+    """
+    seen: set[int] = set()
+
+    def _walk(tp: Any) -> bool:
+        if tp is None or id(tp) in seen:
+            return False
+        seen.add(id(tp))
+        if _is_import_string(tp) or _is_string_to_callable_validator(tp):
+            return True
+        if tp == "ImportString":  # unresolved forward reference, fail closed
+            return True
+        # Unwrap Annotated / Optional / Union / generic containers.
+        return any(_walk(arg) for arg in get_args(tp))
+
+    if _walk(annotation):
+        return True
+    return any(_walk(item) for item in (metadata or []))
+
+
+def _contains_non_local_ref(value: Any) -> bool:
+    """True if a JSON value has a ``$ref`` that is not a pure local fragment.
+
+    ``create_model_from_schema`` resolves ``$ref`` with jsonref's default
+    loader, which follows any non-fragment URI at model-build time. Checking
+    for ``://`` is not enough: jsonref also resolves no-authority forms such
+    as ``file:/etc/hostname`` or ``http:/host/x`` (still URIs — a missing
+    authority does not make them fragments), and relative refs such as
+    ``other.json#/x`` resolve against the process working directory, which is
+    a local-file-read primitive. The only refs that can never touch the
+    network or the filesystem are pure fragments (``#/...``), which resolve
+    inside the schema document itself.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "$ref" and isinstance(item, str):
+                if not item.strip().startswith("#"):
+                    return True
+            elif _contains_non_local_ref(item):
+                return True
+    elif isinstance(value, (list, tuple)):
+        return any(_contains_non_local_ref(item) for item in value)
+    return False
+
+
+# Tool fields whose dict values are passed through create_model_from_schema
+# (which resolves $ref via jsonref). Only these fields can turn a schema
+# dict into a network fetch at construction time.
+_SCHEMA_FIELDS_WITH_REF_RESOLUTION = frozenset({"args_schema", "result_schema"})
+
+# DB2VectorSearchTool fields that are passed to importlib.import_module as
+# strings at connect time (_resolve_db2_packages). They are typed Any, so
+# the import-resolving annotation check below cannot see them. A repository
+# record may only carry the fixed IBM package names (or leave them unset);
+# any other string would become imported code on the loader's host.
+_DB2_PACKAGE_ALLOWLIST: dict[str, str] = {
+    "db2_package": "ibm_db",
+    "db2_dbi_package": "ibm_db_dbi",
+}
+
+
+def _is_json_value(value: Any) -> bool:
+    """True for values that can round-trip through JSON (defense in depth).
+
+    Repository records arrive as JSON, so legitimate init_params are
+    JSON-typed by construction; rejecting anything else keeps callables and
+    other non-serializable objects out of the tool constructor even if a
+    record ever reaches this path from a non-JSON source.
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, (list, tuple)):
+        return all(_is_json_value(item) for item in value)
+    if isinstance(value, dict):
+        return all(
+            isinstance(key, str) and _is_json_value(item) for key, item in value.items()
+        )
+    return False
+
+
+def _validate_repository_tool_params(
+    tool_class: type[BaseTool], init_params: Any
+) -> None:
+    """Fail closed on repository tool init_params that could become code.
+
+    The module allowlist gates *which* tool classes may load; this gates *what*
+    a remote record may pass to their constructors:
+
+    - ``init_params`` must be a JSON object;
+    - every key must be a declared pydantic field of the tool class, so a
+      record cannot smuggle unexpected keyword arguments into ``__init__``;
+    - no field may use an import-resolving annotation (``ImportString`` in
+      any form, or ``SerializableCallable``): such a field turns a remote
+      string like ``"os.system"`` into a live callable, which the tool may
+      then invoke — arbitrary code execution on the loader's host;
+    - ``db2_package`` / ``db2_dbi_package`` (``DB2VectorSearchTool``) may
+      only carry their fixed IBM package names: the fields are typed
+      ``Any`` and a string value is passed to ``importlib.import_module``
+      at connect time, so any other name is the same bypass through a
+      field the annotation check cannot see;
+    - every value must be JSON-typed.
+
+    Raises:
+        AgentRepositoryError: If any parameter fails validation.
+    """
+    tool_name = getattr(tool_class, "__name__", repr(tool_class))
+    if not isinstance(init_params, dict):
+        raise AgentRepositoryError(
+            f"Tool {tool_name!r} has invalid init_params: expected a JSON "
+            f"object, got {type(init_params).__name__}."
+        )
+    fields = getattr(tool_class, "model_fields", None) or {}
+    for key, value in init_params.items():
+        field = fields.get(key)
+        if field is None:
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} does not declare init parameter {key!r}; "
+                "repository records may only set declared tool fields."
+            )
+        if _annotation_resolves_import(
+            field.annotation, getattr(field, "metadata", None)
+        ):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} uses an "
+                "import-resolving annotation: a repository string value would "
+                "be imported as a Python object on this host. Refusing to "
+                "instantiate."
+            )
+        # db2_package / db2_dbi_package are typed Any, so the annotation
+        # check above cannot see them, but _resolve_db2_packages passes a
+        # string value to importlib.import_module at connect time. Only the
+        # fixed IBM package names (or None, which resolves to them) may
+        # come from a repository record.
+        allowed_db2_package = _DB2_PACKAGE_ALLOWLIST.get(key)
+        if allowed_db2_package is not None and value is not None:
+            if value != allowed_db2_package:
+                raise AgentRepositoryError(
+                    f"Tool {tool_name!r} init parameter {key!r} may only be "
+                    f"{allowed_db2_package!r}: a repository string value "
+                    "would be imported as a Python module on this host. "
+                    "Refusing to instantiate."
+                )
+        if not _is_json_value(value):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} must be JSON-typed "
+                f"(got {type(value).__name__}); refusing to instantiate."
+            )
+        # args_schema/result_schema dicts are passed through
+        # create_model_from_schema, which resolves $ref with jsonref's
+        # default loader. Any non-fragment $ref resolves outside the schema
+        # document: absolute URIs (https://..., file://...), no-authority
+        # URI forms (file:/path, http:/host/x), and relative refs
+        # (other.json#/x) which resolve against the process working
+        # directory — a local-file-read or SSRF primitive at construction
+        # time. Reject them; only pure #-fragment refs stay allowed.
+        if (
+            key in _SCHEMA_FIELDS_WITH_REF_RESOLUTION
+            and isinstance(value, dict)
+            and _contains_non_local_ref(value)
+        ):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} contains a "
+                "non-local $ref: schema dicts in repository records may "
+                "only use #-fragment $refs that resolve inside the schema "
+                "document itself."
+            )
+
+
 if TYPE_CHECKING:
+    from importlib.metadata import Distribution
+
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
@@ -1158,7 +1729,6 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     """
     attributes: dict[str, Any] = {}
     if from_repository:
-        import importlib
 
         def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
@@ -1197,8 +1767,31 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module(tool["module"])
+                        if not _is_allowlisted_tool_module(tool["module"]):
+                            raise AgentRepositoryError(
+                                f"Tool module {tool['module']!r} is not in the allowlist. "
+                                f"Allowed modules: {', '.join(sorted(_ALLOWED_TOOL_MODULES))}"
+                            )
+                        # Load from the pinned install only, so the module
+                        # loaded is the one the allowlist just verified, not
+                        # a planted tree shadowing the install from
+                        # <cwd>/src. See _load_allowlisted_tool_module.
+                        module = _load_allowlisted_tool_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
+                        if not (
+                            inspect.isclass(tool_class)
+                            and issubclass(tool_class, BaseTool)
+                        ):
+                            raise AgentRepositoryError(
+                                f"Tool {tool['name']!r} resolved from module {tool['module']!r} "
+                                f"is not a BaseTool subclass."
+                            )
+
+                        # The record is remote JSON: validate what it may pass
+                        # to the constructor before splatting it in.
+                        _validate_repository_tool_params(
+                            tool_class, tool["init_params"]
+                        )
 
                         tool_value = tool_class(**tool["init_params"])
 
