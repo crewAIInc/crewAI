@@ -294,8 +294,9 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.content = b"Invalid JSON"
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            with pytest.raises(SystemExit):
+            with pytest.raises(SystemExit) as exc:
                 self.deploy_command._validate_response(mock_response)
+            assert exc.value.code == 1
             output = fake_out.getvalue()
             assert (
                 "Failed to parse response from Enterprise API failed. Details:"
@@ -314,8 +315,9 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.is_success = False
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            with pytest.raises(SystemExit):
+            with pytest.raises(SystemExit) as exc:
                 self.deploy_command._validate_response(mock_response)
+            assert exc.value.code == 1
             output = fake_out.getvalue()
             assert (
                 "Failed to complete operation. Please fix the following errors:"
@@ -331,8 +333,9 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.is_success = False
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            with pytest.raises(SystemExit):
+            with pytest.raises(SystemExit) as exc:
                 self.deploy_command._validate_response(mock_response)
+            assert exc.value.code == 1
             output = fake_out.getvalue()
             assert "Request to Enterprise API failed. Details:" in output
             assert "Details:\nSomething went wrong" in output
