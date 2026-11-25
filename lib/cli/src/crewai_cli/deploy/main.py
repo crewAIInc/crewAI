@@ -445,10 +445,13 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             source (DeploySource): Where the deployment was initiated from.
             force (bool): Redeploy even while a models comparison runs on the
                 deployment, which stops it (AMP refuses otherwise).
+
+        Raises:
+            SystemExit: With code 1 when pre-deploy validation fails.
         """
         self._force = force
         if not _prepare_project_for_deploy(skip_validate):
-            return
+            raise SystemExit(1)
         self._telemetry.start_deployment_span(uuid, source=source)
         console.print("Starting deployment...", style="bold blue")
         repository = self._prepare_git_repository()
@@ -581,9 +584,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             source (DeploySource): Where the deployment was initiated from.
             force_zip (bool): Upload the project as a ZIP even when it has a git
                 origin remote, without fetching from that remote.
+
+        Raises:
+            SystemExit: With code 1 when pre-deploy validation fails.
         """
         if not _prepare_project_for_deploy(skip_validate):
-            return
+            raise SystemExit(1)
         self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
         try:

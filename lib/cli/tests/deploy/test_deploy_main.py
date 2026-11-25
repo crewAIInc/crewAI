@@ -1019,6 +1019,40 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.deploy_by_uuid.assert_not_called()
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
+    def test_create_crew_exits_nonzero_when_pre_deploy_validation_fails(self):
+        """A failed pre-deploy check must fail the command, not look like success."""
+        failing = _FakeDeployValidator(
+            [ValidationResult(Severity.ERROR, "invalid_crew_json", "bad config")]
+        )
+
+        with (
+            patch.object(deploy_main, "DeployValidator", lambda: failing),
+            patch.object(deploy_main, "render_report", lambda results: None),
+            patch("sys.stdout", new=StringIO()),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            self.deploy_command.create_crew(skip_validate=False)
+
+        assert exc_info.value.code == 1
+        self.mock_client.create_crew.assert_not_called()
+
+    def test_deploy_exits_nonzero_when_pre_deploy_validation_fails(self):
+        """A failed pre-deploy check must fail the push, not look like success."""
+        failing = _FakeDeployValidator(
+            [ValidationResult(Severity.ERROR, "invalid_crew_json", "bad config")]
+        )
+
+        with (
+            patch.object(deploy_main, "DeployValidator", lambda: failing),
+            patch.object(deploy_main, "render_report", lambda results: None),
+            patch("sys.stdout", new=StringIO()),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            self.deploy_command.deploy(uuid="test-uuid", skip_validate=False)
+
+        assert exc_info.value.code == 1
+        self.mock_client.deploy_by_uuid.assert_not_called()
+
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("builtins.input")
