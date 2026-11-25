@@ -6,6 +6,28 @@ from urllib.parse import urlparse
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
 
+from crewai_tools.security.safe_path import validate_url
+
+
+def _validate_browser_url(url: str) -> str:
+    """Validate *url* for navigation by a real browser.
+
+    Extends ``validate_url`` with a parser-differential guard. Chrome's
+    WHATWG URL parser treats a backslash as an authority delimiter for
+    http(s) URLs, while ``urllib.parse`` treats it as ordinary data, so
+    ``http://127.0.0.1:8899\\@example.com/`` validates as the public host
+    ``example.com`` but navigates Chrome to ``127.0.0.1``. A raw backslash
+    is never valid in an http(s) URL (RFC 3986 requires ``%5C``), so reject
+    it outright before the shared checks run.
+    """
+    if "\\" in url:
+        raise ValueError(
+            f"URL contains a backslash: '{url}'. Browsers interpret "
+            "backslashes in URLs differently from this validator, so the "
+            "URL is rejected."
+        )
+    return validate_url(url)
+
 
 class FixedSeleniumScrapingToolSchema(BaseModel):
     """Input for SeleniumScrapingTool."""
@@ -45,7 +67,7 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
         if re.search(r"\s", v):
             raise ValueError("URL cannot contain whitespace")
 
-        return v
+        return _validate_browser_url(v)
 
 
 class SeleniumScrapingTool(BaseTool):
@@ -71,6 +93,8 @@ class SeleniumScrapingTool(BaseTool):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        if website_url is not None:
+            _validate_browser_url(website_url)
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.options import (
@@ -146,6 +170,7 @@ class SeleniumScrapingTool(BaseTool):
     def _get_content(
         self, css_element: str | None, return_html: bool | None
     ) -> list[str]:
+        self._validate_landed_url()
         content: list[str] = []
 
         if self._is_css_element_empty(css_element):
@@ -192,16 +217,50 @@ class SeleniumScrapingTool(BaseTool):
         if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
 
+        _validate_browser_url(url)
+
         if self.driver is None:
             raise RuntimeError("Driver not initialized. Call _run first.")
         sleep_time = wait_time or 0
         self.driver.get(url)
+        self._validate_landed_url()
         time.sleep(sleep_time)
         if cookie:
             self.driver.add_cookie(cookie)
             time.sleep(sleep_time)
             self.driver.get(url)
+            self._validate_landed_url()
             time.sleep(sleep_time)
+        self._validate_landed_url()
+
+    def _validate_landed_url(self) -> None:
+        """Re-validate the URL the browser actually landed on.
+
+        ``_validate_browser_url`` checks the requested URL string, but the
+        browser follows redirects on its own: a public URL can 3xx-redirect
+        to a private or cloud-metadata address, and the tool would return
+        that page. If the final URL is blocked, raise so no content is read.
+
+        Called after each navigation, again after the wait, and at the
+        start of content extraction: a page can also navigate during
+        ``wait_time`` (meta refresh, script), so the only check that
+        matters is the one immediately before content is read.
+
+        This is mitigation, not prevention, and two limits are deliberate:
+        the browser has already made the redirected request by the time
+        this runs, and the check validates the landed URL string, not the
+        IP the browser connected to, so DNS rebinding between validation
+        and navigation is not fully closed for a browser driver. Preventing
+        the request itself would require intercepting the browser's
+        network traffic (CDP/BiDi), which selenium's Python API does not
+        support reliably for arbitrary user-supplied drivers.
+        """
+        if self.driver is None:
+            return
+        current_url = getattr(self.driver, "current_url", None)
+        if not isinstance(current_url, str) or not re.match(r"^https?://", current_url):
+            return
+        _validate_browser_url(current_url)
 
     def close(self) -> None:
         """End the browser session so the process does not linger."""
