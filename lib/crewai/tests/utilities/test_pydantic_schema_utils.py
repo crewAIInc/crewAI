@@ -26,7 +26,7 @@ from crewai.utilities.pydantic_schema_utils import (
     strip_null_from_types,
     strip_unsupported_formats,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import pytest
 
 
@@ -542,12 +542,17 @@ class TestUnionTypes:
         assert Model(v="abc").v == "abc"
         assert Model(v=5.5).v == 5.5
         assert Model(v=None).v is None
-        # invalid string (non-numeric, fails pattern) -> clean ValidationError
-        with pytest.raises(Exception):
-            Model(v="!!!")
-        # invalid number (below minimum) -> clean ValidationError
-        with pytest.raises(Exception):
-            Model(v=-3)
+        for value, error_type in (
+            ("!!!", "string_pattern_mismatch"),
+            (-3.5, "greater_than_equal"),
+        ):
+            with pytest.raises(ValidationError) as exc:
+                Model(v=value)
+            # Pydantic may append the name of the failed union member to loc.
+            assert any(
+                error["loc"][:1] == ("v",) and error["type"] == error_type
+                for error in exc.value.errors()
+            )
 
     def test_type_array_date_format_with_pattern_does_not_raise(self) -> None:
         """`{"type": ["string","null"], "format": "date", "pattern": ...}`:
@@ -759,10 +764,15 @@ class TestAllOfMerging:
             },
         }
         Model = create_model_from_schema(schema)
-        assert Model(age=50).age == 50
+        assert Model(age=0).age == 0
+        assert Model(age=100).age == 100
         assert Model(age=None).age is None
-        with pytest.raises(Exception):
-            Model(age=-5)  # below minimum
+        for value, error_type in ((-1, "greater_than_equal"), (101, "less_than_equal")):
+            with pytest.raises(ValidationError) as exc:
+                Model(age=value)
+            assert [(error["loc"], error["type"]) for error in exc.value.errors()] == [
+                (("age",), error_type)
+            ]
 
     def test_single_allof_nullable_string_format_does_not_apply_lexical_constraint(self) -> None:
         """`{"allOf":[{"type":["string","null"]}],"format":"date","pattern":...}`:
