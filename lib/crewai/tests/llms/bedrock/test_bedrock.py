@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 import threading
@@ -691,6 +692,95 @@ def test_bedrock_message_formatting():
     # Messages should have content array with text
     assert isinstance(formatted_messages[0]["content"], list)
     assert "text" in formatted_messages[0]["content"][0]
+
+
+def test_bedrock_converts_openai_style_content_parts_to_converse_blocks():
+    """Regression test: OpenAI-style multimodal parts must be converted.
+
+    The agent executor emits ``{"type": "text", ...}`` and
+    ``{"type": "image_url", ...}`` parts, but the Converse API keys content
+    blocks by type (``{"text": ...}``, ``{"image": ...}``). Previously these
+    parts were forwarded unchanged, producing a payload Converse rejects.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "look at this"},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
+                    },
+                },
+            ],
+        },
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    content = converse_msgs[0]["content"]
+    assert content == [
+        {"text": "look at this"},
+        {
+            "image": {
+                "format": "png",
+                "source": {"bytes": base64.b64decode("iVBORw0KGgoAAAANSUhEUg==")},
+            }
+        },
+    ]
+
+
+def test_bedrock_maps_jpg_data_uri_to_jpeg():
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/jpg;base64,/9j/4AAQ"}},
+            ],
+        },
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    assert converse_msgs[0]["content"] == [
+        {"image": {"format": "jpeg", "source": {"bytes": base64.b64decode("/9j/4AAQ")}}},
+    ]
+
+
+def test_bedrock_leaves_undecodable_image_part_unchanged():
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    part = {"type": "image_url", "image_url": {"url": "data:image/png;base64,not*base64"}}
+    messages = [{"role": "user", "content": [part]}]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    assert converse_msgs[0]["content"] == [part]
+
+
+def test_bedrock_passes_through_existing_converse_blocks():
+    """Blocks already in Converse shape must not be double-converted."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"text": "already converted"},
+                {"image": {"format": "jpeg", "source": {"bytes": "abc"}}},
+            ],
+        },
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    assert converse_msgs[0]["content"] == [
+        {"text": "already converted"},
+        {"image": {"format": "jpeg", "source": {"bytes": "abc"}}},
+    ]
 
 
 def test_bedrock_streaming_parameter():
