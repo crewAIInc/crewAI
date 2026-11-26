@@ -43,7 +43,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
         ]
     )
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str | None = None):
         super().__init__(
             name="Scrapfly web scraping API tool",
             description="Scrape a webpage url using Scrapfly and return its content as markdown or text",
