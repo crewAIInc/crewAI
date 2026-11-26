@@ -10,7 +10,7 @@ from hashlib import md5
 import inspect
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import threading
 from typing import (
     Annotated,
@@ -29,6 +29,7 @@ from pydantic import (
     BeforeValidator,
     Field,
     PrivateAttr,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -37,6 +38,12 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
+from crewai.artifacts import (
+    Artifact,
+    SavedArtifact,
+    check_artifact_source,
+    save_output_artifact,
+)
 from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
@@ -64,6 +71,7 @@ from crewai.utilities.converter import (
     Converter,
     async_convert_to_model,
     convert_to_model,
+    validate_model,
 )
 from crewai.utilities.file_store import (
     clear_task_files,
@@ -115,6 +123,15 @@ def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
 
         return create_model_from_schema(v)
     return None
+
+
+def _path_anchor(path: str) -> int:
+    """Rank how *path* is anchored: 0 relative, 1 drive-relative (``C:x``),
+    2 rooted (``/x``, ``\\x``, ``C:\\x``, or UNC)."""
+    windows_path = PureWindowsPath(path)
+    if path.startswith(("/", "\\")) or windows_path.root:
+        return 2
+    return 1 if windows_path.drive else 0
 
 
 class Task(BaseModel):
@@ -204,6 +221,13 @@ class Task(BaseModel):
     )
     output_file: str | None = Field(
         description="A file path to be used to create a file output.",
+        default=None,
+    )
+    artifact: Artifact | bool | None = Field(
+        description=(
+            "Save the task's final output as this artifact. True names it "
+            "after the task and picks the kind from the output."
+        ),
         default=None,
     )
     create_directory: bool | None = Field(
@@ -305,10 +329,16 @@ class Task(BaseModel):
         default_factory=dict,
     )
     _original_description: str | None = PrivateAttr(default=None)
+    # The description as a caller wrote it (filled in by the inputs), without the
+    # model text crewAI appends: a crew chat's history and crew or agent planning.
+    # None while nothing has been appended and no inputs filled it in.
+    _input_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    _original_artifact_path: str | None = PrivateAttr(default=None)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
+    checkpoint_input_description: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
@@ -497,6 +527,72 @@ class Task(BaseModel):
                 result[key] = value
         return result
 
+    @staticmethod
+    def _validate_output_file_path(
+        value: str, *, allow_templates: bool = False, label: str = "output_file"
+    ) -> str:
+        """Validate an output file path for security concerns.
+
+        Args:
+            value: The output file path to validate.
+            allow_templates: If True, permit ``{var}`` template placeholders and
+                preserve leading slashes for template paths.  When False (the
+                default), template syntax is rejected and the path is returned
+                unchanged — this is the mode used after interpolation, where
+                the caller decides whether an absolute result is allowed.
+
+        Returns:
+            The validated (and potentially modified) path string.
+
+        Raises:
+            ValueError: If the path contains path traversal sequences, shell
+                expansion characters, shell special characters, or (when
+                *allow_templates* is ``False``) unresolved template variables.
+        """
+        if ".." in value:
+            raise ValueError(
+                f"Path traversal attempts are not allowed in {label} paths"
+            )
+
+        if value.startswith(("~", "$")):
+            raise ValueError(
+                f"Shell expansion characters are not allowed in {label} paths"
+            )
+
+        if any(char in value for char in ["|", ">", "<", "&", ";"]):
+            raise ValueError(
+                f"Shell special characters are not allowed in {label} paths"
+            )
+
+        if "{" in value or "}" in value:
+            if not allow_templates:
+                raise ValueError(
+                    f"Unresolved template variables are not allowed in interpolated {label} paths"
+                )
+            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
+            for var in template_vars:
+                if not var.isidentifier():
+                    raise ValueError(f"Invalid template variable name: {var}")
+            return value
+
+        if allow_templates and value.startswith("/"):
+            return value[1:]
+        return value
+
+    @field_validator("artifact")
+    @classmethod
+    def artifact_kind_validation(
+        cls, value: Artifact | bool | None
+    ) -> Artifact | bool | None:
+        """Reject kinds a task's text output can never fill."""
+        if isinstance(value, Artifact):
+            if value.file_path is not None:
+                cls._validate_output_file_path(
+                    value.file_path, allow_templates=True, label="artifact.file_path"
+                )
+            return check_artifact_source(value)
+        return value or None
+
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
@@ -516,32 +612,7 @@ class Task(BaseModel):
         """
         if value is None:
             return None
-
-        if ".." in value:
-            raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
-            )
-
-        if value.startswith(("~", "$")):
-            raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
-            )
-
-        if any(char in value for char in ["|", ">", "<", "&", ";"]):
-            raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
-            )
-
-        if "{" in value or "}" in value:
-            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
-            for var in template_vars:
-                if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
-            return value
-
-        if value.startswith("/"):
-            return value[1:]
-        return value
+        return cls._validate_output_file_path(value, allow_templates=True)
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
@@ -706,7 +777,7 @@ class Task(BaseModel):
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -762,6 +833,12 @@ class Task(BaseModel):
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
+            if self.output_file:
+                self._save_file(self._output_content(task_output))
+            if self.artifact:
+                task_output.artifact = await asyncio.to_thread(
+                    self._save_artifact, self.artifact, task_output
+                )
 
             if self.callback:
                 cb_result = self.callback(self.output)
@@ -779,17 +856,6 @@ class Task(BaseModel):
                 if inspect.isawaitable(cb_result):
                     await cb_result
 
-            if self.output_file:
-                content = (
-                    task_output.json_dict
-                    if task_output.json_dict
-                    else (
-                        task_output.pydantic.model_dump_json()
-                        if task_output.pydantic
-                        else task_output.raw
-                    )
-                )
-                self._save_file(content)
             crewai_event_bus.emit(
                 self,
                 TaskCompletedEvent(output=task_output, task=self),
@@ -865,7 +931,7 @@ class Task(BaseModel):
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -921,6 +987,10 @@ class Task(BaseModel):
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
+            if self.output_file:
+                self._save_file(self._output_content(task_output))
+            if self.artifact:
+                task_output.artifact = self._save_artifact(self.artifact, task_output)
 
             if self.callback:
                 cb_result = self.callback(self.output)
@@ -938,17 +1008,6 @@ class Task(BaseModel):
                 if inspect.iscoroutine(cb_result):
                     asyncio.run(cb_result)
 
-            if self.output_file:
-                content = (
-                    task_output.json_dict
-                    if task_output.json_dict
-                    else (
-                        task_output.pydantic.model_dump_json()
-                        if task_output.pydantic
-                        else task_output.raw
-                    )
-                )
-                self._save_file(content)
             crewai_event_bus.emit(
                 self,
                 TaskCompletedEvent(output=task_output, task=self),
@@ -1060,6 +1119,20 @@ Follow these guidelines:
             tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 
+    def _interpolate_path(
+        self,
+        template: str,
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]],
+        label: str,
+    ) -> str:
+        """Fill ``{placeholders}`` in a file path template and re-validate it."""
+        try:
+            path = interpolate_only(input_string=template, inputs=inputs)
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"Error interpolating {label} path: {e!s}") from e
+
+        return validate_interpolated_path(path, template, label)
+
     def interpolate_inputs_and_add_conversation_history(
         self, inputs: dict[str, str | int | float | dict[str, Any] | list[Any]]
     ) -> None:
@@ -1074,13 +1147,23 @@ Follow these guidelines:
             ValueError: If a required template variable is missing from inputs.
         """
         if self._original_description is None:
-            self._original_description = self.description
+            # Without the plan a run before this one appended.
+            self._original_description = self._input_description or self.description
         if self._original_expected_output is None:
             self._original_expected_output = self.expected_output
         if self.output_file is not None and self._original_output_file is None:
             self._original_output_file = self.output_file
+        if (
+            isinstance(self.artifact, Artifact)
+            and self.artifact.file_path is not None
+            and self._original_artifact_path is None
+        ):
+            self._original_artifact_path = self.artifact.file_path
 
         if not inputs:
+            # The description stays as the last inputs filled it in, and so
+            # does the text of it a caller wrote.
+            self._record_input_description()
             return
 
         try:
@@ -1095,6 +1178,11 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
         self.description = process_content(self.description, {"task": self})
+        # "" marks a task restored from a checkpoint that didn't record its
+        # caller's text (before 1.15.38), so its description may hold a plan: it
+        # stays unknown, and no spreadsheet URL is read from it.
+        if self._input_description != "":
+            self._input_description = self.description
         self._original_expected_output = process_content(
             self._original_expected_output, {"task": self}
         )
@@ -1107,12 +1195,17 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating expected_output: {e!s}") from e
 
         if self.output_file is not None:
-            try:
-                self.output_file = interpolate_only(
-                    input_string=self._original_output_file, inputs=inputs
-                )
-            except (KeyError, ValueError) as e:
-                raise ValueError(f"Error interpolating output_file path: {e!s}") from e
+            self.output_file = self._interpolate_path(
+                cast(str, self._original_output_file), inputs, "output_file"
+            )
+        if isinstance(self.artifact, Artifact) and self._original_artifact_path:
+            self.artifact = self.artifact.model_copy(
+                update={
+                    "file_path": self._interpolate_path(
+                        self._original_artifact_path, inputs, "artifact.file_path"
+                    )
+                }
+            )
 
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(
@@ -1141,6 +1234,17 @@ Follow these guidelines:
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
 
+    def _record_input_description(self) -> None:
+        """Keep the description as the caller wrote it, before crewAI adds text a
+        caller didn't write: the agent reads spreadsheet URLs from this text only."""
+        if self._input_description is None:
+            self._input_description = self.description
+
+    def _append_model_text(self, text: str) -> None:
+        """Add a plan, which is model text, to the description."""
+        self._record_input_description()
+        self.description += text
+
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
@@ -1168,6 +1272,13 @@ Follow these guidelines:
             "agent",
             "context",
             "tools",
+            # Run artifacts of the run this task already had; a copy is
+            # built for a fresh execution, and a carried output would
+            # make a checkpointed crew's copy skip the task entirely.
+            "output",
+            "checkpoint_original_description",
+            "checkpoint_original_expected_output",
+            "checkpoint_input_description",
         }
 
         copied_data = self.model_dump(exclude=exclude)
@@ -1187,12 +1298,14 @@ Follow these guidelines:
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
 
-        return self.__class__(
+        copied = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        copied._input_description = self._input_description
+        return copied
 
     def _export_output(
         self, result: str | BaseModel
@@ -1200,7 +1313,7 @@ Follow these guidelines:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
 
-        if self.output_pydantic or self.output_json:
+        if model := self.output_pydantic or self.output_json:
             model_output = convert_to_model(
                 result,
                 self.output_pydantic,
@@ -1208,7 +1321,9 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-            pydantic_output, json_output = self._unpack_model_output(model_output)
+            pydantic_output, json_output = self._unpack_model_output(
+                model_output, model, is_json_output=self.output_json is not None
+            )
 
         return pydantic_output, json_output
 
@@ -1219,7 +1334,7 @@ Follow these guidelines:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
 
-        if self.output_pydantic or self.output_json:
+        if model := self.output_pydantic or self.output_json:
             model_output = await async_convert_to_model(
                 result,
                 self.output_pydantic,
@@ -1227,24 +1342,29 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-            pydantic_output, json_output = self._unpack_model_output(model_output)
+            pydantic_output, json_output = self._unpack_model_output(
+                model_output, model, is_json_output=self.output_json is not None
+            )
 
         return pydantic_output, json_output
 
     @staticmethod
     def _unpack_model_output(
         model_output: dict[str, Any] | BaseModel | str,
+        model: type[BaseModel],
+        *,
+        is_json_output: bool,
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
-        if isinstance(model_output, BaseModel):
-            return model_output, None
-        if isinstance(model_output, dict):
-            return None, model_output
+        # A string is either JSON a converter produced or the original answer
+        # that conversion fell back to; keep the validated result when it fits.
         if isinstance(model_output, str):
             try:
-                return None, json.loads(model_output)
-            except json.JSONDecodeError:
+                model_output = validate_model(model_output, model, is_json_output)
+            except ValidationError:
                 return None, None
-        return None, None
+        if isinstance(model_output, BaseModel):
+            return model_output, None
+        return None, model_output
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
@@ -1252,6 +1372,32 @@ Follow these guidelines:
         if self.output_pydantic:
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
+
+    @staticmethod
+    def _output_content(task_output: TaskOutput) -> dict[str, Any] | str:
+        if task_output.json_dict:
+            return task_output.json_dict
+        if task_output.pydantic:
+            return task_output.pydantic.model_dump_json()
+        return task_output.raw
+
+    def _save_artifact(
+        self, artifact: Artifact | bool, task_output: TaskOutput
+    ) -> SavedArtifact | None:
+        """Save the output as ``artifact``. Logs and returns None if it fails."""
+        content = self._output_content(task_output)
+        if isinstance(content, dict):
+            content = json.dumps(content, ensure_ascii=False, indent=2)
+        try:
+            return save_output_artifact(
+                artifact,
+                content=content,
+                name=self.name or self.description,
+                from_task=self,
+            )
+        except Exception as e:
+            self.logger.warning("Failed to save artifact for task %s: %s", self.id, e)
+            return None
 
     def _save_file(self, result: dict[str, Any] | str | Any) -> None:
         """Save task output to a file.
@@ -1324,6 +1470,40 @@ Follow these guidelines:
         """
         return self.security_config.fingerprint
 
+    def _apply_guardrail_result(
+        self,
+        task_output: TaskOutput,
+        result: Any,
+        accumulated_failures: list[ToolFailureRecord],
+    ) -> tuple[TaskOutput, str | BaseModel | None]:
+        """Apply a passing guardrail's result to the task output.
+
+        Returns the output to keep and, when the structured fields need to be
+        rebuilt, the value to export them from.
+        """
+        if isinstance(result, TaskOutput):
+            # A guardrail may return a whole new output; carry the
+            # accumulated failures over or earlier attempts vanish.
+            result.tool_failures = merge_tool_failures(
+                accumulated_failures, result.tool_failures
+            )
+            # Outputs are left unexported while guardrails run, so one passed
+            # straight through may still lack the configured structured field.
+            needs_export = (self.output_pydantic and result.pydantic is None) or (
+                self.output_json and result.json_dict is None
+            )
+            return result, result.raw if needs_export else None
+        if isinstance(result, BaseModel):
+            task_output.raw = result.model_dump_json()
+            return task_output, result
+        if isinstance(result, dict):
+            task_output.raw = json.dumps(result, default=str)
+            return task_output, task_output.raw
+        if isinstance(result, str):
+            task_output.raw = result
+            return task_output, result
+        return task_output, None
+
     def _invoke_guardrail_function(
         self,
         task_output: TaskOutput,
@@ -1362,20 +1542,13 @@ Follow these guidelines:
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
-                        guardrail_result.result
-                    )
+                task_output, to_export = self._apply_guardrail_result(
+                    task_output, guardrail_result.result, accumulated_failures
+                )
+                if to_export is not None:
+                    pydantic_output, json_output = self._export_output(to_export)
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    # A guardrail may return a whole new output; carry the
-                    # accumulated failures over or earlier attempts vanish.
-                    task_output = guardrail_result.result
-                    task_output.tool_failures = merge_tool_failures(
-                        accumulated_failures, task_output.tool_failures
-                    )
 
                 return task_output
 
@@ -1420,7 +1593,7 @@ Follow these guidelines:
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -1483,20 +1656,13 @@ Follow these guidelines:
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = await self._aexport_output(
-                        guardrail_result.result
-                    )
+                task_output, to_export = self._apply_guardrail_result(
+                    task_output, guardrail_result.result, accumulated_failures
+                )
+                if to_export is not None:
+                    pydantic_output, json_output = await self._aexport_output(to_export)
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    # A guardrail may return a whole new output; carry the
-                    # accumulated failures over or earlier attempts vanish.
-                    task_output = guardrail_result.result
-                    task_output.tool_failures = merge_tool_failures(
-                        accumulated_failures, task_output.tool_failures
-                    )
 
                 return task_output
 
@@ -1541,7 +1707,7 @@ Follow these guidelines:
                     json_output = None
                 elif self.output_json:
                     pydantic_output = None
-                    json_output = result.model_dump()
+                    json_output = result.model_dump(mode="json")
                 else:
                     pydantic_output = None
                     json_output = None
@@ -1564,3 +1730,18 @@ Follow these guidelines:
             accumulated_failures = list(task_output.tool_failures)
 
         return task_output
+
+
+def validate_interpolated_path(path: str, template: str, label: str) -> str:
+    """Check a file path after inputs were filled into ``template``.
+
+    Inputs are caller-controlled, so they must not add traversal segments or
+    make the path absolute. Only the developer's template may anchor it.
+    """
+    try:
+        path = Task._validate_output_file_path(path, allow_templates=False, label=label)
+        if _path_anchor(path) > _path_anchor(template):
+            raise ValueError(f"Template inputs cannot make {label} an absolute path")
+    except ValueError as e:
+        raise ValueError(f"Interpolated {label} path failed validation: {e!s}") from e
+    return path

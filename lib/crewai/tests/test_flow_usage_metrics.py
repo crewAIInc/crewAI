@@ -509,3 +509,46 @@ class TestFlowUsageAggregation:
 
             assert flow.usage_metrics.total_tokens == 50
             assert flow.usage_metrics.successful_requests == 1
+
+
+class TestFlowUsageAggregationBedrock:
+    """Bedrock reports usage as ``inputTokens``/``outputTokens``; flow totals
+    must pick those up, not just the LLM's own counters."""
+
+    def test_agent_inside_flow_reports_bedrock_tokens(self, monkeypatch):
+        pytest.importorskip("boto3")
+        from unittest.mock import MagicMock, patch
+
+        from crewai import LLM, Agent
+
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "test")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "test")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+
+        client = MagicMock()
+        client.converse.return_value = {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "Final Answer: hi"}],
+                }
+            },
+            "stopReason": "end_turn",
+            "usage": {"inputTokens": 100, "outputTokens": 20, "totalTokens": 120},
+            "ResponseMetadata": {"RequestId": "req-1"},
+        }
+        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+
+        class _BedrockAgentFlow(Flow):
+            @start()
+            def run_agent(self):
+                Agent(role="r", goal="g", backstory="b", llm=llm).kickoff("say hi")
+
+        with patch.object(type(llm), "_get_sync_client", return_value=client):
+            flow = _BedrockAgentFlow()
+            flow.kickoff()
+
+        assert flow.usage_metrics.prompt_tokens == 100
+        assert flow.usage_metrics.completion_tokens == 20
+        assert flow.usage_metrics.total_tokens == 120
+        assert flow.usage_metrics.successful_requests == 1

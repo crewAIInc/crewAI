@@ -135,6 +135,16 @@ class DB2VectorSearchTool(BaseTool):
         description="Maximum allowed distance for results. Cannot be negative.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _default_connection_string_from_env(cls, data: Any) -> Any:
+        """Fall back to ``DB2_CONNECTION_STRING`` when none is passed."""
+        if isinstance(data, dict) and not data.get("connection_string"):
+            env_value = os.getenv("DB2_CONNECTION_STRING")
+            if env_value:
+                data = {**data, "connection_string": env_value}
+        return data
+
     @model_validator(mode="after")
     def _validate_return_columns(self) -> DB2VectorSearchTool:
         if not self.return_columns:

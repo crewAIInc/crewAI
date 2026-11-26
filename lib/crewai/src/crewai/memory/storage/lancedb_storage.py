@@ -14,7 +14,8 @@ import time
 from typing import Any
 
 from crewai_core.lock_store import lock as store_lock
-import lancedb  # type: ignore[import-untyped]
+import lancedb
+from lancedb.query import ColumnOrdering
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
@@ -353,11 +354,12 @@ class LanceDBStorage:
             )
         with store_lock(self._lock_name):
             self._ensure_table()
-            safe_id = _sql_str(str(record.id))
-            self._do_write("delete", f"id = '{safe_id}'")
+            # Reject unserializable records before deleting the stored version.
             row = self._record_to_row(record)
             if row["vector"] is None or len(row["vector"]) != self._vector_dim:
                 row["vector"] = [0.0] * self._vector_dim
+            safe_id = _sql_str(str(record.id))
+            self._do_write("delete", f"id = '{safe_id}'")
             self._do_write("add", [row])
 
     def touch_records(self, record_ids: list[str]) -> None:
@@ -509,6 +511,22 @@ class LanceDBStorage:
         result: list[dict[str, Any]] = q.limit(limit).to_list()
         return result
 
+    def _count_rows(self, scope_prefix: str | None = None) -> int:
+        """Count rows matching a scope prefix using LanceDB's native count.
+
+        Unlike _scan_rows, this is not capped at _SCAN_ROWS_LIMIT, so scoped
+        counts stay exact on large tables. It uses the same scope-prefix
+        predicate as the scan, so the matched set is identical.
+        """
+        if self._table is None:
+            return 0
+        if scope_prefix is None or scope_prefix.strip("/") == "":
+            return int(self._table.count_rows())
+        prefix = scope_prefix.rstrip("/")
+        if not prefix.startswith("/"):
+            prefix = "/" + prefix
+        return int(self._table.count_rows(filter=_scope_prefix_filter(prefix)))
+
     def list_records(
         self, scope_prefix: str | None = None, limit: int = 200, offset: int = 0
     ) -> list[MemoryRecord]:
@@ -522,10 +540,23 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
-        records = [self._row_to_record(r) for r in rows]
-        records.sort(key=lambda r: r.created_at, reverse=True)
-        return records[offset : offset + limit]
+        if self._table is None or limit <= 0 or offset < 0:
+            return []
+
+        q = self._table.search()
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            q = q.where(_scope_prefix_filter(prefix))
+
+        q = (
+            q.order_by([ColumnOrdering(column_name="created_at", ascending=False)])
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = q.to_list()
+        return [self._row_to_record(row) for row in rows]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
@@ -576,7 +607,7 @@ class LanceDBStorage:
                         newest = dt
         return ScopeInfo(
             path=scope or "/",
-            record_count=len(rows),
+            record_count=self._count_rows(prefix or None),
             categories=sorted(categories_set),
             oldest_record=oldest,
             newest_record=newest,
@@ -613,10 +644,7 @@ class LanceDBStorage:
     def count(self, scope_prefix: str | None = None) -> int:
         if self._table is None:
             return 0
-        if scope_prefix is None or scope_prefix.strip("/") == "":
-            return int(self._table.count_rows())
-        info = self.get_scope_info(scope_prefix)
-        return info.record_count
+        return self._count_rows(scope_prefix)
 
     def reset(self, scope_prefix: str | None = None) -> None:
         with store_lock(self._lock_name):

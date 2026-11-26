@@ -34,4 +34,9 @@ def __getattr__(name: str) -> Any:
         value = getattr(importlib.import_module(module_path), attr)
         globals()[name] = value
         return value
+    if name == "CrewAgentExecutor":
+        raise ImportError(
+            "CrewAgentExecutor has been removed. Use "
+            "crewai.agents.agent_executor.AgentExecutor."
+        )
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

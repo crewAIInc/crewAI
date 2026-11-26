@@ -471,6 +471,109 @@ def test_bedrock_aws_credentials_configuration():
     assert llm_explicit.region_name == "us-west-2"
 
 
+def test_bedrock_accepts_litellm_compatible_region_kwarg(bedrock_mocks):
+    """The LiteLLM region kwarg must configure the native SDK session."""
+    mock_session_class, _ = bedrock_mocks
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_region_name="eu-west-1",
+    )
+
+    assert mock_session_class.call_args.kwargs["region_name"] == "eu-west-1"
+    assert "aws_region_name" not in llm.additional_params
+
+
+def test_bedrock_accepts_litellm_compatible_guardrail_kwarg(bedrock_mocks):
+    """The LiteLLM guardrail kwarg must reach the native Converse request."""
+    _, mock_client = bedrock_mocks
+    guardrail_config = {
+        "guardrailIdentifier": "gr-test",
+        "guardrailVersion": "1",
+    }
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        guardrailConfig=guardrail_config,
+    )
+
+    llm.call("Hello")
+
+    assert mock_client.converse.call_args.kwargs["guardrailConfig"] == guardrail_config
+    assert "guardrailConfig" not in llm.additional_params
+
+
+def test_bedrock_accepts_litellm_kwargs_from_additional_params(bedrock_mocks):
+    """LiteLLM aliases moved to additional params still configure Bedrock."""
+    mock_session_class, mock_client = bedrock_mocks
+    guardrail_config = {
+        "guardrailIdentifier": "gr-from-additional-params",
+        "guardrailVersion": "DRAFT",
+    }
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        additional_params={
+            "aws_region_name": "ap-south-1",
+            "guardrailConfig": guardrail_config,
+        },
+    )
+
+    llm.call("Hello")
+
+    assert mock_session_class.call_args.kwargs["region_name"] == "ap-south-1"
+    assert mock_client.converse.call_args.kwargs["guardrailConfig"] == guardrail_config
+    assert "aws_region_name" not in llm.additional_params
+    assert "guardrailConfig" not in llm.additional_params
+
+
+def test_bedrock_prefers_native_kwargs_over_litellm_aliases(bedrock_mocks):
+    """Explicit native configuration wins when both forms are provided."""
+    mock_session_class, mock_client = bedrock_mocks
+    native_guardrail_config = {
+        "guardrailIdentifier": "gr-native",
+        "guardrailVersion": "1",
+    }
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        region_name="us-west-2",
+        guardrail_config=native_guardrail_config,
+        additional_params={
+            "aws_region_name": "ap-south-1",
+            "guardrailConfig": {
+                "guardrailIdentifier": "gr-legacy",
+                "guardrailVersion": "DRAFT",
+            },
+        },
+    )
+
+    llm.call("Hello")
+
+    assert mock_session_class.call_args.kwargs["region_name"] == "us-west-2"
+    assert (
+        mock_client.converse.call_args.kwargs["guardrailConfig"]
+        == native_guardrail_config
+    )
+    assert "aws_region_name" not in llm.additional_params
+    assert "guardrailConfig" not in llm.additional_params
+
+
+def test_bedrock_does_not_send_litellm_role_kwarg_to_converse(bedrock_mocks):
+    """AWS role configuration is not a Bedrock Converse request parameter."""
+    _, mock_client = bedrock_mocks
+    role_arn = "arn:aws:iam::123456789012:role/Bedrock"
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_role_name=role_arn,
+    )
+
+    llm.call("Hello")
+
+    assert "aws_role_name" not in mock_client.converse.call_args.kwargs
+
+
 def test_bedrock_model_capabilities():
     """
     Test that model capabilities are correctly identified
@@ -1427,6 +1530,75 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+def test_bedrock_passes_timeout_and_max_retries_to_client(bedrock_mocks):
+    """User timeout and max_retries must configure the boto3 client."""
+    mock_session_class, _ = bedrock_mocks
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        timeout=30,
+        max_retries=5,
+    )
+
+    config = mock_session_class.return_value.client.call_args.kwargs["config"]
+    assert config.read_timeout == 30
+    assert config.retries == {"max_attempts": 6, "mode": "adaptive"}
+    assert "timeout" not in llm.additional_params
+    assert "max_retries" not in llm.additional_params
+
+
+def test_bedrock_client_config_defaults_when_timeout_and_retries_unset(bedrock_mocks):
+    """Without user values the client keeps the previous defaults."""
+    mock_session_class, _ = bedrock_mocks
+
+    LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    config = mock_session_class.return_value.client.call_args.kwargs["config"]
+    assert config.read_timeout == 300
+    assert config.retries == {"max_attempts": 3, "mode": "adaptive"}
+
+
+def test_bedrock_to_config_dict_keeps_timeout_and_max_retries():
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        timeout=30,
+        max_retries=5,
+    )
+
+    config = llm.to_config_dict()
+    assert config["timeout"] == 30
+    assert config["max_retries"] == 5
+
+    default_config = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0"
+    ).to_config_dict()
+    assert "timeout" not in default_config
+    assert "max_retries" not in default_config
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_client_uses_timeout_and_max_retries(monkeypatch):
+    """The aiobotocore client must get the same config as the sync client."""
+    monkeypatch.setattr(bedrock_completion, "AIOBOTOCORE_AVAILABLE", True)
+    mock_aio_session = MagicMock()
+    monkeypatch.setattr(
+        bedrock_completion,
+        "get_aiobotocore_session",
+        MagicMock(return_value=mock_aio_session),
+    )
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        timeout=30,
+        max_retries=5,
+    )
+
+    await llm._ensure_async_client()
+
+    config = mock_aio_session.create_client.call_args.kwargs["config"]
+    assert config.read_timeout == 30
+    assert config.retries == {"max_attempts": 6, "mode": "adaptive"}
 
 
 _CONVERSE_HANDLERS = ["_handle_converse", "_handle_streaming_converse",

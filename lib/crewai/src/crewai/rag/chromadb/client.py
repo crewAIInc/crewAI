@@ -23,6 +23,7 @@ from crewai.rag.chromadb.utils import (
     _extract_search_params,
     _is_async_client,
     _is_sync_client,
+    _metadata_filter_to_where,
     _prepare_documents_for_chromadb,
     _process_query_results,
     _sanitize_collection_name,
@@ -451,7 +452,11 @@ class ChromaDBClient(BaseClient):
             embedding_function=self.embedding_function,
         )
 
-        where = params.where if params.where is not None else params.metadata_filter
+        where = (
+            params.where
+            if params.where is not None
+            else _metadata_filter_to_where(params.metadata_filter)
+        )
 
         with suppress_logging(
             "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
@@ -514,7 +519,11 @@ class ChromaDBClient(BaseClient):
             embedding_function=self.embedding_function,
         )
 
-        where = params.where if params.where is not None else params.metadata_filter
+        where = (
+            params.where
+            if params.where is not None
+            else _metadata_filter_to_where(params.metadata_filter)
+        )
 
         with suppress_logging(
             "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
