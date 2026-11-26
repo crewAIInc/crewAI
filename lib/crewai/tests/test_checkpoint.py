@@ -4,29 +4,35 @@ from __future__ import annotations
 
 import inspect
 from contextlib import closing
+import dataclasses
 import json
 import os
 import sqlite3
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Generic, TypeVar
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, TypeAdapter, model_validator
 
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
+from crewai.crews.crew_output import CrewOutput
+from crewai.events.event_bus import crewai_event_bus
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
+from crewai.flow.flow_definition import FlowDefinition
+from crewai.flow.human_feedback import HumanFeedbackResult, human_feedback
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
     _resolve,
     _SENTINEL,
 )
+from crewai.state.method_outputs import record_output_types, rebuild_output_types
 from crewai.state.provider.json_provider import JsonProvider
 from crewai.state.provider.sqlite_provider import SqliteProvider
 from crewai.state.runtime import RuntimeState
@@ -1092,3 +1098,281 @@ class TestCallbacksAcrossRestore:
         )
         assert len(restored.kickoff().tasks_output) == 2
 
+
+class _Quote(BaseModel):
+    amount: int
+
+
+class _ApproveProvider:
+    def request_feedback(self, context: Any, flow: Flow) -> str:
+        return "looks good"
+
+
+_PENDING_FAILURES: list[str] = []
+_PROBE_CALLS: list[Any] = []
+
+
+class _Probe(BaseModel):
+    amount: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def _record(cls, data: Any) -> Any:
+        _PROBE_CALLS.append(data)
+        return data
+
+
+class _NoSchema:
+    pass
+
+
+@dataclasses.dataclass
+class _Unbuildable:
+    thing: _NoSchema
+
+
+class _Node(BaseModel):
+    name: str
+    children: list[_Node] = []
+    parent: _Node | None = Field(default=None, exclude=True, repr=False)
+
+    @model_validator(mode="after")
+    def _link_children(self) -> _Node:
+        for child in self.children:
+            object.__setattr__(child, "parent", self)
+        return self
+
+
+@dataclasses.dataclass
+class _Report:
+    title: str
+    tokens: int = dataclasses.field(init=False)
+
+
+class _LegacyQuote(BaseModel):
+    amount: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate(cls, data: Any) -> Any:
+        return {"amount": data["legacy_amount"]}
+
+
+_T = TypeVar("_T")
+
+
+class _Envelope(BaseModel, Generic[_T]):
+    item: _T
+
+
+@dataclasses.dataclass
+class _Box(Generic[_T]):
+    item: _T
+
+
+class _OrderFlow(Flow):
+    @start()
+    def price(self) -> _Quote:
+        return _Quote(amount=42)
+
+    @listen(price)
+    def charge(self, quote: Any) -> None:
+        if _PENDING_FAILURES:
+            raise RuntimeError(_PENDING_FAILURES.pop())
+        self.state["charged"] = quote.amount
+
+
+class _QuoteReviewFlow(Flow):
+    @start()
+    @human_feedback(message="Approve?", provider=_ApproveProvider())
+    def ask(self) -> _Quote:
+        return _Quote(amount=42)
+
+    @listen(ask)
+    def record(self, result: Any) -> None:
+        if _PENDING_FAILURES:
+            raise RuntimeError(_PENDING_FAILURES.pop())
+        self.state["feedback"] = result.feedback
+        self.state["amount"] = result.output.amount
+
+
+def _checkpoint_after_listener_failure(flow_cls: type[Flow], directory: Path) -> str:
+    """Run ``flow_cls`` once with its listener failing; return the last checkpoint."""
+    _PENDING_FAILURES[:] = ["listener failed once"]
+    flow = flow_cls(
+        checkpoint=CheckpointConfig(
+            location=str(directory), on_events=["method_execution_finished"]
+        )
+    )
+    with pytest.raises(RuntimeError, match="listener failed once"):
+        flow.kickoff()
+    crewai_event_bus.flush()
+    return str(max(directory.rglob("*.json"), key=lambda p: p.stat().st_mtime))
+
+
+class TestRestoredMethodOutputTypes:
+    """A resumed flow hands listeners the same output types as the first run."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_checkpoint_handlers(self, monkeypatch: pytest.MonkeyPatch) -> Any:
+        # The root conftest clears the event bus after every test; re-register
+        # the checkpoint handlers and drop any restored state from a prior test.
+        monkeypatch.setattr(
+            "crewai.state.checkpoint_listener._handlers_registered", False
+        )
+        crewai_event_bus.reset_runtime_state()
+        yield
+        crewai_event_bus.reset_runtime_state()
+
+    def test_listener_receives_pydantic_output_after_restore(
+        self, tmp_path: Path
+    ) -> None:
+        latest = _checkpoint_after_listener_failure(_OrderFlow, tmp_path)
+
+        restored = _OrderFlow.from_checkpoint(CheckpointConfig(restore_from=latest))
+        restored.kickoff()
+
+        assert restored.state["charged"] == 42
+
+    def test_human_feedback_listener_keeps_its_result_after_restore(
+        self, tmp_path: Path
+    ) -> None:
+        latest = _checkpoint_after_listener_failure(_QuoteReviewFlow, tmp_path)
+
+        restored = _QuoteReviewFlow.from_checkpoint(
+            CheckpointConfig(restore_from=latest)
+        )
+        restored.kickoff()
+
+        assert restored.state["feedback"] == "looks good"
+        assert restored.state["amount"] == 42
+
+    def test_restore_rebuilds_the_output_inside_an_emitted_feedback_result(
+        self,
+    ) -> None:
+        feedback = HumanFeedbackResult(
+            output=_Quote(amount=1), feedback="ok", method_name="ask"
+        )
+        recorded = record_output_types(
+            {"method": "ask", "output": feedback.output, "human_feedback": feedback}
+        )
+        entry = json.loads(TypeAdapter(Any).dump_json(recorded))
+
+        rebuilt = rebuild_output_types(entry, [HumanFeedbackResult, _Quote])
+
+        assert rebuilt["output"] == _Quote(amount=1)
+        assert rebuilt["human_feedback"].output == _Quote(amount=1)
+
+    def test_restore_never_builds_an_undeclared_feedback_output_type(self) -> None:
+        feedback = HumanFeedbackResult(
+            output=_Quote(amount=1), feedback="ok", method_name="ask"
+        )
+        recorded = record_output_types({"method": "ask", "output": feedback})
+        raw = TypeAdapter(Any).dump_json(recorded).decode()
+        assert ":_Quote" in raw
+        entry = json.loads(raw.replace(":_Quote", ":_Probe"))
+        _PROBE_CALLS.clear()
+
+        rebuilt = rebuild_output_types(entry, [HumanFeedbackResult, _Quote])
+
+        assert _PROBE_CALLS == []
+        assert rebuilt["output"].output == {"amount": 1}
+
+    def test_definition_built_flow_restores_its_code_action_output(
+        self, tmp_path: Path
+    ) -> None:
+        definition = FlowDefinition.from_declaration(
+            contents=f"""
+name: quote
+methods:
+  price:
+    do:
+      call: code
+      ref: {__name__}:_OrderFlow.price
+    start: true
+"""
+        )
+        flow = Flow.from_declaration(contents=definition)
+        flow.kickoff()
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        location = state.checkpoint(str(tmp_path))
+
+        restored = Flow.from_checkpoint(
+            CheckpointConfig(restore_from=location), definition=definition
+        )
+
+        assert restored.method_outputs == [_Quote(amount=42)]
+
+    @pytest.mark.parametrize(
+        ("value", "annotation"),
+        [
+            (_Quote(amount=1), _Quote | None),
+            (_Quote(amount=1), Annotated[_Quote | None, "meta"]),
+            (_Envelope[_Quote](item=_Quote(amount=1)), _Envelope[_Quote]),
+            (_Box(item=_Quote(amount=1)), _Box[_Quote]),
+            (CrewOutput(raw="r"), CrewOutput),
+        ],
+    )
+    def test_restore_rebuilds_types_inside_a_return_annotation(
+        self, value: Any, annotation: Any
+    ) -> None:
+        recorded = record_output_types({"method": "m", "output": value})
+        entry = json.loads(TypeAdapter(Any).dump_json(recorded))
+
+        rebuilt = rebuild_output_types(entry, [annotation])
+
+        assert rebuilt["output"] == value
+
+    def test_restore_never_builds_a_type_the_flow_does_not_declare(
+        self, tmp_path: Path
+    ) -> None:
+        latest = _checkpoint_after_listener_failure(_OrderFlow, tmp_path)
+        raw = Path(latest).read_text()
+        assert "_Quote" in raw
+        Path(latest).write_text(raw.replace("_Quote", "_Probe"))
+        _PROBE_CALLS.clear()
+
+        restored = _OrderFlow.from_checkpoint(CheckpointConfig(restore_from=latest))
+
+        assert _PROBE_CALLS == []
+        assert restored.method_outputs == [{"amount": 42}]
+
+    def test_restore_rebuilds_a_model_whose_validator_links_parents(self) -> None:
+        entry = {
+            "method": "tree",
+            "output": {"name": "root", "children": [{"name": "leaf", "children": []}]},
+            "output_type": f"{_Node.__module__}:{_Node.__qualname__}",
+        }
+
+        root = rebuild_output_types(entry, [_Node])["output"]
+
+        assert root.children[0].parent is root
+
+    @pytest.mark.parametrize(
+        ("output", "cls"),
+        [
+            ({"amount": "not a number"}, _Quote),
+            ({"thing": None}, _Unbuildable),
+            ({"amount": 1}, _LegacyQuote),
+            ({"title": "t", "tokens": 5}, _Report),
+            (
+                TypeAdapter(Any).dump_python(
+                    CrewOutput(raw="r", pydantic=_Quote(amount=1)), mode="json"
+                ),
+                CrewOutput,
+            ),
+        ],
+    )
+    def test_restore_keeps_json_that_cannot_be_rebuilt(
+        self, output: dict[str, Any], cls: type
+    ) -> None:
+        entry = {
+            "method": "price",
+            "output": output,
+            "output_type": f"{cls.__module__}:{cls.__qualname__}",
+        }
+
+        rebuilt = rebuild_output_types(entry, [cls])
+
+        assert rebuilt == {"method": "price", "output": output}
