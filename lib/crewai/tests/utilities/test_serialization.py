@@ -170,6 +170,40 @@ def test_depth_limit():
     }
 
 
+def test_depth_limit_keeps_primitives_at_the_limit():
+    """Only containers are cut at the depth limit; a leaf keeps its type."""
+    leaves = {"n": 1, "f": 1.5, "s": "x", "flag": True, "none": None}
+    data = {"a": {"b": {"c": {"d": leaves}}}}
+
+    assert to_serializable(data, max_depth=5) == data
+
+
+def test_depth_limit_keeps_tool_schema_required_names():
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                    "required": ["query"],
+                },
+            },
+        }
+    ]
+
+    result = to_serializable(tools)
+
+    assert result[0]["function"]["parameters"]["required"] == ["query"]
+
+
+def test_depth_limit_still_cuts_containers():
+    assert to_serializable({"a": {"b": {"c": [1]}}}, max_depth=3) == {
+        "a": {"b": {"c": "[1]"}}
+    }
+
+
 @pytest.mark.parametrize("max_depth", [0, -1])
 def test_non_positive_max_depth_disables_depth_limit(max_depth):
     def create_nested(depth):
