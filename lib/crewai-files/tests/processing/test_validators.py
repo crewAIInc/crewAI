@@ -1,8 +1,11 @@
 """Tests for file validators."""
 
+from types import SimpleNamespace
+from typing import get_args
 from unittest.mock import patch
 
 from crewai_files import AudioFile, FileBytes, ImageFile, PDFFile, TextFile, VideoFile
+from crewai_files.core.types import AudioMimeType, VideoMimeType
 from crewai_files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
     AudioConstraints,
@@ -642,3 +645,27 @@ class TestRealVideoFile:
 
         assert "duration" in str(exc_info.value).lower()
         assert "2s" in str(exc_info.value)
+
+
+class TestDefaultMediaFormats:
+    """The default constraints must accept every MIME type the library models."""
+
+    @pytest.mark.parametrize("content_type", get_args(AudioMimeType))
+    def test_default_audio_constraints_accept_every_modelled_type(self, content_type):
+        file = SimpleNamespace(
+            read=lambda: MINIMAL_AUDIO,
+            filename="audio",
+            content_type=content_type,
+        )
+
+        validate_audio(file, AudioConstraints(max_size_bytes=10 * 1024 * 1024))
+
+    @pytest.mark.parametrize("content_type", get_args(VideoMimeType))
+    def test_default_video_constraints_accept_every_modelled_type(self, content_type):
+        file = SimpleNamespace(
+            read=lambda: MINIMAL_VIDEO,
+            filename="video",
+            content_type=content_type,
+        )
+
+        validate_video(file, VideoConstraints(max_size_bytes=10 * 1024 * 1024))

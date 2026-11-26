@@ -133,6 +133,7 @@ AudioMimeType = Literal[
     "audio/x-wav",
     "audio/ogg",
     "audio/flac",
+    "audio/x-flac",
     "audio/aac",
     "audio/m4a",
     "audio/mp4",

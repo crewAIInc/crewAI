@@ -41,10 +41,16 @@ DEFAULT_AUDIO_FORMATS: tuple[AudioMimeType, ...] = (
     "audio/mp3",
     "audio/mpeg",
     "audio/wav",
+    "audio/x-wav",
     "audio/ogg",
     "audio/flac",
+    "audio/x-flac",
     "audio/aac",
     "audio/m4a",
+    "audio/mp4",
+    "audio/x-ms-wma",
+    "audio/aiff",
+    "audio/opus",
 )
 
 GEMINI_AUDIO_FORMATS: tuple[AudioMimeType, ...] = (
@@ -63,6 +69,10 @@ DEFAULT_VIDEO_FORMATS: tuple[VideoMimeType, ...] = (
     "video/mpeg",
     "video/webm",
     "video/quicktime",
+    "video/x-msvideo",
+    "video/x-matroska",
+    "video/x-flv",
+    "video/x-ms-wmv",
 )
 
 GEMINI_VIDEO_FORMATS: tuple[VideoMimeType, ...] = (
