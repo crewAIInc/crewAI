@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from copy import copy as shallow_copy
+from copy import copy as shallow_copy, deepcopy
 from hashlib import md5
 from pathlib import Path
 import re
@@ -731,6 +731,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         }
 
         existing_llm = shallow_copy(self._llm_for_copy())
+        # copy.copy shares the LLM's mutable fields. Isolate the dicts a
+        # copied agent actually mutates: provider params and token totals.
+        if getattr(existing_llm, "additional_params", None) is not None:
+            existing_llm.additional_params = deepcopy(existing_llm.additional_params)
+        if getattr(existing_llm, "_token_usage", None) is not None:
+            # A copy starts a new run. kickoff_for_each sums each copy's
+            # lifetime totals, so carried-over counts would be added once per input.
+            existing_llm._token_usage = dict.fromkeys(existing_llm._token_usage, 0)
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         existing_knowledge_sources = None
