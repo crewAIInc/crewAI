@@ -166,6 +166,26 @@ def test_default_folder_gets_the_process_id_and_is_removed_at_exit(
     assert args == (private, os.getpid())
 
 
+def test_exit_cleanup_closes_the_client_and_removes_the_default_folder(
+    tmp_path, monkeypatch
+):
+    registered = []
+    monkeypatch.setattr(
+        "atexit.register", lambda fn, *a, **k: registered.append((fn, a))
+    )
+    config, _ = _default_config(monkeypatch, tmp_path)
+    client = create_client(config)
+    client.get_or_create_collection(collection_name="k")
+    cleanup, args = registered[-1]
+
+    cleanup(*args)
+
+    # Windows cannot delete files the client still holds open.
+    assert not os.path.exists(args[0])
+    with pytest.raises(RuntimeError, match="instance is closed"):
+        client.client.collection_exists("k")
+
+
 def test_processes_using_the_default_folder_do_not_collide(tmp_path, monkeypatch):
     config, _ = _default_config(monkeypatch, tmp_path)
     monkeypatch.setattr("atexit.register", lambda *a, **k: None)
