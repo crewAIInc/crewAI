@@ -225,8 +225,15 @@ class LocalArtifactStore(ArtifactStore):
     ) -> SavedArtifact:
         directory = self.root / execution_id / artifact.identifier
         directory.mkdir(parents=True, exist_ok=True)
-        version = len(list(directory.glob("v*.*"))) + 1
+        existing_versions = [
+            int(path.stem[1:])
+            for path in directory.glob("v*.*")
+            if path.is_file() and path.stem[1:].isdigit()
+        ]
+        version = max(existing_versions, default=0) + 1
         while True:
+            while any(directory.glob(f"v{version}.*")):
+                version += 1
             path = directory / f"v{version}.{extension}"
             try:
                 with path.open("xb") as file:
