@@ -2892,7 +2892,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         method = self._methods[start_method_name]
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
 
-        result, finished_event_id = await self._execute_method(
+        result, finished_event_id, feedback_result = await self._execute_method(
             start_method_name, enhanced_method
         )
 
@@ -2903,11 +2903,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Then execute listeners for the router result (e.g., "approved")
             router_result = result.value if isinstance(result, enum.Enum) else result
             router_result_trigger = FlowMethodName(str(router_result))
-            listener_result = (
-                self.last_human_feedback
-                if self.last_human_feedback is not None
-                else result
-            )
+            listener_result = feedback_result if feedback_result is not None else result
             await self._execute_listeners(
                 router_result_trigger, listener_result, finished_event_id
             )
@@ -2957,13 +2953,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         method: Callable[..., Any],
         *args: Any,
         **kwargs: Any,
-    ) -> tuple[Any, str | None]:
+    ) -> tuple[Any, str | None, HumanFeedbackResult | None]:
         """Execute a method and emit events.
 
         Returns:
-            A tuple of (result, finished_event_id) where finished_event_id is
-            the event_id of the MethodExecutionFinishedEvent, or None if events
-            are suppressed.
+            A tuple of (result, finished_event_id, feedback_result), where
+            feedback_result belongs to this invocation's emitted HITL outcome.
+            finished_event_id identifies MethodExecutionFinishedEvent, or is
+            None if events are suppressed.
         """
         try:
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
@@ -3056,6 +3053,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self._dispatch_interception(InterceptionPoint.POST_STEP, post_step_ctx)
                 result = post_step_ctx.payload
 
+            feedback_result: HumanFeedbackResult | None = None
             self._method_outputs.append({"method": str(method_name), "output": result})
 
             # For @human_feedback methods with emit, the result is the collapsed outcome
@@ -3094,7 +3092,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
 
-            return result, finished_event_id
+            return result, finished_event_id, feedback_result
         except Exception as e:
             # Check if this is a HumanFeedbackPending exception (paused, not failed)
             if isinstance(e, HumanFeedbackPending):
@@ -3250,6 +3248,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 (
                     router_result,
                     current_triggering_event_id,
+                    router_feedback,
                 ) = await self._execute_single_listener(
                     router_name, router_input, current_triggering_event_id
                 )
@@ -3266,15 +3265,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
                 router_result_payloads[router_result_str] = (
-                    self.last_human_feedback
-                    if self.last_human_feedback is not None
-                    else router_result
+                    router_feedback if router_feedback is not None else router_result
                 )
 
-                if self.last_human_feedback is not None:
-                    router_result_to_feedback[router_result_str] = (
-                        self.last_human_feedback
-                    )
+                if router_feedback is not None:
+                    router_result_to_feedback[router_result_str] = router_feedback
+                else:
+                    router_result_to_feedback.pop(router_result_str, None)
                 current_trigger = router_result_event
 
         all_triggers = [trigger_method, *router_results]
@@ -3380,7 +3377,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         listener_name: FlowMethodName,
         result: Any,
         triggering_event_id: str | None = None,
-    ) -> tuple[Any, str | None]:
+    ) -> tuple[Any, str | None, HumanFeedbackResult | None]:
         """Executes a single listener method with proper event handling.
 
         This internal method manages the execution of an individual listener,
@@ -3393,9 +3390,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 used for causal chain tracking.
 
         Returns:
-            A tuple of (listener_result, event_id) where listener_result is the return
-            value of the listener method and event_id is the MethodExecutionFinishedEvent
-            id, or (None, None) if skipped during resumption.
+            A tuple of (listener_result, event_id, feedback_result), where
+            feedback_result belongs to the executed listener's HITL outcome.
+            listener_result is the listener's return value and event_id identifies
+            MethodExecutionFinishedEvent. Returns (None, None, None) if skipped
+            during resumption.
 
         Note:
             - Inspects method signature to determine if it accepts the trigger result
@@ -3431,7 +3430,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         ):
                             # This conditional start was executed, continue its chain
                             await self._execute_start_method(start_method_name)
-                return (None, None)
+                return (None, None, None)
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(listener_name)
             # Clear ALL fired OR listeners so they can fire again in the new cycle.
@@ -3450,28 +3449,36 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if triggering_event_id:
                 with triggered_by_scope(triggering_event_id):
                     if method_params:
-                        listener_result, finished_event_id = await self._execute_method(
-                            listener_name, method, result
-                        )
+                        (
+                            listener_result,
+                            finished_event_id,
+                            feedback_result,
+                        ) = await self._execute_method(listener_name, method, result)
                     else:
-                        listener_result, finished_event_id = await self._execute_method(
-                            listener_name, method
-                        )
+                        (
+                            listener_result,
+                            finished_event_id,
+                            feedback_result,
+                        ) = await self._execute_method(listener_name, method)
             else:
                 if method_params:
-                    listener_result, finished_event_id = await self._execute_method(
-                        listener_name, method, result
-                    )
+                    (
+                        listener_result,
+                        finished_event_id,
+                        feedback_result,
+                    ) = await self._execute_method(listener_name, method, result)
                 else:
-                    listener_result, finished_event_id = await self._execute_method(
-                        listener_name, method
-                    )
+                    (
+                        listener_result,
+                        finished_event_id,
+                        feedback_result,
+                    ) = await self._execute_method(listener_name, method)
 
             await self._execute_listeners(
                 listener_name, listener_result, finished_event_id
             )
 
-            return (listener_result, finished_event_id)
+            return (listener_result, finished_event_id, feedback_result)
 
         except Exception as e:
             # Don't log HumanFeedbackPending as an error - it's expected control flow
