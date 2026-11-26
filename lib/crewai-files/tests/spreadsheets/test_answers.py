@@ -628,6 +628,20 @@ class TestTotalRows:
             "5 | Total | 6"
         )
 
+    @pytest.mark.parametrize(
+        "rows",
+        [
+            [["Item", "Amount"], ["a", 0], ["b", 0], ["c", 0]],
+            [["Item", "Delta"], ["a", 5], ["b", -5], ["c", 0]],
+        ],
+    )
+    def test_a_zero_sum_is_not_evidence_of_a_total_row(self, rows):
+        """A column that sums to zero would match a zero last value for free."""
+        book = parse(xlsx(("S", rows)), "w.xlsx")
+
+        assert "looks like a total" not in answers.overview(book, "w.xlsx")
+        assert "total row" not in body(ask(book, "w.xlsx", operation="describe"))
+
     def test_a_filter_that_excludes_it_says_nothing_of_it(self):
         result = ask(
             self.BOOK,

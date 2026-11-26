@@ -151,12 +151,20 @@ def total_row(table: Table) -> int | None:
     last = frame.iloc[-1]
     labels = [text_of(v) for v in table.last_raw if v is not None and text_of(v)]
     numeric = [n for n in frame.columns if table.kinds[n] in ("integer", "number")]
-    adds_up = any(
-        pd.notna(last[n])
-        and int(frame[n].iloc[:-1].notna().sum()) > 1
-        and math.isclose(float(last[n]), float(frame[n].iloc[:-1].sum()), rel_tol=0.005)
-        for n in numeric
-    )
+
+    def _adds_up(name: str) -> bool:
+        if pd.isna(last[name]):
+            return False
+        above = frame[name].iloc[:-1]
+        if int(above.notna().sum()) <= 1:
+            return False
+        total = float(above.sum())
+        # A zero sum matches a zero last value for free, so a column that sums to
+        # zero is no evidence that the row is a total (an all-zero column would
+        # otherwise hide its last row from every aggregate).
+        return total != 0 and math.isclose(float(last[name]), total, rel_tol=0.005)
+
+    adds_up = any(_adds_up(n) for n in numeric)
     if (labels and _TOTAL_LABEL.match(labels[0])) or adds_up:
         return int(frame.index[-1])
     return None
