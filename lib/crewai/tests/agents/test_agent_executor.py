@@ -1373,6 +1373,94 @@ class TestNativeToolExecution:
             "tools_handler": tools_handler,
         }
 
+    def test_execute_native_tool_reports_hook_arguments_in_history(
+        self, mock_dependencies
+    ):
+        """A before_tool_call hook rewrite must show up in the recorded arguments (#9775).
+
+        The tool receives the rewritten input, so a later turn reading
+        `kickoff().messages` must see the same values, not the model's raw ones.
+        """
+        executor = _build_executor(**mock_dependencies)
+
+        seen = {}
+
+        def reserve(duration_minutes: int) -> str:
+            seen["duration_minutes"] = duration_minutes
+            return "Room reserved."
+
+        executor._available_functions = {"reserve": reserve}
+        # `output_tool` comes from `original_tools` and gates the execution branch;
+        # a name-carrying Mock makes it reachable without a full BaseTool.
+        tool_mock = Mock()
+        tool_mock.name = "reserve"
+        tool_mock.result_as_answer = False
+        tool_mock.max_usage_count = None
+        tool_mock.current_usage_count = 0
+        executor.original_tools = [tool_mock]
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {
+                    "name": "reserve",
+                    "arguments": '{"duration_minutes": 35}',
+                },
+            },
+        ]
+
+        def round_to_blocks(context):
+            context.tool_input["duration_minutes"] = 45
+
+        from crewai.hooks import tool_hooks
+
+        tool_hooks.register_before_tool_call_hook(round_to_blocks)
+        try:
+            result = executor.execute_native_tool()
+        finally:
+            tool_hooks.clear_before_tool_call_hooks()
+
+        assert result == "native_tool_completed"
+        assert seen["duration_minutes"] == 45
+
+        assistant = next(
+            m for m in executor.state.messages if m.get("role") == "assistant"
+        )
+        reported = json.loads(assistant["tool_calls"][0]["function"]["arguments"])
+        assert reported == {"duration_minutes": 45}
+
+    def test_execute_native_tool_keeps_raw_arguments_when_a_hook_blocks(
+        self, mock_dependencies
+    ):
+        """A blocked call never runs, so its history keeps the raw arguments."""
+        executor = _build_executor(**mock_dependencies)
+
+        executor._available_functions = {}
+
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {
+                    "name": "reserve",
+                    "arguments": '{"duration_minutes": 35}',
+                },
+            },
+        ]
+
+        from crewai.hooks import tool_hooks
+
+        tool_hooks.register_before_tool_call_hook(lambda context: False)
+        try:
+            result = executor.execute_native_tool()
+        finally:
+            tool_hooks.clear_before_tool_call_hooks()
+
+        assert result == "native_tool_completed"
+        assistant = next(
+            m for m in executor.state.messages if m.get("role") == "assistant"
+        )
+        reported = json.loads(assistant["tool_calls"][0]["function"]["arguments"])
+        assert reported == {"duration_minutes": 35}
+
     def test_execute_native_tool_runs_parallel_for_multiple_calls(
         self, mock_dependencies
     ):

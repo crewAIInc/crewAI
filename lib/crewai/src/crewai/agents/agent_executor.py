@@ -2025,36 +2025,54 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         pending_tool_calls = list(self.state.pending_tool_calls)
         self.state.pending_tool_calls.clear()
 
-        # Group all tool calls into a single assistant message
-        tool_calls_to_report = []
-        for tool_call in pending_tool_calls:
-            info = extract_tool_call_info(tool_call)
-            if not info:
-                continue
+        def _append_assistant_tool_calls() -> None:
+            """Record the model's tool calls with the arguments the tools received.
 
-            call_id, func_name, func_args = info
-            tool_calls_to_report.append(
-                {
-                    "id": call_id,
-                    "type": "function",
-                    "function": {
-                        "name": func_name,
-                        "arguments": func_args
-                        if isinstance(func_args, str)
-                        else json.dumps(func_args),
-                    },
+            `before_tool_call` hooks rewrite `tool_input` in place, so the
+            post-hook arguments are known only after `_execute_single_native_tool_call`
+            ran: building this message from the model's raw call first would leave the
+            pre-hook values in the history, and a later turn reading
+            `kickoff().messages` would answer from them (#9775). The tool-call rows
+            are appended before the `role: "tool"` rows, which the consumers that
+            walk the history rely on.
+            """
+            reported: list[dict[str, Any]] = []
+            for tool_call in pending_tool_calls:
+                info = extract_tool_call_info(tool_call)
+                if not info:
+                    continue
+
+                call_id, func_name, func_args = info
+                # `model_construct` skips PrivateAttr defaults, so a test-built
+                # executor may not carry the dict; absent means no hook ran.
+                overrides = getattr(self, "_tool_args_overrides", None) or {}
+                override = overrides.get(call_id)
+                reported.append(
+                    {
+                        "id": call_id,
+                        "type": "function",
+                        "function": {
+                            "name": func_name,
+                            "arguments": override
+                            if override is not None
+                            else (
+                                func_args
+                                if isinstance(func_args, str)
+                                else json.dumps(func_args)
+                            ),
+                        },
+                    }
+                )
+
+            if reported:
+                assistant_message: LLMMessage = {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": reported,
                 }
-            )
-
-        if tool_calls_to_report:
-            assistant_message: LLMMessage = {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": tool_calls_to_report,
-            }
-            if all(type(tc).__qualname__ == "Part" for tc in pending_tool_calls):
-                assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
-            self.state.messages.append(assistant_message)
+                if all(type(tc).__qualname__ == "Part" for tc in pending_tool_calls):
+                    assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
+                self.state.messages.append(assistant_message)
 
         runnable_tool_calls = [
             tool_call
@@ -2142,6 +2160,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     # A failed tool must not become the final answer.
                     and execution_result.get("tool_failure") is None
                 ):
+                    _append_assistant_tool_calls()
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
                         output=result,
@@ -2150,7 +2169,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     self.state.is_finished = True
                     return "tool_result_is_final"
 
+            _append_assistant_tool_calls()
             return "native_tool_completed"
+
+        _append_assistant_tool_calls()
 
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
@@ -2329,6 +2351,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             crew=self.crew,
         )
         hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+        # Record what the tool will receive, so the history reports the post-hook
+        # arguments instead of the model's raw ones (#9775). A blocked call keeps
+        # the raw arguments; the PrivateAttr default can be missing under
+        # `model_construct`, which tests use.
+        if not hook_blocked:
+            overrides = getattr(self, "_tool_args_overrides", None)
+            if overrides is None:
+                overrides = {}
+                self._tool_args_overrides = overrides
+            overrides[call_id] = json.dumps(args_dict) if args_dict else "{}"
 
         input_str = json.dumps(args_dict) if args_dict else ""
         if (
