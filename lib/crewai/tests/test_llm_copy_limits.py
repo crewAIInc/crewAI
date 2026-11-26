@@ -17,6 +17,7 @@ def test_litellm_copy_preserves_timeout_and_context_window_size() -> None:
     assert (shallow.timeout, shallow.context_window_size) == (600, 12_345)
     assert (deep.timeout, deep.context_window_size) == (600, 12_345)
 
+
 def test_litellm_copy_ignores_duplicate_limit_keys_in_additional_params() -> None:
     llm = LLM(
         model="gpt-4o-mini",
