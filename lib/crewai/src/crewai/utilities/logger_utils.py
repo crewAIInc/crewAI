@@ -14,7 +14,8 @@ def suppress_logging(
 ) -> Generator[None, None, None]:
     """Suppress verbose logging output from specified logger.
 
-    Commonly used to suppress ChromaDB's verbose HNSW index logging.
+    Commonly used to suppress ChromaDB's verbose HNSW index logging. Restore
+    the configured level, including inheritance, even if the operation fails.
 
     Args:
         logger_name: The logger to suppress
@@ -28,15 +29,17 @@ def suppress_logging(
             collection.query(query_texts=["test"])
     """
     logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
+    original_level = logger.level
     logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
+    try:
+        with (
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+            contextlib.suppress(UserWarning),
+        ):
+            yield
+    finally:
+        logger.setLevel(original_level)
 
 
 @contextlib.contextmanager

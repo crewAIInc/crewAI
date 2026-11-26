@@ -172,8 +172,9 @@ class TestPredefinedConstraints:
         """Test Bedrock constraints are properly defined."""
         assert BEDROCK_CONSTRAINTS.name == "bedrock"
         assert BEDROCK_CONSTRAINTS.image is not None
-        assert BEDROCK_CONSTRAINTS.image.max_size_bytes == 4_608_000
+        assert BEDROCK_CONSTRAINTS.image.max_size_bytes == 3_840_000
         assert BEDROCK_CONSTRAINTS.pdf is not None
+        assert BEDROCK_CONSTRAINTS.pdf.max_size_bytes == 4_608_000
         assert BEDROCK_CONSTRAINTS.supports_file_upload is False
 
 

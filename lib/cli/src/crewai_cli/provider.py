@@ -24,9 +24,6 @@ def select_choice(prompt_message: str, choices: Sequence[str]) -> str | None:
         The selected choice from the list, or None if the user chooses to quit.
     """
 
-    provider_models = get_provider_data()
-    if not provider_models:
-        return None
     click.secho(prompt_message, fg="cyan")
     for idx, choice in enumerate(choices, start=1):
         click.secho(f"{idx}. {choice}", fg="cyan")

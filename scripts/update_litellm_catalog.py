@@ -3,7 +3,8 @@
 """Refresh the checked-in LiteLLM model catalog.
 
 Manual wrapper around :func:`crewai_devtools.litellm_catalog_update.update_catalog`.
-``devtools release`` calls that function after the version-bump PR merges.
+``devtools release`` calls that function first, in its own PR, before the
+version-bump PR.
 
 Usage::
 

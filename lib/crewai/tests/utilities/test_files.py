@@ -1,8 +1,10 @@
 """Unit tests for files module."""
 
 import io
+import sys
 import tempfile
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -351,6 +353,24 @@ class TestNormalizeInputFiles:
         result = normalize_input_files([source])
 
         assert "named.txt" in result
+
+    def test_normalize_file_like_object(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A binary stream is wrapped instead of silently dropped."""
+        magic_module = ModuleType("magic")
+
+        def fake_from_buffer(*args: object, **kwargs: object) -> str:
+            return "text/plain"
+
+        magic_module.from_buffer = fake_from_buffer  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "magic", magic_module)
+
+        stream = io.BytesIO(b"streamed content")
+        stream.name = "streamed.txt"
+
+        result = normalize_input_files([stream])
+
+        assert "streamed.txt" in result
+        assert result["streamed.txt"].read() == b"streamed content"
 
     def test_normalize_mixed_inputs(self, tmp_path: Path) -> None:
         """Test normalizing mixed input types."""
