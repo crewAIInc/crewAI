@@ -671,6 +671,12 @@ class LiteAgent(FlowTrackable, BaseModel):
     def _execute_core(
         self, agent_info: dict[str, Any], response_format: type[BaseModel] | None = None
     ) -> LiteAgentOutput:
+        """Run one execution attempt loop, emitting the paired start/terminal events.
+
+        The started event is emitted exactly once per kickoff; guardrail retries
+        re-enter ``_execute_attempt`` directly so each retry does not open a new
+        (never-closed) execution scope.
+        """
         crewai_event_bus.emit(
             self,
             event=LiteAgentExecutionStartedEvent(
@@ -679,7 +685,13 @@ class LiteAgent(FlowTrackable, BaseModel):
                 messages=self._messages,
             ),
         )
+        return self._execute_attempt(
+            agent_info=agent_info, response_format=response_format
+        )
 
+    def _execute_attempt(
+        self, agent_info: dict[str, Any], response_format: type[BaseModel] | None = None
+    ) -> LiteAgentOutput:
         active_response_format = response_format or self.response_format
         agent_finish = self._invoke_loop(response_model=active_response_format)
         if self._memory is not None:
@@ -778,7 +790,9 @@ class LiteAgent(FlowTrackable, BaseModel):
                     }
                 )
 
-                return self._execute_core(agent_info=agent_info)
+                return self._execute_attempt(
+                    agent_info=agent_info, response_format=response_format
+                )
 
             if guardrail_result.result is not None:
                 if isinstance(guardrail_result.result, str):
