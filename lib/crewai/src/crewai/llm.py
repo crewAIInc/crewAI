@@ -2753,6 +2753,8 @@ class LLM(BaseLLM):
                 "stream",
                 "stop",
                 "prefer_upload",
+                "timeout",
+                "context_window_size",
             ]
         }
 
@@ -2818,6 +2820,8 @@ class LLM(BaseLLM):
                 "stream",
                 "stop",
                 "prefer_upload",
+                "timeout",
+                "context_window_size",
             ]
         }
 
