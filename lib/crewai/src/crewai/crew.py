@@ -2277,7 +2277,23 @@ class Crew(FlowTrackable, BaseModel):
         task_mapping: dict[str, Any] = {}
 
         cloned_tasks = []
-        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
+        # Clone each source. A shallow list copy shares the objects, and
+        # constructing the copied crew calls add(), which extends chunks
+        # in place on whatever source it was given.
+        if self.knowledge_sources:
+            cloned_sources: list[BaseKnowledgeSource] = []
+            for source in self.knowledge_sources:
+                copied_source = (
+                    source.clone_for_copy(storage=None)
+                    if hasattr(source, "clone_for_copy")
+                    else shallow_copy(source)
+                )
+                cloned_sources.append(copied_source)
+            existing_knowledge_sources: list[BaseKnowledgeSource] | None = (
+                cloned_sources
+            )
+        else:
+            existing_knowledge_sources = self.knowledge_sources
         existing_knowledge = shallow_copy(self.knowledge)
 
         for task in self.tasks:

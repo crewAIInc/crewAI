@@ -1911,7 +1911,27 @@ def test_agent_with_knowledge_sources_works_with_copy():
             assert len(agent_copy.knowledge_sources) == 1
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
+            assert agent_copy.knowledge_sources[0] is not string_source
+            assert agent_copy.knowledge_sources[0].chunks is not string_source.chunks
             assert isinstance(agent_copy.llm, BaseLLM)
+
+
+def test_agent_copy_isolates_knowledge_chunks():
+    source = StringKnowledgeSource(content="hello world")
+    source.chunks.append("seed")
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        knowledge_sources=[source],
+    )
+
+    copied = agent.copy()
+    copied.knowledge_sources[0].chunks.append("from-copy")
+
+    assert copied.knowledge_sources[0] is not source
+    assert source.chunks == ["seed"]
+    assert copied.knowledge_sources[0].chunks == ["from-copy"]
 
 
 @pytest.mark.vcr()

@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
@@ -39,6 +40,19 @@ class BaseKnowledgeSource(BaseModel, ABC):
     def get_embeddings(self) -> list[np.ndarray[Any, np.dtype[Any]]]:
         """Return the list of embeddings for the chunks."""
         return self.chunk_embeddings
+
+    def clone_for_copy(self, *, storage: BaseKnowledgeStorage | None) -> Self:
+        """Return a copy that does not share this source's chunk buffers.
+
+        ``add()`` extends ``chunks`` and ``chunk_embeddings`` in place, so the
+        copy starts those lists empty.
+        """
+        copied = self.model_copy()
+        copied.chunks = []
+        copied.chunk_embeddings = []
+        copied.metadata = dict(self.metadata)
+        copied.storage = storage
+        return copied
 
     def _chunk_text(self, text: str) -> list[str]:
         """Split text into chunks of ``chunk_size`` that overlap by ``chunk_overlap``.
