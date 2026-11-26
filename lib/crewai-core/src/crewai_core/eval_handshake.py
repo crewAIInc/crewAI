@@ -50,18 +50,30 @@ _TOKEN = re.compile(r"[0-9a-f]{32}")
 
 
 def _account_home() -> Path:
-    """This account's home from the account database, never `$HOME`."""
+    """This account's home from the account database, never `$HOME`.
+
+    Raises ``OSError`` when the account database has no entry for this
+    process's uid (common in containers that run an arbitrary user). Falling
+    back to ``Path.home()`` would read ``$HOME``, which a project's `.env` can
+    set, and that `.env` would then choose where the tokens are looked for.
+    """
     if os.name == "posix":
-        with contextlib.suppress(ImportError, KeyError, OSError):
+        try:
             import pwd
 
             return Path(pwd.getpwuid(os.getuid()).pw_dir)
+        except (ImportError, KeyError, OSError) as exc:
+            raise OSError(
+                "cannot determine this account's home from the account database"
+            ) from exc
     return Path.home()
 
 
 def awaiting_dir() -> Path:
-    """Where the tokens live: this user's crewAI data directory, wherever the
-    environment says home is. Windows reads it from the known-folder API."""
+    """Where the tokens live: this user's crewAI data directory, found from the
+    account's home in the account database. Windows reads it from the
+    known-folder API. Raises ``OSError`` when this account has no home the
+    process can trust (see ``_account_home``)."""
     if os.name == "nt":
         return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
     home = _account_home()
