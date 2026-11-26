@@ -73,6 +73,8 @@ class PendingFeedbackContext:
     requested_at: datetime = field(default_factory=datetime.now)
     execution_uuid: str | None = None
     trace_context: tuple[int, int] | None = None
+    pending_events: dict[str, list[str]] = field(default_factory=dict)
+    fired_or_listeners: list[str] = field(default_factory=list)
     method_outputs: list[Any] | None = None
 
     @staticmethod
@@ -120,6 +122,8 @@ class PendingFeedbackContext:
             "requested_at": self.requested_at.isoformat(),
             "execution_uuid": self.execution_uuid,
             "trace_context": list(self.trace_context) if self.trace_context else None,
+            "pending_events": self.pending_events,
+            "fired_or_listeners": self.fired_or_listeners,
             "method_outputs": self._make_json_safe(self.method_outputs),
         }
 
@@ -162,6 +166,8 @@ class PendingFeedbackContext:
             trace_context=(trace_context[0], trace_context[1])
             if trace_context
             else None,
+            pending_events=data.get("pending_events", {}),
+            fired_or_listeners=data.get("fired_or_listeners", []),
             method_outputs=data.get("method_outputs"),
         )
 
