@@ -203,10 +203,16 @@ class BaseFile(ABC, BaseModel):
     async def aread(self) -> bytes:
         """Async read the file content as bytes.
 
+        A synchronous stream is read through its own ``read``, which blocks
+        only as long as reading that stream takes; every other source has an
+        async read of its own.
+
         Raises:
             TypeError: If the underlying source doesn't support async read.
         """
         source = self._file_source
+        if isinstance(source, FileStream):
+            return source.read()
         if isinstance(source, (FilePath, FileBytes, AsyncFileStream, FileUrl)):
             return await source.aread()
         raise TypeError(f"{type(source).__name__} does not support async read")
