@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from copy import copy as shallow_copy
+from copy import copy as shallow_copy, deepcopy
 from hashlib import md5
 from pathlib import Path
 import re
@@ -742,9 +742,9 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             existing_knowledge_sources = []
             for source in self.knowledge_sources:
                 copied_source = (
-                    source.model_copy()
+                    source.model_copy(deep=True)
                     if hasattr(source, "model_copy")
-                    else shallow_copy(source)
+                    else deepcopy(source)
                 )
                 copied_source.storage = shared_storage
                 existing_knowledge_sources.append(copied_source)

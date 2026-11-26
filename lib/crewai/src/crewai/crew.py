@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 from concurrent.futures import Future
-from copy import copy as shallow_copy
+from copy import copy as shallow_copy, deepcopy
 from hashlib import md5
 import json
 from pathlib import Path
@@ -2277,8 +2277,8 @@ class Crew(FlowTrackable, BaseModel):
         task_mapping: dict[str, Any] = {}
 
         cloned_tasks = []
-        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
-        existing_knowledge = shallow_copy(self.knowledge)
+        existing_knowledge_sources = deepcopy(self.knowledge_sources)
+        existing_knowledge = deepcopy(self.knowledge)
 
         for task in self.tasks:
             cloned_task = task.copy(cloned_agents, task_mapping)
