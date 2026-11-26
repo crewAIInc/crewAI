@@ -10,6 +10,11 @@ class CustomEmbeddingFunction(EmbeddingFunction[Documents]):
     This provides a concrete implementation that can be subclassed for custom embeddings.
     """
 
+    @staticmethod
+    def name() -> str:
+        """Return the name of the embedding function for ChromaDB compatibility."""
+        return "custom"
+
     def __call__(self, input: Documents) -> Embeddings:
         """Convert input documents to embeddings.
 
