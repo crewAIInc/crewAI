@@ -309,35 +309,58 @@ class AgentReasoning:
             except Exception:  # noqa: S110
                 pass
 
-            refine_prompt = self._create_refine_prompt(plan)
-
-            if self.llm.supports_function_calling():
-                plan, steps, ready = self._call_with_function(
-                    refine_prompt, "refine_plan"
-                )
-            else:
-                response = self._call_llm_with_prompt(
-                    prompt=refine_prompt,
-                    plan_type="refine_plan",
-                )
-                plan, ready = self._parse_planning_response(str(response))
-                steps = []
-
+            # Each refinement attempt opens its own event scope above, so a
+            # failed attempt must emit its own terminal event before
+            # re-raising: the outer handler in handle_agent_reasoning emits
+            # exactly one failed event for attempt 1's scope, and without
+            # this one that scope would leak and the next ending event in
+            # this context would pop it instead of its own opener.
             try:
-                crewai_event_bus.emit(
-                    self.agent,
-                    AgentReasoningCompletedEvent(
-                        agent_role=self.agent.role,
-                        task_id=task_id,
-                        plan=plan,
-                        ready=ready,
-                        attempt=attempt,
-                        from_task=self.task,
-                        from_agent=self.agent,
-                    ),
-                )
-            except Exception:  # noqa: S110
-                pass
+                refine_prompt = self._create_refine_prompt(plan)
+
+                if self.llm.supports_function_calling():
+                    plan, steps, ready = self._call_with_function(
+                        refine_prompt, "refine_plan"
+                    )
+                else:
+                    response = self._call_llm_with_prompt(
+                        prompt=refine_prompt,
+                        plan_type="refine_plan",
+                    )
+                    plan, ready = self._parse_planning_response(str(response))
+                    steps = []
+
+                try:
+                    crewai_event_bus.emit(
+                        self.agent,
+                        AgentReasoningCompletedEvent(
+                            agent_role=self.agent.role,
+                            task_id=task_id,
+                            plan=plan,
+                            ready=ready,
+                            attempt=attempt,
+                            from_task=self.task,
+                            from_agent=self.agent,
+                        ),
+                    )
+                except Exception:  # noqa: S110
+                    pass
+            except Exception as e:
+                try:
+                    crewai_event_bus.emit(
+                        self.agent,
+                        AgentReasoningFailedEvent(
+                            agent_role=self.agent.role,
+                            task_id=task_id,
+                            error=str(e),
+                            attempt=attempt,
+                            from_task=self.task,
+                            from_agent=self.agent,
+                        ),
+                    )
+                except Exception:  # noqa: S110
+                    pass
+                raise
 
             if max_attempts is not None and attempt >= max_attempts:
                 self.logger.warning(
