@@ -509,6 +509,26 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
+def test_excel_knowledge_source_preserves_cell_text(tmpdir):
+    """ExcelKnowledgeSource keeps cell values as stored, without dtype coercion."""
+
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["SKU", "Qty", "Zip", "Status"])
+    ws.append(["A1", 12, "01234", "N/A"])
+    ws.append(["A2", None, "02134", "NULL"])
+    excel_path = Path(tmpdir.join("stock.xlsx"))
+    wb.save(excel_path)
+
+    excel_source = ExcelKnowledgeSource(file_paths=[excel_path])
+
+    assert excel_source.content[excel_path]["Sheet"] == (
+        "SKU,Qty,Zip,Status\nA1,12,01234,N/A\nA2,,02134,NULL\n"
+    )
+
+
 @pytest.mark.vcr
 def test_docling_source(mock_vector_db):
     docling_source = CrewDoclingSource(
