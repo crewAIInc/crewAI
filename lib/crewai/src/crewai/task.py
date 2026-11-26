@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from concurrent.futures import Future
 import contextvars
 from copy import copy as shallow_copy
+from copy import deepcopy
 import datetime
 from hashlib import md5
 import inspect
@@ -1283,6 +1284,11 @@ Follow these guidelines:
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        # model_dump() serializes file sources (FileBytes, paths, URLs) into
+        # plain dicts, which the source validator rejects when rebuilding the
+        # task. Deep-copy the original objects so input_files keep their types.
+        if self.input_files is not None:
+            copied_data["input_files"] = deepcopy(self.input_files)
 
         cloned_context = (
             self.context
