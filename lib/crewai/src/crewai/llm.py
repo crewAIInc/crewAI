@@ -2780,6 +2780,8 @@ class LLM(BaseLLM):
             stream=self.stream,
             stop=self.stop,
             prefer_upload=self.prefer_upload,
+            timeout=self.timeout,
+            context_window_size=self.context_window_size,
             **filtered_params,
         )
 
@@ -2849,6 +2851,8 @@ class LLM(BaseLLM):
             stream=self.stream,
             stop=copy.deepcopy(self.stop, memo) if self.stop else None,
             prefer_upload=self.prefer_upload,
+            timeout=self.timeout,
+            context_window_size=self.context_window_size,
             **filtered_params,
         )
 
