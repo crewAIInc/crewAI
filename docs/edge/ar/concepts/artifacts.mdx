@@ -120,21 +120,22 @@ chart = Task(
 
 - أخبر الـ Agent أين يكتب الملف، مثلًا في وصف الـ Task.
 - في الـ Task تُملأ `{placeholders}` في `file_path` من مدخلات الـ kickoff، كما في `output_file`. وفي تعريف Flow استخدم تعبيرات `${...}` مثل `output/${state.quarter}.png`.
-- يجب أن يكون الملف داخل مجلد العمل. تُرفض المسارات خارجه، لذلك احفظ الرسوم البيانية وملفات PDF في مجلد المشروع.
+- يجب أن يكون الملف داخل مجلد العمل. تُرفض المسارات خارجه، لذلك احفظ الرسوم البيانية وملفات PDF في مجلد المشروع. وتُرفض أيضًا الملفات المخفية وكل ما داخل مجلد مخفي (`.env` و`.git/`).
 
 ### استخدام المخرَج المحفوظ
 
-النسخة المحفوظة موجودة في `artifact` على الناتج، لذلك يمكن لدالة callback أو خطوة لاحقة في الـ Flow أو كودك أن يرسل الرابط:
+النسخة المحفوظة موجودة في `artifact` على الناتج، لذلك يمكن لدالة callback أو خطوة لاحقة في الـ Flow أو كودك أن يستخدمها. أرفق الملف من `url`، وأرسل للناس الرابط `share_url`:
 
 ```python
 output = report.execute_sync()
-print(output.artifact.url)
+print(output.artifact.url)        # رابط تنزيل لإرفاق الملف
+print(output.artifact.share_url)  # الصفحة التي يفتحها الناس
 
 result = analyst.kickoff("...", artifact=True)
 print(result.artifact.url)
 ```
 
-في تعريف Flow، اقرأه باستخدام `${outputs.write_report.artifact.url}`.
+في تعريف Flow، أرفق الملف من `${outputs.write_report.artifact.url}` وأرسل للناس الرابط `${outputs.write_report.artifact.share_url}`.
 
 ## السماح للـ Agents بحفظ المخرجات
 
@@ -154,7 +155,7 @@ analyst = Agent(role="Analyst", goal="...", backstory="...", artifacts=True)
 {"id": "0b9e6c1e-...", "identifier": "q3-report", "version": 1, "url": "file:///.../v1.html", "share_url": null}
 ```
 
-يمكن لـ Task لاحقة استخدام الـ `url`، مثلًا لنشره في Slack أو إرفاقه برسالة بريد إلكتروني.
+يمكن لـ Task لاحقة إرفاق الملف من `url`، مثلًا برسالة بريد إلكتروني، ووضع `share_url` في رسالة يقرؤها الناس، مثل منشور في Slack.
 
 ## الحفظ من الكود
 
@@ -231,7 +232,7 @@ first = load_artifact("board-report", version=1)    # b"<h1>Draft</h1>"
 
 يكون `url` عنوانًا من نوع `file://` ويكون `share_url` فارغًا.
 
-على CrewAI AMP، تسجّل المنصة الـ store الخاص بها عند بدء التشغيل، فيرفع الكود نفسه المخرجات إلى التشغيل. لا يتغير شيء في الـ Crew.
+على CrewAI AMP، تسجّل المنصة الـ store الخاص بها عند بدء التشغيل، فيرفع الكود نفسه المخرجات إلى التشغيل. لا يتغير شيء في الـ Crew. هناك يكون `url` رابط تنزيل تنتهي صلاحيته بعد يوم واحد، ويكون `share_url` صفحة العرض التي تتطلب تسجيل الدخول إلى CrewAI.
 
 ## حالات الفشل
 

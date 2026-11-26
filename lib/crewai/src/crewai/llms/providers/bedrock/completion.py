@@ -55,6 +55,10 @@ except ImportError:
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
+_DEFAULT_READ_TIMEOUT: Final[float] = 300
+# botocore's ``max_attempts`` counts the first request, so 2 retries = 3 attempts.
+_DEFAULT_MAX_RETRIES: Final[int] = 2
+
 
 def _normalize_litellm_bedrock_kwargs(data: dict[str, Any]) -> dict[str, Any]:
     """Map LiteLLM Bedrock kwargs to their native-provider equivalents."""
@@ -264,6 +268,8 @@ class BedrockCompletion(BaseLLM):
     aws_secret_access_key: str | None = None
     aws_session_token: str | None = None
     region_name: str | None = None
+    timeout: float | None = None
+    max_retries: int | None = None
     max_tokens: int | None = None
     top_p: float | None = None
     top_k: int | None = None
@@ -346,19 +352,26 @@ class BedrockCompletion(BaseLLM):
         self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
         return self
 
-    def _build_sync_client(self) -> Any:
-        config = Config(
-            read_timeout=300,
-            retries={"max_attempts": 3, "mode": "adaptive"},
+    def _build_client_config(self) -> Config:
+        """Build the botocore config shared by the sync and async clients."""
+        timeout = _DEFAULT_READ_TIMEOUT if self.timeout is None else self.timeout
+        max_retries = (
+            _DEFAULT_MAX_RETRIES if self.max_retries is None else self.max_retries
+        )
+        return Config(
+            read_timeout=timeout,
+            retries={"max_attempts": max_retries + 1, "mode": "adaptive"},
             tcp_keepalive=True,
         )
+
+    def _build_sync_client(self) -> Any:
         session = Session(
             aws_access_key_id=self.aws_access_key_id,
             aws_secret_access_key=self.aws_secret_access_key,
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-        return session.client("bedrock-runtime", config=config)
+        return session.client("bedrock-runtime", config=self._build_client_config())
 
     def _get_sync_client(self) -> Any:
         if self._client is None:
@@ -450,6 +463,10 @@ class BedrockCompletion(BaseLLM):
         config = super().to_config_dict()
         if self.region_name and self.region_name != "us-east-1":
             config["region_name"] = self.region_name
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        if self.max_retries is not None:
+            config["max_retries"] = self.max_retries
         if self.max_tokens is not None:
             config["max_tokens"] = self.max_tokens
         if self.top_p is not None:
@@ -1322,6 +1339,7 @@ class BedrockCompletion(BaseLLM):
                     aws_access_key_id=self.aws_access_key_id,
                     aws_secret_access_key=self.aws_secret_access_key,
                     aws_session_token=self.aws_session_token,
+                    config=self._build_client_config(),
                 )
             )
             self._async_client = client

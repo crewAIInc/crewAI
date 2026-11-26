@@ -76,7 +76,7 @@ class PlusAPIMixin:
             console.print(
                 f"Response:\n{response.content.decode('utf-8', errors='replace')}"
             )
-            raise SystemExit from None
+            raise SystemExit(1) from None
 
         if response.status_code == 422:
             console.print(
@@ -88,7 +88,7 @@ class PlusAPIMixin:
                     console.print(
                         f"* [bold red]{field.capitalize()}[/bold red] {message}"
                     )
-            raise SystemExit
+            raise SystemExit(1)
 
         if not response.is_success:
             console.print(
@@ -100,4 +100,4 @@ class PlusAPIMixin:
                 or response.content.decode("utf-8", errors="replace")
             )
             console.print(f"{details}")
-            raise SystemExit
+            raise SystemExit(1)
