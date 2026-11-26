@@ -680,11 +680,11 @@ def test_a_model_mapped_onto_litellm_is_not_initialized_again() -> None:
     """`LLM.__new__` returning an `LLM` makes Python call `__init__` with the
     caller's arguments; the mapped instance must keep the mapped model."""
     pytest.importorskip("litellm")
-    with llm_overlay({"model:*": "groq/llama-3.1-8b-instant"}):
+    with llm_overlay({"model:*": "cohere/command-r"}):
         built = LLM(model="openai/gpt-4o-mini", temperature=0.3, api_key="k")
 
     assert type(built).__name__ == "LLM" and built.is_litellm
-    assert built.model == "groq/llama-3.1-8b-instant"
+    assert built.model == "cohere/command-r"
     assert built.temperature == 0.3 and built.api_key != "k"
 
 
@@ -747,9 +747,9 @@ def test_a_subclass_of_llm_keeps_its_model() -> None:
         pass
 
     with llm_overlay({"model:*": "openai/gpt-4o"}):
-        mine = Mine(model="groq/llama-3.1-8b-instant")
+        mine = Mine(model="cohere/command-r")
 
-    assert type(mine) is Mine and mine.model == "groq/llama-3.1-8b-instant"
+    assert type(mine) is Mine and mine.model == "cohere/command-r"
 
 
 def test_a_declared_model_whose_sdk_is_missing_still_maps(
