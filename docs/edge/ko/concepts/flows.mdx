@@ -719,6 +719,106 @@ def next_step(self, result: HumanFeedbackResult):
 
 플로우에서의 인간 피드백에 대한 완전한 가이드는 비동기/논블로킹 피드백과 커스텀 프로바이더(Slack, 웹훅 등)를 포함하여 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows)을 참조하세요.
 
+### `Flow.ask()`용 커스텀 입력 프로바이더
+
+`Flow.ask()`는 `input_provider`가 응답을 반환하거나, 타임아웃이 지나거나, 프로바이더가 `None`을 반환할 때까지 현재 스텝을 차단합니다. 기본 `ConsoleProvider`는 stdin에서 읽습니다. `InputProvider` 프로토콜을 구현하면 스크립트, 큐, WebSocket, 커스텀 UI로 프롬프트를 보낼 수 있으며 콘솔을 차단하지 않습니다.
+
+이는 **대화형 채팅 턴과 다릅니다**:
+
+| API | 용도 |
+|-----|------|
+| `self.ask(message, metadata=...)` | 실행 중인 플로우 메서드 **내부**의 마법사/확인 |
+| `flow.handle_turn(message, session_id=...)` | REST, WebSocket, 테스트에서 **새 채팅 턴 시작** |
+
+`handle_turn()`은 [대화형 Flow](/edge/ko/guides/flows/conversational-flows)를 참조하세요.
+
+`ask()`는 플로우 코드에 항상 `str | None`을 반환합니다. 프로바이더는 일반 문자열, 사용 불가 시 `None`, 또는 응답 메타데이터를 담는 `InputResponse`를 반환할 수 있습니다. `ask()`의 요청 메타데이터는 `request_input(message, flow, metadata=None)`로 전달됩니다.
+
+아래 예시는 **스크립트 프로바이더**(stdin, LLM 호출, API 키 불필요)입니다. 첫 프롬프트는 `InputResponse` 메타데이터로 응답하고, 두 번째 프롬프트에서 `None`을 반환해 플로우가 명시적으로 분기할 수 있게 합니다.
+
+```python Code
+from typing import Any
+
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Returns pre-scripted replies; records each (message, metadata) pair."""
+
+    def __init__(self, replies: list[str | InputResponse | None]) -> None:
+        self.replies = list(replies)
+        self.seen: list[tuple[str, dict[str, Any] | None]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow[Any],
+        metadata: dict[str, Any] | None = None,
+    ) -> str | InputResponse | None:
+        self.seen.append((message, metadata))
+        if not self.replies:
+            return None
+        return self.replies.pop(0)
+
+
+class ResearchWizardFlow(Flow):
+    input_provider = ScriptedProvider(
+        [
+            InputResponse(
+                text="vector databases",
+                metadata={"answered_by": "script", "thread_id": "t1"},
+            )
+        ]
+    )
+
+    @start()
+    def gather(self) -> dict[str, str | None]:
+        topic = self.ask(
+            "What should we research?",
+            metadata={"channel": "#research"},
+        )
+        if topic is None:
+            return {"status": "cancelled", "topic": None, "depth": None}
+
+        depth = self.ask(
+            "How deep should we go?",
+            metadata={"channel": "#research"},
+        )
+        if depth is None:
+            return {"status": "partial", "topic": topic, "depth": None}
+
+        return {"status": "ok", "topic": topic, "depth": depth}
+```
+
+`kickoff()` 후 `flow.input_history`로 응답 메타데이터를 확인합니다:
+
+```python Code
+flow = ResearchWizardFlow()
+result = flow.kickoff()
+
+print("result:", result)
+print("provider saw:", flow.input_provider.seen)
+first = flow.input_history[0]
+print("response_metadata:", first["response_metadata"])
+```
+
+<CodeGroup>
+
+```bash Run
+cd lib/crewai && uv run python examples/flow_custom_input_provider.py
+```
+
+```text Output
+result: {'status': 'partial', 'topic': 'vector databases', 'depth': None}
+provider saw: [('What should we research?', {'channel': '#research'}), ('How deep should we go?', {'channel': '#research'})]
+response_metadata: {'answered_by': 'script', 'thread_id': 't1'}
+```
+
+</CodeGroup>
+
+실행 가능한 스크립트: `lib/crewai/examples/flow_custom_input_provider.py`. 다턴 채팅 앱에는 `handle_turn()`을 사용하세요 — [대화형 Flow](/edge/ko/guides/flows/conversational-flows).
+
 ## 플로우에 에이전트 추가하기
 
 에이전트는 플로우에 원활하게 통합할 수 있으며, 단순하고 집중된 작업 실행이 필요할 때 전체 Crew의 경량 대안으로 활용됩니다. 아래는 에이전트를 플로우 내에서 사용하여 시장 조사를 수행하는 예시입니다:

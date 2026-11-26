@@ -65,7 +65,7 @@ class InputResponse:
     thread ID, external timestamps) return an ``InputResponse`` instead.
 
     ``ask()`` normalizes both cases -- callers always get ``str | None``.
-    The response metadata is stored in ``_input_history`` and emitted
+    The response metadata is available on ``Flow.input_history`` and emitted
     in ``FlowInputReceivedEvent``.
 
     Attributes:
