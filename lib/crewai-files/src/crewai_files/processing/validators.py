@@ -475,7 +475,10 @@ def validate_text(
     """
     errors: list[str] = []
 
-    if constraints.general_max_size_bytes is None:
+    max_size = constraints.general_max_size_bytes
+    if max_size is None and constraints.text is not None:
+        max_size = constraints.text.max_size_bytes
+    if max_size is None:
         return errors
 
     file_size = len(file.read())
@@ -483,7 +486,7 @@ def validate_text(
         "Text file",
         file.filename,
         file_size,
-        constraints.general_max_size_bytes,
+        max_size,
         errors,
         raise_on_error,
     )
