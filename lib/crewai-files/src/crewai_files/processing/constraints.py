@@ -95,6 +95,16 @@ GEMINI_TEXT_FORMATS: tuple[TextContentType, ...] = (
     "text/html",
 )
 
+# Bedrock Converse document blocks accept these text formats (see
+# BedrockFormatter._DOCUMENT_FORMATS); JSON, XML and YAML have no document
+# format and would be dropped by the formatter.
+BEDROCK_TEXT_FORMATS: tuple[TextContentType, ...] = (
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "text/html",
+)
+
 
 @dataclass(frozen=True)
 class ImageConstraints:
@@ -287,6 +297,10 @@ BEDROCK_CONSTRAINTS = ProviderConstraints(
     pdf=PDFConstraints(
         max_size_bytes=4_608_000,  # 4.5 MB per document
         max_pages=100,
+    ),
+    text=TextConstraints(
+        max_size_bytes=4_608_000,  # 4.5 MB per document
+        supported_formats=BEDROCK_TEXT_FORMATS,
     ),
     supports_url_references=True,  # S3 URIs supported
 )

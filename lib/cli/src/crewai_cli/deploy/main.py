@@ -839,13 +839,19 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
     def list_crews(self) -> None:
         """
         List all available crews.
+
+        Raises:
+            AuthenticationRequiredError: If AMP rejects the login (401).
+            SystemExit: For any other failed or unparseable response.
         """
         console.print("Listing all Crews\n", style="bold blue")
 
         response = self.plus_api_client.list_crews()
-        json_response = response.json()
-        if response.status_code == 200:
-            self._display_crews(json_response)
+        self._validate_response(response)
+
+        crews = response.json()
+        if crews:
+            self._display_crews(crews)
         else:
             self._display_no_crews_message()
 

@@ -4,6 +4,141 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Nov 23, 2026">
+  ## v1.15.45
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.45)
+
+  ## What's Changed
+
+  ### Features
+  - Add ability to save HTML or markdown output as a PDF artifact.
+
+  ### Bug Fixes
+  - Fix dependency issue by bumping e2b for Python >=3.11 to pull patched wcmatch.
+  - Wrap file-like inputs in `normalize_input_files`.
+  - Reject negative checkpoint prune retention counts.
+  - Report MongoDB tool's real environment variables.
+  - Enable Bedrock S3 uploads with `prefer_upload`.
+  - Validate foreign models against the target schema.
+  - Preserve narrow dimensions when resizing images.
+  - Reject empty credentials and use constant-time comparison in server authentication.
+  - Make `HyperbrowserLoadTool` parameters optional in its schema.
+  - Keep fields with explicit non-null defaults as non-nullable.
+  - Maintain a streamed Azure delta when its chunk also carries usage.
+  - Reject non-positive text chunk sizes.
+  - Drop credentials on cross-origin redirects.
+  - Stop chunking once a chunk reaches the end of the text.
+  - Serialize enums by value in `CrewJSONEncoder`.
+  - Never cache `save_artifact` tool results.
+  - Set `from_cache` on the native tool finished event.
+
+  ### Documentation
+  - Document that anthropic file blocks carry no cache control.
+
+  ## Contributors
+
+  @Ayushraj06-bit, @Kelvin-Waititu, @Kiko0301, @MaiAditya, @SDLSY, @Sakura-798, @Vidit-Ostwal, @YeChenglin8888, @gabemilani, @houyunsun, @jjhong011001, @joaomdmoura, @kushagra0526, @lkuko, @nazek52, @nurlanmnn
+
+</Update>
+
+<Update label="Nov 19, 2026">
+  ## v1.15.44
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.44)
+
+  ## What's Changed
+
+  ### Features
+  - Add capability to save files as versioned, shareable artifacts.
+
+  ### Bug Fixes
+  - Fix inline agent and crew action references relative to the flow file.
+  - Stop duplicating kept separators when merging chunks.
+  - Isolate nested defaults from a shared flow declaration.
+  - Restrict Pillow to PNG, JPEG, GIF, and WEBP when opening images.
+  - Reset cache eviction order on clear.
+  - Treat a docs path on GitHub as a repository.
+  - Exit with the script's status when crewai train fails.
+  - Relax av pin to ensure current FFmpeg installs.
+  - Keep a deeply nested span that the run app cannot render as text in one step.
+  - Stop stamping cache_control on every anthropic file block.
+  - Detect vision for any Claude 3+ model and geo profile.
+  - Export structured output from non-str guardrail results.
+  - Enforce cwd containment for all FilePath paths.
+
+  ### Documentation
+  - Teach the flow skill to save and read artifacts.
+
+  ## Contributors
+
+  @HanYuanLu, @Kiko0301, @Vidit-Ostwal, @adityajai119, @anilkr09, @gabemilani, @joaomdmoura, @kuquert, @nurlanmnn, @willnhansen
+
+</Update>
+
+<Update label="Nov 18, 2026">
+  ## v1.15.43
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.43)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix detection of multimodal support for Claude 5.
+
+  ### Documentation
+  - Update snapshot and changelog for v1.15.42.
+
+  ## Contributors
+
+  @Vidit-Ostwal, @anubhavlal07, @joaomdmoura
+
+</Update>
+
+<Update label="Nov 18, 2026">
+  ## v1.15.42
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.42)
+
+  ## What's Changed
+
+  ### Features
+  - Make ChromaDB an optional extra
+  - Default Knowledge to local Qdrant and decouple storage from ChromaDB
+  - Pick tools for standalone agents and add them later
+
+  ### Bug Fixes
+  - Store output_json values as JSON to prevent date issues in .json and output_file
+  - Give each Flow its own ID from an initial_state instance
+  - Honor max_execution_time without waiting for the worker
+  - Save task outputs that hold URLs and other Pydantic types
+  - Read the experiment baseline as UTF-8
+  - Prefix sanitized tool names that start with a digit
+  - Count scoped LanceDB records exactly above 50,000 rows
+  - Report Serply's hybrid flag from its own field
+  - Let TavilyResearchTool's configured defaults apply
+  - Normalize flat Chroma metadata filters
+  - Handle CSV record newlines without translating cell values
+  - Load JSON crew and agent files saved with a UTF-8 BOM
+  - Preserve validated converter output in the configured format
+  - Read and write .env as UTF-8
+  - Keep a streamed delta when its chunk also carries usage
+  - Honor caller-provided Weaviate headers
+  - Exit with the UV status when crewai install fails
+  - Read pyproject.toml as UTF-8 in project helpers
+  - Accept an LLM mapping in agents.yaml
+  - Raise soupsieve floor to 4.0 for CVE-2026-126190
+
+  ### Documentation
+  - Align crew endpoint path with runtime example
+  - Update FAQ links to AMP headings
+
+  ## Contributors
+
+  @HhH666-ux, @Kiko0301, @Pranav-Singh-Devloper, @TejasLamba2006, @Varshith-Kali, @Vidit-Ostwal, @adityajai119, @ats3v, @bballhaus, @github-actions[bot], @iris-clawd, @jjhong011001, @lakers-abing, @lorenzejay, @lxcxjxhx, @xu-song
+
+</Update>
+
 <Update label="Nov 13, 2026">
   ## v1.15.41
 

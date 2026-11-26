@@ -14,7 +14,8 @@ account, then it needs one; a run traced while logged in for that
 organization's members; a deployment execution for members who may see its
 traces. The command sends the saved `crewai login` when there is one; when
 AMP refuses it (401) and somebody is at the terminal, it starts the login once
-and asks again, as the run app's Evaluate and Deploy do.
+and asks again, as the run app's Evaluate and Deploy do. Signed out, when AMP
+wants an account to read the run again, it offers that first login the same way.
 
 `crewai eval --models "a,b"` compares models instead: AMP finds the project's
 deployment by `[tool.crewai].project_id` (or `--deployment`), which runs once as
@@ -354,12 +355,20 @@ class EvaluationStoppedError(RuntimeError):
     Raised rather than printed-and-exited, because the same two functions serve
     the terminal and the run app: one of them owns the screen, and a line
     printed underneath it is a smear nobody asked for. REASON says why in one
-    word, for the usage count; an unclassified stop is "unexpected".
+    word, for the usage count; an unclassified stop is "unexpected". ERROR is
+    AMP's own code for a refusal (`account_required`), when it sent one.
     """
 
-    def __init__(self, message: str, *, reason: StopReason = "unexpected") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason: StopReason = "unexpected",
+        error: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.reason: StopReason = reason
+        self.error = error
 
 
 def _note(text: str, style: str = "dim") -> None:
@@ -447,6 +456,7 @@ def eval_crew(
             ),
             trusted=trusted,
             log_in=_log_in_at_the_terminal,
+            offer_login=_offer_a_login_at_the_terminal,
         )
     except EvaluationStoppedError as stopped:
         _stop(stopped)
@@ -862,11 +872,23 @@ LOGIN_FAILED = (
 LOGIN_STILL_REQUIRED = (
     "CrewAI AMP still refused the login after signing in again: {refusal}"
 )
+# Signed out, AMP reads a run once without an account (for a while), then wants
+# one: `account_required`. A login reads it again — and claims it for the
+# login's organization — unless another account already claimed it.
+LOG_IN_TO_EVALUATE_QUESTION = "Log in now and evaluate it?"
+LOG_IN_THEN_EVALUATE = "Run `crewai login`, then `crewai eval` again."
+NOT_LOGGED_IN = f"Not logged in, so the run was not evaluated. {LOG_IN_THEN_EVALUATE}"
+NOT_THIS_ACCOUNTS_RUN = (
+    "Logged in, but CrewAI AMP has no run this account may read ({refusal}). "
+    "A run that already belongs to another account stays with it: log in as a "
+    "member of its organization to evaluate it."
+)
 
 
-def log_in_again() -> None:
+def log_in_again(*, saying: str | None = LOGGING_IN_AGAIN) -> None:
     """AMP refused the saved login: start `crewai login` once, as the run app's
     Deploy does (`run_crew._chain_deploy`), so the evaluation can be tried again.
+    SAYING is the line before it; None when the caller already said why.
 
     A login that does not complete stops the evaluation, with why in a word for
     the usage count: abandoned (Ctrl-C), timed out (the code expired), failed.
@@ -874,7 +896,8 @@ def log_in_again() -> None:
     from crewai_cli.authentication.main import AuthenticationCommand
 
     _count_usage("cli_usage:eval_login_prompted")
-    console.print(Text(LOGGING_IN_AGAIN), style="yellow")
+    if saying:
+        console.print(Text(saying), style="yellow")
     try:
         AuthenticationCommand().login()
     except KeyboardInterrupt as error:
@@ -902,12 +925,31 @@ def _log_in_at_the_terminal() -> bool:
     return True
 
 
+def _offer_a_login_at_the_terminal(refusal: EvaluationStoppedError) -> None:
+    """`crewai eval` signed out, and AMP wants an account to read the run again
+    (`account_required`): at a terminal, AMP's sentence, then the question —
+    Enter means yes — and `crewai login`. Returns once logged in; raises the
+    stop otherwise. With nobody to answer (no terminal, a coding agent), the
+    refusal stops the command with the two commands that would get past it."""
+    if not _at_a_terminal():
+        raise EvaluationStoppedError(
+            f"{refusal}\n{LOG_IN_THEN_EVALUATE}",
+            reason=refusal.reason,
+            error=refusal.error,
+        ) from refusal
+    console.print(Text(str(refusal)), style="yellow")
+    if not click.confirm(LOG_IN_TO_EVALUATE_QUESTION, default=True):
+        raise EvaluationStoppedError(NOT_LOGGED_IN, reason="declined") from refusal
+    log_in_again(saying=None)
+
+
 def _start_logging_in_once(
     client: PlusAPI,
     start: Callable[[PlusAPI], dict[str, Any]],
     *,
     trusted: set[str],
     log_in: Callable[[], bool] | None,
+    offer_login: Callable[[EvaluationStoppedError], None] | None = None,
     note: Callable[[str], None] = _note,
 ) -> tuple[PlusAPI, dict[str, Any]]:
     """START the evaluation with CLIENT, and the client it started with.
@@ -917,11 +959,28 @@ def _start_logging_in_once(
     stops the evaluation as it always did — and the start is tried once more
     with it. Only once: AMP also answers 401 for an account a new login cannot
     fix, so a second refusal stops as `login_still_required`.
+
+    When the request went without a login and AMP wants an account for the run
+    (`account_required`), OFFER_LOGIN offers the first one — returning once
+    logged in, raising otherwise — and the start is tried once more with it:
+    a logged-in read claims an unclaimed run for the login's organization. Only
+    toward an AMP the login would be sent to; anywhere else the retry would be
+    anonymous again.
     """
+    signed_out = False
     try:
         return client, start(client)
     except EvaluationStoppedError as stopped:
-        if (
+        origin = _origin(client.base_url)
+        signed_out = (
+            client.api_key is None
+            and stopped.error == "account_required"
+            and origin in trusted
+            and _encrypted(origin)
+        )
+        if signed_out and offer_login is not None:
+            offer_login(stopped)
+        elif (
             stopped.reason != "amp_401"
             or client.api_key is None
             or log_in is None
@@ -932,6 +991,12 @@ def _start_logging_in_once(
     try:
         return client, start(client)
     except EvaluationStoppedError as again:
+        if signed_out and again.reason == "amp_404":
+            # Logged in, a run claimed by another organization is not found.
+            raise EvaluationStoppedError(
+                NOT_THIS_ACCOUNTS_RUN.format(refusal=again),
+                reason="login_still_required",
+            ) from again
         if again.reason != "amp_401":
             raise
         raise EvaluationStoppedError(
@@ -1501,6 +1566,7 @@ def _accepted(
     raise EvaluationStoppedError(
         _refusal_message(response, subject, about_a_deployment=about_a_deployment),
         reason=_refusal_reason(response),
+        error=str((_payload(response) or {}).get("error") or "") or None,
     )
 
 

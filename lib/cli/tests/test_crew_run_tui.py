@@ -2493,6 +2493,35 @@ def test_format_json_in_text_survives_deep_nesting() -> None:
     assert isinstance(_format_json_in_text(deep), str)
 
 
+def test_a_deep_span_that_does_not_parse_is_kept_as_text() -> None:
+    deep = "[" * 2000 + "x" + "]" * 2000
+    assert _format_json_in_text(f'data: {deep} and {{"a": 1}}') == (
+        f'data: {deep} and {{\n  "a": 1\n}}'
+    )
+
+
+def test_a_deep_span_that_does_not_parse_is_tried_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Retrying it from every inner bracket was quadratic: over a minute on 3.12."""
+    tried: list[str] = []
+    real = crew_run_tui._try_parse_structured
+
+    def counting(text: str) -> Any:
+        tried.append(text)
+        return real(text)
+
+    monkeypatch.setattr(crew_run_tui, "_try_parse_structured", counting)
+    deep = "[" * 2000 + "x" + "]" * 2000
+
+    assert crew_run_tui._format_json_in_text(deep) == deep
+    assert tried == [deep]
+
+
+def test_a_shallow_span_that_does_not_parse_still_formats_json_inside_it() -> None:
+    assert _format_json_in_text('[note: {"a": 1}]') == '[note: {\n  "a": 1\n}]'
+
+
 def test_json_the_render_encoder_cannot_walk_is_left_as_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
