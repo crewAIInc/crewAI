@@ -94,7 +94,8 @@ class PersistenceDecorator:
         try:
             state = getattr(flow_instance, "state", None)
             if state is None:
-                raise ValueError("Flow instance has no state")
+                # Not ValueError, which the handler below reports as id_missing.
+                raise AttributeError("Flow instance has no state")
 
             flow_uuid: str | None = None
             if isinstance(state, dict):
