@@ -5,6 +5,7 @@ suppressed messages) leaves the machine "not asked", buffers nothing, and the
 first run at a terminal still asks. An answer given at a terminal is final.
 """
 
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from functools import partial
 from pathlib import Path
@@ -352,6 +353,26 @@ def test_mark_first_execution_done_keeps_an_earlier_answer() -> None:
     _record(ASKED_YES)
     utils.mark_first_execution_done(user_consented=False)
     assert user_data._load_user_data() == ASKED_YES
+
+
+def test_saving_a_trace_answer_requires_the_answer_by_keyword() -> None:
+    with pytest.raises(TypeError, match="missing 1 required keyword-only argument"):
+        utils._record_trace_answer()  # type: ignore[call-arg]  # the call under test
+    with pytest.raises(TypeError, match="takes 0 positional arguments"):
+        utils._record_trace_answer(False)  # type: ignore[misc]  # the call under test
+    assert user_data._load_user_data() == {}
+
+
+@pytest.mark.parametrize(
+    "mark", [utils.mark_first_execution_done, utils.mark_first_execution_completed]
+)
+@pytest.mark.parametrize("enable", [False, True])
+def test_the_public_mark_functions_keep_their_positional_signature(
+    mark: Callable[[bool], None], enable: bool
+) -> None:
+    mark(enable)
+    data = user_data._load_user_data()
+    assert (data["trace_consent"], data["trace_consent_asked"]) == (enable, True)
 
 
 @pytest.mark.parametrize("enable", [False, True])

@@ -9,7 +9,7 @@ from rich.panel import Panel
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.utils import (
     _prompt_can_be_shown,
-    mark_first_execution_completed,
+    _record_trace_answer,
     prompt_user_for_trace_viewing,
     should_auto_collect_first_time_traces,
 )
@@ -57,7 +57,7 @@ class FirstTimeTraceHandler:
 
         try:
             user_wants_traces = prompt_user_for_trace_viewing()
-            mark_first_execution_completed(user_consented=user_wants_traces)
+            _record_trace_answer(user_consented=user_wants_traces)
 
             if user_wants_traces:
                 self._initialize_backend_and_send_events()

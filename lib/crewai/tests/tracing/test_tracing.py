@@ -624,7 +624,7 @@ class TestTraceListenerSetup:
                 side_effect=Exception("Prompt failed"),
             ),
             patch(
-                "crewai.events.listeners.tracing.first_time_trace_handler.mark_first_execution_completed"
+                "crewai.events.listeners.tracing.first_time_trace_handler._record_trace_answer"
             ) as mock_mark_completed,
         ):
             handler = FirstTimeTraceHandler()

@@ -223,7 +223,7 @@ def on_first_execution_tracing_confirmation() -> bool:
             default=True,
             show_default=True,
         )
-        mark_first_execution_done(user_consented=enable)
+        _record_trace_answer(user_consented=enable)
         return enable
     return False
 
@@ -451,6 +451,14 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
     Args:
         user_consented: Whether the user consented to trace collection.
     """
+    # The default stays for callers outside crewAI; a bare call saves a
+    # permanent decline, so crewAI itself calls `_record_trace_answer`.
+    _record_trace_answer(user_consented=user_consented)
+
+
+def _record_trace_answer(*, user_consented: bool) -> None:
+    """Persist a person's trace answer. Keyword-only and required: a missing
+    answer must not become a saved decline."""
     with store_lock(_user_data_lock_name()):
         data = _load_user_data()
         if _trace_question_asked(data):
@@ -654,4 +662,4 @@ def mark_first_execution_completed(user_consented: bool = False) -> None:
     Args:
         user_consented: Whether the user consented to trace collection.
     """
-    mark_first_execution_done(user_consented=user_consented)
+    _record_trace_answer(user_consented=user_consented)
