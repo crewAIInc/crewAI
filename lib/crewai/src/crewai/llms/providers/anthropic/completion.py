@@ -847,9 +847,11 @@ class AnthropicCompletion(BaseLLM):
     def _convert_image_blocks(content: Any) -> Any:
         """Convert OpenAI-style image_url blocks to Anthropic image blocks.
 
-        Upstream code (e.g. StepExecutor) uses the standard ``image_url``
-        format with a ``data:`` URI.  Anthropic rejects that — it requires
-        ``{"type": "image", "source": {"type": "base64", ...}}``.
+        Upstream code (e.g. StepExecutor, AddImageTool) and OpenAI-shaped
+        messages use ``{"type": "image_url", "image_url": {"url": ...}}`` with
+        either ``data:`` URIs or remote HTTP(S) URLs.  Anthropic rejects
+        ``type: "image_url"`` — it requires ``{"type": "image", "source": ...}``
+        with ``source.type`` set to ``"base64"`` or ``"url"``.
 
         Non-list content and blocks that are not ``image_url`` are passed
         through unchanged.
@@ -857,22 +859,33 @@ class AnthropicCompletion(BaseLLM):
         if not isinstance(content, list):
             return content
 
-        converted: list[dict[str, Any]] = []
+        converted: list[Any] = []
         for block in content:
             if not isinstance(block, dict) or block.get("type") != "image_url":
                 converted.append(block)
                 continue
 
-            image_info = block.get("image_url", {})
-            url = image_info.get("url", "") if isinstance(image_info, dict) else ""
-            if url.startswith("data:") and ";base64," in url:
-                # Parse  data:<media_type>;base64,<data>
-                header, b64_data = url.split(";base64,", 1)
-                media_type = (
-                    header.split("data:", 1)[1] if "data:" in header else "image/png"
-                )
-                converted.append(
-                    {
+            image_info = block.get("image_url")
+            if isinstance(image_info, dict):
+                raw_url = image_info.get("url")
+                url = raw_url.strip() if isinstance(raw_url, str) else ""
+            elif isinstance(image_info, str):
+                url = image_info.strip()
+            else:
+                url = ""
+
+            url_lower = url.lower()
+            image_block: dict[str, Any] | None = None
+            if url_lower.startswith("data:"):
+                prefix, sep, b64_data = url.partition(",")
+                if sep and prefix.lower().endswith(";base64"):
+                    # Parse  data:<media_type>[;<params>];base64,<data>
+                    header = prefix[: -len(";base64")]
+                    media_type = (
+                        header[len("data:") :].split(";", 1)[0].strip().lower()
+                        or "image/png"
+                    )
+                    image_block = {
                         "type": "image",
                         "source": {
                             "type": "base64",
@@ -880,9 +893,20 @@ class AnthropicCompletion(BaseLLM):
                             "data": b64_data,
                         },
                     }
-                )
+            elif url_lower.startswith(("http://", "https://")):
+                image_block = {
+                    "type": "image",
+                    "source": {
+                        "type": "url",
+                        "url": url,
+                    },
+                }
+
+            if image_block is not None:
+                if "cache_control" in block:
+                    image_block["cache_control"] = block["cache_control"]
+                converted.append(image_block)
             else:
-                # Non-data URI — pass through as-is (Anthropic supports url source)
                 converted.append(block)
 
         return converted
