@@ -92,9 +92,13 @@ class MCPNativeTool(BaseTool):
             answered with ``isError: true``.
         """
         try:
-            try:
-                asyncio.get_running_loop()
+            asyncio.get_running_loop()
+            has_running_loop = True
+        except RuntimeError:
+            has_running_loop = False
 
+        try:
+            if has_running_loop:
                 import concurrent.futures
 
                 ctx = contextvars.copy_context()
@@ -102,8 +106,7 @@ class MCPNativeTool(BaseTool):
                     coro = self._run_async(**kwargs)
                     future = executor.submit(ctx.run, asyncio.run, coro)
                     return future.result()
-            except RuntimeError:
-                return asyncio.run(self._run_async(**kwargs))
+            return asyncio.run(self._run_async(**kwargs))
 
         except Exception as e:
             raise RuntimeError(
