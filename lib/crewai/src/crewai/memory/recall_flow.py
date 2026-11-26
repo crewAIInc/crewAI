@@ -22,7 +22,6 @@ from pydantic import BaseModel, Field
 from crewai.flow.flow import Flow, listen, router, start
 from crewai.memory.analyze import QueryAnalysis, analyze_query
 from crewai.memory.types import (
-    _RECALL_OVERSAMPLE_FACTOR,
     MemoryConfig,
     MemoryMatch,
     MemoryRecord,
@@ -101,7 +100,7 @@ class RecallFlow(Flow[RecallState]):
                 embedding,
                 scope_prefix=scope,
                 categories=search_categories,
-                limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
+                limit=self.state.limit * self._config.recall_oversample_factor,
                 min_score=0.0,
             )
             if self.state.time_cutoff and raw:

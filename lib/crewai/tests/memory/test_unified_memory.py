@@ -1424,3 +1424,50 @@ def test_private_record_still_visible_to_its_source_and_when_included(lancedb_pa
     assert [m.record.content for m in with_private] == ["private to worker-1"], (
         "include_private=True must still see everything"
     )
+
+
+@pytest.mark.parametrize(
+    ("oversample_factor", "expected_id"),
+    [(1, "nearest"), (2, "middle"), (3, "important")],
+)
+def test_recall_uses_configured_oversample_factor(
+    lancedb_path: Path, oversample_factor: int, expected_id: str
+) -> None:
+    from crewai.memory.recall_flow import RecallFlow
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=2)
+    storage.save(
+        [
+            MemoryRecord(
+                id=record_id,
+                content=record_id,
+                scope="/notes",
+                embedding=embedding,
+                importance=importance,
+            )
+            for record_id, embedding, importance in [
+                ("nearest", [1.0, 0.0], 0.1),
+                ("middle", [0.9, 0.1], 0.5),
+                ("important", [0.8, 0.2], 1.0),
+            ]
+        ]
+    )
+    llm = MagicMock()
+    flow = RecallFlow(
+        storage=storage,
+        llm=llm,
+        embedder=lambda texts: [[1.0, 0.0] for _ in texts],
+        config=MemoryConfig(
+            recall_oversample_factor=oversample_factor,
+            semantic_weight=0.0,
+            recency_weight=0.0,
+            importance_weight=1.0,
+            exploration_budget=0,
+        ),
+    )
+
+    matches = flow.kickoff(inputs={"query": "note", "scope": "/notes", "limit": 1})
+
+    assert [match.record.id for match in matches] == [expected_id]
+    llm.call.assert_not_called()
