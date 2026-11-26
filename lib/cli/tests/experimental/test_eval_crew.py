@@ -22,6 +22,7 @@ import pytest
 from rich.console import Console
 
 from crewai_cli import run_crew as run_crew_module
+from crewai_core.token_manager import TokenManager
 from crewai_cli.experimental import eval_crew as eval_module
 from crewai_cli.cli import eval_command
 
@@ -132,12 +133,25 @@ def done(gate="passed", grades=None, eval_config=None):
     return httpx.Response(200, json=payload)
 
 
+def _the_login_store_is_this_accounts(tmp_path: Path, monkeypatch) -> Path:
+    """The `crewai login` store, and the account's own, are one folder of this
+    test's (hidden, and made only by a test that saves a login there): a saved
+    login counts as this account's."""
+    from crewai_core.token_manager import TokenManager
+
+    store = tmp_path / ".credentials"
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", staticmethod(lambda: store))
+    monkeypatch.setattr(eval_module, "_account_credentials_dir", lambda: store)
+    return store
+
+
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(eval_module, "console", Console(width=240))  # one sentence per line in the captured output
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
     monkeypatch.setattr(eval_module, "saved_login", lambda: "login-token")
+    _the_login_store_is_this_accounts(tmp_path, monkeypatch)
     monkeypatch.setattr(eval_module.time, "sleep", lambda seconds: None)
     monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: False)
     # This machine is logged in to https://amp.test (`crewai enterprise configure`).
@@ -3863,9 +3877,7 @@ def login_on_disk(tmp_path, monkeypatch):
     what `saved_login` reads is what was saved, expiry included."""
     from crewai_core.token_manager import TokenManager
 
-    store = tmp_path / ".credentials"
-    store.mkdir()
-    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", staticmethod(lambda: store))
+    _the_login_store_is_this_accounts(tmp_path, monkeypatch).mkdir(exist_ok=True)
     monkeypatch.setattr(eval_module, "saved_login", _REAL_SAVED_LOGIN)
 
     def save(expires_in_seconds: float) -> None:
@@ -4087,6 +4099,104 @@ def test_logged_in_a_project_that_turned_tracing_off_is_still_asked(
         assert ran == []
         assert usage == ["cli_usage:eval_stopped:declined"]
         assert (directory / ".env").read_text() == "CREWAI_TRACING_ENABLED=false\n"
+
+
+# ── a project's .env cannot bring a login of its own ────────────────────────
+
+# As shipped: the fixtures above point both stores at one folder.
+_SHIPPED_LOGIN_STORE = vars(TokenManager)["_get_secure_storage_path"]
+_SHIPPED_ACCOUNT_CREDENTIALS_DIR = eval_module._account_credentials_dir
+# What a cloned project's .env says, to move the login store into the project.
+FOREIGN_HOME_ENV = (
+    "HOME=./.h\nXDG_DATA_HOME=./.h/.local/share\nLOCALAPPDATA=./.h/AppData/Local\n"
+)
+
+
+@pytest.fixture
+def two_logins(tmp_path, tmp_path_factory, monkeypatch):
+    """This account's home, in the account database and in HOME, holding a live
+    `crewai login`; and `.h` in the project, a home it ships, holding someone
+    else's live login. Both stores, and the account's, are found as shipped."""
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", _SHIPPED_LOGIN_STORE)
+    monkeypatch.setattr(eval_module, "_account_credentials_dir", _SHIPPED_ACCOUNT_CREDENTIALS_DIR)
+    monkeypatch.setattr(eval_module, "saved_login", _REAL_SAVED_LOGIN)
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setattr("pwd.getpwuid", lambda uid: SimpleNamespace(pw_dir=str(home)))
+    # Put back after the test whatever the project's .env sets in os.environ.
+    for name in ("XDG_DATA_HOME", "LOCALAPPDATA"):
+        monkeypatch.delenv(name, raising=False)
+    in_a_day = int(time.time() + 86400)
+    monkeypatch.setenv("HOME", str(tmp_path / ".h"))
+    TokenManager().save_tokens("someone-elses-token", in_a_day)
+    monkeypatch.setenv("HOME", str(home))
+    TokenManager().save_tokens("this-accounts-token", in_a_day)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+@pytest.mark.parametrize("run_again", [False, True], ids=["crewai eval", "the run app's Evaluate"])
+def test_a_login_the_projects_env_points_to_is_no_consent(
+    project, monkeypatch, capsys, usage, consent_screen, two_logins, run_again
+):
+    """A cloned project's .env moves HOME (and XDG_DATA_HOME, LOCALAPPDATA) to a
+    folder it ships, holding a valid login to the attacker's organization. The
+    login it reads is not this account's, so the person is still asked; a no
+    runs nothing, sends nothing, and AMP is not asked about that login."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    (directory / ".env").write_text(FOREIGN_HOME_ENV)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+    consent_screen.answer["yes"] = False
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew(run_again=run_again)
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert exited.value.code == 0
+    assert eval_module.saved_login() == "someone-elses-token"  # what the run would carry
+    assert consent_screen.asked == [{"default": True}]
+    assert eval_module.TRACING_NOW_ON not in out
+    assert ran == [] and amp.calls == [] and amp.login_checks == []
+    assert (directory / ".env").read_text() == FOREIGN_HOME_ENV
+    assert usage == ["cli_usage:eval_stopped:declined"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_this_accounts_own_login_still_stands_in_for_the_question(
+    project, monkeypatch, usage, consent_screen, two_logins
+):
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == []
+    assert ran == [("true", True)]
+    assert amp.login_checks == [("this-accounts-token", "https://amp.test")]
+    assert amp.calls[0] == ("create", "the-new-run")
+    assert usage[0] == "cli_usage:eval_consent:logged_in"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_with_no_home_in_the_account_database_no_login_is_this_accounts(
+    project, monkeypatch, usage, consent_screen, two_logins
+):
+    """Nothing to tell this account's store from one the environment points to:
+    the person is asked."""
+    directory, _ = project
+    ran = _a_project_that_never_traced(directory, monkeypatch)
+
+    def no_entry(uid):
+        raise KeyError(f"getpwuid(): uid not found: {uid}")
+
+    monkeypatch.setattr("pwd.getpwuid", no_entry)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert consent_screen.asked == [{"default": True}]
+    assert ran == [("true", False)]
+    assert "cli_usage:eval_consent:logged_in" not in usage
 
 
 # ── a project that turned tracing off is asked, never overruled ─────────────

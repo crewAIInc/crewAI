@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import sys
 import time
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -21,6 +22,7 @@ import pytest
 from crewai_cli import crew_run_tui, run_crew as run_crew_module
 from crewai_cli.crew_run_tui import CrewRunApp
 from crewai_cli.experimental import eval_crew as eval_module
+from crewai_core.token_manager import TokenManager
 
 
 _SHIPPED_SAVED_LOGIN = eval_module.saved_login
@@ -72,6 +74,12 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(eval_module, "_EVAL_ID", ContextVar("crewai_eval_id", default=None))
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
     monkeypatch.setattr(eval_module, "saved_login", lambda: "login-token")
+    # The `crewai login` store and the account's own are one folder here: a
+    # saved login counts as this account's.
+    store = tmp_path / ".credentials"
+    store.mkdir()
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", staticmethod(lambda: store))
+    monkeypatch.setattr(eval_module, "_account_credentials_dir", lambda: store)
     monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: False)
     monkeypatch.setattr(eval_module, "_open", lambda url: None)
     monkeypatch.setattr(eval_module.time, "sleep", lambda seconds: None)
@@ -218,13 +226,8 @@ def test_logged_in_toward_an_untrusted_amp_nothing_is_run_or_asked(project) -> N
 
 
 @pytest.fixture
-def real_saved_login(tmp_path, monkeypatch):
-    """`saved_login` as shipped, over a login store in this test's folder."""
-    from crewai_core.token_manager import TokenManager
-
-    store = tmp_path / ".credentials"
-    store.mkdir()
-    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", staticmethod(lambda: store))
+def real_saved_login(monkeypatch):
+    """`saved_login` as shipped, over the project's login store in this test's folder."""
     monkeypatch.setattr(eval_module, "saved_login", _SHIPPED_SAVED_LOGIN)
 
 
@@ -232,8 +235,6 @@ def real_saved_login(tmp_path, monkeypatch):
 def test_an_expired_login_is_treated_as_logged_out(
     project, monkeypatch, real_saved_login, expires_in, asked
 ) -> None:
-    from crewai_core.token_manager import TokenManager
-
     TokenManager().save_tokens("saved-token", int(time.time() + expires_in))
 
     eval_module.eval_crew()
@@ -324,3 +325,84 @@ def test_the_run_apps_evaluate_with_a_login_amp_refuses_is_asked_in_the_terminal
     assert exited.value.code == 0
     assert project.asked == ["Run your crew and grade it?"]
     assert project.ran == [] and _env(project.directory) == ""
+
+
+# A cloned project's .env, moving the login store into a folder it ships.
+_FOREIGN_HOME_ENV = "HOME=./.h\nXDG_DATA_HOME=./.h/.local/share\nLOCALAPPDATA=./.h/AppData/Local\n"
+_SHIPPED_LOGIN_STORE = vars(TokenManager)["_get_secure_storage_path"]
+_SHIPPED_ACCOUNT_CREDENTIALS_DIR = eval_module._account_credentials_dir
+
+
+@pytest.fixture
+def two_logins(project, tmp_path_factory, monkeypatch):
+    """This account's home (account database and HOME) with a live login, and
+    `.h` in the project, a home it ships, with someone else's live login. The
+    stores, and the account's, are found as shipped."""
+    monkeypatch.setattr(TokenManager, "_get_secure_storage_path", _SHIPPED_LOGIN_STORE)
+    monkeypatch.setattr(eval_module, "_account_credentials_dir", _SHIPPED_ACCOUNT_CREDENTIALS_DIR)
+    monkeypatch.setattr(eval_module, "saved_login", _SHIPPED_SAVED_LOGIN)
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setattr("pwd.getpwuid", lambda uid: SimpleNamespace(pw_dir=str(home)))
+    # Put back after the test whatever the project's .env sets in os.environ.
+    for name in ("XDG_DATA_HOME", "LOCALAPPDATA"):
+        monkeypatch.delenv(name, raising=False)
+    in_a_day = int(time.time() + 86400)
+    monkeypatch.setenv("HOME", str(project.directory / ".h"))
+    TokenManager().save_tokens("someone-elses-token", in_a_day)
+    monkeypatch.setenv("HOME", str(home))
+    TokenManager().save_tokens("this-accounts-token", in_a_day)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_a_login_the_projects_env_points_to_is_no_consent(project, two_logins, capsys) -> None:
+    """The project's .env points HOME at its own valid login: the person is
+    still asked, and a no runs nothing and asks AMP nothing."""
+    (project.directory / ".env").write_text(_FOREIGN_HOME_ENV)
+    project.answer["yes"] = False
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert exited.value.code == 0
+    assert eval_module.saved_login() == "someone-elses-token"  # what the run would carry
+    assert project.asked == ["Run your crew and grade it?"]
+    assert eval_module.TRACING_NOW_ON not in out
+    assert project.ran == [] and project.amp.created == [] and project.amp.login_checks == []
+    assert _env(project.directory) == _FOREIGN_HOME_ENV
+    assert project.usage == ["cli_usage:eval_stopped:declined"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_this_accounts_own_login_still_skips_the_question(project, two_logins) -> None:
+    eval_module.eval_crew()
+
+    assert project.asked == []
+    assert project.ran == [("true", True)]
+    assert project.amp.login_checks == ["this-accounts-token"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the account database is POSIX's")
+def test_the_run_apps_evaluate_asks_when_the_projects_env_points_to_a_login(
+    project, two_logins, monkeypatch
+) -> None:
+    """The run already loaded the project's .env into this process."""
+    monkeypatch.setenv("HOME", "./.h")
+    monkeypatch.setenv("XDG_DATA_HOME", "./.h/.local/share")
+    monkeypatch.setenv("LOCALAPPDATA", "./.h/AppData/Local")
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    pushed: list[object] = []
+    app.push_screen = lambda screen, callback=None: pushed.append(screen)  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    assert [type(screen) for screen in pushed] == [crew_run_tui.EvaluateConsentScreen]
+    assert exits == []

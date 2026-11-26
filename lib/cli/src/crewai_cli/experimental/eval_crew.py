@@ -57,6 +57,7 @@ import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.plus_api import restore_machine_transport
 from crewai_core.settings import Settings
+from crewai_core.token_manager import TokenManager
 from dotenv import dotenv_values, set_key
 import httpx
 from rich.console import Console
@@ -1080,13 +1081,56 @@ def logged_in_to_trusted_amp(trusted: set[str]) -> bool:
     Read on this machine alone, so the run app can decide at once whether to
     ask. A login that cannot be read is not one: the person is asked, and the
     evaluation says why it cannot use it (`saved_login`). Before the question
-    is skipped, `crewai eval` also asks AMP (`_amp_accepts_the_login`)."""
-    if untrusted_amp_stop(trusted) is not None:
+    is skipped, `crewai eval` also asks AMP (`_amp_accepts_the_login`).
+
+    Only this account's own login counts (`_login_is_this_accounts`): by now
+    the project's `.env` is in the environment, and it can point the login
+    store somewhere else."""
+    if untrusted_amp_stop(trusted) is not None or not _login_is_this_accounts():
         return False
     try:
         return saved_login() is not None
     except EvaluationStoppedError:
         return False
+
+
+def _login_is_this_accounts() -> bool:
+    """Is the login store `saved_login` reads this account's own?
+
+    `TokenManager` finds it from `HOME` (`LOCALAPPDATA` on Windows), which a
+    project's `.env` can set — and a store the project ships holds someone
+    else's valid login, under which the run's trace would go to their
+    organization. A store anywhere but the account's own is no consent."""
+    own = _account_credentials_dir()
+    return own is not None and os.path.realpath(
+        TokenManager._get_secure_storage_path()
+    ) == os.path.realpath(own)
+
+
+def _account_credentials_dir() -> Path | None:
+    """Where `crewai login` saves for this account, found as
+    `crewai_core.eval_handshake` finds its folder: from the account's home in
+    the account database (on Windows, the known-folder API), never from the
+    environment. None when the account database has no home for this user.
+
+    Mirrors `TokenManager._get_secure_storage_path`'s layout: should the two
+    drift, every login reads as foreign and the person is asked."""
+    if sys.platform == "win32":
+        import appdirs
+
+        return Path(appdirs.user_data_dir()) / "crewai" / "credentials"
+    try:
+        import pwd
+
+        home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    except (ImportError, KeyError, OSError):
+        return None
+    base = (
+        home / "Library" / "Application Support"
+        if sys.platform == "darwin"
+        else home / ".local" / "share"
+    )
+    return base / "crewai" / "credentials"
 
 
 def _amp_accepts_the_login() -> bool:
