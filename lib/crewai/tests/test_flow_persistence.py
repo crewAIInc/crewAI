@@ -3,11 +3,13 @@
 from contextlib import closing
 import os
 import sqlite3
+from types import SimpleNamespace
 from typing import Dict, List
 
 import pytest
 from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
+from crewai.flow.persistence.decorators import PersistenceDecorator
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from pydantic import BaseModel
 
@@ -836,3 +838,27 @@ def test_install_persistence_routes_persist_saves_to_installed_backend(tmp_path)
     assert saved is not None
     assert saved["counter"] == 7
     assert saved["message"] == "via-installed"
+
+
+@pytest.mark.parametrize(
+    "flow_instance",
+    [SimpleNamespace(), SimpleNamespace(state=None)],
+    ids=["no_state_attribute", "state_is_none"],
+)
+def test_persist_state_reports_missing_state(tmp_path, flow_instance):
+    """Test that a flow with no state is not reported as missing an id."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    with pytest.raises(ValueError) as excinfo:
+        PersistenceDecorator.persist_state(flow_instance, "step", persistence)
+    assert str(excinfo.value) == "Flow instance has no state"
+
+
+def test_persist_state_reports_missing_id(tmp_path):
+    """Test that a state without an id still gets the missing id error."""
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+    flow_instance = SimpleNamespace(state={"message": "no id"})
+
+    with pytest.raises(ValueError) as excinfo:
+        PersistenceDecorator.persist_state(flow_instance, "step", persistence)
+    assert str(excinfo.value) == "Flow state must have an 'id' field for persistence"
