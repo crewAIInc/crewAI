@@ -102,6 +102,20 @@ class TestKeycloakProvider:
     def test_get_audience(self):
         assert self.provider.get_audience() == "test-audience"
 
+    def test_missing_audience_is_reported_instead_of_substituted(self):
+        """A Keycloak login without an audience must say so, not send a placeholder."""
+        settings = Oauth2Settings(
+            provider="keycloak",
+            domain="keycloak.example.com",
+            client_id="test-client-id",
+            audience=None,
+            extra={"realm": "test-realm"},
+        )
+        provider = KeycloakProvider(settings)
+
+        with pytest.raises(ValueError, match="Audience is required"):
+            provider.get_audience()
+
     def test_get_client_id(self):
         assert self.provider.get_client_id() == "test-client-id"
 
