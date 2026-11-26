@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
@@ -27,6 +28,26 @@ class BaseKnowledgeSource(BaseModel, ABC):
     storage: BaseKnowledgeStorage | None = Field(default=None)
     metadata: dict[str, Any] = Field(default_factory=dict)  # Currently unused
     collection_name: str | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def _validate_chunk_config(self) -> Self:
+        """Reject chunk configurations that cannot produce any chunks.
+
+        ``_chunk_text`` advances by ``chunk_size - chunk_overlap``, so an
+        overlap greater than or equal to the size makes the step zero or
+        negative: zero raises a cryptic ``range()`` error while negative
+        silently yields no chunks at all.
+        """
+        if self.chunk_size <= 0:
+            raise ValueError(
+                f"chunk_size must be a positive integer, got {self.chunk_size}"
+            )
+        if not 0 <= self.chunk_overlap < self.chunk_size:
+            raise ValueError(
+                f"chunk_overlap ({self.chunk_overlap}) must satisfy "
+                f"0 <= chunk_overlap < chunk_size ({self.chunk_size})"
+            )
+        return self
 
     @abstractmethod
     def validate_content(self) -> Any:
