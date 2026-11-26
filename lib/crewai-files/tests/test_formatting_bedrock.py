@@ -68,4 +68,47 @@ def test_bedrock_declares_text_document_constraints() -> None:
         "text/markdown",
         "text/csv",
         "text/html",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }
+
+
+@pytest.mark.parametrize(
+    ("filename", "content_type", "bedrock_format"),
+    [
+        ("contract.doc", "application/msword", "doc"),
+        (
+            "contract.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "docx",
+        ),
+        ("sheet.xls", "application/vnd.ms-excel", "xls"),
+        (
+            "sheet.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "xlsx",
+        ),
+    ],
+)
+def test_office_documents_reach_bedrock_as_document_blocks(
+    monkeypatch: pytest.MonkeyPatch,
+    filename: str,
+    content_type: str,
+    bedrock_format: str,
+) -> None:
+    """An Office document the Bedrock formatter implements must not be filtered out."""
+    file = _text_file(monkeypatch, b"PK\x03\x04doc", filename, content_type)
+
+    blocks = format_multimodal_content({filename: file}, "bedrock")
+
+    assert blocks == [
+        {
+            "document": {
+                "name": filename,
+                "format": bedrock_format,
+                "source": {"bytes": b"PK\x03\x04doc"},
+            }
+        }
+    ]
