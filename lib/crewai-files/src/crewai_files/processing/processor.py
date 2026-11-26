@@ -337,8 +337,11 @@ class FileProcessor:
                         return file
 
         if isinstance(file, TextFile):
-            # Use general max size as character limit approximation
+            # Use the provider's text limit as a character limit approximation,
+            # falling back to the general one when the provider declares neither.
             max_size = self.constraints.general_max_size_bytes
+            if max_size is None and self.constraints.text is not None:
+                max_size = self.constraints.text.max_size_bytes
             if max_size is not None:
                 content = file.read()
                 if len(content) > max_size:
