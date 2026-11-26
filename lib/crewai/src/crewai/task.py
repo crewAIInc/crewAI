@@ -1272,6 +1272,7 @@ Follow these guidelines:
             "agent",
             "context",
             "tools",
+            "input_files",
             # Run artifacts of the run this task already had; a copy is
             # built for a fresh execution, and a carried output would
             # make a checkpointed crew's copy skip the task entirely.
@@ -1297,12 +1298,15 @@ Follow these guidelines:
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
+        # model_dump flattens file sources to dicts the file validators reject.
+        cloned_input_files = shallow_copy(self.input_files)
 
         copied = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
+            input_files=cloned_input_files,
         )
         copied._input_description = self._input_description
         return copied

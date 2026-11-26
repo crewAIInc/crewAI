@@ -1959,3 +1959,40 @@ def test_async_execution_fails():
       with pytest.raises(RuntimeError, match="boom!"):
         execution = task.execute_async(agent=researcher)
         execution.result()
+
+
+def test_task_copy_preserves_input_files():
+    from crewai_files import FileBytes, ImageFile
+
+    source = FileBytes(data=b"\x89PNG\r\n\x1a\n", filename="chart.png")
+    original_task = Task(
+        description="Describe the image",
+        expected_output="One sentence",
+        input_files={"chart": ImageFile(source=source)},
+    )
+
+    new_task = original_task.copy(agents=[], task_mapping={})
+
+    assert new_task.input_files["chart"] is original_task.input_files["chart"]
+    assert new_task.input_files is not original_task.input_files
+
+
+def test_crew_copy_preserves_task_input_files():
+    from crewai_files import FileBytes, ImageFile
+
+    agent = Agent(role="Analyst", goal="Describe", backstory="Describes", llm="gpt-4o")
+    task = Task(
+        description="Describe the image",
+        expected_output="One sentence",
+        agent=agent,
+        input_files={
+            "chart": ImageFile(
+                source=FileBytes(data=b"\x89PNG\r\n\x1a\n", filename="chart.png")
+            )
+        },
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    copied = crew.copy()
+
+    assert set(copied.tasks[0].input_files) == {"chart"}
