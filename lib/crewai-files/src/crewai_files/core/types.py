@@ -122,6 +122,12 @@ TextContentType = Literal[
     "text/yaml",
     "text/html",
 ]
+DocumentContentType = Literal[
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]
 
 AudioExtension = Literal[
     ".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".wma", ".aiff", ".opus"

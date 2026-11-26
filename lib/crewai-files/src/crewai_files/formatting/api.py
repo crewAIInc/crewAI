@@ -253,6 +253,7 @@ def _get_supported_types(
         supported.append("application/json")
         supported.append("application/xml")
         supported.append("application/x-yaml")
+        supported.extend(constraints.text.supported_formats)
     return supported
 
 

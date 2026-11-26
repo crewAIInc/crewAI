@@ -6,6 +6,7 @@ from typing import Literal
 
 from crewai_files.core.types import (
     AudioMimeType,
+    DocumentContentType,
     ImageMimeType,
     TextContentType,
     VideoMimeType,
@@ -95,14 +96,18 @@ GEMINI_TEXT_FORMATS: tuple[TextContentType, ...] = (
     "text/html",
 )
 
-# Bedrock Converse document blocks accept these text formats (see
+# Bedrock Converse document blocks accept these formats (see
 # BedrockFormatter._DOCUMENT_FORMATS); JSON, XML and YAML have no document
 # format and would be dropped by the formatter.
-BEDROCK_TEXT_FORMATS: tuple[TextContentType, ...] = (
+BEDROCK_TEXT_FORMATS: tuple[TextContentType | DocumentContentType, ...] = (
     "text/plain",
     "text/markdown",
     "text/csv",
     "text/html",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
 
 
@@ -174,11 +179,13 @@ class TextConstraints:
 
     Attributes:
         max_size_bytes: Maximum file size in bytes.
-        supported_formats: Supported text MIME types.
+        supported_formats: Supported text and document MIME types.
     """
 
     max_size_bytes: int
-    supported_formats: tuple[TextContentType, ...] = DEFAULT_TEXT_FORMATS
+    supported_formats: tuple[TextContentType | DocumentContentType, ...] = (
+        DEFAULT_TEXT_FORMATS
+    )
 
 
 @dataclass(frozen=True)
