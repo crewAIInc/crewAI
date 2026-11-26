@@ -188,6 +188,7 @@ class TestAuthenticationCommand:
             future_timestamp if has_expiration else 0,
             refresh_token=None,
             token_url=f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/token",
+            keep_login_time=False,
         )
 
     @patch("crewai_cli.tools.main.ToolCommand")

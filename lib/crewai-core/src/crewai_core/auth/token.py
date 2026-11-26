@@ -27,8 +27,10 @@ def get_auth_token(*, refresh: bool = True) -> str:
 
     Args:
         refresh: Renew an access token about to expire with the saved refresh
-            token first, which may send one request to the login provider. Pass
-            False where only the saved token is wanted and no request may be sent.
+            token first, which may send one request to the login provider, and
+            record the call as a use of the saved login, which keeps it for 72
+            more hours. Pass False where only the saved token is wanted, no
+            request may be sent and the token file must not be written.
 
     Raises:
         AuthError: If there is no usable token, including when renewal failed.
@@ -43,6 +45,11 @@ def get_auth_token(*, refresh: bool = True) -> str:
     access_token = access_token or token_manager.get_token()
     if not access_token:
         raise AuthError("No token found, make sure you are logged in")
+    if refresh:
+        # Only a call on its way to AMP extends the login. Readers that pass
+        # refresh=False, such as TraceBatchManager while `import crewai` runs,
+        # neither extend it nor write the token file.
+        token_manager.record_use()
     return access_token
 
 

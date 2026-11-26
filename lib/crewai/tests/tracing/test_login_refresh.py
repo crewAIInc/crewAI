@@ -41,13 +41,15 @@ def expired_login(
     )
     responses: list[httpx.Response] = []
 
-    def post(url: str, *, data: dict[str, str], timeout: float) -> httpx.Response:
-        assert url == TOKEN_URL
+    def handle_request(
+        transport: httpx.HTTPTransport, request: httpx.Request
+    ) -> httpx.Response:
+        assert str(request.url) == TOKEN_URL
         if not responses:
             raise AssertionError("unexpected refresh request")
         return responses.pop(0)
 
-    monkeypatch.setattr("crewai_core.auth.oauth2.httpx.post", post)
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", handle_request)
     TokenManager().save_tokens(
         "old-access",
         int((datetime.now() - timedelta(minutes=5)).timestamp()),
@@ -88,6 +90,23 @@ def test_building_the_trace_batch_manager_sends_no_refresh_request(
     """`import crewai` builds it, so an opted-out user must not reach the login provider."""
     assert TraceBatchManager().plus_api.api_key is None
     assert TokenManager().get_refresh_token() == ("refresh-1", TOKEN_URL)
+
+
+def test_building_the_trace_batch_manager_does_not_extend_the_login(
+    expired_login: list[httpx.Response], tmp_path: Path
+) -> None:
+    """`import crewai` builds it, so a valid login is read but neither counted as a
+    use, which would keep it alive 72 more hours, nor written back to disk."""
+    TokenManager().save_tokens(
+        "valid-access",
+        int((datetime.now() + timedelta(hours=1)).timestamp()),
+        refresh_token="refresh-1",
+        token_url=TOKEN_URL,
+    )
+    saved = (tmp_path / "tokens.enc").read_bytes()
+
+    assert TraceBatchManager().plus_api.api_key == "valid-access"
+    assert (tmp_path / "tokens.enc").read_bytes() == saved
 
 
 def test_trace_batch_manager_uses_a_login_that_is_still_valid(

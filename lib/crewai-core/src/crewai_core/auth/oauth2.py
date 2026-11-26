@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from rich.console import Console
 
 from crewai_core.auth.utils import validate_jwt_token
+from crewai_core.plus_api import PlusAPI
 from crewai_core.settings import Settings
 from crewai_core.token_manager import TokenManager
 
@@ -200,6 +201,8 @@ class AuthenticationCommand:
             a rotated refresh token is kept even when its access token fails
             validation. A reply lost after the provider rotated the token cannot
             be recovered: the next attempt is rejected and the user logs in again.
+            A login idle for over 72 hours, or started over 30 days ago, is not
+            refreshed: the token manager no longer returns its refresh token.
         """
         with self.token_manager.lock():
             # Another process may have refreshed while this one waited for the lock.
@@ -216,15 +219,18 @@ class AuthenticationCommand:
                 return None
 
             try:
-                response = httpx.post(
-                    token_url,
-                    data={
-                        "grant_type": "refresh_token",
-                        "refresh_token": refresh_token,
-                        "client_id": self.oauth2_provider.get_client_id(),
-                    },
-                    timeout=_REFRESH_TIMEOUT_SECONDS,
-                )
+                # Through the proxy and CA the machine had at startup: httpx.post would
+                # read a project's .env (HTTPS_PROXY, SSL_CERT_FILE) loaded since.
+                with PlusAPI._http_client() as client:
+                    response = client.post(
+                        token_url,
+                        data={
+                            "grant_type": "refresh_token",
+                            "refresh_token": refresh_token,
+                            "client_id": self.oauth2_provider.get_client_id(),
+                        },
+                        timeout=_REFRESH_TIMEOUT_SECONDS,
+                    )
             except httpx.HTTPError:
                 return None
 
@@ -250,6 +256,7 @@ class AuthenticationCommand:
                 self._validate_and_save_token(
                     {**token_data, "refresh_token": rotated},
                     jwks_timeout=_REFRESH_TIMEOUT_SECONDS,
+                    keep_login_time=True,
                 )
             # validate_jwt_token raises a bare Exception for every invalid token.
             except Exception:
@@ -258,13 +265,20 @@ class AuthenticationCommand:
                     # exchange, so the one just sent is spent. Keep the new one,
                     # with no usable access token beside it.
                     self.token_manager.save_tokens(
-                        "", 0, refresh_token=rotated, token_url=token_url
+                        "",
+                        0,
+                        refresh_token=rotated,
+                        token_url=token_url,
+                        keep_login_time=True,
                     )
                 return None
             return cast(str, token_data["access_token"])
 
     def _validate_and_save_token(
-        self, token_data: dict[str, Any], jwks_timeout: float = 30
+        self,
+        token_data: dict[str, Any],
+        jwks_timeout: float = 30,
+        keep_login_time: bool = False,
     ) -> None:
         """Validate the JWT and persist it, with any refresh token, via the token manager."""
         jwt_token = token_data["access_token"]
@@ -284,6 +298,7 @@ class AuthenticationCommand:
             expires_at,
             refresh_token=token_data.get("refresh_token"),
             token_url=self.oauth2_provider.get_token_url(),
+            keep_login_time=keep_login_time,
         )
 
     def _post_login(self) -> None:

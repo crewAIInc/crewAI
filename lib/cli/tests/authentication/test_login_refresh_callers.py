@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import NoReturn
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qsl
 
 from click.testing import CliRunner
 from crewai_cli import create_json_crew
 from crewai_cli.cli import logout
 from crewai_cli.command import AuthenticationRequiredError, PlusAPIMixin
 from crewai_cli.experimental import eval_crew
-from crewai_core import lock_store
 from crewai_core.auth.oauth2 import Oauth2Settings
 from crewai_core.token_manager import TokenManager
 import httpx
@@ -45,12 +44,14 @@ def token_endpoint(monkeypatch: pytest.MonkeyPatch) -> list[httpx.Response]:
     """Responses the provider's token endpoint will give, in order."""
     responses: list[httpx.Response] = []
 
-    def post(url: str, *, data: dict[str, str], timeout: float) -> httpx.Response:
-        assert url == TOKEN_URL
-        assert data["grant_type"] == "refresh_token"
+    def handle_request(
+        transport: httpx.HTTPTransport, request: httpx.Request
+    ) -> httpx.Response:
+        assert str(request.url) == TOKEN_URL
+        assert dict(parse_qsl(request.read().decode()))["grant_type"] == "refresh_token"
         return responses.pop(0)
 
-    monkeypatch.setattr("crewai_core.auth.oauth2.httpx.post", post)
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", handle_request)
     return responses
 
 
@@ -113,16 +114,14 @@ def test_eval_reads_an_unreadable_refresh_reply_as_not_logged_in(
     assert eval_crew.saved_login() is None
 
 
-def test_eval_reads_a_lock_that_cannot_be_taken_as_not_logged_in() -> None:
-    def unreachable(name: str, *, timeout: float) -> NoReturn:
-        raise ConnectionError("Error 61 connecting to 127.0.0.1:1.")
-
+def test_eval_reads_a_lock_that_cannot_be_taken_as_not_logged_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("crewai_core.token_manager._LOCK_TIMEOUT_SECONDS", 0.05)
     _save_expired_login()
-    lock_store.set_lock_backend(unreachable)
-    try:
+
+    with TokenManager().lock():
         assert eval_crew.saved_login() is None
-    finally:
-        lock_store.set_lock_backend(None)
 
 
 def test_platform_tools_fetch_the_integration_token_with_the_renewed_login(

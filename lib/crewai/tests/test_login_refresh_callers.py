@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qsl
 
 from crewai.skills.cache import SkillCacheManager
 from crewai.skills.registry import download_skill
@@ -43,12 +44,14 @@ def expired_login(
     )
     responses: list[httpx.Response] = []
 
-    def post(url: str, *, data: dict[str, str], timeout: float) -> httpx.Response:
-        assert url == TOKEN_URL
-        assert data["refresh_token"] == "refresh-1"
+    def handle_request(
+        transport: httpx.HTTPTransport, request: httpx.Request
+    ) -> httpx.Response:
+        assert str(request.url) == TOKEN_URL
+        assert dict(parse_qsl(request.read().decode()))["refresh_token"] == "refresh-1"
         return responses.pop(0)
 
-    monkeypatch.setattr("crewai_core.auth.oauth2.httpx.post", post)
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", handle_request)
     TokenManager().save_tokens(
         "old-access",
         int((datetime.now() - timedelta(minutes=5)).timestamp()),

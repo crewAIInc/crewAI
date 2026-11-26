@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 import json
+import os
 from pathlib import Path
-from typing import Any, NoReturn
+import sys
+from typing import Any
+from urllib.parse import parse_qsl
 
-from crewai_core import lock_store
+from crewai_core import lock_store, token_manager as token_manager_module
 from crewai_core.auth import token as token_module
 from crewai_core.auth.oauth2 import AuthenticationCommand, Oauth2Settings
 from crewai_core.auth.providers.auth0 import Auth0Provider
@@ -21,7 +24,11 @@ from crewai_core.auth.providers.workos import WorkosProvider
 from crewai_core.auth.token import AuthError, get_auth_token
 from crewai_core.token_manager import TokenManager
 import httpx
+import portalocker.exceptions
 import pytest
+
+
+_REAL_STORAGE_PATH = TokenManager.__dict__["_get_secure_storage_path"]
 
 
 DOMAIN = "login.example.com"
@@ -38,12 +45,24 @@ def _settings(domain: str = DOMAIN) -> Oauth2Settings:
     )
 
 
+class ShiftedDatetime(datetime):
+    """``datetime`` whose ``now()`` runs ``offset`` ahead, for the token manager's clock."""
+
+    offset = timedelta(0)
+
+    @classmethod
+    def now(cls, tz: tzinfo | None = None) -> ShiftedDatetime:
+        return cls.fromtimestamp(
+            datetime.now(tz).timestamp() + cls.offset.total_seconds(), tz
+        )
+
+
 def _in(seconds: float) -> int:
-    return int((datetime.now() + timedelta(seconds=seconds)).timestamp())
+    return int((ShiftedDatetime.now() + timedelta(seconds=seconds)).timestamp())
 
 
 class FakeTokenEndpoint:
-    """Stands in for ``httpx.post`` and records every request it receives."""
+    """Stands in for httpx's transport and records every request it receives."""
 
     def __init__(self) -> None:
         self.requests: list[tuple[str, dict[str, str]]] = []
@@ -55,14 +74,13 @@ class FakeTokenEndpoint:
     def fail(self, error: Exception) -> None:
         self.responses.append(error)
 
-    def __call__(
-        self, url: str, *, data: dict[str, str], timeout: float
-    ) -> httpx.Response:
-        self.requests.append((url, data))
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(
+            (str(request.url), dict(parse_qsl(request.read().decode())))
+        )
         response = self.responses.pop(0)
         if isinstance(response, Exception):
             raise response
-        response.request = httpx.Request("POST", url)
         return response
 
 
@@ -129,8 +147,9 @@ def configured(monkeypatch: pytest.MonkeyPatch) -> Callable[[Oauth2Settings], No
 
 @pytest.fixture
 def endpoint(monkeypatch: pytest.MonkeyPatch) -> FakeTokenEndpoint:
+    """Every request, through any client and proxy, reaches the fake instead of the network."""
     fake = FakeTokenEndpoint()
-    monkeypatch.setattr("crewai_core.auth.oauth2.httpx.post", fake)
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", fake)
     return fake
 
 
@@ -148,6 +167,29 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     return fake
 
 
+class WallClock:
+    """Moves the token manager's clock, which decides session and access-token expiry."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._monkeypatch = monkeypatch
+        monkeypatch.setattr(token_manager_module, "datetime", ShiftedDatetime)
+
+    def advance(self, by: timedelta) -> None:
+        self._monkeypatch.setattr(
+            ShiftedDatetime, "offset", ShiftedDatetime.offset + by
+        )
+
+
+@pytest.fixture
+def wall_clock(monkeypatch: pytest.MonkeyPatch) -> WallClock:
+    return WallClock(monkeypatch)
+
+
+@pytest.fixture
+def short_lock_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(token_manager_module, "_LOCK_TIMEOUT_SECONDS", 0.05)
+
+
 @pytest.fixture(autouse=True)
 def _env(
     storage: Path,
@@ -157,15 +199,6 @@ def _env(
     clock: FakeClock,
 ) -> None:
     """Every test gets isolated storage, fixed settings, a fixed clock and no network."""
-
-
-@contextmanager
-def _lock_backend(backend: lock_store.LockBackend) -> Iterator[None]:
-    lock_store.set_lock_backend(backend)
-    try:
-        yield
-    finally:
-        lock_store.set_lock_backend(None)
 
 
 def _save_login(
@@ -392,16 +425,14 @@ class TestRefreshFailure:
         with pytest.raises(AuthError, match="make sure you are logged in"):
             get_auth_token()
 
+    @pytest.mark.usefixtures("short_lock_timeout")
     def test_lock_that_cannot_be_taken_reads_as_logged_out(
         self, endpoint: FakeTokenEndpoint
     ) -> None:
-        def unreachable(name: str, *, timeout: float) -> NoReturn:
-            raise ConnectionError("Error 61 connecting to 127.0.0.1:1.")
-
         _save_login()
 
         with (
-            _lock_backend(unreachable),
+            TokenManager().lock(),
             pytest.raises(AuthError, match="make sure you are logged in"),
         ):
             get_auth_token()
@@ -551,24 +582,25 @@ class TestRefreshTokenDestination:
         assert b"very-secret-refresh-token" not in (storage / "tokens.enc").read_bytes()
 
 
+@pytest.fixture
+def other_process_refreshes_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Taking the lock finds that another process refreshed while this one waited."""
+
+    @contextmanager
+    def lock(manager: TokenManager) -> Iterator[None]:
+        manager.save_tokens(
+            "access-from-other-process",
+            _in(8 * 3600),
+            refresh_token="refresh-2",
+            token_url=TOKEN_URL,
+            keep_login_time=True,
+        )
+        yield
+
+    monkeypatch.setattr(TokenManager, "lock", lock)
+
+
 class TestConcurrentRefresh:
-    @pytest.fixture
-    def other_process_refreshes_first(self) -> Iterator[None]:
-        """A lock backend whose acquisition finds another process already refreshed."""
-
-        @contextmanager
-        def backend(name: str, *, timeout: float) -> Iterator[None]:
-            TokenManager().save_tokens(
-                "access-from-other-process",
-                _in(8 * 3600),
-                refresh_token="refresh-2",
-                token_url=TOKEN_URL,
-            )
-            yield
-
-        with _lock_backend(backend):
-            yield
-
     @pytest.mark.usefixtures("other_process_refreshes_first")
     def test_refresh_reuses_the_token_another_process_just_saved(
         self, endpoint: FakeTokenEndpoint
@@ -578,22 +610,12 @@ class TestConcurrentRefresh:
         assert get_auth_token() == "access-from-other-process"
         assert endpoint.requests == []
 
+    @pytest.mark.usefixtures("short_lock_timeout")
     def test_logins_in_different_stores_do_not_share_a_lock(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        held: set[str] = set()
-
-        @contextmanager
-        def exclusive(name: str, *, timeout: float) -> Iterator[None]:
-            if name in held:
-                raise TimeoutError("lock already held")
-            held.add(name)
-            try:
-                yield
-            finally:
-                held.discard(name)
-
         def manager_in(directory: Path) -> TokenManager:
+            directory.mkdir(exist_ok=True)
             manager = TokenManager()
             monkeypatch.setattr(manager, "_get_secure_storage_path", lambda: directory)
             return manager
@@ -602,12 +624,202 @@ class TestConcurrentRefresh:
         same_store = manager_in(tmp_path / "a")
         other_store = manager_in(tmp_path / "b")
 
-        with _lock_backend(exclusive), first.lock():
+        with first.lock():
             with other_store.lock():
                 pass
-            with pytest.raises(TimeoutError, match="lock already held"):
-                with same_store.lock():
-                    pass
+            with (
+                pytest.raises(portalocker.exceptions.LockException),
+                same_store.lock(),
+            ):
+                pass
+
+    def test_the_lock_file_sits_next_to_the_token_file(self, storage: Path) -> None:
+        with TokenManager().lock():
+            assert (storage / "tokens.enc.lock").is_file()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX modes and owners")
+    def test_the_lock_is_in_this_users_private_credentials_directory(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setattr(
+            TokenManager, "_get_secure_storage_path", _REAL_STORAGE_PATH
+        )
+
+        with TokenManager().lock():
+            lock_files = list(tmp_path.rglob("tokens.enc.lock"))
+            assert len(lock_files) == 1
+            directory = lock_files[0].parent.stat()
+            assert directory.st_mode & 0o777 == 0o700
+            assert directory.st_uid == os.getuid()
+
+    def test_a_lock_held_at_the_old_shared_temp_path_does_not_block_a_refresh(
+        self, endpoint: FakeTokenEndpoint
+    ) -> None:
+        """Another local account could create or hold that file; it no longer matters."""
+        _save_login()
+        endpoint.reply(200, {"access_token": "new-access"})
+
+        with lock_store.lock(f"file:{TokenManager().token_path}", timeout=1):
+            assert get_auth_token() == "new-access"
+
+
+class TestSessionLimits:
+    """A login lasts 72 hours from its last use and ends 30 days after `crewai login`."""
+
+    def _token_file(self, storage: Path) -> bytes:
+        return (storage / "tokens.enc").read_bytes()
+
+    def test_each_use_extends_the_login_by_another_72_hours(
+        self, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        _save_login()
+
+        for day in range(1, 4):
+            wall_clock.advance(timedelta(hours=71))
+            endpoint.reply(200, {"access_token": f"access-{day}"})
+            assert get_auth_token() == f"access-{day}"
+
+        assert len(endpoint.requests) == 3
+
+    def test_a_use_with_a_still_valid_access_token_also_extends_the_login(
+        self, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        _save_login(expires_at=_in(200 * 3600))
+
+        wall_clock.advance(timedelta(hours=71))
+        assert get_auth_token() == "old-access"
+        wall_clock.advance(timedelta(hours=71))
+
+        assert get_auth_token() == "old-access"
+        assert endpoint.requests == []
+
+    def test_a_login_idle_for_over_72_hours_is_logged_out_without_a_refresh(
+        self, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        _save_login()
+
+        wall_clock.advance(timedelta(hours=72, minutes=1))
+
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+        assert endpoint.requests == []
+        assert TokenManager().get_refresh_token() is None
+
+    def test_an_idle_login_is_not_used_even_with_an_unexpired_access_token(
+        self, wall_clock: WallClock
+    ) -> None:
+        _save_login(expires_at=_in(200 * 3600))
+
+        wall_clock.advance(timedelta(hours=72, minutes=1))
+
+        for refresh in (True, False):
+            with pytest.raises(AuthError, match="make sure you are logged in"):
+                get_auth_token(refresh=refresh)
+
+    def test_the_login_ends_30_days_after_crewai_login_however_often_it_is_used(
+        self, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        _save_login()
+        for _ in range(14):
+            wall_clock.advance(timedelta(hours=48))
+            endpoint.reply(200, {"access_token": "renewed", "refresh_token": "next"})
+            assert get_auth_token() == "renewed"
+        requests_sent = len(endpoint.requests)
+
+        wall_clock.advance(timedelta(days=2, minutes=1))
+
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+        assert len(endpoint.requests) == requests_sent
+
+    def test_an_unexpired_access_token_is_not_used_past_the_30_days(
+        self, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        _save_login(expires_at=_in(40 * 24 * 3600))
+        for _ in range(15):
+            wall_clock.advance(timedelta(hours=47, minutes=56))
+            assert get_auth_token() == "old-access"
+
+        wall_clock.advance(timedelta(hours=1, minutes=1))
+
+        assert TokenManager().get_token() is None
+        for refresh in (True, False):
+            with pytest.raises(AuthError, match="make sure you are logged in"):
+                get_auth_token(refresh=refresh)
+        assert endpoint.requests == []
+
+    def test_logging_in_again_starts_a_new_30_days(
+        self, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        _save_login()
+        wall_clock.advance(timedelta(days=31))
+        endpoint.reply(200, {"access_token": "access-1", "refresh_token": "refresh-9"})
+
+        AuthenticationCommand()._poll_for_token(
+            {"device_code": "dc", "interval": 0, "expires_in": 60}
+        )
+        wall_clock.advance(timedelta(hours=1))
+
+        assert get_auth_token() == "access-1"
+
+    def test_reading_the_login_without_refresh_does_not_extend_it_or_write_the_file(
+        self, storage: Path, wall_clock: WallClock
+    ) -> None:
+        """`import crewai` reads it this way (TraceBatchManager), on every import."""
+        _save_login(expires_at=_in(200 * 3600))
+        saved = self._token_file(storage)
+
+        wall_clock.advance(timedelta(hours=71))
+        assert get_auth_token(refresh=False) == "old-access"
+        assert self._token_file(storage) == saved
+        wall_clock.advance(timedelta(hours=2))
+
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token(refresh=False)
+
+    def test_a_login_saved_without_session_times_starts_counting_at_its_first_use(
+        self, storage: Path, endpoint: FakeTokenEndpoint, wall_clock: WallClock
+    ) -> None:
+        manager = TokenManager()
+        data = {
+            "access_token": "legacy-access",
+            "expiration": datetime.fromtimestamp(_in(-60)).isoformat(),
+            "refresh_token": FIRST_REFRESH,
+            "token_url": TOKEN_URL,
+        }
+        (storage / "tokens.enc").write_bytes(
+            manager.fernet.encrypt(json.dumps(data).encode())
+        )
+        wall_clock.advance(timedelta(days=90))
+        endpoint.reply(200, {"access_token": "new-access"})
+
+        assert get_auth_token() == "new-access"
+        wall_clock.advance(timedelta(hours=72, minutes=1))
+        with pytest.raises(AuthError, match="make sure you are logged in"):
+            get_auth_token()
+        assert len(endpoint.requests) == 1
+
+    @pytest.mark.usefixtures("short_lock_timeout")
+    def test_a_use_while_another_process_holds_the_lock_still_returns_the_token(
+        self, wall_clock: WallClock
+    ) -> None:
+        _save_login(expires_at=_in(200 * 3600))
+        wall_clock.advance(timedelta(hours=1))
+
+        with TokenManager().lock():
+            assert get_auth_token() == "old-access"
+
+    @pytest.mark.usefixtures("other_process_refreshes_first")
+    def test_recording_a_use_keeps_a_refresh_token_another_process_rotated(
+        self, wall_clock: WallClock
+    ) -> None:
+        _save_login(expires_at=_in(200 * 3600))
+        wall_clock.advance(timedelta(hours=1))
+
+        get_auth_token()
+
+        assert TokenManager().get_refresh_token() == ("refresh-2", TOKEN_URL)
 
 
 class TestLogout:
