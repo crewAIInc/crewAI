@@ -21,6 +21,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.persistence.base import FlowPersistence
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -665,6 +666,31 @@ class TestKickoffFromCheckpoint:
         assert result == "flow_result"
 
 
+class TestCustomPersistenceCheckpoint:
+    def test_custom_persistence_without_type_override_restores(self, tmp_path: Path) -> None:
+        class MemoryPersistence(FlowPersistence):
+            def init_db(self) -> None:
+                pass
+
+            def save_state(
+                self, flow_uuid: str, method_name: str, state_data: dict[str, Any] | BaseModel
+            ) -> None:
+                pass
+
+            def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
+                return None
+
+        flow = Flow(persistence=MemoryPersistence())
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        location = state.checkpoint(str(tmp_path))
+
+        restored = Flow.from_checkpoint(CheckpointConfig(restore_from=location))
+
+        assert isinstance(restored.persistence, MemoryPersistence)
+        assert restored.persistence.persistence_type == "MemoryPersistence"
+        assert isinstance(flow.persistence, MemoryPersistence)
+        assert flow.persistence.persistence_type == "base"
 
 
 class TestLegacyMethodOutputsRestore:
