@@ -323,7 +323,7 @@ class TestChromaDBClient:
 
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
-        assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+        assert call_args[1]["metadatas"] == [None, None, {"key": "value"}]
 
     def test_add_documents_all_without_metadata(
         self, client, mock_chromadb_client
@@ -438,7 +438,7 @@ class TestChromaDBClient:
 
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
-        assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+        assert call_args[1]["metadatas"] == [None, None, {"key": "value"}]
 
     @pytest.mark.asyncio
     async def test_aadd_documents_empty_list_raises_error(
