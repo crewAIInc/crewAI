@@ -12,6 +12,7 @@ Supported authentication methods:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 import hmac
 import logging
@@ -114,6 +115,22 @@ class ServerAuthScheme(ABC, BaseModel):
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        """Rebuild the scheme from its dumped fields.
+
+        Some schemes hold a client that cannot be deep-copied (OIDCAuth
+        and OAuth2ServerAuth cache a PyJWKClient, which holds a threading
+        lock), so rebuild from the field values instead. The model
+        validators run again on construction and re-create those clients
+        fresh, so the copy never shares cached signing keys with the
+        original.
+        """
+        if memo is None:
+            memo = {}
+        copied = type(self)(**deepcopy(self.model_dump(), memo))
+        memo[id(self)] = copied
+        return copied
 
     @abstractmethod
     async def authenticate(self, token: str) -> AuthenticatedUser:

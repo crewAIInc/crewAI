@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from copy import copy as shallow_copy
+from copy import copy as shallow_copy, deepcopy
 from hashlib import md5
 from pathlib import Path
 import re
@@ -728,6 +728,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "apps",
             "mcps",
             "actions",
+            # The a2a config holds an auth scheme typed as the abstract
+            # ClientAuthScheme (or ServerAuthScheme). Dumping it to a dict
+            # and re-validating cannot reconstruct the concrete scheme, so
+            # keep it out of the dump and pass the config through instead,
+            # like llm, tools and knowledge below.
+            "a2a",
         }
 
         existing_llm = shallow_copy(self._llm_for_copy())
@@ -748,6 +754,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
                 )
                 copied_source.storage = shared_storage
                 existing_knowledge_sources.append(copied_source)
+
+        # Deep-copy the a2a config (single config or list of configs) so
+        # the copy gets its own config while the auth scheme instance is
+        # never round-tripped through validation against its abstract type.
+        # getattr: a2a is defined on Agent, not on BaseAgent itself.
+        existing_a2a = getattr(self, "a2a", None)
+        copied_a2a = deepcopy(existing_a2a) if existing_a2a is not None else None
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
@@ -771,6 +784,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             knowledge_sources=existing_knowledge_sources,
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
+            a2a=copied_a2a,
         )
 
     def _llm_for_copy(self) -> Any:
