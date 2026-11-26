@@ -717,8 +717,9 @@ class AzureCompletion(BaseLLM):
             params["frequency_penalty"] = self.frequency_penalty
         if self.presence_penalty is not None:
             params["presence_penalty"] = self.presence_penalty
-        if self.max_tokens is not None:
-            params["max_tokens"] = self.max_tokens
+        cap_param, cap = self._completion_token_cap()
+        if cap_param == "max_tokens" and cap is not None:
+            params["max_tokens"] = cap
         stops = self.stop_sequences
         if stops and self.supports_stop_words():
             params["stop"] = stops
@@ -734,25 +735,16 @@ class AzureCompletion(BaseLLM):
         # Reasoning deployments only accept these as extra body parameters.
         # ``ChatCompletionsClient.complete`` sends extra kwargs to the HTTP
         # pipeline, not the request body, so they have to travel in model_extras.
-        if self.max_completion_tokens is not None:
-            model_extras["max_completion_tokens"] = self.max_completion_tokens
-            # Reasoning deployments reject a body that carries both token caps,
-            # so the legacy one must not survive next to the new one.
-            params.pop("max_tokens", None)
+        if cap_param == "model_extras" and cap is not None:
+            model_extras["max_completion_tokens"] = cap
         if self.reasoning_effort is not None:
             model_extras["reasoning_effort"] = self.reasoning_effort
 
         if model_extras:
             params["model_extras"] = model_extras
 
-        additional_params = self.additional_params
-        additional_drop_params = additional_params.get("additional_drop_params")
-        drop_params = additional_params.get("drop_params")
-
-        if drop_params and isinstance(additional_drop_params, list):
-            for drop_param in additional_drop_params:
-                if isinstance(drop_param, str):
-                    params.pop(drop_param, None)  # type: ignore[misc]
+        for drop_param in self._completion_params_to_drop():
+            params.pop(drop_param, None)  # type: ignore[misc]
 
         return params
 
@@ -1362,9 +1354,27 @@ class AzureCompletion(BaseLLM):
             configured=self.context_window_size,
         )
 
+    def _completion_params_to_drop(self) -> list[str]:
+        additional_drop_params = self.additional_params.get("additional_drop_params")
+        if self.additional_params.get("drop_params") and isinstance(
+            additional_drop_params, list
+        ):
+            return [param for param in additional_drop_params if isinstance(param, str)]
+        return []
+
+    def _completion_token_cap(
+        self,
+    ) -> tuple[Literal["max_tokens", "model_extras"], int | None]:
+        """Choose the top-level SDK parameter carrying the Chat Completions cap."""
+        # Reasoning deployments reject requests carrying both token caps.
+        if self.max_completion_tokens is not None:
+            return "model_extras", self.max_completion_tokens
+        return "max_tokens", self.max_tokens
+
     def _effective_max_tokens(self) -> int | float | None:
-        """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""
-        return self.max_tokens or self.max_completion_tokens
+        """Report the cap actually sent by Azure Chat Completions."""
+        cap_param, cap = self._completion_token_cap()
+        return None if cap_param in self._completion_params_to_drop() else cap
 
     @staticmethod
     def _extract_finish_reason_and_id(
