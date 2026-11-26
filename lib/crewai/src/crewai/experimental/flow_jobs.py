@@ -167,8 +167,10 @@ def commit_job_update(state: JobState[Any], update: JobUpdate) -> bool:
     except (ValidationError, ValueError, TypeError):
         return False
     # Preserve record identity for existing consumers, after all validation.
-    for name in type(job).model_fields:
-        setattr(job, name, getattr(candidate, name))
+    # Install every validated field at once: per-field setattr would re-run
+    # validate_assignment validators against a half-updated record.
+    job.__dict__.update(candidate.__dict__)
+    job.__pydantic_fields_set__.update(changes)
     state.job_sequence += 1
     return True
 
