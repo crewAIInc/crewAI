@@ -11,7 +11,7 @@ import re
 import threading
 from typing import Final, Literal, cast
 
-from a2a.client.errors import A2AClientHTTPError
+from crewai.a2a._compat import A2AClientHTTPError
 from a2a.types import (
     APIKeySecurityScheme,
     AgentCard,

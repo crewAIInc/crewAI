@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from a2a.types import PushNotificationAuthenticationInfo
+from crewai.a2a._compat import PushNotificationAuthenticationInfo
 from pydantic import AnyHttpUrl, BaseModel, BeforeValidator, Field
 
 from crewai.a2a.updates.base import PushNotificationResultStore
