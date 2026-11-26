@@ -21,6 +21,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
+from litellm.exceptions import ContextWindowExceededError
 import pytest
 
 
@@ -1363,6 +1364,181 @@ def test_usage_info_streaming_with_call():
     assert llm._token_usage["prompt_tokens"] > 0
     assert llm._token_usage["completion_tokens"] > 0
     assert llm._token_usage["successful_requests"] == 1
+
+
+def test_streaming_response_model_conversion_failure_raises():
+    """A completed stream that fails response_model conversion must raise,
+    not silently fall back to returning the raw prose (issue #6735)."""
+
+    class Answer(BaseModel):
+        city: str
+        population: int
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris has 2.1M residents."}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", return_value=iter(chunks)),
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError("model output did not match schema"),
+        ),
+        pytest.raises(Exception, match="Failed to convert streaming response"),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+
+def test_streaming_conversion_failure_text_cannot_trigger_stop_retry():
+    """Model output quoted in a conversion error must not look like an
+    unsupported 'stop' error, or LLM.call would retry without limit."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", side_effect=lambda **_: iter(chunks)) as completion,
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError("Unsupported parameter: 'stop'"),
+        ),
+        pytest.raises(Exception, match="Failed to convert streaming response"),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+    assert completion.call_count == 1
+
+
+def test_streaming_conversion_failure_text_cannot_trigger_rate_limit_retry():
+    """Model output quoted in a conversion error must not look like a
+    provider throttle, or the finished stream is re-run as a retry."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", side_effect=lambda **_: iter(chunks)) as completion,
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError("city: 'rate limit exceeded, throttled'"),
+        ),
+        patch("crewai.llms.retry.time.sleep"),
+        pytest.raises(Exception, match="Failed to convert streaming response"),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+    assert completion.call_count == 1
+
+
+def test_streaming_response_model_context_limit_keeps_its_error_type():
+    """A context-limit failure during conversion must not look like a schema
+    mismatch, or callers lose their context-window handling."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", return_value=iter(chunks)),
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            # Wording the text check would miss: only the type says so.
+            side_effect=ContextWindowExceededError(
+                "prompt is too large for this model",
+                model="gpt-4o-mini",
+                llm_provider="openai",
+            ),
+        ),
+        pytest.raises(LLMContextLengthExceededError),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+
+def test_streaming_conversion_failure_text_is_not_read_as_context_limit():
+    """A schema error that quotes model output saying "maximum context length"
+    must stay a conversion error, not trigger context-window handling."""
+
+    class Answer(BaseModel):
+        city: str
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "maximum context length exceeded"}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", return_value=iter(chunks)),
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError(
+                "input_value='maximum context length exceeded'"
+            ),
+        ),
+        pytest.raises(Exception, match="Failed to convert streaming response") as exc,
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+    assert not isinstance(exc.value, LLMContextLengthExceededError)
 
 
 @pytest.mark.asyncio
