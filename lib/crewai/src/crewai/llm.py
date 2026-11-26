@@ -762,6 +762,7 @@ class LLM(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
         skip_file_processing: bool = False,
+        extra_headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
@@ -769,6 +770,8 @@ class LLM(BaseLLM):
             messages: Input messages for the LLM
             tools: Optional list of tool schemas
             skip_file_processing: Skip file processing (used when already done async)
+            extra_headers: Headers for this call, merged over any headers set
+                on the instance.
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
@@ -819,7 +822,14 @@ class LLM(BaseLLM):
             **self.additional_params,
         }
 
-        return {k: v for k, v in params.items() if v is not None}
+        params = {k: v for k, v in params.items() if v is not None}
+        if extra_headers:
+            configured = params.get("extra_headers")
+            params["extra_headers"] = {
+                **(configured if isinstance(configured, dict) else {}),
+                **extra_headers,
+            }
+        return params
 
     def get_input_tokens_count(
         self,
@@ -1957,6 +1967,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> str | Any:
         """High-level LLM call method.
 
@@ -1974,6 +1985,8 @@ class LLM(BaseLLM):
             from_task: Optional Task that invoked the LLM
             from_agent: Optional Agent that invoked the LLM
             response_model: Optional Model that contains a pydantic response model.
+            extra_headers: Optional HTTP headers for this request only. Merged
+                           over headers configured on the instance.
 
         Returns:
             Union[str, Any]: Either a text response from the LLM (str) or
@@ -2014,7 +2027,9 @@ class LLM(BaseLLM):
                 if callbacks and len(callbacks) > 0:
                     self.set_callbacks(callbacks)
                 try:
-                    params = self._prepare_completion_params(messages, tools)
+                    params = self._prepare_completion_params(
+                        messages, tools, extra_headers=extra_headers
+                    )
                     if self._effective_stream():
                         result = self._handle_streaming_response(
                             params=params,
@@ -2077,6 +2092,7 @@ class LLM(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             response_model=response_model,
+                            extra_headers=extra_headers,
                         )
 
                     crewai_event_bus.emit(
@@ -2099,6 +2115,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> str | Any:
         """Async high-level LLM call method.
 
@@ -2116,6 +2133,8 @@ class LLM(BaseLLM):
             from_task: Optional Task that invoked the LLM
             from_agent: Optional Agent that invoked the LLM
             response_model: Optional Model that contains a pydantic response model.
+            extra_headers: Optional HTTP headers for this request only. Merged
+                           over headers configured on the instance.
 
         Returns:
             Union[str, Any]: Either a text response from the LLM (str) or
@@ -2160,7 +2179,10 @@ class LLM(BaseLLM):
                     self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(
-                        messages, tools, skip_file_processing=True
+                        messages,
+                        tools,
+                        skip_file_processing=True,
+                        extra_headers=extra_headers,
                     )
 
                     if self._effective_stream():
@@ -2222,6 +2244,7 @@ class LLM(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             response_model=response_model,
+                            extra_headers=extra_headers,
                         )
 
                     crewai_event_bus.emit(

@@ -224,6 +224,70 @@ def test_llm_passes_additional_params():
         assert result == "Test response"
 
 
+def _mock_text_response(content: str) -> MagicMock:
+    message = MagicMock()
+    message.content = content
+    message.tool_calls = None
+    choice = MagicMock()
+    choice.message = message
+    response = MagicMock()
+    response.choices = [choice]
+    response.usage = {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}
+    return response
+
+
+def test_llm_passes_per_call_extra_headers():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch("litellm.completion") as mocked_completion:
+        mocked_completion.return_value = _mock_text_response("Test response")
+
+        llm.call(
+            [{"role": "user", "content": "Hello, world!"}],
+            extra_headers={"X-Agent-Hint": "s-1"},
+        )
+
+        _, kwargs = mocked_completion.call_args
+        assert kwargs["extra_headers"] == {"X-Agent-Hint": "s-1"}
+
+
+def test_per_call_extra_headers_override_instance_headers():
+    llm = LLM(
+        model="gpt-4o-mini",
+        is_litellm=True,
+        extra_headers={"X-Gateway": "gw-1", "X-Agent-Hint": "stale"},
+    )
+
+    with patch("litellm.completion") as mocked_completion:
+        mocked_completion.return_value = _mock_text_response("Test response")
+
+        llm.call(
+            [{"role": "user", "content": "Hello, world!"}],
+            extra_headers={"X-Agent-Hint": "fresh"},
+        )
+
+        _, kwargs = mocked_completion.call_args
+        assert kwargs["extra_headers"] == {
+            "X-Gateway": "gw-1",
+            "X-Agent-Hint": "fresh",
+        }
+
+
+@pytest.mark.asyncio
+async def test_acall_passes_per_call_extra_headers():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True, stream=False)
+    response = _mock_text_response("Test response")
+
+    async def _ret(*args, **kwargs):
+        return response
+
+    with patch("crewai.llm.litellm.acompletion", side_effect=_ret) as mocked:
+        await llm.acall("Hello, world!", extra_headers={"X-Agent-Hint": "s-1"})
+
+    _, kwargs = mocked.call_args
+    assert kwargs["extra_headers"] == {"X-Agent-Hint": "s-1"}
+
+
 def test_get_custom_llm_provider_openrouter():
     llm = LLM(model="openrouter/deepseek/deepseek-chat", is_litellm=True)
     assert llm._get_custom_llm_provider() == "openrouter"
