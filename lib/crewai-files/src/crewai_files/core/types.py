@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from copy import deepcopy
 from io import IOBase
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Literal
@@ -178,6 +179,18 @@ class BaseFile(ABC, BaseModel):
         default="auto",
         description="How to handle if file exceeds limits: strict, auto, warn, chunk.",
     )
+
+    def copy_for_task(self) -> Self:
+        """Copy the attachment for a fresh run, with its own stream and read cache."""
+        source = self.source
+        if isinstance(source, FileStream):
+            return deepcopy(self, {id(source): source._copy_for_task()})
+
+        copied = self.model_copy(deep=True)
+        if isinstance(copied.source, (FilePath, FileUrl)):
+            copied.source._content = None
+            copied.source._content_type = None
+        return copied
 
     @property
     def _file_source(self) -> FileSource:

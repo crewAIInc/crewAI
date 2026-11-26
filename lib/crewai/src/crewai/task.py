@@ -1281,8 +1281,14 @@ Follow these guidelines:
             "checkpoint_input_description",
         }
 
+        if HAS_CREWAI_FILES:
+            exclude.add("input_files")  # File sources lose their types in a model dump.
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        if HAS_CREWAI_FILES:
+            copied_data["input_files"] = {
+                name: file.copy_for_task() for name, file in self.input_files.items()
+            }
 
         cloned_context = (
             self.context
