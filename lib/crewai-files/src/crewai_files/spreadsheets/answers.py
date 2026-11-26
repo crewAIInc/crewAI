@@ -154,6 +154,9 @@ def total_row(table: Table) -> int | None:
     adds_up = any(
         pd.notna(last[n])
         and int(frame[n].iloc[:-1].notna().sum()) > 1
+        # A zero sum matches a zero last value trivially, so it is not
+        # evidence that the row is a total.
+        and abs(float(frame[n].iloc[:-1].sum())) > 1e-12
         and math.isclose(float(last[n]), float(frame[n].iloc[:-1].sum()), rel_tol=0.005)
         for n in numeric
     )
