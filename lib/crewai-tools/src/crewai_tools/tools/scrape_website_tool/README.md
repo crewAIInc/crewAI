@@ -22,3 +22,4 @@ tool = ScrapeWebsiteTool(website_url='https://www.example.com')
 
 ## Arguments
 - `website_url` : Mandatory website URL to read the file. This is the primary input for the tool, specifying which website's content should be scraped and read.
+- `cookies` : Optional initialization configuration with `name` (the cookie name) and `value` (the environment variable containing its value). Cookies require a non-empty `website_url` at initialization; otherwise the tool raises `ValueError`. A configured URL cannot be overridden by a runtime argument. The same restriction applies to `ScrapeElementFromWebsiteTool`.
