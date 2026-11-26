@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 from contextlib import closing
 import json
@@ -20,7 +21,7 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -665,6 +666,46 @@ class TestKickoffFromCheckpoint:
         assert result == "flow_result"
 
 
+
+
+class TestFlowRuntimeStateIsolation:
+    def test_top_level_kickoff_starts_from_only_the_running_flow(self) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+
+        captured: list[list[int]] = []
+
+        class OrderFlow(Flow):
+            @start()
+            def reserve(self) -> None:
+                self.state["reserved"] = True
+
+        def capture_state(state: RuntimeState, *args: Any) -> None:
+            captured.append([id(entity) for entity in state.root])
+
+        stale = OrderFlow(
+            checkpoint=CheckpointConfig(
+                location="unused", on_events=["method_execution_finished"]
+            )
+        )
+        current = OrderFlow(
+            checkpoint=CheckpointConfig(
+                location="unused", on_events=["method_execution_finished"]
+            )
+        )
+        # Emulate a finished run whose flow is still attached to this context.
+        crewai_event_bus.set_runtime_state(RuntimeState(root=[stale]))
+
+        with patch(
+            "crewai.state.checkpoint_listener._do_checkpoint",
+            side_effect=capture_state,
+        ):
+            current.kickoff(inputs={"order": 1})
+            deadline = time.monotonic() + 5.0
+            while not captured and time.monotonic() < deadline:
+                time.sleep(0.02)
+
+        assert captured, "no checkpoint was attempted"
+        assert captured[-1] == [id(current)]
 
 
 class TestLegacyMethodOutputsRestore:
