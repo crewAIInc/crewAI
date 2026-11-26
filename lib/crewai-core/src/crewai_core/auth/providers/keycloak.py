@@ -21,7 +21,11 @@ class KeycloakProvider(BaseProvider):
         return f"{self._oauth2_base_url()}/realms/{self.settings.extra.get('realm')}"
 
     def get_audience(self) -> str:
-        return self.settings.audience or "no-audience-provided"
+        if self.settings.audience is None:
+            raise ValueError(
+                "Audience is required. Please set it in the configuration."
+            )
+        return self.settings.audience
 
     def get_client_id(self) -> str:
         if self.settings.client_id is None:
