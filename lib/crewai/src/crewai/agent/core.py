@@ -2342,11 +2342,38 @@ class Agent(BaseAgent):
         usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
+        validate_max_execution_time(self.max_execution_time)
         with tool_failure_collector() as kickoff_failures:
-            result = cast(dict[str, Any], executor.invoke(inputs))
+            if self.max_execution_time is not None:
+                result = self._invoke_kickoff_with_timeout(
+                    executor, inputs, self.max_execution_time
+                )
+            else:
+                result = cast(dict[str, Any], executor.invoke(inputs))
         return self._build_output_from_result(
             result, executor, response_format, usage_baseline, kickoff_failures
         )
+
+    def _invoke_kickoff_with_timeout(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        timeout: int,
+    ) -> dict[str, Any]:
+        ctx = contextvars.copy_context()
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        try:
+            future = pool.submit(ctx.run, executor.invoke, inputs)
+            try:
+                return cast(dict[str, Any], future.result(timeout=timeout))
+            except concurrent.futures.TimeoutError as e:
+                future.cancel()
+                raise TimeoutError(
+                    f"Agent '{self.role}' execution timed out after {timeout} seconds. "
+                    "Consider increasing max_execution_time or optimizing the request."
+                ) from e
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
 
     async def _execute_and_build_output_async(
         self,
@@ -2356,8 +2383,21 @@ class Agent(BaseAgent):
         usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously and build the output object."""
+        validate_max_execution_time(self.max_execution_time)
         with tool_failure_collector() as kickoff_failures:
-            result = await executor.invoke_async(inputs)
+            if self.max_execution_time is not None:
+                try:
+                    result = await asyncio.wait_for(
+                        executor.invoke_async(inputs),
+                        timeout=self.max_execution_time,
+                    )
+                except asyncio.TimeoutError as e:
+                    raise TimeoutError(
+                        f"Agent '{self.role}' execution timed out after {self.max_execution_time} seconds. "
+                        "Consider increasing max_execution_time or optimizing the request."
+                    ) from e
+            else:
+                result = await executor.invoke_async(inputs)
         return self._build_output_from_result(
             result, executor, response_format, usage_baseline, kickoff_failures
         )
