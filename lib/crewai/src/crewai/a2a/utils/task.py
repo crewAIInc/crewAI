@@ -156,6 +156,8 @@ def cancellable(
             if isinstance(cache, SimpleMemoryCache):
                 return await poll_for_cancel()
 
+            pubsub = None
+            redis_error: Exception | None = None
             try:
                 client = cache.client
                 pubsub = client.pubsub()
@@ -164,9 +166,21 @@ def cancellable(
                     if message["type"] == "message":
                         return True
             except (OSError, ConnectionError) as e:
+                redis_error = e
+            finally:
+                # The watcher is cancelled whenever the wrapped task finishes
+                # first (and ends on cancel/error paths too): never leak the
+                # subscription connection.
+                if pubsub is not None:
+                    try:
+                        await pubsub.aclose()
+                    except Exception:  # noqa: S110
+                        pass  # closing a broken connection must not mask the outcome
+
+            if redis_error is not None:
                 logger.warning(
                     "Cancel watcher Redis error, falling back to polling",
-                    extra={"task_id": task_id, "error": str(e)},
+                    extra={"task_id": task_id, "error": str(redis_error)},
                 )
                 return await poll_for_cancel()
             return False
