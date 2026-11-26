@@ -87,7 +87,16 @@ class GithubLoader(BaseLoader):
 
         if "issue" in content_types:
             issues = repo.get_issues(state="open")
-            issue_list = [i for i in list(issues[:10]) if not i.pull_request][:5]
+            # GitHub's Issues API includes pull requests. Skip PR entries while
+            # collecting up to five real issues (paginating as needed) instead of
+            # truncating the mixed list first.
+            issue_list = []
+            for issue in issues:
+                if getattr(issue, "pull_request", None):
+                    continue
+                issue_list.append(issue)
+                if len(issue_list) >= 5:
+                    break
             if issue_list:
                 all_content.append("Recent Issues:")
                 for issue in issue_list:
