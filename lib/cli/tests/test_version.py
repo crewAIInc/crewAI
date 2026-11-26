@@ -405,6 +405,120 @@ class TestIsCurrentVersionYanked:
         assert reason == ""
 
 
+class TestVersionCacheAfterUpgrade:
+    """The cache records the yanked status of the version that wrote it, so a
+    different installed version must not reuse it."""
+
+    @staticmethod
+    def _write_cache_for_yanked_1_0_0(cache_file: Path) -> None:
+        cache_file.write_text(
+            json.dumps(
+                {
+                    "version": "2.0.0",
+                    "timestamp": datetime.now().isoformat(),
+                    "current_version": "1.0.0",
+                    "current_version_yanked": True,
+                    "current_version_yanked_reason": "bad release",
+                }
+            )
+        )
+
+    @staticmethod
+    def _pypi_response(latest: str = "2.0.0") -> MagicMock:
+        releases = {
+            "1.0.0": [{"yanked": True, "yanked_reason": "bad release"}],
+            "2.0.0": [{"yanked": False}],
+        }
+        if latest not in releases:
+            releases[latest] = [{"yanked": False}]
+        response = MagicMock()
+        response.read.return_value = json.dumps({"releases": releases}).encode()
+        return response
+
+    @patch("crewai_core.version.request.urlopen")
+    @patch("crewai_core.version.get_crewai_version")
+    @patch("crewai_core.version._get_cache_file")
+    def test_upgrading_from_a_yanked_version_clears_the_yanked_flag(
+        self,
+        mock_cache_file: MagicMock,
+        mock_version: MagicMock,
+        mock_urlopen: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_version.return_value = "2.0.0"
+        cache_file = tmp_path / "version_cache.json"
+        self._write_cache_for_yanked_1_0_0(cache_file)
+        mock_cache_file.return_value = cache_file
+        mock_urlopen.return_value.__enter__.return_value = self._pypi_response()
+
+        is_yanked, reason = is_current_version_yanked()
+
+        assert is_yanked is False
+        assert reason == ""
+        mock_urlopen.assert_called_once()
+
+    @patch("crewai_core.version.request.urlopen")
+    @patch("crewai_core.version.get_crewai_version")
+    @patch("crewai_core.version._get_cache_file")
+    def test_cache_written_for_another_version_is_not_used_offline(
+        self,
+        mock_cache_file: MagicMock,
+        mock_version: MagicMock,
+        mock_urlopen: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        from urllib.error import URLError
+
+        mock_version.return_value = "2.0.0"
+        cache_file = tmp_path / "version_cache.json"
+        self._write_cache_for_yanked_1_0_0(cache_file)
+        mock_cache_file.return_value = cache_file
+        mock_urlopen.side_effect = URLError("offline")
+
+        is_yanked, reason = is_current_version_yanked()
+
+        assert is_yanked is False
+        assert reason == ""
+
+    @patch("crewai_core.version.request.urlopen")
+    @patch("crewai_core.version.get_crewai_version")
+    @patch("crewai_core.version._get_cache_file")
+    def test_latest_version_is_refetched_for_a_new_installed_version(
+        self,
+        mock_cache_file: MagicMock,
+        mock_version: MagicMock,
+        mock_urlopen: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_version.return_value = "2.0.0"
+        cache_file = tmp_path / "version_cache.json"
+        self._write_cache_for_yanked_1_0_0(cache_file)
+        mock_cache_file.return_value = cache_file
+        mock_urlopen.return_value.__enter__.return_value = self._pypi_response("3.0.0")
+
+        assert get_latest_version_from_pypi() == "3.0.0"
+        assert json.loads(cache_file.read_text())["current_version"] == "2.0.0"
+
+    @patch("crewai_core.version.request.urlopen")
+    @patch("crewai_core.version.get_crewai_version")
+    @patch("crewai_core.version._get_cache_file")
+    def test_cache_for_the_installed_version_is_still_used(
+        self,
+        mock_cache_file: MagicMock,
+        mock_version: MagicMock,
+        mock_urlopen: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_version.return_value = "1.0.0"
+        cache_file = tmp_path / "version_cache.json"
+        self._write_cache_for_yanked_1_0_0(cache_file)
+        mock_cache_file.return_value = cache_file
+
+        assert is_current_version_yanked() == (True, "bad release")
+        assert get_latest_version_from_pypi() == "2.0.0"
+        mock_urlopen.assert_not_called()
+
+
 
 # TestConsoleFormatterVersionCheck tests remain in lib/crewai/tests/cli/test_version.py
 # as they depend on crewai.events.utils.console_formatter (core package).
