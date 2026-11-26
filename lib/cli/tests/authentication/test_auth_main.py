@@ -536,3 +536,31 @@ class TestAuthenticationCommand:
 
         with pytest.raises(httpx.HTTPError):
             self.auth_command._poll_for_token(device_code_data)
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    def test_poll_for_token_reports_an_html_gateway_error(self, mock_post):
+        """A proxy's 502 HTML page is an HTTP failure, not a JSON parse error."""
+        response = MagicMock()
+        response.status_code = 502
+        response.json.side_effect = ValueError(
+            "Expecting value: line 1 column 1 (char 0)"
+        )
+        mock_post.return_value = response
+
+        device_code_data = {"device_code": "test_device_code", "interval": 0}
+
+        with pytest.raises(httpx.HTTPError, match="502"):
+            self.auth_command._poll_for_token(device_code_data)
+
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    def test_poll_for_token_reports_a_rate_limit_without_an_oauth_error(self, mock_post):
+        """A 429 whose body has no OAuth ``error`` is an HTTP failure, not a KeyError."""
+        response = MagicMock()
+        response.status_code = 429
+        response.json.return_value = {"message": "rate limited"}
+        mock_post.return_value = response
+
+        device_code_data = {"device_code": "test_device_code", "interval": 0}
+
+        with pytest.raises(httpx.HTTPError, match="429"):
+            self.auth_command._poll_for_token(device_code_data)

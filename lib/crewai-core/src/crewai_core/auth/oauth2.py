@@ -21,6 +21,22 @@ console = Console()
 # self-hosted provider that omits it anyway.
 _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS = 600
 
+
+def _oauth2_error_body(response: httpx.Response) -> dict[str, Any]:
+    """Return the token endpoint's OAuth error body, or ``{}`` when it sent none.
+
+    Only a 200 answer is a device-flow answer. A proxy or gateway in front of
+    the endpoint answers 502/503/504 with an HTML page, and a rate limiter
+    answers 429 with JSON that has no ``error`` member; neither is something
+    to read an OAuth error out of.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return {}
+    return cast(dict[str, Any], body) if isinstance(body, dict) else {}
+
+
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
@@ -150,9 +166,9 @@ class AuthenticationCommand:
             response = httpx.post(
                 self.oauth2_provider.get_token_url(), data=token_payload, timeout=30
             )
-            token_data = response.json()
 
             if response.status_code == 200:
+                token_data = response.json()
                 self._validate_and_save_token(token_data)
 
                 console.print(
@@ -165,13 +181,18 @@ class AuthenticationCommand:
                 console.print("\n[bold green]Welcome to CrewAI AMP![/bold green]\n")
                 return
 
+            token_data = _oauth2_error_body(response)
+            error = token_data.get("error")
+
             # The provider's clock for the code started before ours did, so its
             # `expired_token` can arrive before our deadline; it is the same timeout.
-            if token_data["error"] == "expired_token":
+            if error == "expired_token":
                 break
-            if token_data["error"] not in ("authorization_pending", "slow_down"):
+            if error not in ("authorization_pending", "slow_down"):
                 raise httpx.HTTPError(
-                    token_data.get("error_description") or token_data.get("error")
+                    token_data.get("error_description")
+                    or error
+                    or f"Token endpoint returned HTTP {response.status_code}"
                 )
 
             time.sleep(device_code_data["interval"])
