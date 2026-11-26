@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from crewai.artifacts import Artifact
 from crewai.flow.expressions import Expression, ExpressionData
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
@@ -98,12 +99,23 @@ class ToolAction:
         self.definition = definition
         self.tool = self._build_tool()
         self.kwargs = definition.with_ or {}
+        # Tool instances are built once per flow object and reused across
+        # kickoffs; register the tool so each kickoff can reset its usage
+        # budget (Flow._reset_tool_action_usage_budgets). Without the reset,
+        # current_usage_count survives runs and a budget exhausted in an
+        # earlier kickoff makes every later kickoff fail.
+        tools = getattr(flow, "_tool_action_tools", None)
+        if tools is None:
+            tools = []
+            object.__setattr__(flow, "_tool_action_tools", tools)
+        tools.append(self.tool)
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         from crewai.tools.tool_failure import (
             ToolExecutionFailedError,
             ToolFailureRecord,
             detect_tool_failure,
+            handle_tool_failure,
         )
 
         local_context = _pop_local_context(kwargs)
@@ -112,11 +124,26 @@ class ToolAction:
         ).render_template()
         result = self.tool.run(**rendered)
         if failure := detect_tool_failure(result):
-            raise ToolExecutionFailedError(
-                ToolFailureRecord(
-                    tool_name=self.tool.name, failure=failure, tool_args=rendered
+            if getattr(self.tool, "tool_failure_policy", None) is not None:
+                # The tool declares an explicit policy, which per BaseTool's
+                # contract overrides everything for this tool: WARN records
+                # the failure, emits ToolFailureDetectedEvent and the flow
+                # continues; IGNORE stays silent; RAISE aborts. Only a tool
+                # that sets no policy keeps flow actions' fail-hard default.
+                handle_tool_failure(
+                    failure,
+                    tool_name=self.tool.name,
+                    tool_args=rendered,
+                    tool=self.tool,
                 )
-            )
+            else:
+                raise ToolExecutionFailedError(
+                    ToolFailureRecord(
+                        tool_name=self.tool.name,
+                        failure=failure,
+                        tool_args=rendered,
+                    )
+                )
         return result
 
     def _build_tool(self) -> Any:
@@ -192,7 +219,10 @@ class CrewAction:
                 **(self.definition.inputs or {}),
             }
             crew, _ = await asyncio.to_thread(
-                load_crew_from_definition, crew_definition, source="crew action"
+                load_crew_from_definition,
+                crew_definition,
+                source="crew action",
+                project_root=self.flow._definition.source_dir,
             )
 
         inputs = Expression.from_flow(
@@ -220,15 +250,35 @@ class AgentAction:
             local_context=local_context,
         ).render_template()
         agent_input = _normalize_agent_input(rendered_input)
+        artifact = self.definition.with_.artifact
+        if isinstance(artifact, Artifact) and artifact.file_path:
+            file_path = Expression.from_flow(
+                cast(ExpressionData, artifact.file_path),
+                self.flow,
+                local_context=local_context,
+            ).render_template()
+            from crewai.task import validate_interpolated_path
+
+            file_path = validate_interpolated_path(
+                str(file_path), artifact.file_path, "artifact.file_path"
+            )
+            artifact = artifact.model_copy(update={"file_path": file_path})
 
         agent, response_format = await asyncio.to_thread(
             load_agent_from_definition,
             self.definition.with_,
             source="agent action",
+            project_root=self.flow._definition.source_dir,
         )
+        input_files = {
+            name: await asyncio.to_thread(reference.load_file)
+            for name, reference in (self.definition.with_.input_files or {}).items()
+        }
         return await agent.kickoff_async(
             agent_input,
             response_format=response_format,
+            input_files=input_files or None,
+            artifact=artifact,
         )
 
 

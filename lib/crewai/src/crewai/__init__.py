@@ -12,6 +12,7 @@ from pydantic import Field, PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.artifacts import Artifact, load_artifact, save_artifact
 from crewai.context import ExecutionContext
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -53,9 +54,10 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.28"
+__version__ = "1.15.45"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "CrewBase": ("crewai.project", "CrewBase"),
     "Memory": ("crewai.memory.unified_memory", "Memory"),
 }
 
@@ -130,9 +132,15 @@ try:
         "ToolResult": _ToolResult,
     }
 
+    # Dunders are left out: copying base_agent's `__name__`/`__spec__`/`__file__`
+    # onto the modules below made their import errors name base_agent.
     _resolve_namespace = {
         **_full_namespace,
-        **sys.modules[_BaseAgent.__module__].__dict__,
+        **{
+            name: value
+            for name, value in sys.modules[_BaseAgent.__module__].__dict__.items()
+            if not (name.startswith("__") and name.endswith("__"))
+        },
     }
 
     import crewai.state.runtime as _runtime_state_mod
@@ -187,8 +195,10 @@ except (ImportError, PydanticUserError):
 __all__ = [
     "LLM",
     "Agent",
+    "Artifact",
     "BaseLLM",
     "Crew",
+    "CrewBase",
     "CrewOutput",
     "Entity",
     "ExecutionContext",
@@ -202,4 +212,6 @@ __all__ = [
     "Task",
     "TaskOutput",
     "__version__",
+    "load_artifact",
+    "save_artifact",
 ]

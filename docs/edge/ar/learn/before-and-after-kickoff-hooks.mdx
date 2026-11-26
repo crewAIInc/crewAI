@@ -11,8 +11,7 @@ mode: "wide"
 يُنفَّذ خطاف قبل الانطلاق قبل أن يبدأ Crew مهامه. يتلقى قاموس المدخلات ويمكنه تعديله قبل تمريره إلى Crew. يمكنك استخدام هذا الخطاف لإعداد بيئتك أو تحميل البيانات اللازمة أو معالجة المدخلات مسبقًا.
 
 ```python
-from crewai import CrewBase
-from crewai.project import before_kickoff
+from crewai.project import CrewBase, before_kickoff
 
 @CrewBase
 class MyCrew:
@@ -27,8 +26,7 @@ class MyCrew:
 يُنفَّذ خطاف بعد الانطلاق بعد إتمام Crew مهامه. يتلقى كائن النتيجة الذي يحتوي على مخرجات تنفيذ Crew. هذا الخطاف مثالي لمعالجة النتائج لاحقًا مثل التسجيل أو تحويل البيانات أو التحليل الإضافي.
 
 ```python
-from crewai import CrewBase
-from crewai.project import after_kickoff
+from crewai.project import CrewBase, after_kickoff
 
 @CrewBase
 class MyCrew:

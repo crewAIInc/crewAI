@@ -249,11 +249,14 @@ class FileResolver:
         Returns:
             True if the file should be uploaded, False otherwise.
         """
-        if constraints is None or not constraints.supports_file_upload:
+        if constraints is None:
             return False
 
         if self.config.prefer_upload:
             return True
+
+        if not constraints.supports_file_upload:
+            return False
 
         content_type = file.content_type
         type_constraint = self._get_type_constraint(content_type, constraints)

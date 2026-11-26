@@ -62,6 +62,13 @@ class UnsupportedFileTypeError(FileValidationError):
         super().__init__(message, file_name)
 
 
+class UnsupportedImageFormatError(UnsupportedFileTypeError):
+    """Raised when image bytes are not a PNG, JPEG, GIF or WEBP image.
+
+    The format is detected from the bytes, not the declared content type.
+    """
+
+
 class ProcessingDependencyError(FileProcessingError):
     """Raised when a required processing dependency is not installed."""
 
