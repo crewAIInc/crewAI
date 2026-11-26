@@ -2056,6 +2056,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
             self.state.messages.append(assistant_message)
 
+        # Build a lookup so we can patch the assistant message after hooks
+        # may have mutated tool arguments.
+        _tool_calls_by_id = {tc["id"]: tc for tc in tool_calls_to_report} if tool_calls_to_report else {}
+
         runnable_tool_calls = [
             tool_call
             for tool_call in pending_tool_calls
@@ -2115,6 +2119,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 execution_result = self._execute_single_native_tool_call(tool_call)
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
+                # Reflect any args mutated by before_tool_call hooks into the
+                # assistant message so downstream consumers see the actual
+                # arguments that reached the tool.
+                if call_id in _tool_calls_by_id and "tool_args" in execution_result:
+                    _tool_calls_by_id[call_id]["function"]["arguments"] = json.dumps(
+                        execution_result["tool_args"], default=str, sort_keys=True
+                    )
                 result = self._prepare_tool_result_for_context(execution_result)
                 result += check_repeated_tool_call(
                     self._tool_call_counts,
@@ -2155,6 +2166,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
+            # Reflect any args mutated by before_tool_call hooks into the
+            # assistant message so downstream consumers see the actual
+            # arguments that reached the tool.
+            if call_id in _tool_calls_by_id and "tool_args" in execution_result:
+                _tool_calls_by_id[call_id]["function"]["arguments"] = json.dumps(
+                    execution_result["tool_args"], default=str, sort_keys=True
+                )
             result = self._prepare_tool_result_for_context(execution_result)
             # Here rather than in the worker threads, so the streak follows the
             # order the model made the calls in, not the order they finished.
