@@ -781,12 +781,13 @@ class Task(BaseModel):
                 else:
                     pydantic_output = None
                     json_output = None
-            elif not self._guardrails and not self._guardrail:
+            else:
+                # A guardrail may inspect task_output.pydantic / .json_dict, so
+                # the structured output is exported before validation instead of
+                # being left empty until the guardrail passes (or silently
+                # dropped when it returns a TaskOutput).
                 raw = result
                 pydantic_output, json_output = await self._aexport_output(result)
-            else:
-                raw = result
-                pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -935,12 +936,13 @@ class Task(BaseModel):
                 else:
                     pydantic_output = None
                     json_output = None
-            elif not self._guardrails and not self._guardrail:
+            else:
+                # A guardrail may inspect task_output.pydantic / .json_dict, so
+                # the structured output is exported before validation instead of
+                # being left empty until the guardrail passes (or silently
+                # dropped when it returns a TaskOutput).
                 raw = result
                 pydantic_output, json_output = self._export_output(result)
-            else:
-                raw = result
-                pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
