@@ -217,6 +217,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "databricks",
 ]
 
 
@@ -242,6 +243,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "databricks": "databricks",
 }
 
 
@@ -473,6 +475,11 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "databricks":
+            # Databricks Unity Gateway model services: ``system.ai.<model>`` or any
+            # customer-configured ``<catalog>.<schema>.<service>``.
+            return True
+
         return False
 
     @classmethod
@@ -543,6 +550,14 @@ class LLM(BaseLLM):
             model_string = model
 
         native_class = cls._get_native_provider(provider) if use_native else None
+        if native_class is not None and provider == "databricks":
+            # One provider, three Databricks Unity Gateway APIs: the class follows the model
+            # service name and `api=` (a pure lookup, no I/O).
+            from crewai.llms.providers.databricks.completion import (
+                databricks_llm_class,
+            )
+
+            native_class = databricks_llm_class(model_string, kwargs.get("api"))
         if provider not in SUPPORTED_NATIVE_PROVIDERS:
             native_class = None
         return _Route(provider, model_string, native_class, custom_openai_route)
@@ -688,6 +703,15 @@ class LLM(BaseLLM):
             from crewai.llms.providers.snowflake.completion import SnowflakeCompletion
 
             return SnowflakeCompletion
+
+        if provider == "databricks":
+            # The unified-API class; `_resolve_route` swaps in the native
+            # Anthropic/Gemini class when the model service calls for it.
+            from crewai.llms.providers.databricks.completion import (
+                DatabricksCompletion,
+            )
+
+            return DatabricksCompletion
 
         openai_compatible_providers = {
             "openrouter",

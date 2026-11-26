@@ -15,7 +15,7 @@ from functools import wraps
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast
 import uuid
 
 from pydantic import (
@@ -298,6 +298,9 @@ class BaseLLM(BaseModel, ABC):
     base_url: str | None = None
     provider: str = Field(default="openai")
     prefer_upload: bool = False
+    # True for providers reached through a gateway with no Files API: files
+    # are then always sent inline, never uploaded with vendor credentials.
+    _inline_files_only: ClassVar[bool] = False
     is_litellm: bool = False
     stop: list[str] = Field(
         default_factory=list,
@@ -745,6 +748,10 @@ class BaseLLM(BaseModel, ABC):
         # Content-block schema key for crewai_files. Identity stays on self.provider.
         return self.provider or self.model
 
+    def file_constraints_provider(self) -> str:
+        """The provider name used to look up which file types this LLM accepts."""
+        return self.provider or self.model
+
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.
 
@@ -1142,7 +1149,12 @@ class BaseLLM(BaseModel, ABC):
             text = existing_content if isinstance(existing_content, str) else None
 
             content_blocks = format_multimodal_content(
-                files, formatter, api=api, prefer_upload=self.prefer_upload, text=text
+                files,
+                formatter,
+                api=api,
+                prefer_upload=self.prefer_upload,
+                text=text,
+                allow_upload=not self._inline_files_only,
             )
             if not content_blocks:
                 msg.pop("files", None)

@@ -85,6 +85,7 @@ def format_multimodal_content(
     api: str | None = None,
     prefer_upload: bool | None = None,
     text: str | None = None,
+    allow_upload: bool = True,
 ) -> list[dict[str, Any]]:
     """Format text and files as provider-specific multimodal content blocks.
 
@@ -102,6 +103,8 @@ def format_multimodal_content(
         prefer_upload: Whether to prefer uploading files instead of inlining.
             If None, uses provider-specific defaults.
         text: Optional text content to include as the first content block.
+        allow_upload: If False, files are always inlined and never uploaded to
+            the provider's Files API.
 
     Returns:
         List of content blocks in the provider's expected format.
@@ -142,7 +145,7 @@ def format_multimodal_content(
     if not supported_files:
         return content_blocks
 
-    config = _get_resolver_config(provider_type, prefer_upload)
+    config = _get_resolver_config(provider_type, prefer_upload, allow_upload)
     upload_cache = get_upload_cache()
     resolver = FileResolver(config=config, upload_cache=upload_cache)
 
@@ -163,6 +166,7 @@ async def aformat_multimodal_content(
     api: str | None = None,
     prefer_upload: bool | None = None,
     text: str | None = None,
+    allow_upload: bool = True,
 ) -> list[dict[str, Any]]:
     """Async format text and files as provider-specific multimodal content blocks.
 
@@ -175,6 +179,8 @@ async def aformat_multimodal_content(
         prefer_upload: Whether to prefer uploading files instead of inlining.
             If None, uses provider-specific defaults.
         text: Optional text content to include as the first content block.
+        allow_upload: If False, files are always inlined and never uploaded to
+            the provider's Files API.
 
     Returns:
         List of content blocks in the provider's expected format.
@@ -208,7 +214,7 @@ async def aformat_multimodal_content(
     if not supported_files:
         return content_blocks
 
-    config = _get_resolver_config(provider_type, prefer_upload)
+    config = _get_resolver_config(provider_type, prefer_upload, allow_upload)
     upload_cache = get_upload_cache()
     resolver = FileResolver(config=config, upload_cache=upload_cache)
 
@@ -279,6 +285,7 @@ def _filter_supported_files(
 def _get_resolver_config(
     provider_lower: str,
     prefer_upload_override: bool | None = None,
+    allow_upload: bool = True,
 ) -> FileResolverConfig:
     """Get resolver config for provider.
 
@@ -286,6 +293,7 @@ def _get_resolver_config(
         provider_lower: Lowercase provider name.
         prefer_upload_override: Override for prefer_upload setting.
             If None, uses provider-specific defaults.
+        allow_upload: If False, files are always inlined.
 
     Returns:
         Configured FileResolverConfig.
@@ -298,13 +306,15 @@ def _get_resolver_config(
             else bool(s3_bucket)
         )
         return FileResolverConfig(
-            prefer_upload=prefer_upload, use_bytes_for_bedrock=True
+            prefer_upload=prefer_upload,
+            use_bytes_for_bedrock=True,
+            allow_upload=allow_upload,
         )
 
     prefer_upload = (
         prefer_upload_override if prefer_upload_override is not None else False
     )
-    return FileResolverConfig(prefer_upload=prefer_upload)
+    return FileResolverConfig(prefer_upload=prefer_upload, allow_upload=allow_upload)
 
 
 def _get_formatter(

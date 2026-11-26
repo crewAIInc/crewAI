@@ -196,6 +196,34 @@ class _OneBadFileResolver(FileResolver):
         return await super().aresolve(file, provider)
 
 
+class TestUploadsDisabled:
+    """allow_upload=False always inlines, for gateways that serve no Files API."""
+
+    def test_default_allows_uploads(self):
+        assert FileResolverConfig().allow_upload is True
+
+    @pytest.mark.parametrize("provider", ["openai", "anthropic", "gemini"])
+    def test_large_files_are_inlined_without_an_uploader(self, provider):
+        resolver = _NoUploaderResolver(
+            config=FileResolverConfig(allow_upload=False, prefer_upload=True)
+        )
+        file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
+
+        resolved = resolver.resolve(file, provider)
+
+        assert isinstance(resolved, InlineBase64)
+
+    @pytest.mark.parametrize("provider", ["anthropic", "bedrock"])
+    def test_format_api_builds_inline_only_configs(self, provider):
+        from crewai_files.formatting.api import _get_resolver_config
+
+        assert (
+            _get_resolver_config(provider, True, allow_upload=False).allow_upload
+            is False
+        )
+        assert _get_resolver_config(provider).allow_upload is True
+
+
 class TestBatchUploaderErrors:
     """A provider setup failure must surface, an unrelated per-file error must not."""
 

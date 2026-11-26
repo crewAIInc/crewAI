@@ -1727,11 +1727,7 @@ class Crew(FlowTrackable, BaseModel):
                 and isinstance(agent.llm, BaseLLM)
                 and agent.llm.supports_multimodal()
             ):
-                provider = (
-                    getattr(agent.llm, "provider", None)
-                    or getattr(agent.llm, "model", None)
-                    or "openai"
-                )
+                provider = agent.llm.file_constraints_provider() or "openai"
                 api = getattr(agent.llm, "api", None)
                 supported_types = get_supported_content_types(provider, api)
 

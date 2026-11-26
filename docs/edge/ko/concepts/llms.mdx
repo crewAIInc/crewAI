@@ -98,7 +98,7 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
 </Tabs>
 
 <Info>
-  CrewAI는 OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, Snowflake Cortex에 대해 네이티브 SDK 통합을 제공합니다 — 제공자별 extras(예: `uv add "crewai[openai]"`) 외에 추가 설치가 필요하지 않습니다.
+  CrewAI는 OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, Snowflake Cortex, Databricks에 대해 네이티브 SDK 통합을 제공합니다 — 제공자별 extras(예: `uv add "crewai[openai]"`) 외에 추가 설치가 필요하지 않습니다.
 
   그 외 모든 제공자는 **LiteLLM**을 통해 지원됩니다. 이를 사용하려면 프로젝트에 의존성으로 추가하세요:
   ```bash
@@ -253,6 +253,88 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     - Snowflake Claude 모델에서 유효하지 않은 마지막 assistant prefill 자동 제거
   </Accordion>
 
+  <Accordion title="Databricks">
+    CrewAI는 [Databricks Unity Gateway](https://docs.databricks.com/aws/en/ai-gateway/query-model-services) model service와 네이티브로 통합됩니다. Databricks가 제공하는 서비스(`system.ai.<model>`)나 Unity Catalog에서 직접 구성한 서비스(`<catalog>.<schema>.<service>`)를 `model="databricks/<model-service>"`로 사용하세요.
+
+    ```bash
+    uv add "crewai[databricks]"
+    ```
+
+    **API 선택:** Databricks Unity Gateway는 각 model service를 네이티브 API 또는 통합 API로 제공합니다. CrewAI는 model service 이름이나 `api=`로 API를 선택합니다:
+
+    | Model service | Databricks Unity Gateway API |
+    |---|---|
+    | `system.ai.*claude*` | 네이티브 Anthropic Messages API (`/ai-gateway/anthropic`) |
+    | `system.ai.*gemini*` | 네이티브 Gemini API (`/ai-gateway/gemini`) |
+    | 그 밖의 `system.ai.*` 서비스 또는 직접 구성한 서비스 | 통합 Responses API (`/ai-gateway/mlflow/v1`) |
+    | `api="completions"`를 지정한 모든 서비스 | 통합 Chat Completions API (`/ai-gateway/mlflow/v1`) |
+
+    통합 API는 모든 모델을 지원합니다. Claude나 Gemini 기반으로 직접 구성한 서비스에서 네이티브 API를 쓰려면 `api="anthropic"` 또는 `api="gemini"`를 지정하세요. Gemini에서 여러 턴에 걸친 도구 호출에는 네이티브 API가 필요합니다.
+
+    **인증:** CrewAI는 Databricks 통합 인증을 사용하므로 Databricks SDK가 지원하는 모든 방식이 동작하며, 오래 실행되는 crew에서도 OAuth 토큰이 자동으로 갱신됩니다. 자격 증명은 첫 요청 시점에 확인되므로 `LLM`을 생성할 때는 네트워크 호출이 일어나지 않습니다.
+
+    ```toml Code
+    # Personal access token
+    DATABRICKS_HOST=https://<workspace>.cloud.databricks.com
+    DATABRICKS_TOKEN=<personal-access-token>
+
+    # OAuth machine-to-machine (service principal)
+    DATABRICKS_HOST=https://<workspace>.cloud.databricks.com
+    DATABRICKS_CLIENT_ID=<service-principal-client-id>
+    DATABRICKS_CLIENT_SECRET=<service-principal-secret>
+
+    # OAuth user-to-machine: a profile created by `databricks auth login`
+    DATABRICKS_CONFIG_PROFILE=<profile-name>
+    ```
+
+    명시적으로 전달한 `api_key=`(personal access token)가 우선합니다. 그 외에는 환경 변수나 프로필에 인증 방식을 하나만 설정하세요. 예를 들어 토큰과 client secret을 함께 설정하면 Databricks SDK가 거부합니다.
+
+    **기본 사용법:**
+    ```python Code
+    from crewai import LLM
+
+    claude = LLM(model="databricks/system.ai.claude-sonnet-5")   # native Anthropic API
+    gemini = LLM(model="databricks/system.ai.gemini-3-5-flash")  # native Gemini API
+    gpt = LLM(model="databricks/system.ai.gpt-6-sol")            # unified Responses API
+
+    # Model services you configured in Unity Catalog
+    support = LLM(model="databricks/main.ai_services.support_assistant")              # unified Responses API
+    gemini_svc = LLM(model="databricks/main.ai_services.gemini_service", api="gemini")  # native Gemini API
+    ```
+
+    **명시적 자격 증명과 옵션:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="databricks/system.ai.claude-sonnet-5",
+        profile="my-profile",            # or host= with api_key= (a PAT), or client_id=/client_secret=
+        # auth_type="external-browser",  # interactive OAuth sign-in
+        # api="responses",               # choose an API: "anthropic", "gemini", "responses", "completions"
+        # base_url="https://<host>",     # another workspace host, or a full Databricks Unity Gateway URL (api_base= also works)
+    )
+    ```
+
+    기존 Databricks SDK 클라이언트를 `workspace_client=`로, 또는 `databricks_config=`(`databricks.sdk.core.Config`)로 전달할 수도 있습니다. 자격 증명은 `LLM`을 만들 때 고정되며 그 복사본들이 함께 사용합니다. 다른 자격 증명을 쓰려면 새 `LLM`을 만드세요.
+
+    **권한:** 호출하는 ID에는 서비스의 catalog와 schema에 대한 `USE CATALOG`, `USE SCHEMA`, 그리고 model service에 대한 `EXECUTE` 권한이 필요합니다. Unity Catalog는 접근할 수 없는 서비스를 존재하지 않는 것으로 보고하므로, `404`는 대개 권한이 없다는 뜻입니다.
+
+    **네트워크:** 프록시는 httpx 기본 클라이언트와 같은 방식으로 적용됩니다. `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`, `NO_PROXY`를 따르며, 이들이 설정되지 않은 경우 macOS/Windows 시스템 프록시 설정을 사용합니다. 다른 provider와 마찬가지로 `interceptor=`를 지정하면 자체 transport가 이 프록시 처리를 대신합니다. 호스트와 `base_url`은 `https://`를 사용해야 합니다.
+
+    **LiteLLM 경로에서 옮겨오기:** 이전 버전에서는 `databricks/...` 모델을 LiteLLM으로 보냈습니다. 이제 CrewAI는 모든 `databricks/` 모델에 대해 Databricks에서 모델에 접근하는 권장 방식인 Databricks Unity Gateway를 호출합니다. model service 이름(`system.ai.<model>` 또는 직접 구성한 서비스)을 사용하세요. 이전처럼 LiteLLM을 계속 쓰려면 `is_litellm=True`를 전달하세요.
+
+    **기능:**
+    - 모든 Databricks Unity Gateway API에서 네이티브 function calling, 스트리밍, 비동기 호출, 구조화된 출력, 토큰 사용량 추적
+    - thought signature를 보존하는 네이티브 Gemini API를 통한 Gemini의 여러 턴 도구 호출
+    - `temperature`를 받지 않는 모델에 대해 `temperature` 없이 자동 재시도
+    - 이미지와 기타 파일(`input_files`)은 각 API의 형식에 맞게 요청에 인라인으로 전송됩니다
+    - 저장된 상태(checkpoint)에서 복원한 agent와 crew는 Databricks 모델을 다시 만듭니다. 비밀 정보는 저장되지 않으므로 복원된 모델은 환경 변수나 프로필의 자격 증명을 사용합니다
+    - 이 provider가 보내는 Databricks 요청에는 `crewai_oss/<version>` User-Agent가 포함되며, 다른 provider나 사용자의 Databricks SDK 클라이언트에는 영향이 없습니다
+
+    <Note>
+      Gemini는 thinking 토큰을 `max_tokens`에 포함합니다. thinking과 답변을 모두 감당할 수 있는 한도를 설정하지 않으면 응답이 잘릴 수 있습니다.
+    </Note>
+  </Accordion>
   <Accordion title="Anthropic">
     ```toml Code
     # Required

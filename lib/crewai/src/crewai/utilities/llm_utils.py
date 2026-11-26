@@ -139,6 +139,17 @@ PROVIDER_SETTINGS: Final[tuple[str, ...]] = (
     "aws_secret_access_key",
     "aws_session_token",
     "region_name",
+    # Databricks Unity Gateway credentials (the PAT lives in databricks_token,
+    # and databricks_auth carries already-resolved credentials)
+    "host",
+    "profile",
+    "auth_type",
+    "client_id",
+    "client_secret",
+    "databricks_token",
+    "databricks_config",
+    "workspace_client",
+    "databricks_auth",
     # client construction
     "max_retries",
     "default_headers",
@@ -350,6 +361,8 @@ def _same_route_provider(
     """
     if route.native_class is None:
         return declared_class is LLM and route.provider == declared_provider
+    if _both_databricks(declared_provider, route):
+        return True
     if declared_class is route.native_class:
         return not _serves_several_providers(route.native_class) or (
             route.provider == declared_provider
@@ -377,6 +390,8 @@ def _same_provider(base: BaseLLM, route: Any) -> bool:
     route by the class that string names.
     """
     if route.native_class is not None:
+        if _both_databricks(base.provider, route):
+            return True
         if type(base) is route.native_class:
             # One class serves every OpenAI-compatible provider (OpenRouter,
             # DeepSeek, Ollama, vLLM, …); each is its own vendor with its own
@@ -393,6 +408,13 @@ def _same_provider(base: BaseLLM, route: Any) -> bool:
             )
         )
     return type(base) is LLM and route.provider == base.provider
+
+
+def _both_databricks(provider: str | None, route: Any) -> bool:
+    """Databricks serves each model service through one of three classes (native
+    Anthropic, native Gemini, unified APIs); they are one provider, with the same
+    workspace and credentials."""
+    return provider == "databricks" and route.provider == "databricks"
 
 
 def _serves_several_providers(native_class: type[BaseLLM]) -> bool:

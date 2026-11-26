@@ -64,6 +64,7 @@ _PROVIDERS: list[tuple[str, str]] = [
     ("cerebras", "Cerebras"),
     ("sambanova", "SambaNova"),
     ("watson", "IBM watsonx"),
+    ("databricks", "Databricks"),
 ]
 
 # Curated offline fallback / label source. The picker prefers models pulled
@@ -135,6 +136,13 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("gpt-oss-120b", "GPT-OSS 120B"),
         ("DeepSeek-V3.1", "DeepSeek V3.1"),
         ("gemma-4-31B-it", "Gemma 4 31B (preview)"),
+    ],
+    # Databricks Unity Gateway model services; any `<catalog>.<schema>.<service>`
+    # model service name also works.
+    "databricks": [
+        ("system.ai.claude-sonnet-5", "Claude Sonnet 5 (Databricks)"),
+        ("system.ai.gpt-6-sol", "GPT-6 Sol (Databricks)"),
+        ("system.ai.gemini-3-5-flash", "Gemini 3.5 Flash (Databricks)"),
     ],
     "watson": [
         ("ibm/granite-4-h-small", "Granite 4 H Small"),

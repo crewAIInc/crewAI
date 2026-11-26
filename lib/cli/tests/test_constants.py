@@ -404,6 +404,8 @@ def test_classic_provider_extra_covers_every_model_it_lists() -> None:
         ("deepseek", ["DEEPSEEK_API_KEY"]),
         ("dashscope", ["DASHSCOPE_API_KEY"]),
         ("deepinfra", ["DEEPINFRA_API_KEY"]),
+        # The token is optional: OAuth needs none.
+        ("databricks", ["DATABRICKS_HOST"]),
         ("mistral", []),
     ],
 )

@@ -269,6 +269,15 @@ def declared_before_overlay(llm: Any) -> Declared | None:
     return _declared_before.get(id(llm))
 
 
+def is_building_mapped_model() -> bool:
+    """Whether the overlay is building the model it mapped to right now.
+
+    Lets a provider tell a remapped model (built with settings carried over from
+    another model) from one the caller built.
+    """
+    return _building_mapped.get()
+
+
 @contextmanager
 def building_mapped_model() -> Iterator[None]:
     """Build the model the overlay mapped to, without mapping it again."""
