@@ -114,6 +114,16 @@ Cada `handle_turn` executa este pipeline:
 
 Os handlers devem chamar **`append_assistant_message(reply)`** quando a resposta visível não for o valor de retorno, ou ao recortar o histórico. Um retorno de string pública também é gravado como assistente e entra no snapshot `@persist`, então uma nova instância de Flow o restaura. A linha do usuário já é salva por `handle_turn` — não acrescente de novo nos handlers.
 
+## Persistindo e retomando uma conversa
+
+Com `@persist` e `SQLiteFlowPersistence`, uma conversa sobrevive entre instâncias *novas* de `Flow`: uma nova instância com a mesma persistência e o mesmo `session_id` restaura as mensagens anteriores antes de processar o próximo turno, enquanto um `session_id` diferente é uma conversa separada. O exemplo abaixo é determinístico e offline — uma rota roteirizada, sem chamadas de modelo — então roda como está.
+
+```python
+# (não traduzir blocos de código)
+```
+
+A nova instância restaura o *estado persistido* — o histórico de mensagens — e não o trabalho em segundo plano em execução ou recursos de execução. O `handle_turn` armazena a linha do usuário, e o retorno em string de um handler é registrado como a resposta do assistente e incluído no snapshot, então não anexe nenhum dos dois novamente no seu handler.
+
 ## Visão geral da configuração
 
 Decorar uma subclasse de `Flow` com `ConversationConfig` anexa os padrões de chat e habilita o modo conversacional. Consulte a [referência completa de campos](#conversationconfig) abaixo. Sobrescreva a pré-classificação por turno com `handle_turn(..., intents=..., intent_llm=...)`.
