@@ -1620,3 +1620,131 @@ def test_azure_credential_scopes_in_to_config_dict():
         )
         config = llm.to_config_dict()
         assert config["credential_scopes"] == scopes
+
+
+def test_azure_completion_params_forward_cap_and_reasoning_effort():
+    """A reasoning deployment is capped and tuned on the default completions API.
+
+    ``ChatCompletionsClient.complete`` only merges ``model_extras`` into the
+    request body (extra kwargs go to the HTTP pipeline), so both settings have
+    to travel there.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com",
+    }):
+        llm = LLM(
+            model="azure/gpt-5-nano",
+            max_completion_tokens=256,
+            reasoning_effort="low",
+        )
+
+        from crewai.llms.providers.azure.completion import AzureCompletion
+        assert isinstance(llm, AzureCompletion)
+        assert llm.api == "completions"
+
+        params = llm._prepare_completion_params(
+            [{"role": "user", "content": "Say hello."}]
+        )
+
+        extras = params.get("model_extras", {})
+        assert extras.get("max_completion_tokens") == 256
+        assert extras.get("reasoning_effort") == "low"
+
+def test_azure_completion_params_drop_legacy_cap_when_reasoning_cap_is_set():
+    """A reasoning deployment rejects a body carrying both token caps.
+
+    Azure answers `max_tokens` alongside `max_completion_tokens` with an
+    unsupported-parameter error, so the legacy cap must not survive next to
+    the reasoning one.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com",
+    }):
+        llm = LLM(
+            model="azure/gpt-5-nano",
+            max_tokens=128,
+            max_completion_tokens=256,
+        )
+
+        params = llm._prepare_completion_params(
+            [{"role": "user", "content": "Say hello."}]
+        )
+
+        assert "max_tokens" not in params
+        assert params.get("model_extras", {}).get("max_completion_tokens") == 256
+
+
+@pytest.mark.parametrize(
+    ("legacy_cap", "reasoning_cap", "drop_params", "dropped", "expected_caps"),
+    [
+        pytest.param(128, 256, False, [], {"max_completion_tokens": 256}, id="both"),
+        pytest.param(128, 0, False, [], {"max_completion_tokens": 0}, id="zero-modern"),
+        pytest.param(128, None, False, [], {"max_tokens": 128}, id="legacy"),
+        pytest.param(0, None, False, [], {"max_tokens": 0}, id="zero-legacy"),
+        pytest.param(None, None, False, [], {}, id="unset"),
+        pytest.param(128, 256, True, ["model_extras"], {}, id="drop-extras"),
+        pytest.param(128, None, True, ["max_tokens"], {}, id="drop-legacy"),
+        pytest.param(
+            128,
+            256,
+            True,
+            ["max_completion_tokens"],
+            {"max_completion_tokens": 256},
+            id="drop-only-top-level",
+        ),
+        pytest.param(
+            128, None, False, ["max_tokens"], {"max_tokens": 128}, id="drop-disabled"
+        ),
+    ],
+)
+def test_azure_completion_started_event_matches_wire_token_cap(
+    legacy_cap, reasoning_cap, drop_params, dropped, expected_caps
+):
+    import json
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallStartedEvent
+    import requests
+
+    llm = LLM(
+        model="azure/gpt-5-nano",
+        api_key="test-key",
+        endpoint="https://models.inference.ai.azure.com",
+        max_tokens=legacy_cap,
+        max_completion_tokens=reasoning_cap,
+        drop_params=drop_params,
+        additional_drop_params=dropped,
+    )
+    reply = requests.Response()
+    reply.status_code = 200
+    reply.raw = Mock()
+    reply._content_consumed = True
+    reply.headers["Content-Type"] = "application/json"
+    reply._content = (
+        b'{"choices":[{"index":0,"message":{"role":"assistant","content":"Hello"},'
+        b'"finish_reason":"stop"}]}'
+    )
+    events = []
+    with (
+        crewai_event_bus.scoped_handlers(),
+        patch.object(requests.Session, "send", return_value=reply) as send,
+    ):
+
+        @crewai_event_bus.on(LLMCallStartedEvent)
+        def capture_started_event(source, event):
+            if source is llm:
+                events.append(event)
+
+        assert llm.call("Say hello.") == "Hello"
+        assert crewai_event_bus.flush()
+
+    send.assert_called_once()
+    body = json.loads(send.call_args.args[0].body)
+    assert {
+        key: body[key] for key in ("max_tokens", "max_completion_tokens") if key in body
+    } == expected_caps
+    assert len(events) == 1
+    assert isinstance(events[0], LLMCallStartedEvent)
+    assert events[0].max_tokens == next(iter(expected_caps.values()), None)
