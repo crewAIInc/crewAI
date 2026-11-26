@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -27,6 +27,10 @@ from crewai.events.types.tool_usage_events import (
 from crewai.task import Task
 
 
+if TYPE_CHECKING:
+    from crewai.events.base_events import BaseEvent
+
+
 class EvaluationTraceCallback(BaseEventListener):
     """Event listener for collecting execution traces for evaluation.
 
@@ -37,6 +41,7 @@ class EvaluationTraceCallback(BaseEventListener):
 
     _instance: EvaluationTraceCallback | None = None
     _initialized: bool = False
+    _listeners: tuple[tuple[type[BaseEvent], Callable[..., Any]], ...] | None = None
 
     def __new__(cls) -> EvaluationTraceCallback:
         """Create or return the singleton instance."""
@@ -55,42 +60,36 @@ class EvaluationTraceCallback(BaseEventListener):
             self.current_llm_call: dict[str, Any] = {}
             self._initialized = True
 
-    def setup_listeners(self, event_bus: CrewAIEventsBus) -> None:
-        """Set up event listeners on the event bus.
+    def _get_listeners(
+        self,
+    ) -> tuple[tuple[type[BaseEvent], Callable[..., Any]], ...]:
+        """Build and cache handler callables once so setup_listeners is idempotent."""
+        if self._listeners is not None:
+            return self._listeners
 
-        Args:
-            event_bus: The event bus to register listeners on.
-        """
-
-        @event_bus.on(AgentExecutionStartedEvent)
         def on_agent_started(source: Any, event: AgentExecutionStartedEvent) -> None:
             self.on_agent_start(event.agent, event.task)
 
-        @event_bus.on(LiteAgentExecutionStartedEvent)
         def on_lite_agent_started(
             source: Any, event: LiteAgentExecutionStartedEvent
         ) -> None:
             self.on_lite_agent_start(event.agent_info)
 
-        @event_bus.on(AgentExecutionCompletedEvent)
         def on_agent_completed(
             source: Any, event: AgentExecutionCompletedEvent
         ) -> None:
             self.on_agent_finish(event.agent, event.task, event.output)
 
-        @event_bus.on(LiteAgentExecutionCompletedEvent)
         def on_lite_agent_completed(
             source: Any, event: LiteAgentExecutionCompletedEvent
         ) -> None:
             self.on_lite_agent_finish(event.output)
 
-        @event_bus.on(ToolUsageFinishedEvent)
         def on_tool_completed(source: Any, event: ToolUsageFinishedEvent) -> None:
             self.on_tool_use(
                 event.tool_name, event.tool_args, event.output, success=True
             )
 
-        @event_bus.on(ToolUsageErrorEvent)
         def on_tool_usage_error(source: Any, event: ToolUsageErrorEvent) -> None:
             self.on_tool_use(
                 event.tool_name,
@@ -100,7 +99,6 @@ class EvaluationTraceCallback(BaseEventListener):
                 error_type="usage_error",
             )
 
-        @event_bus.on(ToolExecutionErrorEvent)
         def on_tool_execution_error(
             source: Any, event: ToolExecutionErrorEvent
         ) -> None:
@@ -112,7 +110,6 @@ class EvaluationTraceCallback(BaseEventListener):
                 error_type="execution_error",
             )
 
-        @event_bus.on(ToolSelectionErrorEvent)
         def on_tool_selection_error(
             source: Any, event: ToolSelectionErrorEvent
         ) -> None:
@@ -124,7 +121,6 @@ class EvaluationTraceCallback(BaseEventListener):
                 error_type="selection_error",
             )
 
-        @event_bus.on(ToolValidateInputErrorEvent)
         def on_tool_validate_input_error(
             source: Any, event: ToolValidateInputErrorEvent
         ) -> None:
@@ -136,13 +132,35 @@ class EvaluationTraceCallback(BaseEventListener):
                 error_type="validation_error",
             )
 
-        @event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source: Any, event: LLMCallStartedEvent) -> None:
             self.on_llm_call_start(event.messages, event.tools)
 
-        @event_bus.on(LLMCallCompletedEvent)
         def on_llm_call_completed(source: Any, event: LLMCallCompletedEvent) -> None:
             self.on_llm_call_end(event.messages, event.response)
+
+        self._listeners = (
+            (AgentExecutionStartedEvent, on_agent_started),
+            (LiteAgentExecutionStartedEvent, on_lite_agent_started),
+            (AgentExecutionCompletedEvent, on_agent_completed),
+            (LiteAgentExecutionCompletedEvent, on_lite_agent_completed),
+            (ToolUsageFinishedEvent, on_tool_completed),
+            (ToolUsageErrorEvent, on_tool_usage_error),
+            (ToolExecutionErrorEvent, on_tool_execution_error),
+            (ToolSelectionErrorEvent, on_tool_selection_error),
+            (ToolValidateInputErrorEvent, on_tool_validate_input_error),
+            (LLMCallStartedEvent, on_llm_call_started),
+            (LLMCallCompletedEvent, on_llm_call_completed),
+        )
+        return self._listeners
+
+    def setup_listeners(self, event_bus: CrewAIEventsBus) -> None:
+        """Set up event listeners on the event bus.
+
+        Args:
+            event_bus: The event bus to register listeners on.
+        """
+        for event_type, handler in self._get_listeners():
+            event_bus.register_handler(event_type, handler)
 
     def on_lite_agent_start(self, agent_info: dict[str, Any]) -> None:
         """Handle a lite agent execution start event.
