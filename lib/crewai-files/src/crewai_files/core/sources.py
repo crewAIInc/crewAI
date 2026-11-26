@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
+from copy import deepcopy
 import inspect
+from io import BytesIO
 import json
 import mimetypes
 import os
 from pathlib import Path
+from threading import Lock, RLock
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
+from weakref import WeakValueDictionary
 
 import aiofiles
 from pydantic import (
@@ -20,12 +24,20 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import CoreSchema, core_schema
-from typing_extensions import TypeIs
+from typing_extensions import Self, TypeIs
 
 from crewai_files.core.constants import DEFAULT_MAX_FILE_SIZE_BYTES, MAGIC_BUFFER_SIZE
 
 
 OCTET_STREAM = "application/octet-stream"
+_stream_locks: WeakValueDictionary[int, RLock] = WeakValueDictionary()
+_stream_locks_guard = Lock()
+
+
+def _stream_lock(stream: BinaryIO) -> RLock:
+    # Wrappers around the same handle share a lock, even if they are separate models.
+    with _stream_locks_guard:
+        return _stream_locks.setdefault(id(stream), RLock())
 
 
 @runtime_checkable
@@ -214,7 +226,7 @@ class FilePath(BaseModel):
         description="Maximum file size in bytes.",
     )
     _content: bytes | None = PrivateAttr(default=None)
-    _content_type: str = PrivateAttr()
+    _content_type: str | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def _validate_file_exists(self) -> FilePath:
@@ -245,7 +257,6 @@ class FilePath(BaseModel):
                 max_size=self.max_size_bytes,
             )
 
-        self._content_type = detect_content_type_from_path(self.path, self.path.name)
         return self
 
     @property
@@ -256,19 +267,28 @@ class FilePath(BaseModel):
     @property
     def content_type(self) -> str:
         """Get the content type."""
+        if self._content_type is None:
+            self._content_type = detect_content_type_from_path(self.path, self.filename)
         return self._content_type
+
+    def _cache_content(self, content: bytes) -> bytes:
+        self._content_type = detect_content_type(
+            content[:MAGIC_BUFFER_SIZE], self.filename
+        )
+        self._content = content
+        return content
 
     def read(self) -> bytes:
         """Read the file content from disk."""
         if self._content is None:
-            self._content = self.path.read_bytes()
+            return self._cache_content(self.path.read_bytes())
         return self._content
 
     async def aread(self) -> bytes:
         """Async read the file content from disk."""
         if self._content is None:
             async with aiofiles.open(self.path, "rb") as f:
-                self._content = await f.read()
+                return self._cache_content(await f.read())
         return self._content
 
     def read_chunks(self, chunk_size: int = 65536) -> Iterator[bytes]:
@@ -365,12 +385,35 @@ class FileStream(BaseModel):
             if name is not None:
                 self.filename = Path(name).name
 
-        position = self.stream.tell()
-        self.stream.seek(0)
-        header = self.stream.read(MAGIC_BUFFER_SIZE)
-        self.stream.seek(position)
+        header = self._read_at(0, MAGIC_BUFFER_SIZE)
         self._content_type = detect_content_type(header, self.filename)
         return self
+
+    def _read_at(self, offset: int, size: int = -1) -> bytes:
+        with _stream_lock(self.stream):
+            position = self.stream.tell()
+            try:
+                self.stream.seek(offset)
+                return self.stream.read(size)
+            finally:
+                self.stream.seek(position)
+
+    def _copy_for_task(self) -> Self:
+        with _stream_lock(self.stream):
+            if self._content is not None and getattr(self.stream, "closed", False):
+                content, position = self._content, 0
+            else:
+                position = self.stream.tell()
+                content = self._read_at(0)
+
+        stream = BytesIO(content)
+        stream.seek(position)
+        copied = deepcopy(self, {id(self.stream): stream})
+        copied._content = None
+        copied._content_type = detect_content_type(
+            content[:MAGIC_BUFFER_SIZE], self.filename
+        )
+        return copied
 
     @property
     def content_type(self) -> str:
@@ -379,16 +422,15 @@ class FileStream(BaseModel):
 
     def read(self) -> bytes:
         """Read the stream content. Content is cached after first read."""
-        if self._content is None:
-            position = self.stream.tell()
-            self.stream.seek(0)
-            self._content = self.stream.read()
-            self.stream.seek(position)
-        return self._content
+        with _stream_lock(self.stream):
+            if self._content is None:
+                self._content = self._read_at(0)
+            return self._content
 
     def close(self) -> None:
         """Close the underlying stream."""
-        self.stream.close()
+        with _stream_lock(self.stream):
+            self.stream.close()
 
     def __enter__(self) -> FileStream:
         """Enter context manager."""
@@ -412,13 +454,10 @@ class FileStream(BaseModel):
         Yields:
             Chunks of stream content.
         """
-        position = self.stream.tell()
-        self.stream.seek(0)
-        try:
-            while chunk := self.stream.read(chunk_size):
-                yield chunk
-        finally:
-            self.stream.seek(position)
+        offset = 0
+        while chunk := self._read_at(offset, chunk_size):
+            offset += len(chunk)
+            yield chunk
 
 
 class AsyncFileStream(BaseModel):
