@@ -2,11 +2,14 @@
 
 import atexit
 from collections.abc import Callable
+import contextlib
 import functools
 import json
+import logging
 import os
 import shutil
 import threading
+import time
 from typing import Any
 
 from crewai_core.paths import db_storage_path
@@ -14,6 +17,9 @@ from qdrant_client import QdrantClient as SyncQdrantClientBase
 
 from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.qdrant.config import QdrantConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 class _LockedQdrantClient(SyncQdrantClientBase):
@@ -69,15 +75,92 @@ def _with_lock(lock: threading.RLock, method: Callable[..., Any]) -> Callable[..
 _local_clients: dict[str, SyncQdrantClientBase] = {}
 _local_clients_lock = threading.Lock()
 
+_RMTREE_ATTEMPTS = 5
+"""How often deleting the default folder is attempted before giving up.
+
+Windows refuses to delete a file while another handle has it open, and even
+after the client is closed a virus scanner or the search indexer can hold one
+for a moment. A single ``rmtree`` call is therefore not enough there, while its
+failure is worth retrying on every platform because the retry is free when the
+first attempt succeeds.
+"""
+
+_RMTREE_RETRY_DELAY = 0.1
+"""Seconds to wait between delete attempts; short, since this runs at exit."""
+
+
+def _close_local_client(folder: str) -> None:
+    """Drop ``folder``'s cached client and close it.
+
+    Closing releases the folder's ``.lock`` file and every collection's
+    ``storage.sqlite``. It is what lets the folder be deleted on Windows, which
+    cannot unlink files that are still open. Safe to call when the client was
+    never opened or was already closed.
+    """
+    with _local_clients_lock:
+        client = _local_clients.pop(folder, None)
+    if client is None:
+        return
+    # A close failure must not stop the folder from being removed, and it cannot
+    # be reported usefully at interpreter exit.
+    with contextlib.suppress(Exception):
+        client.close()
+
+
+def _try_remove_once(folder: str) -> bool:
+    """Delete ``folder`` once.
+
+    Returns:
+        ``True`` when the folder is gone, ``False`` when a file in it was still
+        open, which Windows reports as ``OSError``.
+    """
+    try:
+        shutil.rmtree(folder)
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _remove_folder(folder: str) -> bool:
+    """Delete ``folder``, retrying handles that are briefly still open.
+
+    Returns:
+        ``True`` when the folder is gone, ``False`` when it survived every
+        attempt. Failures are never swallowed silently: the caller reports a
+        survivor, because a leftover folder is what the bug report describes.
+    """
+    for attempt in range(_RMTREE_ATTEMPTS):
+        if _try_remove_once(folder):
+            return True
+        if attempt < _RMTREE_ATTEMPTS - 1:
+            time.sleep(_RMTREE_RETRY_DELAY)
+    return False
+
 
 def _remove_folder_if_owner(folder: str, owner_pid: int) -> None:
     """Delete ``folder`` at exit, but only in the process that created it.
 
     A forked child inherits this exit handler and must not delete its parent's
     storage when it exits.
+
+    The folder's client is closed first: Windows cannot delete files that are
+    still open, so removing the folder while the shared client held its
+    ``.lock`` and ``storage.sqlite`` files left it behind on every run. A folder
+    that still cannot be removed is reported rather than dropped, because a
+    silent ``ignore_errors`` delete is what let the leftovers pile up unnoticed.
     """
-    if os.getpid() == owner_pid:
-        shutil.rmtree(folder, ignore_errors=True)
+    if os.getpid() != owner_pid:
+        return
+    _close_local_client(folder)
+    if not _remove_folder(folder):
+        logger.warning(
+            "Could not remove the local Qdrant storage at '%s'. It is left in "
+            "place rather than deleted while a file is still open. Remove it "
+            "once the process that uses it has exited.",
+            folder,
+        )
 
 
 def _get_qdrant_client(config: QdrantConfig) -> SyncQdrantClientBase:
