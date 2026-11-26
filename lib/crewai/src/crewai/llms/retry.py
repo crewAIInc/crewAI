@@ -23,6 +23,15 @@ _RETRYABLE_ERROR_CODES: Final[frozenset[str]] = frozenset(
 _NON_RETRYABLE_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {
         "servicequotaexceededexception",
+        "insufficientquota",
+        "creditbalanceexhausted",
+        "projectspendlimitexceeded",
+        "usageexceeded",
+    }
+)
+_NON_RETRYABLE_ERROR_TYPES: Final[frozenset[str]] = frozenset(
+    {
+        "insufficientquota",
     }
 )
 _RETRYABLE_MESSAGE_MARKERS: Final[tuple[str, ...]] = (
@@ -51,6 +60,11 @@ class _ThrottlingErrorClassifier:
         error_chain = tuple(cls.iter_error_chain(error))
         error_codes = tuple(cls.error_code(candidate) for candidate in error_chain)
         if any(code in _NON_RETRYABLE_ERROR_CODES for code in error_codes):
+            return False
+        if any(
+            cls.error_type(candidate) in _NON_RETRYABLE_ERROR_TYPES
+            for candidate in error_chain
+        ):
             return False
 
         for candidate, error_code in zip(error_chain, error_codes, strict=True):
@@ -86,6 +100,24 @@ class _ThrottlingErrorClassifier:
             if isinstance(response_error, dict):
                 code = response_error.get("Code") or response_error.get("code") or code
         return str(code or error.__class__.__name__).replace("_", "").lower()
+
+    @staticmethod
+    def error_type(error: BaseException) -> str:
+        """Extract and normalize provider error types across common SDK shapes."""
+        error_type: Any = getattr(error, "type", None)
+        body = getattr(error, "body", None)
+        if isinstance(body, dict):
+            error_type = body.get("type") or error_type
+        response = getattr(error, "response", None)
+        if isinstance(response, dict):
+            response_error = response.get("Error") or response.get("error") or {}
+            if isinstance(response_error, dict):
+                error_type = (
+                    response_error.get("Type")
+                    or response_error.get("type")
+                    or error_type
+                )
+        return str(error_type or "").replace("_", "").lower()
 
     @staticmethod
     def status_code(error: BaseException) -> int | None:
