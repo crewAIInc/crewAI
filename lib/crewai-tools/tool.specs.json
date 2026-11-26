@@ -14437,6 +14437,158 @@
       }
     },
     {
+      "description": "Asks TypeSafe's Jev model one Choice question about a state and returns the selected label, its confidence, and the probability of each label.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the TypeSafe API",
+          "name": "TYPESAFE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Jev Decision Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Answer one Choice question with TypeSafe's Jev model.\n\nCredentials and endpoint come from the SDK's own configuration\n(``TYPESAFE_API_KEY``, ``TYPESAFE_BASE_URL``), or from ``client``.",
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Jev model name. None uses the SDK default.",
+            "title": "Model"
+          }
+        },
+        "required": [],
+        "title": "JevDecisionTool",
+        "type": "object"
+      },
+      "name": "JevDecisionTool",
+      "package_dependencies": [
+        "typesafe-sdk"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for JevDecisionTool.",
+        "properties": {
+          "choices": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "Choice labels mapped to a description of when each applies, or null to let the label speak for itself.",
+            "title": "Choices",
+            "type": "object"
+          },
+          "question": {
+            "description": "The non-empty question or instruction to answer about the state.",
+            "pattern": "\\S",
+            "title": "Question",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              }
+            ],
+            "description": "Text, JSON object, or array for Jev to evaluate.",
+            "title": "State"
+          }
+        },
+        "required": [
+          "state",
+          "question",
+          "choices"
+        ],
+        "title": "JevDecisionToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content using Jina.ai reader and return markdown content.",
       "env_vars": [],
       "humanized_name": "JinaScrapeWebsiteTool",
