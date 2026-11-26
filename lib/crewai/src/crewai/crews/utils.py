@@ -502,7 +502,16 @@ async def run_for_each_async(
         for crew_copy, input_data in zip(crew_copies, inputs, strict=True)
     ]
 
-    results = await asyncio.gather(*async_tasks)
+    try:
+        results = await asyncio.gather(*async_tasks)
+    except BaseException:
+        # One crew failed: cancel the remaining crews instead of leaving them
+        # running in the background, and retrieve their outcomes.
+        for orphan in async_tasks:
+            if not orphan.done():
+                orphan.cancel()
+        await asyncio.gather(*async_tasks, return_exceptions=True)
+        raise
 
     total_usage_metrics = UsageMetrics()
     for crew_copy in crew_copies:
