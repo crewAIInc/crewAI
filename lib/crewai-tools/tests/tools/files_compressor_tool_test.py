@@ -129,3 +129,18 @@ def test_prepare_output_makes_dir(mock_exists, mock_makedirs):
     result = tool._prepare_output("some/missing/path/file.zip", overwrite=True)
     assert result is True
     mock_makedirs.assert_called_once()
+
+
+def test_output_inside_input_directory_is_rejected(tool, tmp_path):
+    (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
+    result = tool._run(str(tmp_path), str(tmp_path / "archive.zip"))
+    assert "outside the input directory" in result
+    assert not (tmp_path / "archive.zip").exists()
+
+
+def test_output_equal_to_input_file_is_rejected(tool, tmp_path):
+    source = tmp_path / "data.zip"
+    source.write_text("original", encoding="utf-8")
+    result = tool._run(str(source), str(source), overwrite=True)
+    assert "must differ from input_path" in result
+    assert source.read_text(encoding="utf-8") == "original"
