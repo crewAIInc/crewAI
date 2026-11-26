@@ -11410,6 +11410,122 @@
       }
     },
     {
+      "description": "Run a Firecrawl Alexandria data provider capability and return its structured data. To find a capability and its options, first call it with provider='firecrawl', capability='find-tools' and options '{\"query\": \"<what you need>\", \"level\": \"tools\", \"expand\": [\"options\"], \"limit\": 5}'. Then call the provider and capability it returns, with options as a JSON-encoded object string using the option names it lists.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Firecrawl services",
+          "name": "FIRECRAWL_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Firecrawl Alexandria tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Tool for running Firecrawl Alexandria data provider capabilities.\n\nAlexandria exposes structured data providers (company filings, public\nrecords, finance, sports and more) behind the Firecrawl API. Each call runs\none provider capability and returns its data. The `firecrawl` provider's\n`find-tools` capability searches the catalog and lists each capability's\noptions, so the same tool covers discovery and execution. To run this tool,\nyou need a Firecrawl API key.\n\nArgs:\n    api_key (str): Your Firecrawl API key. Defaults to the\n        `FIRECRAWL_API_KEY` environment variable.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          }
+        },
+        "required": [],
+        "title": "FirecrawlAlexandriaTool",
+        "type": "object"
+      },
+      "name": "FirecrawlAlexandriaTool",
+      "package_dependencies": [
+        "firecrawl-py"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "capability": {
+            "description": "Capability of that provider, for example 'filings/company'",
+            "title": "Capability",
+            "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "JSON-encoded object string with the capability inputs, for example {\"ticker\": \"AAPL\"}",
+            "title": "Options"
+          },
+          "provider": {
+            "description": "Alexandria provider id, for example 'sec-gov', or 'firecrawl' for find-tools",
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "capability"
+        ],
+        "title": "FirecrawlAlexandriaToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Crawl webpages using Firecrawl and return the contents",
       "env_vars": [
         {
