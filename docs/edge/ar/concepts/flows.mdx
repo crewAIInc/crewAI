@@ -726,6 +726,99 @@ def next_step(self, result: HumanFeedbackResult):
 
 للحصول على دليل كامل حول التغذية الراجعة البشرية في التدفقات، بما في ذلك **التغذية الراجعة غير المتزامنة/غير الحاجبة** مع مزودين مخصصين (Slack، webhooks، إلخ)، انظر [التغذية الراجعة البشرية في التدفقات](/ar/learn/human-feedback-in-flows).
 
+### سؤال المستخدم عن إدخال عبر `ask()`
+
+يوقف `Flow.ask()` الخطوة الحالية ليسأل المستخدم سؤالاً ويعيد نص الإجابة — استخدمه للمعالجات الإرشادية والتوضيحات والقرارات أثناء التدفق. وهذا يختلف عن `handle_turn()` الذي يبدأ جولة محادثة كاملة على `Flow` محادثاتي (انظر [التدفقات المحادثاتية](/ar/guides/flows/conversational-flows)).
+
+افتراضياً يقرأ `ask()` من الطرفية. لجمع الإدخال من أي مكان آخر — سكربت، قائمة انتظار، Slack، واجهة ويب — عيّن موفر إدخال مخصصاً: أي كائن يطبّق `request_input(message, flow, metadata=None)`.
+
+```python Code
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedProvider:
+    """Deterministic provider: scripted answers keyed by question text."""
+
+    def __init__(self, script):
+        # script: list of (question_substring, answer, responder) tuples.
+        self.script = script
+
+    def request_input(self, message, flow, metadata=None):
+        # Metadata passed to ask() arrives here; use it to route the question.
+        for question_part, answer, responder in self.script:
+            if question_part in message:
+                return InputResponse(
+                    text=answer,
+                    metadata={"responded_by": responder, "channel": "script"},
+                )
+        # Unavailable input: return None explicitly. Never invent an answer.
+        return None
+
+
+class OnboardingFlow(Flow):
+    input_provider = ScriptedProvider(
+        script=[("team name", "spinach-labs", "abhishek")]
+    )
+
+    @start()
+    def onboard(self):
+        # ask() returns the response text; metadata goes to the provider.
+        team = self.ask(
+            "What is your team name?",
+            metadata={"user_id": "u123", "channel": "#onboarding"},
+        )
+        if team is None:
+            return "onboarding skipped: no team name provided"
+        # No scripted answer for this question, so the provider returns None.
+        nickname = self.ask("Pick a nickname for the team bot?")
+        if nickname is None:
+            # Handle None explicitly: unavailable input is NOT an answer.
+            return f"team '{team}' onboarded without a nickname"
+        return f"team '{team}' onboarded, bot nickname '{nickname}'"
+
+
+flow = OnboardingFlow()
+print(flow.kickoff())
+```
+
+شغّله (بدون stdin، وبدون استدعاءات نماذج، وبدون بيانات اعتماد):
+
+```bash
+python scripted_input_provider_example.py
+```
+
+المخرجات المتوقعة:
+
+```text
+team 'spinach-labs' onboarded without a nickname
+```
+
+يُسجَّل كل استدعاء لـ `ask()` في `flow.input_history`: السؤال، والرد (أو `None`)، والطريقة السائلة، و`metadata` الطلب، و`response_metadata` الخاصة بالموفر.
+
+```python Code
+for entry in flow.input_history:
+    print(entry["message"], "->", entry["response"])
+    print("request metadata:", entry["metadata"])
+    print("response metadata:", entry["response_metadata"])
+```
+
+```text
+What is your team name? -> spinach-labs
+request metadata: {'user_id': 'u123', 'channel': '#onboarding'}
+response metadata: {'responded_by': 'abhishek', 'channel': 'script'}
+Pick a nickname for the team bot? -> None
+request metadata: None
+response metadata: None
+```
+
+ملاحظات:
+
+- يحجب `ask()` الخطوة المستدعية حتى يجيب الموفر (ومهلة `timeout=` الاختيارية تعيد `None` أيضاً عند انتهائها). وهو لا يحجب حلقة الأحداث أبداً: الموفرون المتزامنون يعملون في تجمع خيوط.
+- عند تهيئة `@persist`، يحفظ `ask()` نقطة تفتيش لـ `self.state` قبل الانتظار، فلا تُفقَد الحالة إذا تعطل أثناء انتظار الإدخال.
+- أعِد سلسلة نصية عادية من `request_input()` للإجابات البسيطة؛ وأعِد `InputResponse` عندما يجب أن تحمل الإجابة بيانات وصفية. أعِد `None` للإدخال غير المتاح (ألغى المستخدم، لا إجابة مُعدّة، انقطع الاتصال) وتعامل معه صراحةً — `None` تعني "لا إجابة"، وليست إجابة فارغة أبداً.
+- يسأل `ask()` **داخل** خطوة جارية واحدة. أما `handle_turn()` فيبدأ **جولة محادثة جديدة** (يلحق سطر المستخدم، ويوجّه، ويشغّل الرسم البياني). استخدم `ask()` لسؤال أثناء الخطوة و`handle_turn()` لرسالة المحادثة التالية.
+
 ## إضافة Agents إلى التدفقات
 
 يمكن دمج Agents بسلاسة في تدفقاتك، مما يوفر بديلًا خفيف الوزن لفرق Crew الكاملة عندما تحتاج إلى تنفيذ مهام أبسط وأكثر تركيزًا. إليك مثال على كيفية استخدام Agent ضمن تدفق لإجراء أبحاث السوق:
