@@ -13,11 +13,16 @@ from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
     LLMCallBlockedError,
+    MissingAPIKeyError,
+    _without_placeholder,
     llm_call_context,
 )
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -223,6 +228,16 @@ def _tool_use_input(block: _AnthropicToolUseBlock) -> dict[str, Any]:
     return (
         block["input"] if isinstance(block, dict) else cast(dict[str, Any], block.input)
     )
+
+
+def _tools_named_in_history(messages: list[LLMMessage]) -> list[dict[str, Any]]:
+    """Return an open-schema definition for each tool the history's tool_use blocks name."""
+    names: dict[str, None] = {}
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            names.update(dict.fromkeys(map(_tool_use_name, _tool_use_blocks(content))))
+    return [{"name": name, "input_schema": {"type": "object"}} for name in names]
 
 
 class AnthropicThinkingConfig(BaseModel):
@@ -440,10 +455,11 @@ class AnthropicCompletion(BaseLLM):
                 without leaking a sync one.
         """
 
+        self.api_key = _without_placeholder(self.api_key)
         if self.api_key is None:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            self.api_key = _without_placeholder(os.getenv("ANTHROPIC_API_KEY"))
             if self.api_key is None:
-                raise ValueError("ANTHROPIC_API_KEY is required")
+                raise MissingAPIKeyError("ANTHROPIC_API_KEY", self.model)
 
         client_params = {
             "api_key": self.api_key,
@@ -669,6 +685,12 @@ class AnthropicCompletion(BaseLLM):
             # Claude models (Sonnet 5.5, Opus 5.5, Fable 5.1, Mythos 5.1).
             if available_functions and len(regular_tools) == 1:
                 params["tool_choice"] = {"type": "auto"}
+        elif history_tools := _tools_named_in_history(messages):
+            # Anthropic rejects tool_use/tool_result blocks in a request that
+            # defines no tools (a final-answer or schema request after tool
+            # calls). Declare the tools the history used and forbid calling them.
+            params["tools"] = history_tools
+            params["tool_choice"] = {"type": "none"}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
@@ -2082,7 +2104,10 @@ class AnthropicCompletion(BaseLLM):
         )
 
         return resolve_context_window_size(
-            self.model, ANTHROPIC_CONTEXT_WINDOWS, default=200_000
+            self.model,
+            ANTHROPIC_CONTEXT_WINDOWS,
+            default=200_000,
+            configured=self.context_window_size,
         )
 
     @staticmethod
@@ -2133,14 +2158,7 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             True if the model supports images and PDFs.
         """
-        model_lower = self.model.lower()
-        return (
-            "claude-3" in model_lower
-            or "claude-4" in model_lower
-            or "claude-sonnet-4" in model_lower
-            or "claude-opus-4" in model_lower
-            or "claude-haiku-4" in model_lower
-        )
+        return claude_supports_vision(self.model)
 
     def get_file_uploader(self) -> Any:
         """Get an Anthropic file uploader using this LLM's clients.

@@ -135,6 +135,14 @@ class UsageMetrics(BaseModel):
                 + _coerce_int(usage_data.get("cache_creation_input_tokens"))
             )
 
+        if "inputTokens" in usage_data:
+            # Bedrock Converse: ``inputTokens`` excludes cache reads/writes.
+            return (
+                _coerce_int(usage_data.get("inputTokens"))
+                + _coerce_int(usage_data.get("cacheReadInputTokens"))
+                + _coerce_int(usage_data.get("cacheWriteInputTokens"))
+            )
+
         return _first_int(
             usage_data, "prompt_tokens", "prompt_token_count", "input_tokens"
         )
@@ -162,12 +170,14 @@ class UsageMetrics(BaseModel):
             "completion_tokens",
             "candidates_token_count",
             "output_tokens",
+            "outputTokens",
         )
         cached_prompt_tokens = _first_int(
             usage_data,
             "cached_tokens",
             "cached_prompt_tokens",
             "cache_read_input_tokens",
+            "cacheReadInputTokens",
         )
         if not cached_prompt_tokens:
             details = usage_data.get("prompt_tokens_details")
@@ -176,7 +186,10 @@ class UsageMetrics(BaseModel):
 
         cache_creation_tokens = _coerce_int(
             usage_data.get("cache_creation_tokens")
-        ) or _coerce_int(usage_data.get("cache_creation_input_tokens"))
+        ) or _coerce_int(
+            usage_data.get("cache_creation_input_tokens")
+            or usage_data.get("cacheWriteInputTokens")
+        )
 
         return cls(
             total_tokens=prompt_tokens + completion_tokens,

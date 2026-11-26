@@ -553,6 +553,33 @@ def test_gemini_generation_config():
     assert hasattr(config, 'max_output_tokens') or 'max_output_tokens' in str(config)
 
 
+def test_gemini_generation_config_includes_seed_and_penalties():
+    """seed and the penalty settings reach the Gemini request config."""
+    llm = LLM(
+        model="google/gemini-2.0-flash-001",
+        seed=0,
+        frequency_penalty=0.5,
+        presence_penalty=-0.5,
+    )
+
+    config = llm._prepare_generation_config()
+
+    assert config.seed == 0
+    assert config.frequency_penalty == 0.5
+    assert config.presence_penalty == -0.5
+
+
+def test_gemini_generation_config_omits_unset_seed_and_penalties():
+    """Unset seed and penalties are left to the API defaults."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    config = llm._prepare_generation_config()
+
+    assert config.seed is None
+    assert config.frequency_penalty is None
+    assert config.presence_penalty is None
+
+
 def test_gemini_model_detection():
     """
     Test that various Gemini model formats are properly detected

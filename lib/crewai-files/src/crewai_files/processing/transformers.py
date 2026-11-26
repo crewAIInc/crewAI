@@ -6,7 +6,11 @@ import logging
 
 from crewai_files.core.sources import FileBytes
 from crewai_files.core.types import ImageFile, PDFFile, TextFile
-from crewai_files.processing.exceptions import ProcessingDependencyError
+from crewai_files.processing.exceptions import (
+    ProcessingDependencyError,
+    UnsupportedImageFormatError,
+)
+from crewai_files.processing.images import open_image
 
 
 logger = logging.getLogger(__name__)
@@ -31,8 +35,14 @@ def resize_image(
         A new ImageFile with the resized image data.
 
     Raises:
+        ValueError: If either maximum dimension is not positive.
         ProcessingDependencyError: If Pillow is not installed.
+        UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
+            image.
     """
+    if max_width <= 0 or max_height <= 0:
+        raise ValueError("Maximum image dimensions must be greater than 0")
+
     try:
         from PIL import Image
     except ImportError as e:
@@ -44,7 +54,9 @@ def resize_image(
 
     content = file.read()
 
-    with Image.open(io.BytesIO(content)) as img:
+    with open_image(
+        content, filename=file.filename, content_type=file.content_type
+    ) as img:
         original_width, original_height = img.size
 
         if original_width <= max_width and original_height <= max_height:
@@ -55,8 +67,8 @@ def resize_image(
             height_ratio = max_height / original_height
             scale_factor = min(width_ratio, height_ratio)
 
-            new_width = int(original_width * scale_factor)
-            new_height = int(original_height * scale_factor)
+            new_width = max(1, int(original_width * scale_factor))
+            new_height = max(1, int(original_height * scale_factor))
         else:
             new_width = min(original_width, max_width)
             new_height = min(original_height, max_height)
@@ -102,9 +114,11 @@ def optimize_image(
 
     Raises:
         ProcessingDependencyError: If Pillow is not installed.
+        UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
+            image.
     """
     try:
-        from PIL import Image
+        import PIL  # noqa: F401 - only checks that Pillow is installed
     except ImportError as e:
         raise ProcessingDependencyError(
             "Pillow is required for image optimization",
@@ -118,9 +132,11 @@ def optimize_image(
     if current_size <= target_size_bytes:
         return file
 
-    with Image.open(io.BytesIO(content)) as img:
+    with open_image(
+        content, filename=file.filename, content_type=file.content_type
+    ) as img:
         if img.mode in ("RGBA", "LA", "P"):
-            img = img.convert("RGB")  # type: ignore[assignment]
+            img = img.convert("RGB")
             output_format = "JPEG"
         else:
             output_format = img.format or "JPEG"
@@ -243,7 +259,15 @@ def chunk_text(
 
     Yields:
         TextFile objects, one per chunk.
+
+    Raises:
+        ValueError: If ``max_chars`` is not positive or ``overlap_chars`` is negative.
     """
+    if max_chars <= 0:
+        raise ValueError("max_chars must be greater than 0.")
+    if overlap_chars < 0:
+        raise ValueError("overlap_chars must be non-negative.")
+
     content = file.read()
     text = content.decode(errors="replace")
     total_chars = len(text)
@@ -293,9 +317,13 @@ def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:
 
     Returns:
         Tuple of (width, height) in pixels, or None if dimensions cannot be determined.
+
+    Raises:
+        UnsupportedImageFormatError: If the file is not a PNG, JPEG, GIF or WEBP
+            image.
     """
     try:
-        from PIL import Image
+        import PIL  # noqa: F401 - only checks that Pillow is installed
     except ImportError:
         logger.warning("Pillow not installed - cannot get image dimensions")
         return None
@@ -303,9 +331,13 @@ def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:
     content = file.read()
 
     try:
-        with Image.open(io.BytesIO(content)) as img:
+        with open_image(
+            content, filename=file.filename, content_type=file.content_type
+        ) as img:
             width, height = img.size
             return width, height
+    except UnsupportedImageFormatError:
+        raise
     except Exception as e:
         logger.warning(f"Failed to get image dimensions: {e}")
         return None

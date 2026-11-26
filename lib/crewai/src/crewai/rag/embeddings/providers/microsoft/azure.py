@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from chromadb.utils.embedding_functions.openai_embedding_function import (
-    OpenAIEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field, model_validator
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.providers.openai.embedding_callable import (
+    OpenAIEmbeddingFunction,
+)
 
 
 class AzureProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):

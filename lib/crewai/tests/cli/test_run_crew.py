@@ -1,6 +1,8 @@
 """Tests for the ``crewai run`` command and its subprocess plumbing."""
 
+import os
 from pathlib import Path
+import subprocess
 import sys
 from types import ModuleType
 from types import SimpleNamespace
@@ -9,8 +11,12 @@ from unittest import mock
 from click.testing import CliRunner
 import pytest
 
+import crewai_cli
 from crewai_cli.cli import run
 from crewai_cli.run_crew import (
+    _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV,
+    _CREWAI_JSON_CREW_DEFINITION_ENV,
+    _JSON_CREW_RUNNER_CODE,
     _execute_uv_script,
     _load_json_crew_for_tui,
     _missing_input_names,
@@ -78,6 +84,44 @@ def test_execute_command_omits_env_var_when_filename_absent(
 
     _, kwargs = subprocess_run.call_args
     assert "CREWAI_TRAINED_AGENTS_FILE" not in kwargs["env"]
+
+
+@mock.patch("crewai_cli.run_crew.record_run_stopped")
+@mock.patch("crewai_cli.run_crew.read_toml", return_value={})
+@mock.patch(
+    "crewai_cli.run_crew.subprocess.run",
+    side_effect=subprocess.CalledProcessError(5, ["uv", "run", "run_crew"]),
+)
+def test_execute_command_exits_with_a_failed_scripts_code(
+    _subprocess_run: mock.Mock,
+    _read_toml: mock.Mock,
+    record_run_stopped: mock.Mock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        _execute_uv_script("run_crew", entity_type="crew")
+
+    assert exited.value.code == 5
+    assert "An error occurred while running the crew" in capsys.readouterr().err
+    record_run_stopped.assert_called_once_with("script_failed")
+
+
+@mock.patch("crewai_cli.run_crew.record_run_stopped")
+@mock.patch(
+    "crewai_cli.run_crew.subprocess.run",
+    side_effect=FileNotFoundError("uv not found"),
+)
+def test_execute_command_exits_1_when_uv_cannot_start(
+    _subprocess_run: mock.Mock,
+    record_run_stopped: mock.Mock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exited:
+        _execute_uv_script("kickoff", entity_type="flow")
+
+    assert exited.value.code == 1
+    assert "An unexpected error occurred: uv not found" in capsys.readouterr().err
+    record_run_stopped.assert_called_once_with("launch_failed")
 
 
 def test_missing_input_names_scans_agent_and_task_placeholders() -> None:
@@ -176,3 +220,80 @@ def test_load_json_crew_for_tui_prepares_metadata_before_prompt(monkeypatch) -> 
     assert task_names == ["research_task", "Write summary for developers"]
     assert agent_names == ["Researcher", "writer"]
     assert prepared == [crew]
+
+
+# Mirrors lib/cli/tests/test_run_crew.py, which CI does not run: the runner execs this
+# CLI against the project's own (possibly older) crewai-core, so a module-level
+# import of a newer core symbol on the runner path must fail here.
+def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path) -> None:
+    old_parent = tmp_path / "old_env"
+    old_crewai_core = old_parent / "crewai_core"
+    old_crewai_core.mkdir(parents=True)
+    (old_crewai_core / "__init__.py").write_text("")
+    (old_crewai_core / "constants.py").write_text(
+        "CREWAI_TRAINED_AGENTS_FILE_ENV = 'CREWAI_TRAINED_AGENTS_FILE'\n"
+    )
+    (old_crewai_core / "project.py").write_text(
+        "def read_toml(*args, **kwargs):\n"
+        "    return {}\n"
+        "def parse_toml(*args, **kwargs):\n"
+        "    return {}\n"
+        "def get_project_description(*args, **kwargs):\n"
+        "    return None\n"
+        "def get_project_name(*args, **kwargs):\n"
+        "    return None\n"
+        "def get_project_version(*args, **kwargs):\n"
+        "    return None\n"
+    )
+    (old_crewai_core / "tool_credentials.py").write_text(
+        "def build_env_with_all_tool_credentials(*args, **kwargs):\n"
+        "    return {}\n"
+        "def build_env_with_tool_repository_credentials(*args, **kwargs):\n"
+        "    return {}\n"
+    )
+    (old_crewai_core / "version.py").write_text(
+        "def check_version(*args, **kwargs):\n"
+        "    return None\n"
+        "def get_crewai_version(*args, **kwargs):\n"
+        "    return '1.0.0'\n"
+        "def get_latest_version_from_pypi(*args, **kwargs):\n"
+        "    return None\n"
+        "def is_current_version_yanked(*args, **kwargs):\n"
+        "    return False\n"
+        "def is_newer_version_available(*args, **kwargs):\n"
+        "    return False\n"
+    )
+
+    marker = tmp_path / "marker.txt"
+    old_crewai_project = old_parent / "crewai" / "project"
+    old_crewai_project.mkdir(parents=True)
+    (old_parent / "crewai" / "__init__.py").write_text("")
+    (old_crewai_project / "__init__.py").write_text("")
+    (old_crewai_project / "crew_loader.py").write_text(
+        "from pathlib import Path\n"
+        "class Crew:\n"
+        "    agents = []\n"
+        "    tasks = []\n"
+        "    def kickoff(self, inputs):\n"
+        f"        Path({str(marker)!r}).write_text('ran')\n"
+        "        return 'done'\n"
+        "def load_crew(path):\n"
+        "    return Crew(), {}\n"
+    )
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(old_parent)
+    env["CREWAI_DMN"] = "true"
+    env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
+        Path(crewai_cli.__file__).resolve().parent
+    )
+    env[_CREWAI_JSON_CREW_DEFINITION_ENV] = "crew.jsonc"
+
+    subprocess.run(
+        [sys.executable, "-c", _JSON_CREW_RUNNER_CODE],
+        check=True,
+        env=env,
+        cwd=tmp_path,
+    )
+
+    assert marker.read_text() == "ran"

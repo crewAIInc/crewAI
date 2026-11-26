@@ -549,6 +549,22 @@ def test_classify_missing_openai_key_is_warning(tmp_path: Path) -> None:
     assert "OPENAI_API_KEY" in result.title
 
 
+def test_classify_missing_api_key_error_is_warning(tmp_path: Path) -> None:
+    """Newer crewai raises a missing key as itself, not inside an ImportError."""
+    v = DeployValidator(project_root=tmp_path)
+    v._classify_import_error(
+        "MissingAPIKeyError",
+        "DEEPSEEK_API_KEY is required for model 'deepseek-chat' but is not set or "
+        "is still the placeholder 'YOUR_API_KEY'.",
+        tb='File ".../site-packages/pydantic/main.py", line 250, in __init__',
+    )
+    assert len(v.results) == 1
+    result = v.results[0]
+    assert result.code == "llm_init_missing_key"
+    assert result.severity is Severity.WARNING
+    assert "DEEPSEEK_API_KEY" in result.title
+
+
 def test_classify_azure_extra_missing_is_error(tmp_path: Path) -> None:
     """The real message raised by the Azure provider module uses plain
     double quotes around the install command (no backticks). Match the
@@ -765,3 +781,17 @@ def test_render_report_prints_bracketed_text_verbatim(severity, capsys):
     assert "[stale_lockfile] uv.lock is out of date with pyproject.toml" in out
     assert "error: crewai[tools]==1.0 not found; stray [/red] tag" in out
     assert "hint: Add [tool.hatch.build.targets.wheel] under [project]." in out
+
+
+def test_classify_validation_error_without_a_key_is_not_an_llm_failure(
+    tmp_path: Path,
+) -> None:
+    """Only a ValidationError that names a missing key is an LLM key problem."""
+    v = DeployValidator(project_root=tmp_path)
+    v._classify_import_error(
+        "ValidationError",
+        "1 validation error for Agent\n  role\n    Field required [type=missing]",
+        tb="",
+    )
+    assert "llm_init_missing_key" not in _codes(v)
+    assert "llm_provider_init_failed" not in _codes(v)

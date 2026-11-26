@@ -61,9 +61,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     A class to handle tool repository related operations for CrewAI projects.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, base_url: str | None = None) -> None:
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry, base_url=base_url)
 
     def create(self, handle: str) -> None:
         self._ensure_not_in_project()
@@ -74,7 +74,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         project_root = Path(folder_name)
         if project_root.exists():
             click.secho(f"Folder {folder_name} already exists.", fg="red")
-            raise SystemExit
+            raise SystemExit(1)
         os.makedirs(project_root)
 
         click.secho(f"Creating custom tool {folder_name}...", fg="green", bold=True)
@@ -101,7 +101,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             os.chdir(old_directory)
 
     def publish(self, is_public: bool, force: bool = False) -> None:
-        if not git.Repository().is_synced() and not force:
+        # Check force first: building a Repository runs git checks and a fetch,
+        # which is exactly what --force is documented to bypass.
+        if not force and not git.Repository().is_synced():
             console.print(
                 "[bold red]Failed to publish tool.[/bold red]\n"
                 "Local changes need to be resolved before publishing. Please do the following:\n"
@@ -110,7 +112,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "* [bold]Pull[/bold] the latest changes from the remote.\n"
                 "\nOnce your repository is up-to-date, retry publishing the tool."
             )
-            raise SystemExit()
+            raise SystemExit(1)
 
         project_name = get_project_name(require=True)
         assert isinstance(project_name, str)  # noqa: S101
@@ -214,12 +216,12 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "No tool found with this name. Please ensure the tool was published and you have access to it.",
                 style="bold red",
             )
-            raise SystemExit
+            raise SystemExit(1)
         if get_response.status_code != 200:
             console.print(
                 "Failed to get tool details. Please try again later.", style="bold red"
             )
-            raise SystemExit
+            raise SystemExit(1)
 
         self._add_package(get_response.json())
 
@@ -250,7 +252,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                     f"[{login_response.status_code} error - Unknown error - Invalid JSON response]",
                     style="bold red italic",
                 )
-            raise SystemExit
+            raise SystemExit(1)
 
         login_response_json = login_response.json()
 
@@ -292,7 +294,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if add_package_result.stderr:
             click.echo(add_package_result.stderr, err=True)
-            raise SystemExit
+            raise SystemExit(1)
 
     def _ensure_not_in_project(self) -> None:
         if os.path.isfile("./pyproject.toml"):
@@ -305,7 +307,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             console.print(
                 "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
             )
-            raise SystemExit
+            raise SystemExit(1)
 
     def _print_tools_preview(self, tools_metadata: list[dict[str, Any]]) -> None:
         if not tools_metadata:

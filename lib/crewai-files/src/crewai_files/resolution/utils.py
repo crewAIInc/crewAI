@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from io import IOBase
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -82,6 +83,8 @@ def normalize_input_files(
                 file_source = FilePath(path=Path(item))
         elif isinstance(item, (bytes, memoryview)):
             file_source = FileBytes(data=bytes(item))
+        elif isinstance(item, IOBase):
+            file_source = FileStream(stream=item)
         else:
             continue
 

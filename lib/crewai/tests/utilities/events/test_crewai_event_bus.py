@@ -5,7 +5,7 @@ from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
 
 
-class TestEvent(BaseEvent):
+class EventStub(BaseEvent):
     pass
 
 
@@ -14,14 +14,14 @@ def test_specific_event_handler():
     condition = threading.Condition()
     handler_called = [False]
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(EventStub)
     def handler(source, event):
         with condition:
             mock_handler(source, event)
             handler_called[0] = True
             condition.notify()
 
-    event = TestEvent(type="test_event")
+    event = EventStub(type="test_event")
     crewai_event_bus.emit("source_object", event)
 
     with condition:
@@ -39,21 +39,21 @@ def test_multiple_handlers_same_event():
     condition = threading.Condition()
     handlers_called = {"handler1": False, "handler2": False}
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(EventStub)
     def handler1(source, event):
         with condition:
             mock_handler1(source, event)
             handlers_called["handler1"] = True
             condition.notify()
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(EventStub)
     def handler2(source, event):
         with condition:
             mock_handler2(source, event)
             handlers_called["handler2"] = True
             condition.notify()
 
-    event = TestEvent(type="test_event")
+    event = EventStub(type="test_event")
     crewai_event_bus.emit("source_object", event)
 
     with condition:
@@ -73,16 +73,16 @@ def test_event_bus_error_handling():
     called = threading.Event()
     error_caught = threading.Event()
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(EventStub)
     def broken_handler(source, event):
         called.set()
         raise ValueError("Simulated handler failure")
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(EventStub)
     def working_handler(source, event):
         error_caught.set()
 
-    event = TestEvent(type="test_event")
+    event = EventStub(type="test_event")
     crewai_event_bus.emit("source_object", event)
 
     assert called.wait(timeout=2), "Broken handler was never called"
