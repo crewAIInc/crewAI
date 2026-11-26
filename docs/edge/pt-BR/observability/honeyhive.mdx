@@ -1,0 +1,130 @@
+---
+title: Integração HoneyHive
+description: Rastreie crews, tasks, ferramentas e a colaboração entre agentes do CrewAI no HoneyHive com instrumentação OpenTelemetry
+icon: route
+mode: "wide"
+---
+
+# Integração HoneyHive
+
+Este guia mostra como enviar rastreamentos do CrewAI para o **HoneyHive**. Os instrumentadores OpenInference registram execuções de crews, etapas de agentes, chamadas de ferramentas e requisições ao modelo. Seu código CrewAI não muda.
+
+> **O que é HoneyHive?** [HoneyHive](https://www.honeyhive.ai) é uma plataforma de observabilidade de agentes para rastrear, avaliar, monitorar e melhorar agentes de IA do desenvolvimento à produção. Ela é baseada em OpenTelemetry e está disponível como serviço gerenciado na nuvem ou auto-hospedada no seu próprio ambiente.
+
+Para a referência completa da integração, consulte o [guia de integração CrewAI do HoneyHive](https://docs.honeyhive.ai/v2/integrations/crewai).
+
+## Começar
+
+Os spans de orquestração do CrewAI vêm do `CrewAIInstrumentor`. Os spans do modelo vêm do cliente do provedor que o CrewAI chama por baixo. Este exemplo usa `openai/gpt-4o-mini`, então também usa o `OpenAIInstrumentor`. Se sua crew usa outro provedor, adicione o instrumentador OpenInference correspondente a esse provedor.
+
+### Passo 1: Instalar Dependências
+
+```bash
+uv add honeyhive crewai openinference-instrumentation-crewai openinference-instrumentation-openai
+```
+
+### Passo 2: Configurar Variáveis de Ambiente
+
+Crie uma chave de API de ingestão no HoneyHive em **Settings > Project > API Keys** (aba Ingestion). A chave define o projeto que recebe seus rastreamentos.
+
+```bash
+export HH_INGESTION_API_KEY="your-honeyhive-ingestion-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+O tracer também aceita `HH_API_KEY` quando `HH_INGESTION_API_KEY` não está definida. Para implantações auto-hospedadas ou dedicadas, defina `HH_API_URL` com a URL do data plane exibida na aba Ingestion.
+
+### Passo 3: Inicializar o HoneyHive e Instrumentar o CrewAI
+
+Inicialize o tracer primeiro e depois passe o tracer provider dele para os dois instrumentadores. Execute isso antes de criar os agentes.
+
+```python
+from honeyhive import HoneyHiveTracer
+from openinference.instrumentation.crewai import CrewAIInstrumentor
+from openinference.instrumentation.openai import OpenAIInstrumentor
+
+# Reads HH_INGESTION_API_KEY from your environment
+tracer = HoneyHiveTracer.init()
+
+CrewAIInstrumentor().instrument(tracer_provider=tracer.provider)
+OpenAIInstrumentor().instrument(tracer_provider=tracer.provider)
+```
+
+### Passo 4: Criar e Executar uma Aplicação CrewAI
+
+Esta crew tem um agente de suporte com uma ferramenta. Cada execução da crew, etapa de agente, chamada de ferramenta e requisição ao modelo aparece como um span no HoneyHive.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.tools import tool
+
+
+@tool("OrderStatusLookup")
+def lookup_order_status(order_id: str) -> str:
+    """Look up the current status and ETA for a customer order."""
+    statuses = {
+        "ORD-1001": {"state": "shipped", "eta_days": 2},
+        "ORD-1003": {"state": "delayed", "eta_days": 8},
+    }
+    status = statuses.get(order_id.upper())
+    if not status:
+        return f"Order {order_id.upper()}: not found in the system."
+    return (
+        f"Order {order_id.upper()}: {status['state']}, "
+        f"estimated delivery in {status['eta_days']} days."
+    )
+
+
+support_agent = Agent(
+    role="Support Generalist",
+    goal="Resolve order questions using the available tools",
+    backstory=(
+        "You are a customer support generalist. Use tools for order status "
+        "questions, then reply with short, customer-friendly answers."
+    ),
+    tools=[lookup_order_status],
+    llm="openai/gpt-4o-mini",
+    verbose=False,
+)
+
+task = Task(
+    description="Check the status of order ORD-1003 and suggest next steps.",
+    expected_output="A concise, customer-facing answer.",
+    agent=support_agent,
+)
+
+crew = Crew(
+    name="support_crew",
+    agents=[support_agent],
+    tasks=[task],
+    process=Process.sequential,
+    verbose=False,
+)
+
+print(crew.kickoff())
+```
+
+### Passo 5: Visualizar Rastreamentos no HoneyHive
+
+Abra seu projeto no [HoneyHive](https://app.us.honeyhive.ai) e vá até a aba **Traces**. A execução aparece como uma sessão com spans aninhados para a crew, cada agente, cada chamada de ferramenta e cada requisição ao modelo.
+
+## O Que é Rastreado
+
+- **Execuções de crews**: spans de kickoff da crew e execução em várias etapas
+- **Atividade dos agentes**: papéis, prompts e saídas dos agentes em cada task
+- **Requisições ao modelo**: chamadas de LLM com o conteúdo do prompt e da resposta
+- **Uso de ferramentas**: cada execução de ferramenta do CrewAI, com seus argumentos e resultado
+- **Flows**: execuções de `Flow.kickoff()` e cada etapa de método do flow
+- **Agentes independentes**: chamadas de `Agent.kickoff()` feitas fora de uma crew
+
+Spans de ferramentas decoradas com `@tool` exigem `openinference-instrumentation-crewai` 1.1.11 ou posterior.
+
+## Solução de Problemas
+
+Se os rastreamentos não aparecerem, verifique se `HH_INGESTION_API_KEY` (ou `HH_API_KEY`) está definida e se os dois instrumentadores recebem `tracer_provider=tracer.provider`. Chamar `instrument()` sem o tracer provider envia os spans para o provider padrão do OpenTelemetry em vez do HoneyHive. Confirme também que você instrumentou o provedor que sua crew realmente chama.
+
+## Referências
+
+- [Guia de integração CrewAI do HoneyHive](https://docs.honeyhive.ai/v2/integrations/crewai)
+- [Início rápido de rastreamento do HoneyHive](https://docs.honeyhive.ai/v2/introduction/tracing-quickstart)
+- [Instrumentador OpenInference para CrewAI](https://pypi.org/project/openinference-instrumentation-crewai/)

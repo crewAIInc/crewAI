@@ -1,0 +1,130 @@
+---
+title: تكامل HoneyHive
+description: تتبع طواقم CrewAI ومهامها وأدواتها وتعاون الوكلاء في HoneyHive باستخدام أدوات OpenTelemetry
+icon: route
+mode: "wide"
+---
+
+# تكامل HoneyHive
+
+يوضح هذا الدليل كيفية إرسال تتبعات CrewAI إلى **HoneyHive**. تسجل أدوات OpenInference تشغيلات الطواقم وخطوات الوكلاء واستدعاءات الأدوات وطلبات النموذج. لا يتغير كود CrewAI الخاص بك.
+
+> **ما هو HoneyHive؟** [HoneyHive](https://www.honeyhive.ai) هو منصة مراقبة للوكلاء لتتبع وكلاء الذكاء الاصطناعي وتقييمهم ومراقبتهم وتحسينهم من التطوير إلى الإنتاج. وهو مبني على OpenTelemetry، ومتاح كخدمة سحابية مُدارة أو مستضاف ذاتياً في بيئتك الخاصة.
+
+للاطلاع على المرجع الكامل للتكامل، راجع [دليل تكامل CrewAI من HoneyHive](https://docs.honeyhive.ai/v2/integrations/crewai).
+
+## البدء
+
+تأتي نطاقات (spans) تنسيق CrewAI من `CrewAIInstrumentor`. وتأتي نطاقات النموذج من عميل المزوّد الذي يستدعيه CrewAI داخلياً. يستخدم هذا المثال `openai/gpt-4o-mini`، لذا يستخدم أيضاً `OpenAIInstrumentor`. إذا كان طاقمك يستخدم مزوّداً آخر، فأضف أداة OpenInference المطابقة لذلك المزوّد.
+
+### الخطوة 1: تثبيت الاعتماديات
+
+```bash
+uv add honeyhive crewai openinference-instrumentation-crewai openinference-instrumentation-openai
+```
+
+### الخطوة 2: إعداد متغيرات البيئة
+
+أنشئ مفتاح API للاستيعاب في HoneyHive من **Settings > Project > API Keys** (علامة التبويب Ingestion). يحدد المفتاح المشروع الذي يستقبل تتبعاتك.
+
+```bash
+export HH_INGESTION_API_KEY="your-honeyhive-ingestion-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+يقبل المتتبع أيضاً `HH_API_KEY` عندما لا يكون `HH_INGESTION_API_KEY` معيّناً. في عمليات النشر المستضافة ذاتياً أو المخصصة، عيّن `HH_API_URL` إلى عنوان URL لمستوى البيانات (data plane) المعروض في علامة التبويب Ingestion.
+
+### الخطوة 3: تهيئة HoneyHive وإضافة أدوات التتبع إلى CrewAI
+
+هيّئ المتتبع أولاً، ثم مرّر مزوّد التتبع الخاص به إلى أداتي التتبع كلتيهما. نفّذ ذلك قبل إنشاء الوكلاء.
+
+```python
+from honeyhive import HoneyHiveTracer
+from openinference.instrumentation.crewai import CrewAIInstrumentor
+from openinference.instrumentation.openai import OpenAIInstrumentor
+
+# Reads HH_INGESTION_API_KEY from your environment
+tracer = HoneyHiveTracer.init()
+
+CrewAIInstrumentor().instrument(tracer_provider=tracer.provider)
+OpenAIInstrumentor().instrument(tracer_provider=tracer.provider)
+```
+
+### الخطوة 4: إنشاء تطبيق CrewAI وتشغيله
+
+يحتوي هذا الطاقم على وكيل دعم واحد مع أداة. يظهر كل تشغيل للطاقم وكل خطوة وكيل وكل استدعاء أداة وكل طلب للنموذج كنطاق (span) في HoneyHive.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.tools import tool
+
+
+@tool("OrderStatusLookup")
+def lookup_order_status(order_id: str) -> str:
+    """Look up the current status and ETA for a customer order."""
+    statuses = {
+        "ORD-1001": {"state": "shipped", "eta_days": 2},
+        "ORD-1003": {"state": "delayed", "eta_days": 8},
+    }
+    status = statuses.get(order_id.upper())
+    if not status:
+        return f"Order {order_id.upper()}: not found in the system."
+    return (
+        f"Order {order_id.upper()}: {status['state']}, "
+        f"estimated delivery in {status['eta_days']} days."
+    )
+
+
+support_agent = Agent(
+    role="Support Generalist",
+    goal="Resolve order questions using the available tools",
+    backstory=(
+        "You are a customer support generalist. Use tools for order status "
+        "questions, then reply with short, customer-friendly answers."
+    ),
+    tools=[lookup_order_status],
+    llm="openai/gpt-4o-mini",
+    verbose=False,
+)
+
+task = Task(
+    description="Check the status of order ORD-1003 and suggest next steps.",
+    expected_output="A concise, customer-facing answer.",
+    agent=support_agent,
+)
+
+crew = Crew(
+    name="support_crew",
+    agents=[support_agent],
+    tasks=[task],
+    process=Process.sequential,
+    verbose=False,
+)
+
+print(crew.kickoff())
+```
+
+### الخطوة 5: عرض التتبعات في HoneyHive
+
+افتح مشروعك في [HoneyHive](https://app.us.honeyhive.ai) وانتقل إلى علامة التبويب **Traces**. يظهر التشغيل كجلسة واحدة تحتوي على نطاقات متداخلة للطاقم وكل وكيل وكل استدعاء أداة وكل طلب للنموذج.
+
+## ما يتم تتبعه
+
+- **تشغيلات الطاقم**: نطاقات بدء الطاقم والتنفيذ متعدد الخطوات
+- **نشاط الوكلاء**: أدوار الوكلاء والمطالبات والمخرجات لكل مهمة
+- **طلبات النموذج**: استدعاءات LLM مع محتوى المطالبة والاستجابة
+- **استخدام الأدوات**: كل تشغيل لأداة CrewAI مع وسائطها ونتيجتها
+- **Flows**: تشغيلات `Flow.kickoff()` وكل خطوة من خطوات أساليب الـ flow
+- **الوكلاء المستقلون**: استدعاءات `Agent.kickoff()` التي تتم خارج الطاقم
+
+تتطلب نطاقات الأدوات المزيّنة بـ `@tool` الإصدار 1.1.11 أو أحدث من `openinference-instrumentation-crewai`.
+
+## استكشاف الأخطاء وإصلاحها
+
+إذا لم تظهر التتبعات، فتحقق من تعيين `HH_INGESTION_API_KEY` (أو `HH_API_KEY`) ومن أن أداتي التتبع كلتيهما تتلقيان `tracer_provider=tracer.provider`. يؤدي استدعاء `instrument()` دون مزوّد التتبع إلى إرسال النطاقات إلى مزوّد OpenTelemetry الافتراضي بدلاً من HoneyHive. وتأكد أيضاً من أنك أضفت أداة التتبع للمزوّد الذي يستدعيه طاقمك فعلياً.
+
+## المراجع
+
+- [دليل تكامل CrewAI من HoneyHive](https://docs.honeyhive.ai/v2/integrations/crewai)
+- [البدء السريع للتتبع في HoneyHive](https://docs.honeyhive.ai/v2/introduction/tracing-quickstart)
+- [أداة OpenInference لـ CrewAI](https://pypi.org/project/openinference-instrumentation-crewai/)
