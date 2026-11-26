@@ -100,6 +100,7 @@ _KNOWN_API_KEY_HINTS: dict[str, str] = {
     "SERPLY_API_KEY": "Serply",
     "PERPLEXITY_API_KEY": "Perplexity",
     "DEEPSEEK_API_KEY": "DeepSeek",
+    "DEEPINFRA_API_KEY": "DeepInfra",
     "OPENROUTER_API_KEY": "OpenRouter",
     "FIRECRAWL_API_KEY": "Firecrawl",
     "EXA_API_KEY": "Exa",
