@@ -51,6 +51,18 @@ class FileCompressorTool(BaseTool):
 
         output_path = validate_file_path(output_path)
 
+        # Opening the archive inside the input directory would add the archive
+        # to its own contents; opening it over the input file would truncate the
+        # file before it is read.
+        resolved_input = os.path.realpath(input_path)
+        resolved_output = os.path.realpath(output_path)
+        if resolved_output == resolved_input:
+            return "Error: output_path must differ from input_path."
+        if os.path.isdir(resolved_input) and os.path.commonpath(
+            [resolved_input, resolved_output]
+        ) == resolved_input:
+            return "Error: output_path must be outside the input directory."
+
         format_extension = {
             "zip": ".zip",
             "tar": ".tar",
