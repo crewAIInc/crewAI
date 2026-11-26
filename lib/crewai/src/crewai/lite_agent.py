@@ -544,6 +544,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             self._iterations = 0
             self.tools_results = []
             self._tool_failures = []
+            self._guardrail_retry_count = 0
 
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
