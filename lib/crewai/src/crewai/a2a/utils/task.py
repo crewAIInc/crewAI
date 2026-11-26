@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
@@ -72,6 +72,8 @@ class RedisCacheConfig(TypedDict, total=False):
     port: int
     db: int
     password: str
+    ssl: bool
+    connection_pool_kwargs: dict[str, str]
 
 
 def _parse_redis_url(url: str) -> RedisCacheConfig:
@@ -96,6 +98,11 @@ def _parse_redis_url(url: str) -> RedisCacheConfig:
             pass
     if parsed.password:
         config["password"] = parsed.password
+    if parsed.username:
+        # aiocache rejects a top-level username, so it goes to the redis pool.
+        config["connection_pool_kwargs"] = {"username": unquote(parsed.username)}
+    if parsed.scheme == "rediss":
+        config["ssl"] = True
     return config
 
 
