@@ -128,6 +128,29 @@ def test_chromadb_is_used_when_configured():
     assert isinstance(create.call_args.args[0], ChromaDBConfig)
 
 
+@pytest.mark.requires_chromadb
+def test_custom_embedder_save_and_search_roundtrip_on_chromadb():
+    from crewai.rag.chromadb.config import ChromaDBConfig
+    from crewai.rag.embeddings.providers.custom.embedding_callable import (
+        CustomEmbeddingFunction,
+    )
+
+    class MyEmbedder(CustomEmbeddingFunction):
+        def __call__(self, input):
+            return TopicEmbedder()(input)
+
+    set_rag_config(ChromaDBConfig(embedding_function=MyEmbedder()))
+    storage = KnowledgeStorage(
+        collection_name="docs",
+        embedder={"provider": "custom", "config": {"embedding_callable": MyEmbedder}},
+    )
+    storage.save(["python is a language", "cooking pasta tonight"])
+
+    results = storage.search(["python"], limit=2, score_threshold=0.75)
+
+    assert [r["content"] for r in results] == ["python is a language"]
+
+
 def test_chromadb_without_the_extra_explains_how_to_install(monkeypatch):
     monkeypatch.setitem(sys.modules, "chromadb", None)
     for name in [m for m in sys.modules if m.startswith("crewai.rag.chromadb")]:
