@@ -1099,6 +1099,35 @@ class TestConversationalFlow:
         mock_finalize.assert_called_once_with()
         assert flow.defer_trace_finalization is False
 
+    def test_chat_restores_defer_trace_finalization_when_trace_finalization_fails(
+        self,
+    ) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                return "done"
+
+        flow = MyChat()
+        inputs = iter(["first", "quit"])
+
+        with patch.object(
+            flow,
+            "finalize_session_traces",
+            side_effect=RuntimeError("finalization error"),
+        ):
+            with pytest.raises(RuntimeError, match="finalization error"):
+                flow.chat(
+                    session_id="session-1",
+                    input_fn=lambda _: next(inputs),
+                    output_fn=lambda _: None,
+                )
+
+        assert flow.defer_trace_finalization is False
+
     def test_chat_stringifies_repl_output_like_conversation_helpers(self) -> None:
         class RawResult:
             raw = "raw assistant output"
