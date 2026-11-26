@@ -204,6 +204,7 @@ def check_conditional_skip(
             color="yellow",
         )
         skipped_task_output = task.get_skipped_task_output()
+        task.output = None
 
         if not was_replayed:
             crew._store_execution_log(task, skipped_task_output, task_index)
