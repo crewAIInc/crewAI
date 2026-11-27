@@ -9,6 +9,72 @@ mode: "wide"
 
 يدعم CrewAI تنفيذات LLM المخصصة من خلال فئة `BaseLLM` المجردة. يتيح لك ذلك دمج أي مزود LLM لا يحظى بدعم مدمج في LiteLLM، أو تنفيذ آليات مصادقة مخصصة.
 
+## جرّبه دون اتصال أولًا
+
+قبل ربط مزود حقيقي، يمكنك التحقق من واجهة `BaseLLM` باستخدام نموذج بديل يعيد إجابة ثابتة. لا يحتاج إلى مفتاح API ولا يرسل أي طلب HTTP إلى نموذج. هذا البديل للتعلّم والاختبار فقط؛ دالة `call` فيه هي المكان الذي يرسل فيه التنفيذ الحقيقي الطلب إلى مزودك، كما في قسم «بداية سريعة» أدناه.
+
+احفظ هذا باسم `echo_llm.py`:
+
+```python
+from typing import Any
+
+from crewai import Agent, BaseLLM, Crew, Task
+
+
+class EchoLLM(BaseLLM):
+    """A deterministic stand-in for a model, for learning and testing only."""
+
+    def call(
+        self,
+        messages: str | list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: Any | None = None,
+    ) -> str:
+        # Replace this line with a request to your provider (see Quick Start).
+        # Without native tool calling, agents read the "Final Answer:" line.
+        return "Thought: I can answer directly.\nFinal Answer: Hello from EchoLLM!"
+
+    def supports_function_calling(self) -> bool:
+        return False  # no native tool calling
+
+    def supports_stop_words(self) -> bool:
+        return False  # no native stop-word support
+
+
+llm = EchoLLM(model="echo")
+print(llm.call("Say hello"))
+
+agent = Agent(
+    role="Greeter",
+    goal="Greet the user",
+    backstory="You greet people.",
+    llm=llm,
+)
+task = Task(description="Say hello", expected_output="A greeting", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+print(crew.kickoff().raw)
+```
+
+شغّله:
+
+```bash
+python echo_llm.py
+```
+
+المخرجات المتوقعة:
+
+```text
+Thought: I can answer directly.
+Final Answer: Hello from EchoLLM!
+Hello from EchoLLM!
+```
+
+السطران الأولان هما ناتج استدعاء `call` المباشر، والأخير هو نتيجة الطاقم. يصرّح `EchoLLM` بأنه لا يدعم استدعاء الأدوات الأصلي ولا كلمات التوقف، لذا يقرأ الوكيل النص الذي يلي `Final Answer:` كنتيجة للمهمة.
+
 ## بداية سريعة
 
 راجع الملف الإنجليزي الأصلي للحصول على تنفيذ LLM مخصص كامل يوضح طريقة `call()` المطلوبة والطرق الاختيارية مثل `supports_function_calling()` و`get_context_window_size()`.
