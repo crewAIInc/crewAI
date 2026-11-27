@@ -254,6 +254,7 @@ _NATIVE_ANY_MODEL_PROVIDERS = frozenset(
         "cerebras",
         "dashscope",
         "deepinfra",
+        "fireworks_ai",
         "hosted_vllm",
         "ollama",
         "ollama_chat",
