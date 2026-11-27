@@ -171,7 +171,11 @@ def format_description_for_llm(
     """
     description = strip_composite_description_prefix(description)
     if args_schema is not None:
-        schema = generate_model_description(args_schema)
+        # Keep the ``null`` branch for Optional fields, matching the native
+        # tool-calling schema (see ``convert_tools_to_openai_schema``).
+        # Stripping it left ReAct agents with no valid way to pass null for
+        # an Optional argument (crewAIInc/crewAI#9882).
+        schema = generate_model_description(args_schema, strip_null_types=False)
         args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
     else:
         args_json = "{}"
