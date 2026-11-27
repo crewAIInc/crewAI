@@ -265,6 +265,23 @@ class SnowflakeSearchTool(BaseTool):
             logger.error(f"Error executing query: {e!s}")
             raise
 
+    async def _arun(
+        self,
+        query: str,
+        database: str | None = None,
+        snowflake_schema: str | None = None,
+        timeout: int = 300,
+        **kwargs: Any,
+    ) -> Any:
+        """Run the async implementation through the tool's async interface."""
+        return await self._run(
+            query,
+            database=database,
+            snowflake_schema=snowflake_schema,
+            timeout=timeout,
+            **kwargs,
+        )
+
     def __del__(self) -> None:
         """Cleanup connections on deletion."""
         try:
