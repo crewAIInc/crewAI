@@ -16,7 +16,12 @@ from typing import Any
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.events.base_events import BaseEvent
-from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus, is_replaying
+from crewai.events.event_bus import (
+    CrewAIEventsBus,
+    crewai_event_bus,
+    is_replaying,
+    is_restoring_from_checkpoint,
+)
 from crewai.events.types.checkpoint_events import (
     CheckpointBaseEvent,
     CheckpointCompletedEvent,
@@ -229,6 +234,12 @@ def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None
 def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
     """Sync handler registered on every event class."""
     if is_replaying():
+        return
+    # Events emitted while a checkpoint is being restored come from entities
+    # that are still being rebuilt. Checkpointing them would persist a blank
+    # snapshot, and _prepare_entities would overwrite their restored
+    # checkpoint fields with their still-empty live state.
+    if is_restoring_from_checkpoint():
         return
     if isinstance(
         event,
