@@ -1,6 +1,8 @@
 """Test flow state persistence functionality."""
 
+from contextlib import closing
 import os
+import sqlite3
 from typing import Dict, List
 
 import pytest
@@ -10,7 +12,7 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from pydantic import BaseModel
 
 
-class TestState(FlowState):
+class StateStub(FlowState):
     """Test state model with required id field."""
 
     counter: int = 0
@@ -44,8 +46,8 @@ def test_structured_state_persistence(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class StructuredFlow(Flow[TestState]):
-        initial_state = TestState
+    class StructuredFlow(Flow[StateStub]):
+        initial_state = StateStub
 
         @start()
         @persist(persistence)
@@ -67,7 +69,7 @@ def test_flow_state_restoration(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class RestorableFlow(Flow[TestState]):
+    class RestorableFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def set_message(self):
@@ -100,7 +102,7 @@ def test_multiple_method_persistence(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class MultiStepFlow(Flow[TestState]):
+    class MultiStepFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step_1(self):
@@ -129,7 +131,7 @@ def test_multiple_method_persistence(tmp_path):
     assert final_state.counter == 2
     assert final_state.message == "Step 2"
 
-    class NoPersistenceMultiStepFlow(Flow[TestState]):
+    class NoPersistenceMultiStepFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step_1(self):
@@ -236,6 +238,62 @@ def test_persistence_with_base_model(tmp_path):
     assert isinstance(flow.state, State)
 
 
+def test_state_instance_gives_each_flow_its_own_id(tmp_path):
+    """Regression for #9498: an initial_state instance must not share its id."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    @persist(persistence)
+    class InstanceStateFlow(Flow[StateStub]):
+        initial_state = StateStub(message="start")
+
+        @start()
+        def step(self):
+            self.state.counter += 1
+
+    first = InstanceStateFlow(persistence=persistence)
+    first.kickoff()
+    second = InstanceStateFlow(persistence=persistence)
+    second.kickoff()
+
+    assert first.state.id != second.state.id
+    assert first.state.message == second.state.message == "start"
+    with closing(sqlite3.connect(db_path)) as conn:
+        flow_uuids = {row[0] for row in conn.execute("SELECT flow_uuid FROM flow_states")}
+    assert flow_uuids == {first.state.id, second.state.id}
+
+
+def test_state_instance_keeps_explicit_id():
+    """An id the user set on the initial_state instance is kept (#9498)."""
+
+    class PinnedStateFlow(Flow[StateStub]):
+        initial_state = StateStub(id="pinned-id")
+
+        @start()
+        def step(self):
+            pass
+
+    assert PinnedStateFlow().state.id == "pinned-id"
+    assert PinnedStateFlow().state.id == "pinned-id"
+
+
+def test_passed_initial_state_instance_keeps_its_id():
+    """A state passed to one Flow keeps its id, e.g. to continue a run (#9498)."""
+
+    class ContinueFlow(Flow[StateStub]):
+        initial_state = StateStub()
+
+        @start()
+        def step(self):
+            pass
+
+    previous = StateStub(counter=3)
+    flow = ContinueFlow(initial_state=previous)
+
+    assert flow.state.id == previous.id
+    assert flow.state.counter == 3
+
+
 def test_fork_with_restore_from_state_id(tmp_path):
     """Fork: restore_from_state_id hydrates state from source flow_uuid; new run gets a
     fresh state.id; source's history is preserved (the fork's @persist writes go under
@@ -243,7 +301,7 @@ def test_fork_with_restore_from_state_id(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class ForkableFlow(Flow[TestState]):
+    class ForkableFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -282,7 +340,7 @@ def test_fork_with_pinned_state_id(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class PinnableFlow(Flow[TestState]):
+    class PinnableFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -315,7 +373,7 @@ def test_restore_from_state_id_not_found_silent_fallback(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class FallbackFlow(Flow[TestState]):
+    class FallbackFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -336,7 +394,7 @@ def test_restore_from_state_id_none_is_no_op(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class BaselineFlow(Flow[TestState]):
+    class BaselineFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -352,7 +410,7 @@ def test_fork_conflict_with_from_checkpoint_raises():
     both parameters."""
     from crewai.state import CheckpointConfig
 
-    class ConflictFlow(Flow[TestState]):
+    class ConflictFlow(Flow[StateStub]):
         @start()
         def step(self):
             pass
@@ -375,7 +433,7 @@ async def test_fork_via_kickoff_async(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class AsyncForkableFlow(Flow[TestState]):
+    class AsyncForkableFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -402,7 +460,7 @@ async def test_fork_via_akickoff(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class AkickoffForkableFlow(Flow[TestState]):
+    class AkickoffForkableFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -429,7 +487,7 @@ async def test_akickoff_pinned_fork(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class PinnableAsyncFlow(Flow[TestState]):
+    class PinnableAsyncFlow(Flow[StateStub]):
         @start()
         @persist(persistence)
         def step(self):
@@ -458,7 +516,7 @@ async def test_akickoff_fork_conflict_with_from_checkpoint_raises():
     both from_checkpoint and restore_from_state_id are set."""
     from crewai.state import CheckpointConfig
 
-    class AsyncConflictFlow(Flow[TestState]):
+    class AsyncConflictFlow(Flow[StateStub]):
         @start()
         def step(self):
             pass
@@ -619,3 +677,162 @@ def test_save_pending_feedback_complex_types(tmp_path):
     assert loaded_state["session_id"] == str(uid)
     assert set(loaded_state["categories"]) == {"ai", "agents"}
 
+
+def test_persist_from_flow_flow_path_saves_state(tmp_path):
+    """The import path AGENTS.md taught for 1.10.0-1.15.28 persists state."""
+    from crewai.flow.flow import persist as flow_flow_persist
+
+    persistence = SQLiteFlowPersistence(os.path.join(tmp_path, "test_flows.db"))
+
+    @flow_flow_persist(persistence)
+    class ClassPersistedFlow(Flow[StateStub]):
+        @start()
+        def count_up(self):
+            self.state.counter += 1
+
+    flow = ClassPersistedFlow()
+    flow.kickoff()
+
+    saved_state = persistence.load_state(flow.state.id)
+    assert saved_state is not None
+    assert saved_state["counter"] == 1
+
+
+def _flow_state_row_ids(db_path: str, flow_uuid: str) -> list[int]:
+    """Return the flow_states row ids saved for a flow, oldest first."""
+    with closing(sqlite3.connect(db_path)) as conn:
+        rows = conn.execute(
+            "SELECT id FROM flow_states WHERE flow_uuid = ? ORDER BY id",
+            (flow_uuid,),
+        ).fetchall()
+    return [row[0] for row in rows]
+
+
+def test_load_state_from_history_returns_exact_nested_state(tmp_path):
+    """Test that a historical row returns its own stored state, not the latest."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    first = {
+        "id": "flow-1",
+        "step": 1,
+        "nested": {"items": [{"name": "a", "tags": ["x", "y"]}], "meta": {"ok": True}},
+    }
+    persistence.save_state("flow-1", "first_step", first)
+    persistence.save_state("flow-1", "second_step", {"id": "flow-1", "step": 2})
+    persistence.save_state("flow-1", "third_step", {"id": "flow-1", "step": 3})
+
+    first_row_id = _flow_state_row_ids(db_path, "flow-1")[0]
+
+    assert persistence.load_state_from_history("flow-1", first_row_id) == first
+
+
+def test_load_state_from_history_returns_none_for_missing_record(tmp_path):
+    """Test that a missing row id or an unknown flow UUID returns None."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    persistence.save_state("flow-1", "first_step", {"id": "flow-1", "step": 1})
+
+    row_id = _flow_state_row_ids(db_path, "flow-1")[0]
+
+    assert persistence.load_state_from_history("flow-1", row_id + 1) is None
+    assert persistence.load_state_from_history("unknown-flow", row_id) is None
+
+
+def test_load_state_from_history_never_returns_another_flows_row(tmp_path):
+    """Test that a row id only resolves under the flow UUID that saved it."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    persistence.save_state("flow-a", "step", {"id": "flow-a", "value": "a1"})
+    persistence.save_state("flow-b", "step", {"id": "flow-b", "value": "b1"})
+    persistence.save_state("flow-a", "step", {"id": "flow-a", "value": "a2"})
+
+    a_ids = _flow_state_row_ids(db_path, "flow-a")
+    b_ids = _flow_state_row_ids(db_path, "flow-b")
+
+    assert persistence.load_state_from_history("flow-a", a_ids[0]) == {
+        "id": "flow-a",
+        "value": "a1",
+    }
+    assert persistence.load_state_from_history("flow-b", b_ids[0]) == {
+        "id": "flow-b",
+        "value": "b1",
+    }
+    assert persistence.load_state_from_history("flow-b", a_ids[0]) is None
+    assert persistence.load_state_from_history("flow-a", b_ids[0]) is None
+
+
+def test_load_state_still_returns_latest_after_history_lookup(tmp_path):
+    """Test that looking up an older row leaves load_state on the latest state."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    persistence.save_state("flow-1", "first_step", {"id": "flow-1", "step": 1})
+    persistence.save_state("flow-1", "second_step", {"id": "flow-1", "step": 2})
+
+    first_row_id = _flow_state_row_ids(db_path, "flow-1")[0]
+
+    assert persistence.load_state_from_history("flow-1", first_row_id) == {
+        "id": "flow-1",
+        "step": 1,
+    }
+    assert persistence.load_state("flow-1") == {"id": "flow-1", "step": 2}
+
+
+def test_assigning_persistence_after_init_does_not_mark_instance_supplied(tmp_path):
+    class_db = os.path.join(tmp_path, "class.db")
+    other_db = os.path.join(tmp_path, "other.db")
+    class_store = SQLiteFlowPersistence(class_db)
+    other_store = SQLiteFlowPersistence(other_db)
+
+    @persist(class_store)
+    class DecoratedFlow(Flow[StateStub]):
+        @start()
+        def step(self):
+            self.state.counter = 1
+
+    flow = DecoratedFlow()
+    assert flow._instance_persistence is False
+    flow.persistence = other_store
+    assert flow._instance_persistence is False
+
+
+def test_install_persistence_marks_backend_as_instance_supplied(tmp_path):
+    class_db = os.path.join(tmp_path, "class.db")
+    installed_db = os.path.join(tmp_path, "installed.db")
+    class_store = SQLiteFlowPersistence(class_db)
+    installed = SQLiteFlowPersistence(installed_db)
+
+    @persist(class_store)
+    class DecoratedFlow(Flow[StateStub]):
+        @start()
+        def step(self):
+            self.state.counter = 1
+
+    flow = DecoratedFlow()
+    assert flow._instance_persistence is False
+    flow.install_persistence(installed)
+    assert flow._instance_persistence is True
+    assert flow.persistence is installed
+
+
+def test_install_persistence_routes_persist_saves_to_installed_backend(tmp_path):
+    class_db = os.path.join(tmp_path, "class.db")
+    installed_db = os.path.join(tmp_path, "installed.db")
+    class_store = SQLiteFlowPersistence(class_db)
+    installed = SQLiteFlowPersistence(installed_db)
+
+    @persist(class_store)
+    class DecoratedFlow(Flow[StateStub]):
+        @start()
+        def step(self):
+            self.state.counter = 7
+            self.state.message = "via-installed"
+
+    flow = DecoratedFlow()
+    flow.install_persistence(installed)
+    flow.kickoff()
+
+    assert class_store.load_state(flow.state.id) is None
+    saved = installed.load_state(flow.state.id)
+    assert saved is not None
+    assert saved["counter"] == 7
+    assert saved["message"] == "via-installed"

@@ -1,6 +1,11 @@
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.azure_documentdb_vector_search_tool import (
+    AzureDocumentDBToolSchema,
+    AzureDocumentDBVectorSearchConfig,
+    AzureDocumentDBVectorSearchTool,
+)
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
 from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
     BraveLLMContextTool,
@@ -113,6 +118,12 @@ from crewai_tools.tools.multion_tool.multion_tool import MultiOnTool
 from crewai_tools.tools.mysql_search_tool.mysql_search_tool import MySQLSearchTool
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool
 from crewai_tools.tools.ocr_tool.ocr_tool import OCRTool
+from crewai_tools.tools.oracle_vector_search_tool import (
+    OracleToolSchema,
+    OracleVectorSearchConfig,
+    OracleVectorSearchQueryConfig,
+    OracleVectorSearchTool,
+)
 from crewai_tools.tools.oxylabs_amazon_product_scraper_tool.oxylabs_amazon_product_scraper_tool import (
     OxylabsAmazonProductScraperTool,
 )
@@ -215,6 +226,9 @@ __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
+    "AzureDocumentDBToolSchema",
+    "AzureDocumentDBVectorSearchConfig",
+    "AzureDocumentDBVectorSearchTool",
     "BraveImageSearchTool",
     "BraveLLMContextTool",
     "BraveLocalPOIsDescriptionTool",
@@ -274,6 +288,10 @@ __all__ = [
     "MySQLSearchTool",
     "NL2SQLTool",
     "OCRTool",
+    "OracleToolSchema",
+    "OracleVectorSearchConfig",
+    "OracleVectorSearchQueryConfig",
+    "OracleVectorSearchTool",
     "OxylabsAmazonProductScraperTool",
     "OxylabsAmazonSearchScraperTool",
     "OxylabsGoogleSearchScraperTool",

@@ -28,9 +28,7 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
 
     Normalizes Unicode, splits camelCase, lowercases, replaces invalid characters
     with underscores, and truncates to max_length. Conforms to OpenAI/Bedrock requirements.
-    Names whose characters are all stripped (e.g. non-ASCII-only names) fall back to a
-    deterministic hash of the original input so a non-empty name never sanitizes to an
-    empty result.
+    If filtering strips a non-empty name, use a deterministic fallback.
 
     Args:
         name: Original tool name.
@@ -51,7 +49,17 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = name.strip("_")
 
     if not name and original_name:
-        name = f"tool_{hashlib.sha256(original_name.encode()).hexdigest()[:8]}"
+        name_hash = hashlib.sha256(original_name.encode()).hexdigest()[:8]
+        fallback = f"tool_{name_hash}"
+        if len(fallback) <= max_length:
+            return fallback
+        return f"t{name_hash}"[: max(0, max_length)]
+
+    if name[:1].isdigit():
+        # Function names must start with a letter or underscore (see
+        # crewai.llms.providers.utils.common.validate_function_name); the tool
+        # schemas sent to every provider are built from this sanitized name.
+        name = f"_{name}"
 
     if len(name) > max_length:
         name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]

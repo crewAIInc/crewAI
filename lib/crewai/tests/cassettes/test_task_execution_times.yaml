@@ -1,147 +1,226 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agents\nTo give my best complete final
-      answer to the task use the exact following format:\n\nThought: I now can give
-      a great answer\nFinal Answer: Your final answer must be the great and the most
-      complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Give me
-      a list of 5 interesting ideas to explore for na article, what makes them unique
-      and interesting.\n\nThis is the expect criteria for your final answer: Bullet
-      point list of 5 interesting ideas.\nyou MUST return the actual complete content
-      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
-      use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream":
-      false}'
+    body: '{"input":[{"role":"user","content":"\nCurrent Task: Give me a list of 5
+      interesting ideas to explore for na article, what makes them unique and interesting.\n\nThis
+      is the expected criteria for your final answer: Bullet point list of 5 interesting
+      ideas.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nProvide your complete response:"}],"instructions":"You are Researcher.
+      You''re an expert researcher, specialized in technology, software engineering,
+      AI and startups. You work as a freelancer and is now working on doing research
+      and analysis for a new customer.\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents","model":"gpt-6-luna"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '1177'
+      - '716'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.52.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.52.1
-      x-stainless-raw-response:
-      - 'true'
+      - 2.41.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.7
+      - 3.13.14
+    method: POST
+    uri: https://api.openai.com/v1/responses/input_tokens
+  response:
+    body:
+      string: "{\n  \"object\": \"response.input_tokens\",\n  \"input_tokens\": 134\n}"
+    headers:
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 18 Nov 2026 06:22:20 GMT
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '58'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      server:
+      - cloudflare
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Researcher. You''re an
+      expert researcher, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and is now working on doing research and analysis for
+      a new customer.\nYour personal goal is: Make the best research and analysis
+      on content about AI and AI agents"},{"role":"user","content":"\nCurrent Task:
+      Give me a list of 5 interesting ideas to explore for na article, what makes
+      them unique and interesting.\n\nThis is the expected criteria for your final
+      answer: Bullet point list of 5 interesting ideas.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nProvide your complete
+      response:"}],"model":"gpt-6-luna"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '732'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.41.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.14
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-AlfwrGToOoVtDhb3ryZMpA07aZy4m\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1735926029,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
-        \ answer  \\nFinal Answer: \\n- **The Role of Emotional Intelligence in AI\
-        \ Agents**: Explore how developing emotional intelligence in AI can change\
-        \ user interactions. Investigate algorithms that enable AI agents to recognize\
-        \ and respond to human emotions, enhancing user experience in sectors such\
-        \ as therapy, customer service, and education. This idea is unique as it blends\
-        \ psychology with artificial intelligence, presenting a new frontier for AI\
-        \ applications.\\n\\n- **AI Agents in Problem-Solving for Climate Change**:\
-        \ Analyze how AI agents can contribute to developing innovative solutions\
-        \ for climate change challenges. Focus on their role in predicting climate\
-        \ patterns, optimizing energy consumption, and managing resources more efficiently.\
-        \ This topic is unique because it highlights the practical impact of AI on\
-        \ one of the most pressing global issues.\\n\\n- **The Ethics of Autonomous\
-        \ Decision-Making AI**: Delve into the ethical implications surrounding AI\
-        \ agents that make autonomous decisions, especially in critical areas like\
-        \ healthcare, transportation, and law enforcement. This idea raises questions\
-        \ about accountability and bias, making it a vital discussion point as AI\
-        \ continues to advance. The unique aspect lies in the intersection of technology\
-        \ and moral philosophy.\\n\\n- **AI Agents Shaping the Future of Remote Work**:\
-        \ Investigate how AI agents are transforming remote work environments through\
-        \ automation, communication facilitation, and performance monitoring. Discuss\
-        \ unique applications such as virtual assistants, project management tools,\
-        \ and AI-driven team collaboration platforms. This topic is particularly relevant\
-        \ as the workforce becomes increasingly remote, making it an appealing area\
-        \ of exploration.\\n\\n- **Cultural Impacts of AI Agents in Media and Entertainment**:\
-        \ Examine how AI-driven characters and narratives are changing the media landscape,\
-        \ from video games to films and animations. Analyze audience reception and\
-        \ the role of AI in personalizing content. This concept is unique due to its\
-        \ intersection with digital culture and artistic expression, offering insights\
-        \ into how technology influences social norms and preferences.\",\n      \
-        \  \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
-        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 220,\n   \
-        \ \"completion_tokens\": 376,\n    \"total_tokens\": 596,\n    \"prompt_tokens_details\"\
-        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
-        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
-        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
-        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-ElTLht6H7Zxq3Gl5PHZBB09nw2mov\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1794982941,\n  \"model\": \"gpt-6-luna\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"- **AI agents that hire other AI agents:**
+        Explore how autonomous systems could delegate work to specialized agents\u2014such
+        as a researcher, coder, and fact-checker\u2014and what happens when they disagree.
+        It\u2019s interesting because it shifts the focus from one chatbot to a small,
+        potentially unpredictable digital workforce.\\n\\n- **The hidden economics
+        of agent autonomy:** Examine how much time, money, and computing power agents
+        actually save once you account for supervision, errors, and tool costs. This
+        angle is unique because it tests the popular promise of \u201Chands-off\u201D
+        automation against the practical cost of keeping agents on track.\\n\\n- **When
+        an AI agent takes an irreversible action:** Investigate what safeguards are
+        needed when agents can send emails, move money, delete files, or make purchases.
+        It\u2019s compelling because it turns abstract AI safety questions into concrete
+        decisions about permission, responsibility, and who is accountable when something
+        goes wrong.\\n\\n- **Can AI agents earn trust through transparency?** Look
+        at ways an agent might show its sources, explain its steps, and flag uncertainty
+        while completing a task. This is interesting because trust may depend less
+        on how human-like an agent sounds and more on whether people can inspect and
+        verify its work.\\n\\n- **The rise of the \u201Cagent manager\u201D job:**
+        Explore how human roles may change from doing every task themselves to setting
+        goals, assigning work to agents, and reviewing results. It\u2019s a fresh
+        angle because it treats AI agents not simply as job replacements, but as a
+        technology that could reshape how work is organized and managed.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 134,\n    \"completion_tokens\":
+        360,\n    \"total_tokens\": 494,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"cache_write_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n
+        \   \"completion_tokens_details\": {\n      \"reasoning_tokens\": 46,\n      \"audio_tokens\":
+        0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\":
+        0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":
+        null\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8fc4c6324d42ad5a-POA
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 03 Jan 2025 17:40:34 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=zdRUS9YIvR7oCmJGeB7BOAnmxI7FOE5Jae5yRZDCnPE-1735926034-1.0.1.1-gvIEXrMfT69wL2mv4ApivWX67OOpDegjf1LE6g9u3GEDuQdLQok.vlLZD.SdGzK0bMug86JZhBeDZMleJlI2EQ;
-        path=/; expires=Fri, 03-Jan-25 18:10:34 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=CW_cKQGYWY3cL.S6Xo5z0cmkmWHy5Q50OA_KjPEijNk-1735926034530-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      date:
+      - Wed, 18 Nov 2026 06:22:26 GMT
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '5124'
+      - '5428'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      server:
+      - cloudflare
       strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
+      transfer-encoding:
+      - chunked
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999729'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_95ae59da1099e02c0d95bf25ba179fed
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

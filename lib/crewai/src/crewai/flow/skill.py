@@ -71,6 +71,7 @@ def template_context(
         "examples_format": examples_format,
         "example": render_flow_example(examples_format),
         "example_language": examples_format,
+        "include_artifacts": "artifacts" not in skips,
         "include_each_action": "each" not in skips,
         "include_conversational": "conversational" not in skips,
         "include_hitl": "hitl" not in skips,
@@ -428,6 +429,7 @@ class FlowSkillReferenceExtractor:
             or ("persistence" in self.skips and field_name == "persist")
             or ("config" in self.skips and field_name == "config")
             or ("conversational" in self.skips and field_name == "conversational")
+            or ("artifacts" in self.skips and field_name in {"artifact", "input_files"})
             or (model_name == "AgentDefinition" and field_name == "response_format")
             or (model_name == "CrewDefinition" and field_name == "manager_agent")
             or (model_name == "CrewTaskDefinition" and field_name == "context")

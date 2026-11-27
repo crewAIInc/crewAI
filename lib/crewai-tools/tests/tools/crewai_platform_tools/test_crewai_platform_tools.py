@@ -5,7 +5,7 @@ from crewai_tools.tools.crewai_platform_tools import CrewaiPlatformTools
 
 
 class TestCrewaiPlatformTools(unittest.TestCase):
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -19,7 +19,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert tools is not None
         assert type(tools) is list
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -96,7 +96,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             {"apps": "slack"},
         ]
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -135,7 +135,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         ]
         assert all(tool.args_schema.model_fields == {} for tool in tools)
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     def test_crewai_platform_tools_empty_apps(self):
         with patch(
             "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
@@ -150,7 +150,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             assert isinstance(tools, list)
             assert len(tools) == 0
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -164,9 +164,9 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(ValueError) as context:
                 CrewaiPlatformTools(apps=["github"])
-            assert "No platform integration token found" in str(context.exception)
+            assert "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN" in str(context.exception)
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
     )
@@ -211,7 +211,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
             "CREWAI_PLUS_URL": "https://platform.example.test/",
         },
         clear=True,
@@ -265,7 +265,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
             "CREWAI_PLUS_URL": "https://platform.example.test/",
         },
         clear=True,
@@ -290,7 +290,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
             "CREWAI_PLUS_URL": "https://platform.example.test/",
         },
         clear=True,
@@ -320,7 +320,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             "connection_id": connection_id
         }
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -364,7 +364,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert [tool.app for tool in tools] == ["github", "slack"]
         assert [tool.description for tool in tools] == ["Search GitHub", "Search Slack"]
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
@@ -389,3 +389,41 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert tools[0].name == (
             "google_drive_create_file_550e8400_e29b_41d4_a716_446655440000"
         )
+
+
+def _amp_answer(status, body):
+    import json
+
+    import requests
+
+    response = requests.Response()
+    response.status_code = status
+    response._content = json.dumps(body).encode()
+    response.url = "https://platform.example.test/"
+    return response
+
+
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_every_app_amp_cannot_resolve_is_named_once(mock_get):
+    import pytest
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    answers = {
+        "github": _amp_answer(200, {"actions": {"github": []}}),
+        "gmail": _amp_answer(422, {"missing": ["gmail"]}),
+        "gmail/send_email": _amp_answer(422, {"missing": ["gmail"]}),
+        "slack": _amp_answer(409, {"errors": [{"code": "conflict"}]}),
+    }
+
+    def get(url, **kwargs):
+        if "apps" in kwargs.get("params", {}):
+            return answers[kwargs["params"]["apps"]]
+        return answers["slack"]
+
+    mock_get.side_effect = get
+
+    with pytest.raises(PlatformAppsUnavailableError) as raised:
+        CrewaiPlatformTools(apps=["github", "gmail", "gmail/send_email", "slack@private"])
+
+    assert raised.value.missing_apps == ["gmail", "slack"]

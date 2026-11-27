@@ -25,6 +25,9 @@ class AnthropicFormatter:
     ) -> dict[str, Any] | None:
         """Format a resolved file into an Anthropic content block.
 
+        Blocks carry no ``cache_control``: Anthropic allows four breakpoints
+        per request, and the provider places them on the marked messages.
+
         Args:
             file: Original file input with metadata.
             resolved: Resolved file.
@@ -44,7 +47,6 @@ class AnthropicFormatter:
                     "type": "file",
                     "file_id": resolved.file_id,
                 },
-                "cache_control": {"type": "ephemeral"},
             }
 
         if isinstance(resolved, UrlReference):
@@ -54,7 +56,6 @@ class AnthropicFormatter:
                     "type": "url",
                     "url": resolved.url,
                 },
-                "cache_control": {"type": "ephemeral"},
             }
 
         if isinstance(resolved, InlineBase64):
@@ -65,7 +66,6 @@ class AnthropicFormatter:
                     "media_type": resolved.content_type,
                     "data": resolved.data,
                 },
-                "cache_control": {"type": "ephemeral"},
             }
 
         if isinstance(resolved, InlineBytes):
@@ -76,7 +76,6 @@ class AnthropicFormatter:
                     "media_type": resolved.content_type,
                     "data": base64.b64encode(resolved.data).decode("ascii"),
                 },
-                "cache_control": {"type": "ephemeral"},
             }
 
         raise TypeError(f"Unexpected resolved type: {type(resolved).__name__}")

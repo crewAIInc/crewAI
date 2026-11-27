@@ -69,7 +69,8 @@ def test_scrape_without_css_selector(_mocked_chrome_driver):
     assert "test content" in result
     mock_driver.get.assert_called_once_with("https://example.com")
     mock_driver.find_element.assert_called_with("tag name", "body")
-    mock_driver.close.assert_called_once()
+    mock_driver.close.assert_not_called()
+    mock_driver.quit.assert_not_called()
 
 
 @patch("selenium.webdriver.Chrome")
@@ -83,7 +84,8 @@ def test_scrape_with_css_selector(_mocked_chrome_driver):
     assert "test content in a specific div" in result
     mock_driver.get.assert_called_once_with("https://example.com")
     mock_driver.find_elements.assert_called_with("css selector", "div.test")
-    mock_driver.close.assert_called_once()
+    mock_driver.close.assert_not_called()
+    mock_driver.quit.assert_not_called()
 
 
 @patch("selenium.webdriver.Chrome")
@@ -97,7 +99,8 @@ def test_scrape_with_return_html_true(_mocked_chrome_driver):
     assert html_content in result
     mock_driver.get.assert_called_once_with("https://example.com")
     mock_driver.find_element.assert_called_with("tag name", "body")
-    mock_driver.close.assert_called_once()
+    mock_driver.close.assert_not_called()
+    mock_driver.quit.assert_not_called()
 
 
 @patch("selenium.webdriver.Chrome")
@@ -111,7 +114,8 @@ def test_scrape_with_return_html_false(_mocked_chrome_driver):
     assert "HTML content" in result
     mock_driver.get.assert_called_once_with("https://example.com")
     mock_driver.find_element.assert_called_with("tag name", "body")
-    mock_driver.close.assert_called_once()
+    mock_driver.close.assert_not_called()
+    mock_driver.quit.assert_not_called()
 
 
 @patch("selenium.webdriver.Chrome")
@@ -121,7 +125,8 @@ def test_scrape_with_driver_error(_mocked_chrome_driver):
     tool = initialize_tool_with(mock_driver)
     result = tool._run(website_url="https://example.com")
     assert result == "Error scraping website: WebDriver error occurred"
-    mock_driver.close.assert_called_once()
+    mock_driver.close.assert_not_called()
+    mock_driver.quit.assert_not_called()
 
 
 @patch("selenium.webdriver.Chrome")
@@ -129,3 +134,71 @@ def test_initialization_with_driver(_mocked_chrome_driver):
     mock_driver = MagicMock()
     tool = initialize_tool_with(mock_driver)
     assert tool.driver == mock_driver
+
+
+class FakeWindowDriver:
+    """Mimics a real chromedriver: closing the only window ends navigation."""
+
+    def __init__(self) -> None:
+        self.get_calls = 0
+        self.window_closed = False
+        self.quit_calls = 0
+
+    def get(self, url: str) -> None:
+        if self.window_closed:
+            raise Exception("no such window: target window already closed")
+        self.get_calls += 1
+
+    def find_element(self, by: str, selector: str):
+        if self.window_closed:
+            raise Exception("no such window: target window already closed")
+
+        class Element:
+            text = "body content"
+
+            def get_attribute(self, name: str) -> str:
+                return "<html><body>body content</body></html>"
+
+        return Element()
+
+    def find_elements(self, by: str, selector: str):
+        if self.window_closed:
+            raise Exception("no such window: target window already closed")
+        return [self.find_element(by, selector)]
+
+    def close(self) -> None:
+        self.window_closed = True
+
+    def quit(self) -> None:
+        self.quit_calls += 1
+
+
+@patch("selenium.webdriver.Chrome")
+def test_driver_stays_reusable_across_runs(_mocked_chrome_driver):
+    """The driver must survive a run so the tool can be called again.
+
+    Real chromedriver raises 'no such window' once the only window has been
+    closed, so closing the driver after every run made every call after the
+    first fail.
+    """
+    driver = FakeWindowDriver()
+    tool = SeleniumScrapingTool(driver=driver, wait_time=0)
+
+    first = tool._run(website_url="https://example.com")
+    second = tool._run(website_url="https://example.com", css_element="div.test")
+
+    assert "body content" in first
+    assert "body content" in second
+    assert driver.get_calls == 2
+    assert not driver.window_closed
+
+
+@patch("selenium.webdriver.Chrome")
+def test_close_ends_the_session(_mocked_chrome_driver):
+    """close() must end the session so the browser process does not linger."""
+    driver = FakeWindowDriver()
+    tool = SeleniumScrapingTool(driver=driver, wait_time=0)
+
+    tool.close()
+
+    assert driver.quit_calls == 1

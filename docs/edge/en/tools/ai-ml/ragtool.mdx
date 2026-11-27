@@ -49,6 +49,7 @@ The `RagTool` can be used with a wide variety of data sources, including:
 - 📰 PDF files
 - 📊 CSV files
 - 📃 JSON files
+- JSONL files (`.jsonl` and `.ndjson`)
 - 📝 Text
 - 📁 Directories/Folders
 - 🌐 HTML Web pages
@@ -95,7 +96,16 @@ rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VID
 
 # Add a directory of files
 rag_tool.add(data_type="directory", path="path/to/your/directory")
+
+# Add a local JSONL file with an explicit type
+rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
+
+# Auto-detect a local JSONL file by its extension
+rag_tool.add(path="path/to/your/records.ndjson")
 ```
+
+JSONL files contain one JSON value per line. The JSONL loader supports local files;
+recognizing a JSONL URL does not fetch its content.
 
 ## Agent Integration Example
 
@@ -120,6 +130,14 @@ def knowledge_expert(self) -> Agent:
         tools=[rag_tool]
     )
 ```
+
+## Vector Database
+
+`RagTool` stores content in a local Qdrant database by default, with OpenAI's `text-embedding-3-small` as the embedder. To use ChromaDB, install it with `pip install "crewai[chromadb]"` and set `"provider": "chromadb"` in the `vectordb` config.
+
+<Note>
+Content that an earlier version stored in ChromaDB is not read by the Qdrant default. Add it again, or set the `chromadb` provider.
+</Note>
 
 ## Advanced Configuration
 
@@ -167,6 +185,10 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
 ```
 
 ### Supported Providers
+
+<Note>
+These providers use ChromaDB and need `pip install "crewai[chromadb]"`: `bedrock`, `cohere`, `google-generativeai`, `huggingface`, `instructor`, `jina`, `ollama`, `onnx`, `openclip`, `roboflow`, `sentence-transformer`, `text2vec`. The others (such as `openai`, `azure`, `openrouter`, `google-vertex`, `voyageai`, `watsonx`, `oracle` and `custom`) work without it.
+</Note>
 
 <AccordionGroup>
   <Accordion title="OpenAI">
@@ -530,7 +552,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
     **Config Options:**
     - `model_name` (str): OpenCLIP model architecture. Default: `ViT-B-32`. Options: `ViT-B-32`, `ViT-B-16`, `ViT-L-14`
     - `checkpoint` (str): Pretrained checkpoint name. Default: `laion2b_s34b_b79k`. Options: `laion2b_s34b_b79k`, `laion400m_e32`, `openai`
-    - `device` (str): Device to run on. Default: `cpu`. Options: `cpu`, `cuda`
+    - `device` (str): Device to run on. Default: `cpu`. Options: `cpu`, `cuda`, `mps`, `xpu`
 
     **Environment Variables:**
     - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`
