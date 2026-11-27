@@ -18,6 +18,8 @@ The `SeleniumScrapingTool` is crafted for high-efficiency web scraping tasks.
 It allows for precise extraction of content from web pages by using CSS selectors to target specific elements. 
 Its design caters to a wide range of scraping needs, offering flexibility to work with any provided website URL.
 
+The tool does not navigate to private or reserved addresses (including cloud metadata endpoints such as `169.254.169.254`). The requested URL is checked before the browser loads it, and the final URL is checked again after any redirects.
+
 ## Installation
 
 To use this tool, you need to install the CrewAI tools package and Selenium:
@@ -92,7 +94,7 @@ The `SeleniumScrapingTool` accepts the following parameters during initializatio
 
 - **website_url**: Optional. The URL of the website to scrape. If provided during initialization, the agent won't need to specify it when using the tool.
 - **css_element**: Optional. The CSS selector for the elements to extract. If provided during initialization, the agent won't need to specify it when using the tool.
-- **cookie**: Optional. A dictionary containing cookie information, useful for simulating a logged-in session to access restricted content.
+- **cookie**: Optional. A dictionary containing cookie information, useful for simulating a logged-in session to access restricted content. The cookie is only sent to a page whose host matches the cookie's `domain` (or a subdomain of it). If the cookie has no `domain`, it is tied to the host of the `website_url` set at initialization; if neither is available, the cookie is not sent.
 - **wait_time**: Optional. Specifies the delay (in seconds) before scraping, allowing the website and any dynamic content to fully load. Default is `3` seconds.
 - **return_html**: Optional. Whether to return the HTML content instead of just the text. Default is `False`.
 

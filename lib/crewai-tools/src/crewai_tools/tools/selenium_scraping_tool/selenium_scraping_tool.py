@@ -1,3 +1,4 @@
+import logging
 import re
 import time
 from typing import Any
@@ -5,6 +6,11 @@ from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
+
+from crewai_tools.security.safe_path import validate_url
+
+
+logger = logging.getLogger(__name__)
 
 
 class FixedSeleniumScrapingToolSchema(BaseModel):
@@ -194,14 +200,49 @@ class SeleniumScrapingTool(BaseTool):
 
         if self.driver is None:
             raise RuntimeError("Driver not initialized. Call _run first.")
+        # urlparse (used by validate_url) splits the netloc at the last "@", but
+        # Chrome ends the authority at the first "\". With a backslash the host
+        # that is checked differs from the host that is navigated to.
+        if "\\" in url:
+            raise ValueError("URL cannot contain backslashes")
+
+        validate_url(url)
+
         sleep_time = wait_time or 0
         self.driver.get(url)
         time.sleep(sleep_time)
+        # Chrome follows redirects itself, so re-check where it actually landed.
+        loaded_url = validate_url(self.driver.current_url)
         if cookie:
+            if not self._cookie_applies_to(cookie, loaded_url):
+                logger.warning(
+                    "Not sending the configured cookie to %s: host does not match "
+                    "the cookie's domain.",
+                    urlparse(loaded_url).hostname,
+                )
+                return
             self.driver.add_cookie(cookie)
             time.sleep(sleep_time)
             self.driver.get(url)
             time.sleep(sleep_time)
+            validate_url(self.driver.current_url)
+
+    def _cookie_applies_to(self, cookie: dict[str, Any], url: str) -> bool:
+        """Return True only if ``url``'s host belongs to the cookie's domain.
+
+        The domain comes from the cookie, or else from the ``website_url`` fixed
+        at construction. With neither, the cookie is withheld rather than sent to
+        whatever host the model chose.
+        """
+        domain = cookie.get("domain")
+        if not domain and self.website_url:
+            domain = urlparse(self.website_url).hostname
+        host = urlparse(url).hostname
+        if not domain or not host:
+            return False
+        domain = str(domain).lstrip(".").lower()
+        host = host.lower()
+        return host == domain or host.endswith(f".{domain}")
 
     def close(self) -> None:
         """End the browser session so the process does not linger."""
