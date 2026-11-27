@@ -1620,3 +1620,64 @@ def test_azure_credential_scopes_in_to_config_dict():
         )
         config = llm.to_config_dict()
         assert config["credential_scopes"] == scopes
+
+
+def test_azure_passes_timeout_and_max_retries_to_sync_and_async_clients():
+    """Configured `timeout` and `max_retries` must reach both Azure AI Inference clients."""
+    with patch.dict(os.environ, {}, clear=True):
+        llm = LLM(
+            model="azure/gpt-4o",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            timeout=15.0,
+            max_retries=5,
+        )
+
+    sync_client = llm._get_sync_client()
+    async_client = llm._get_async_client()
+
+    assert sync_client._config.retry_policy.total_retries == 5
+    assert sync_client._client._pipeline._transport.connection_config.timeout == 15.0
+    assert (
+        sync_client._client._pipeline._transport.connection_config.read_timeout == 15.0
+    )
+
+    assert async_client._config.retry_policy.total_retries == 5
+    assert async_client._client._pipeline._transport.connection_config.timeout == 15.0
+    assert (
+        async_client._client._pipeline._transport.connection_config.read_timeout == 15.0
+    )
+
+
+def test_azure_zero_max_retries_disables_sdk_retries():
+    """`max_retries=0` is falsy and must still disable retries rather than falling back to SDK defaults."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4o",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            max_retries=0,
+        )
+
+    assert llm._get_sync_client()._config.retry_policy.total_retries == 0
+    assert llm._get_async_client()._config.retry_policy.total_retries == 0
+
+
+def test_azure_client_defaults_when_timeout_and_max_retries_unset():
+    """When `timeout` is unset, transport timeouts stay omitted while `max_retries` uses the field default (2)."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4o",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+        kwargs = llm._make_client_kwargs()
+
+    assert kwargs["retry_total"] == 2
+    assert "connection_timeout" not in kwargs
+    assert "read_timeout" not in kwargs
+    assert llm._get_sync_client()._config.retry_policy.total_retries == 2
