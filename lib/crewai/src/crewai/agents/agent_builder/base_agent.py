@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from copy import copy as shallow_copy
+from copy import copy as shallow_copy, deepcopy
 from hashlib import md5
 from pathlib import Path
 import re
@@ -731,6 +731,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         }
 
         existing_llm = shallow_copy(self._llm_for_copy())
+        if hasattr(existing_llm, "additional_params"):
+            existing_llm.additional_params = deepcopy(existing_llm.additional_params)
+        if hasattr(existing_llm, "_token_usage"):
+            existing_llm._token_usage = deepcopy(existing_llm._token_usage)
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         existing_knowledge_sources = None
