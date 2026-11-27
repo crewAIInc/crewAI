@@ -465,14 +465,17 @@ def replay(
         task_id: The ID of the task to replay from.
         trained_agents_file: Optional trained-agents pickle path.
     """
+    if deprecated_task_id is not None:
+        warn_deprecated(kind="flag", old="--task_id", new="--task-id")
+        task_id = deprecated_task_id
+    if task_id is None:
+        raise click.UsageError("Missing option '--task-id'.")
+
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
     # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
-    if deprecated_task_id is not None:
-        warn_deprecated(kind="flag", old="--task_id", new="--task-id")
-        task_id = deprecated_task_id
     try:
         click.echo(f"Replaying the crew from task {task_id}")
         replay_task_command(task_id, trained_agents_file=trained_agents_file)
