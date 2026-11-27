@@ -29,6 +29,8 @@ def replay_task_command(task_id: str, trained_agents_file: str | None = None) ->
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while replaying the task: {e}", err=True)
         click.echo(e.output, err=True)
+        raise SystemExit(e.returncode) from e
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise SystemExit(1) from e
