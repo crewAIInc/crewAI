@@ -1,7 +1,9 @@
 from datetime import datetime
+import json
 import os
-from typing import Any
+from typing import Any, get_origin
 
+from pydantic import TypeAdapter
 from rich.console import Console
 from rich.table import Table
 
@@ -79,7 +81,7 @@ class SettingsCommand(BaseCommand):
 
         readonly_settings = READONLY_SETTINGS_KEYS + HIDDEN_SETTINGS_KEYS
 
-        if not hasattr(self.settings, key) or key in readonly_settings:
+        if key not in Settings.model_fields or key in readonly_settings:
             console.print(
                 f"Error: Unknown or readonly configuration key '{key}'",
                 style="bold red",
@@ -90,7 +92,17 @@ class SettingsCommand(BaseCommand):
                     console.print(f"  - {field_name}", style="yellow")
             raise SystemExit(1)
 
-        setattr(self.settings, key, value)
+        # Settings does not validate on assignment, so coerce the raw CLI
+        # string to the declared field type before persisting it.
+        field = Settings.model_fields[key]
+        raw: object = value
+        if get_origin(field.annotation) is dict:
+            try:
+                raw = json.loads(value)
+            except json.JSONDecodeError:
+                pass
+        parsed = TypeAdapter(field.annotation).validate_python(raw)
+        setattr(self.settings, key, parsed)
         self.settings.dump()
 
         console.print(f"Successfully set '{key}' to '{value}'", style="bold green")
