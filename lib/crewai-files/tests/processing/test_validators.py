@@ -1,8 +1,18 @@
 """Tests for file validators."""
 
+import sys
+from types import ModuleType
 from unittest.mock import patch
 
-from crewai_files import AudioFile, FileBytes, ImageFile, PDFFile, TextFile, VideoFile
+from crewai_files import (
+    AudioFile,
+    File,
+    FileBytes,
+    ImageFile,
+    PDFFile,
+    TextFile,
+    VideoFile,
+)
 from crewai_files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
     AudioConstraints,
@@ -284,6 +294,57 @@ class TestValidateFile:
 
         assert "does not support PDFs" in str(exc_info.value)
 
+    def test_validate_file_generic_image_uses_detected_type(self, monkeypatch):
+        """A generic File is validated as the image type its content detects."""
+        constraints = ProviderConstraints(
+            name="test",
+            image=ImageConstraints(max_size_bytes=10),
+        )
+        file = _generic_file(monkeypatch, "image/png", filename="chart.png")
+
+        with pytest.raises(FileTooLargeError) as exc_info:
+            validate_file(file, constraints)
+
+        assert "chart.png" in str(exc_info.value)
+
+    def test_validate_file_generic_image_not_supported(self, monkeypatch):
+        """A generic image is rejected when the provider takes no images."""
+        constraints = ProviderConstraints(name="test", image=None)
+        file = _generic_file(monkeypatch, "image/png", filename="chart.png")
+
+        with pytest.raises(UnsupportedFileTypeError) as exc_info:
+            validate_file(file, constraints)
+
+        assert "does not support images" in str(exc_info.value)
+
+    def test_validate_file_generic_text_uses_text_limits(self, monkeypatch):
+        """A generic text file is validated against the text size limit."""
+        constraints = ProviderConstraints(name="test", general_max_size_bytes=10)
+        file = _generic_file(
+            monkeypatch,
+            "text/plain",
+            data=b"hello world, this is text",
+            filename="a.txt",
+        )
+
+        with pytest.raises(FileTooLargeError) as exc_info:
+            validate_file(file, constraints)
+
+        assert "a.txt" in str(exc_info.value)
+
+    def test_validate_file_generic_unknown_type_not_supported(self, monkeypatch):
+        """A generic file of an unknown type is rejected instead of skipped."""
+        constraints = ProviderConstraints(
+            name="test",
+            image=ImageConstraints(max_size_bytes=1000),
+        )
+        file = _generic_file(monkeypatch, "application/zip", filename="archive.zip")
+
+        with pytest.raises(UnsupportedFileTypeError) as exc_info:
+            validate_file(file, constraints)
+
+        assert "application/zip" in str(exc_info.value)
+
 
 # Minimal audio bytes for testing (not a valid audio file, used for mocked tests)
 MINIMAL_AUDIO = b"\x00" * 100
@@ -293,6 +354,27 @@ MINIMAL_VIDEO = b"\x00" * 100
 
 # Fallback content type when python-magic cannot detect
 FALLBACK_CONTENT_TYPE = "application/octet-stream"
+
+
+def _generic_file(
+    monkeypatch: pytest.MonkeyPatch,
+    content_type: str,
+    *,
+    data: bytes = b"x" * 100,
+    filename: str = "sample.bin",
+) -> File:
+    """Build a generic ``File`` whose source reports ``content_type``.
+
+    Content detection is stubbed so the tests do not depend on libmagic.
+    """
+    magic_module = ModuleType("magic")
+
+    def fake_from_buffer(*args: object, **kwargs: object) -> str:
+        return content_type
+
+    magic_module.from_buffer = fake_from_buffer  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "magic", magic_module)
+    return File(source=FileBytes(data=data, filename=filename))
 
 
 class TestValidateAudio:
