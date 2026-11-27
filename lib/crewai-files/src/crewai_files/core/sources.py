@@ -221,8 +221,9 @@ class FilePath(BaseModel):
         """Validate that the file exists, is secure, and within size limits."""
         from crewai_files.processing.exceptions import FileTooLargeError
 
-        path_str = str(self.path)
-        if ".." in path_str:
+        # Only a parent-directory component can traverse. A substring check
+        # would also reject ordinary filenames like `data..2024.csv`.
+        if ".." in self.path.parts:
             raise ValueError(f"Path traversal not allowed: {self.path}")
 
         resolved = self.path.resolve()
