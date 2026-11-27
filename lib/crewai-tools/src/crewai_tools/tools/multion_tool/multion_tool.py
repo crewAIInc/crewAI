@@ -48,7 +48,8 @@ class MultiOnTool(BaseTool):
                 raise ImportError(
                     "`multion` package not found, please run `uv add multion`"
                 ) from None
-        self.session_id = None
+        # Keep a session id supplied through kwargs (super().__init__ already
+        # stored it); overwriting it with None silently starts a new session.
         self.multion = MultiOn(api_key=api_key or os.getenv("MULTION_API_KEY"))
 
     def _run(
