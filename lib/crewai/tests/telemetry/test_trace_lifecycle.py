@@ -675,7 +675,7 @@ def test_host_supplied_conversation_identity_survives_turn_execution_id(public_i
 
 
 @pytest.mark.parametrize("legacy_defer", [None, True, False])
-def test_legacy_session_finalization_and_correlation_are_unchanged(
+def test_legacy_session_finalization_preserves_lifecycle_and_conversation_identity(
     in_memory_grant_collectors, monkeypatch, legacy_defer
 ):
     from crewai.flow.conversational import ConversationConfig, ConversationState
@@ -710,10 +710,11 @@ def test_legacy_session_finalization_and_correlation_are_unchanged(
     roots = [span for span in exported if span.name == "execute flow" and span.parent is None]
     assert len(roots) == (1 if deferred else 2)
     assert all(span.status.status_code == trace.StatusCode.OK for span in roots)
-    assert all("gen_ai.conversation.id" not in span.attributes for span in roots)
+    assert all(span.attributes["gen_ai.conversation.id"] == flow.state.id
+               for span in roots)
     llm_spans = [span for span in exported if span.name == "call llm"]
     assert llm_spans
-    assert all(span.attributes["gen_ai.conversation.id"] != flow.state.id
+    assert all(span.attributes["gen_ai.conversation.id"] == flow.state.id
                for span in llm_spans)
     before = len(exported)
     flow.finalize_session_traces()

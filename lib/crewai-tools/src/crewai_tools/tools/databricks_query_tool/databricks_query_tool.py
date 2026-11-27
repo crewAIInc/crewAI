@@ -348,8 +348,10 @@ class DatabricksQueryTool(BaseTool):
 
                     # Debug info for schema
 
-                    # Keep track of all dynamic columns we create
-                    all_columns = set(columns)
+                    # Keep track of all dynamic columns we create, preserving
+                    # the order reported by the query schema (and appending
+                    # extra columns after it) so result columns stay stable.
+                    all_columns = list(columns)
 
                     # Dump the raw structure of result data to help troubleshoot
                     if _has_data_array(result):
@@ -729,7 +731,8 @@ class DatabricksQueryTool(BaseTool):
                                                 # Extra values without column names
                                                 dynamic_col = f"Column_{i}"
                                                 row_dict[dynamic_col] = val
-                                                all_columns.add(dynamic_col)
+                                                if dynamic_col not in all_columns:
+                                                    all_columns.append(dynamic_col)
 
                                     for col in columns:
                                         if col not in row_dict:
@@ -754,7 +757,8 @@ class DatabricksQueryTool(BaseTool):
                                         # Extra values without column names
                                         dynamic_col = f"Column_{i}"
                                         row_dict[dynamic_col] = val
-                                        all_columns.add(dynamic_col)
+                                        if dynamic_col not in all_columns:
+                                            all_columns.append(dynamic_col)
 
                                 for i, col in enumerate(columns):
                                     if i >= len(row):

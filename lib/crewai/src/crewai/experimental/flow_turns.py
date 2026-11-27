@@ -19,7 +19,7 @@ from crewai.experimental.flow_jobs import JobRecord
 from crewai.flow.conversational import ConversationState
 from crewai.flow.flow import Flow
 from crewai.types.streaming import StreamFrame
-from crewai.utilities.agent_utils import message_content_text
+from crewai.utilities.message_utils import message_content_text
 
 
 class TurnRecord(BaseModel):

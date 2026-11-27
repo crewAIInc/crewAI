@@ -193,7 +193,12 @@ def _build_definition_state_model(
     state_definition: FlowStateDefinition,
     compose: Callable[[type[BaseModel]], type[BaseModel]] | None = None,
 ) -> BaseModel | None:
-    kwargs = dict(state_definition.default or {})
+    # Isolate nested values. A shallow dict() copy leaves inner
+    # containers shared across flows built from the same declaration.
+    try:
+        kwargs: dict[str, Any] = copy.deepcopy(state_definition.default or {})
+    except (TypeError, AttributeError):
+        kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
     state_ref = getattr(state_definition, "ref", None)
@@ -489,6 +494,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         alongside whatever the declaration asked for.
         """
         return model_class
+
+    def _record_kickoff_output(self, output: Any) -> None:
+        """Allow an extension to record output before execution tracing closes."""
 
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
@@ -894,6 +902,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         self._methods.update(methods)
+
+    def install_persistence(self, persistence: FlowPersistence) -> None:
+        """Install an instance-supplied backend so later ``@persist`` saves use it."""
+        self.persistence = persistence
+        self._instance_persistence = True
 
     def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
         def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
@@ -1314,6 +1327,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
+        instance._method_outputs = list(pending_context.method_outputs or [])
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1625,6 +1639,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
+                e.context.method_outputs = list(self._method_outputs)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -1767,7 +1782,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             model = init_state
             if hasattr(model, "id"):
                 state_dict = model.model_dump()
-                if not state_dict.get("id"):
+                id_field = type(model).model_fields.get("id")
+                if (
+                    id_field is not None
+                    and id_field.default_factory is not None
+                    and "initial_state" not in self.model_fields_set
+                    and "id" not in model.model_fields_set
+                ):
+                    # A class-level instance is shared by every Flow, and its
+                    # default_factory id was generated once, so give each Flow its own.
+                    state_dict["id"] = id_field.get_default(
+                        call_default_factory=True, validated_data=state_dict
+                    )
+                elif not state_dict.get("id"):
                     state_dict["id"] = str(uuid4())
                 model_class = type(model)
                 return cast(T, model_class(**state_dict))
@@ -1808,7 +1835,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "Flow %r declares state of unknown type; falling back to dict state",
                 self._definition.name,
             )
-        dict_state: dict[str, Any] = dict(state_definition.default or {})
+        # Isolate nested values. A shallow dict() copy leaves inner
+        # containers shared across flows built from the same declaration.
+        try:
+            dict_state: dict[str, Any] = copy.deepcopy(state_definition.default or {})
+        except (TypeError, AttributeError):
+            dict_state = dict(state_definition.default or {})
         if "id" not in dict_state:
             dict_state["id"] = str(uuid4())
         return dict_state
@@ -2096,6 +2128,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         output_holder.append(stream_session)
         return stream_session
 
+    def _reset_tool_action_usage_budgets(self) -> None:
+        """Give every tool action a fresh usage budget for this run.
+
+        Tool actions build their tools once (``_flow_post_init``) and reuse
+        them across kickoffs, so ``current_usage_count`` would otherwise
+        survive runs. Agents zero the counter each time they prepare tools
+        (``parse_tools``); flows reset at the kickoff boundary instead. A
+        budget exhausted in an earlier kickoff must not fail later ones.
+        """
+        for tool in getattr(self, "_tool_action_tools", None) or ():
+            reset = getattr(tool, "reset_usage_count", None)
+            if callable(reset):
+                reset()
+
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
@@ -2208,6 +2254,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 restore_from_state_id=restore_from_state_id,
             )
 
+        self._reset_tool_action_usage_budgets()
         self._cel_now = datetime.now(timezone.utc)
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
@@ -2474,6 +2521,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
+                    e.context.method_outputs = list(self._method_outputs)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
@@ -2514,6 +2562,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
+            self._record_kickoff_output(final_output)
 
             if self._event_futures:
                 await asyncio.gather(

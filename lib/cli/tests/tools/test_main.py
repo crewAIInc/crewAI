@@ -8,9 +8,12 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.shared.token_manager import TokenManager
 from crewai_cli.tools.main import ToolCommand
+from crewai_cli.version import get_crewai_tools_dependency
 from pytest import raises
 
 
@@ -56,7 +59,7 @@ def test_create_success(mock_subprocess, capsys, tool_command):
 
         with open(os.path.join("test_tool", "pyproject.toml"), "r") as f:
             content = f.read()
-            assert '"crewai[tools]>=1.15.0,<2.0.0"' in content
+            assert f'"{get_crewai_tools_dependency()}"' in content
 
         with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
             content = f.read()
@@ -168,8 +171,10 @@ def test_install_tool_not_found(mock_get, capsys, tool_command):
     mock_get_response.status_code = 404
     mock_get.return_value = mock_get_response
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc_info:
         tool_command.install("non-existent-tool")
+    # A tool that cannot be installed must not look like a success to scripts.
+    assert exc_info.value.code == 1
     output = capsys.readouterr().out
     assert "No tool found with this name" in output
 
@@ -182,8 +187,9 @@ def test_install_api_error(mock_get, capsys, tool_command):
     mock_get_response.status_code = 500
     mock_get.return_value = mock_get_response
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc_info:
         tool_command.install("error-tool")
+    assert exc_info.value.code == 1
     output = capsys.readouterr().out
     assert "Failed to get tool details" in output
 
@@ -194,9 +200,11 @@ def test_install_api_error(mock_get, capsys, tool_command):
 def test_publish_when_not_in_sync(mock_repository, capsys, tool_command):
     mock_repository.return_value.is_synced.return_value = False
 
-    with raises(SystemExit):
+    with raises(SystemExit) as exc_info:
         tool_command.publish(is_public=True)
 
+    # A refused publish must not look like a success to scripts and CI.
+    assert exc_info.value.code == 1
     output = capsys.readouterr().out
     assert "Local changes need to be resolved before publishing" in output
     mock_repository.return_value.is_synced.assert_called_once_with()
@@ -278,6 +286,56 @@ def test_publish_when_not_in_sync_and_force(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch(
+    "crewai_cli.tools.main.git.Repository",
+    side_effect=ValueError("not a Git repository"),
+)
+@patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch(
+    "crewai.utilities.project_utils.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch(
+    "crewai.utilities.project_utils.extract_tools_metadata",
+    return_value=[],
+)
+@patch("crewai_cli.tools.main.ToolCommand._print_current_organization")
+def test_publish_force_skips_git_validation(
+    mock_print_org,
+    mock_tools_metadata,
+    mock_available_exports,
+    mock_publish,
+    mock_repository,
+    mock_open,
+    mock_listdir,
+    mock_subprocess_run,
+    mock_get_project_description,
+    mock_get_project_version,
+    mock_get_project_name,
+    tool_command,
+):
+    """--force bypasses the git check even with no repository to validate."""
+    mock_publish_response = MagicMock()
+    mock_publish_response.status_code = 200
+    mock_publish_response.json.return_value = {"handle": "sample-tool"}
+    mock_publish.return_value = mock_publish_response
+
+    tool_command.publish(is_public=True, force=True)
+
+    mock_repository.assert_not_called()
+    mock_publish.assert_called_once()
+
+
+@patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")
+@patch("crewai_cli.tools.main.get_project_version", return_value="1.0.0")
+@patch("crewai_cli.tools.main.get_project_description", return_value="A sample tool")
+@patch("crewai_cli.tools.main.subprocess.run")
+@patch("crewai_cli.tools.main.os.listdir", return_value=["sample-tool-1.0.0.tar.gz"])
+@patch(
+    "crewai_cli.tools.main.open",
+    new_callable=unittest.mock.mock_open,
+    read_data=b"sample tarball content",
+)
 @patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
@@ -341,7 +399,9 @@ def test_publish_success(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
     "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
@@ -353,7 +413,9 @@ def test_publish_success(
 def test_publish_failure(
     mock_tools_metadata,
     mock_available_exports,
+    mock_is_synced,
     mock_publish,
+    mock_fetch,
     mock_open,
     mock_listdir,
     mock_subprocess_run,
@@ -387,7 +449,9 @@ def test_publish_failure(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
     "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
@@ -399,7 +463,9 @@ def test_publish_failure(
 def test_publish_api_error(
     mock_tools_metadata,
     mock_available_exports,
+    mock_is_synced,
     mock_publish,
+    mock_fetch,
     mock_open,
     mock_listdir,
     mock_subprocess_run,
@@ -423,6 +489,7 @@ def test_publish_api_error(
     mock_publish.assert_called_once()
 
 
+@patch("crewai_cli.tools.main.git.Repository")
 @patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai_cli.tools.main.get_project_version", return_value="1.0.0")
 @patch("crewai_cli.tools.main.get_project_description", return_value="A sample tool")
@@ -433,6 +500,48 @@ def test_publish_api_error(
     new_callable=unittest.mock.mock_open,
     read_data=b"sample tarball content",
 )
+@patch("crewai_cli.plus_api.PlusAPI.publish_tool")
+@patch(
+    "crewai.utilities.project_utils.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch("crewai.utilities.project_utils.extract_tools_metadata", return_value=[])
+def test_publish_unauthorized_shows_amps_reason_and_asks_for_login(
+    mock_tools_metadata,
+    mock_available_exports,
+    mock_publish,
+    mock_open,
+    mock_listdir,
+    mock_subprocess_run,
+    mock_get_project_description,
+    mock_get_project_version,
+    mock_get_project_name,
+    mock_repository,
+    capsys,
+    tool_command,
+):
+    mock_publish.return_value = httpx.Response(
+        401, json={"error": "not_allowed", "message": "Account not activated"}
+    )
+
+    with raises(AuthenticationRequiredError):
+        tool_command.publish(is_public=True)
+    output = capsys.readouterr().out
+    assert "Account not activated" in output
+    assert "Run 'crewai login' to sign in again." in output
+
+
+@patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")
+@patch("crewai_cli.tools.main.get_project_version", return_value="1.0.0")
+@patch("crewai_cli.tools.main.get_project_description", return_value="A sample tool")
+@patch("crewai_cli.tools.main.subprocess.run")
+@patch("crewai_cli.tools.main.os.listdir", return_value=["sample-tool-1.0.0.tar.gz"])
+@patch(
+    "crewai_cli.tools.main.open",
+    new_callable=unittest.mock.mock_open,
+    read_data=b"sample tarball content",
+)
+@patch("crewai_cli.tools.main.git.Repository.fetch")
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
@@ -448,6 +557,7 @@ def test_publish_metadata_extraction_failure_continues_with_warning(
     mock_available_exports,
     mock_is_synced,
     mock_publish,
+    mock_fetch,
     mock_open,
     mock_listdir,
     mock_subprocess_run,
@@ -501,3 +611,76 @@ def test_print_current_organization_without_org(mock_settings, capsys, tool_comm
     output = capsys.readouterr().out
     assert "No organization currently set" in output
     assert "org switch <org_id>" in output
+
+
+def test_create_tool_when_the_folder_exists_exits_with_status_1(
+    tool_command, capsys
+):
+    """A refused scaffold must not look like a success to scripts and CI."""
+    with in_temp_dir():
+        os.makedirs("test_tool")
+
+        with raises(SystemExit) as exc_info:
+            tool_command.create("test-tool")
+
+    assert exc_info.value.code == 1
+    assert "Folder test_tool already exists." in capsys.readouterr().out
+
+
+def test_create_tool_inside_a_project_exits_with_status_1(tool_command, capsys):
+    with in_temp_dir():
+        Path("pyproject.toml").write_text("", encoding="utf-8")
+
+        with raises(SystemExit) as exc_info:
+            tool_command.create("test-tool")
+
+    assert exc_info.value.code == 1
+    assert "inside a project" in capsys.readouterr().out
+
+
+@patch("crewai_cli.tools.main.build_env_with_tool_repository_credentials")
+@patch("crewai_cli.tools.main.subprocess.run")
+def test_add_package_with_stderr_exits_with_status_1(
+    mock_run, _mock_build_env, tool_command, capsys
+):
+    """`uv add` writing to stderr on the tool-repository path is a failure."""
+    mock_run.return_value = MagicMock(stderr="uv failed to add the package")
+
+    with raises(SystemExit) as exc_info:
+        tool_command._add_package(
+            {
+                "source": "pypi",
+                "handle": "sample-tool",
+                "repository": {"handle": "repo", "url": "https://example.com"},
+            }
+        )
+
+    assert exc_info.value.code == 1
+
+
+def test_login_failure_exits_with_status_1(capsys):
+    """A failed tool-repository login must not look like a success."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with patch.object(
+            TokenManager, "_get_secure_storage_path", return_value=Path(temp_dir)
+        ):
+            TokenManager().save_tokens(
+                "test-token", (datetime.now() + timedelta(seconds=36000)).timestamp()
+            )
+            command = ToolCommand()
+
+    response = MagicMock()
+    response.status_code = 401
+    response.json.return_value = {"message": "no access"}
+    command.plus_api_client.login_to_tool_repository = MagicMock(
+        return_value=response
+    )
+
+    with (
+        patch("crewai_cli.tools.main._require_get_user_id", return_value=lambda: "u"),
+        patch("crewai_cli.tools.main.get_project_id", return_value="pid"),
+    ):
+        with raises(SystemExit) as exc_info:
+            command.login()
+
+    assert exc_info.value.code == 1

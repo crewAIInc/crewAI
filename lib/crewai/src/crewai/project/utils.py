@@ -12,7 +12,7 @@ from crewai.agents.cache.cache_handler import CacheHandler
 
 P = ParamSpec("P")
 R = TypeVar("R")
-cache = CacheHandler()
+_CACHE_ATTR = "_memoize_cache"
 
 
 def _make_hashable(arg: Any) -> Any:
@@ -35,8 +35,22 @@ def _make_hashable(arg: Any) -> Any:
     return arg
 
 
+def _instance_cache(args: tuple[Any, ...]) -> CacheHandler:
+    """Return the cache of the instance a memoized method is called on.
+
+    Results live on the instance rather than in a module-level cache keyed by
+    ``id(self)``: ids are reused once an instance is freed, which handed a new
+    crew the agents and tasks of an unrelated, already-collected one.
+    """
+    namespace = vars(args[0])
+    cache = namespace.get(_CACHE_ATTR)
+    if not isinstance(cache, CacheHandler):
+        cache = namespace[_CACHE_ATTR] = CacheHandler()
+    return cache
+
+
 def memoize(meth: Callable[P, R]) -> Callable[P, R]:
-    """Memoize a method by caching its results based on arguments.
+    """Memoize a method by caching its results per instance, based on arguments.
 
     Handles both sync and async methods. Pydantic BaseModel instances are
     converted to JSON strings before hashing for cache lookup.
@@ -57,7 +71,8 @@ def _memoize_sync(meth: Callable[P, R]) -> Callable[P, R]:
 
     @wraps(meth)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        hashable_args = tuple(_make_hashable(arg) for arg in args)
+        cache = _instance_cache(args)
+        hashable_args = tuple(_make_hashable(arg) for arg in args[1:])
         hashable_kwargs = tuple(
             sorted((k, _make_hashable(v)) for k, v in kwargs.items())
         )
@@ -81,7 +96,8 @@ def _memoize_async(
 
     @wraps(meth)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        hashable_args = tuple(_make_hashable(arg) for arg in args)
+        cache = _instance_cache(args)
+        hashable_args = tuple(_make_hashable(arg) for arg in args[1:])
         hashable_kwargs = tuple(
             sorted((k, _make_hashable(v)) for k, v in kwargs.items())
         )
