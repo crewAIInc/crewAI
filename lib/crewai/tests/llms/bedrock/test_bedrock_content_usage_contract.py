@@ -198,10 +198,6 @@ def test_parts_list_is_sent_as_blocks_with_image_bytes_intact(
     assert all(isinstance(block, dict) for block in blocks)
 
 
-@pytest.mark.xfail(
-    reason="#9095: OpenAI-style text parts are forwarded to Converse unconverted",
-    strict=True,
-)
 def test_openai_style_text_part_is_sent_as_a_converse_text_block(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -212,10 +208,6 @@ def test_openai_style_text_part_is_sent_as_a_converse_text_block(
     assert BEDROCK.user_blocks(request) == [[{"text": PROMPT}]]
 
 
-@pytest.mark.xfail(
-    reason="#9095: image_url data URIs are forwarded to Converse unconverted",
-    strict=True,
-)
 def test_openai_style_image_url_part_is_sent_as_a_converse_image_block(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
