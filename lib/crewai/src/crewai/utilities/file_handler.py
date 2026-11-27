@@ -149,8 +149,11 @@ class PickleHandler:
           data: The data to be saved to the file.
         """
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
+            # Serialize first: opening the file with "wb" before dump would
+            # truncate an existing save if serialization then fails.
+            payload = pickle.dumps(data)
             with open(self.file_path, "wb") as f:
-                pickle.dump(obj=data, file=f)
+                f.write(payload)
 
     def load(self) -> Any:
         """Load the data from the specified file using pickle.
