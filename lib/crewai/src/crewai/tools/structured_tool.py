@@ -320,6 +320,12 @@ class CrewStructuredTool(BaseModel):
             if param_name in ("self", "cls"):
                 continue
 
+            if param.kind in (
+                inspect.Parameter.VAR_KEYWORD,
+                inspect.Parameter.VAR_POSITIONAL,
+            ):
+                continue
+
             annotation = type_hints.get(param_name, Any)
 
             default = ... if param.default == param.empty else param.default
