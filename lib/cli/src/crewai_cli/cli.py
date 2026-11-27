@@ -1248,6 +1248,22 @@ def flow_add_crew(crew_name: str) -> None:
     add_crew_to_flow(crew_name)
 
 
+@flow.command(name="state")
+@click.argument("db_path", type=click.Path(dir_okay=False))
+@click.argument("flow_uuid")
+@click.argument("record_id", type=click.IntRange(min=1))
+@click.option("--json", "as_json", is_flag=True, help="Print the record as JSON.")
+def flow_state(db_path: str, flow_uuid: str, record_id: int, as_json: bool) -> None:
+    """Show one persisted Flow state from a SQLite flow_states database.
+
+    Read-only. These are per-method Flow states, not checkpoints; use
+    `crewai checkpoint` for those.
+    """
+    from crewai_cli.flow_state_cli import inspect_flow_state
+
+    inspect_flow_state(db_path, flow_uuid, record_id, as_json=as_json)
+
+
 @crewai.group()
 def triggers() -> None:
     """Trigger related commands. Use 'crewai triggers list' to see available triggers, or 'crewai triggers run app_slug/trigger_slug' to execute."""
