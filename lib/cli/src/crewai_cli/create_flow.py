@@ -1,4 +1,6 @@
+import keyword
 from pathlib import Path
+import re
 import sys
 
 import click
@@ -46,7 +48,8 @@ def create_flow(
 
     Raises:
         click.BadParameter: ``provider`` is neither a provider with a listed
-            model nor a ``provider/model`` string.
+            model nor a ``provider/model`` string; or ``name`` cannot become a
+            Python module name.
     """
     from crewai_cli.create_json_crew import (
         _PROVIDER_MODELS,
@@ -63,8 +66,35 @@ def create_flow(
             param_hint="'--provider'",
         )
 
+    name = name.rstrip("/")
+    if not name.strip():
+        raise click.BadParameter(
+            "Flow name cannot be empty or contain only whitespace",
+            param_hint="'name'",
+        )
+
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
+    # The folder name is the package the generated main.py imports from, so
+    # only characters a Python module name can hold may survive.
+    folder_name = re.sub(r"[^a-zA-Z0-9_]", "", folder_name)
+    if not folder_name:
+        raise click.BadParameter(
+            f"Flow name '{name}' contains no valid characters for a Python module name",
+            param_hint="'name'",
+        )
+    if folder_name[0].isdigit():
+        raise click.BadParameter(
+            f"Flow name '{name}' would generate folder name '{folder_name}' which cannot start with a digit (invalid Python module name)",
+            param_hint="'name'",
+        )
+    if keyword.iskeyword(folder_name):
+        raise click.BadParameter(
+            f"Flow name '{name}' would generate folder name '{folder_name}' which is a reserved Python keyword",
+            param_hint="'name'",
+        )
+
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+    class_name = re.sub(r"[^a-zA-Z0-9_]", "", class_name)
 
     click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
 
