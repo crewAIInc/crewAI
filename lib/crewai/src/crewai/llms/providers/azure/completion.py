@@ -335,11 +335,15 @@ class AzureCompletion(BaseLLM):
         client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
             "credential": self._resolve_credential(),
+            "retry_total": self.max_retries,
         }
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
         if self.credential_scopes:
             client_kwargs["credential_scopes"] = self.credential_scopes
+        if self.timeout is not None:
+            client_kwargs["connection_timeout"] = self.timeout
+            client_kwargs["read_timeout"] = self.timeout
         return client_kwargs
 
     def _resolve_credential(self) -> Any:
