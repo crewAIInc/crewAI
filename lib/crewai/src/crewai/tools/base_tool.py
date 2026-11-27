@@ -624,6 +624,14 @@ class Tool(BaseTool, Generic[P, R]):
         Raises:
             NotImplementedError: If the wrapped function is not async.
         """
+        # Check before calling: a synchronous function may have side effects
+        # (sending email, writing a row, charging a card) that must not happen
+        # when the caller asked for async execution that is unsupported.
+        if not _is_async_callable(self.func):
+            raise NotImplementedError(
+                f"{sanitize_tool_name(self.name)} does not have an async function. "
+                "Use run() for sync execution or provide an async function."
+            )
         result = self.func(*args, **kwargs)
         if _is_awaitable(result):
             return await result
