@@ -45,6 +45,10 @@ from crewai_tools.tools.contextualai_rerank_tool.contextual_rerank_tool import (
 from crewai_tools.tools.couchbase_tool.couchbase_tool import (
     CouchbaseFTSVectorSearchTool,
 )
+from crewai_tools.tools.crawlcheck_tool.crawlcheck_tool import (
+    CrawlCheckSiteCheckTool,
+    CrawlCheckVerifyFactTool,
+)
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
 )
@@ -249,6 +253,8 @@ __all__ = [
     "ContextualAIQueryTool",
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
+    "CrawlCheckSiteCheckTool",
+    "CrawlCheckVerifyFactTool",
     "CrewaiPlatformTools",
     "DB2ToolSchema",
     "DB2VectorSearchTool",
