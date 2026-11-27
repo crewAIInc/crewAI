@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from copy import copy as shallow_copy
+from copy import deepcopy
 from hashlib import md5
 from pathlib import Path
 import re
@@ -751,6 +752,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        # A2A auth schemes are abstract typed models; model_dump turns them
+        # into plain dicts that pydantic cannot revalidate into the abstract
+        # ClientAuthScheme field. Keep the concrete instance instead.
+        if self.a2a is not None:
+            copied_data["a2a"] = deepcopy(self.a2a)
         # Tool-result caching distinguishes "explicitly enabled" from the
         # field default via model_fields_set; don't let the dump turn the
         # default into an explicit opt-in on the copy. An agent that opted
