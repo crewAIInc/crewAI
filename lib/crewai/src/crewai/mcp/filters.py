@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -64,8 +65,15 @@ class StaticToolFilter:
             blocked_tool_names: List of tool names to block. Blocked tools
                 take precedence over allowed tools.
         """
-        self.allowed_tool_names = set(allowed_tool_names or [])
-        self.blocked_tool_names = set(blocked_tool_names or [])
+        # Accept configured names in either the published or sanitized form,
+        # so a change to the sanitizer does not silently invalidate lists.
+        self.allowed_tool_names = self._normalize_names(allowed_tool_names)
+        self.blocked_tool_names = self._normalize_names(blocked_tool_names)
+
+    @staticmethod
+    def _normalize_names(names: list[str] | None) -> set[str]:
+        result = set(names or [])
+        return result | {sanitize_tool_name(name) for name in result}
 
     def __call__(self, tool: dict[str, Any]) -> bool:
         """Filter tool based on allow/block lists.
@@ -76,14 +84,18 @@ class StaticToolFilter:
         Returns:
             True if tool should be included, False otherwise.
         """
-        tool_name = tool.get("name", "")
+        # MCPClient stores the sanitized name under "name" and the server's
+        # published name under "original_name"; accept a list written with
+        # either spelling.
+        tool_names = {tool.get("name", ""), tool.get("original_name", "")}
+        tool_names |= {sanitize_tool_name(name) for name in tool_names}
 
         # Blocked tools take precedence over allowed tools
-        if self.blocked_tool_names and tool_name in self.blocked_tool_names:
+        if self.blocked_tool_names and tool_names & self.blocked_tool_names:
             return False
 
         if self.allowed_tool_names:
-            return tool_name in self.allowed_tool_names
+            return bool(tool_names & self.allowed_tool_names)
 
         return True
 
