@@ -37,6 +37,13 @@ class TestDiscoverSkills:
         names = {s.name for s in skills}
         assert names == {"alpha", "beta"}
 
+    def test_finds_skill_saved_with_a_bom(self, tmp_path: Path) -> None:
+        skill_dir = _create_skill_dir(tmp_path, "bom-skill")
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_bytes(b"\xef\xbb\xbf" + skill_md.read_bytes())
+        skills = discover_skills(tmp_path)
+        assert [s.name for s in skills] == ["bom-skill"]
+
     def test_skips_dirs_without_skill_md(self, tmp_path: Path) -> None:
         _create_skill_dir(tmp_path, "valid")
         (tmp_path / "no-skill").mkdir()
@@ -141,6 +148,22 @@ class TestLoadSkill:
             "name: inline-skill\r\n"
             "description: Inline guidance\r\n"
             "---\r\n"
+            "Follow these instructions."
+        )
+
+        skills = load_skill(inline_skill)
+
+        assert [skill.name for skill in skills] == ["inline-skill"]
+        assert [skill.instructions for skill in skills] == [
+            "Follow these instructions."
+        ]
+
+    def test_loads_inline_skill_with_a_bom(self) -> None:
+        inline_skill = (
+            "\ufeff---\n"
+            "name: inline-skill\n"
+            "description: Inline guidance\n"
+            "---\n"
             "Follow these instructions."
         )
 
