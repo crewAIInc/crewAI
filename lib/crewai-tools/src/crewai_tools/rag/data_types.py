@@ -16,6 +16,7 @@ class DataType(str, Enum):
     CSV = "csv"
     JSON = "json"
     JSONL = "jsonl"
+    NOTEBOOK = "notebook"
     XML = "xml"
     DOCX = "docx"
     MDX = "mdx"
@@ -41,6 +42,7 @@ class DataType(str, Enum):
             DataType.CSV: ("structured_chunker", "CsvChunker"),
             DataType.JSON: ("structured_chunker", "JsonChunker"),
             DataType.JSONL: ("structured_chunker", "JsonChunker"),
+            DataType.NOTEBOOK: ("text_chunker", "TextChunker"),
             DataType.XML: ("structured_chunker", "XmlChunker"),
             DataType.WEBSITE: ("web_chunker", "WebsiteChunker"),
             DataType.DIRECTORY: ("text_chunker", "TextChunker"),
@@ -73,6 +75,7 @@ class DataType(str, Enum):
             DataType.MDX: ("mdx_loader", "MDXLoader"),
             DataType.JSON: ("json_loader", "JSONLoader"),
             DataType.JSONL: ("jsonl_loader", "JSONLLoader"),
+            DataType.NOTEBOOK: ("notebook_loader", "NotebookLoader"),
             DataType.DOCX: ("docx_loader", "DOCXLoader"),
             DataType.CSV: ("csv_loader", "CSVLoader"),
             DataType.DIRECTORY: ("directory_loader", "DirectoryLoader"),
@@ -125,6 +128,7 @@ class DataTypes:
                 ".json": DataType.JSON,
                 ".jsonl": DataType.JSONL,
                 ".ndjson": DataType.JSONL,
+                ".ipynb": DataType.NOTEBOOK,
                 ".xml": DataType.XML,
                 ".txt": DataType.TEXT_FILE,
             }

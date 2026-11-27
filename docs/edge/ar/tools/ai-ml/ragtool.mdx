@@ -50,6 +50,7 @@ def knowledge_expert(self) -> Agent:
 - ملفات CSV
 - ملفات JSON
 - ملفات JSONL (`.jsonl` و`.ndjson`)
+- دفاتر Jupyter (`.ipynb`)
 - نصوص
 - مجلدات/أدلة
 - صفحات ويب HTML
@@ -102,10 +103,17 @@ rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
 
 # Auto-detect a local JSONL file by its extension
 rag_tool.add(path="path/to/your/records.ndjson")
+
+# Add a local Jupyter notebook (auto-detected by its .ipynb extension)
+rag_tool.add(path="path/to/your/analysis.ipynb")
 ```
 
 تحتوي ملفات JSONL على قيمة JSON واحدة في كل سطر. يدعم مُحمِّل JSONL الملفات المحلية؛
 التعرّف على عنوان URL لملف JSONL لا يجلب محتواه.
+
+تُفهرَس دفاتر Jupyter حسب مصدر الخلايا، مع إضافة علامة `[cell N: type]` قبل كل خلية.
+لا تُنفَّذ الدفاتر أبداً ولا تُفهرَس مخرجات الخلايا. يدعم مُحمِّل الدفاتر الملفات المحلية؛
+التعرّف على عنوان URL لدفتر لا يجلب محتواه. استخدم `data_type="notebook"` لتحديده صراحةً.
 
 ## مثال على التكامل مع الوكيل
 

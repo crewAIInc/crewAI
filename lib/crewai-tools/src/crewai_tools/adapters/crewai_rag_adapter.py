@@ -186,6 +186,7 @@ class CrewAIRagAdapter(Adapter):
             ".json",
             ".jsonl",
             ".ndjson",
+            ".ipynb",
             ".xml",
             ".docx",
             ".mdx",
@@ -313,6 +314,7 @@ class CrewAIRagAdapter(Adapter):
                     DataType.CSV,
                     DataType.JSON,
                     DataType.JSONL,
+                    DataType.NOTEBOOK,
                     DataType.XML,
                     DataType.MDX,
                 ]:
