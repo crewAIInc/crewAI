@@ -29,6 +29,21 @@ class ScrapeElementFromWebsiteToolSchema(FixedScrapeElementFromWebsiteToolSchema
     )
 
 
+class _FixedUrlSchema(FixedScrapeElementFromWebsiteToolSchema):
+    """Input when only the website url is fixed at initialization."""
+
+    css_element: str = Field(
+        ...,
+        description="Mandatory css reference for element to scrape from the website",
+    )
+
+
+class _FixedElementSchema(FixedScrapeElementFromWebsiteToolSchema):
+    """Input when only the css element is fixed at initialization."""
+
+    website_url: str = Field(..., description="Mandatory website url to read the file")
+
+
 class ScrapeElementFromWebsiteTool(BaseTool):
     name: str = "Read a website content"
     description: str = "A tool that can be used to read a website content."
@@ -56,16 +71,23 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
+        if css_element is not None:
+            self.css_element = css_element
+            self.args_schema = _FixedElementSchema
         if website_url is not None:
             self.website_url = website_url
-            self.css_element = css_element
             self.description = (
                 f"A tool that can be used to read {website_url}'s content."
             )
-            self.args_schema = FixedScrapeElementFromWebsiteToolSchema
-            self._generate_description()
+            self.args_schema = (
+                FixedScrapeElementFromWebsiteToolSchema
+                if css_element is not None
+                else _FixedUrlSchema
+            )
             if cookies is not None:
                 self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
+        if website_url is not None or css_element is not None:
+            self._generate_description()
 
     def _run(
         self,
