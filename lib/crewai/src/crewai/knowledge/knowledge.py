@@ -117,6 +117,11 @@ class Knowledge(BaseModel):
         **data: object,
     ) -> None:
         super().__init__(**data)
+        # The explicit parameters shadow the model fields, so forward them to
+        # the model as well: checkpoints serialize these fields, and callers
+        # expect them to reflect what storage was built with.
+        self.embedder = embedder
+        self.collection_name = collection_name
         if storage is not None:
             self.storage = storage
         else:
