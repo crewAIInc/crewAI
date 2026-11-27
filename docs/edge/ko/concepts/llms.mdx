@@ -788,6 +788,36 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="AI Stupid Level">
+    CrewAI는 네이티브 OpenAI 클라이언트로 AI Stupid Level에 연결하므로 LiteLLM 설치가 필요하지 않습니다. AI Stupid Level은 라우터로, 지속적으로 다시 실행되는 코딩, 추론, 도구 사용 벤치마크에서 현재 가장 높은 점수를 받은 모델로 각 요청을 보내며, 사용자의 자체 공급자 키(OpenAI, Anthropic, Google, DeepSeek, Kimi, GLM)를 사용합니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required: a router key (aism_...) from https://aistupidlevel.info/router/keys
+    AISTUPIDLEVEL_API_KEY=<your-router-key>
+
+    # Optional
+    AISTUPIDLEVEL_BASE_URL=https://aistupidlevel.info/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="aistupidlevel/auto-coding",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      AI Stupid Level 특징:
+      - 모델 ID로 사용하는 라우팅 모드: `auto-coding`, `auto-reasoning`, `auto-tooling`, `auto-best`
+      - `auto-value*` 모드는 최상위권 모델 중 측정된 비용 대비 벤치마크 점수가 가장 높은 모델을 선택
+      - 도구 호출, 스트리밍, JSON 스키마 구조화 출력 지원; 도구 루프는 하나의 모델에서 유지
+    </Info>
+
+    실제 모델 ID(예: `aistupidlevel/claude-opus-5-5`)를 지정하면 해당 모델로 고정됩니다. 전체 목록은 [라우팅 모드](https://aistupidlevel.info/router/docs#strategies)와 `GET /v1/models`를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
