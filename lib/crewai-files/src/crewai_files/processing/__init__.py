@@ -26,6 +26,7 @@ from crewai_files.processing.exceptions import (
     FileValidationError,
     ProcessingDependencyError,
     UnsupportedFileTypeError,
+    UnsupportedImageFormatError,
 )
 from crewai_files.processing.processor import FileProcessor
 from crewai_files.processing.validators import (
@@ -56,6 +57,7 @@ __all__ = [
     "ProcessingDependencyError",
     "ProviderConstraints",
     "UnsupportedFileTypeError",
+    "UnsupportedImageFormatError",
     "VideoConstraints",
     "get_constraints_for_provider",
     "get_supported_content_types",

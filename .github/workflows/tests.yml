@@ -69,34 +69,21 @@ jobs:
       - name: Restore test durations
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: .test_durations_py*
-          key: test-durations-py${{ matrix.python-version }}
+          path: .test_durations_*
+          # Never an exact hit; restore-keys picks the newest saved durations.
+          key: test-durations-py${{ matrix.python-version }}-${{ github.run_id }}
+          restore-keys: |
+            test-durations-py${{ matrix.python-version }}-
 
       # pytest-randomly shuffles before pytest-split slices, so every group job must
       # share one seed; per-job seeds make the 8 groups overlap and skip about a third.
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
-          PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
-          DURATION_FILE="../../.test_durations_py${PYTHON_VERSION_SAFE}"
-
-          # Temporarily always skip cached durations to fix test splitting
-          # When durations don't match, pytest-split runs duplicate tests instead of splitting
-          echo "Using even test splitting (duration cache disabled until fix merged)"
+          PY=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          cd lib/crewai
           DURATIONS_ARG=""
-
-          # Original logic (disabled temporarily):
-          # if [ ! -f "$DURATION_FILE" ]; then
-          #   echo "No cached durations found, tests will be split evenly"
-          #   DURATIONS_ARG=""
-          # elif git diff origin/${{ github.base_ref }}...HEAD --name-only 2>/dev/null | grep -q "^tests/.*\.py$"; then
-          #   echo "Test files have changed, skipping cached durations to avoid mismatches"
-          #   DURATIONS_ARG=""
-          # else
-          #   echo "No test changes detected, using cached test durations for optimal splitting"
-          #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
-          # fi
-
-          cd lib/crewai && uv run pytest \
+          [ -f "../../.test_durations_crewai_py${PY}" ] && DURATIONS_ARG="--durations-path=../../.test_durations_crewai_py${PY}"
+          uv run pytest \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
@@ -107,21 +94,30 @@ jobs:
 
       - name: Run tool tests (group ${{ matrix.group }} of 8)
         run: |
-          cd lib/crewai-tools && uv run pytest \
+          PY=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          cd lib/crewai-tools
+          DURATIONS_ARG=""
+          [ -f "../../.test_durations_tools_py${PY}" ] && DURATIONS_ARG="--durations-path=../../.test_durations_tools_py${PY}"
+          uv run pytest \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
             --randomly-seed=${{ github.run_id }} \
+            $DURATIONS_ARG \
             --durations=10 \
             --maxfail=3
 
       - name: Run CLI, core and files tests (group ${{ matrix.group }} of 8)
         run: |
+          PY=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          DURATIONS_ARG=""
+          [ -f ".test_durations_misc_py${PY}" ] && DURATIONS_ARG="--durations-path=.test_durations_misc_py${PY}"
           uv run pytest lib/cli/tests lib/crewai-core/tests lib/crewai-files/tests \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
             --randomly-seed=${{ github.run_id }} \
+            $DURATIONS_ARG \
             --durations=10 \
             --maxfail=3
 

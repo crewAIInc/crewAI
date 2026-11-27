@@ -423,3 +423,52 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert first.total_tokens == 240
         assert first.cached_prompt_tokens == 30
         assert first.successful_requests == 2
+
+
+class TestFromProviderDictBedrock:
+    def test_converse_usage_keys_are_normalized(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {"inputTokens": 100, "outputTokens": 20, "totalTokens": 120}
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 100
+        assert metrics.completion_tokens == 20
+        assert metrics.total_tokens == 120
+        assert metrics.successful_requests == 1
+
+    def test_converse_cache_read_tokens_are_reported_as_cached(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 10,
+                "outputTokens": 5,
+                "totalTokens": 15,
+                "cacheReadInputTokens": 7,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.cached_prompt_tokens == 7
+        assert metrics.prompt_tokens == 17
+        assert metrics.total_tokens == 22
+
+    def test_converse_cache_write_tokens_are_reported_as_cache_creation(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 10,
+                "outputTokens": 5,
+                "totalTokens": 35,
+                "cacheWriteInputTokens": 20,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.cache_creation_tokens == 20
+        assert metrics.prompt_tokens == 30
+        assert metrics.total_tokens == 35
