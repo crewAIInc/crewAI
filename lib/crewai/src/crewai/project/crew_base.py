@@ -831,10 +831,8 @@ class CrewBase(metaclass=_CrewBaseType):
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """Type stub for decorator usage.
 
-            Args:
-                decorated_cls: Class to transform with CrewBaseMeta metaclass.
-
-            Returns:
-                New class with CrewBaseMeta metaclass applied.
+            Declares the constructor shape so type checkers accept `@CrewBase` on a
+            class; the metaclass supplies the real `__init__`. See
+            `CrewBaseMeta.__call__` for the decorator's own `decorated_cls` argument.
             """
             ...
