@@ -1,5 +1,11 @@
 from pathlib import Path
 
+import pytest
+
+from crewai.tools.agent_tools.deferred_tool_result_reader import (
+    DeferredToolResultReader,
+)
+
 from crewai.utilities.tool_result_artifacts import ToolResultArtifactStore
 
 
@@ -73,3 +79,43 @@ def test_cleanup_removes_execution_directory_and_is_idempotent(tmp_path: Path) -
     store.cleanup()
 
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("separator", ["\v", "\f", "\x85", "\u2028", "\u2029"])
+def test_line_metadata_matches_deferred_reader(tmp_path: Path, separator: str) -> None:
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+    try:
+        content = f"first{separator}second\nthird\n"
+        artifact = store.store(content, estimated_token_count=9)
+        reader = DeferredToolResultReader()
+        alias = artifact.relative_path.as_posix()
+        reader.allow_file(str(artifact.file_path), alias)
+
+        assert artifact.line_count == 2
+        assert artifact.preview == content
+        assert (
+            reader.run(file_path=alias, start_line=1, line_count=1)
+            == f"first{separator}second\n"
+        )
+        assert reader.run(file_path=alias, start_line=2, line_count=1) == "third\n"
+    finally:
+        store.cleanup()
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r", "\r\n"])
+def test_preview_uses_the_readers_universal_newline_boundaries(
+    tmp_path: Path, newline: str
+) -> None:
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+    try:
+        content = "\u2028".join(["part"] * 12) + newline + "tail"
+        artifact = store.store(content, estimated_token_count=20)
+        reader = DeferredToolResultReader()
+        alias = artifact.relative_path.as_posix()
+        reader.allow_file(str(artifact.file_path), alias)
+
+        assert artifact.line_count == 2
+        assert artifact.preview_truncated is False
+        assert artifact.preview == reader.run(file_path=alias)
+    finally:
+        store.cleanup()
