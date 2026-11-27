@@ -857,6 +857,10 @@ def _default_agents_and_tasks(
 
 # ── JSONC generation from wizard data ──────────────────────────
 
+# Wizard text is serialized with ensure_ascii=False so non-ASCII values
+# (Chinese, Korean, Japanese, emoji) stay readable in the generated .jsonc
+# files instead of turning into \uXXXX escapes.
+
 
 def _agent_to_jsonc(agent: dict[str, Any]) -> str:
     """Convert agent wizard data to JSONC string with comments."""
@@ -875,11 +879,11 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
     return _render_json_crew_template(
         "agent.jsonc",
         {
-            "role_json": json.dumps(agent["role"]),
-            "goal_json": json.dumps(agent["goal"]),
-            "backstory_json": json.dumps(agent["backstory"]),
-            "llm_json": json.dumps(agent["llm"]),
-            "tools_json": json.dumps(agent["tools"]),
+            "role_json": json.dumps(agent["role"], ensure_ascii=False),
+            "goal_json": json.dumps(agent["goal"], ensure_ascii=False),
+            "backstory_json": json.dumps(agent["backstory"], ensure_ascii=False),
+            "llm_json": json.dumps(agent["llm"], ensure_ascii=False),
+            "tools_json": json.dumps(agent["tools"], ensure_ascii=False),
             "settings_block": settings_block,
         },
     )
@@ -896,7 +900,7 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
         context_block = (
             "\n\n"
             "      // Task outputs used as context\n"
-            f'      "context": {json.dumps(task["context"])}'
+            f'      "context": {json.dumps(task["context"], ensure_ascii=False)}'
             f"{',' if has_output_file else ''}"
         )
 
@@ -904,16 +908,18 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
         output_file_block = (
             "\n\n"
             "      // Save output to a file\n"
-            f'      "output_file": {json.dumps(task["output_file"])}'
+            f'      "output_file": {json.dumps(task["output_file"], ensure_ascii=False)}'
         )
 
     return _render_json_crew_template(
         "task.jsonc",
         {
-            "name_json": json.dumps(task["name"]),
-            "description_json": json.dumps(task["description"]),
-            "expected_output_json": json.dumps(task["expected_output"]),
-            "agent_json": json.dumps(task["agent"]),
+            "name_json": json.dumps(task["name"], ensure_ascii=False),
+            "description_json": json.dumps(task["description"], ensure_ascii=False),
+            "expected_output_json": json.dumps(
+                task["expected_output"], ensure_ascii=False
+            ),
+            "agent_json": json.dumps(task["agent"], ensure_ascii=False),
             "agent_comma": "," if has_context or has_output_file else "",
             "context_block": context_block,
             "output_file_block": output_file_block,
@@ -928,9 +934,9 @@ def _crew_to_jsonc(
     settings: dict[str, Any],
 ) -> str:
     """Generate the full crew.jsonc from wizard data."""
-    agent_names_json = json.dumps([a["name"] for a in agents])
+    agent_names_json = json.dumps([a["name"] for a in agents], ensure_ascii=False)
     tasks_fragments = ",\n".join(_task_to_json_fragment(t) for t in tasks)
-    inputs_json = json.dumps(settings.get("inputs", {}), indent=4)
+    inputs_json = json.dumps(settings.get("inputs", {}), ensure_ascii=False, indent=4)
     # Re-indent inputs to 4-space
     inputs_lines = inputs_json.split("\n")
     if len(inputs_lines) > 1:
@@ -943,10 +949,12 @@ def _crew_to_jsonc(
     return _render_json_crew_template(
         "crew.jsonc",
         {
-            "name_json": json.dumps(name),
+            "name_json": json.dumps(name, ensure_ascii=False),
             "agent_names_json": agent_names_json,
             "tasks_fragments": tasks_fragments,
-            "process_json": json.dumps(settings.get("process", "sequential")),
+            "process_json": json.dumps(
+                settings.get("process", "sequential"), ensure_ascii=False
+            ),
             "memory": memory,
             "manager_agent_name": agents[0]["name"],
             "inputs_json": inputs_json,
