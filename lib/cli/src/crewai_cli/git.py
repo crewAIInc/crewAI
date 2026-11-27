@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from functools import cached_property
+import logging
 from pathlib import Path
 import subprocess
 
+
+logger = logging.getLogger(__name__)
 
 _INITIAL_COMMIT_EXCLUDE_PATTERNS = [
     ".crewai/",
@@ -206,13 +209,28 @@ class Repository:
         )
 
     def deployable_files(self) -> list[str]:
-        """Return files tracked by Git or untracked and not ignored."""
+        """Return files tracked by Git or untracked and not ignored.
+
+        ``-z`` makes Git print paths verbatim; otherwise non-ASCII names or
+        names with quotes come back C-quoted and match no file on disk.
+        A name that is not valid UTF-8 is skipped with a warning, since a ZIP
+        entry name has to be written as UTF-8.
+        """
         output = subprocess.check_output(
-            ["git", "ls-files", "--cached", "--others", "--exclude-standard"],  # noqa: S607
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],  # noqa: S607
             cwd=self.path,
-            encoding="utf-8",
         )
-        return [line for line in output.splitlines() if line]
+        paths: list[str] = []
+        for entry in output.split(b"\0"):
+            if not entry:
+                continue
+            try:
+                paths.append(entry.decode("utf-8"))
+            except UnicodeDecodeError:
+                logger.warning(
+                    "Skipping a file whose name is not valid UTF-8: %r", entry
+                )
+        return paths
 
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""
