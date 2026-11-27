@@ -54,9 +54,39 @@ class TestSettingsCommand(unittest.TestCase):
             READONLY_SETTINGS_KEYS + HIDDEN_SETTINGS_KEYS
         )
         for key in valid_keys:
-            test_value = f"some_value_for_{key}"
+            if key == "oauth2_extra":
+                test_value = '{"scope": "value"}'
+                expected = {"scope": "value"}
+            else:
+                test_value = f"some_value_for_{key}"
+                expected = test_value
             self.settings_command.set(key, test_value)
-            self.assertEqual(getattr(self.settings_command.settings, key), test_value)
+            self.assertEqual(
+                getattr(self.settings_command.settings, key), expected
+            )
+
+    def test_set_dict_value_is_parsed_and_survives_reload(self):
+        with patch("crewai_cli.settings.main.console"):
+            self.settings_command.set("oauth2_extra", '{"scope": "admin"}')
+
+        self.assertEqual(
+            self.settings_command.settings.oauth2_extra, {"scope": "admin"}
+        )
+        reloaded = Settings(config_path=self.config_path)
+        self.assertEqual(reloaded.oauth2_extra, {"scope": "admin"})
+
+    def test_set_rejects_value_that_does_not_match_field_type(self):
+        with patch("crewai_cli.settings.main.console"):
+            with self.assertRaises(SystemExit):
+                self.settings_command.set("oauth2_extra", "not-json")
+
+        self.assertEqual(self.settings_command.settings.oauth2_extra, {})
+        self.assertFalse(self.config_path.exists())
+
+    def test_set_rejects_field_names_that_are_not_settings(self):
+        with patch("crewai_cli.settings.main.console"):
+            with self.assertRaises(SystemExit):
+                self.settings_command.set("dump", "value")
 
     def test_set_invalid_key(self):
         with self.assertRaises(SystemExit):
