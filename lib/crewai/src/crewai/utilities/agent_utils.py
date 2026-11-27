@@ -1144,6 +1144,39 @@ def _print_current_organization() -> None:
         )
 
 
+_FIRST_PARTY_TOOL_ROOTS: Final = frozenset({"crewai", "crewai_tools"})
+
+
+def _is_first_party_module(module_name: str) -> bool:
+    return module_name.partition(".")[0] in _FIRST_PARTY_TOOL_ROOTS
+
+
+def _load_repository_tool_class(module_name: Any, class_name: Any) -> Any:
+    """Resolve a tool class named by a repository agent, first-party only.
+
+    The module and class names come from the repository API response, so they
+    are checked *before* importing: importing a module runs its code.
+    """
+    import importlib
+
+    if not isinstance(module_name, str) or not isinstance(class_name, str):
+        raise ValueError("Tool 'module' and 'name' must be strings")
+    if not _is_first_party_module(module_name):
+        raise ValueError(
+            f"Refusing to import tool module {module_name!r}: only crewai and "
+            "crewai_tools tools can be loaded from a repository agent"
+        )
+    if not class_name.isidentifier():
+        raise ValueError(f"Invalid tool name {class_name!r}")
+
+    tool_class = getattr(importlib.import_module(module_name), class_name)
+
+    # Reject names a first-party module merely re-exports (e.g. ``os``).
+    if not _is_first_party_module(getattr(tool_class, "__module__", "") or ""):
+        raise ValueError(f"Tool {class_name!r} is not defined in a first-party package")
+    return tool_class
+
+
 def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     """Load an agent from the repository.
 
@@ -1158,7 +1191,6 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     """
     attributes: dict[str, Any] = {}
     if from_repository:
-        import importlib
 
         def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
@@ -1197,8 +1229,9 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module(tool["module"])
-                        tool_class = getattr(module, tool["name"])
+                        tool_class = _load_repository_tool_class(
+                            tool["module"], tool["name"]
+                        )
 
                         tool_value = tool_class(**tool["init_params"])
 
