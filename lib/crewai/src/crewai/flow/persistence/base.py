@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 if TYPE_CHECKING:
@@ -13,6 +14,27 @@ if TYPE_CHECKING:
 
 
 _persistence_registry: dict[str, type[FlowPersistence]] = {}
+
+DEFAULT_HISTORY_LIMIT = 50
+MAX_HISTORY_LIMIT = 1000
+
+
+class FlowStateHistoryRecord(BaseModel):
+    """Metadata for one persisted state snapshot of a flow.
+
+    Attributes:
+        id: Stable ID of the snapshot within the backend; increases with each
+            save. This is not the flow's ``state.id`` and cannot be passed to
+            ``kickoff(restore_from_state_id=...)``.
+        method_name: Name of the flow method that produced the snapshot.
+        timestamp: When the snapshot was saved.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: int
+    method_name: str
+    timestamp: datetime
 
 
 class FlowPersistence(BaseModel, ABC):
@@ -25,6 +47,9 @@ class FlowPersistence(BaseModel, ABC):
     - save_pending_feedback(): Saves state with pending feedback context
     - load_pending_feedback(): Loads state and pending feedback context
     - clear_pending_feedback(): Clears pending feedback after resume
+
+    Backends that retain every saved snapshot can optionally override
+    list_state_history() to expose paginated snapshot metadata.
     """
 
     persistence_type: str = Field(default="base")
@@ -66,6 +91,30 @@ class FlowPersistence(BaseModel, ABC):
         Returns:
             The most recent state as a dictionary, or None if no state exists
         """
+
+    def list_state_history(
+        self,
+        flow_uuid: str,
+        *,
+        limit: int = DEFAULT_HISTORY_LIMIT,
+        offset: int = 0,
+    ) -> list[FlowStateHistoryRecord]:
+        """List metadata for persisted state snapshots of a flow.
+
+        Optional override for backends that retain snapshot history. The
+        default raises ``NotImplementedError``.
+
+        Args:
+            flow_uuid: Unique identifier for the flow instance
+            limit: Maximum number of records to return (1 to ``MAX_HISTORY_LIMIT``)
+            offset: Number of records to skip
+
+        Returns:
+            Records ordered oldest first.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support listing state history"
+        )
 
     def save_pending_feedback(
         self,

@@ -16,7 +16,12 @@ from crewai_core.paths import db_storage_path
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
-from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.persistence.base import (
+    DEFAULT_HISTORY_LIMIT,
+    MAX_HISTORY_LIMIT,
+    FlowPersistence,
+    FlowStateHistoryRecord,
+)
 
 
 if TYPE_CHECKING:
@@ -25,6 +30,7 @@ if TYPE_CHECKING:
 
 _SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 _SCHEMA_RETRY_DELAY_SECONDS = 0.05
+_SQLITE_MAX_INTEGER = 2**63 - 1
 
 
 def _json_default(obj: Any) -> Any:
@@ -245,6 +251,110 @@ class SQLiteFlowPersistence(FlowPersistence):
             result = json.loads(row[0])
             return result if isinstance(result, dict) else None
         return None
+
+    def list_state_history(
+        self,
+        flow_uuid: str,
+        *,
+        limit: int = DEFAULT_HISTORY_LIMIT,
+        offset: int = 0,
+    ) -> list[FlowStateHistoryRecord]:
+        """List metadata for every persisted state snapshot of a flow.
+
+        Delegates to :meth:`read_history` with this instance's ``db_path``.
+
+        Args:
+            flow_uuid: Unique identifier for the flow instance.
+            limit: Maximum number of records to return (1 to ``MAX_HISTORY_LIMIT``).
+            offset: Number of records to skip.
+
+        Returns:
+            Records ordered oldest first by row ID.
+
+        Raises:
+            ValueError: If ``limit`` or ``offset`` is out of range.
+        """
+        return self.read_history(self.db_path, flow_uuid, limit=limit, offset=offset)
+
+    @staticmethod
+    def read_history(
+        db_path: str | Path,
+        flow_uuid: str,
+        *,
+        limit: int = DEFAULT_HISTORY_LIMIT,
+        offset: int = 0,
+    ) -> list[FlowStateHistoryRecord]:
+        """List state snapshot metadata without modifying the database.
+
+        This needs no persistence instance, so no database file or table is
+        created and no schema or journal mode is changed. The database is opened with ``mode=ro``, which makes it
+        safe for inspection tools such as the CLI. Reading a WAL-mode database
+        may create ``-wal``/``-shm`` sidecar files next to it; if they cannot
+        be created, the ``sqlite3.OperationalError`` is raised.
+
+        Args:
+            db_path: Path to a ``SQLiteFlowPersistence`` database file.
+            flow_uuid: Unique identifier for the flow instance.
+            limit: Maximum number of records to return (1 to ``MAX_HISTORY_LIMIT``).
+            offset: Number of records to skip.
+
+        Returns:
+            Records ordered oldest first by row ID, or an empty list if the
+            database file, table, or flow does not exist.
+
+        Raises:
+            ValueError: If ``limit`` or ``offset`` is out of range.
+            sqlite3.DatabaseError: If the database cannot be read.
+        """
+        if (
+            not isinstance(limit, int)
+            or isinstance(limit, bool)
+            or not 1 <= limit <= MAX_HISTORY_LIMIT
+        ):
+            raise ValueError(
+                f"limit must be an integer between 1 and {MAX_HISTORY_LIMIT}, "
+                f"got {limit!r}"
+            )
+        if (
+            not isinstance(offset, int)
+            or isinstance(offset, bool)
+            or not 0 <= offset <= _SQLITE_MAX_INTEGER
+        ):
+            raise ValueError(
+                f"offset must be an integer between 0 and {_SQLITE_MAX_INTEGER}, "
+                f"got {offset!r}"
+            )
+        path = Path(db_path)
+        if not path.exists():
+            return []
+        uri = f"{path.resolve().as_uri()}?mode=ro"
+        try:
+            with closing(
+                sqlite3.connect(uri, uri=True, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn:
+                rows = conn.execute(
+                    "SELECT id, method_name, timestamp FROM flow_states"
+                    " WHERE flow_uuid = ? ORDER BY id ASC LIMIT ? OFFSET ?",
+                    (flow_uuid, limit, offset),
+                ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                return []
+            raise
+
+        # Older releases wrote naive UTC timestamps; normalise them to aware
+        # UTC so records from one database always compare with each other.
+        records: list[FlowStateHistoryRecord] = []
+        for row_id, method_name, ts in rows:
+            timestamp = datetime.fromisoformat(ts)
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            records.append(
+                FlowStateHistoryRecord(
+                    id=row_id, method_name=method_name, timestamp=timestamp
+                )
+            )
+        return records
 
     def load_state_from_history(
         self, flow_uuid: str, record_id: int
