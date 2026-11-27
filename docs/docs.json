@@ -251,6 +251,7 @@
                           "edge/en/tools/web-scraping/stagehandtool",
                           "edge/en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/en/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "edge/en/tools/web-scraping/firecrawlsearchtool",
                           "edge/en/tools/web-scraping/oxylabsscraperstool",
                           "edge/en/tools/web-scraping/brightdata-tools",
                           "edge/en/tools/web-scraping/youai-contents"
@@ -273,6 +274,7 @@
                           "edge/en/tools/search-research/tavilysearchtool",
                           "edge/en/tools/search-research/tavilyextractortool",
                           "edge/en/tools/search-research/tavilyresearchtool",
+                          "edge/en/tools/search-research/tavilygetresearchtool",
                           "edge/en/tools/search-research/arxivpapertool",
                           "edge/en/tools/search-research/serpapi-googlesearchtool",
                           "edge/en/tools/search-research/serpapi-googleshoppingtool",
@@ -373,6 +375,8 @@
                     "group": "Learn",
                     "pages": [
                       "edge/en/learn/overview",
+                      "edge/en/learn/bring-your-own-agent",
+                      "edge/en/learn/a2a-agent-delegation",
                       "edge/en/learn/llm-selection-guide",
                       "edge/en/learn/conditional-tasks",
                       "edge/en/learn/coding-agents",
@@ -388,6 +392,8 @@
                       "edge/en/learn/human-feedback-in-flows",
                       "edge/en/learn/kickoff-async",
                       "edge/en/learn/kickoff-for-each",
+                      "edge/en/learn/streaming-crew-execution",
+                      "edge/en/learn/streaming-flow-execution",
                       "edge/en/learn/streaming-runtime-contract",
                       "edge/en/learn/consuming-streams",
                       "edge/en/learn/llm-connections",
@@ -24914,6 +24920,7 @@
                           "edge/pt-BR/tools/web-scraping/stagehandtool",
                           "edge/pt-BR/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/pt-BR/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "edge/pt-BR/tools/web-scraping/firecrawlsearchtool",
                           "edge/pt-BR/tools/web-scraping/oxylabsscraperstool"
                         ]
                       },
@@ -25018,6 +25025,7 @@
                     "group": "Aprenda",
                     "pages": [
                       "edge/pt-BR/learn/overview",
+                      "edge/pt-BR/learn/bring-your-own-agent",
                       "edge/pt-BR/learn/llm-selection-guide",
                       "edge/pt-BR/learn/conditional-tasks",
                       "edge/pt-BR/learn/coding-agents",
@@ -25033,6 +25041,7 @@
                       "edge/pt-BR/learn/human-feedback-in-flows",
                       "edge/pt-BR/learn/kickoff-async",
                       "edge/pt-BR/learn/kickoff-for-each",
+                      "edge/pt-BR/learn/streaming-crew-execution",
                       "edge/pt-BR/learn/streaming-runtime-contract",
                       "edge/pt-BR/learn/llm-connections",
                       "edge/pt-BR/learn/multimodal-agents",
@@ -47505,6 +47514,7 @@
                           "edge/ko/tools/web-scraping/stagehandtool",
                           "edge/ko/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/ko/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "edge/ko/tools/web-scraping/firecrawlsearchtool",
                           "edge/ko/tools/web-scraping/oxylabsscraperstool",
                           "edge/ko/tools/web-scraping/brightdata-tools"
                         ]
@@ -47619,6 +47629,7 @@
                     "group": "학습",
                     "pages": [
                       "edge/ko/learn/overview",
+                      "edge/ko/learn/bring-your-own-agent",
                       "edge/ko/learn/llm-selection-guide",
                       "edge/ko/learn/conditional-tasks",
                       "edge/ko/learn/coding-agents",
@@ -47634,6 +47645,7 @@
                       "edge/ko/learn/human-feedback-in-flows",
                       "edge/ko/learn/kickoff-async",
                       "edge/ko/learn/kickoff-for-each",
+                      "edge/ko/learn/streaming-crew-execution",
                       "edge/ko/learn/streaming-runtime-contract",
                       "edge/ko/learn/llm-connections",
                       "edge/ko/learn/multimodal-agents",
@@ -70850,6 +70862,7 @@
                           "edge/ar/tools/web-scraping/stagehandtool",
                           "edge/ar/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/ar/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "edge/ar/tools/web-scraping/firecrawlsearchtool",
                           "edge/ar/tools/web-scraping/oxylabsscraperstool",
                           "edge/ar/tools/web-scraping/brightdata-tools"
                         ]
@@ -70964,6 +70977,8 @@
                     "group": "التعلّم",
                     "pages": [
                       "edge/ar/learn/overview",
+                      "edge/ar/learn/bring-your-own-agent",
+                      "edge/ar/learn/a2a-agent-delegation",
                       "edge/ar/learn/llm-selection-guide",
                       "edge/ar/learn/conditional-tasks",
                       "edge/ar/learn/coding-agents",
@@ -70979,6 +70994,8 @@
                       "edge/ar/learn/human-feedback-in-flows",
                       "edge/ar/learn/kickoff-async",
                       "edge/ar/learn/kickoff-for-each",
+                      "edge/ar/learn/streaming-crew-execution",
+                      "edge/ar/learn/streaming-flow-execution",
                       "edge/ar/learn/streaming-runtime-contract",
                       "edge/ar/learn/llm-connections",
                       "edge/ar/learn/multimodal-agents",
