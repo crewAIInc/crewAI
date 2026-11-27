@@ -903,6 +903,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         self._methods.update(methods)
 
+    def install_persistence(self, persistence: FlowPersistence) -> None:
+        """Install an instance-supplied backend so later ``@persist`` saves use it."""
+        self.persistence = persistence
+        self._instance_persistence = True
+
     def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
         def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
             try:

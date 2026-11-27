@@ -1612,3 +1612,72 @@ def test_converse_string_system_and_tool_content_unchanged():
         if isinstance(block, dict) and "toolResult" in block
     ]
     assert tool_results[0]["content"] == [{"text": "string result"}]
+
+
+def test_bedrock_passes_timeout_and_max_retries_to_client(bedrock_mocks):
+    """User timeout and max_retries must configure the boto3 client."""
+    mock_session_class, _ = bedrock_mocks
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        timeout=30,
+        max_retries=5,
+    )
+
+    config = mock_session_class.return_value.client.call_args.kwargs["config"]
+    assert config.read_timeout == 30
+    assert config.retries == {"max_attempts": 6, "mode": "adaptive"}
+    assert "timeout" not in llm.additional_params
+    assert "max_retries" not in llm.additional_params
+
+
+def test_bedrock_client_config_defaults_when_timeout_and_retries_unset(bedrock_mocks):
+    """Without user values the client keeps the previous defaults."""
+    mock_session_class, _ = bedrock_mocks
+
+    LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    config = mock_session_class.return_value.client.call_args.kwargs["config"]
+    assert config.read_timeout == 300
+    assert config.retries == {"max_attempts": 3, "mode": "adaptive"}
+
+
+def test_bedrock_to_config_dict_keeps_timeout_and_max_retries():
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        timeout=30,
+        max_retries=5,
+    )
+
+    config = llm.to_config_dict()
+    assert config["timeout"] == 30
+    assert config["max_retries"] == 5
+
+    default_config = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0"
+    ).to_config_dict()
+    assert "timeout" not in default_config
+    assert "max_retries" not in default_config
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_client_uses_timeout_and_max_retries(monkeypatch):
+    """The aiobotocore client must get the same config as the sync client."""
+    monkeypatch.setattr(bedrock_completion, "AIOBOTOCORE_AVAILABLE", True)
+    mock_aio_session = MagicMock()
+    monkeypatch.setattr(
+        bedrock_completion,
+        "get_aiobotocore_session",
+        MagicMock(return_value=mock_aio_session),
+    )
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        timeout=30,
+        max_retries=5,
+    )
+
+    await llm._ensure_async_client()
+
+    config = mock_aio_session.create_client.call_args.kwargs["config"]
+    assert config.read_timeout == 30
+    assert config.retries == {"max_attempts": 6, "mode": "adaptive"}
