@@ -93,6 +93,14 @@ def _prepare_documents_for_chromadb(
             else:
                 processed_metadata = {}
 
+            # ChromaDB rejects non-scalar metadata values; one None in a
+            # batch otherwise makes the whole upsert fail.
+            processed_metadata = {
+                key: value
+                for key, value in processed_metadata.items()
+                if isinstance(value, (str, int, float, bool))
+            }
+
             if doc_id in seen_ids:
                 idx = seen_ids[doc_id]
                 texts[idx] = doc["content"]

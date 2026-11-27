@@ -169,7 +169,14 @@ class RAG(Adapter):
                     ids=ids,
                     embeddings=embeddings,
                     documents=contents,
-                    metadatas=metadatas,
+                    metadatas=[
+                        {
+                            key: value
+                            for key, value in metadata.items()
+                            if isinstance(value, (str, int, float, bool))
+                        }
+                        for metadata in metadatas
+                    ],
                 )
                 logger.info(f"Added {len(documents)} documents to knowledge base")
             except Exception as e:
