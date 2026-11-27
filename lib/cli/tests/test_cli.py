@@ -375,6 +375,34 @@ def test_create_requires_name_in_dmn_mode(runner):
     assert "NAME is required when CREWAI_DMN is set" in result.output
 
 
+@pytest.mark.parametrize(
+    "doc_path",
+    [
+        "index.mdx",
+        *(
+            f"edge/{lang}/{page}"
+            for lang in ("en", "ar", "ko", "pt-BR")
+            for page in ("index.mdx", "installation.mdx")
+        ),
+    ],
+)
+def test_coding_agent_setup_prompt_dmn_create_passes_type_and_name(
+    doc_path: str,
+) -> None:
+    """The copied setup prompt must give `crewai create` a type and a name in DMN mode."""
+    text = (Path(__file__).parents[3] / "docs" / doc_path).read_text()
+    lines = [
+        line.strip()
+        for line in text.splitlines()
+        if "CREWAI_DMN=true crewai create" in line
+    ]
+
+    assert lines, doc_path
+    for line in lines:
+        args = line.split("crewai create", 1)[1].split()
+        assert len(args) >= 2, f"{doc_path}: {line}"
+
+
 RUN_ARGV = [sys.executable, "-m", "crewai_cli.cli", "run"]
 
 PROJECT_CREATES = [
