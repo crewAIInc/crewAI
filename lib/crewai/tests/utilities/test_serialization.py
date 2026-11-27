@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+from enum import Enum, IntEnum
 from typing import Any, List
+import uuid
 
 import pytest
 from crewai.utilities.serialization import to_serializable, to_string
@@ -209,3 +211,80 @@ def test_exclude_keys():
         "birthday": "1994-01-01",
         "skills": ["Python", "Testing"],
     }
+
+
+class Status(Enum):
+    OK = "ok"
+
+
+class Count(IntEnum):
+    ONE = 1
+
+
+class Day(Enum):
+    NEW_YEAR = date(2024, 1, 1)
+
+
+class Pair(Enum):
+    VAL = (1, 2)
+
+
+class Ratio(Enum):
+    HALF = 0.5
+
+
+class Ident(Enum):
+    UID = uuid.UUID("123e4567-e89b-12d3-a456-426614174000")
+
+
+def test_enum_serializes_to_declared_value():
+    assert to_serializable({"status": Status.OK}) == {"status": "ok"}
+    assert to_serializable({"n": Count.ONE}) == {"n": 1}
+    assert to_serializable({"d": Day.NEW_YEAR}) == {"d": "2024-01-01"}
+    assert to_serializable({"t": Pair.VAL}) == {"t": [1, 2]}
+    assert to_serializable({"r": Ratio.HALF}) == {"r": 0.5}
+    assert to_serializable({"u": Ident.UID}) == {
+        "u": "123e4567-e89b-12d3-a456-426614174000"
+    }
+    assert to_serializable({"list": [Status.OK, Count.ONE]}) == {"list": ["ok", 1]}
+
+
+def test_enum_keys_are_deterministic():
+    assert to_serializable({Status.OK: 1}) == {"ok": 1}
+    assert to_serializable({Day.NEW_YEAR: 1}) == {"2024-01-01": 1}
+    assert to_serializable({Pair.VAL: 1}) == {"[1, 2]": 1}
+    assert to_serializable({Ratio.HALF: 1}) == {"0.5": 1}
+    assert to_serializable({Ident.UID: 1}) == {
+        "123e4567-e89b-12d3-a456-426614174000": 1
+    }
+    first = list(to_serializable({Status.OK: 1}).keys())[0]
+    assert first == "ok"
+
+
+def test_equivalent_enum_values_share_a_key():
+    """Two enums holding the same value must not produce different keys."""
+
+    class OtherRatio(Enum):
+        HALF = 0.5
+
+    class OtherIdent(Enum):
+        UID = uuid.UUID("123e4567-e89b-12d3-a456-426614174000")
+
+    ratio_key = list(to_serializable({Ratio.HALF: 1}).keys())[0]
+    other_ratio_key = list(to_serializable({OtherRatio.HALF: 1}).keys())[0]
+    assert ratio_key == other_ratio_key == "0.5"
+
+    ident_key = list(to_serializable({Ident.UID: 1}).keys())[0]
+    other_ident_key = list(to_serializable({OtherIdent.UID: 1}).keys())[0]
+    assert ident_key == other_ident_key == "123e4567-e89b-12d3-a456-426614174000"
+
+
+def test_enum_unwrap_keeps_depth_budget():
+    assert to_serializable(Status.OK, max_depth=1) == "ok"
+
+
+def test_enum_result_is_json_compatible():
+    import json
+
+    value = to_serializable({"a": Status.OK, "n": Count.ONE, Status.OK: 1})
+    assert json.loads(json.dumps(value)) == {"a": "ok", "n": 1, "ok": 1}
