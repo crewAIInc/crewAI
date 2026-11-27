@@ -81,6 +81,39 @@ def is_replaying() -> bool:
     return _replaying.get()
 
 
+_restoring_from_checkpoint: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "crewai_restoring_from_checkpoint", default=False
+)
+
+
+def is_restoring_from_checkpoint() -> bool:
+    """Return True while a checkpoint is being restored in this context.
+
+    Restoring rebuilds entities from a checkpoint payload. Their construction
+    emits lifecycle events (e.g. ``flow_created``) before their checkpoint
+    fields have been applied to their live state. Listeners with side effects
+    (checkpoint writes) should early-return when this is true: checkpointing
+    a half-restored entity persists a blank snapshot and overwrites the
+    entity's restored checkpoint fields with its still-empty live state.
+    """
+    return _restoring_from_checkpoint.get()
+
+
+@contextmanager
+def checkpoint_restore_scope() -> Generator[None, None, None]:
+    """Mark the current context as restoring a checkpoint.
+
+    The flag is a ContextVar, and the bus copies the emitting context into
+    handler threads, so handlers dispatched for events emitted inside the
+    scope observe it.
+    """
+    token = _restoring_from_checkpoint.set(True)
+    try:
+        yield
+    finally:
+        _restoring_from_checkpoint.reset(token)
+
+
 _runtime_state_var: contextvars.ContextVar[RuntimeState | None] = (
     contextvars.ContextVar("crewai_runtime_state", default=None)
 )

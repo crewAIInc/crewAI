@@ -25,7 +25,7 @@ from pydantic import (
 )
 
 from crewai.context import capture_execution_context
-from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_bus import checkpoint_restore_scope, crewai_event_bus
 from crewai.events.types.checkpoint_events import (
     CheckpointCompletedEvent,
     CheckpointFailedEvent,
@@ -211,7 +211,12 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if isinstance(data, dict) and "entities" in data:
             data = _migrate(data)
             record_data = data.get("event_record")
-            state = handler(data["entities"])
+            # Rebuilding entities from a checkpoint payload emits lifecycle
+            # events before their checkpoint fields are applied; the restore
+            # scope keeps side-effecting listeners (auto-checkpoint) from
+            # acting on the half-restored entities.
+            with checkpoint_restore_scope():
+                state = handler(data["entities"])
             if record_data:
                 state._event_record = EventRecord.model_validate(record_data)
             state._parent_id = data.get("parent_id")

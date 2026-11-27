@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import inspect
 from contextlib import closing
+import glob
+import inspect
 import json
 import os
 import sqlite3
@@ -20,7 +21,8 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.events.event_bus import crewai_event_bus
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -1092,3 +1094,81 @@ class TestCallbacksAcrossRestore:
         )
         assert len(restored.kickoff().tasks_output) == 2
 
+
+
+class TestFlowResumeFromAutomaticCheckpoint:
+    """Resuming a crashed flow must skip methods completed before the crash.
+
+    Regression test for #9839: with ``on_events=["*"]`` the checkpoint
+    listener fired on the ``flow_created`` event emitted while the restored
+    flow was still being rebuilt, and ``_prepare_entities`` overwrote the
+    restored ``checkpoint_completed_methods`` with the flow's still-empty
+    live state, so the resume re-ran every method.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_checkpoint_listener(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> Any:
+        # The root conftest clears the event bus after every test, but the
+        # listener's register-once flag stays set; reset it so this test's
+        # checkpoint handlers are registered again.
+        monkeypatch.setattr(
+            "crewai.state.checkpoint_listener._handlers_registered", False
+        )
+        crewai_event_bus.reset_runtime_state()
+        yield
+        crewai_event_bus.reset_runtime_state()
+
+    @pytest.mark.parametrize(
+        "on_events",
+        [["method_execution_finished"], ["*"]],
+    )
+    def test_resume_skips_completed_methods(
+        self, on_events: list[str], tmp_path: Path
+    ) -> None:
+        ran: list[str] = []
+        crash = {"on": True}
+
+        class ThreeStepFlow(Flow):
+            @start()
+            def a(self) -> str:
+                ran.append("A")
+                return "a"
+
+            @listen(a)
+            def b(self, x: str) -> str:
+                ran.append("B")
+                return "b"
+
+            @listen(b)
+            def c(self, x: str) -> str:
+                ran.append("C")
+                if crash["on"]:
+                    raise RuntimeError("crash after B")
+                return "c"
+
+        location = str(tmp_path)
+        try:
+            ThreeStepFlow(
+                checkpoint=CheckpointConfig(location=location, on_events=on_events)
+            ).kickoff()
+        except Exception:
+            pass
+        # Checkpoint writes run in the event bus's handler threads; wait for
+        # them to land before selecting the latest checkpoint file.
+        crewai_event_bus.flush()
+        assert ran == ["A", "B", "C"]
+
+        checkpoints = glob.glob(location + "/**/*.json", recursive=True)
+        assert checkpoints
+        last = max(checkpoints, key=os.path.getmtime)
+
+        ran.clear()
+        crash["on"] = False
+        restored = ThreeStepFlow.from_checkpoint(
+            CheckpointConfig(location=location, restore_from=last)
+        )
+        assert restored.checkpoint_completed_methods == {"a", "b"}
+        restored.kickoff()
+        assert ran == ["C"]
