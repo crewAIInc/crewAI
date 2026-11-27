@@ -209,25 +209,34 @@ def supports_stop_words(self) -> bool:
     return True  # Your LLM supports stop sequences
 ```
 
-If your LLM doesn't support stop words natively:
+If your LLM doesn't support stop words natively, truncate the response with the
+inherited `BaseLLM._apply_stop_words()` helper:
 
 ```python
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
-    # Manually truncate at stop words
-    if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
-    
-    return content
+    # Truncate at the stop word that appears earliest in the response
+    return self._apply_stop_words(content)
 
 def supports_stop_words(self) -> bool:
     return False  # Tell CrewAI we handle stop words manually
 ```
+
+The helper cuts at the stop word that occurs earliest in the response text, so the
+result never depends on the order of `self.stop`. Given the response
+`"hello EARLY middle LATE tail"`, both `["LATE", "EARLY"]` and `["EARLY", "LATE"]`
+return `"hello"` — the truncated text is `.strip()`ed, so the whitespace before
+`EARLY` is intentionally removed. A response containing none of the stop words is
+returned unchanged.
+
+<Warning>
+Don't truncate at the first *entry* of `self.stop` that happens to be present
+(for example with `content.split(stop_word)[0]` inside a loop that breaks on the
+first hit). That keeps text the model emitted after a later-listed stop word, and
+the output changes when the stop list is reordered.
+</Warning>
 
 ## Function Calling
 
