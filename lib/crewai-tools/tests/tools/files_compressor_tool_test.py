@@ -1,6 +1,8 @@
 from unittest.mock import patch
+import tarfile
+import zipfile
 
-from crewai_tools.tools.files_compressor_tool import FileCompressorTool
+from crewai_tools.tools import FileCompressorTool
 import pytest
 
 
@@ -129,3 +131,52 @@ def test_prepare_output_makes_dir(mock_exists, mock_makedirs):
     result = tool._prepare_output("some/missing/path/file.zip", overwrite=True)
     assert result is True
     mock_makedirs.assert_called_once()
+
+
+def test_output_inside_input_is_not_archived(tmp_path, monkeypatch):
+    """An archive written inside the input directory must not include itself."""
+    monkeypatch.chdir(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "a.txt").write_text("hello", encoding="utf-8")
+
+    result = FileCompressorTool()._run(
+        input_path="data", output_path="data/archive.zip", overwrite=True
+    )
+
+    assert "Successfully compressed" in result
+    with zipfile.ZipFile(data / "archive.zip") as archive:
+        assert archive.namelist() == ["a.txt"]
+
+
+def test_tar_output_inside_input_is_not_archived(tmp_path, monkeypatch):
+    """The tar path uses a filter so its archive does not include itself."""
+    monkeypatch.chdir(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "a.txt").write_text("hello", encoding="utf-8")
+
+    result = FileCompressorTool()._run(
+        input_path="data",
+        output_path="data/archive.tar",
+        format="tar",
+        overwrite=True,
+    )
+
+    assert "Successfully compressed" in result
+    with tarfile.open(data / "archive.tar") as archive:
+        assert archive.getnames() == ["data", "data/a.txt"]
+
+
+def test_output_file_cannot_be_the_input(tmp_path, monkeypatch):
+    """Compressing a file onto itself would truncate the source before reading it."""
+    monkeypatch.chdir(tmp_path)
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"not-an-archive")
+
+    result = FileCompressorTool()._run(
+        input_path="archive.zip", output_path="archive.zip", overwrite=True
+    )
+
+    assert "must be different" in result
+    assert archive.read_bytes() == b"not-an-archive"
