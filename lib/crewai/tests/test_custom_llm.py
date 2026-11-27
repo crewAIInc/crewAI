@@ -374,3 +374,52 @@ def test_timeout_handling_llm():
     with pytest.raises(TimeoutError, match="LLM request failed after 2 attempts"):
         llm.call("Test message")
     assert len(llm.calls) == 2  # Initial call + failed retry attempt
+
+
+class EchoLLM(BaseLLM):
+    """The offline stub documented in ``docs/edge/en/learn/custom-llm.mdx``."""
+
+    def __init__(self, reply: str = "pong"):
+        super().__init__(model="echo")
+        self.reply = reply
+
+    def call(
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        tools: Optional[List[dict]] = None,
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        return self.reply
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 8192
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
+
+
+def test_offline_custom_llm_example_runs_without_a_provider() -> None:
+    """The documented stub answers directly and through a one-task Crew."""
+    llm = EchoLLM("pong")
+    assert llm.call("ping") == "pong"
+
+    agent = Agent(
+        role="Echo",
+        goal="Repeat what you are told",
+        backstory="A deterministic stub used to exercise the interface.",
+        llm=llm,
+        verbose=False,
+    )
+    task = Task(description="Say pong", expected_output="pong", agent=agent)
+
+    assert Crew(agents=[agent], tasks=[task]).kickoff().raw == "pong"
