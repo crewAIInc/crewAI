@@ -705,3 +705,24 @@ class TestToolMetadata:
 
         assert DB2VectorSearchTool is not None
         assert DB2ToolSchema is not None
+
+
+class TestConnectionStringFromEnv:
+    """The declared DB2_CONNECTION_STRING env var must actually be read."""
+
+    def test_uses_env_var_when_connection_string_omitted(self, monkeypatch):
+        monkeypatch.setenv(
+            "DB2_CONNECTION_STRING",
+            "DATABASE=ENVDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;",
+        )
+        tool = DB2VectorSearchTool(table_name="documents")
+        assert tool.connection_string == (
+            "DATABASE=ENVDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;"
+        )
+
+    def test_explicit_connection_string_wins_over_env_var(self, monkeypatch):
+        monkeypatch.setenv("DB2_CONNECTION_STRING", "DATABASE=ENVDB;")
+        tool = DB2VectorSearchTool(
+            connection_string="DATABASE=EXPLICIT;", table_name="documents"
+        )
+        assert tool.connection_string == "DATABASE=EXPLICIT;"

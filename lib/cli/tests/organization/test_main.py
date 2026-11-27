@@ -5,8 +5,9 @@ import pytest
 from click.testing import CliRunner
 import httpx
 
+from crewai_cli.authentication.token import AuthError
 from crewai_cli.organization.main import OrganizationCommand
-from crewai_cli.cli import org_list, switch, current
+from crewai_cli.cli import crewai, org_list, switch, current
 
 
 @pytest.fixture
@@ -162,8 +163,10 @@ class TestOrganizationCommand(unittest.TestCase):
         self.org_command.plus_api_client = MagicMock()
         self.org_command.plus_api_client.get_organizations.return_value = mock_response
 
-        self.org_command.switch("non-existent-id")
+        with pytest.raises(SystemExit) as exc:
+            self.org_command.switch("non-existent-id")
 
+        assert exc.value.code == 1
         self.org_command.plus_api_client.get_organizations.assert_called_once()
         mock_console.print.assert_called_once_with(
             "Organization with id 'non-existent-id' not found.", style="bold red"
@@ -191,8 +194,10 @@ class TestOrganizationCommand(unittest.TestCase):
         mock_settings_instance.org_uuid = None
         mock_settings_class.return_value = mock_settings_instance
 
-        self.org_command.current()
+        with pytest.raises(SystemExit) as exc:
+            self.org_command.current()
 
+        assert exc.value.code == 1
         assert mock_console.print.call_count == 3
         mock_console.print.assert_any_call(
             "You're not currently logged in to any organization.", style="yellow"
@@ -210,8 +215,10 @@ class TestOrganizationCommand(unittest.TestCase):
         mock_response.raise_for_status.side_effect = mock_http_error
         self.org_command.plus_api_client.get_organizations.return_value = mock_response
 
-        self.org_command.list()
+        with pytest.raises(SystemExit) as exc:
+            self.org_command.list()
 
+        assert exc.value.code == 1
         self.org_command.plus_api_client.get_organizations.assert_called_once()
         mock_console.print.assert_called_once_with(
             "You are not logged in to any organization. Use 'crewai login' to login.",
@@ -230,10 +237,68 @@ class TestOrganizationCommand(unittest.TestCase):
         mock_response.raise_for_status.side_effect = mock_http_error
         self.org_command.plus_api_client.get_organizations.return_value = mock_response
 
-        self.org_command.switch("test-id")
+        with pytest.raises(SystemExit) as exc:
+            self.org_command.switch("test-id")
 
+        assert exc.value.code == 1
         self.org_command.plus_api_client.get_organizations.assert_called_once()
         mock_console.print.assert_called_once_with(
             "You are not logged in to any organization. Use 'crewai login' to login.",
             style="bold red",
         )
+
+
+def _logged_out() -> str:
+    raise AuthError("No token")
+
+
+@pytest.mark.parametrize(
+    "args", [["org", "list"], ["org", "current"], ["org", "switch", "org-123"]]
+)
+def test_org_commands_exit_1_when_logged_out(runner, args):
+    with patch("crewai_cli.command.get_auth_token", _logged_out):
+        result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 1, result.output
+    assert "Please sign up/login to CrewAI+ before using the CLI." in result.output
+    assert "Run 'crewai login' to sign up/login." in result.output
+
+
+def _organizations_response(orgs: list[dict[str, str]]) -> httpx.Response:
+    return httpx.Response(
+        200, json=orgs, request=httpx.Request("GET", "http://test/organizations")
+    )
+
+
+@pytest.mark.parametrize(
+    ("orgs", "expected"),
+    [
+        ([{"name": "Org 1", "uuid": "org-123"}], "org-123"),
+        ([], "You don't belong to any organizations yet."),
+    ],
+)
+def test_org_list_exits_0_when_logged_in(runner, orgs, expected):
+    with (
+        patch("crewai_cli.command.get_auth_token", return_value="token"),
+        patch(
+            "crewai_cli.plus_api.PlusAPI.get_organizations",
+            return_value=_organizations_response(orgs),
+        ),
+    ):
+        result = runner.invoke(crewai, ["org", "list"])
+
+    assert result.exit_code == 0, result.output
+    assert expected in result.output
+
+
+def test_org_current_exits_0_when_an_org_is_selected(runner):
+    with (
+        patch("crewai_cli.command.get_auth_token", return_value="token"),
+        patch("crewai_cli.organization.main.Settings") as settings_class,
+    ):
+        settings_class.return_value.org_name = "Org 1"
+        settings_class.return_value.org_uuid = "org-123"
+        result = runner.invoke(crewai, ["org", "current"])
+
+    assert result.exit_code == 0, result.output
+    assert "Currently logged in to organization Org 1 (org-123)" in result.output

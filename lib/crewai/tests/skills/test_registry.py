@@ -518,7 +518,7 @@ class TestDownloadSkillAuthentication:
         cache = SkillCacheManager(cache_root=tmp_path / "cache")
         api = MagicMock()
         api.get_skill.return_value = _mock_skill_response("my-skill")
-        monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+        monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
         monkeypatch.setenv("CREWAI_USER_PAT", "user-pat")
         monkeypatch.setenv("CREWAI_ORGANIZATION_UUID", "organization-uuid")
 
@@ -539,7 +539,7 @@ class TestDownloadSkillAuthentication:
         api = MagicMock()
         api.get_skill.return_value = _mock_skill_response("my-skill")
         monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
-        monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+        monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
         monkeypatch.delenv("CREWAI_ORGANIZATION_UUID", raising=False)
 
         with (

@@ -57,8 +57,8 @@ class AgentConfig(TypedDict, total=False):
     max_tokens: int
     callbacks: list[str]
 
-    llm: str
-    function_calling_llm: str
+    llm: str | dict[str, Any]
+    function_calling_llm: str | dict[str, Any]
     use_system_prompt: bool
 
     system_template: str
@@ -661,7 +661,7 @@ def _map_agent_variables(
         callbacks: Dictionary of available callbacks.
     """
     if llm := agent_info.get("llm"):
-        factory = llms.get(llm)
+        factory = llms.get(llm) if isinstance(llm, str) else None
         self.agents_config[agent_name]["llm"] = factory() if factory else llm
 
     if tools := agent_info.get("tools"):
@@ -671,7 +671,11 @@ def _map_agent_variables(
             ]
 
     if function_calling_llm := agent_info.get("function_calling_llm"):
-        factory = llms.get(function_calling_llm)
+        factory = (
+            llms.get(function_calling_llm)
+            if isinstance(function_calling_llm, str)
+            else None
+        )
         self.agents_config[agent_name]["function_calling_llm"] = (
             factory() if factory else function_calling_llm
         )

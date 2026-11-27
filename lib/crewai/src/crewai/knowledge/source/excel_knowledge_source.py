@@ -133,9 +133,9 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
     def _import_dependencies(self) -> ModuleType:
         """Dynamically import dependencies."""
         try:
-            import pandas as pd  # type: ignore[import-untyped]
+            import pandas as pd
 
-            return pd  # type: ignore[no-any-return]
+            return pd
         except ImportError as e:
             missing_package = str(e).split()[-1]
             raise ImportError(
@@ -172,10 +172,3 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
         await self._asave_documents()
-
-    def _chunk_text(self, text: str) -> list[str]:
-        """Utility method to split text into chunks."""
-        return [
-            text[i : i + self.chunk_size]
-            for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
-        ]

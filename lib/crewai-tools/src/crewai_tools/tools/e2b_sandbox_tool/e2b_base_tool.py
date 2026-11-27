@@ -115,7 +115,7 @@ class E2BBaseTool(BaseTool):
         if cached is not None:
             return cached
         try:
-            from e2b import Sandbox  # type: ignore[import-untyped]
+            from e2b import Sandbox  # type: ignore[import-untyped,unused-ignore]
         except ImportError as exc:
             raise ImportError(
                 "The 'e2b' package is required for E2B sandbox tools. "

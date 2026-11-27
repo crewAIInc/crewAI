@@ -6,11 +6,11 @@ from typing import Literal, cast
 import warnings
 
 from chromadb.config import Settings
+from crewai_core.paths import db_storage_path
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.chromadb.constants import (
     DEFAULT_DATABASE,
-    DEFAULT_STORAGE_PATH,
     DEFAULT_TENANT,
 )
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
@@ -35,10 +35,11 @@ def _default_settings() -> Settings:
     """Create default ChromaDB settings.
 
     Returns:
-        Settings with persistent storage and reset enabled.
+        Settings with persistent storage and reset enabled. The path is
+        resolved when the config is created, so it follows ``CREWAI_STORAGE_DIR``.
     """
     return Settings(
-        persist_directory=DEFAULT_STORAGE_PATH,
+        persist_directory=db_storage_path(),
         allow_reset=True,
         is_persistent=True,
         anonymized_telemetry=False,
@@ -49,7 +50,7 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
     """Create default ChromaDB embedding function.
 
     Returns:
-        Default embedding function using all-MiniLM-L6-v2 via ONNX.
+        Default embedding function using OpenAI's text-embedding-3-small.
     """
     from chromadb.utils.embedding_functions.openai_embedding_function import (
         OpenAIEmbeddingFunction,

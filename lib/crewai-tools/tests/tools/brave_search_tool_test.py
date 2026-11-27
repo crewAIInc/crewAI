@@ -802,3 +802,72 @@ def test_retry_uses_exponential_backoff_when_no_retry_after(
     retry_sleeps = [c[0][0] for c in mock_time.sleep.call_args_list]
     assert 1.0 in retry_sleeps
     assert 2.0 in retry_sleeps
+
+
+class TestLegacyBraveSearchToolApiKey:
+    """The documented `api_key=` parameter of the legacy BraveSearchTool."""
+
+    def test_explicit_api_key_works_without_the_env_var(self):
+        from crewai_tools.tools.brave_search_tool.brave_search_tool import (
+            BraveSearchTool,
+        )
+
+        with patch.dict(os.environ, {}, clear=True):
+            tool = BraveSearchTool(api_key="explicit-key")
+
+        assert tool.api_key == "explicit-key"
+
+    def test_falls_back_to_the_env_var(self):
+        from crewai_tools.tools.brave_search_tool.brave_search_tool import (
+            BraveSearchTool,
+        )
+
+        with patch.dict(os.environ, {"BRAVE_API_KEY": "env-key"}, clear=True):
+            tool = BraveSearchTool()
+
+        assert tool.api_key == "env-key"
+
+    def test_explicit_api_key_wins_over_the_env_var(self):
+        from crewai_tools.tools.brave_search_tool.brave_search_tool import (
+            BraveSearchTool,
+        )
+
+        with patch.dict(os.environ, {"BRAVE_API_KEY": "env-key"}):
+            tool = BraveSearchTool(api_key="explicit-key")
+
+        assert tool.api_key == "explicit-key"
+
+    def test_missing_key_still_raises(self):
+        from crewai_tools.tools.brave_search_tool.brave_search_tool import (
+            BraveSearchTool,
+        )
+
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(ValueError, match="BRAVE_API_KEY"),
+        ):
+            BraveSearchTool()
+
+    def test_explicit_api_key_is_sent_to_the_api(self):
+        from crewai_tools.tools.brave_search_tool.brave_search_tool import (
+            BraveSearchTool,
+        )
+
+        captured: dict[str, str] = {}
+
+        def fake_get(url, headers=None, params=None, timeout=None):
+            captured.update(headers or {})
+            response = MagicMock()
+            response.json.return_value = {"web": {"results": []}}
+            return response
+
+        with patch.dict(os.environ, {}, clear=True):
+            tool = BraveSearchTool(api_key="explicit-key")
+
+        with patch(
+            "crewai_tools.tools.brave_search_tool.brave_search_tool.requests.get",
+            fake_get,
+        ):
+            tool._run(q="test")
+
+        assert captured["X-Subscription-Token"] == "explicit-key"

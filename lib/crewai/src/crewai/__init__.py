@@ -3,10 +3,16 @@ import sys
 from typing import TYPE_CHECKING, Annotated, Any
 import warnings
 
+# Pin the machine's proxy and CA for AMP requests first: importing crewai.llm and
+# crewai.project loads the project's .env, which must not choose where the saved
+# login travels. A crew run in its own process (`uv run run_crew`) never imports
+# the CLI, so this import is the pin there.
+import crewai_core.plus_api  # noqa: F401
 from pydantic import Field, PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.artifacts import Artifact, load_artifact, save_artifact
 from crewai.context import ExecutionContext
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -48,9 +54,10 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.27"
+__version__ = "1.15.45"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "CrewBase": ("crewai.project", "CrewBase"),
     "Memory": ("crewai.memory.unified_memory", "Memory"),
 }
 
@@ -71,8 +78,8 @@ try:
     from crewai.agents.agent_builder.base_agent_executor import (
         BaseAgentExecutor as _BaseAgentExecutor,
     )
+    from crewai.agents.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
-    from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
     from crewai.tools.tool_types import ToolResult as _ToolResult
     from crewai.utilities.prompts import (
@@ -125,9 +132,15 @@ try:
         "ToolResult": _ToolResult,
     }
 
+    # Dunders are left out: copying base_agent's `__name__`/`__spec__`/`__file__`
+    # onto the modules below made their import errors name base_agent.
     _resolve_namespace = {
         **_full_namespace,
-        **sys.modules[_BaseAgent.__module__].__dict__,
+        **{
+            name: value
+            for name, value in sys.modules[_BaseAgent.__module__].__dict__.items()
+            if not (name.startswith("__") and name.endswith("__"))
+        },
     }
 
     import crewai.state.runtime as _runtime_state_mod
@@ -138,22 +151,17 @@ try:
         Crew.__module__,
         Flow.__module__,
         Task.__module__,
-        "crewai.agents.crew_agent_executor",
         _runtime_state_mod.__name__,
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
-    from crewai.agents.crew_agent_executor import (
-        CrewAgentExecutor as _CrewAgentExecutor,
-    )
     from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
 
     _BaseAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     Task.model_rebuild(force=True, _types_namespace=_full_namespace)
     _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
-    _CrewAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
     Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
@@ -187,8 +195,10 @@ except (ImportError, PydanticUserError):
 __all__ = [
     "LLM",
     "Agent",
+    "Artifact",
     "BaseLLM",
     "Crew",
+    "CrewBase",
     "CrewOutput",
     "Entity",
     "ExecutionContext",
@@ -202,4 +212,6 @@ __all__ = [
     "Task",
     "TaskOutput",
     "__version__",
+    "load_artifact",
+    "save_artifact",
 ]
