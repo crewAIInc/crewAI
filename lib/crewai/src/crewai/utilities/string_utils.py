@@ -28,6 +28,7 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
 
     Normalizes Unicode, splits camelCase, lowercases, replaces invalid characters
     with underscores, and truncates to max_length. Conforms to OpenAI/Bedrock requirements.
+    If filtering strips a non-empty name, use a deterministic fallback.
 
     Args:
         name: Original tool name.
@@ -36,6 +37,7 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     Returns:
         Sanitized tool name (lowercase, a-z0-9_ only, max 64 chars).
     """
+    original_name = name
     name = unicodedata.normalize("NFKD", name)
     name = name.encode("ascii", "ignore").decode("ascii")
     name = _CAMEL_UPPER_LOWER.sub(r"\1_\2", name)
@@ -45,6 +47,14 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = _DISALLOWED_CHARS_PATTERN.sub("_", name)
     name = _DUPLICATE_UNDERSCORE_PATTERN.sub("_", name)
     name = name.strip("_")
+
+    if not name and original_name:
+        original_bytes = original_name.encode(errors="surrogatepass")
+        name_hash = hashlib.sha256(original_bytes).hexdigest()[:8]
+        fallback = f"tool_{name_hash}"
+        if len(fallback) <= max_length:
+            return fallback
+        return f"t{name_hash}"[: max(0, max_length)]
 
     if name[:1].isdigit():
         # Function names must start with a letter or underscore (see
