@@ -29,4 +29,14 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
                 return parsed
             except json.JSONDecodeError:  # noqa: PERF203
                 continue
+    # A judge may answer in prose followed by a bare JSON object with no
+    # fence or backticks. Decode the first complete object in the text.
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"[{\[]", text):
+        try:
+            parsed, _ = decoder.raw_decode(text[match.start() :])
+        except json.JSONDecodeError:  # noqa: PERF203
+            continue
+        if isinstance(parsed, dict):
+            return parsed
     raise ValueError("No valid JSON found in the response")
