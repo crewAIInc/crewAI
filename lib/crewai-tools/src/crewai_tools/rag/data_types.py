@@ -128,8 +128,9 @@ class DataTypes:
                 ".xml": DataType.XML,
                 ".txt": DataType.TEXT_FILE,
             }
+            lowered = path.lower()
             for ext, dtype in mapping.items():
-                if path.endswith(ext):
+                if lowered.endswith(ext):
                     return dtype
             return None
 
