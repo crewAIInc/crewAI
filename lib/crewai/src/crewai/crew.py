@@ -2168,16 +2168,29 @@ class Crew(FlowTrackable, BaseModel):
             stored_output = stored_outputs[i][
                 "output"
             ]  # for adding context to the task
+            task = self.tasks[i]
+            stored_pydantic = stored_output["pydantic"]
+            if isinstance(stored_pydantic, dict):
+                # Storage serializes the model with CrewJSONEncoder. Passing
+                # that dict straight into the `BaseModel | None` field makes
+                # pydantic build an empty bare BaseModel, which is unusable
+                # for context and crashes str()/to_dict(); rebuild the
+                # task's own model instead.
+                stored_pydantic = (
+                    task.output_pydantic.model_validate(stored_pydantic)
+                    if task.output_pydantic is not None
+                    else None
+                )
             task_output = TaskOutput(
                 description=stored_output["description"],
                 agent=stored_output["agent"],
                 raw=stored_output["raw"],
-                pydantic=stored_output["pydantic"],
+                pydantic=stored_pydantic,
                 json_dict=stored_output["json_dict"],
                 output_format=stored_output["output_format"],
                 messages=stored_output.get("messages", []),
             )
-            self.tasks[i].output = task_output
+            task.output = task_output
 
         self._logging_color = "bold_blue"
         try:
