@@ -33,7 +33,7 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_text,
 )
-from crewai.memory.utils import join_scope_paths
+from crewai.memory.utils import join_scope_paths, normalize_scope_path
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
@@ -897,7 +897,7 @@ class Memory(BaseModel):
             embedding = embed_text(self._embedder, content)
             updates["embedding"] = embedding if embedding else existing.embedding
         if scope is not None:
-            updates["scope"] = scope
+            updates["scope"] = normalize_scope_path(scope)
         if categories is not None:
             updates["categories"] = categories
         if metadata is not None:
