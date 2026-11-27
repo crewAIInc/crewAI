@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from crewai.utilities.string_utils import sanitize_tool_name
+
 
 if TYPE_CHECKING:
     pass
@@ -66,6 +68,12 @@ class StaticToolFilter:
         """
         self.allowed_tool_names = set(allowed_tool_names or [])
         self.blocked_tool_names = set(blocked_tool_names or [])
+        self._allowed_tool_names_normalized = {
+            sanitize_tool_name(name) for name in self.allowed_tool_names
+        }
+        self._blocked_tool_names_normalized = {
+            sanitize_tool_name(name) for name in self.blocked_tool_names
+        }
 
     def __call__(self, tool: dict[str, Any]) -> bool:
         """Filter tool based on allow/block lists.
@@ -77,13 +85,25 @@ class StaticToolFilter:
             True if tool should be included, False otherwise.
         """
         tool_name = tool.get("name", "")
+        original_name = tool.get("original_name", "")
+        candidate_names = {
+            tool_name,
+            original_name,
+            sanitize_tool_name(tool_name),
+            sanitize_tool_name(original_name) if original_name else "",
+        }
 
         # Blocked tools take precedence over allowed tools
-        if self.blocked_tool_names and tool_name in self.blocked_tool_names:
+        if self.blocked_tool_names and candidate_names & (
+            self.blocked_tool_names | self._blocked_tool_names_normalized
+        ):
             return False
 
         if self.allowed_tool_names:
-            return tool_name in self.allowed_tool_names
+            return bool(
+                candidate_names
+                & (self.allowed_tool_names | self._allowed_tool_names_normalized)
+            )
 
         return True
 
