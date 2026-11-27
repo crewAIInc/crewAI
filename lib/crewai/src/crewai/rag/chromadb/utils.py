@@ -93,6 +93,13 @@ def _prepare_documents_for_chromadb(
             else:
                 processed_metadata = {}
 
+            # ChromaDB rejects None metadata values, failing the whole batch.
+            processed_metadata = {
+                key: value
+                for key, value in processed_metadata.items()
+                if value is not None
+            }
+
             if doc_id in seen_ids:
                 idx = seen_ids[doc_id]
                 texts[idx] = doc["content"]
