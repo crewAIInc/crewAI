@@ -108,35 +108,21 @@ def sanitize_results(context):
 Registre hooks para uma instância específica de crew:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
-from crewai.hooks import before_tool_call_crew, after_tool_call_crew
+from crewai import Crew, Process
+from crewai.hooks import on, HookAborted, InterceptionPoint
+from crewai.project import CrewBase, crew
 
 @CrewBase
 class MyProjCrew:
-    @before_tool_call_crew
-    def validate_tool_inputs(self, context):
-        # Aplica-se apenas a esta crew
-        if context.tool_name == "web_search":
-            if not context.tool_input.get('query'):
-                print("❌ Consulta de busca inválida")
-                return False
-        return None
-    
-    @after_tool_call_crew
-    def log_tool_results(self, context):
-        # Logging de ferramenta específico da crew
-        print(f"✅ {context.tool_name} concluída")
-        return None
-    
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def validate_tool_inputs(self, ctx):
+        # Only applies to this crew
+        if ctx.tool_name == "web_search" and not ctx.tool_input.get("query"):
+            raise HookAborted(reason="empty search query", source="input-validation")
+
     @crew
     def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True
-        )
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
 ```
 
 ## Casos de Uso Comuns

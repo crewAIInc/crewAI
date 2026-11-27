@@ -110,33 +110,21 @@ def sanitize_response(context):
 특정 크루 인스턴스에 대한 훅을 등록합니다:
 
 ```python
-from crewai import CrewBase
-from crewai.project import crew
-from crewai.hooks import before_llm_call_crew, after_llm_call_crew
+from crewai import Crew, Process
+from crewai.hooks import on, InterceptionPoint
+from crewai.project import CrewBase, crew
 
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
-    def validate_inputs(self, context):
-        # 이 크루에만 적용됩니다
-        if context.iterations == 0:
-            print(f"작업 시작: {context.task.description}")
-        return None
-    
-    @after_llm_call_crew
-    def log_responses(self, context):
-        # 크루별 응답 로깅
-        print(f"응답 길이: {len(context.response)}")
-        return None
-    
+    @on(InterceptionPoint.PRE_MODEL_CALL)
+    def validate_inputs(self, ctx):
+        # Only applies to this crew
+        if ctx.iterations == 0:
+            print(f"Starting task: {ctx.task.description}")
+
     @crew
     def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True
-        )
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
 ```
 
 ## 일반적인 사용 사례
