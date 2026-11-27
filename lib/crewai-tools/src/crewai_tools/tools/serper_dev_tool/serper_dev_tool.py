@@ -105,6 +105,12 @@ class SerperDevToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to search the internet"
     )
+    search_type: str | None = Field(
+        default=None, description="Per-call search type, e.g. 'search' or 'news'"
+    )
+    save_file: bool | None = Field(
+        default=None, description="Per-call flag to save results to a file"
+    )
 
 
 class SerperDevTool(BaseTool):
@@ -317,8 +323,12 @@ class SerperDevTool(BaseTool):
     def _run(self, **kwargs: Any) -> FormattedResults:
         """Execute the search operation."""
         search_query: str | None = kwargs.get("search_query") or kwargs.get("query")
-        search_type: str = kwargs.get("search_type", self.search_type)
-        save_file = kwargs.get("save_file", self.save_file)
+        search_type = kwargs.get("search_type") or self.search_type
+        save_file = (
+            kwargs.get("save_file")
+            if kwargs.get("save_file") is not None
+            else self.save_file
+        )
 
         if not search_query:
             raise ValueError("search_query is required")
