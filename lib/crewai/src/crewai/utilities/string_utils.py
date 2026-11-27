@@ -49,7 +49,8 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = name.strip("_")
 
     if not name and original_name:
-        name_hash = hashlib.sha256(original_name.encode()).hexdigest()[:8]
+        original_bytes = original_name.encode(errors="surrogatepass")
+        name_hash = hashlib.sha256(original_bytes).hexdigest()[:8]
         fallback = f"tool_{name_hash}"
         if len(fallback) <= max_length:
             return fallback

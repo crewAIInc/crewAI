@@ -233,6 +233,11 @@ class TestSanitizeToolName:
         assert len(result) <= max_length
         assert re.fullmatch(r"[a-z_][a-z0-9_]*", result)
 
+    def test_fallback_handles_an_isolated_surrogate(self) -> None:
+        result = sanitize_tool_name("\ud800")
+
+        assert re.fullmatch(r"[a-z_][a-z0-9_]*", result)
+
     def test_distinct_non_ascii_names_get_distinct_results(self):
         """Two different erased names must not collapse onto one fallback."""
         assert sanitize_tool_name("搜索工具") != sanitize_tool_name("抓取网页")
