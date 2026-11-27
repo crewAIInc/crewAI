@@ -1,0 +1,134 @@
+---
+title: Instant Expert
+description: تتيح لطاقم الوكلاء الدفع لشخص محدد، مثل مسؤول تنفيذي أو خبير في مجال ما، مقابل مكالمة قصيرة أو إجابة مكتوبة
+icon: user-tie
+mode: "wide"
+---
+
+# Instant Expert
+
+تتيح [Instant Expert](https://instant.expert) للوكيل الحصول على إجابات من أشخاص محددين يستحقون الدفع لهم: مسؤولون تنفيذيون ومديرو عمليات وخبراء في مجالاتهم. تعثر الخدمة على الأشخاص المطابقين لوصف ما (أو تستخدم الأشخاص الذين تحددهم)، وترسل إلى كل منهم دعوة مدفوعة لمكالمة قصيرة أو إجابة مكتوبة، ولا تفرض أي رسوم إلا إذا حجز الشخص موعدًا أو أجاب. وهي خادم MCP بعيد، لذا يتصل بها CrewAI عبر دعم MCP المدمج فيه، أي `MCPServerHTTP` ضمن `mcps` الخاصة بالوكيل، دون الحاجة إلى تثبيت أي حزمة إضافية.
+
+| نقطة الاتصال                      | ما تصل إليه                                                        | التفويض                          |
+| --------------------------------- | ------------------------------------------------------------------ | -------------------------------- |
+| `https://instant.expert/mcp/test` | وضع الاختبار: أشخاص وهميون، لا يُرسل أي بريد إلكتروني، بطاقة اختبار من Stripe | رمز مجاني لوضع الاختبار، دون حساب |
+| `https://instant.expert/mcp`      | حساب حقيقي: أشخاص حقيقيون ومدفوعات حقيقية                         | رمز وصول OAuth للحساب            |
+
+## المتطلبات
+
+- CrewAI، وهو يتضمن مكتبة `mcp` التي يستخدمها `MCPServerHTTP`
+- مفتاح API لنموذج LLM، مثل `OPENAI_API_KEY`
+- لا يلزم حساب Instant Expert لوضع الاختبار
+
+## الحصول على رمز لوضع الاختبار
+
+يستخدم وضع الاختبار أشخاصًا وهميين، ويسجل كل بريد إلكتروني بدلًا من إرساله، ويستخدم بطاقة اختبار من Stripe. يعيد طلب واحد رمزًا صالحًا لمدة 24 ساعة:
+
+```bash
+curl -X POST https://instant.expert/api/sandbox
+export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
+```
+
+يمكن لكل شبكة إنشاء خمسة رموز في الساعة، لذا أعد استخدام رمز واحد عبر مرات التشغيل.
+
+## الاستخدام
+
+يوقف خطاف `before_tool_call` الطاقم عند `send_requests`، وهي الأداة التي تنفذ الطلب، إلى أن يوافق عليه شخص.
+
+```python
+import os
+
+from crewai import Agent, Crew, Task
+from crewai.hooks import ToolCallHookContext, before_tool_call
+from crewai.mcp import MCPServerHTTP
+
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp/test",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_SANDBOX_TOKEN']}"},
+)
+
+
+@before_tool_call
+def approve_paid_send(context: ToolCallHookContext) -> bool | None:
+    # CrewAI prefixes MCP tool names with the server, so match the suffix.
+    if not context.tool_name.endswith("send_requests"):
+        return None
+    answer = context.request_human_input(
+        prompt=f"Place this order? {context.tool_input}",
+        default_message="Type y to send:",
+    )
+    return None if answer.strip().lower() == "y" else False  # False blocks the call
+
+
+coordinator = Agent(
+    role="Outreach coordinator",
+    goal="Get answers from the right executives and report each person's outcome",
+    backstory="You find the right people through Instant Expert and only spend within budget.",
+    mcps=[instant_expert],
+)
+outreach = Task(
+    description=(
+        "Find 3 product leaders at SaaS companies. Offer each of them $40 for a "
+        "15-minute call about how they choose analytics tools, with a $150 total "
+        "budget. Search, wait for the job with get_job, read the people with "
+        "get_search, draft with queue_requests, then preview with "
+        "prepare_request_order. Then call send_requests right away with the "
+        "preview's details and confirmed=true. Don't ask for approval in chat: "
+        "the crew pauses at send_requests and shows the founder the order. "
+        "Finally, report who booked, replied or declined."
+    ),
+    expected_output="Who was invited, the price, and each person's status",
+    agent=coordinator,
+)
+print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
+```
+
+في وضع الاختبار، يرد كل شخص وهمي من تلقاء نفسه بعد تسليم الدعوة: بعضهم يحجز موعدًا، وبعضهم يرد بسؤال، وبعضهم يرفض، وبعضهم لا يرد أبدًا.
+
+## الأدوات المتاحة
+
+| الأداة                                              | الوظيفة                                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| `plan_outreach`                                     | تقترح فئات تستحق التواصل معها لشركة أو سؤال بحثي                          |
+| `search_people`, `get_job`, `get_search`            | تعثر على الأشخاص المطابقين لوصف ما، كمهمة في الخلفية                      |
+| `import_people`                                     | تحفظ أشخاصًا تعرفهم عبر رابط LinkedIn أو البريد الإلكتروني أو الاسم والشركة |
+| `queue_requests`, `get_request_draft`               | تُعد مسودة الدعوات المدفوعة: الرسالة والمبلغ لكل شخص والميزانية الإجمالية  |
+| `prepare_request_order`, `send_requests`            | تعرض معاينة الطلب ثم تنفذه                                                |
+| `get_request_order`, `list_requests`, `get_request` | تتابع التسليم ورد كل شخص                                                  |
+| `simulate_response`                                 | في وضع الاختبار فقط: تفرض نتيجة لشخص وهمي                                 |
+
+## استخدام حساب حقيقي
+
+يستخدم الحساب الحقيقي `https://instant.expert/mcp` ورمز وصول OAuth بدلًا من رمز وضع الاختبار. لا توجد مفاتيح API: يسجّل الخادم دخول العملاء عبر OAuth 2.1 (مع PKCE والتسجيل الديناميكي للعملاء). لا يرسل `MCPServerHTTP` إلا الترويسات التي تمررها إليه، لذا احصل على الرمز من عميل MCP ينفّذ تسجيل الدخول، مثل FastMCP. ثبّته في الأمر نفسه مع CrewAI، أي `pip install crewai fastmcp`، حتى يختار pip إصدارًا من FastMCP يتوافق مع إصدار مكتبة `mcp` الذي يستخدمه CrewAI.
+
+```python
+import asyncio
+
+from crewai.mcp import MCPServerHTTP
+from fastmcp import Client
+from fastmcp.client.auth import OAuth
+
+LIVE_URL = "https://instant.expert/mcp"
+
+
+async def sign_in() -> str:
+    """Sign in to Instant Expert in the browser and return an access token."""
+    oauth = OAuth(mcp_url=LIVE_URL)
+    async with Client(LIVE_URL, auth=oauth):
+        tokens = await oauth.token_storage_adapter.get_tokens()
+    return tokens.access_token
+
+
+instant_expert = MCPServerHTTP(
+    url=LIVE_URL,
+    headers={"Authorization": f"Bearer {asyncio.run(sign_in())}"},
+)
+```
+
+تفتح `sign_in()` المتصفح مرة واحدة في كل تشغيل لتسجيل الدخول والموافقة على الاتصال. يرسل CrewAI هذه الترويسة كما هي طوال التشغيل، وتنتهي صلاحية رموز الوصول بعد وقت قصير، لذا دع التشغيل ينتهي، بما في ذلك الموافقة، قبل انتهاء صلاحية الرمز. وإذا بدأت استدعاءات الأدوات تفشل بالخطأ HTTP 401، فسجّل الدخول من جديد وابدأ تشغيلًا جديدًا. تبقى الطلبات التي نُفذت قبل ذلك قائمة، لذا راجع `list_requests` قبل الإرسال مرة أخرى. ولكي ينفذ الوكيل الطلبات، يجب أيضًا تفعيل الإرسال المدفوع لهذا الاتصال وحفظ بطاقة. راجع [وثائق MCP الخاصة بـ Instant Expert](https://instant.expert/docs/mcp).
+
+## ملاحظات
+
+- يضيف CrewAI اسم الخادم بادئةً إلى أسماء أدوات MCP: `instant_expert_mcp_test_send_requests` في وضع الاختبار و`instant_expert_mcp_send_requests` في الحساب الحقيقي. ويطابق الخطاف نهاية الاسم، لذا يعمل في الحالتين.
+- لا يمرر CrewAI تعليمات الخادم نفسه إلى النموذج، لذا تشرح المهمة أعلاه الخطوات التي تصفها هذه التعليمات: البحث، وانتظار المهمة، وقراءة الأشخاص، وإعداد المسودة، والمعاينة، ثم الإرسال.
+- يعيد CrewAI محاولة استدعاء الأداة الذي يستغرق أكثر من 30 ثانية. وهذا آمن هنا: فالأدوات التي تبدأ مهمة أو تنفذ طلبًا تأخذ مفتاح عدم تكرار (idempotency key)، وإعادة المحاولة بالوسائط نفسها تعيد المهمة أو الطلب الأصلي.
