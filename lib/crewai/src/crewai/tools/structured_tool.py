@@ -5,6 +5,7 @@ from collections.abc import Callable
 import inspect
 import json
 import re
+import threading
 import textwrap
 from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
 import warnings
@@ -215,6 +216,7 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
+    _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @property
     def formatted_description(self) -> str:
@@ -395,12 +397,10 @@ class CrewStructuredTool(BaseModel):
         """
         parsed_args = self._parse_args(input)
 
-        if self.has_reached_max_usage_count():
+        if not self._claim_usage_count():
             raise ToolUsageLimitExceededError(
                 f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
             )
-
-        self._increment_usage_count()
 
         try:
             if inspect.iscoroutinefunction(self.func):
@@ -429,12 +429,10 @@ class CrewStructuredTool(BaseModel):
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
 
-        if self.has_reached_max_usage_count():
+        if not self._claim_usage_count():
             raise ToolUsageLimitExceededError(
                 f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
             )
-
-        self._increment_usage_count()
 
         if inspect.iscoroutinefunction(self.func):
             return asyncio.run(self.func(**parsed_args, **kwargs))
@@ -452,6 +450,17 @@ class CrewStructuredTool(BaseModel):
             self.max_usage_count is not None
             and self.current_usage_count >= self.max_usage_count
         )
+
+    def _claim_usage_count(self) -> bool:
+        """Atomically claim one usage slot before executing the tool."""
+        with self._usage_lock:
+            if (
+                self.max_usage_count is not None
+                and self.current_usage_count >= self.max_usage_count
+            ):
+                return False
+            self._increment_usage_count()
+            return True
 
     def _increment_usage_count(self) -> None:
         """Increment the usage count."""
