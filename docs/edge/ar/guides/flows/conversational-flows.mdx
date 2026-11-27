@@ -35,6 +35,84 @@ mode: "wide"
 
 ترفع `handle_turn()` و`stream_turn()` و`chat()` الخطأ `ValueError` ما لم يكن الوضع المحادثاتي مفعّلاً. يؤدي تطبيق `@ConversationConfig(...)` إلى تفعيله تلقائياً؛ وإلا فعيّن `conversational = True`.
 
+## Mid-flow input with `ask()`
+
+Use `self.ask(message)` inside any flow step to pause and prompt for input — useful for wizards, clarifications, or human-in-the-loop data collection. It blocks the current step until input arrives, the timeout expires, or the provider returns `None`.
+
+```python
+from crewai import Flow
+from crewai.flow import start
+
+
+class SupportFlow(Flow):
+    @start()
+    def gather(self):
+        topic = self.ask("What topic should we research?", metadata={"user_id": "u123"})
+        if topic is None:
+            return "No input received"
+        return topic
+
+
+flow = SupportFlow()
+# Defaults to ConsoleProvider, which reads from stdin.
+flow.kickoff()
+```
+
+`ask()` accepts `timeout` (seconds; `None` waits indefinitely) and `metadata` (forwarded to the provider). On timeout or provider error it returns `None`, enabling the `while (msg := self.ask("You: ", timeout=300)) is not None` loop pattern. Before waiting, the current state is checkpointed to persistence (if configured) for durability.
+
+### Custom input provider (scripted, no stdin / no LLM)
+
+Implement the `InputProvider` protocol to drive input from a script, queue, websocket, or any external system instead of `input()`. Providers may return a plain `str` or an `InputResponse` that also carries response metadata (who answered, thread ID, timestamps).
+
+```python
+from crewai import Flow, start
+from crewai.flow.input_provider import InputProvider, InputResponse
+
+
+class ScriptedProvider(InputProvider):
+    """Deterministic provider: returns pre-scripted responses, no stdin/LLM."""
+
+    def __init__(self, scripts: list[str | InputResponse | None]) -> None:
+        self.scripts = list(scripts)
+        self.calls: list[tuple[str, dict | None]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict | None = None,
+    ) -> str | InputResponse | None:
+        self.calls.append((message, metadata))
+        if not self.scripts:
+            return None
+        return self.scripts.pop(0)
+
+
+class ResearchFlow(Flow):
+    input_provider = ScriptedProvider(
+        [
+            InputResponse(
+                text="AI",
+                metadata={"responded_by": "script-1", "thread_id": "t1"},
+            )
+        ]
+    )
+
+    @start()
+    def gather(self):
+        topic = self.ask("Topic?", metadata={"user_id": "u123"})
+        if topic is None:
+            return "No input received"
+        return topic
+
+
+flow = ResearchFlow()
+result = flow.kickoff()          # "AI"
+# flow._input_history[0]["response_metadata"] == {"responded_by": "script-1", "thread_id": "t1"}
+```
+
+`ask()` normalizes both return types — callers always get `str | None`. The caller-supplied `metadata` and the provider's `response_metadata` are both recorded in `flow._input_history` and emitted in `FlowInputRequestedEvent` / `FlowInputReceivedEvent`, so you can audit who answered which prompt without touching stdin.
+
 ## بداية سريعة
 
 ```python
@@ -180,7 +258,7 @@ class MyChatState(ChatState):
 | `receive_user_message(text, *, outcomes=None, llm=None)` | إضافة رسالة مستخدم، وضبط `last_intent` اختيارياً |
 | `finalize_session_traces()` | إصدار `flow_finished` المؤجل وإنهاء دفعة trace |
 | `_should_defer_trace_finalization()` | hook متقدم/داخلي يحسم ما إذا كان إنهاء trace لكل جولة مؤجلاً |
-| `input_history` | سجل تدقيق مطالبات وردود `ask()` |
+| `_input_history` | سجل تدقيق مطالبات وردود `ask()` |
 
 ### مساعدات الوحدة (`crewai.flow.conversation`)
 
@@ -195,7 +273,7 @@ class MyChatState(ChatState):
 | `receive_user_message(flow, text, ...)` | مثل طريقة المثيل |
 | `set_state_field(flow, name, value)` | تعيين حقل dict أو Pydantic |
 | `get_conversational_config(flow)` | قراءة `conversational_config` |
-| `input_history_to_messages(entries)` | تحويل `input_history` لصيغة رسائل LLM |
+| `input_history_to_messages(entries)` | تحويل _input_history لصيغة رسائل LLM |
 
 ## أنماط توجيه النية
 

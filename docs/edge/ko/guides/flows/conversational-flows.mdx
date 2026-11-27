@@ -35,6 +35,84 @@ REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지
 
 대화형 모드가 활성화되지 않으면 `handle_turn()`, `stream_turn()`, `chat()`은 `ValueError`를 발생시킵니다. `@ConversationConfig(...)`를 적용하면 자동으로 활성화되며, 그렇지 않으면 `conversational = True`로 설정하세요.
 
+## Mid-flow input with `ask()`
+
+Use `self.ask(message)` inside any flow step to pause and prompt for input — useful for wizards, clarifications, or human-in-the-loop data collection. It blocks the current step until input arrives, the timeout expires, or the provider returns `None`.
+
+```python
+from crewai import Flow
+from crewai.flow import start
+
+
+class SupportFlow(Flow):
+    @start()
+    def gather(self):
+        topic = self.ask("What topic should we research?", metadata={"user_id": "u123"})
+        if topic is None:
+            return "No input received"
+        return topic
+
+
+flow = SupportFlow()
+# Defaults to ConsoleProvider, which reads from stdin.
+flow.kickoff()
+```
+
+`ask()` accepts `timeout` (seconds; `None` waits indefinitely) and `metadata` (forwarded to the provider). On timeout or provider error it returns `None`, enabling the `while (msg := self.ask("You: ", timeout=300)) is not None` loop pattern. Before waiting, the current state is checkpointed to persistence (if configured) for durability.
+
+### Custom input provider (scripted, no stdin / no LLM)
+
+Implement the `InputProvider` protocol to drive input from a script, queue, websocket, or any external system instead of `input()`. Providers may return a plain `str` or an `InputResponse` that also carries response metadata (who answered, thread ID, timestamps).
+
+```python
+from crewai import Flow, start
+from crewai.flow.input_provider import InputProvider, InputResponse
+
+
+class ScriptedProvider(InputProvider):
+    """Deterministic provider: returns pre-scripted responses, no stdin/LLM."""
+
+    def __init__(self, scripts: list[str | InputResponse | None]) -> None:
+        self.scripts = list(scripts)
+        self.calls: list[tuple[str, dict | None]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict | None = None,
+    ) -> str | InputResponse | None:
+        self.calls.append((message, metadata))
+        if not self.scripts:
+            return None
+        return self.scripts.pop(0)
+
+
+class ResearchFlow(Flow):
+    input_provider = ScriptedProvider(
+        [
+            InputResponse(
+                text="AI",
+                metadata={"responded_by": "script-1", "thread_id": "t1"},
+            )
+        ]
+    )
+
+    @start()
+    def gather(self):
+        topic = self.ask("Topic?", metadata={"user_id": "u123"})
+        if topic is None:
+            return "No input received"
+        return topic
+
+
+flow = ResearchFlow()
+result = flow.kickoff()          # "AI"
+# flow._input_history[0]["response_metadata"] == {"responded_by": "script-1", "thread_id": "t1"}
+```
+
+`ask()` normalizes both return types — callers always get `str | None`. The caller-supplied `metadata` and the provider's `response_metadata` are both recorded in `flow._input_history` and emitted in `FlowInputRequestedEvent` / `FlowInputReceivedEvent`, so you can audit who answered which prompt without touching stdin.
+
 ## 빠른 시작
 
 ```python
@@ -180,7 +258,7 @@ class MyChatState(ChatState):
 | `receive_user_message(text, *, outcomes=None, llm=None)` | 사용자 메시지 추가; 선택적 `last_intent` |
 | `finalize_session_traces()` | 지연 `flow_finished` 발생 및 세션 trace batch 종료 |
 | `_should_defer_trace_finalization()` | 턴별 trace 종료 지연 여부를 결정하는 고급/내부 hook |
-| `input_history` | `ask()` 프롬프트/응답 감사 기록 |
+| `_input_history` | `ask()` 프롬프트/응답 감사 기록 |
 
 ### 모듈 헬퍼 (`crewai.flow.conversation`)
 
@@ -195,7 +273,7 @@ class MyChatState(ChatState):
 | `receive_user_message(flow, text, ...)` | 인스턴스 메서드와 동일 |
 | `set_state_field(flow, name, value)` | dict 또는 Pydantic 상태 필드 설정 |
 | `get_conversational_config(flow)` | 클래스 `conversational_config` 읽기 |
-| `input_history_to_messages(entries)` | `input_history`를 LLM 메시지 형식으로 |
+| `input_history_to_messages(entries)` | _input_history를 LLM 메시지 형식으로 |
 
 ## 의도 라우팅 패턴
 
