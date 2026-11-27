@@ -1139,6 +1139,53 @@ class TestConversationalFlow:
         else:
             raise AssertionError("Flow.chat() should reject regular flows")
 
+    def test_chat_restores_defer_trace_finalization_when_finalization_fails(
+        self,
+    ) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+        assert flow.defer_trace_finalization is False
+
+        with patch.object(
+            flow,
+            "finalize_session_traces",
+            side_effect=RuntimeError("finalization failed"),
+        ) as mock_finalize:
+            try:
+                flow.chat(input_fn=lambda _: "quit", output_fn=lambda _: None)
+            except RuntimeError as exc:
+                assert str(exc) == "finalization failed"
+            else:
+                raise AssertionError("Flow.chat() should propagate finalization errors")
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    @pytest.mark.parametrize("exit_exc", [EOFError, KeyboardInterrupt])
+    def test_chat_restores_defer_trace_finalization_on_eof_and_interrupt(
+        self,
+        exit_exc: type[BaseException],
+    ) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+        outputs: list[str] = []
+
+        def input_fn(_prompt: str) -> str:
+            raise exit_exc()
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=input_fn, output_fn=outputs.append)
+
+        assert outputs == [""]
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
     def test_defer_trace_finalization_skips_per_turn_finalize(self) -> None:
         """``defer_trace_finalization = True`` suppresses per-turn ``finalize_batch``.
 
