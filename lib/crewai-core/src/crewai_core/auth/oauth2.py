@@ -20,6 +20,8 @@ console = Console()
 # RFC 8628 makes the device code's `expires_in` required; this covers a
 # self-hosted provider that omits it anyway.
 _FALLBACK_DEVICE_CODE_LIFETIME_SECONDS = 600
+# RFC 8628 section 3.2: use 5 seconds when the provider omits `interval`.
+_FALLBACK_POLL_INTERVAL_SECONDS = 5
 
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
@@ -174,7 +176,7 @@ class AuthenticationCommand:
                     token_data.get("error_description") or token_data.get("error")
                 )
 
-            time.sleep(device_code_data["interval"])
+            time.sleep(device_code_data.get("interval", _FALLBACK_POLL_INTERVAL_SECONDS))
 
         console.print(
             "Timeout: the login code expired before sign-in finished. "
