@@ -110,8 +110,10 @@ class Repository:
     def is_ahead_or_behind(self) -> bool:
         """Check if the repository is ahead or behind the remote."""
         for line in self.status().splitlines():
-            if line.startswith("##") and ("ahead" in line or "behind" in line):
-                return True
+            if line.startswith("## "):
+                # Git ref names cannot contain spaces, so " [" starts the status suffix.
+                tracking_status = line.partition(" [")[2]
+                return tracking_status.startswith(("ahead ", "behind "))
         return False
 
     def is_synced(self) -> bool:
