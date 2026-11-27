@@ -741,11 +741,14 @@ class Memory(BaseModel):
                 if not embedding:
                     results: list[MemoryMatch] = []
                 else:
+                    # Fetch extra candidates when private records are excluded:
+                    # otherwise a closer private match hides the requested
+                    # number of visible matches in a shallow recall.
                     raw = self._storage.search(
                         embedding,
                         scope_prefix=effective_scope,
                         categories=categories,
-                        limit=limit,
+                        limit=limit if include_private else limit * 2,
                         min_score=0.0,
                     )
                     if not include_private:
@@ -770,6 +773,7 @@ class Memory(BaseModel):
                             )
                         )
                     results.sort(key=lambda m: m.score, reverse=True)
+                    results = results[:limit]
             else:
                 from crewai.memory.recall_flow import RecallFlow
 
