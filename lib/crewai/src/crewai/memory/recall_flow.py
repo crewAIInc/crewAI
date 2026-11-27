@@ -97,26 +97,41 @@ class RecallFlow(Flow[RecallState]):
         def _search_one(
             embedding: list[float], scope: str
         ) -> tuple[str, list[tuple[MemoryRecord, float]]]:
-            raw = self._storage.search(
-                embedding,
-                scope_prefix=scope,
-                categories=search_categories,
-                limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
-                min_score=0.0,
-            )
-            if self.state.time_cutoff and raw:
-                raw = [(r, s) for r, s in raw if r.created_at >= self.state.time_cutoff]
-            if not self.state.include_private and raw:
-                raw = [
-                    (r, s)
-                    for r, s in raw
-                    # Match the shallow path: a private record with source=None
-                    # must not leak to default (source=None) callers via
-                    # None == None.
-                    if not r.private
-                    or (self.state.source is not None and r.source == self.state.source)
-                ]
-            return scope, raw
+            want = self.state.limit * _RECALL_OVERSAMPLE_FACTOR
+            if want <= 0:
+                return scope, []
+            search_limit = want
+            while True:
+                candidates = self._storage.search(
+                    embedding,
+                    scope_prefix=scope,
+                    categories=search_categories,
+                    limit=search_limit,
+                    min_score=0.0,
+                )
+                raw = candidates
+                if self.state.time_cutoff and raw:
+                    raw = [
+                        (r, s) for r, s in raw if r.created_at >= self.state.time_cutoff
+                    ]
+                if not self.state.include_private and raw:
+                    raw = [
+                        (r, s)
+                        for r, s in raw
+                        # Match the shallow path: a private record with source=None
+                        # must not leak to default (source=None) callers via
+                        # None == None.
+                        if not r.private
+                        or (
+                            self.state.source is not None
+                            and r.source == self.state.source
+                        )
+                    ]
+                if len(raw) >= want or len(candidates) < search_limit:
+                    return scope, raw[:want]
+                # Hidden or too old records used up the candidate window, so
+                # look further, same as the shallow path.
+                search_limit *= 2
 
         tasks: list[tuple[list[float], str]] = [
             (embedding, scope)
