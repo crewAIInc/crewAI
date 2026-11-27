@@ -788,6 +788,37 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Groq">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Groq에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    GROQ_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    GROQ_BASE_URL=https://api.groq.com/openai/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="groq/llama-3.3-70b-versatile",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Groq 특징:
+      - Groq 자체 하드웨어에서의 저지연 추론
+      - 스트리밍과 도구 호출을 지원하는 OpenAI 호환 채팅 완성
+      - 모델 ID는 그대로 전달되므로, 자체 슬래시를 포함한 `groq/openai/gpt-oss-120b` 같은 ID도 두 세그먼트를 유지합니다
+    </Info>
+
+    Groq는 일부 모델이 지원하지 않는 요청 필드(`logprobs`, `logit_bias` 등)를 문서화하고 있습니다.
+    현재 목록은 [Groq OpenAI 호환 가이드](https://console.groq.com/docs/openai)를 참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
