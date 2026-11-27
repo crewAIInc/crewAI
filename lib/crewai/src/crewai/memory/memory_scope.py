@@ -282,6 +282,14 @@ class MemorySlice(BaseModel):
         """Remember into an explicit scope. No-op when read_only=True."""
         if self.read_only:
             return None
+        # Check scope boundaries: a sibling like /team/alphabet must not be
+        # treated as inside /team/alpha.
+        target = (scope or "/").rstrip("/") or "/"
+        if not any(
+            target == allowed or (allowed != "/" and target.startswith(allowed + "/"))
+            for allowed in self.scopes
+        ):
+            return None
         return self._require_memory().remember(
             content,
             scope=scope,
