@@ -1,11 +1,8 @@
 name: Update Test Durations
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'tests/**/*.py'
+  schedule:
+    - cron: '0 3 * * 0'  # weekly refresh so durations don't go stale
   workflow_dispatch:
 
 permissions:
@@ -40,25 +37,45 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
-          version: "0.11.3"
+          version: "0.13.4"
           python-version: ${{ matrix.python-version }}
           enable-cache: false
 
       - name: Install the project
         run: uv sync --all-groups --all-extras
 
-      - name: Run all tests and store durations
+      # One durations file per suite and Python version. Each suite is run the
+      # same way (directory and paths) as in tests.yml so pytest-split node IDs
+      # match, and serially (no xdist) so per-test timings are not distorted.
+      - name: Store durations (crewai)
         run: |
-          PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
-          uv run pytest --store-durations --durations-path=.test_durations_py${PYTHON_VERSION_SAFE} -n auto
+          PY=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          cd lib/crewai && uv run pytest --store-durations \
+            --durations-path=../../.test_durations_crewai_py${PY}
+        continue-on-error: true
+
+      - name: Store durations (crewai-tools)
+        run: |
+          PY=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          cd lib/crewai-tools && uv run pytest --store-durations \
+            --durations-path=../../.test_durations_tools_py${PY}
+        continue-on-error: true
+
+      - name: Store durations (cli, core, files)
+        run: |
+          PY=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          uv run pytest lib/cli/tests lib/crewai-core/tests lib/crewai-files/tests \
+            --store-durations --durations-path=.test_durations_misc_py${PY}
         continue-on-error: true
 
       - name: Save durations to cache
         if: always()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: .test_durations_py*
-          key: test-durations-py${{ matrix.python-version }}
+          path: .test_durations_*
+          # Cache entries are immutable, so use a unique key per run;
+          # tests.yml restores the newest one via the restore-keys prefix.
+          key: test-durations-py${{ matrix.python-version }}-${{ github.run_id }}
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'

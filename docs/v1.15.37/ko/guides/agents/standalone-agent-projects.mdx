@@ -1,0 +1,262 @@
+---
+title: "독립형 Agent 프로젝트 (실험적)"
+description: "YAML, JSON 또는 Python으로 독립형 Agent 프로젝트를 만들고 실행합니다."
+---
+
+<Warning>
+독립형 Agent 프로젝트는 실험적 기능입니다. 프로젝트 스키마와 로딩 API는 변경될 수 있습니다. 이 미리 보기를 사용하려면 해당 기능이 포함된 서로 호환되는 CLI 및 SDK 빌드가 필요하며, 관리형 배포에는 호환되는 Enterprise 런타임도 필요합니다. 이 예제가 이전에 설치한 릴리스에서도 지원된다는 의미는 아닙니다.
+</Warning>
+
+독립형 Agent 프로젝트는 하나의 Agent를 정의하고 kickoff 시점에 메시지를 받습니다. 기본 프로젝트 형식은 YAML이며, JSON과 Python은 명시적으로 선택할 수 있는 대안입니다. `main.py`, Crew, Flow 또는 팩터리 함수가 필요하지 않습니다.
+
+## 프로젝트 만들기
+
+```shell Terminal
+crewai create agent support_agent
+cd support_agent
+cp .env.example .env
+```
+
+기본 모델인 `openai/gpt-6.1-sol`를 사용하도록 `.env`에 `OPENAI_API_KEY`를 설정한 다음 설치하고 실행합니다:
+
+스캐폴드는 이 모델의 도구 호출에 Responses API(`api: responses`)를 사용합니다. YAML/JSON 프로젝트에서는 정의 파일의 `llm.model`과 `llm.api`를 수정하세요. Python 템플릿은 `.env`에서 `MODEL`을 읽고 Responses API를 사용합니다.
+
+```shell Terminal
+crewai install
+crewai run
+crewai run --inputs '{"messages":"What are the support hours?"}'
+```
+
+`crewai install`은 `uv.lock`을 생성합니다. 이 파일을 프로젝트와 함께 커밋하세요. `.env`는 로컬에 보관하고, 공급자 인증 정보는 배포 환경 설정에 지정하세요.
+
+## 로컬 대화
+
+스캐폴드는 `conversational: true`를 설정하며 Python에서는 `Agent(conversational=True)`를 사용합니다. 터미널에서 `crewai run`을 실행하면 기존 대화형 채팅 인터페이스가 열립니다. 각 메시지는 설정된 Agent와 도구에 세션 기록을 전달합니다. 독립적인 kickoff만 사용하려면 플래그를 false로 설정하세요.
+
+```shell Terminal
+crewai run
+```
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+agent.handle_turn("Remember that my project is Cedar Finch.")
+reply = agent.handle_turn("What is my project's name?")
+print(reply.raw)
+```
+
+실험적 SDK는 `agent.handle_turn(...)`과 `agent.as_flow()`로 같은 세션을 제공합니다. 기록은 기본적으로 메모리에 유지되며, 프로세스 간 복구를 위해서는 Flow 영속성을 명시적으로 설정해야 합니다. 독립적인 대화마다 별도의 Agent 인스턴스를 사용하세요. `session_id` 옵션은 Flow 세션을 식별하거나 복원하며 하나의 Agent를 동시 다중 세션 서버로 만들지는 않습니다.
+
+## 프로젝트 구조
+
+```text
+support_agent/
+├── agent.yaml
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── .gitignore
+├── README.md
+├── tools/
+│   ├── __init__.py
+│   ├── support_hours.py
+│   ├── lookup_plan.py
+│   └── support_checklist.py
+└── skills/
+    └── .gitkeep
+```
+
+설정 기반 프로젝트에는 소스 패키지가 없습니다. 스캐폴드에는 가상의 지원 서비스를 위한 로컬 도구 세 개와 빈 스킬 디렉터리가 포함됩니다. 모델 공급자 키 외에 추가 서비스나 인증 정보가 필요하지 않습니다.
+
+생성된 `pyproject.toml`은 Agent 정의를 선택하고 설정과 로컬 도구를 패키지에 포함합니다:
+
+```toml
+[tool.crewai]
+type = "agent"
+definition = "agent.yaml"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["agent.yaml", "tools", "skills"]
+```
+
+## Agent 정의하기
+
+기본 정체성은 범용 CrewAI Agent입니다. `role`, `goal`, `backstory`를 편집해 특화할 수 있습니다. 포함된 지원 도구는 관련이 있을 때만 사용하는 예시이므로 다른 용도에서는 교체하거나 제거하세요. 기본으로 설치된 스킬은 없습니다.
+
+`agent.yaml`을 편집합니다:
+
+```yaml
+conversational: true
+role: General-purpose AI agent
+goal: Help users accomplish tasks accurately using the available tools and skills.
+backstory: |-
+  # Identity
+  You are a general-purpose AI agent powered by CrewAI.
+
+  # Customization
+  Your behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.
+llm:
+  model: openai/gpt-6.1-sol
+  api: responses
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+max_iter: 8
+```
+
+이 항목들은 Agent 생성자 필드입니다. 요청은 실행 시 `messages`로 전달하세요. 정의에 고정된 `input` 필드를 추가하지 마세요.
+
+### JSON 또는 Python 선택하기
+
+```shell Terminal
+crewai create agent json_support --format json
+crewai create agent python_support --format python
+```
+
+JSON 프로젝트 템플릿은 동일한 필드를 가진 `agent.json`을 생성합니다:
+
+```json
+{
+  "conversational": true,
+  "role": "General-purpose AI agent",
+  "goal": "Help users accomplish tasks accurately using the available tools and skills.",
+  "backstory": "# Identity\nYou are a general-purpose AI agent powered by CrewAI.\n\n# Customization\nYour behavior and capabilities are defined by this project's agent definition, tools, and skills. Customize these files for the user's needs. The included support tools are examples; use them only when relevant. Be clear about the capabilities available in this project and do not claim external actions without a tool result.",
+  "llm": {
+    "model": "openai/gpt-6.1-sol",
+    "api": "responses"
+  },
+  "tools": [
+    "custom:support_hours",
+    "custom:lookup_plan",
+    "custom:support_checklist"
+  ],
+  "skills": [
+    "./skills"
+  ],
+  "max_iter": 8
+}
+```
+
+Python 프로젝트 템플릿은 `src/python_support/agent.py`에서 `agent = Agent(...)`를 내보냅니다. Agent를 정의하는 데 Python 로직이 필요한 경우 사용하세요.
+
+`.yml`과 `.yaml`을 모두 지원합니다. 설정 파일의 이름이나 위치를 변경할 때는 `definition`과 wheel의 `only-include` 목록을 함께 수정하세요. 정의 경로는 프로젝트 루트 안에 있어야 합니다.
+
+`definition`을 명시하지 않으면 루트의 `agent.py`, `agent.json`, `agent.yml`, `agent.yaml` 또는 일반적인 `src/<package>/agent.py` 중 하나를 검색합니다. 여러 파일이 발견되면 오류가 발생하므로 `definition`을 설정해 하나를 선택하세요.
+
+## 사용자 지정 도구 추가하기
+
+포함된 `tools/support_hours.py`를 새 도구의 출발점으로 사용하세요:
+
+```python
+from crewai.tools import BaseTool
+
+
+class SupportHoursTool(BaseTool):
+    name: str = "support_hours"
+    description: str = "Return the fictional service's published support hours."
+
+    def _run(self) -> str:
+        return "Support is available Monday to Friday, 09:00-17:00 UTC."
+```
+
+생성된 정의는 도구와 스킬 디렉터리를 명시적으로 등록합니다. JSON도 동일한 문자열 목록을 사용합니다:
+
+```yaml
+tools:
+  - custom:support_hours
+  - custom:lookup_plan
+  - custom:support_checklist
+skills:
+  - ./skills
+```
+
+`custom:support_hours`는 `tools/support_hours.py`에서 `BaseTool` 하위 클래스를 로드합니다. 도구에 필요한 의존성을 `pyproject.toml`에 추가하고 `crewai install`로 잠금 파일을 갱신하세요. 신뢰할 수 있는 프로젝트 코드만 로드하세요. 사용자 지정 도구와 Python 참조는 로딩 중 Python 코드를 실행합니다.
+
+## 참조 도구와 스킬
+
+생성된 예제는 로컬의 가상 데이터를 사용합니다. 실제 계정을 조회하거나 비밀번호를 재설정하거나 환불하거나 티켓을 만들지 않습니다.
+
+| 도구 | 입력 | 결과 |
+| --- | --- | --- |
+| `support_hours` | 없음 | UTC 기준으로 공지된 지원 시간 |
+| `lookup_plan` | `plan`: `starter` 또는 `pro` | 좌석 수와 지원 채널 |
+| `support_checklist` | `topic`: `sign-in` 또는 `billing` | 문제 해결 단계 |
+
+`skills/` 디렉터리는 Git과 빌드된 패키지에서 유지하기 위한 `.gitkeep`만 포함하며 비어 있습니다. 스킬을 만들려면 `name`과 `description` 프런트매터를 포함한 `skills/<name>/SKILL.md`를 추가하세요. 추가된 스킬은 메타데이터로 검색되며 Agent는 `load_skill`로 관련 지침을 필요할 때 로드할 수 있습니다.
+
+YAML/JSON의 로컬 스킬 경로는 프로젝트 루트를 기준으로 해석됩니다. 다른 디렉터리에서 `load_agent_project(path)`를 호출해도 동일합니다. Python 스캐폴드는 `tools/`와 `skills/`를 모두 `src/<package>/` 안에 두고 `agent.py`를 기준으로 스킬 경로를 지정합니다. wheel과 배포 아카이브에 이 파일들이 포함됩니다.
+
+예제 기능을 함께 사용하는 요청을 실행해 보세요:
+
+```shell Terminal
+crewai run --inputs '{"messages":"I use the Pro plan and cannot sign in. Use the available tools to explain what I should try and when support is available. Write a short customer reply."}'
+```
+
+## 메시지 기록 전달하기
+
+`messages`는 role/content 메시지로 구성된 비어 있지 않은 목록도 받습니다:
+
+```shell Terminal
+crewai run --inputs '{"messages":[{"role":"user","content":"Use support_hours to verify the published support hours."}]}'
+```
+
+각 kickoff는 새로운 Agent와 일반적인 로컬 사용자 지정 도구 인스턴스를 생성합니다. 이 프로젝트는 kickoff 간에 대화 기록을 자동으로 유지하지 않습니다. 기존의 임의 Python 참조는 모듈 수준의 싱글턴 객체로 해석될 수 있으며, 로더는 해당 객체의 변경 가능한 상태를 격리하지 않습니다.
+
+프로그램에서 사용할 경우, 실험적 SDK 로더도 동일한 프로젝트 선택 규칙을 따릅니다:
+
+```python
+from crewai.project import load_agent_project
+
+agent = load_agent_project("./support_agent")
+result = agent.kickoff("What are the support hours?")
+print(result.raw)
+```
+
+## 미리 보기 검증 및 배포하기
+
+```shell Terminal
+crewai deploy validate
+```
+
+YAML/JSON 검증은 프로젝트 Python 코드를 실행하거나 Agent, 도구 또는 공급자 클라이언트를 생성하지 않고 필드, Python 참조 구문 및 도구 선언을 확인합니다. Python 진입점은 가져오며 프로젝트 코드를 실행할 수 있습니다. 검증은 kickoff를 실행하지 않습니다. 일반 아카이브 파이프라인은 `.env`와 `.venv`를 제외하고 정의, 도구, 스킬 및 잠금 파일을 포함합니다.
+
+호환되는 미리 보기 Enterprise 런타임에 배포하려면 [CLI 참조](/edge/ko/concepts/cli)에 설명된 기존 배포 절차를 사용하세요. 관리형 API는 동일한 입력을 받습니다:
+
+```json
+{"inputs": {"messages": "What are the support hours?"}}
+```
+
+## 대화형 관리형 배포
+
+호환되는 실험적 Enterprise 런타임에서 내부 Agent 어댑터는 `conversational = True`를 설정합니다. 채팅은 매 턴마다 설정된 Agent와 도구를 사용합니다. 세션을 시작한 뒤 후속 메시지에 같은 `session_id`를 사용하세요:
+
+```http
+POST /chat/start
+Authorization: Bearer <deployment-token>
+Content-Type: application/json
+
+{}
+```
+
+```http
+POST /chat/<session_id>/message
+Authorization: Bearer <deployment-token>
+Content-Type: application/json
+
+{"message": "Remember that my project is Cedar Finch.", "stream": false}
+```
+
+```http
+GET /chat/<session_id>/history
+Authorization: Bearer <deployment-token>
+```
+
+각 메시지는 서로 다른 `kickoff_id`를 반환합니다. 다음 메시지를 보내기 전에 `/status/<kickoff_id>`를 조회하여 턴이 완료될 때까지 기다리세요. 세션은 사용자/어시스턴트 기록을 보존하고 매 턴 새 Agent에 전달합니다. 대화 기록에는 사용자에게 보여 줄 답변만 포함되며, 실행 결과에는 구조화된 Agent 출력과 사용량이 유지됩니다. 세션 수명과 영속성은 배포된 런타임의 저장소 설정에 따라 달라집니다. 세션별 기록은 분리됩니다.
+
+`POST /kickoff`는 독립적인 실행에 계속 사용할 수 있습니다. 로컬 `crewai run`은 채팅을 열고 `crewai run --inputs`는 kickoff를 한 번 실행합니다. 스캐폴드는 Agent 정의에서 대화 플래그를 활성화하므로 Flow나 `main.py`를 작성할 필요가 없습니다.
+
+이 미리 보기는 네이티브 API와 Celery 워커로 검증되었습니다. 토큰 스트리밍, 복원/체크포인트 지원, Agent 전용 프로비저닝, 프로덕션 컨테이너 및 릴리스 호환성은 검증된 범위에 포함되지 않습니다.

@@ -49,6 +49,7 @@ O `RagTool` pode ser utilizado com uma grande variedade de fontes de dados, incl
 - 📰 Arquivos PDF
 - 📊 Arquivos CSV
 - 📃 Arquivos JSON
+- Arquivos JSONL (`.jsonl` e `.ndjson`)
 - 📝 Texto
 - 📁 Diretórios/Pastas
 - 🌐 Páginas web em HTML
@@ -95,7 +96,16 @@ rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VID
 
 # Add a directory of files
 rag_tool.add(data_type="directory", path="path/to/your/directory")
+
+# Add a local JSONL file with an explicit type
+rag_tool.add(data_type="jsonl", path="path/to/your/records.jsonl")
+
+# Auto-detect a local JSONL file by its extension
+rag_tool.add(path="path/to/your/records.ndjson")
 ```
+
+Arquivos JSONL contêm um valor JSON por linha. O carregador JSONL suporta arquivos locais;
+reconhecer uma URL JSONL não busca seu conteúdo.
 
 ## Exemplo de Integração com Agente
 
@@ -120,6 +130,14 @@ def knowledge_expert(self) -> Agent:
         tools=[rag_tool]
     )
 ```
+
+## Banco Vetorial
+
+O `RagTool` armazena o conteúdo em um banco Qdrant local por padrão, usando o `text-embedding-3-small` da OpenAI como embedder. Para usar o ChromaDB, instale-o com `pip install "crewai[chromadb]"` e defina `"provider": "chromadb"` na configuração `vectordb`.
+
+<Note>
+O conteúdo que uma versão anterior armazenou no ChromaDB não é lido pelo padrão Qdrant. Adicione-o novamente ou defina o provedor `chromadb`.
+</Note>
 
 ## Configuração Avançada
 
@@ -167,6 +185,10 @@ O parâmetro `embedding_model` aceita um dicionário `crewai.rag.embeddings.type
 ```
 
 ### Provedores Suportados
+
+<Note>
+Estes provedores usam o ChromaDB e exigem `pip install "crewai[chromadb]"`: `bedrock`, `cohere`, `google-generativeai`, `huggingface`, `instructor`, `jina`, `ollama`, `onnx`, `openclip`, `roboflow`, `sentence-transformer`, `text2vec`. Os demais (como `openai`, `azure`, `openrouter`, `google-vertex`, `voyageai`, `watsonx`, `oracle` e `custom`) funcionam sem ele.
+</Note>
 
 <AccordionGroup>
   <Accordion title="OpenAI">
@@ -530,7 +552,7 @@ O parâmetro `embedding_model` aceita um dicionário `crewai.rag.embeddings.type
     **Opções de Configuração:**
     - `model_name` (str): Arquitetura do modelo OpenCLIP. Padrão: `ViT-B-32`. Opções: `ViT-B-32`, `ViT-B-16`, `ViT-L-14`
     - `checkpoint` (str): Nome do checkpoint pré-treinado. Padrão: `laion2b_s34b_b79k`. Opções: `laion2b_s34b_b79k`, `laion400m_e32`, `openai`
-    - `device` (str): Dispositivo no qual executar. Padrão: `cpu`. Opções: `cpu`, `cuda`
+    - `device` (str): Dispositivo no qual executar. Padrão: `cpu`. Opções: `cpu`, `cuda`, `mps`, `xpu`
 
     **Variáveis de Ambiente:**
     - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`

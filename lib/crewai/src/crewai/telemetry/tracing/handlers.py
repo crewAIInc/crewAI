@@ -94,7 +94,10 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
+from crewai.events.types.artifact_events import ArtifactCreatedEvent
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowPausedEvent,
     MethodExecutionPausedEvent,
 )
@@ -111,7 +114,8 @@ from crewai.events.types.skill_events import (
     SkillLoadedEvent,
     SkillUsedEvent,
 )
-from crewai.telemetry.tracing import semantic_conventions
+from crewai.tasks.output_format import OutputFormat
+from crewai.telemetry.tracing import gen_ai_shapes, semantic_conventions
 from crewai.telemetry.tracing.context import (
     PendingSpanEnd,
     TelemetryExecutionContext,
@@ -209,6 +213,12 @@ def register_handlers(
             lambda source, event: handle_skill_used(providers, ctx, source, event),
         ),
         (
+            ArtifactCreatedEvent,
+            lambda source, event: handle_artifact_created(
+                providers, ctx, source, event
+            ),
+        ),
+        (
             SkillDiscoveryStartedEvent,
             lambda source, event: handle_skill_discovery_started(
                 providers, ctx, source, event
@@ -231,6 +241,18 @@ def register_handlers(
         (
             SkillLoadFailedEvent,
             lambda source, event: handle_skill_load_failed(
+                providers, ctx, source, event
+            ),
+        ),
+        (
+            ConversationMessageAddedEvent,
+            lambda source, event: handle_conversation_message_added(
+                providers, ctx, source, event
+            ),
+        ),
+        (
+            ConversationRouteSelectedEvent,
+            lambda source, event: handle_conversation_route_selected(
                 providers, ctx, source, event
             ),
         ),
@@ -569,10 +591,44 @@ def _serialize(value: Any) -> str:
     return json.dumps(to_serializable(value))
 
 
+def _task_output_format(task: Any, output: Any = None) -> str:
+    """The output format ``task`` declared, as the ``OutputFormat`` value string.
+
+    A finished task's ``TaskOutput`` records the format it was produced under,
+    so that is preferred when given. Before completion, and on failure, the
+    format is read off the declaration (``output_json`` / ``output_pydantic``)
+    with the precedence ``Task._get_output_format`` applies.
+    """
+    declared = getattr(output, "output_format", None)
+    if declared is not None:
+        return str(getattr(declared, "value", declared))
+    if getattr(task, "output_json", None) is not None:
+        return OutputFormat.JSON.value
+    if getattr(task, "output_pydantic", None) is not None:
+        return OutputFormat.PYDANTIC.value
+    return OutputFormat.RAW.value
+
+
 def _set_span_attributes(span: Span, attributes: dict[str, Any]) -> None:
+    """Set ``attributes`` on ``span``, no string value over the export bound.
+
+    The ``gen_ai.*`` content attributes arrive already bounded (and marked),
+    message-aware, by ``semantic_conventions``; this catches every other
+    string — a task's ``crewai.task.output``, an MCP tool's ``crewai.mcp.tool_result``, a flow's
+    serialized state — with a plain cut (the head, up to the bound) so one
+    oversized value marks itself instead of making the whole span too large
+    for Wharf to accept, and is never reshaped as if it were a conversation.
+    """
     for key, value in attributes.items():
-        if value is not None:
-            span.set_attribute(key, value)
+        if value is None:
+            continue
+        if isinstance(value, str) and f"{key}.truncated" not in attributes:
+            value, markers = gen_ai_shapes.truncate_plain(value, attr=key)
+            for marker, marker_value in markers.items():
+                span.set_attribute(marker, marker_value)
+            if value is None:
+                continue
+        span.set_attribute(key, value)
 
 
 def _get_parent_context(
@@ -660,6 +716,8 @@ def _start_span(
         if links:
             start_kwargs["links"] = links
         span = tracer.start_span(name, **start_kwargs)
+        if ctx.conversation_id is not None:
+            attributes["gen_ai.conversation.id"] = ctx.conversation_id
         _set_span_attributes(span, attributes)
         span.set_attribute("event_id", event.event_id)
         if event.parent_event_id:
@@ -826,13 +884,15 @@ def _record_agent_llm_call(
 def _conversation_id(event: Any, ctx: TelemetryExecutionContext) -> str:
     """Resolve gen_ai.conversation.id with a strict fallback chain.
 
-    task_id (most specific) -> agent_id (lite-agent) -> kickoff_id (session-wide).
+    Conversation session id -> task_id -> agent_id -> kickoff_id.
     The required session context always provides the final fallback.
 
     `agent_info["id"]` on the OSS side is a UUID object (LiteAgent.id is UUID4),
     and OTel attribute values must be primitive types — coerce to str at the
     boundary so the attribute isn't silently dropped by the SDK.
     """
+    if ctx.conversation_id is not None:
+        return ctx.conversation_id
     task_id = getattr(event, "task_id", None)
     agent_id = getattr(event, "agent_id", None)
     if not agent_id:
@@ -904,6 +964,7 @@ def handle_task_started(
             name=task.name,
             description=task.description,
             expected_output=task.expected_output,
+            output_format=_task_output_format(task),
         ),
         **semantic_conventions.gen_ai(
             operation_name=semantic_conventions.GEN_AI_OP_EXECUTE_TASK,
@@ -936,6 +997,7 @@ def handle_task_completed(
     span = (
         ctx.active_spans.get(event.started_event_id) if event.started_event_id else None
     )
+    output = event.output
 
     attrs: dict[str, Any] = {
         **semantic_conventions.crewai_span(
@@ -948,11 +1010,14 @@ def handle_task_completed(
             key=task.key,
             id=str(task.id),
             name=task.name,
-            output=task.output.raw if task.output else None,
+            output=output.raw,
+            output_format=_task_output_format(task, output),
+            # The declaration says what was asked for; these say what the run
+            # actually yielded, so a consumer can tell the two apart.
+            output_pydantic_produced=output.pydantic is not None,
+            output_json_produced=output.json_dict is not None,
         ),
-        **semantic_conventions.gen_ai_io(
-            output_value=task.output.raw if task.output else None
-        ),
+        **semantic_conventions.gen_ai_io(output_value=output.raw),
     }
 
     providers.emit_log(
@@ -989,6 +1054,7 @@ def handle_task_failed(
             name=task.name,
             description=task.description,
             expected_output=task.expected_output,
+            output_format=_task_output_format(task),
         ),
     }
 
@@ -1090,6 +1156,7 @@ def handle_agent_execution_started(
             tool_definitions=agent.tools,
             system_instructions=agent.backstory,
         ),
+        **semantic_conventions.gen_ai_io(input_value=event.task_prompt),
         **semantic_conventions.crewai_span(event_name=event.type, subject=agent.role),
         **semantic_conventions.crewai_agent(role=agent.role),
     }
@@ -1141,6 +1208,7 @@ def handle_agent_execution_completed(
             tool_definitions=agent.tools,
             system_instructions=agent.backstory,
         ),
+        **semantic_conventions.gen_ai_io(output_value=event.output),
         **semantic_conventions.crewai_span(event_name=event.type, subject=agent.role),
         **semantic_conventions.crewai_agent(role=agent.role),
     }
@@ -1398,6 +1466,7 @@ def handle_tool_usage_finished(
             event_name=event.type, subject=event.tool_name
         ),
         **semantic_conventions.crewai_agent(key=event.agent_key, role=event.agent_role),
+        **semantic_conventions.crewai_tool(from_cache=event.from_cache),
         **_tool_failure_attrs(failure),
     }
 
@@ -1522,13 +1591,53 @@ def _reparent_suppressed_flow_children(
     ready.set()
 
 
+def _is_conversational_flow(source: Any) -> bool:
+    conversational = getattr(source, "_is_conversational_enabled", None)
+    return callable(conversational) and conversational() is True
+
+
+def handle_conversation_message_added(
+    providers: TelemetryProviders,
+    ctx: TelemetryExecutionContext,
+    source: Any,
+    event: ConversationMessageAddedEvent,
+) -> None:
+    attrs = {
+        **semantic_conventions.crewai_span(event_name=event.type, subject=event.role),
+        "gen_ai.conversation.id": event.session_id,
+        "crewai.conversation.role": event.role,
+        "crewai.conversation.content": _serialize(event.content),
+        "crewai.conversation.message_index": event.message_index,
+    }
+    _instant_span(providers, ctx, "conversation message", event, attrs)
+
+
+def handle_conversation_route_selected(
+    providers: TelemetryProviders,
+    ctx: TelemetryExecutionContext,
+    source: Any,
+    event: ConversationRouteSelectedEvent,
+) -> None:
+    attrs = {
+        **semantic_conventions.crewai_span(event_name=event.type, subject=event.route),
+        "gen_ai.conversation.id": event.session_id,
+        "crewai.conversation.route": event.route,
+        "crewai.conversation.user_message": event.user_message,
+        "crewai.conversation.message_index": event.message_index,
+        "crewai.conversation.previous_intent": event.previous_intent,
+    }
+    _instant_span(providers, ctx, "select conversation route", event, attrs)
+
+
 def handle_flow_started(
     providers: TelemetryProviders,
     ctx: TelemetryExecutionContext,
     source: Flow[Any],
     event: FlowStartedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if ctx.conversation_id is None and _is_conversational_flow(source):
+        ctx.conversation_id = str(source.flow_id)
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         _reparent_suppressed_flow_children(ctx, event)
         return
 
@@ -1595,7 +1704,7 @@ def handle_flow_finished(
     source: Flow[Any],
     event: FlowFinishedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         return
 
     flow_name = source.name or event.flow_name
@@ -1646,7 +1755,7 @@ def handle_flow_failed(
     source: Flow[Any],
     event: FlowFailedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         return
 
     flow_name = source.name or event.flow_name
@@ -1805,7 +1914,7 @@ def handle_flow_paused(
     source: Flow[Any],
     event: FlowPausedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         return
 
     flow_name = source.name or event.flow_name
@@ -2973,6 +3082,41 @@ def handle_skill_used(
 
     providers.emit_log(
         f"Skill used: {event.skill_name}",
+        level="INFO",
+        span=span,
+        attributes=attrs,
+        ctx=ctx,
+    )
+
+
+def handle_artifact_created(
+    providers: TelemetryProviders,
+    ctx: TelemetryExecutionContext,
+    source: Any,
+    event: Any,
+) -> None:
+    """Record a saved artifact version, with the agent and task that saved it."""
+    attrs = {
+        **semantic_conventions.crewai_span(
+            event_name=event.type, subject=event.title or event.identifier
+        ),
+        **semantic_conventions.crewai_artifact(
+            id=event.id,
+            identifier=event.identifier,
+            version=event.version,
+            kind=event.kind,
+            content_type=event.content_type,
+            size=event.size,
+            url=event.url,
+        ),
+        **semantic_conventions.crewai_agent(role=event.agent_role),
+        **semantic_conventions.crewai_task(id=event.task_id, name=event.task_name),
+    }
+
+    span = _instant_span(providers, ctx, "save artifact", event, attrs)
+
+    providers.emit_log(
+        f"Artifact saved: {event.identifier} v{event.version}",
         level="INFO",
         span=span,
         attributes=attrs,

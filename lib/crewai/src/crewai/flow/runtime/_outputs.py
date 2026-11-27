@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypedDict
+from typing import Any
+
+from typing_extensions import NotRequired, TypedDict
 
 from crewai.utilities.serialization import to_serializable
 
@@ -11,6 +13,7 @@ from crewai.utilities.serialization import to_serializable
 class _MethodOutput(TypedDict):
     method: str
     output: Any
+    human_feedback: NotRequired[Any]
 
 
 def outputs_by_name(
@@ -21,7 +24,8 @@ def outputs_by_name(
 ) -> dict[str, Any]:
     outputs: dict[str, Any] = {}
     for entry in method_outputs:
-        outputs[entry["method"]] = _output_value(entry["output"], serialize=serialize)
+        value = entry.get("human_feedback", entry["output"])
+        outputs[entry["method"]] = _output_value(value, serialize=serialize)
 
     if local_outputs is not None:
         outputs.update(

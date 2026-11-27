@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+import re
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -13,7 +15,10 @@ from typing_extensions import Required
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
-from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.providers.utils.common import (
+    claude_supports_vision,
+    safe_tool_conversion,
+)
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -49,6 +54,31 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+_DEFAULT_READ_TIMEOUT: Final[float] = 300
+# botocore's ``max_attempts`` counts the first request, so 2 retries = 3 attempts.
+_DEFAULT_MAX_RETRIES: Final[int] = 2
+
+
+def _normalize_litellm_bedrock_kwargs(data: dict[str, Any]) -> dict[str, Any]:
+    """Map LiteLLM Bedrock kwargs to their native-provider equivalents."""
+    normalized_data = dict(data)
+    additional_params = normalized_data.get("additional_params")
+    if isinstance(additional_params, dict):
+        additional_params = dict(additional_params)
+        normalized_data["additional_params"] = additional_params
+
+    for litellm_name, native_name in (
+        ("aws_region_name", "region_name"),
+        ("guardrailConfig", "guardrail_config"),
+    ):
+        value = normalized_data.pop(litellm_name, None)
+        if value is None and isinstance(additional_params, dict):
+            value = additional_params.pop(litellm_name, None)
+        if normalized_data.get(native_name) is None and value is not None:
+            normalized_data[native_name] = value
+
+    return normalized_data
 
 
 def _preprocess_structured_data(
@@ -202,6 +232,13 @@ class BedrockConverseStreamRequestBody(TypedDict, total=False):
     additionalModelResponseFieldPaths: list[str]
 
 
+# GPT-6 IDs include point releases (``openai.gpt-6.1-*``), so the family ends at
+# ``.`` or ``-``; Nova IDs carry a ``-v<n>`` version.
+_BEDROCK_VISION_MODEL: Final[re.Pattern[str]] = re.compile(
+    r"openai\.gpt-6[.-]|amazon\.nova-(?:lite|pro|premier|2-lite)-v\d"
+)
+
+
 class BedrockCompletion(BaseLLM):
     """AWS Bedrock native completion implementation using the Converse API.
 
@@ -231,6 +268,8 @@ class BedrockCompletion(BaseLLM):
     aws_secret_access_key: str | None = None
     aws_session_token: str | None = None
     region_name: str | None = None
+    timeout: float | None = None
+    max_retries: int | None = None
     max_tokens: int | None = None
     top_p: float | None = None
     top_k: int | None = None
@@ -264,6 +303,8 @@ class BedrockCompletion(BaseLLM):
 
         data.pop("provider", None)
         data["provider"] = "bedrock"
+
+        data = _normalize_litellm_bedrock_kwargs(data)
 
         popped = data.pop("stop_sequences", None)
         seqs = popped if popped is not None else (data.get("stop") or [])
@@ -311,19 +352,26 @@ class BedrockCompletion(BaseLLM):
         self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
         return self
 
-    def _build_sync_client(self) -> Any:
-        config = Config(
-            read_timeout=300,
-            retries={"max_attempts": 3, "mode": "adaptive"},
+    def _build_client_config(self) -> Config:
+        """Build the botocore config shared by the sync and async clients."""
+        timeout = _DEFAULT_READ_TIMEOUT if self.timeout is None else self.timeout
+        max_retries = (
+            _DEFAULT_MAX_RETRIES if self.max_retries is None else self.max_retries
+        )
+        return Config(
+            read_timeout=timeout,
+            retries={"max_attempts": max_retries + 1, "mode": "adaptive"},
             tcp_keepalive=True,
         )
+
+    def _build_sync_client(self) -> Any:
         session = Session(
             aws_access_key_id=self.aws_access_key_id,
             aws_secret_access_key=self.aws_secret_access_key,
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-        return session.client("bedrock-runtime", config=config)
+        return session.client("bedrock-runtime", config=self._build_client_config())
 
     def _get_sync_client(self) -> Any:
         if self._client is None:
@@ -335,11 +383,90 @@ class BedrockCompletion(BaseLLM):
         using ``aiobotocore`` inside an exit stack."""
         return self._async_client
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[Any, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Bedrock's CountTokens API.
+
+        The CountTokens request accepts the Converse message, system, tool, and
+        additional-model fields that affect input tokenization. Generation-only
+        settings, such as output limits and sampling, are excluded.
+        """
+        formatted_messages, system_message = self._format_messages_for_converse(
+            messages
+        )
+        converse_input: dict[str, Any] = {"messages": formatted_messages}
+
+        if system_message:
+            converse_input["system"] = [{"text": system_message}]
+
+        if tools:
+            converse_input["toolConfig"] = {
+                "tools": self._format_tools_for_converse(tools)
+            }
+        elif self._messages_contain_tool_content(formatted_messages):
+            tools_from_history = self._extract_tools_from_message_history(
+                formatted_messages
+            )
+            if tools_from_history:
+                converse_input["toolConfig"] = {"tools": tools_from_history}
+
+        if self.additional_model_request_fields:
+            converse_input["additionalModelRequestFields"] = (
+                self.additional_model_request_fields
+            )
+
+        effective_response_model = response_model or self.response_format
+        if effective_response_model:
+            structured_tool: ConverseToolTypeDef = {
+                "toolSpec": {
+                    "name": STRUCTURED_OUTPUT_TOOL_NAME,
+                    "description": (
+                        "Use this tool to provide your final structured response. "
+                        "Call this tool when you have gathered all necessary information "
+                        "and are ready to provide the final answer in the required format."
+                    ),
+                    "inputSchema": {
+                        "json": generate_model_description(effective_response_model)
+                        .get("json_schema", {})
+                        .get("schema", {})
+                    },
+                }
+            }
+            tool_config = converse_input.get("toolConfig")
+            existing_tools = list(tool_config.get("tools", [])) if tool_config else []
+            if not any(
+                tool.get("toolSpec", {}).get("name") == STRUCTURED_OUTPUT_TOOL_NAME
+                for tool in existing_tools
+            ):
+                existing_tools.append(structured_tool)
+                converse_input["toolConfig"] = {"tools": existing_tools}
+                if len(existing_tools) == 1:
+                    converse_input["toolConfig"]["toolChoice"] = {
+                        "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
+                    }
+
+        try:
+            response = self._get_sync_client().count_tokens(
+                modelId=self.model_id,
+                input={"converse": converse_input},
+            )
+        except (BotoCoreError, ClientError):
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response["inputTokens"])
+
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
         config = super().to_config_dict()
         if self.region_name and self.region_name != "us-east-1":
             config["region_name"] = self.region_name
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        if self.max_retries is not None:
+            config["max_retries"] = self.max_retries
         if self.max_tokens is not None:
             config["max_tokens"] = self.max_tokens
         if self.top_p is not None:
@@ -485,15 +612,25 @@ class BedrockCompletion(BaseLLM):
             Generated text response or structured output.
 
         Raises:
-            NotImplementedError: If aiobotocore is not installed.
             LLMContextLengthExceededError: If context window is exceeded.
         """
         effective_response_model = response_model or self.response_format
 
         if not AIOBOTOCORE_AVAILABLE:
-            raise NotImplementedError(
-                "Async support for AWS Bedrock requires aiobotocore. "
-                'Install with: uv add "crewai[bedrock]"'
+            logging.warning(
+                "aiobotocore is not installed; falling back to synchronous AWS "
+                "Bedrock calls in a worker thread. Install `crewai[bedrock]` "
+                "for native async support."
+            )
+            return await asyncio.to_thread(
+                self.call,
+                messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=effective_response_model,
             )
 
         with llm_call_context():
@@ -1202,6 +1339,7 @@ class BedrockCompletion(BaseLLM):
                     aws_access_key_id=self.aws_access_key_id,
                     aws_secret_access_key=self.aws_secret_access_key,
                     aws_session_token=self.aws_session_token,
+                    config=self._build_client_config(),
                 )
             )
             self._async_client = client
@@ -2045,7 +2183,7 @@ class BedrockCompletion(BaseLLM):
             config["temperature"] = float(self.temperature)
         if self.top_p is not None:
             config["topP"] = float(self.top_p)
-        if self.stop_sequences:
+        if self.stop_sequences and self.supports_stop_words():
             config["stopSequences"] = self.stop_sequences
 
         if self.is_claude_model and self.top_k is not None:
@@ -2119,64 +2257,47 @@ class BedrockCompletion(BaseLLM):
         return self.supports_tools
 
     def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return True
+        """Check if the model supports stop words.
+
+        OpenAI models on Bedrock (gpt-oss, GPT-5.x, GPT-6) reject
+        ``stopSequences``. Stop words are still applied to their output
+        client-side by ``_apply_stop_words``.
+        """
+        return "openai." not in self.model.lower()
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+        from crewai.llms.context_window import (
+            BEDROCK_CONTEXT_WINDOWS,
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            resolve_context_window_size,
+        )
 
-        context_windows = {
-            "anthropic.claude-sonnet-4": 200000,
-            "anthropic.claude-opus-4": 200000,
-            "anthropic.claude-haiku-4": 200000,
-            "anthropic.claude-3-5-sonnet": 200000,
-            "anthropic.claude-3-5-haiku": 200000,
-            "anthropic.claude-3-opus": 200000,
-            "anthropic.claude-3-sonnet": 200000,
-            "anthropic.claude-3-haiku": 200000,
-            "anthropic.claude-3-7-sonnet": 200000,
-            "anthropic.claude-v2": 100000,
-            "amazon.titan-text-express": 8000,
-            "ai21.j2-ultra": 8192,
-            "cohere.command-text": 4096,
-            "meta.llama2-13b-chat": 4096,
-            "meta.llama2-70b-chat": 4096,
-            "meta.llama3-70b-instruct": 128000,
-            "deepseek.r1": 32768,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            BEDROCK_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            configured=self.context_window_size,
+        )
 
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+        Claude 3+, Nova Lite/Pro/Premier/2 Lite and OpenAI GPT-6 (Sol, Luna,
+        Astra) on Bedrock support vision, also behind a geo inference profile
+        prefix (``us.``, ``eu.``, ``global.``, ...).
 
         Returns:
             True if the model supports images.
         """
+        from crewai.llms.context_window import _REGION_PREFIXES
+
         model_lower = self.model.lower()
-        vision_models = (
-            "anthropic.claude-3",
-            "anthropic.claude-sonnet-4",
-            "anthropic.claude-opus-4",
-            "anthropic.claude-haiku-4",
-            "amazon.nova-lite",
-            "amazon.nova-pro",
-            "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
-        )
-        return any(model_lower.startswith(m) for m in vision_models)
+        if model_lower.startswith(_REGION_PREFIXES):
+            model_lower = model_lower.split(".", 1)[1]
+        if model_lower.startswith("anthropic."):
+            return claude_supports_vision(model_lower.removeprefix("anthropic."))
+        return _BEDROCK_VISION_MODEL.match(model_lower) is not None
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.

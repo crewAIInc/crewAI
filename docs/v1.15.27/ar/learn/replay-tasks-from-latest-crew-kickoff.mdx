@@ -1,0 +1,79 @@
+---
+title: إعادة تشغيل المهام من آخر تنفيذ للطاقم
+description: إعادة تشغيل المهام من آخر crew.kickoff(...)
+icon: arrow-right
+mode: "wide"
+---
+
+## مقدمة
+
+يوفر CrewAI القدرة على إعادة التشغيل من مهمة محددة من آخر تشغيل للطاقم. هذه الميزة مفيدة بشكل خاص عندما تكون قد أنهيت تشغيلاً وقد ترغب في إعادة محاولة مهام معينة أو لا تحتاج إلى إعادة جلب البيانات ووكلاؤك لديهم بالفعل السياق المحفوظ من تنفيذ التشغيل، لذا تحتاج فقط إلى إعادة تشغيل المهام التي تريدها.
+
+<Note>
+    يجب عليك تشغيل `crew.kickoff()` قبل أن تتمكن من إعادة تشغيل مهمة.
+    حالياً، يُدعم فقط آخر تشغيل، لذا إذا استخدمت `kickoff_for_each`، فسيسمح لك فقط بإعادة التشغيل من أحدث تشغيل للطاقم.
+</Note>
+
+إليك مثالاً على كيفية إعادة التشغيل من مهمة:
+
+### إعادة التشغيل من مهمة محددة باستخدام CLI
+
+لاستخدام ميزة إعادة التشغيل، اتبع هذه الخطوات:
+
+<Steps>
+   <Step title="افتح الطرفية أو موجه الأوامر."></Step>
+   <Step title="انتقل إلى المجلد الذي يقع فيه مشروع CrewAI الخاص بك."></Step>
+   <Step title="شغّل الأوامر التالية:">
+      لعرض معرفات المهام من آخر تشغيل، استخدم:
+
+      ```shell
+      crewai log-tasks-outputs
+      ```
+
+      بمجرد حصولك على `task_id` لإعادة التشغيل، استخدم:
+
+      ```shell
+      crewai replay -t <task_id>
+      ```
+   </Step>
+</Steps>
+
+<Note>
+    تأكد من أن `crewai` مثبت ومُعد بشكل صحيح في بيئة التطوير الخاصة بك.
+</Note>
+
+### إعادة التشغيل من مهمة برمجياً
+
+لإعادة التشغيل من مهمة برمجياً، استخدم الخطوات التالية:
+
+<Steps>
+   <Step title="حدد معرف المهمة ومعاملات الإدخال لعملية إعادة التشغيل.">
+      حدد `task_id` ومعاملات الإدخال لعملية إعادة التشغيل.
+   </Step>
+   <Step title="نفّذ أمر إعادة التشغيل ضمن كتلة try-except للتعامل مع الأخطاء المحتملة.">
+      نفّذ أمر إعادة التشغيل ضمن كتلة try-except للتعامل مع الأخطاء المحتملة.
+      <CodeGroup>
+          ```python Code
+            def replay():
+            """
+            Replay the crew execution from a specific task.
+            """
+            task_id = '<task_id>'
+            inputs = {"topic": "CrewAI Training"}  # This is optional; you can pass in the inputs you want to replay; otherwise, it uses the previous kickoff's inputs.
+            try:
+                YourCrewName_Crew().crew().replay(task_id=task_id, inputs=inputs)
+
+            except subprocess.CalledProcessError as e:
+                raise Exception(f"An error occurred while replaying the crew: {e}")
+
+            except Exception as e:
+                raise Exception(f"An unexpected error occurred: {e}")
+            ```
+      </CodeGroup>
+   </Step>
+</Steps>
+
+## الخاتمة
+
+مع التحسينات المذكورة أعلاه والوظائف المفصلة، أصبحت إعادة تشغيل مهام محددة في CrewAI أكثر كفاءة ومتانة.
+تأكد من اتباع الأوامر والخطوات بدقة لتحقيق أقصى استفادة من هذه الميزات.

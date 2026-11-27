@@ -54,7 +54,7 @@ def after_hook(context: LLMCallHookContext) -> str | None:
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor  # 전체 실행자 참조
+    executor: AgentExecutor  # 전체 실행자 참조
     messages: list               # 변경 가능한 메시지 목록
     agent: Agent                 # 현재 에이전트
     task: Task                   # 현재 작업
@@ -63,6 +63,8 @@ class LLMCallHookContext:
     iterations: int              # 현재 반복 횟수
     response: str | None         # LLM 응답 (후 훅용)
 ```
+
+`AgentExecutor`는 `crewai.agents`에서 가져옵니다. `CrewAgentExecutor`와 `crewai.experimental.agent_executor` 가져오기 경로는 제거되었습니다.
 
 ### 메시지 수정
 

@@ -37,6 +37,14 @@ class BraveSearchTool(BaseTool):
     search_url: str = "https://api.search.brave.com/res/v1/web/search"
     n_results: int = 10
     save_file: bool = False
+    api_key: str | None = Field(
+        default=None,
+        description=(
+            "Brave Search API key. Falls back to the BRAVE_API_KEY environment "
+            "variable."
+        ),
+        exclude=True,
+    )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -52,9 +60,11 @@ class BraveSearchTool(BaseTool):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        if "BRAVE_API_KEY" not in os.environ:
+        if not self.api_key:
+            self.api_key = os.environ.get("BRAVE_API_KEY")
+        if not self.api_key:
             raise ValueError(
-                "BRAVE_API_KEY environment variable is required for BraveSearchTool"
+                "BRAVE_API_KEY environment variable or api_key parameter is required for BraveSearchTool"
             )
 
     def _run(
@@ -126,7 +136,7 @@ class BraveSearchTool(BaseTool):
             payload["result_filter"] = "web"
 
             headers = {
-                "X-Subscription-Token": os.environ["BRAVE_API_KEY"],
+                "X-Subscription-Token": self.api_key or os.environ["BRAVE_API_KEY"],
                 "Accept": "application/json",
             }
 

@@ -20,7 +20,7 @@ from crewai_tools.tools.crewai_platform_tools.integrations_client import (
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
         "CREWAI_FACTORY": "false",
         "CREWAI_PLUS_URL": "https://platform.example.test/",
@@ -53,7 +53,7 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
     mock_get.side_effect = [index_response, show_response]
     connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
 
-    tools = ClipperClient().get_actions(
+    tools = ClipperClient(base_url="https://configured.example.test/").get_actions(
         [
             ApplicationSelector.from_string(f"github@{connection_id}"),
             ApplicationSelector.from_string("github/create_issue"),
@@ -83,14 +83,14 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
     }
     assert mock_get.call_args_list == [
         call(
-            "https://platform.example.test/clipper/v1/applications/github/tools",
+            "https://configured.example.test/clipper/v1/applications/github/tools",
             headers=headers,
             params={"connection_id": str(connection_id)},
             timeout=30,
             verify=True,
         ),
         call(
-            "https://platform.example.test/clipper/v1/applications/github/tools/create_issue",
+            "https://configured.example.test/clipper/v1/applications/github/tools/create_issue",
             headers=headers,
             params={},
             timeout=30,
@@ -114,7 +114,7 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
     },
 )
@@ -144,7 +144,7 @@ def test_clipper_client_preserves_discovery_ssl_behavior(
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
         "CREWAI_FACTORY": "false",
         "CREWAI_PLUS_URL": "https://platform.example.test/",
@@ -203,7 +203,7 @@ def test_clipper_client_executes_action(
 @patch.dict(
     "os.environ",
     {
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token",
         "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
         "CREWAI_FACTORY": "false",
         "CREWAI_PLUS_URL": "https://platform.example.test/",
@@ -265,7 +265,7 @@ def test_clipper_client_normalizes_execution_failure(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"},
     clear=True,
 )
 @patch(
@@ -296,7 +296,7 @@ def test_clipper_client_normalizes_non_json_service_failure(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"},
     clear=True,
 )
 @patch(
@@ -320,7 +320,7 @@ def test_clipper_client_discovers_without_deployment_instance_uuid(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"},
     clear=True,
 )
 @patch(
@@ -367,13 +367,72 @@ def test_clipper_client_requires_platform_integration_token(
         parameters={},
     )
 
-    with pytest.raises(ValueError, match="CREWAI_PLATFORM_INTEGRATION_TOKEN"):
+    with pytest.raises(ValueError, match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"):
         ClipperClient().execute_action(tool, {})
 
     mock_post.assert_not_called()
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "old_token"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_supports_legacy_platform_integration_token(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=200)
+    response.json.return_value = {"data": {"output": {}}}
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    ClipperClient().execute_action(tool, {})
+
+    assert mock_post.call_args.kwargs["headers"] == {
+        "Authorization": "Bearer old_token"
+    }
+
+
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "new_token",
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "old_token",
+    },
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_ignores_the_old_token_when_the_new_one_is_set(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=200)
+    response.json.return_value = {"data": {"output": {}}}
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    ClipperClient().execute_action(tool, {})
+
+    assert mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer new_token"
+
+
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -415,7 +474,7 @@ def test_legacy_client_normalizes_discovered_actions(mock_get: Mock) -> None:
     assert mock_get.call_args.kwargs["params"] == {"apps": "github/create_issue"}
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -457,7 +516,7 @@ def test_legacy_client_sends_multiple_selectors_in_one_request(
     }
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -583,7 +642,7 @@ def test_application_selector_rejects_invalid_values(
         ("TRUE", False),
     ],
 )
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
@@ -607,7 +666,7 @@ def test_legacy_client_preserves_discovery_ssl_behavior(
     assert mock_get.call_args.kwargs["verify"] is verify
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
 )
@@ -648,7 +707,7 @@ def test_legacy_client_preserves_execution_request(
     assert mock_post.call_args.kwargs["allow_redirects"] is False
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
 )
@@ -688,7 +747,7 @@ def test_legacy_client_normalizes_execution_failures(
     )
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
 )
@@ -713,3 +772,116 @@ def test_legacy_client_treats_redirect_as_execution_failure(
         code="302",
         retryable=False,
     )
+
+
+# Apps CrewAI AMP cannot resolve
+
+
+def amp_answer(status: int, body: Any) -> "requests.Response":
+    import json
+
+    import requests
+
+    response = requests.Response()
+    response.status_code = status
+    response._content = json.dumps(body).encode()
+    response.url = "https://platform.example.test/"
+    return response
+
+
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_legacy_client_names_the_apps_amp_reports_missing(mock_get: Mock) -> None:
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    mock_get.return_value = amp_answer(
+        422,
+        {"error": "No actions found for apps: gmail, slack", "missing": ["gmail", "slack"]},
+    )
+
+    with pytest.raises(
+        PlatformAppsUnavailableError,
+        match=r"^CrewAI AMP could not resolve these apps: gmail, slack$",
+    ) as raised:
+        LegacyClient().get_actions(
+            [ApplicationSelector.from_string("gmail"), ApplicationSelector.from_string("slack")]
+        )
+
+    assert raised.value.missing_apps == ["gmail", "slack"]
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [
+        (422, {"error": "no list"}),
+        (422, ["not", "a", "dict"]),
+        (401, {"error": "Invalid API key"}),
+        (500, {"error": "Failed to list actions"}),
+    ],
+)
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_legacy_client_raises_http_errors_that_name_no_app(
+    mock_get: Mock, status: int, body: Any
+) -> None:
+    import requests
+
+    mock_get.return_value = amp_answer(status, body)
+
+    with pytest.raises(requests.HTTPError, match=str(status)):
+        LegacyClient().get_actions([ApplicationSelector.from_string("gmail")])
+
+
+@pytest.mark.parametrize(("status", "code"), [(409, "conflict"), (404, "clipper_not_found")])
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_clipper_client_names_an_app_without_a_connection_or_unknown(
+    mock_get: Mock, status: int, code: str
+) -> None:
+    """Clipper answers 409 `conflict` for an app with no active connection, and
+    404 `clipper_not_found` for one it does not know."""
+    from crewai_core.platform_apps import PlatformAppsUnavailableError
+
+    mock_get.return_value = amp_answer(status, {"errors": [{"code": code}]})
+
+    with pytest.raises(PlatformAppsUnavailableError) as raised:
+        ClipperClient().get_actions([ApplicationSelector.from_string("slack@private")])
+
+    assert raised.value.missing_apps == ["slack"]
+
+
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_clipper_client_raises_a_refusal_that_names_no_app(mock_get: Mock) -> None:
+    import requests
+
+    mock_get.return_value = amp_answer(403, {"errors": [{"code": "clipper_disallowed"}]})
+
+    with pytest.raises(requests.HTTPError, match="403"):
+        ClipperClient().get_actions([ApplicationSelector.from_string("slack@private")])
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [
+        (404, {"error": "Not Found"}),
+        (404, "<html>404 Not Found</html>"),
+        (404, {"errors": [{"code": "not_found"}]}),
+        (409, {"errors": [{"code": "clipper_not_found"}]}),
+        (409, {"errors": []}),
+    ],
+    ids=["proxy-json", "proxy-html", "other-code", "code-for-another-status", "no-errors"],
+)
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
+def test_clipper_client_keeps_another_servers_404_or_409(
+    mock_get: Mock, status: int, body: Any
+) -> None:
+    """A 404 or 409 without Clipper's own code, from a proxy or a wrong base URL,
+    is not reported as an app that is not connected."""
+    import requests
+
+    mock_get.return_value = amp_answer(status, body)
+
+    with pytest.raises(requests.HTTPError, match=str(status)):
+        ClipperClient().get_actions([ApplicationSelector.from_string("slack@private")])

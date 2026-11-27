@@ -33,6 +33,8 @@ Pick the simplest action that does the job.
 - Use `call: expression` for simple reads, filters, computed values, and deterministic routing.
 - Use `call: agent` for one AI worker that classifies, decides, summarizes, writes, or drafts. Put `role`, `goal`, `backstory`, and `input` under `with`. Do not add an action-level `inputs` map to an agent.
 - Use `call: crew` for coordinated AI work with multiple agents or tasks. Define the crew under `with`. Pass runtime values with the action-level `inputs` map.
+- Save an agent's output as an artifact when people should open, download or share it (a report, a chart, a CSV). Set `artifact: true` under `with` to name it after the method and pick the kind from the output, or `artifact: {identifier: weekly-report, title: Weekly report, kind: html}` to set them. For a file the agent's tools write, add `file_path`; `image` and `file` kinds need it. For a PDF, set `kind: pdf` without `file_path` and have the agent write one full HTML page or markdown; it is rendered into the PDF without running scripts, so ask for charts as inline SVG and images as `data:` URLs; remote image URLs are not loaded. Attach the file from `${outputs.method_name.artifact.url}` (for example in an app action's `attachments`); link people to it with `${outputs.method_name.artifact.share_url}`.
+- Give an agent an artifact the run saved earlier with `input_files: {current_report: {artifact: <identifier>}}` under `with`, adding `version` for an older one. Use it when a resumed flow revises what it saved before a human review.
 
 ## Wire Methods Explicitly
 
@@ -113,6 +115,14 @@ Dynamic value rules:
 - Do not rely on crew action-level `inputs` alone to ground agent behavior. Inputs that do not match placeholders are effectively unused by the prompt.
 - Do not ask agents to infer missing facts when accuracy matters. Tell them to mark missing dates, amounts, offers, logs, or constraints as unknown.
 - Do not set `config.stream: true` unless the caller is expected to consume a streaming result. For normal generated flows and CLI smoke tests, omit it.
+
+## Evaluating this flow
+
+Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. It grades a run that already happened, so after changing code run the flow again first (`crewai run`, with `CREWAI_TRACING_ENABLED=true` in `.env`; a run with no terminal is only traced when logged in with `crewai login`), then `crewai eval`. In a terminal with no traced run recorded, it offers to run the flow once with tracing on.
+
+- Run by a coding agent or script (no terminal), it prints a **markdown brief** after the verdict: what failed and the change to make. Act on its "what failed" changes, then `crewai run` and `crewai eval` again. (An older AMP may print only a link to the brief, or nothing.)
+- `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is. A comparison can take an hour: run it in the background and read its output as it goes. A model that stops prints its error while the others run, with where it broke (step → task → agent) when the service knows it; a stop it cannot place prints after about 20 seconds, or when the comparison ends, with only the error.
+- Exit codes: `crewai eval` exits 0 only when the goal gate passed; `--models` exits 0 when the comparison finished, whatever each model's grades. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
 
 ## Examples
 
@@ -307,6 +317,8 @@ Fields:
 - `apps` (optional): list[string] | null; default `null`. Platform apps available to this agent. Can contain app names such as `gmail` or app/action refs such as `gmail/send_email`. Example: `["gmail", "slack/send_message"]`
 - `mcps` (optional): list[string | map of string to any] | null; default `null`. MCP server refs or serialized MCP server configs available to this agent. String refs can use HTTPS URLs, connected MCP integration slugs, or refs with a `#tool_name` suffix for specific tools. Example: `["https://api.weather.com/mcp#get_current_weather", "snowflake", "stripe#list_invoices", {"cache_tools_list": true, "headers": {"Authorization": "Bearer your_token"}, "streamable": true, "url": "https://api.example.com/mcp"}]`
 - `input` (required): string. Agent prompt template. Insert Flow values with `${...}`, for example `Ticket: ${state.ticket_id}`. Example: `${state.ticket.body}`
+- `input_files` (optional): map of string to object | null; default `null`. Files passed to the agent's kickoff, by name. Each points at an artifact this run saved, loaded when the step runs. Example: `{"current_report": {"artifact": "board-report"}}`
+- `artifact` (optional): object | boolean | null; default `null`. Save the agent's final output as an artifact. True names it after the flow method and picks the kind from the output. Examples: `true`, `{"identifier": "report", "kind": "html", "title": "Report"}`
 
 #### LLM Definition
 

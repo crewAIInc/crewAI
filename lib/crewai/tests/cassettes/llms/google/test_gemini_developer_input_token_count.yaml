@@ -1,0 +1,56 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "CrewAI coordinates autonomous AI agents
+      to complete a shared task."}], "role": "user"}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '123'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.65.0 gl-python/3.13.14
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:countTokens
+  response:
+    body:
+      string: "{\n  \"totalTokens\": 13,\n  \"promptTokensDetails\": [\n    {\n      \"modality\":
+        \"TEXT\",\n      \"tokenCount\": 13\n    }\n  ]\n}\n"
+    headers:
+      alt-svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      content-type:
+      - application/json; charset=UTF-8
+      date:
+      - Tue, 13 Oct 2026 17:55:09 GMT
+      server:
+      - scaffolding on HTTPServer2
+      server-timing:
+      - gfet4t7; dur=266
+      transfer-encoding:
+      - chunked
+      vary:
+      - Origin
+      - X-Origin
+      - Referer
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
