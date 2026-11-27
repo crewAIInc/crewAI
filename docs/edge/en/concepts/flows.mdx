@@ -729,6 +729,67 @@ Access all feedback collected during a flow via `self.last_human_feedback` (most
 
 For a complete guide on human feedback in flows, including **async/non-blocking feedback** with custom providers (Slack, webhooks, etc.), see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
 
+## Requesting input with `ask()` and a custom provider
+
+Inside a running step, a Flow can request input with `self.ask(...)`. By default it reads the console, but you can supply your own **input provider** (a Slack bot, a web UI, a test harness) by setting `input_provider` on the Flow. A provider implements `request_input(message, flow, metadata=None)` and returns the answer as a string, an `InputResponse` (to attach response metadata), or `None` when input is unavailable. Unlike `handle_turn()`, which starts a whole conversational turn, `ask()` prompts for a single value in the middle of a step.
+
+```python
+from crewai.flow import Flow, start
+from crewai.flow.input_provider import InputResponse
+
+
+class ScriptedInputProvider:
+    """A deterministic input provider: answers come from a script, not the console."""
+
+    def __init__(self, answers):
+        self.answers = answers
+
+    def request_input(self, message, flow, metadata=None):
+        # `metadata` is whatever the Flow passed to ask(); a real provider would use it to route
+        # the question (channel, user id, ...). Returning None means "no input available".
+        return self.answers.get(message)
+
+
+class OnboardingFlow(Flow):
+    input_provider = ScriptedInputProvider(
+        {
+            "What's your name?": InputResponse(text="Ada", metadata={"responded_by": "harness"}),
+            "Favorite language?": None,  # input unavailable (cancelled / dropped)
+        }
+    )
+
+    @start()
+    def collect(self):
+        name = self.ask("What's your name?", metadata={"field": "name"})
+        language = self.ask("Favorite language?", metadata={"field": "language"})
+        if language is None:
+            language = "(not provided)"
+        return f"Hello, {name}! Favourite language: {language}"
+
+
+flow = OnboardingFlow()
+print(flow.kickoff())
+# ask() returns only the text; the provider's response metadata is kept in the input history.
+for entry in flow._input_history:
+    print(f"- {entry['message']!r} -> {entry['response']!r} (response_metadata={entry['response_metadata']})")
+```
+
+Save it as `custom_input_provider.py` and run it:
+
+```bash
+python custom_input_provider.py
+```
+
+Expected output (CrewAI also prints its flow-execution panels):
+
+```text
+Hello, Ada! Favourite language: (not provided)
+- "What's your name?" -> 'Ada' (response_metadata={'responded_by': 'harness'})
+- 'Favorite language?' -> None (response_metadata=None)
+```
+
+`ask()` returns only the text; the provider's response metadata is kept in the flow's input history (`flow._input_history`). Handle a `None` answer explicitly — it means input was unavailable, not an empty answer. Providers are synchronous; CrewAI runs them in a thread so `ask()` never blocks the event loop.
+
 ## Adding Agents to Flows
 
 Agents can be seamlessly integrated into your flows, providing a lightweight alternative to full Crews when you need simpler, focused task execution. Here's an example of how to use an Agent within a flow to perform market research:
