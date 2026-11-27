@@ -176,3 +176,119 @@ def test_cyclic_flow_with_conditional_start():
     ]
 
     assert execution_log == expected
+
+
+import pytest
+from pydantic import BaseModel
+
+
+class _CheckpointQuote(BaseModel):
+    amount: int
+
+
+def test_checkpoint_restore_preserves_pydantic_output_for_listener(tmp_path):
+    """Regression test for #8974: Pydantic output survives checkpoint restore."""
+    from crewai import CheckpointConfig
+
+    failures = [1]
+
+    class OrderFlow(Flow):
+        @start()
+        def price(self) -> _CheckpointQuote:
+            return _CheckpointQuote(amount=42)
+
+        @listen(price)
+        def charge(self, quote):
+            if failures[0]:
+                failures[0] -= 1
+                raise RuntimeError("charge failed")
+            self.state["charged"] = quote.amount
+
+    with pytest.raises(RuntimeError, match="charge failed"):
+        OrderFlow(
+            checkpoint=CheckpointConfig(
+                location=str(tmp_path), on_events=["method_execution_finished"]
+            )
+        ).kickoff()
+
+    checkpoints = list(tmp_path.rglob("*.json"))
+    assert checkpoints
+    latest = max(checkpoints, key=lambda p: p.stat().st_mtime)
+
+    restored = OrderFlow.from_checkpoint(CheckpointConfig(restore_from=str(latest)))
+    restored.kickoff()
+    assert restored.state.get("charged") == 42
+
+
+def test_checkpoint_restore_preserves_human_feedback_result_dataclass(tmp_path):
+    """Regression test for #8974: HumanFeedbackResult dataclass survives checkpoint restore."""
+    from crewai import CheckpointConfig
+    from crewai.flow.async_feedback.types import HumanFeedbackProvider
+    from crewai.flow.human_feedback import HumanFeedbackResult, human_feedback
+
+    class _StubProvider(HumanFeedbackProvider):
+        def request_feedback(self, context, flow):
+            return "approved"
+
+    failures = [1]
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(message="Approve?", provider=_StubProvider())
+        def ask(self):
+            return "draft"
+
+        @listen(ask)
+        def record(self, result):
+            if failures[0]:
+                failures[0] -= 1
+                raise RuntimeError("record failed")
+            assert isinstance(result, HumanFeedbackResult)
+            self.state["feedback"] = result.feedback
+
+    with pytest.raises(RuntimeError, match="record failed"):
+        ReviewFlow(
+            checkpoint=CheckpointConfig(
+                location=str(tmp_path), on_events=["method_execution_finished"]
+            )
+        ).kickoff()
+
+    checkpoints = list(tmp_path.rglob("*.json"))
+    assert checkpoints
+    latest = max(checkpoints, key=lambda p: p.stat().st_mtime)
+
+    restored = ReviewFlow.from_checkpoint(CheckpointConfig(restore_from=str(latest)))
+    restored.kickoff()
+    assert restored.state.get("feedback") == "approved"
+
+
+def test_checkpoint_restore_rejects_untrusted_arbitrary_output_type(monkeypatch):
+    """Untrusted checkpoint output_type cannot instantiate arbitrary classes without opt-in."""
+    from crewai.flow.runtime import _restore_method_output_entry
+
+    class UnannotatedFlow(Flow):
+        @start()
+        def step(self):
+            return {"amount": 1}
+
+    flow = UnannotatedFlow()
+    monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+
+    tampered = {
+        "method": "step",
+        "output": {"amount": 42},
+        "output_type": f"{_CheckpointQuote.__module__}:{_CheckpointQuote.__qualname__}",
+    }
+    restored = _restore_method_output_entry(tampered, flow=flow)
+    assert restored["output"] == {"amount": 42}
+    assert isinstance(restored["output"], dict)
+
+    monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+    local_tampered = {
+        "method": "step",
+        "output": {"amount": 42},
+        "output_type": f"{_CheckpointQuote.__module__}:<locals>.Fake",
+    }
+    restored_local = _restore_method_output_entry(local_tampered, flow=flow)
+    assert isinstance(restored_local["output"], dict)
+

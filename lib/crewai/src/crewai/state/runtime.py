@@ -59,6 +59,7 @@ def _sync_checkpoint_fields(entity: object) -> None:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
     from crewai.flow.flow import Flow
+    from crewai.flow.runtime import _serialize_method_output_entry
 
     if isinstance(entity, BaseAgent):
         entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
@@ -67,7 +68,9 @@ def _sync_checkpoint_fields(entity: object) -> None:
             set(entity._completed_methods) if entity._completed_methods else None
         )
         entity.checkpoint_method_outputs = (
-            list(entity._method_outputs) if entity._method_outputs else None
+            [_serialize_method_output_entry(entry) for entry in entity._method_outputs]
+            if entity._method_outputs
+            else None
         )
         entity.checkpoint_method_counts = (
             {str(k): v for k, v in entity._method_execution_counts.items()}
