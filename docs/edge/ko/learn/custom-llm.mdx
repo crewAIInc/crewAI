@@ -32,6 +32,9 @@ class CustomLLM(BaseLLM):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
+        response_model: Optional[Any] = None,
     ) -> Union[str, Any]:
         """Call the LLM with the given messages."""
         # Convert string to message format if needed
@@ -153,7 +156,8 @@ def get_context_window_size(self) -> int:
 ```python
 import requests
 
-def call(self, messages, tools=None, callbacks=None, available_functions=None):
+def call(self, messages, tools=None, callbacks=None, available_functions=None,
+         from_task=None, from_agent=None, response_model=None):
     try:
         response = requests.post(
             self.endpoint,
@@ -184,7 +188,8 @@ class CustomAuthLLM(BaseLLM):
         self.auth_token = auth_token
         self.endpoint = endpoint
     
-    def call(self, messages, tools=None, callbacks=None, available_functions=None):
+    def call(self, messages, tools=None, callbacks=None, available_functions=None,
+             from_task=None, from_agent=None, response_model=None):
         headers = {
             "Authorization": f"Custom {self.auth_token}",  # Custom auth format
             "Content-Type": "application/json"
@@ -197,7 +202,8 @@ class CustomAuthLLM(BaseLLM):
 CrewAI는 에이전트의 동작을 제어하기 위해 `"\nObservation:"`를 스톱 워드로 자동 추가합니다. 만약 사용 중인 LLM이 스톱 워드를 지원한다면:
 
 ```python
-def call(self, messages, tools=None, callbacks=None, available_functions=None):
+def call(self, messages, tools=None, callbacks=None, available_functions=None,
+         from_task=None, from_agent=None, response_model=None):
     payload = {
         "model": self.model,
         "messages": messages,
@@ -212,7 +218,8 @@ def supports_stop_words(self) -> bool:
 만약 사용 중인 LLM이 스톱 워드를 기본적으로 지원하지 않는다면:
 
 ```python
-def call(self, messages, tools=None, callbacks=None, available_functions=None):
+def call(self, messages, tools=None, callbacks=None, available_functions=None,
+         from_task=None, from_agent=None, response_model=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
@@ -236,7 +243,8 @@ LLM이 함수 호출을 지원하는 경우, 전체 플로우를 구현하세요
 ```python
 import json
 
-def call(self, messages, tools=None, callbacks=None, available_functions=None):
+def call(self, messages, tools=None, callbacks=None, available_functions=None,
+         from_task=None, from_agent=None, response_model=None):
     # Convert string to message format
     if isinstance(messages, str):
         messages = [{"role": "user", "content": messages}]
