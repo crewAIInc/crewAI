@@ -24,6 +24,14 @@ Freshness = FreshnessPreset | FreshnessRange
 SafeSearch = Literal["off", "moderate", "strict"]
 
 
+class BraveSearchParams(WebSearchParams):
+    """Web search params plus the per-call save_file flag."""
+
+    save_file: bool | None = Field(
+        default=None, description="Per-call flag to save results to a file"
+    )
+
+
 # TODO: Extend support to additional endpoints (e.g., /images, /news, etc.)
 class BraveSearchTool(BaseTool):
     """A tool that performs web searches using the Brave Search API."""
@@ -33,7 +41,7 @@ class BraveSearchTool(BaseTool):
         "A tool that performs web searches using the Brave Search API. "
         "Results are returned as structured JSON data."
     )
-    args_schema: type[BaseModel] = WebSearchParams
+    args_schema: type[BaseModel] = BraveSearchParams
     search_url: str = "https://api.search.brave.com/res/v1/web/search"
     n_results: int = 10
     save_file: bool = False
@@ -110,7 +118,11 @@ class BraveSearchTool(BaseTool):
             if safesearch := kwargs.get("safesearch"):
                 payload["safesearch"] = safesearch
 
-            save_file = kwargs.get("save_file", self.save_file)
+            save_file = (
+            kwargs.get("save_file")
+            if kwargs.get("save_file") is not None
+            else self.save_file
+        )
             if freshness := kwargs.get("freshness"):
                 payload["freshness"] = freshness
 
