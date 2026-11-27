@@ -1,0 +1,123 @@
+---
+title: Xpenvo Agents Integration
+description: Give each CrewAI crew a hard dollar limit that is checked before every model call, with per-run and per-customer limits, loop pausing and a kill switch.
+icon: wallet
+mode: "wide"
+---
+
+# Introduction
+
+A crew can hand work between agents many times, and every hand-off is more model calls. `max_iter` and `max_rpm` count steps and requests, not dollars. [Xpenvo Agents](https://agents.xpenvo.com) is a hosted proxy that gives each crew, run or end customer a hard spending limit. The cost of a call is reserved before it reaches the provider, so a call that would go over the limit is refused and never billed.
+
+You keep your provider account and API key. Point the crew's `LLM` at Xpenvo and nothing else in your crew changes.
+
+## Features
+
+- **Hard limits, checked before each call**: the most a call could cost is held against the budget before it is sent, then the real cost is charged when it ends.
+- **One limit per crew, run or customer**: give each crew its own agent key and budget, and add your own run or end-customer id to cap each run or each customer.
+- **Loop and spike pausing**: a key that sends the same request again and again, or spends far faster than usual, is paused.
+- **Approvals and kill switch**: ask a person to approve calls above an amount you set, or stop every key in an organisation at once.
+- **Cheaper fallback models**: when a limit would block a call, Xpenvo can send it to a cheaper model you name instead of refusing it.
+- **Many providers**: OpenAI, Anthropic, Gemini, Mistral, OpenRouter, Azure OpenAI and Amazon Bedrock.
+
+## Setup Instructions
+
+<Steps>
+  <Step title="Create a budget and an agent key">
+    Sign up at [agents.xpenvo.com](https://agents.xpenvo.com), create a budget with a dollar limit, and create an agent key (`xpv_...`) for it.
+    ```bash
+    export XPENVO_KEY="xpv_..."
+    export OPENAI_API_KEY="sk-..."
+    ```
+  </Step>
+  <Step title="Point the crew's LLM at Xpenvo">
+    Set `base_url` to Xpenvo and put your agent key, a colon, then your provider key in `api_key`. Xpenvo splits them, stores neither, and sends only your provider key on to the provider.
+    ```python
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-5-mini",
+        base_url="https://agents.xpenvo.com/v1",
+        api_key=f"{os.environ['XPENVO_KEY']}:{os.environ['OPENAI_API_KEY']}",
+    )
+    ```
+  </Step>
+  <Step title="Give the LLM to your agents">
+    Use this `llm` for every agent in the crew. Each call is now checked against the budget first.
+  </Step>
+</Steps>
+
+## Quick Start Example
+
+```python
+import os
+from crewai import Agent, Task, Crew, LLM
+
+llm = LLM(
+    model="openai/gpt-5-mini",
+    base_url="https://agents.xpenvo.com/v1",
+    api_key=f"{os.environ['XPENVO_KEY']}:{os.environ['OPENAI_API_KEY']}",
+)
+
+researcher = Agent(
+    role="Research Specialist",
+    goal="Research topics thoroughly",
+    backstory="Expert researcher with skills in finding information",
+    llm=llm,
+)
+
+task = Task(
+    description="Research the given topic and provide a short summary",
+    agent=researcher,
+    expected_output="A summary with the key findings",
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff())
+```
+
+## Limit each run or each end customer
+
+With OpenAI models you can keep your plain OpenAI key and send the agent key as a header instead. This also lets you add your own run id or end-customer id, so that per-run and per-customer limits on the budget apply.
+
+```python
+import os, uuid
+from crewai import LLM
+
+llm = LLM(
+    model="openai/gpt-5-mini",
+    base_url="https://agents.xpenvo.com/v1",
+    api_key=os.environ["OPENAI_API_KEY"],
+    default_headers={
+        "X-Xpenvo-Key": os.environ["XPENVO_KEY"],
+        "X-Xpenvo-Run": f"run-{uuid.uuid4().hex[:12]}",  # your own run id
+        "X-Xpenvo-Customer": "customer-42",  # your own customer id, never an email address
+    },
+)
+```
+
+## Claude and other providers
+
+For Claude, use an `anthropic/` model, the Xpenvo address without `/v1`, and your Anthropic key after the colon:
+
+```python
+llm = LLM(
+    model="anthropic/claude-sonnet-5-5",
+    base_url="https://agents.xpenvo.com",
+    api_key=f"{os.environ['XPENVO_KEY']}:{os.environ['ANTHROPIC_API_KEY']}",
+)
+```
+
+The addresses for Gemini, Mistral, OpenRouter, Azure OpenAI and Amazon Bedrock are in the [Xpenvo setup guide](https://agents.xpenvo.com/docs).
+
+## What happens when a limit is reached
+
+The call is refused before it reaches the provider, so it is not billed. CrewAI sees a normal model error, and the response carries an `X-Xpenvo-Error` header with the reason, for example `over_budget`, `run_limit`, `customer_limit`, `loop_detected` or `kill_switch`. Every decision is shown in the Xpenvo dashboard with its reason.
+
+## Resources
+
+- [CrewAI guide on agents.xpenvo.com](https://agents.xpenvo.com/guides/crewai-budget)
+- [Setup guide for all providers](https://agents.xpenvo.com/docs)
+- [Python helper library](https://pypi.org/project/xpenvo/) (`pip install xpenvo`)
+- [Security and privacy](https://agents.xpenvo.com/security)
