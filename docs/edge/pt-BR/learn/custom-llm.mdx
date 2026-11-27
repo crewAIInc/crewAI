@@ -64,16 +64,26 @@ O método `call()` é o núcleo da sua implementação de LLM. Ele deve:
 
 ### Suporte a Stop Words
 
-O CrewAI adiciona automaticamente `"\nObservation:"` como stop word para controlar o comportamento do agente. Se o seu LLM suporta stop words:
+O CrewAI adiciona automaticamente `"\nObservation:"` como stop word para controlar o comportamento do agente. Se o seu LLM suporta stop words, envie `self.stop` na chamada da API.
 
 ```python
 # (não traduzir blocos de código)
 ```
 
-Se o seu LLM não suporta stop words nativamente:
+Se o seu LLM não suporta stop words nativamente, trunque a resposta com `BaseLLM._apply_stop_words`. O corte é a ocorrência mais antiga de qualquer stop word no texto gerado. Tanto `stop=["LATE", "EARLY"]` quanto `stop=["EARLY", "LATE"]` transformam `"hello EARLY middle LATE tail"` em `"hello"`, porque `EARLY` aparece primeiro e o trecho mantido passa por `str.strip()`. Um texto que não contém nenhuma stop word é devolvido sem alteração.
 
 ```python
-# (não traduzir blocos de código)
+def call(self, messages, tools=None, callbacks=None, available_functions=None):
+    response = self._make_api_call(messages, tools)
+    content = response["choices"][0]["message"]["content"]
+
+    # Earliest stop word in the text wins; the kept prefix is stripped.
+    content = self._apply_stop_words(content)
+
+    return content
+
+def supports_stop_words(self) -> bool:
+    return False  # Tell CrewAI we handle stop words manually
 ```
 
 ## Chamada de Funções
