@@ -57,6 +57,9 @@ _DATES: Final = "datetime64[us]"
 
 _US_NUMBER: Final = re.compile(r"[-+]?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?([eE][-+]?\d+)?")
 _EU_NUMBER: Final = re.compile(r"[-+]?(\d{1,3}(\.\d{3})+|\d+)(,\d+)?")
+# A float holds every integer of up to 15 significant digits; past that it rounds,
+# so a column of long IDs would read as other IDs.
+_LONG_INTEGER: Final = re.compile(r"[-+]?0*[1-9]\d{15,}")
 _DATE_TEXT: Final = re.compile(
     r"\d{4}-\d{1,2}-\d{1,2}([ T]\d{1,2}:\d{2}(:\d{2})?)?|\d{1,2}[./]\d{1,2}[./]\d{2,4}"
 )
@@ -759,8 +762,9 @@ def _build_table(sheet: Sheet, index: int, detected: bool) -> Table:
     )
 
 
-def numbers(texts: Column, decimal_comma: bool) -> Column:
-    """Text that reads as a number, as floats; NaN where it doesn't."""
+def numbers(texts: Column, decimal_comma: bool, *, exact: bool = False) -> Column:
+    """Text that reads as a number, as floats; NaN where it doesn't. With ``exact``,
+    also NaN for an integer too long for a float to hold."""
     cleaned = texts.str.replace("\N{NO-BREAK SPACE}", "", regex=False).str.replace(
         " ", "", regex=False
     )
@@ -773,6 +777,9 @@ def numbers(texts: Column, decimal_comma: bool) -> Column:
         matched = cleaned.str.fullmatch(_US_NUMBER.pattern)
         cleaned = cleaned.str.replace(",", "", regex=False)
     keep = matched.fillna(False).astype(bool)
+    if exact:
+        long = cleaned.str.fullmatch(_LONG_INTEGER.pattern).fillna(False).astype(bool)
+        keep &= ~long
     return pd.to_numeric(cleaned.where(keep), errors="coerce")
 
 
@@ -836,8 +843,12 @@ def _typed(raw: Column, decimal_comma: bool) -> tuple[Column, str, int]:
     is_bool, is_number = cell_kinds == "boolean", cell_kinds == "number"
     is_date, is_text = cell_kinds == "date", cell_kinds == "text"
     texts = present[is_text].astype(str)
+    # Exact only here, so a column of long IDs types as text. A filter value or a sum
+    # is compared with a number column's floats, so it reads a long integer as one.
     numeric_text = (
-        numbers(texts, decimal_comma) if len(texts) else pd.Series(dtype=float)
+        numbers(texts, decimal_comma, exact=True)
+        if len(texts)
+        else pd.Series(dtype=float)
     )
     date_text = (
         _dates(texts[numeric_text.isna()], dayfirst=decimal_comma)
