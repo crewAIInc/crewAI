@@ -1,6 +1,6 @@
 """Tests for TokenManager with atomic file operations."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import tempfile
@@ -84,7 +84,7 @@ class TestTokenManager(unittest.TestCase):
         data = json.loads(decrypted_data)
         self.assertEqual(data["access_token"], access_token)
         expiration = datetime.fromisoformat(data["expiration"])
-        self.assertEqual(expiration, datetime.fromtimestamp(expires_at))
+        self.assertEqual(expiration, datetime.fromtimestamp(expires_at, tz=timezone.utc))
 
     @patch("crewai_core.token_manager.TokenManager._read_secure_file")
     def test_get_token_valid(
