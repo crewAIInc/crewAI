@@ -286,7 +286,10 @@ def load_agent(source: str | Path, *, project_root: str | Path | None = None) ->
             str(root / skill)
             if isinstance(skill, str)
             and not skill.startswith("@")
-            and not skill.lstrip().startswith(("---\n", "---\r\n"))
+            and not skill.lstrip()
+            .removeprefix("\ufeff")
+            .lstrip()
+            .startswith(("---\n", "---\r\n"))
             and not _is_python_ref(skill)
             else skill
             for skill in defn["skills"]

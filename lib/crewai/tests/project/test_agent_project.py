@@ -170,6 +170,28 @@ def test_project_skill_paths_are_independent_of_cwd(
     assert {skill.name for skill in agent.skills} == {"support-policy", "inline-style"}
 
 
+def test_project_loads_inline_skill_with_utf8_bom(data_project, monkeypatch, tmp_path):
+    write_agent_data(
+        data_project,
+        "agent.json",
+        skills=[
+            "\ufeff---\n"
+            "name: inline-style\n"
+            "description: Write clear answers.\n"
+            "---\n"
+            "Be concise."
+        ],
+    )
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    agent = load_agent_project(data_project)
+
+    assert [skill.name for skill in agent.skills] == ["inline-style"]
+    assert [skill.instructions for skill in agent.skills] == ["Be concise."]
+
+
 @pytest.mark.parametrize("extension", ["json", "yml", "yaml"])
 def test_explicit_data_definition_uses_project_root_for_custom_tools(
     data_project, extension

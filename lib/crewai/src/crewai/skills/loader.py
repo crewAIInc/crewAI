@@ -187,17 +187,18 @@ def load_skill(
         if activate:
             return [resolve_registry_ref(skill, source=source)]
         return [resolve_registry_ref(skill, source=source, activate=False)]
-    if isinstance(skill, str) and skill.lstrip().startswith(("---\n", "---\r\n")):
-        frontmatter_dict, body = parse_frontmatter(skill.strip())
-        return [
-            Skill(
-                frontmatter=SkillFrontmatter(**frontmatter_dict),
-                instructions=body,
-                path=Path("."),
-                disclosure_level=INSTRUCTIONS,
-            )
-        ]
     if isinstance(skill, str):
+        inline_content = skill.lstrip().removeprefix("\ufeff").lstrip()
+        if inline_content.startswith(("---\n", "---\r\n")):
+            frontmatter_dict, body = parse_frontmatter(inline_content.strip())
+            return [
+                Skill(
+                    frontmatter=SkillFrontmatter(**frontmatter_dict),
+                    instructions=body,
+                    path=Path("."),
+                    disclosure_level=INSTRUCTIONS,
+                )
+            ]
         discovered = discover_skills(Path(skill), source=source)
         if not activate:
             return discovered
