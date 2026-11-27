@@ -1045,6 +1045,38 @@ mode: "wide"
     [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
     وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
   </Accordion>
+
+  <Accordion title="Together AI">
+    يتصل CrewAI بـ Together AI عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    TOGETHER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    TOGETHER_BASE_URL=https://api.together.ai/v1
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Together AI:
+      - نماذج مفتوحة الأوزان خلف نقطة نهاية متوافقة مع OpenAI
+      - البث واستدعاء الأدوات والمخرجات المنظمة بمخطط JSON
+      - نقاط نهاية بدون خادم ومخصّصة
+    </Info>
+
+    تُزال بادئة `together/` فقط. تحتفظ معرّفات النماذج بصيغة `organization/model`، لذا يصل
+    `together/Qwen/Qwen3-235B-A22B-Instruct-2507-tput` إلى الـ API بالصيغة
+    `Qwen/Qwen3-235B-A22B-Instruct-2507-tput`.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

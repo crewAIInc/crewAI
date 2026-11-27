@@ -788,6 +788,38 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
     참조하세요.
   </Accordion>
+
+  <Accordion title="Together AI">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Together AI에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    TOGETHER_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a gateway
+    TOGETHER_BASE_URL=https://api.together.ai/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Together AI 특징:
+      - OpenAI 호환 엔드포인트로 제공되는 오픈 웨이트 모델
+      - 스트리밍, 도구 호출, JSON 스키마 구조화 출력
+      - 서버리스 및 전용 엔드포인트
+    </Info>
+
+    `together/` 접두사만 제거됩니다. 모델 ID는 `organization/model` 형식을 유지하므로
+    `together/Qwen/Qwen3-235B-A22B-Instruct-2507-tput`은 API에
+    `Qwen/Qwen3-235B-A22B-Instruct-2507-tput`으로 전달됩니다.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
