@@ -402,5 +402,7 @@ def get_supported_content_types(provider: str, api: str | None = None) -> list[s
     if constraints.video:
         types.append("video/")
     if constraints.text:
-        types.append("text/")
+        types.extend(
+            ["text/", "application/json", "application/xml", "application/x-yaml"]
+        )
     return types
