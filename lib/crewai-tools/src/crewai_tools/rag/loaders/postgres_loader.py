@@ -1,7 +1,7 @@
 """PostgreSQL database loader."""
 
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from psycopg2 import Error, connect
 from psycopg2.extras import RealDictCursor
@@ -35,11 +35,13 @@ class PostgresLoader(BaseLoader):
         if parsed.scheme not in ["postgresql", "postgres", "postgresql+psycopg2"]:
             raise ValueError(f"Invalid PostgreSQL URI scheme: {parsed.scheme}")
 
-        connection_params = {
+        connection_params: dict[str, Any] = {
             "host": parsed.hostname or "localhost",
             "port": parsed.port or 5432,
-            "user": parsed.username,
-            "password": parsed.password,
+            "user": unquote(parsed.username) if parsed.username is not None else None,
+            "password": unquote(parsed.password)
+            if parsed.password is not None
+            else None,
             "database": parsed.path.lstrip("/") if parsed.path else None,
             "cursor_factory": RealDictCursor,
         }
