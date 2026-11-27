@@ -2027,12 +2027,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Group all tool calls into a single assistant message
         tool_calls_to_report = []
+        runnable_tool_calls = []
         for tool_call in pending_tool_calls:
             info = extract_tool_call_info(tool_call)
             if not info:
                 continue
 
             call_id, func_name, func_args = info
+            runnable_tool_calls.append(tool_call)
             tool_calls_to_report.append(
                 {
                     "id": call_id,
@@ -2056,11 +2058,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
             self.state.messages.append(assistant_message)
 
-        runnable_tool_calls = [
-            tool_call
-            for tool_call in pending_tool_calls
-            if extract_tool_call_info(tool_call) is not None
-        ]
         should_parallelize = self._should_parallelize_native_tool_calls(
             runnable_tool_calls
         )
@@ -2111,8 +2108,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         else:
             # Execute sequentially so result_as_answer tools can short-circuit
             # immediately without running remaining calls.
-            for tool_call in runnable_tool_calls:
+            for tool_call, report in zip(
+                runnable_tool_calls, tool_calls_to_report, strict=True
+            ):
                 execution_result = self._execute_single_native_tool_call(tool_call)
+                self._record_effective_tool_arguments(report, execution_result)
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
                 result = self._prepare_tool_result_for_context(execution_result)
@@ -2152,7 +2152,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             return "native_tool_completed"
 
-        for execution_result in execution_results:
+        for execution_result, report in zip(
+            execution_results, tool_calls_to_report, strict=True
+        ):
+            self._record_effective_tool_arguments(report, execution_result)
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
             result = self._prepare_tool_result_for_context(execution_result)
@@ -2194,6 +2197,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 return "tool_result_is_final"
 
         return "native_tool_completed"
+
+    @staticmethod
+    def _record_effective_tool_arguments(
+        report: dict[str, Any], execution_result: dict[str, Any]
+    ) -> None:
+        if (arguments := execution_result.get("history_arguments")) is not None:
+            report["function"]["arguments"] = arguments
 
     def _should_parallelize_native_tool_calls(self, tool_calls: list[Any]) -> bool:
         """Determine if native tool calls are safe to run in parallel."""
@@ -2260,6 +2270,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
             return parse_error
         args_dict: dict[str, Any] = parsed_args or {}
+        model_argument_names = tuple(args_dict) if isinstance(args_dict, dict) else ()
+        model_arguments = json.dumps(args_dict) if model_argument_names else ""
 
         # Get agent_key for event tracking
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -2331,6 +2343,18 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
         input_str = json.dumps(args_dict) if args_dict else ""
+        history_arguments = None
+        if model_argument_names and input_str != model_arguments:
+            # Keep newly injected top-level arguments out of model history.
+            visible_arguments = json.dumps(
+                {
+                    name: args_dict[name]
+                    for name in model_argument_names
+                    if name in args_dict
+                }
+            )
+            if visible_arguments != model_arguments:
+                history_arguments = visible_arguments
         if (
             not hook_blocked
             and self.tools_handler
@@ -2346,6 +2370,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 tool_failure = detect_tool_failure(cached_result)
                 from_cache = True
 
+        tool_called = False
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
@@ -2354,6 +2379,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
+                    tool_called = True
                     raw_result = tool_func(**args_dict)
                     raw_tool_result = raw_result
 
@@ -2463,6 +2489,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "func_name": func_name,
             "result": result,
             "tool_args": args_dict,
+            "history_arguments": history_arguments
+            if tool_called or from_cache
+            else None,
             "from_cache": from_cache,
             "original_tool": original_tool,
             "tool_failure": tool_failure,
