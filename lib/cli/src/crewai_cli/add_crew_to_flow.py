@@ -19,7 +19,8 @@ def add_crew_to_flow(crew_name: str) -> None:
 
     crews_folder = _find_crews_folder(Path.cwd())
 
-    create_embedded_crew(crew_name, parent_folder=crews_folder)
+    if not create_embedded_crew(crew_name, parent_folder=crews_folder):
+        return
 
     click.echo(
         f"Crew {crew_name} added to the current flow successfully!",
@@ -57,8 +58,12 @@ def _find_crews_folder(flow_folder: Path) -> Path:
     raise click.ClickException(message)
 
 
-def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
-    """Create a new crew within an existing flow project."""
+def create_embedded_crew(crew_name: str, parent_folder: Path) -> bool:
+    """Create a new crew within an existing flow project.
+
+    Returns True when the crew was written and False when the user declined to
+    overwrite an existing crew folder.
+    """
     folder_name = crew_name.replace(" ", "_").replace("-", "_").lower()
     class_name = crew_name.replace("_", " ").replace("-", " ").title().replace(" ", "")
 
@@ -69,7 +74,7 @@ def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
             f"Crew {folder_name} already exists. Do you want to override it?"
         ):
             click.secho("Operation cancelled.", fg="yellow")
-            return
+            return False
         click.secho(f"Overriding crew {folder_name}...", fg="green", bold=True)
     else:
         click.secho(f"Creating crew {folder_name}...", fg="green", bold=True)
@@ -94,3 +99,4 @@ def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
     click.secho(
         f"Crew {crew_name} added to the flow successfully!", fg="green", bold=True
     )
+    return True
