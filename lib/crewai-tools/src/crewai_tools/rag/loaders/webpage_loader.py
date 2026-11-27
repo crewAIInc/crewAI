@@ -26,6 +26,7 @@ class WebPageLoader(BaseLoader):
 
         try:
             response = safe_get(url, timeout=15, headers=headers)
+            response.raise_for_status()
             response.encoding = response.apparent_encoding
 
             soup = BeautifulSoup(response.text, "html.parser")
