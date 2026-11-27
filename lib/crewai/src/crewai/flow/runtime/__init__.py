@@ -1773,7 +1773,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return cast(T, {"id": str(uuid4())})
 
         if isinstance(init_state, dict):
-            new_state = dict(init_state)  # Copy to avoid mutations
+            # Isolate nested values. A shallow dict() copy leaves inner
+            # containers shared with the caller and with other Flow instances.
+            try:
+                new_state = copy.deepcopy(init_state)
+            except (TypeError, AttributeError):
+                new_state = dict(init_state)
             if "id" not in new_state:
                 new_state["id"] = str(uuid4())
             return cast(T, new_state)
