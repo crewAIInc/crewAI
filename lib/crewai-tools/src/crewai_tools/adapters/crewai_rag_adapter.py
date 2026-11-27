@@ -304,7 +304,14 @@ class CrewAIRagAdapter(Adapter):
                             continue
             else:
                 metadata: dict[str, Any] = base_metadata.copy()
-                source_content = SourceContent(source_ref)
+                # For an inline text dict, index the body and keep `source` as
+                # metadata. Otherwise the source label gets indexed instead.
+                text = (
+                    str(arg.get("content", ""))
+                    if isinstance(arg, dict) and data_type == DataType.TEXT
+                    else source_ref
+                )
+                source_content = SourceContent(text)
 
                 if data_type in [
                     DataType.PDF_FILE,
