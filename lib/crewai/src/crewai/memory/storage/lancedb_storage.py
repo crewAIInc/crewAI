@@ -63,6 +63,32 @@ def _scope_prefix_filter(prefix: str) -> str:
     return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
 
 
+def _build_filter_condition(
+    scope_prefix: str | None,
+    record_ids: list[str] | None,
+    older_than: datetime | None,
+) -> str | None:
+    """Combine the SQL-expressible delete criteria into one ``where`` clause.
+
+    Criteria containing ``OR`` are parenthesised and everything is joined with
+    ``AND`` so the criteria narrow each other instead of widening the match.
+    Returns ``None`` when no criterion applies.
+    """
+    conditions: list[str] = []
+    if record_ids:
+        conditions.append(_id_in_filter(record_ids))
+    if scope_prefix is not None and scope_prefix.strip("/"):
+        prefix = scope_prefix.rstrip("/")
+        if not prefix.startswith("/"):
+            prefix = "/" + prefix
+        conditions.append(f"({_scope_prefix_filter(prefix)} OR scope = '/')")
+    if older_than is not None:
+        conditions.append(f"created_at < '{older_than.isoformat()}'")
+    if not conditions:
+        return None
+    return " AND ".join(conditions)
+
+
 class LanceDBStorage:
     """LanceDB-backed storage for the unified memory system."""
 
@@ -441,12 +467,16 @@ class LanceDBStorage:
         if self._table is None:
             return 0
         with store_lock(self._lock_name):
-            if record_ids and not (categories or metadata_filter):
-                before = int(self._table.count_rows())
-                self._do_write("delete", _id_in_filter(record_ids))
-                return before - int(self._table.count_rows())
             if categories or metadata_filter:
-                rows = self._scan_rows(scope_prefix)
+                # Derived from the table schema so it stays in sync with the
+                # stored columns. Skip ``vector`` (the large embedding): this
+                # scan only inspects record metadata.
+                columns = [f.name for f in self._table.schema if f.name != "vector"]
+                rows = self._scan_rows(
+                    scope_prefix,
+                    columns=columns,
+                    where=_build_filter_condition(None, record_ids, older_than),
+                )
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
@@ -458,29 +488,15 @@ class LanceDBStorage:
                         record.metadata.get(k) == v for k, v in metadata_filter.items()
                     ):
                         continue
-                    if older_than and record.created_at >= older_than:
-                        continue
                     to_delete.append(record.id)
                 if not to_delete:
                     return 0
                 before = int(self._table.count_rows())
                 self._do_write("delete", _id_in_filter(to_delete))
                 return before - int(self._table.count_rows())
-            conditions = []
-            if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                if not prefix.startswith("/"):
-                    prefix = "/" + prefix
-                conditions.append(f"{_scope_prefix_filter(prefix)} OR scope = '/'")
-            if older_than is not None:
-                conditions.append(f"created_at < '{older_than.isoformat()}'")
-            if not conditions:
-                before = int(self._table.count_rows())
-                self._do_write("delete", "id != ''")
-                return before - int(self._table.count_rows())
-            where_expr = " AND ".join(conditions)
+            where_expr = _build_filter_condition(scope_prefix, record_ids, older_than)
             before = int(self._table.count_rows())
-            self._do_write("delete", where_expr)
+            self._do_write("delete", where_expr or "id != ''")
             return before - int(self._table.count_rows())
 
     def _scan_rows(
@@ -488,6 +504,7 @@ class LanceDBStorage:
         scope_prefix: str | None = None,
         limit: int = _SCAN_ROWS_LIMIT,
         columns: list[str] | None = None,
+        where: str | None = None,
     ) -> list[dict[str, Any]]:
         """Scan rows optionally filtered by scope prefix.
 
@@ -500,12 +517,16 @@ class LanceDBStorage:
             columns: Optional list of column names to fetch.  Pass only the
                 columns you need for metadata operations to avoid reading the
                 heavy ``vector`` column unnecessarily.
+            where: Optional extra SQL predicate, ANDed with the scope filter.
+                Applied before ``limit`` so it narrows the rows scanned.
         """
         if self._table is None:
             return []
         q = self._table.search()
         if scope_prefix is not None and scope_prefix.strip("/"):
             q = q.where(_scope_prefix_filter(scope_prefix.rstrip("/")))
+        if where is not None:
+            q = q.where(where)
         if columns is not None:
             q = q.select(columns)
         result: list[dict[str, Any]] = q.limit(limit).to_list()
