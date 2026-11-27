@@ -1,5 +1,6 @@
 """Handles planning and coordination of crew tasks."""
 
+import json
 import logging
 
 from pydantic import BaseModel, Field
@@ -149,10 +150,14 @@ class CrewPlanner:
             agent_tools = (
                 f"[{', '.join(str(tool) for tool in task.agent.tools)}]"
                 if task.agent and task.agent.tools
-                else '"agent has no tools"',
-                f',\n                "agent_knowledge": "[\\"{knowledge_list[0]}\\"]"'
-                if knowledge_list and str(knowledge_list) != "None"
-                else "",
+                else '"agent has no tools"'
+            )
+            # Every source, not just the first, and JSON-escaped so quotes and
+            # newlines in a source cannot break the summary.
+            agent_knowledge = (
+                f',\n                "agent_knowledge": {json.dumps([str(item) for item in knowledge_list])}'
+                if knowledge_list
+                else ""
             )
             task_summary = f"""
                 Task Number {idx + 1} - {task.description}
@@ -161,7 +166,7 @@ class CrewPlanner:
                 "agent": {task.agent.role if task.agent else "None"}
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
-                "agent_tools": {"".join(agent_tools)}"""
+                "agent_tools": {agent_tools}{agent_knowledge}"""
 
             tasks_summary.append(task_summary)
         return " ".join(tasks_summary)
