@@ -975,6 +975,117 @@ class TestNativeProviderAfterHooksAsync:
 
         assert llm.call([{"role": "user", "content": "hi"}]) == "the [REDACTED] is 42"
 
+    @staticmethod
+    def _anthropic_llm(stream: bool):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from anthropic.types import Message
+
+        from crewai.llm import LLM
+
+        message = Message.model_validate(
+            {
+                "id": "msg_1",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-sonnet-4-5",
+                "content": [{"type": "text", "text": "the SECRET is 42"}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+            }
+        )
+
+        class FakeStream:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def __aiter__(self):
+                delta = MagicMock(spec=["type", "delta"])
+                delta.type = "content_block_delta"
+                delta.delta.text = "the SECRET is 42"
+                yield delta
+
+            async def get_final_message(self):
+                return message
+
+        llm = LLM(model="anthropic/claude-sonnet-4-5", api_key="sk-test", stream=stream)
+        client = MagicMock()
+        client.messages.create = AsyncMock(return_value=message)
+        client.messages.stream.return_value = FakeStream()
+        llm._get_async_client = lambda: client  # type: ignore[method-assign]
+        return llm
+
+    @staticmethod
+    def _openai_responses_llm(stream: bool):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from openai.types.responses import Response
+
+        from crewai.llm import LLM
+
+        response = Response.model_validate(
+            {
+                "id": "resp_1",
+                "object": "response",
+                "created_at": 0,
+                "model": "gpt-4o-mini",
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "id": "msg_1",
+                        "role": "assistant",
+                        "status": "completed",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": "the SECRET is 42",
+                                "annotations": [],
+                            }
+                        ],
+                    }
+                ],
+                "parallel_tool_calls": False,
+                "tool_choice": "auto",
+                "tools": [],
+            }
+        )
+
+        async def events():
+            yield MagicMock(type="response.output_text.delta", delta="the SECRET is 42")
+            yield MagicMock(type="response.completed", response=response)
+
+        llm = LLM(model="gpt-4o-mini", api="responses", api_key="sk-test", stream=stream)
+        client = MagicMock()
+        client.responses.create = AsyncMock(
+            return_value=events() if stream else response
+        )
+        llm._get_async_client = lambda: client  # type: ignore[method-assign]
+        return llm
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("stream", [False, True])
+    @pytest.mark.parametrize("factory", ["_anthropic_llm", "_openai_responses_llm"])
+    async def test_global_after_hook_runs_once_on_anthropic_and_responses_acall(
+        self, factory, stream
+    ):
+        calls: list[str] = []
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            calls.append(context.response)
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        register_after_llm_call_hook(redact)
+        llm = getattr(self, factory)(stream)
+
+        result = await llm.acall([{"role": "user", "content": "hi"}])
+
+        assert result == "the [REDACTED] is 42"
+        assert calls == ["the SECRET is 42"]
+
 
 class TestLiteLLMAfterHooksAsync:
     """The generic LiteLLM route runs after_llm_call hooks on acall() as it does on call()."""
