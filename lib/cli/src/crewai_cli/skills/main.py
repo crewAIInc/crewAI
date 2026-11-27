@@ -185,6 +185,16 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         in_project = os.path.isfile("pyproject.toml")
         if in_project:
             dest = Path("skills") / name
+            if dest.exists() or dest.is_symlink():
+                console.print(
+                    f"[yellow]Warning: Existing skill directory [bold]{dest}[/bold] will be overwritten.[/yellow]"
+                )
+                if dest.is_dir() and not dest.is_symlink():
+                    import shutil
+
+                    shutil.rmtree(dest)
+                else:
+                    dest.unlink()
             dest.mkdir(parents=True, exist_ok=True)
             self._unpack_archive(archive_bytes, dest)
             console.print(
@@ -199,10 +209,13 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             except ImportError:
                 # Fallback if SDK not installed — write directly
                 cache_dir = Path.home() / ".crewai" / "skills" / org / name
-                if cache_dir.exists():
-                    import shutil
+                if cache_dir.exists() or cache_dir.is_symlink():
+                    if cache_dir.is_dir() and not cache_dir.is_symlink():
+                        import shutil
 
-                    shutil.rmtree(cache_dir)
+                        shutil.rmtree(cache_dir)
+                    else:
+                        cache_dir.unlink()
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 self._unpack_archive(archive_bytes, cache_dir)
                 # Write metadata so `crewai skill list` can discover it
