@@ -21,7 +21,12 @@ class TextFileLoader(BaseLoader):
                     f"The following file does not exist: {source_content.source}"
                 )
 
-            with open(source_content.source, encoding="utf-8") as file:
+            # A .txt file may still use another encoding (Latin-1, GBK, ...).
+            # Replace undecodable bytes instead of aborting the whole ingestion:
+            # partial text is more useful than a UnicodeDecodeError.
+            with open(
+                source_content.source, encoding="utf-8", errors="replace"
+            ) as file:
                 content = file.read()
 
         return LoaderResult(

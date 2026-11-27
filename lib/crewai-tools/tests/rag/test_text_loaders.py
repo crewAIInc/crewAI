@@ -104,6 +104,16 @@ class TestTextFileLoader:
             finally:
                 cleanup_temp_file(path)
 
+    def test_non_utf8_content_is_decoded_with_replacement(self):
+        path = write_temp_file("café", encoding="latin-1")
+        try:
+            result = TextFileLoader().load(SourceContent(path))
+
+            assert result.content.startswith("caf")
+            assert "�" in result.content
+        finally:
+            cleanup_temp_file(path)
+
 
 class TestTextFileLoaderURLs:
     @pytest.mark.parametrize(
