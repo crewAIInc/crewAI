@@ -128,6 +128,25 @@ class TestToolDecorator:
         with pytest.raises(NotImplementedError):
             await sync_func.arun(value="test")
 
+        assert sync_func.current_usage_count == 0
+
+    @pytest.mark.asyncio
+    async def test_sync_decorated_tool_arun_does_not_execute_function(self) -> None:
+        """Reject sync tools before invoking them or claiming usage."""
+        calls: list[str] = []
+
+        @tool("sync_decorated_side_effect")
+        def sync_func(value: str) -> str:
+            """A sync decorated tool with an observable side effect."""
+            calls.append(value)
+            return "sent"
+
+        with pytest.raises(NotImplementedError):
+            await sync_func.arun(value="hello")
+
+        assert calls == []
+        assert sync_func.current_usage_count == 0
+
     @pytest.mark.asyncio
     async def test_async_decorated_tool_arun(self) -> None:
         """Test async decorated tool works with arun()."""
