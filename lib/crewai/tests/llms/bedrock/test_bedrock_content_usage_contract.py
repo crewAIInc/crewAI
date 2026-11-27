@@ -287,10 +287,6 @@ def test_system_text_goes_to_the_system_parameter_not_the_turns(
     assert BEDROCK.user_texts(request) == [PROMPT]
 
 
-@pytest.mark.xfail(
-    reason="#7920: a parts list is sent as the raw list in system[0].text",
-    strict=True,
-)
 def test_parts_list_system_content_is_sent_as_its_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -304,10 +300,6 @@ def test_parts_list_system_content_is_sent_as_its_text(
     assert BEDROCK.system_text(request) == "Answer briefly."
 
 
-@pytest.mark.xfail(
-    reason="#7920: a later None system message is joined as the text 'None'",
-    strict=True,
-)
 def test_none_system_content_never_becomes_text_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
