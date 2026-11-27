@@ -11,10 +11,12 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable, Coroutine
+import concurrent.futures
 import contextvars
 import sys
 import time
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 from urllib.parse import urlparse
 
 
@@ -53,6 +55,7 @@ MCP_MAX_RETRIES: Final[int] = 3
 
 _mcp_schema_cache: dict[str, Any] = {}
 _cache_ttl: Final[int] = 300  # 5 minutes
+_T = TypeVar("_T")
 
 
 class MCPToolResolver:
@@ -100,18 +103,42 @@ class MCPToolResolver:
 
         return all_tools
 
+    @staticmethod
+    def _run_async(coro_fn: Callable[[], Coroutine[Any, Any, _T]]) -> _T:
+        """Run an async callable even when an event loop is already active."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = False
+        else:
+            running_loop = True
+
+        if running_loop:
+            ctx = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(ctx.run, lambda: asyncio.run(coro_fn())).result()
+
+        return asyncio.run(coro_fn())
+
     def cleanup(self) -> None:
         """Disconnect all MCP client connections."""
         if not self._clients:
             return
 
+        clients = list(self._clients)
+
         async def _disconnect_all() -> None:
-            for client in self._clients:
+            for client in clients:
                 if client and hasattr(client, "connected") and client.connected:
-                    await client.disconnect()
+                    try:
+                        await client.disconnect()
+                    except Exception as e:
+                        self._logger.log(
+                            "error", f"Error during MCP client disconnect: {e}"
+                        )
 
         try:
-            asyncio.run(_disconnect_all())
+            self._run_async(_disconnect_all)
         except Exception as e:
             self._logger.log("error", f"Error during MCP client cleanup: {e}")
         finally:
@@ -393,31 +420,9 @@ class MCPToolResolver:
 
         try:
             try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                running_loop = False
-            else:
-                running_loop = True
-
-            if running_loop:
-                import concurrent.futures
-
-                ctx = contextvars.copy_context()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        ctx.run, asyncio.run, _setup_client_and_list_tools()
-                    )
-                    try:
-                        tools_list = future.result()
-                    except (asyncio.CancelledError, Exception) as e:
-                        raise_connection_failure(
-                            f"Failed to get native MCP tools: {e}", e
-                        )
-            else:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except (asyncio.CancelledError, Exception) as e:
-                    raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
+                tools_list = self._run_async(_setup_client_and_list_tools)
+            except (asyncio.CancelledError, Exception) as e:
+                raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
 
             if mcp_config.tool_filter:
                 filtered_tools = []
@@ -500,7 +505,14 @@ class MCPToolResolver:
             raise
         except Exception as e:
             if discovery_client.connected:
-                asyncio.run(discovery_client.disconnect())
+                try:
+                    self._run_async(discovery_client.disconnect)
+                except Exception as disconnect_error:
+                    if isinstance(disconnect_error, MCPConnectionError):
+                        raise disconnect_error from e
+                    self._logger.log(
+                        "error", f"Error during disconnect: {disconnect_error}"
+                    )
 
             raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
 
@@ -564,7 +576,9 @@ class MCPToolResolver:
                 return cached_data  # type: ignore[no-any-return]
 
         try:
-            schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
+            schemas = self._run_async(
+                lambda: self._get_mcp_tool_schemas_async(server_params)
+            )
             _mcp_schema_cache[cache_key] = (schemas, current_time)
             return schemas
         except MCPConnectionError:
