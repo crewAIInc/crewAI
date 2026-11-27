@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from typing import get_origin
 from unittest.mock import patch, MagicMock, call
 
 from crewai_cli.settings.main import SettingsCommand
@@ -26,6 +27,20 @@ class TestSettingsCommand(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
+
+    @patch("crewai_cli.settings.main.console")
+    def test_set_parses_dict_field(self, mock_console):
+        self.settings_command.set("oauth2_extra", '{"scope": "x"}')
+
+        assert self.settings_command.settings.oauth2_extra == {"scope": "x"}
+        assert Settings(config_path=self.config_path).oauth2_extra == {"scope": "x"}
+
+    @patch("crewai_cli.settings.main.console")
+    def test_set_rejects_method_names(self, mock_console):
+        with self.assertRaises(SystemExit) as ctx:
+            self.settings_command.set("dump", "anything")
+
+        assert ctx.exception.code == 1
 
     @patch("crewai_cli.settings.main.console")
     @patch("crewai_cli.settings.main.Table")
@@ -54,9 +69,12 @@ class TestSettingsCommand(unittest.TestCase):
             READONLY_SETTINGS_KEYS + HIDDEN_SETTINGS_KEYS
         )
         for key in valid_keys:
-            test_value = f"some_value_for_{key}"
+            if get_origin(Settings.model_fields[key].annotation) is dict:
+                test_value, expected = '{"scope": "x"}', {"scope": "x"}
+            else:
+                test_value = expected = f"some_value_for_{key}"
             self.settings_command.set(key, test_value)
-            self.assertEqual(getattr(self.settings_command.settings, key), test_value)
+            self.assertEqual(getattr(self.settings_command.settings, key), expected)
 
     def test_set_invalid_key(self):
         with self.assertRaises(SystemExit):
