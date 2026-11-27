@@ -225,7 +225,14 @@ class Settings(BaseModel):
             try:
                 with config_path.open("r") as f:
                     file_data = json.load(f)
-            except Exception:
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.warning(
+                    "Could not parse settings file %s (%s); ignoring its contents "
+                    "and falling back to defaults. The file will be overwritten "
+                    "on the next successful save.",
+                    config_path,
+                    type(e).__name__,
+                )
                 file_data = {}
 
         merged_data = {**file_data, **data}
@@ -244,22 +251,49 @@ class Settings(BaseModel):
         self.dump()
 
     def dump(self) -> None:
-        """Save current settings to settings.json."""
+        """Save current settings to settings.json.
+
+        If the existing file cannot be parsed (corrupt JSON), it is backed up
+        to ``settings.json.bak`` and treated as empty so the write can recover
+        the configuration.
+        """
         if str(self.config_path) == "/dev/null":
             return
 
-        try:
-            if self.config_path.is_file():
+        existing_data: dict[str, Any] = {}
+        if self.config_path.is_file():
+            try:
                 with self.config_path.open("r") as f:
                     existing_data = json.load(f)
-            else:
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+                backup = self.config_path.with_suffix(".json.bak")
+                try:
+                    self.config_path.replace(backup)
+                    logger.warning(
+                        "Backed up corrupt settings file %s to %s (%s); "
+                        "writing a fresh settings file.",
+                        self.config_path,
+                        backup,
+                        type(e).__name__,
+                    )
+                except OSError as backup_error:
+                    logger.warning(
+                        "Could not back up corrupt settings file %s (%s); "
+                        "overwriting it anyway.",
+                        self.config_path,
+                        backup_error,
+                    )
                 existing_data = {}
 
+        try:
             updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
             _write_secure_json(self.config_path, updated_data)
-
-        except Exception:  # noqa: S110
-            pass
+        except OSError as e:
+            logger.error(
+                "Failed to write settings file %s: %s",
+                self.config_path,
+                e,
+            )
 
     def _reset_user_settings(self) -> None:
         """Reset all user settings to default values."""
