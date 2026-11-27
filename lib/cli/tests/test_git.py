@@ -1,3 +1,4 @@
+from pathlib import Path
 import subprocess
 
 import pytest
@@ -61,10 +62,13 @@ def test_has_uncommitted_changes(fp, repository):
     assert repository.has_uncommitted_changes() is True
 
 
-def test_is_ahead_or_behind(fp, repository):
+@pytest.mark.parametrize(
+    "tracking_status", ["ahead 1", "behind 1", "ahead 1, behind 1"]
+)
+def test_is_ahead_or_behind(fp, repository, tracking_status: str) -> None:
     fp.register(
         ["git", "status", "--branch", "--porcelain"],
-        stdout="## main...origin/main [ahead 1]\n",
+        stdout=f"## main...origin/main [{tracking_status}]\n",
     )
     assert repository.is_ahead_or_behind() is True
 
@@ -165,6 +169,24 @@ def _git(cwd, *args: str) -> str:
         text=True,
         check=True,
     ).stdout.strip()
+
+
+@pytest.mark.parametrize(
+    ("branch", "upstream"),
+    [
+        ("feature/behind-the-scenes", "main"),
+        ("feature/review", "feature/ahead-of-schedule"),
+    ],
+)
+def test_is_synced_when_branch_names_contain_ahead_or_behind(
+    tmp_path: Path, branch: str, upstream: str
+) -> None:
+    _git(tmp_path, "init", "-q", "-b", upstream)
+    _git(tmp_path, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "first")
+    _git(tmp_path, "switch", "-q", "-c", branch)
+    _git(tmp_path, "branch", f"--set-upstream-to={upstream}")
+
+    assert Repository(path=str(tmp_path), fetch=False).is_synced()
 
 
 def test_head_commit_is_none_before_the_first_commit(tmp_path):
