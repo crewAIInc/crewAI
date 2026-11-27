@@ -1,5 +1,6 @@
 """Unit tests for file_store module."""
 
+import asyncio
 import uuid
 
 import pytest
@@ -121,6 +122,31 @@ class TestFileStore:
         result = get_all_files(new_crew_id, new_task_id)
 
         assert result is None
+
+
+class TestRunSync:
+    """Tests for the sync bridge used when an event loop is already running."""
+
+    def test_runs_coroutine_without_running_loop(self) -> None:
+        from crewai.utilities.file_store import _run_sync
+
+        async def answer() -> int:
+            return 42
+
+        assert _run_sync(answer()) == 42
+
+    def test_propagates_runtime_error_from_coroutine(self) -> None:
+        """An error raised by the coroutine must not be mistaken for no loop."""
+        from crewai.utilities.file_store import _run_sync
+
+        async def fail() -> None:
+            raise RuntimeError("raised inside the coroutine")
+
+        async def call_from_running_loop() -> None:
+            with pytest.raises(RuntimeError, match="raised inside the coroutine"):
+                _run_sync(fail())
+
+        asyncio.run(call_from_running_loop())
 
 
 @pytest.mark.asyncio
