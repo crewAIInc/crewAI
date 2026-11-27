@@ -792,3 +792,62 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
+
+
+class TestFormattedDescriptionKeepsOptionalNull:
+    """Regression tests for crewAIInc/crewAI#9882: the ReAct prompt block
+    stripped the ``null`` branch from Optional tool arguments, so a model
+    had no valid way to pass null for them. The prompt schema must match
+    the native tool-calling schema.
+    """
+
+    def _make_tool(self) -> BaseTool:
+        class LookupArgs(BaseModel):
+            query: str
+            country: str | None = None
+
+        class LookupTool(BaseTool):
+            name: str = "lookup"
+            description: str = "Look up a query."
+            args_schema: type[BaseModel] = LookupArgs
+
+            def _run(self, query: str, country: str | None = None) -> str:
+                return query
+
+        return LookupTool()
+
+    @staticmethod
+    def _prompt_schema(formatted: str) -> dict:
+        args_json = formatted.split("Tool Arguments: ", 1)[1].rsplit(
+            "\nTool Description:", 1
+        )[0]
+        return json.loads(args_json)
+
+    def test_optional_arg_keeps_null_branch(self):
+        tool_instance = self._make_tool()
+        for candidate in (tool_instance, tool_instance.to_structured_tool()):
+            schema = self._prompt_schema(candidate.formatted_description)
+            assert schema["properties"]["country"] == {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "default": None,
+                "title": "Country",
+            }
+
+    def test_prompt_schema_matches_native_schema(self):
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        tool_instance = self._make_tool()
+        native, _, _ = convert_tools_to_openai_schema([tool_instance])
+        native_props = native[0]["function"]["parameters"]["properties"]
+        prompt_props = self._prompt_schema(
+            tool_instance.formatted_description
+        )["properties"]
+        assert prompt_props == native_props
+
+    def test_non_optional_arg_is_unchanged(self):
+        tool_instance = self._make_tool()
+        schema = self._prompt_schema(tool_instance.formatted_description)
+        assert schema["properties"]["query"] == {
+            "title": "Query",
+            "type": "string",
+        }
