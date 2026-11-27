@@ -1,0 +1,93 @@
+---
+title: Protocolo Agent-to-Agent (A2A)
+description: Agentes delegam tarefas a Agentes A2A remotos e/ou atuam como Agentes servidores compatíveis com A2A.
+icon: network-wired
+mode: "wide"
+---
+
+## Delegação de Agent A2A
+
+O CrewAI trata o [protocolo A2A](https://a2a-protocol.org/latest/) como uma primitiva central de delegação, permitindo que Agentes deleguem tarefas, solicitem informações e colaborem com Agentes remotos, além de atuarem como servidores compatíveis com A2A. No modo cliente, os Agentes escolhem automaticamente entre execução local e delegação remota com base nos requisitos da tarefa.
+
+## Como funciona
+
+Quando um Agente é configurado com capacidades A2A:
+
+1. O Agente analisa cada tarefa
+2. Decide entre:
+   - tratar a tarefa diretamente com suas próprias capacidades
+   - delegar a um Agente A2A remoto para processamento especializado
+3. Se delegar, o Agente se comunica com o Agente A2A remoto via protocolo
+4. Os resultados são devolvidos ao fluxo de trabalho do CrewAI
+
+<Note>
+  A delegação A2A requer o pacote `a2a-sdk`. Instale com: `uv add 'crewai[a2a]'` ou `pip install 'crewai[a2a]'`
+</Note>
+
+## Configuração básica
+
+<Warning>
+  `crewai.a2a.config.A2AConfig` está obsoleto e será removido na v2.0.0. Use `A2AClientConfig` para conectar a Agentes remotos e/ou `A2AServerConfig` para expor Agentes como servidores.
+</Warning>
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai.a2a import A2AClientConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks efficiently",
+    backstory="Expert at delegating to specialized research agents",
+    llm="gpt-4o",
+    a2a=A2AClientConfig(
+        endpoint="https://example.com/.well-known/agent-card.json",
+        timeout=120,
+        max_turns=10
+    )
+)
+
+task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="A comprehensive research report",
+    agent=agent
+)
+
+crew = Crew(agents=[agent], tasks=[task], verbose=True)
+result = crew.kickoff()
+```
+
+## Opções de configuração do cliente
+
+Consulte o arquivo original em inglês para a lista completa de parâmetros de `A2AClientConfig`, opções de autenticação, mecanismos de atualização e configuração do servidor.
+
+<Note>
+  A URL anunciada pelo AgentCard do Agente remoto deve permanecer na origem (origin) do `endpoint` configurado. Um cartão que aponte para outro lugar é rejeitado antes de qualquer credencial ser enviada. As interfaces listadas em `additional_interfaces` seguem a mesma regra e são ignoradas se não a cumprirem. Alvos gRPC devem usar o mesmo host do `endpoint` e, quando ele for HTTPS, um esquema TLS (`grpcs://`).
+</Note>
+
+Para verificar o cartão, defina `card_public_key` (uma chave pública em formato PEM) em `A2AClientConfig`. Quando definida, o cartão deve conter uma assinatura JWS válida, caso contrário a delegação é recusada. Use `card_signature_algorithms` para restringir os algoritmos permitidos.
+
+## Melhores práticas
+
+<CardGroup cols={2}>
+  <Card title="Defina timeouts adequados" icon="clock">
+    Configure os timeouts com base nos tempos de resposta esperados do Agente A2A.
+  </Card>
+
+  <Card title="Limite os turnos de conversa" icon="comments">
+    Use `max_turns` para evitar trocas excessivas.
+  </Card>
+
+  <Card title="Use tratamento de erros resiliente" icon="shield-check">
+    Defina `fail_fast=False` em produção com vários Agentes.
+  </Card>
+
+  <Card title="Proteja as credenciais" icon="lock">
+    Armazene tokens de autenticação e credenciais em variáveis de ambiente, não no código.
+  </Card>
+</CardGroup>
+
+## Saiba mais
+
+- [Documentação do protocolo A2A](https://a2a-protocol.org)
+- [Implementações de exemplo A2A](https://github.com/a2aproject/a2a-samples)
+- [A2A Python SDK](https://github.com/a2aproject/a2a-python)

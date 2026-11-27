@@ -422,6 +422,14 @@ class A2AConfig(BaseModel):
         default_factory=list,
         description="Client-side processing hooks for tool injection and prompt augmentation",
     )
+    card_public_key: str | None = Field(
+        default=None,
+        description="PEM public key. When set, the remote AgentCard must carry a valid JWS signature.",
+    )
+    card_signature_algorithms: list[SigningAlgorithm] | None = Field(
+        default=None,
+        description="Allowed JWS algorithms for AgentCard verification (default: all asymmetric).",
+    )
     transport: ClientTransportConfig = Field(
         default_factory=ClientTransportConfig,
         description="Transport configuration (preferred, supported transports, gRPC settings)",
@@ -523,6 +531,14 @@ class A2AClientConfig(BaseModel):
     client_extensions: list[ValidatedA2AExtension] = Field(
         default_factory=list,
         description="Client-side processing hooks for tool injection and prompt augmentation",
+    )
+    card_public_key: str | None = Field(
+        default=None,
+        description="PEM public key. When set, the remote AgentCard must carry a valid JWS signature.",
+    )
+    card_signature_algorithms: list[SigningAlgorithm] | None = Field(
+        default=None,
+        description="Allowed JWS algorithms for AgentCard verification (default: all asymmetric).",
     )
     transport: ClientTransportConfig = Field(
         default_factory=ClientTransportConfig,

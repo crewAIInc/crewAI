@@ -1,0 +1,93 @@
+---
+title: Agent-to-Agent (A2A) 프로토콜
+description: Agent가 원격 A2A Agent에 작업을 위임하거나 A2A 호환 서버 Agent로 동작합니다.
+icon: network-wired
+mode: "wide"
+---
+
+## A2A Agent 위임
+
+CrewAI는 [A2A 프로토콜](https://a2a-protocol.org/latest/)을 핵심 위임 기본 요소로 취급하여, Agent가 작업을 위임하고, 정보를 요청하고, 원격 Agent와 협업할 수 있게 하며, A2A 호환 서버 Agent로도 동작할 수 있게 합니다. 클라이언트 모드에서 Agent는 작업 요구 사항에 따라 로컬 실행과 원격 위임 중 하나를 자동으로 선택합니다.
+
+## 작동 방식
+
+Agent에 A2A 기능이 구성되면:
+
+1. Agent가 각 작업을 분석합니다
+2. 다음 중 하나를 결정합니다:
+   - 자체 기능으로 작업을 직접 처리
+   - 전문 처리를 위해 원격 A2A Agent에 위임
+3. 위임하는 경우, Agent는 프로토콜을 통해 원격 A2A Agent와 통신합니다
+4. 결과가 CrewAI 워크플로로 반환됩니다
+
+<Note>
+  A2A 위임에는 `a2a-sdk` 패키지가 필요합니다. 다음으로 설치하세요: `uv add 'crewai[a2a]'` 또는 `pip install 'crewai[a2a]'`
+</Note>
+
+## 기본 구성
+
+<Warning>
+  `crewai.a2a.config.A2AConfig`는 더 이상 사용되지 않으며 v2.0.0에서 제거됩니다. 원격 Agent에 연결하려면 `A2AClientConfig`를, Agent를 서버로 노출하려면 `A2AServerConfig`를 사용하세요.
+</Warning>
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai.a2a import A2AClientConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks efficiently",
+    backstory="Expert at delegating to specialized research agents",
+    llm="gpt-4o",
+    a2a=A2AClientConfig(
+        endpoint="https://example.com/.well-known/agent-card.json",
+        timeout=120,
+        max_turns=10
+    )
+)
+
+task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="A comprehensive research report",
+    agent=agent
+)
+
+crew = Crew(agents=[agent], tasks=[task], verbose=True)
+result = crew.kickoff()
+```
+
+## 클라이언트 구성 옵션
+
+`A2AClientConfig`의 전체 매개변수 목록, 인증 옵션, 업데이트 메커니즘, 서버 구성은 영어 원문을 참조하세요.
+
+<Note>
+  원격 Agent의 AgentCard가 알리는 URL은 구성된 `endpoint`의 origin 내에 있어야 합니다. 다른 곳을 가리키는 카드는 자격 증명이 전송되기 전에 거부됩니다. `additional_interfaces`에 나열된 인터페이스에도 같은 규칙이 적용되며, 규칙에 맞지 않으면 무시됩니다. gRPC 대상은 `endpoint`와 같은 호스트여야 하며, `endpoint`가 HTTPS인 경우 TLS 스킴(`grpcs://`)을 사용해야 합니다.
+</Note>
+
+카드를 검증하려면 `A2AClientConfig`에 `card_public_key`(PEM 형식의 공개 키)를 설정하세요. 설정하면 카드에 유효한 JWS 서명이 있어야 하며, 그렇지 않으면 위임이 거부됩니다. `card_signature_algorithms`로 허용되는 알고리즘을 제한할 수 있습니다.
+
+## 모범 사례
+
+<CardGroup cols={2}>
+  <Card title="적절한 타임아웃 설정" icon="clock">
+    예상되는 A2A Agent 응답 시간에 따라 타임아웃을 구성하세요.
+  </Card>
+
+  <Card title="대화 턴 제한" icon="comments">
+    `max_turns`를 사용하여 과도한 주고받기를 방지하세요.
+  </Card>
+
+  <Card title="복원력 있는 오류 처리 사용" icon="shield-check">
+    여러 Agent가 있는 프로덕션 환경에서는 `fail_fast=False`로 설정하세요.
+  </Card>
+
+  <Card title="자격 증명 보호" icon="lock">
+    인증 토큰과 자격 증명은 코드가 아닌 환경 변수에 저장하세요.
+  </Card>
+</CardGroup>
+
+## 더 알아보기
+
+- [A2A 프로토콜 문서](https://a2a-protocol.org)
+- [A2A 샘플 구현](https://github.com/a2aproject/a2a-samples)
+- [A2A Python SDK](https://github.com/a2aproject/a2a-python)

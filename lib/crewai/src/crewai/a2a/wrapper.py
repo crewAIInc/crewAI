@@ -1336,6 +1336,10 @@ def _delegate_to_a2a(
                 client_extensions=getattr(ctx.agent_config, "extensions", None),
                 accepted_output_modes=accepted_output_modes,
                 input_files=task.input_files,
+                card_public_key=getattr(ctx.agent_config, "card_public_key", None),
+                card_signature_algorithms=getattr(
+                    ctx.agent_config, "card_signature_algorithms", None
+                ),
             )
 
             conversation_history = a2a_result.get("history", [])
@@ -1692,6 +1696,10 @@ async def _adelegate_to_a2a(
                 client_extensions=getattr(ctx.agent_config, "extensions", None),
                 accepted_output_modes=accepted_output_modes,
                 input_files=task.input_files,
+                card_public_key=getattr(ctx.agent_config, "card_public_key", None),
+                card_signature_algorithms=getattr(
+                    ctx.agent_config, "card_signature_algorithms", None
+                ),
             )
 
             conversation_history = a2a_result.get("history", [])
