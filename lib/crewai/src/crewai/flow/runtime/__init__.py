@@ -31,6 +31,8 @@ from typing import (
     ParamSpec,
     TypeVar,
     cast,
+    get_args,
+    get_type_hints,
 )
 from uuid import uuid4
 
@@ -462,7 +464,70 @@ def _serialize_method_output_entry(entry: Any) -> Any:
     return entry
 
 
-def _restore_method_output_entry(entry: Any) -> dict[str, Any]:
+def _is_structured_output_type(candidate: Any) -> bool:
+    """Return True if *candidate* is a concrete BaseModel subclass or dataclass type."""
+    return isinstance(candidate, type) and (
+        issubclass(candidate, BaseModel) or dataclasses.is_dataclass(candidate)
+    )
+
+
+def _declared_method_output_types(
+    flow: Flow[Any] | None, method_name: Any
+) -> list[type[Any]]:
+    """Return concrete BaseModel/dataclass types from a flow method's return annotation."""
+    if flow is None or not isinstance(method_name, str) or not method_name:
+        return []
+    method = flow._methods.get(FlowMethodName(method_name)) or getattr(
+        type(flow), method_name, None
+    )
+    if method is None:
+        return []
+    try:
+        hints = get_type_hints(method)
+    except Exception:
+        return []
+    ret = hints.get("return")
+    if ret is None:
+        return []
+    candidates = get_args(ret) if get_args(ret) else (ret,)
+    return [c for c in candidates if _is_structured_output_type(c)]
+
+
+def _resolve_trusted_output_type(
+    output_type: str, flow: Flow[Any] | None, method_name: Any
+) -> type[Any] | None:
+    """Resolve *output_type* only if it matches the flow method's return annotation or trusted deserialize is enabled."""
+    mod_name, sep, qualname = output_type.partition(":")
+    if not sep or not mod_name or not qualname:
+        return None
+    if "<locals>" in qualname or "<lambda>" in qualname:
+        return None
+
+    if output_type == "crewai.flow.human_feedback:HumanFeedbackResult":
+        from crewai.flow.human_feedback import HumanFeedbackResult
+
+        return HumanFeedbackResult
+
+    declared = _declared_method_output_types(flow, method_name)
+    for candidate in declared:
+        if f"{candidate.__module__}:{candidate.__qualname__}" == output_type:
+            return candidate
+    if declared:
+        return None
+
+    from crewai.types.callback import _trusted_deserialize
+
+    if not _trusted_deserialize() or mod_name not in sys.modules:
+        return None
+    obj: Any = sys.modules[mod_name]
+    for attr in qualname.split("."):
+        obj = getattr(obj, attr)
+    return obj if _is_structured_output_type(obj) else None
+
+
+def _restore_method_output_entry(
+    entry: Any, *, flow: Flow[Any] | None = None
+) -> dict[str, Any]:
     """Normalize a checkpointed method-output entry and rebuild structured outputs."""
     if not (isinstance(entry, dict) and "method" in entry and "output" in entry):
         return {"method": "", "output": entry}
@@ -470,23 +535,19 @@ def _restore_method_output_entry(entry: Any) -> dict[str, Any]:
     output = entry["output"]
     output_type = entry.get("output_type")
     if isinstance(output_type, str) and isinstance(output, dict):
-        mod_name, sep, qualname = output_type.partition(":")
-        if sep and mod_name in sys.modules:
-            obj: Any = sys.modules[mod_name]
-            try:
-                for attr in qualname.split("."):
-                    obj = getattr(obj, attr)
-                if isinstance(obj, type) and issubclass(obj, BaseModel):
-                    output = obj.model_validate(output)
-                elif isinstance(obj, type) and dataclasses.is_dataclass(obj):
-                    output = TypeAdapter(obj).validate_python(output)
-            except Exception as exc:
-                logger.warning(
-                    "Failed to restore structured output for method %r (%s): %s",
-                    entry.get("method"),
-                    output_type,
-                    exc,
-                )
+        try:
+            obj = _resolve_trusted_output_type(output_type, flow, entry.get("method"))
+            if obj is not None and issubclass(obj, BaseModel):
+                output = obj.model_validate(output)
+            elif obj is not None and dataclasses.is_dataclass(obj):
+                output = TypeAdapter(obj).validate_python(output)
+        except Exception as exc:
+            logger.warning(
+                "Failed to restore structured output for method %r (%s): %s",
+                entry.get("method"),
+                output_type,
+                exc,
+            )
 
     return {"method": entry["method"], "output": output}
 
@@ -800,7 +861,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
             self._method_outputs = [
-                _restore_method_output_entry(entry)
+                _restore_method_output_entry(entry, flow=self)
                 for entry in self.checkpoint_method_outputs
             ]
         if self.checkpoint_method_counts is not None:
@@ -1366,7 +1427,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
         instance._initialize_state(state_data)
         instance._method_outputs = [
-            _restore_method_output_entry(entry)
+            _restore_method_output_entry(entry, flow=instance)
             for entry in (pending_context.method_outputs or [])
         ]
         instance._pending_feedback_context = pending_context

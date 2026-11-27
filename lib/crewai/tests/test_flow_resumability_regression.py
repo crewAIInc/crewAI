@@ -194,7 +194,7 @@ def test_checkpoint_restore_preserves_pydantic_output_for_listener(tmp_path):
 
     class OrderFlow(Flow):
         @start()
-        def price(self):
+        def price(self) -> _CheckpointQuote:
             return _CheckpointQuote(amount=42)
 
         @listen(price)
@@ -260,4 +260,35 @@ def test_checkpoint_restore_preserves_human_feedback_result_dataclass(tmp_path):
     restored = ReviewFlow.from_checkpoint(CheckpointConfig(restore_from=str(latest)))
     restored.kickoff()
     assert restored.state.get("feedback") == "approved"
+
+
+def test_checkpoint_restore_rejects_untrusted_arbitrary_output_type(monkeypatch):
+    """Untrusted checkpoint output_type cannot instantiate arbitrary classes without opt-in."""
+    from crewai.flow.runtime import _restore_method_output_entry
+
+    class UnannotatedFlow(Flow):
+        @start()
+        def step(self):
+            return {"amount": 1}
+
+    flow = UnannotatedFlow()
+    monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+
+    tampered = {
+        "method": "step",
+        "output": {"amount": 42},
+        "output_type": f"{_CheckpointQuote.__module__}:{_CheckpointQuote.__qualname__}",
+    }
+    restored = _restore_method_output_entry(tampered, flow=flow)
+    assert restored["output"] == {"amount": 42}
+    assert isinstance(restored["output"], dict)
+
+    monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+    local_tampered = {
+        "method": "step",
+        "output": {"amount": 42},
+        "output_type": f"{_CheckpointQuote.__module__}:<locals>.Fake",
+    }
+    restored_local = _restore_method_output_entry(local_tampered, flow=flow)
+    assert isinstance(restored_local["output"], dict)
 
