@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from crewai_core.lock_store import lock as store_lock
-from crewai_core.paths import db_storage_path
+from crewai_core.paths import account_data_dir, db_storage_path
 
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,27 @@ def has_user_declined_tracing() -> bool:
         data.get("trace_consent_asked") is True
         and data.get("trace_consent", False) is False
     )
+
+
+def _recorded_trace_yes() -> bool:
+    """Did a person on this account say yes to uploading traces, and is that
+    answer theirs to rely on with nobody at the screen?
+
+    Only an asked yes counts (``trace_consent_asked``, written by ``crewai
+    traces enable`` or a yes at the prompt), never while
+    ``CREWAI_TRACING_ENABLED`` is false, and only from the account's own file:
+    ``db_storage_path`` follows ``HOME`` (``XDG_DATA_HOME`` on Linux) and
+    ``CREWAI_STORAGE_DIR``, which a project's ``.env`` can set to a folder
+    holding a yes nobody here gave. The file must sit in a folder directly
+    inside ``account_data_dir``.
+    """
+    if os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0"):
+        return False
+    folder = Path(os.path.realpath(_user_data_file())).parent
+    if folder.parent != Path(os.path.realpath(account_data_dir())):
+        return False
+    data = _load_user_data()
+    return data.get("trace_consent_asked") is True and data.get("trace_consent") is True
 
 
 def is_tracing_enabled() -> bool:

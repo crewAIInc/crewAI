@@ -11,7 +11,7 @@ import os
 from threading import Lock
 
 from crewai_core.eval_handshake import run_awaited_by_evaluation
-from crewai_core.user_data import update_user_data
+from crewai_core.user_data import _recorded_trace_yes, update_user_data
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import (
@@ -133,12 +133,14 @@ class EphemeralSpanBuffer(SpanExporter):
             # is the PROMPT, and a prompt is what a user who turned tracing on
             # has already answered: CREWAI_TRACING_ENABLED, or tracing=True, is
             # the yes. (A callback that opens its own prompt — the TUI's modal —
-            # asks `tracing_asked_for()` for itself.)
+            # asks `tracing_asked_for()` for itself.) So is a yes the person
+            # gave and this account recorded (`crewai traces enable`), with or
+            # without a screen: it is how a coding agent turns traces on.
             consent = self._consent or _trace_consent.get()
             approved: bool | None
             if consent is not None:
                 approved = consent()
-            elif tracing_asked_for():
+            elif tracing_asked_for() or _recorded_trace_yes():
                 approved = True
             else:
                 approved = prompt_user_for_trace_viewing(sharing=True)

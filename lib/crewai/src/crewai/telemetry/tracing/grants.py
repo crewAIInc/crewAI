@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 
+import click
 from crewai_core.plus_api import PlusAPI
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
@@ -24,7 +25,9 @@ from rich.text import Text
 
 from crewai.auth.token import AuthError, get_auth_token
 from crewai.context import get_platform_integration_token
+from crewai.events.listeners.tracing import utils as tracing_utils
 from crewai.events.listeners.tracing.utils import (
+    TRACE_LINK_NOTICE,
     is_tui_mode,
     should_suppress_tracing_messages,
 )
@@ -423,16 +426,20 @@ class GrantSpanExporter(SpanExporter):
         """
         if not self._trace_url or should_suppress_tracing_messages() or is_tui_mode():
             return
+        ephemeral = self._client._tier == "ephemeral"
+        if not tracing_utils._is_interactive_terminal():
+            # With no terminal (a coding agent, CI) the panel folds the URL at
+            # 80 columns, so the link goes out whole on one line — to stderr,
+            # like the agent hint, keeping the program's own stdout clean.
+            notice = f" ({TRACE_LINK_NOTICE})" if ephemeral else ""
+            click.echo(f"View traces: {self._trace_url}{notice}", err=True)
+            return
         line = Text("View traces: ", style="white")
         line.append(
             self._trace_url,
             style=Style(color="cyan", underline=True, link=self._trace_url),
         )
-        title = (
-            "🔗 Ephemeral Execution Traces"
-            if self._client._tier == "ephemeral"
-            else "🔗 Execution Traces"
-        )
+        title = "🔗 Ephemeral Execution Traces" if ephemeral else "🔗 Execution Traces"
         Console().print(Panel(line, title=title, border_style="green", padding=(1, 2)))
 
     def shutdown(self) -> None:

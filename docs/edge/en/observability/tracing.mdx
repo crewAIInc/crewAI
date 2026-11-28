@@ -210,6 +210,18 @@ The line saves no answer: tracing turns on only when someone runs
 `crewai traces enable`. It is not shown after you have answered, or when
 `CREWAI_TRACING_ENABLED` is set.
 
+After `crewai traces enable`, or a **y** at the prompt, each run uploads its
+trace without asking, also with no terminal and no login. Without a terminal,
+the link is printed whole on one line to stderr:
+
+```text
+View traces: <link> (Anyone with the link can open it for 24 hours.)
+```
+
+This yes is read only from your account's own data folder. A `.env` that
+points `HOME`, `XDG_DATA_HOME` or `CREWAI_STORAGE_DIR` somewhere else does not
+carry it, and such a run uploads nothing unless someone at a terminal says yes.
+
 You can change tracing later with `crewai traces enable` or
 `crewai traces disable`, or by setting `tracing` on the Crew or Flow.
 
@@ -284,4 +296,4 @@ If traces aren't showing up in the dashboard:
 1. Confirm `tracing=True` is set in your Crew/Flow
 2. Check that `CREWAI_TRACING_ENABLED=true` if using environment variables
 3. For authenticated export, verify your CLI login, `CREWAI_USER_PAT`, or platform integration credential. For anonymous sharing, explicitly approve the consent prompt; login is not required
-4. Verify your crew/flow executed and the trace export succeeded. Declining consent, timing out, or running without an interactive consent prompt discards the local buffer without uploading it
+4. Verify your crew/flow executed and the trace export succeeded. Declining consent, timing out, or running without an interactive consent prompt discards the local buffer without uploading it, unless you ran `crewai traces enable` or answered yes before

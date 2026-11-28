@@ -210,6 +210,18 @@ To debug runs step by step, run `crewai traces enable` to upload a trace of each
 실행해야만 추적이 켜집니다. 답변한 후나 `CREWAI_TRACING_ENABLED`가
 설정된 경우에는 표시되지 않습니다.
 
+`crewai traces enable`을 실행했거나 프롬프트에서 **y**로 답한 후에는, 터미널과
+로그인이 없어도 각 실행이 묻지 않고 추적을 업로드합니다. 터미널이 없으면 링크가
+잘리지 않은 한 줄로 stderr에 출력됩니다:
+
+```text
+View traces: <link> (Anyone with the link can open it for 24 hours.)
+```
+
+이 동의는 계정 자체의 데이터 폴더에서만 읽습니다. `HOME`, `XDG_DATA_HOME` 또는
+`CREWAI_STORAGE_DIR`을 다른 곳으로 지정하는 `.env`는 이 동의를 가져오지 않으며,
+그런 실행은 터미널 앞의 사람이 동의하지 않는 한 아무것도 업로드하지 않습니다.
+
 나중에 `crewai traces enable` 또는 `crewai traces disable`을 사용하거나 Crew
 또는 Flow에서 `tracing`을 설정하여 추적 설정을 변경할 수 있습니다.
 
@@ -285,4 +297,4 @@ CrewAI 추적은 다음에 대한 포괄적인 가시성을 제공합니다:
 1. Crew/Flow에서 `tracing=True`가 설정되어 있는지 확인하세요
 2. 환경 변수를 사용하는 경우 `CREWAI_TRACING_ENABLED=true`인지 확인하세요
 3. 인증된 내보내기의 경우 CLI 로그인, `CREWAI_USER_PAT` 또는 플랫폼 통합 자격 증명을 확인하세요. 익명으로 공유하려면 동의 프롬프트에서 명시적으로 동의하세요. 로그인은 필요하지 않습니다
-4. crew/flow가 실행되었고 추적 내보내기가 성공했는지 확인하세요. 동의를 거절하거나 시간이 초과되거나 대화형 동의 프롬프트 없이 실행하면 로컬 버퍼가 업로드되지 않고 삭제됩니다
+4. crew/flow가 실행되었고 추적 내보내기가 성공했는지 확인하세요. 동의를 거절하거나 시간이 초과되거나 대화형 동의 프롬프트 없이 실행하면 로컬 버퍼가 업로드되지 않고 삭제됩니다. 단, 이전에 `crewai traces enable`을 실행했거나 동의한 경우는 예외입니다

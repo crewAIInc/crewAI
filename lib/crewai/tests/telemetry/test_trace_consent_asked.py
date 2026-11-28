@@ -6,13 +6,16 @@ first run at a terminal still asks. An answer given at a terminal is final.
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from functools import partial
+import os
 from pathlib import Path
 import threading
 from unittest.mock import Mock
 from uuid import uuid4
 
+import appdirs
 from crewai.events.listeners.tracing import utils
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
@@ -704,3 +707,165 @@ def test_enabling_traces_after_the_hint_records_an_asked_yes(
     assert (data["trace_consent"], data["trace_consent_asked"]) == (True, True)
     assert utils.should_enable_tracing() is True
     assert utils.is_first_execution() is False
+
+
+# -- a recorded yes uploads with nobody at the screen --------------------------
+
+TRACE_URL = "https://app.crewai.com/crewai_plus/ephemeral_trace_batches/run?access_code=TRACE-x"
+LINK_LINE = f"View traces: {TRACE_URL} (Anyone with the link can open it for 24 hours.)"
+_REAL_USER_DATA_DIR = appdirs.user_data_dir
+
+needs_account_database = pytest.mark.skipif(
+    os.name == "nt", reason="the account database is POSIX"
+)
+
+
+def _homes(
+    monkeypatch: pytest.MonkeyPatch, *, environment: Path, account: Path
+) -> None:
+    """HOME (and XDG_DATA_HOME) as the environment says, and the home the
+    account database gives this user — what a project's `.env` cannot set."""
+    import pwd
+
+    monkeypatch.setattr("crewai_core.paths.appdirs.user_data_dir", _REAL_USER_DATA_DIR)
+    monkeypatch.setenv("HOME", str(environment))
+    monkeypatch.setenv("XDG_DATA_HOME", str(environment / ".local" / "share"))
+    real = pwd.getpwuid(os.getuid())
+    entry = pwd.struct_passwd((*real[:5], str(account), real[6]))
+    monkeypatch.setattr(pwd, "getpwuid", lambda uid: entry)
+
+
+@pytest.fixture
+def own_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The user-data file lives in this account's own data folder."""
+    _homes(monkeypatch, environment=tmp_path / "home", account=tmp_path / "home")
+    monkeypatch.chdir(tmp_path)
+
+
+@pytest.fixture
+def linked_grants(grants: list[TraceGrant], monkeypatch: pytest.MonkeyPatch):
+    """Upload grants that carry AMP's 24-hour viewer link."""
+    create = TraceGrantClient.create
+
+    def with_link(client: TraceGrantClient, execution_uuid: str) -> TraceGrant:
+        grant = replace(create(client, execution_uuid), trace_url=TRACE_URL)
+        grants[-1] = grant
+        return grant
+
+    monkeypatch.setattr(TraceGrantClient, "create", with_link)
+    return grants
+
+
+@needs_account_database
+@pytest.mark.usefixtures("own_store", "coding_agent")
+def test_a_coding_agent_that_enabled_traces_uploads_and_sees_the_link(
+    capsys, linked_grants, terminal_answer
+) -> None:
+    """The hint's advice works: `crewai traces enable`, then a run with no
+    terminal and no login uploads anonymously and prints the link whole, on
+    one line of stderr, where the agent reads it."""
+    result = CliRunner().invoke(traces_enable)
+    assert result.exit_code == 0, result.output
+    capsys.readouterr()
+
+    assert ExampleFlow().kickoff() == "hello world"
+
+    terminal_answer.assert_not_called()
+    assert len(linked_grants) == 1
+    output = capsys.readouterr()
+    assert LINK_LINE in output.err.splitlines()
+    assert TRACE_URL not in output.out
+
+
+@needs_account_database
+@pytest.mark.parametrize("recorded", [LEGACY_YES, ASKED_NO])
+@pytest.mark.usefixtures("own_store", "coding_agent")
+def test_only_an_asked_yes_uploads_without_a_terminal(
+    capsys, linked_grants, recorded
+) -> None:
+    """A yes saved before `trace_consent_asked` existed cannot be told apart
+    from one nobody gave; a no is a no."""
+    _record(recorded)
+
+    assert ExampleFlow().kickoff() == "hello world"
+
+    assert linked_grants == []
+    assert "View traces:" not in capsys.readouterr().err
+    assert user_data._load_user_data() == recorded
+
+
+@needs_account_database
+@pytest.mark.parametrize("value", ["false", "0"])
+@pytest.mark.usefixtures("own_store", "coding_agent")
+def test_tracing_turned_off_outranks_a_recorded_yes(
+    monkeypatch, linked_grants, value
+) -> None:
+    _record(ASKED_YES)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", value)
+
+    assert ExampleFlow().kickoff() == "hello world"
+    # And a run already buffering when the variable turned tracing off.
+    with ephemeral_tracing(str(uuid4())) as session:
+        session.get_tracer().start_span("execute flow").end()
+
+    assert linked_grants == []
+
+
+@needs_account_database
+@pytest.mark.usefixtures("own_store", "coding_agent")
+def test_a_host_that_says_no_outranks_a_recorded_yes(linked_grants) -> None:
+    _record(ASKED_YES)
+
+    with trace_consent(lambda: False):
+        assert ExampleFlow().kickoff() == "hello world"
+
+    assert linked_grants == []
+
+
+@needs_account_database
+@pytest.mark.parametrize("planted", ["home", "storage_dir"])
+@pytest.mark.usefixtures("coding_agent")
+def test_a_yes_in_a_store_the_environment_redirected_is_not_recorded(
+    monkeypatch, tmp_path, linked_grants, planted
+) -> None:
+    """A project's `.env` can move the user-data file — HOME, XDG_DATA_HOME,
+    or a CREWAI_STORAGE_DIR that leaves the data folder — to one holding a yes
+    nobody on this account gave. Nobody can be asked, so nothing uploads."""
+    monkeypatch.chdir(tmp_path)
+    if planted == "home":
+        _homes(monkeypatch, environment=tmp_path / "planted", account=tmp_path / "home")
+    else:
+        _homes(monkeypatch, environment=tmp_path / "home", account=tmp_path / "home")
+        monkeypatch.setenv("CREWAI_STORAGE_DIR", str(tmp_path / "project" / ".store"))
+    _record(ASKED_YES)
+    assert tmp_path / "home" not in user_data._user_data_file().parents
+
+    assert ExampleFlow().kickoff() == "hello world"
+
+    assert linked_grants == []
+
+
+@needs_account_database
+@pytest.mark.usefixtures("own_store", "person_at_terminal")
+def test_a_recorded_yes_at_a_terminal_uploads_without_asking_again(
+    capsys, linked_grants, terminal_answer
+) -> None:
+    _record(ASKED_YES)
+
+    assert ExampleFlow().kickoff() == "hello world"
+
+    terminal_answer.assert_not_called()
+    assert len(linked_grants) == 1
+    output = capsys.readouterr()
+    assert "Ephemeral Execution Traces" in output.out
+    assert "View traces:" not in output.err
+
+
+@needs_account_database
+@pytest.mark.usefixtures("own_store")
+def test_tracing_asked_for_still_ignores_a_recorded_yes() -> None:
+    """Only the env var and `tracing=True` are `tracing_asked_for`; the
+    recorded yes is read where the upload is approved."""
+    _record(ASKED_YES)
+
+    assert utils.tracing_asked_for() is False
