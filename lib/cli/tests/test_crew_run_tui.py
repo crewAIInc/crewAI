@@ -2899,6 +2899,7 @@ async def test_the_end_of_run_sharing_screen_offers_a_link(key, shared) -> None:
         "See this run step by step? "
         "Upload it to CrewAI AMP for a link showing every agent decision, "
         "tool call and LLM call. "
+        "The upload includes prompts, inputs, outputs, tool arguments and results. "
         "Anyone with the link can open it for 24 hours. "
         "No answer in 20 seconds is Not now."
     )

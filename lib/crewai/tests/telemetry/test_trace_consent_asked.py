@@ -349,6 +349,25 @@ def test_the_legacy_handler_records_a_terminal_no_as_asked(
     assert user_data.has_user_declined_tracing() is True
 
 
+@pytest.mark.parametrize("recorded", [None, LEGACY_NO])
+@pytest.mark.usefixtures("person_at_terminal")
+def test_the_legacy_handler_records_nothing_when_the_question_fails(
+    monkeypatch, recorded
+) -> None:
+    if recorded is not None:
+        _record(recorded)
+    monkeypatch.setattr("builtins.input", Mock(side_effect=EOFError()))
+    declined = Mock()
+    monkeypatch.setattr(FirstTimeTraceHandler, "_show_tracing_declined_message", declined)
+
+    _handler().handle_execution_completion()
+
+    declined.assert_not_called()
+    assert user_data._load_user_data() == (recorded or {})
+    assert user_data.has_user_declined_tracing() is False
+    assert utils.is_first_execution() is True
+
+
 def test_mark_first_execution_done_keeps_an_earlier_answer() -> None:
     _record(ASKED_YES)
     utils.mark_first_execution_done(user_consented=False)
@@ -424,6 +443,10 @@ def test_the_terminal_question_says_what_the_upload_gives(
         "Upload it to CrewAI AMP for a link showing every agent decision, "
         "tool call and LLM call." in out
     )
+    assert (
+        "The upload includes prompts, inputs, outputs, tool arguments and results."
+        in out
+    )
     assert "Anyone with the link can open it for 24 hours." in out
     assert "View trace? [y/N] (20s timeout):" in out
 
@@ -454,7 +477,58 @@ def test_the_question_is_not_shown_where_nobody_can_answer(monkeypatch) -> None:
     monkeypatch.setattr(
         "builtins.input", Mock(side_effect=AssertionError("read input with no one there"))
     )
-    assert utils.prompt_user_for_trace_viewing() is False
+    assert utils.prompt_user_for_trace_viewing() is None
+
+
+def _console_that_cannot_render() -> Mock:
+    console = Mock()
+    console.return_value.print.side_effect = RuntimeError("terminal cannot render")
+    return console
+
+
+@pytest.mark.parametrize(
+    "error", [EOFError(), OSError("stdin closed"), KeyboardInterrupt(), LookupError()]
+)
+@pytest.mark.usefixtures("person_at_terminal")
+def test_a_question_whose_answer_cannot_be_read_is_not_answered(
+    monkeypatch, error
+) -> None:
+    """Reading the answer failed: that is no answer, not a no."""
+    monkeypatch.setattr("builtins.input", Mock(side_effect=error))
+    assert utils.prompt_user_for_trace_viewing(timeout_seconds=5) is None
+
+
+@pytest.mark.usefixtures("person_at_terminal")
+def test_a_question_that_cannot_be_rendered_is_not_answered(monkeypatch) -> None:
+    monkeypatch.setattr(utils, "Console", _console_that_cannot_render())
+    monkeypatch.setattr(
+        "builtins.input", Mock(side_effect=AssertionError("read input after a failure"))
+    )
+    assert utils.prompt_user_for_trace_viewing() is None
+
+
+@pytest.mark.parametrize("failure", ["render", "input"])
+@pytest.mark.parametrize("recorded", [None, LEGACY_NO])
+@pytest.mark.usefixtures("person_at_terminal")
+def test_a_failed_question_records_nothing_and_asks_again(
+    monkeypatch, grants, failure, recorded
+) -> None:
+    """The first-run upload path: a prompt that failed saves no decline, so
+    the next run at a terminal asks again."""
+    if recorded is not None:
+        _record(recorded)
+    if failure == "render":
+        monkeypatch.setattr(utils, "Console", _console_that_cannot_render())
+    else:
+        monkeypatch.setattr("builtins.input", Mock(side_effect=EOFError()))
+
+    _first_run_traced()
+
+    assert grants == []
+    assert user_data._load_user_data() == (recorded or {})
+    assert user_data.has_user_declined_tracing() is False
+    assert utils.is_first_execution() is True
+    assert utils.should_auto_collect_first_time_traces() is True
 
 
 # -- callers of has_user_declined_tracing ----------------------------------------

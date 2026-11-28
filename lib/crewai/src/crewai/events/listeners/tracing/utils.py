@@ -571,7 +571,8 @@ def _is_interactive_terminal() -> bool:
 TRACE_PROMPT_HEADLINE = "See this run step by step?"
 TRACE_PROMPT_BODY = (
     "Upload it to CrewAI AMP for a link showing every agent decision, "
-    "tool call and LLM call."
+    "tool call and LLM call. "
+    "The upload includes prompts, inputs, outputs, tool arguments and results."
 )
 TRACE_LINK_NOTICE = "Anyone with the link can open it for 24 hours."
 
@@ -582,7 +583,7 @@ def _prompt_can_be_shown() -> bool:
     Three cases where it cannot: a suite under test, a host that asked for
     tracing messages to be suppressed, and a process with no terminal (CI, API
     servers, Docker) where a prompt would block for twenty seconds with nobody
-    to answer it. `prompt_user_for_trace_viewing` returns False in each, which
+    to answer it. `prompt_user_for_trace_viewing` returns None in each, which
     is what keeps an unapproved ephemeral trace on the machine — and
     `tracing_asked_for` asks the same question, so the two cannot drift apart.
     """
@@ -597,15 +598,17 @@ def _prompt_can_be_shown() -> bool:
 
 def prompt_user_for_trace_viewing(
     timeout_seconds: int = 20, *, sharing: bool = False
-) -> bool:
+) -> bool | None:
     """Ask the person at the terminal whether to upload this run's trace.
 
     Returns True only for an explicit yes; no, Enter, and the timeout are
-    "Not now". ``sharing`` no longer changes the question: both callers upload
-    the trace, and the question says so.
+    "Not now" (False). Returns None when nobody answered: the question could
+    not be shown, or showing it or reading the answer failed. ``sharing`` no
+    longer changes the question: both callers upload the trace, and the
+    question says so.
     """
     if not _prompt_can_be_shown():
-        return False
+        return None
 
     try:
         import threading
@@ -633,14 +636,14 @@ def prompt_user_for_trace_viewing(
         )
         click.echo(prompt_text, nl=False)
 
-        result = [False]
+        result: list[bool | None] = [None]
 
         def get_input() -> None:
             try:
                 response = input().strip().lower()
-                result[0] = response in ["y", "yes"]
             except (EOFError, KeyboardInterrupt, OSError, LookupError):
-                result[0] = False
+                return  # no answer was read, so `result` stays None
+            result[0] = response in ["y", "yes"]
 
         ctx = contextvars.copy_context()
         input_thread = threading.Thread(target=ctx.run, args=(get_input,), daemon=True)
@@ -653,7 +656,8 @@ def prompt_user_for_trace_viewing(
         return result[0]
 
     except Exception:
-        return False
+        # The panel or prompt failed to render: nobody saw the question.
+        return None
 
 
 def mark_first_execution_completed(user_consented: bool = False) -> None:

@@ -57,6 +57,8 @@ class FirstTimeTraceHandler:
 
         try:
             user_wants_traces = prompt_user_for_trace_viewing()
+            if user_wants_traces is None:
+                return  # the question failed before anyone answered it
             _record_trace_answer(user_consented=user_wants_traces)
 
             if user_wants_traces:

@@ -21,7 +21,6 @@ from opentelemetry.sdk.trace.export import (
 )
 
 from crewai.events.listeners.tracing.utils import (
-    _prompt_can_be_shown,
     prompt_user_for_trace_viewing,
     tracing_asked_for,
 )
@@ -143,8 +142,6 @@ class EphemeralSpanBuffer(SpanExporter):
                 approved = True
             else:
                 approved = prompt_user_for_trace_viewing(sharing=True)
-                if not approved and not _prompt_can_be_shown():
-                    approved = None  # nobody was there to ask, so nobody answered
             if first_time and approved is not None:
                 update_user_data(
                     {
