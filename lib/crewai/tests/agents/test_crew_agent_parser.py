@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from crewai.agents import parser
 from crewai.agents.parser import (
@@ -365,6 +367,57 @@ def test_integration_valid_and_invalid():
     assert isinstance(results[1], AgentFinish)
     assert isinstance(results[2], OutputParserException)
     assert isinstance(results[3], OutputParserException)
+
+
+def test_parse_repairs_bare_none_field_to_json_null():
+    text = (
+        "Thought: Look up a user record\n"
+        "Action: lookup\n"
+        'Action Input: {"query": "x", "country": None}'
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    parsed = json.loads(result.tool_input)
+    assert parsed == {"query": "x", "country": None}
+    assert parsed["country"] is None
+
+
+def test_parse_repairs_nested_bare_none_and_python_bool_in_list():
+    text = (
+        "Thought: Run filtered lookup\n"
+        "Action: lookup\n"
+        'Action Input: {"query": "x", "flag": True, "nested": {"opt": None}, "ids": [1, None, 3]}'
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert json.loads(result.tool_input) == {
+        "query": "x",
+        "flag": True,
+        "nested": {"opt": None},
+        "ids": [1, None, 3],
+    }
+
+
+def test_parse_repairs_mixed_python_none_and_json_literals():
+    text = (
+        "Thought: Send mixed literal payload\n"
+        "Action: lookup\n"
+        'Action Input: {"a": None, "b": true, "c": false}'
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert json.loads(result.tool_input) == {"a": None, "b": True, "c": False}
+
+
+def test_parse_preserves_quoted_none_string():
+    text = (
+        "Thought: Pass literal string None\n"
+        "Action: lookup\n"
+        'Action Input: {"query": "x", "country": "None"}'
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert json.loads(result.tool_input) == {"query": "x", "country": "None"}
 
 
 # TODO: ADD TEST TO MAKE SURE ** REMOVAL DOESN'T MESS UP ANYTHING
