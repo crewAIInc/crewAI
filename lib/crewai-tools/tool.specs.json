@@ -8868,6 +8868,425 @@
       }
     },
     {
+      "description": "Query Dealport's 28M+ cited US private company Records, NYC commercial and multifamily building Records, free ($0.00) market sizing counts, and verified human owner contacts backed by primary public filings.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Dealport workspace API key (dp_live_...)",
+          "name": "DP_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Dealport SMB Intelligence Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Query Dealport V4 cited US private company Records, commercial buildings, and owners.",
+        "properties": {
+          "base_url": {
+            "default": "https://app.dealport.com",
+            "description": "Base URL for the Dealport API.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "DealportTool",
+        "type": "object"
+      },
+      "name": "DealportTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for querying Dealport V4 company, building, and owner endpoints.",
+        "properties": {
+          "action": {
+            "default": "preview_companies",
+            "description": "Dealport V4 operation to execute: 'preview_companies' ($0.00 US company market sizing count and up to 5 samples), 'search_companies' ($0.01/company Record, $0.00 repeat within 30 days), 'search_buildings' ($0.01/NYC building Record, $0.00 repeat within 30 days), 'get_record' ($0.01 cited company UUID or 10-digit NYC BBL Record), or 'find_owner' ($0.09 verified human owner/contact hit, $0.00 miss).",
+            "enum": [
+              "preview_companies",
+              "search_companies",
+              "search_buildings",
+              "get_record",
+              "find_owner"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "borough": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "NYC borough code required for 'search_buildings': MN, BK, QN, BX, or SI.",
+            "title": "Borough"
+          },
+          "cities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional city names within state, e.g. ['Columbus', 'Dayton'].",
+            "title": "Cities"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Dealport company UUID required for 'find_owner'.",
+            "title": "Company Id"
+          },
+          "counties": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional county names within state, e.g. ['Franklin', 'Montgomery'].",
+            "title": "Counties"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Pagination cursor from a previous search response.",
+            "title": "Cursor"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Company website domain, e.g. 'example.com'.",
+            "title": "Domain"
+          },
+          "independent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "When True, restrict to privately held independent companies.",
+            "title": "Independent"
+          },
+          "licensed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "When True, restrict to companies holding an active state license.",
+            "title": "Licensed"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum number of Records to return (1 to 50).",
+            "title": "Limit"
+          },
+          "loan_due_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum ACRIS mortgage maturity year for 'search_buildings', e.g. 2027.",
+            "title": "Loan Due By"
+          },
+          "loan_holder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Mortgage holder category or lender filter for 'search_buildings'.",
+            "title": "Loan Holder"
+          },
+          "max_employees": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum employee headcount.",
+            "title": "Max Employees"
+          },
+          "max_revenue": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum annual revenue in USD.",
+            "title": "Max Revenue"
+          },
+          "min_employees": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Minimum employee headcount.",
+            "title": "Min Employees"
+          },
+          "min_revenue": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Minimum annual revenue in USD.",
+            "title": "Min Revenue"
+          },
+          "min_units": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Minimum unit count for 'search_buildings'.",
+            "title": "Min Units"
+          },
+          "naics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "2-to-6 digit NAICS industry codes, e.g. ['238220', '332710'].",
+            "title": "Naics"
+          },
+          "owner_contact": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "When True, restrict to companies with an owner phone or email on file.",
+            "title": "Owner Contact"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional full name of a specific principal for 'find_owner'.",
+            "title": "Person"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Company name prefix (for company queries) or building address/owner filter.",
+            "title": "Q"
+          },
+          "record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Company UUID or 10-digit NYC BBL required for 'get_record'.",
+            "title": "Record Id"
+          },
+          "signal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional building signal filter for 'search_buildings'.",
+            "title": "Signal"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Two-letter US state code for company queries, e.g. 'OH' or 'TX'.",
+            "title": "State"
+          }
+        },
+        "title": "DealportToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to recursively list a directory's content.",
       "env_vars": [],
       "humanized_name": "List files in directory",

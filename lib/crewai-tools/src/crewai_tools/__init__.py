@@ -73,6 +73,10 @@ from crewai_tools.tools.db2_search_tool import (
     DB2ToolSchema,
     DB2VectorSearchTool,
 )
+from crewai_tools.tools.dealport_tool import (
+    DealportTool,
+    DealportToolInput,
+)
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
 )
@@ -273,6 +277,8 @@ __all__ = [
     "DaytonaExecTool",
     "DaytonaFileTool",
     "DaytonaPythonTool",
+    "DealportTool",
+    "DealportToolInput",
     "DirectoryReadTool",
     "DirectorySearchTool",
     "E2BExecTool",
