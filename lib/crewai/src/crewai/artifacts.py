@@ -350,12 +350,15 @@ def save_artifact(
     if file_path is not None:
         path = _check_readable(file_path)
         data = path.read_bytes()
-        extension = extension or path.suffix.lstrip(".") or "bin"
-        content_type = (
-            content_type
-            or mimetypes.guess_type(path.name)[0]
-            or "application/octet-stream"
-        )
+        if artifact.kind == "image":
+            extension, content_type = _image_format(data)
+        else:
+            extension = extension or path.suffix.lstrip(".") or "bin"
+            content_type = (
+                content_type
+                or mimetypes.guess_type(path.name)[0]
+                or "application/octet-stream"
+            )
     elif content is not None:
         # Text can never be an image or file; bytes from code can.
         if artifact.kind in FILE_KINDS and isinstance(content, str):
