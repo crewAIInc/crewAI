@@ -132,6 +132,78 @@ def mock_embedder() -> MagicMock:
 class TestMemoryRootScope:
     """Tests for Memory class root_scope field."""
 
+    @pytest.mark.parametrize(
+        ("root_scope", "scope", "expected_scope"),
+        [
+            ("/crew/research", "/renamed", "/crew/research/renamed"),
+            ("/crew/research/", "renamed", "/crew/research/renamed"),
+            ("/crew/research", "/", "/crew/research"),
+            ("/crew/research", None, "/crew/research/original"),
+            (None, "/renamed", "/renamed"),
+            (None, None, "/original"),
+        ],
+    )
+    def test_update_keeps_records_retrievable_under_root_scope(
+        self,
+        tmp_path: Path,
+        mock_embedder: MagicMock,
+        root_scope: str | None,
+        scope: str | None,
+        expected_scope: str,
+    ) -> None:
+        """Moving a memory uses the same relative scope as remember and recall."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope=root_scope,
+        )
+        try:
+            record = mem.remember(
+                "A remembered fact", scope="/original", categories=["test"], importance=0.7
+            )
+            assert record is not None
+
+            updated = mem.update(record.id, scope=scope, importance=0.8)
+
+            assert updated.scope == expected_scope
+            assert updated.importance == 0.8
+            assert [r.id for r in mem.list_records(scope=scope)] == [record.id]
+            matches = mem.recall("A remembered fact", scope=scope, depth="shallow")
+            assert [match.record.id for match in matches] == [record.id]
+            assert matches[0].record.scope == expected_scope
+        finally:
+            mem.close()
+
+    def test_read_only_update_preserves_record_scope(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """Read-only memory keeps the original scope even when a move is requested."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/research",
+        )
+        try:
+            record = mem.remember(
+                "A remembered fact", scope="/original", categories=["test"], importance=0.7
+            )
+            assert record is not None
+            mem.read_only = True
+
+            updated = mem.update(record.id, scope="/renamed")
+
+            assert updated.scope == "/crew/research/original"
+            assert [r.id for r in mem.list_records(scope="/original")] == [record.id]
+            assert mem.list_records(scope="/renamed") == []
+        finally:
+            mem.close()
+
     def test_memory_with_root_scope_prepends_to_explicit_scope(
         self, tmp_path: Path, mock_embedder: MagicMock
     ) -> None:
