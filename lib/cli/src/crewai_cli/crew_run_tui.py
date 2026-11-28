@@ -229,6 +229,11 @@ def _append_highlighted(t: Text, content: str, indent: str, max_lines: int = 50)
     return total
 
 
+# How long the end-of-run question waits; no answer by then is "Not now", as at
+# the terminal prompt, and is saved like one.
+_TRACE_CONSENT_TIMEOUT_SECONDS = 20
+
+
 class TraceConsentScreen(ModalScreen[bool]):
     CSS = """
     TraceConsentScreen {
@@ -285,7 +290,8 @@ class TraceConsentScreen(ModalScreen[bool]):
         Binding("n", "consent_no", "No", show=False),
         Binding("escape", "consent_no", "Cancel", show=False),
     ]
-    YES_LABEL = "Share Trace"
+    YES_LABEL = "View trace"
+    NO_LABEL = "Not now"
 
     def compose(self) -> ComposeResult:
         with Vertical(id="consent-dialog"):
@@ -296,17 +302,21 @@ class TraceConsentScreen(ModalScreen[bool]):
                     id="btn-consent-yes",
                     classes="consent-btn",
                 )
-                yield Button("Cancel", id="btn-consent-no", classes="consent-btn")
+                yield Button(self.NO_LABEL, id="btn-consent-no", classes="consent-btn")
 
     def _build_content(self) -> Text:
-        t = Text()
-        t.append(
-            "  Share this execution trace with CrewAI?\n\n", style=f"bold {_C_TEXT}"
+        from crewai.events.listeners.tracing.utils import (
+            TRACE_PROMPT_BODY,
+            TRACE_PROMPT_HEADLINE,
         )
-        t.append("  The trace is stored locally and may include\n", style=_C_DIM)
-        t.append("  prompts, inputs, outputs, and tool calls.\n\n", style=_C_DIM)
-        t.append("  Sharing uploads it. Cancel or wait 20 seconds\n", style=_C_MUTED)
-        t.append("  to discard it without uploading.\n", style=_C_MUTED)
+
+        t = Text()
+        t.append(f"{TRACE_PROMPT_HEADLINE}\n\n", style=f"bold {_C_TEXT}")
+        t.append(f"{TRACE_PROMPT_BODY}\n\n", style=_C_DIM)
+        t.append(
+            f"No answer in {_TRACE_CONSENT_TIMEOUT_SECONDS} seconds is Not now.",
+            style=_C_MUTED,
+        )
         return t
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -335,6 +345,7 @@ class TurnTracingOnScreen(TraceConsentScreen):
     run has to happen again, traced, and only a yes turns tracing on."""
 
     YES_LABEL = "Turn On & Evaluate"
+    NO_LABEL = "Cancel"
 
     def _build_content(self) -> Text:
         t = Text()
@@ -356,6 +367,7 @@ class EvaluateConsentScreen(TraceConsentScreen):
     the evaluation; Cancel or Esc runs nothing. Nothing times out."""
 
     YES_LABEL = "Share & Evaluate"
+    NO_LABEL = "Cancel"
 
     def _build_content(self) -> Text:
         t = Text()
@@ -1332,15 +1344,19 @@ FooterKey .footer-key--key {
         self._unsubscribe()
         self.exit(self._crew_result)
 
-    def _request_trace_consent(self) -> bool:
+    def _request_trace_consent(self) -> bool | None:
         """Wait in the execution worker while the UI asks for upload consent.
 
         Unless the user already answered: turning tracing on — in the project's
         .env, or with ``tracing=True`` — is the yes, and a modal at the end of
         the run would be the same question a second time.
+
+        Quitting the app is not an answer: it returns ``None``, so nothing is
+        uploaded and a first run records nothing. Letting the 20 seconds run
+        out is "Not now", as at the terminal prompt.
         """
         if self._discard_trace_on_exit:
-            return False
+            return None
         if self._tracing_was_asked_for():
             return True
         done = threading.Event()
@@ -1360,12 +1376,10 @@ FooterKey .footer-key--key {
 
         try:
             self.call_from_thread(show)
-            return (
-                done.wait(timeout=20)
-                and not self._discard_trace_on_exit
-                and bool(decision)
-                and decision[0]
-            )
+            answered = done.wait(timeout=_TRACE_CONSENT_TIMEOUT_SECONDS)
+            if self._discard_trace_on_exit:
+                return None
+            return answered and bool(decision) and decision[0]
         finally:
             self._trace_consent_pending = None
             if not self._discard_trace_on_exit:

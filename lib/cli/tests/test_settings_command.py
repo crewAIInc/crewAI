@@ -14,6 +14,10 @@ from crewai_cli.config import (
 )
 import shutil
 
+import pytest
+
+from crewai_cli.user_data import update_user_data
+
 
 class TestSettingsCommand(unittest.TestCase):
     def setUp(self):
@@ -86,3 +90,42 @@ class TestSettingsCommand(unittest.TestCase):
             self.assertEqual(
                 getattr(self.settings_command.settings, key), DEFAULT_CLI_SETTINGS.get(key)
             )
+
+
+@pytest.mark.parametrize(
+    ("recorded", "says"),
+    [
+        (None, "Not set"),
+        (
+            {
+                "trace_consent": False,
+                "first_execution_done": True,
+                "trace_consent_asked": True,
+            },
+            "❌ Disabled",
+        ),
+        # Written by older versions for runs where nobody could be asked too:
+        # `crewai traces status` calls it not set, and so does this list.
+        ({"trace_consent": False, "first_execution_done": True}, "Not set"),
+        ({"trace_consent": True, "first_execution_done": True}, "✅ Enabled"),
+    ],
+)
+def test_list_shows_trace_consent_like_traces_status(
+    tmp_path, monkeypatch, recorded, says
+):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", "crewai_cli_settings_list")
+    monkeypatch.setattr(
+        "crewai_core.paths.appdirs.user_data_dir",
+        lambda app, author: str(tmp_path / app),
+    )
+    if recorded is not None:
+        update_user_data(recorded)
+    table = MagicMock()
+    monkeypatch.setattr("crewai_cli.settings.main.Table", lambda **_: table)
+    monkeypatch.setattr("crewai_cli.settings.main.console", MagicMock())
+
+    SettingsCommand(settings_kwargs={"config_path": tmp_path / "settings.json"}).list()
+
+    table.add_row.assert_any_call(
+        "trace_consent", says, "Whether trace collection is enabled"
+    )

@@ -17,6 +17,7 @@ import uuid
 import click
 from crewai_core.eval_handshake import run_awaited_by_evaluation
 from crewai_core.lock_store import lock as store_lock
+from crewai_core.runtime_env import detect_coding_agent
 from crewai_core.user_data import (
     _load_user_data as _load_user_data,
     _save_user_data as _save_user_data,
@@ -214,16 +215,17 @@ def is_tracing_enabled_in_context() -> bool:
 
 
 def on_first_execution_tracing_confirmation() -> bool:
-    if _is_test_environment():
+    if not _prompt_can_be_shown():
         return False
 
     if is_first_execution():
-        mark_first_execution_done()
-        return click.confirm(
+        enable = click.confirm(
             "This is the first execution of CrewAI. Do you want to enable tracing?",
             default=True,
             show_default=True,
         )
+        _record_trace_answer(user_consented=enable)
+        return enable
     return False
 
 
@@ -425,21 +427,42 @@ def get_user_id() -> str:
         return uid
 
 
+def _trace_question_asked(data: dict[str, Any]) -> bool:
+    """The question was put to a person on this machine: a yes from anywhere, or
+    any answer recorded with ``trace_consent_asked`` (see
+    ``has_user_declined_tracing``)."""
+    return data.get("trace_consent") is True or data.get("trace_consent_asked") is True
+
+
 def is_first_execution() -> bool:
-    """True if this is the first execution for this user."""
-    data = _load_user_data()
-    return not data.get("first_execution_done", False)
+    """True until the trace question was put to a person on this machine.
+
+    A run where nobody could be asked records nothing, so it does not end the
+    first execution: the first run at a terminal still asks. A question shown
+    and left to time out is "Not now", and is recorded like one.
+    """
+    return not _trace_question_asked(_load_user_data())
 
 
 def mark_first_execution_done(user_consented: bool = False) -> None:
-    """Mark that the first execution has been completed.
+    """Record a person's answer to the first-execution trace question.
+
+    Call it only after somebody was asked: the answer is final.
 
     Args:
         user_consented: Whether the user consented to trace collection.
     """
+    # The default stays for callers outside crewAI; a bare call saves a
+    # permanent decline, so crewAI itself calls `_record_trace_answer`.
+    _record_trace_answer(user_consented=user_consented)
+
+
+def _record_trace_answer(*, user_consented: bool) -> None:
+    """Persist a person's trace answer. Keyword-only and required: a missing
+    answer must not become a saved decline."""
     with store_lock(_user_data_lock_name()):
         data = _load_user_data()
-        if data.get("first_execution_done", False):
+        if _trace_question_asked(data):
             return
 
         uid = data.get("user_id") or _generate_user_id()
@@ -450,6 +473,7 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
                 "user_id": uid,
                 "machine_id": _get_machine_id(),
                 "trace_consent": user_consented,
+                "trace_consent_asked": True,
             }
         )
         p = _user_data_file()
@@ -505,7 +529,20 @@ def should_auto_collect_first_time_traces() -> bool:
     if is_tracing_enabled_in_context():
         return False
 
-    return is_first_execution()
+    if not is_first_execution():
+        return False
+
+    # Buffer only where somebody can answer. A server or CI job has nobody to
+    # ask, and would otherwise buffer every run's spans and discard them.
+    return _prompt_can_be_shown() or _host_asks_for_trace_consent()
+
+
+def _host_asks_for_trace_consent() -> bool:
+    """A host such as the terminal UI asks with its own screen
+    (``crewai.telemetry.tracing.ephemeral.trace_consent``)."""
+    from crewai.telemetry.tracing.ephemeral import _trace_consent
+
+    return _trace_consent.get() is not None
 
 
 def _is_interactive_terminal() -> bool:
@@ -528,13 +565,23 @@ def _is_interactive_terminal() -> bool:
         return False
 
 
+# The first-run question, shared by this prompt and the terminal UI's screen.
+TRACE_PROMPT_HEADLINE = "See this run step by step?"
+TRACE_PROMPT_BODY = (
+    "Use CrewAI AMP to observe every agent decision, tool call and LLM call."
+)
+# Printed once to a coding agent, which cannot answer the question above. It
+# only says how; the agent running the command is what records the yes.
+TRACE_AGENT_HINT = "To debug runs step by step, run `crewai traces enable`"
+
+
 def _prompt_can_be_shown() -> bool:
     """Could a question about traces be put to somebody at all?
 
     Three cases where it cannot: a suite under test, a host that asked for
     tracing messages to be suppressed, and a process with no terminal (CI, API
     servers, Docker) where a prompt would block for twenty seconds with nobody
-    to answer it. `prompt_user_for_trace_viewing` returns False in each, which
+    to answer it. `prompt_user_for_trace_viewing` returns None in each, which
     is what keeps an unapproved ephemeral trace on the machine — and
     `tracing_asked_for` asks the same question, so the two cannot drift apart.
     """
@@ -547,16 +594,54 @@ def _prompt_can_be_shown() -> bool:
     return _is_interactive_terminal()
 
 
+def _tell_coding_agent_how_to_trace() -> None:
+    """Print ``TRACE_AGENT_HINT`` once per user record, for a coding agent
+    running with the trace question unanswered and nobody to put it to.
+
+    Records only that the hint was shown (``trace_consent_agent_hint_shown``),
+    never an answer: the question stays open for the next run at a terminal.
+    Written to stderr so a program's own stdout stays clean.
+    """
+    if os.getenv("CREWAI_TRACING_ENABLED"):
+        return
+    if (
+        _is_test_environment()
+        or should_suppress_tracing_messages()
+        or _is_interactive_terminal()
+        or _host_asks_for_trace_consent()
+    ):
+        return
+    if detect_coding_agent() == "unknown":
+        return
+    try:
+        with store_lock(_user_data_lock_name()):
+            data = _load_user_data()
+            if (
+                _trace_question_asked(data)
+                or data.get("trace_consent_agent_hint_shown") is True
+            ):
+                return
+            data["trace_consent_agent_hint_shown"] = True
+            _user_data_file().write_text(json.dumps(data, indent=2))
+    except OSError:
+        # Unrecorded, the hint would print on every run: skip it instead.
+        return
+    click.echo(TRACE_AGENT_HINT, err=True)
+
+
 def prompt_user_for_trace_viewing(
     timeout_seconds: int = 20, *, sharing: bool = False
-) -> bool:
-    """
-    Prompt user if they want to see their traces with timeout.
-    Returns True if user agrees, False otherwise. ``sharing`` explicitly asks
-    permission to upload locally buffered spans rather than merely view a trace.
+) -> bool | None:
+    """Ask the person at the terminal whether to upload this run's trace.
+
+    Returns True only for an explicit yes; no, Enter, and the timeout are
+    "Not now" (False). Returns None when nobody answered: the question could
+    not be shown, or showing it or reading the answer failed. ``sharing`` no
+    longer changes the question: both callers upload the trace, and the
+    question says so.
     """
     if not _prompt_can_be_shown():
-        return False
+        return None
 
     try:
         import threading
@@ -564,50 +649,33 @@ def prompt_user_for_trace_viewing(
         console = Console()
 
         content = Text()
-        content.append("🔍 ", style="cyan bold")
-        content.append(
-            "Detailed execution traces are available!\n\n", style="cyan bold"
-        )
-        content.append("View insights including:\n", style="white")
-        content.append("  • Agent decision-making process\n", style="bright_blue")
-        content.append("  • Task execution flow and timing\n", style="bright_blue")
-        content.append("  • Tool usage details", style="bright_blue")
-        if sharing:
-            content.append(
-                "\n\nThese traces are stored locally and may contain prompts, inputs, "
-                "and outputs. Sharing uploads them to CrewAI.",
-                style="white",
-            )
+        content.append(f"{TRACE_PROMPT_HEADLINE}\n\n", style="cyan bold")
+        content.append(TRACE_PROMPT_BODY, style="white")
 
         panel = Panel(
             content,
-            title="[bold cyan]Execution Traces[/bold cyan]",
+            title="[bold cyan]Execution trace[/bold cyan]",
             border_style="cyan",
             padding=(1, 2),
         )
         console.print("\n")
         console.print(panel)
 
-        question = (
-            "Share this execution trace with CrewAI?"
-            if sharing
-            else "Would you like to view your execution traces?"
-        )
         prompt_text = click.style(
-            f"{question} [y/N] ({timeout_seconds}s timeout): ",
+            f"View trace? [y/N] ({timeout_seconds}s timeout): ",
             fg="white",
             bold=True,
         )
         click.echo(prompt_text, nl=False)
 
-        result = [False]
+        result: list[bool | None] = [None]
 
         def get_input() -> None:
             try:
                 response = input().strip().lower()
-                result[0] = response in ["y", "yes"]
             except (EOFError, KeyboardInterrupt, OSError, LookupError):
-                result[0] = False
+                return  # no answer was read, so `result` stays None
+            result[0] = response in ["y", "yes"]
 
         ctx = contextvars.copy_context()
         input_thread = threading.Thread(target=ctx.run, args=(get_input,), daemon=True)
@@ -620,7 +688,8 @@ def prompt_user_for_trace_viewing(
         return result[0]
 
     except Exception:
-        return False
+        # The panel or prompt failed to render: nobody saw the question.
+        return None
 
 
 def mark_first_execution_completed(user_consented: bool = False) -> None:
@@ -629,4 +698,4 @@ def mark_first_execution_completed(user_consented: bool = False) -> None:
     Args:
         user_consented: Whether the user consented to trace collection.
     """
-    mark_first_execution_done(user_consented=user_consented)
+    _record_trace_answer(user_consented=user_consented)

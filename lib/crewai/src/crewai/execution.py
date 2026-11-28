@@ -153,6 +153,7 @@ def _tracing_disabled(tracing: bool | None) -> bool:
 
 def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     from crewai.events.listeners.tracing.utils import (
+        _tell_coding_agent_how_to_trace,
         should_auto_collect_first_time_traces,
         should_enable_tracing,
     )
@@ -162,6 +163,7 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
         return
     enabled = should_enable_tracing(override=tracing)
     if not enabled and not should_auto_collect_first_time_traces():
+        _tell_coding_agent_how_to_trace()
         return
     from crewai.telemetry.tracing.grants import (
         GrantSpanExporter,

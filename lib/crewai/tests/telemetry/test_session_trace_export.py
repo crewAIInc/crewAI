@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from crewai.auth.token import AuthError
+from crewai.events.listeners.tracing import utils as tracing_utils
 from crewai.telemetry.tracing import ephemeral
 from crewai.telemetry.tracing.ephemeral import (
     EphemeralSpanBuffer,
@@ -184,6 +185,7 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
     collector.export_status = status
     if authenticated:
         monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    monkeypatch.setattr(tracing_utils, "_is_interactive_terminal", lambda: True)
     seen = {}
 
     def run():
@@ -231,6 +233,37 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
         assert written["trace_url"] == url
     else:
         assert written is None
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+def test_without_a_terminal_the_link_is_one_whole_line_on_stderr(
+    collector, recorded_runs, monkeypatch, capsys, authenticated
+):
+    """A panel folds a long URL at 80 columns when nothing sets the width, so
+    with no terminal (a coding agent, CI) the link is printed whole, once, on
+    stderr; an anonymous one says who can open it and for how long."""
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    url = collector.url + "/crewai_plus/otel_traces/" + "r" * 120 + "?access_code=secret"
+    collector.grant_override = {"trace_url": url}
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    monkeypatch.setattr(tracing_utils, "_is_interactive_terminal", lambda: False)
+
+    def run():
+        with trace_consent(lambda: True):
+            token = begin_execution(tracing=True)
+            try:
+                record(get_trace_session())
+            finally:
+                end_execution(token)
+
+    copy_context().run(run)
+    captured = capsys.readouterr()
+    assert captured.err.splitlines().count(f"View traces: {url}") == 1
+    assert "Anyone with the link" not in captured.err
+    assert "View traces:" not in captured.out and "╭" not in captured.out
 
 
 @pytest.mark.parametrize("first_status", [200, 401])
@@ -292,7 +325,8 @@ def test_a_refreshed_grant_still_records_the_run_once(
     exporter.record_export()
     exporter.record_export()
     assert writes == [grant.execution_uuid]  # written once, however often the exporter is told the run ended
-    shown = capsys.readouterr().out
+    captured = capsys.readouterr()
+    shown = captured.out + captured.err
     assert shown.count("View traces:") == 1  # and the link with it, once
     assert grant.execution_uuid not in shown
     written = _last_run(recorded_runs)
@@ -679,7 +713,7 @@ def test_terminal_consent_explicitly_requests_sharing(collector, approved):
 
 
 @pytest.mark.parametrize("approved", [False, True])
-def test_first_time_preference_contains_only_completion_and_consent(
+def test_first_time_preference_records_the_answer_as_asked(
     collector, monkeypatch, approved
 ):
     save = Mock()
@@ -691,7 +725,11 @@ def test_first_time_preference_contains_only_completion_and_consent(
         record(session)
         save.assert_not_called()
     save.assert_called_once_with(
-        {"first_execution_done": True, "trace_consent": approved}
+        {
+            "first_execution_done": True,
+            "trace_consent": approved,
+            "trace_consent_asked": True,
+        }
     )
     assert len(collector.grants) == int(approved)
 
@@ -741,7 +779,11 @@ def test_first_time_execution_uses_local_session_even_with_saved_credentials(
     assert get_trace_session() is None and get_execution_uuid() is None
     assert session._closed
     save.assert_called_once_with(
-        {"first_execution_done": True, "trace_consent": approved}
+        {
+            "first_execution_done": True,
+            "trace_consent": approved,
+            "trace_consent_asked": True,
+        }
     )
     assert len(collector.grants) == int(approved)
 

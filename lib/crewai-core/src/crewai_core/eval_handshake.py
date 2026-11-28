@@ -38,38 +38,20 @@ import os
 from pathlib import Path
 import re
 import secrets
-import sys
 from typing import Any
 from urllib.parse import urlparse
 
-import appdirs
+from crewai_core.paths import account_data_dir
 
 
 AWAITING_ENV = "CREWAI_EVAL_AWAITING_RUN"
 _TOKEN = re.compile(r"[0-9a-f]{32}")
 
 
-def _account_home() -> Path:
-    """This account's home from the account database, never `$HOME`."""
-    if os.name == "posix":
-        with contextlib.suppress(ImportError, KeyError, OSError):
-            import pwd
-
-            return Path(pwd.getpwuid(os.getuid()).pw_dir)
-    return Path.home()
-
-
 def awaiting_dir() -> Path:
     """Where the tokens live: this user's crewAI data directory, wherever the
-    environment says home is. Windows reads it from the known-folder API."""
-    if os.name == "nt":
-        return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
-    home = _account_home()
-    if sys.platform == "darwin":
-        base = home / "Library" / "Application Support"
-    else:
-        base = home / ".local" / "share"  # XDG_DATA_HOME ignored on purpose
-    return base / "crewai" / "eval-awaiting"
+    environment says home is (``crewai_core.paths.account_data_dir``)."""
+    return account_data_dir() / "crewai" / "eval-awaiting"
 
 
 def awaited_evaluation() -> dict[str, Any] | None:

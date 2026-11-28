@@ -12,7 +12,13 @@ import pytest
 USER_DATA = {
     "nothing recorded": None,
     "consented": {"trace_consent": True, "first_execution_done": True},
-    "declined": {"trace_consent": False, "first_execution_done": True},
+    "declined": {
+        "trace_consent": False,
+        "first_execution_done": True,
+        "trace_consent_asked": True,
+    },
+    # Older versions wrote this for runs nobody was asked about, too.
+    "legacy unasked decline": {"trace_consent": False, "first_execution_done": True},
 }
 
 

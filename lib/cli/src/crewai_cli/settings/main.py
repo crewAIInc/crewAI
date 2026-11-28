@@ -7,7 +7,7 @@ from rich.table import Table
 
 from crewai_cli.command import BaseCommand
 from crewai_cli.config import HIDDEN_SETTINGS_KEYS, READONLY_SETTINGS_KEYS, Settings
-from crewai_cli.user_data import _load_user_data
+from crewai_cli.user_data import _load_user_data, has_user_declined_tracing
 
 
 console = Console()
@@ -53,7 +53,7 @@ class SettingsCommand(BaseCommand):
         trace_consent = user_data.get("trace_consent")
         if trace_consent is True:
             consent_display = "✅ Enabled"
-        elif trace_consent is False:
+        elif has_user_declined_tracing():
             consent_display = "❌ Disabled"
         else:
             consent_display = "Not set"

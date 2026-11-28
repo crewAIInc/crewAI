@@ -172,17 +172,56 @@ CREWAI_TRACING_ENABLED=true
 
 ## 첫 실행 후 추적 보기
 
-Crew 또는 Flow를 처음 실행하면 대화형 터미널에서 다음을 물을 수 있습니다:
+대화형 터미널에서 Crew 또는 Flow를 처음 실행하면 CrewAI가 다음을 묻습니다:
 
 ```text
-Share this execution trace with CrewAI? [y/N]
+See this run step by step?
+
+Use CrewAI AMP to observe every agent decision, tool call and LLM call.
+
+View trace? [y/N] (20s timeout):
 ```
 
-버퍼에 저장된 추적을 CrewAI에 업로드하려면 **yes**를 선택하세요. 추적에는
-프롬프트, 입력, 출력이 포함될 수 있습니다. 거절하거나 시간이 초과되거나
-대화형 동의 프롬프트 없이 실행하면 버퍼가 삭제됩니다. 나중에
-`crewai traces enable` 또는 `crewai traces disable`을 사용하거나 Crew 또는
-Flow에서 `tracing`을 설정하여 추적 설정을 변경할 수 있습니다.
+버퍼에 저장된 추적을 CrewAI AMP에 업로드하려면 **y**(View trace)로 답하세요.
+추적에는 프롬프트, 입력, 출력이 포함될 수 있습니다. **N**, Enter 또는 20초가
+지나도록 답하지 않으면 **Not now**입니다: 버퍼가 삭제되고 아무것도 업로드되지
+않습니다. 터미널 UI는 **View trace** 및 **Not now** 버튼으로 같은 질문을
+합니다. 답변은 저장됩니다. **Not now** 이후에는 실행이 추적되지 않으며 질문을
+다시 하지 않습니다.
+
+사람의 답변만 저장됩니다. CI, 서버 또는 대화형 터미널이 없는 모든 프로세스처럼
+물어볼 사람이 없는 실행은 추적을 버퍼에 저장하지 않고, 아무것도 업로드하지
+않으며, 아무것도 저장하지 않으므로 터미널에서의 첫 실행에서는 여전히 질문합니다.
+이전 CrewAI 버전이 묻지 않고 저장한 "아니요"는 실제 답변과 구별할 수 없으므로
+터미널에서 한 번 더 질문합니다. 이전 버전에서 `crewai traces disable`로 저장한
+"아니요"도 마찬가지입니다: 질문을 받지 않으려면 이 명령을 다시 실행하거나
+`CREWAI_TRACING_ENABLED=false`를 설정하세요.
+
+코딩 에이전트가 이런 실행을 시작하면 CrewAI는 에이전트가 추적을 켜는 방법을
+알 수 있도록 stderr에 한 줄을 한 번만 출력합니다:
+
+```text
+To debug runs step by step, run `crewai traces enable`
+```
+
+이 줄은 어떤 답변도 저장하지 않습니다. 누군가 `crewai traces enable`을
+실행해야만 추적이 켜집니다. 답변한 후나 `CREWAI_TRACING_ENABLED`가
+설정된 경우에는 표시되지 않습니다.
+
+`crewai traces enable`을 실행했거나 프롬프트에서 **y**로 답한 후에는, 터미널과
+로그인이 없어도 각 실행이 묻지 않고 추적을 업로드합니다. 터미널이 없으면 링크가
+잘리지 않은 한 줄로 stderr에 출력됩니다:
+
+```text
+View traces: <link>
+```
+
+이 동의는 계정 자체의 데이터 폴더에서만 읽습니다. `HOME`, `XDG_DATA_HOME` 또는
+`CREWAI_STORAGE_DIR`을 다른 곳으로 지정하는 `.env`는 이 동의를 가져오지 않으며,
+그런 실행은 터미널 앞의 사람이 동의하지 않는 한 아무것도 업로드하지 않습니다.
+
+나중에 `crewai traces enable` 또는 `crewai traces disable`을 사용하거나 Crew
+또는 Flow에서 `tracing`을 설정하여 추적 설정을 변경할 수 있습니다.
 
 ### 로컬 버퍼링 및 인증된 내보내기
 
@@ -256,4 +295,4 @@ CrewAI 추적은 다음에 대한 포괄적인 가시성을 제공합니다:
 1. Crew/Flow에서 `tracing=True`가 설정되어 있는지 확인하세요
 2. 환경 변수를 사용하는 경우 `CREWAI_TRACING_ENABLED=true`인지 확인하세요
 3. 인증된 내보내기의 경우 CLI 로그인, `CREWAI_USER_PAT` 또는 플랫폼 통합 자격 증명을 확인하세요. 익명으로 공유하려면 동의 프롬프트에서 명시적으로 동의하세요. 로그인은 필요하지 않습니다
-4. crew/flow가 실행되었고 추적 내보내기가 성공했는지 확인하세요. 동의를 거절하거나 시간이 초과되거나 대화형 동의 프롬프트 없이 실행하면 로컬 버퍼가 업로드되지 않고 삭제됩니다
+4. crew/flow가 실행되었고 추적 내보내기가 성공했는지 확인하세요. 동의를 거절하거나 시간이 초과되거나 대화형 동의 프롬프트 없이 실행하면 로컬 버퍼가 업로드되지 않고 삭제됩니다. 단, 이전에 `crewai traces enable`을 실행했거나 동의한 경우는 예외입니다
