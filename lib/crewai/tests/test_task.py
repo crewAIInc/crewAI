@@ -502,6 +502,31 @@ def test_json_property_is_none_when_output_json_was_not_produced():
     assert crew_output.json is None
 
 
+def test_crew_json_uses_last_executed_task_after_skipped_task() -> None:
+    from crewai.crews.crew_output import CrewOutput
+    from crewai.tasks.output_format import OutputFormat
+
+    json_output = TaskOutput(
+        description="Produce JSON",
+        agent="Writer",
+        raw='{"answer": 42}',
+        output_format=OutputFormat.JSON,
+        json_dict={"answer": 42},
+    )
+    skipped_output = TaskOutput(
+        description="Skip conditionally",
+        agent="Reviewer",
+        raw="",
+    )
+    crew_output = CrewOutput(
+        raw=json_output.raw,
+        json_dict=json_output.json_dict,
+        tasks_output=[json_output, skipped_output],
+    )
+
+    assert crew_output.json == '{"answer": 42}'
+
+
 @pytest.mark.vcr()
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):
