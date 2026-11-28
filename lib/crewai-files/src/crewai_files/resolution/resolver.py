@@ -297,7 +297,7 @@ class FileResolver:
         """
         if self.upload_cache is not None:
             cached = self.upload_cache.get_by_hash(context.content_hash, provider)
-            if cached is not None:
+            if cached is not None and cached.content_type == context.content_type:
                 logger.debug(
                     f"Using cached upload for {file.filename}: {cached.file_id}"
                 )
@@ -518,7 +518,7 @@ class FileResolver:
             cached = await self.upload_cache.aget_by_hash(
                 context.content_hash, provider
             )
-            if cached is not None:
+            if cached is not None and cached.content_type == context.content_type:
                 logger.debug(
                     f"Using cached upload for {file.filename}: {cached.file_id}"
                 )
