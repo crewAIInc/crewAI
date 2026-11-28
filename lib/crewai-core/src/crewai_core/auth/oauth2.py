@@ -30,19 +30,6 @@ REFRESH_MARGIN_SECONDS = 60
 # Short: a refresh runs on its caller's way to AMP, inside a crew run or a CLI command.
 _REFRESH_TIMEOUT_SECONDS = 5
 
-# RFC 6749 section 5.2 limits `error` to printable ASCII; anything else, or anything
-# long, is not echoed into a log line.
-# RFC 6749 section 5.2. Only these are logged: anything else in `error` is server text, and a
-# refresh token fits any "looks like a code" pattern.
-_OAUTH_ERROR_CODES = (
-    "invalid_request",
-    "invalid_client",
-    "invalid_grant",
-    "unauthorized_client",
-    "unsupported_grant_type",
-    "invalid_scope",
-)
-
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
@@ -53,7 +40,19 @@ def _oauth_error_code(response: httpx.Response) -> str | None:
     except ValueError:
         return None
     error = body.get("error") if isinstance(body, dict) else None
-    return next((code for code in _OAUTH_ERROR_CODES if code == error), None)
+    # Only the RFC 6749 section 5.2 codes come back, as these are logged: anything else in
+    # `error` is server text, and a refresh token fits any "looks like a code" pattern. The
+    # literal tuple is also what CodeQL accepts as clearing the value for logging.
+    if error in (
+        "invalid_request",
+        "invalid_client",
+        "invalid_grant",
+        "unauthorized_client",
+        "unsupported_grant_type",
+        "invalid_scope",
+    ):
+        return str(error)
+    return None
 
 
 class Oauth2Settings(BaseModel):
