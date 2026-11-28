@@ -334,6 +334,8 @@ Deploy the crew or flow to [CrewAI AMP](https://app.crewai.com).
   crewai login
   ```
 
+  Without a login, a coding agent or a person at a terminal running `crewai deploy` or `crewai eval --models` gets a temporary CrewAI account instead of a login prompt. The CLI prints when it expires (7 days after it was created, together with its deployment) and a claim link: sign up there to keep the account and what it deployed. `crewai login` replaces the temporary account with your own; it does not move its deployment. CI, with neither, still needs `crewai login`.
+
 - **Create a deployment**: Once you are authenticated, you can create a deployment for your crew or flow from the root of your localproject.
   ```shell Terminal
   crewai deploy create

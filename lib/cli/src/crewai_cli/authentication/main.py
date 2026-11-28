@@ -15,6 +15,7 @@ from crewai_core.auth.oauth2 import (
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.settings import Settings
 
+from crewai_cli.authentication.placeholder import forget_placeholder
 from crewai_cli.authentication.token import get_auth_token
 from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick
@@ -27,6 +28,9 @@ class AuthenticationCommand(_BaseAuthenticationCommand):
     """CLI-side login that also signs the user into the tool repository."""
 
     def _post_login(self) -> None:
+        # A real login replaces the temporary account `crewai deploy` or
+        # `crewai eval --models` may have created; its claim link still works.
+        forget_placeholder()
         self._select_organization()
         self._login_to_tool_repository()
 

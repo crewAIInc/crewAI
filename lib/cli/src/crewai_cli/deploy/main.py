@@ -305,7 +305,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
 
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+        PlusAPIMixin.__init__(
+            self, telemetry=self._telemetry, placeholder_source="deploy"
+        )
         self.project_name = get_project_name(require=True)
         # Sent with every create and push, so AMP knows which project a
         # deployment runs — `crewai eval --models` finds the deployment by it.

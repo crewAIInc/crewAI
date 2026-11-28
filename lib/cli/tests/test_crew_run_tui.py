@@ -2676,6 +2676,8 @@ def _amp_deploy_doubles(monkeypatch, *, statuses):
     calls: list[str] = []
 
     class FakeDeployCommand:
+        placeholder = None  # logged in: no temporary account
+
         def create_crew(self, **kwargs) -> None:
             calls.append("create")
             status = statuses.pop(0)
