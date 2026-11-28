@@ -62,7 +62,10 @@ class CrewOutput(BaseModel):
 
         None when that output could not be converted to its ``output_json`` model.
         """
-        if self.tasks_output[-1].output_format != OutputFormat.JSON:
+        last_non_empty = next(
+            (t for t in reversed(self.tasks_output) if t.raw), None
+        )
+        if last_non_empty is None or last_non_empty.output_format != OutputFormat.JSON:
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
             )
