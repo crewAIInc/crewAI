@@ -566,21 +566,13 @@ def _is_interactive_terminal() -> bool:
 
 
 # The first-run question, shared by this prompt and the terminal UI's screen.
-# Every upload it authorizes is anonymous — a first run is never sent with a
-# saved login (`crewai.execution._start_tracing`) — so the link notice holds
-# whether or not the CLI is logged in.
 TRACE_PROMPT_HEADLINE = "See this run step by step?"
 TRACE_PROMPT_BODY = (
-    "Upload it to CrewAI AMP for a link showing every agent decision, "
-    "tool call and LLM call."
+    "Use CrewAI AMP to observe every agent decision, tool call and LLM call."
 )
-TRACE_LINK_NOTICE = "Anyone with the link can open it for 24 hours."
 # Printed once to a coding agent, which cannot answer the question above. It
 # only says how; the agent running the command is what records the yes.
-TRACE_AGENT_HINT = (
-    "To debug runs step by step, run `crewai traces enable` to upload a trace "
-    "of each run (prompts, inputs, outputs and tool calls)."
-)
+TRACE_AGENT_HINT = "To debug runs step by step, run `crewai traces enable`"
 
 
 def _prompt_can_be_shown() -> bool:
@@ -659,7 +651,6 @@ def prompt_user_for_trace_viewing(
         content = Text()
         content.append(f"{TRACE_PROMPT_HEADLINE}\n\n", style="cyan bold")
         content.append(TRACE_PROMPT_BODY, style="white")
-        content.append(f"\n\n{TRACE_LINK_NOTICE}", style="bright_black")
 
         panel = Panel(
             content,

@@ -177,9 +177,7 @@ Na primeira vez que você executa um Crew ou Flow em um terminal interativo, o C
 ```text
 See this run step by step?
 
-Upload it to CrewAI AMP for a link showing every agent decision, tool call and LLM call.
-
-Anyone with the link can open it for 24 hours.
+Use CrewAI AMP to observe every agent decision, tool call and LLM call.
 
 View trace? [y/N] (20s timeout):
 ```
@@ -205,7 +203,7 @@ uma linha no stderr, uma única vez, para que o agente saiba como ativar o
 rastreamento:
 
 ```text
-To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+To debug runs step by step, run `crewai traces enable`
 ```
 
 A linha não salva nenhuma resposta: o rastreamento só é ativado quando alguém
@@ -217,7 +215,7 @@ envia seu rastreamento sem perguntar, também sem terminal e sem login. Sem
 terminal, o link é impresso inteiro em uma linha no stderr:
 
 ```text
-View traces: <link> (Anyone with the link can open it for 24 hours.)
+View traces: <link>
 ```
 
 Esse sim é lido apenas da pasta de dados da sua própria conta. Um `.env` que

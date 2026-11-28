@@ -448,10 +448,11 @@ def test_the_terminal_question_says_what_the_upload_gives(
     out = " ".join(capsys.readouterr().out.split())
     assert "See this run step by step?" in out
     assert (
-        "Upload it to CrewAI AMP for a link showing every agent decision, "
-        "tool call and LLM call." in out
+        "Use CrewAI AMP to observe every agent decision, tool call and LLM call."
+        in out
     )
-    assert "Anyone with the link can open it for 24 hours." in out
+    assert "Anyone with the link" not in out
+    assert "24 hours" not in out
     assert "View trace? [y/N] (20s timeout):" in out
 
 
@@ -565,10 +566,7 @@ def test_disabled_tracing_notices_read_the_same_in_every_unconsented_state(
 
 # -- the one-time hint for a coding agent -----------------------------------------
 
-AGENT_HINT = (
-    "To debug runs step by step, run `crewai traces enable` to upload a trace "
-    "of each run (prompts, inputs, outputs and tool calls)."
-)
+AGENT_HINT = "To debug runs step by step, run `crewai traces enable`"
 
 
 @pytest.fixture
@@ -591,6 +589,7 @@ def test_a_coding_agent_is_told_once_how_to_turn_traces_on(
     second = capsys.readouterr()
 
     assert first.err.count(AGENT_HINT) == 1
+    assert AGENT_HINT in first.err.splitlines()
     assert AGENT_HINT not in first.out
     assert AGENT_HINT not in second.err + second.out
     assert user_data._load_user_data() == {
@@ -708,7 +707,7 @@ def test_enabling_traces_after_the_hint_records_an_asked_yes(
 # -- a recorded yes uploads with nobody at the screen --------------------------
 
 TRACE_URL = "https://app.crewai.com/crewai_plus/ephemeral_trace_batches/run?access_code=TRACE-x"
-LINK_LINE = f"View traces: {TRACE_URL} (Anyone with the link can open it for 24 hours.)"
+LINK_LINE = f"View traces: {TRACE_URL}"
 _REAL_USER_DATA_DIR = appdirs.user_data_dir
 
 needs_account_database = pytest.mark.skipif(

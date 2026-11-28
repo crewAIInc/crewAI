@@ -177,9 +177,7 @@ CREWAI_TRACING_ENABLED=true
 ```text
 See this run step by step?
 
-Upload it to CrewAI AMP for a link showing every agent decision, tool call and LLM call.
-
-Anyone with the link can open it for 24 hours.
+Use CrewAI AMP to observe every agent decision, tool call and LLM call.
 
 View trace? [y/N] (20s timeout):
 ```
@@ -203,7 +201,7 @@ View trace? [y/N] (20s timeout):
 알 수 있도록 stderr에 한 줄을 한 번만 출력합니다:
 
 ```text
-To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+To debug runs step by step, run `crewai traces enable`
 ```
 
 이 줄은 어떤 답변도 저장하지 않습니다. 누군가 `crewai traces enable`을
@@ -215,7 +213,7 @@ To debug runs step by step, run `crewai traces enable` to upload a trace of each
 잘리지 않은 한 줄로 stderr에 출력됩니다:
 
 ```text
-View traces: <link> (Anyone with the link can open it for 24 hours.)
+View traces: <link>
 ```
 
 이 동의는 계정 자체의 데이터 폴더에서만 읽습니다. `HOME`, `XDG_DATA_HOME` 또는

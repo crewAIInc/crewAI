@@ -2897,9 +2897,7 @@ async def test_the_end_of_run_sharing_screen_offers_a_link(key, shared) -> None:
     assert (yes, no) == ("View trace", "Not now")
     assert text == (
         "See this run step by step? "
-        "Upload it to CrewAI AMP for a link showing every agent decision, "
-        "tool call and LLM call. "
-        "Anyone with the link can open it for 24 hours. "
+        "Use CrewAI AMP to observe every agent decision, tool call and LLM call. "
         "No answer in 20 seconds is Not now."
     )
 

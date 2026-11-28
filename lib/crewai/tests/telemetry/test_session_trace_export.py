@@ -261,8 +261,8 @@ def test_without_a_terminal_the_link_is_one_whole_line_on_stderr(
 
     copy_context().run(run)
     captured = capsys.readouterr()
-    notice = "" if authenticated else " (Anyone with the link can open it for 24 hours.)"
-    assert captured.err.splitlines().count(f"View traces: {url}{notice}") == 1
+    assert captured.err.splitlines().count(f"View traces: {url}") == 1
+    assert "Anyone with the link" not in captured.err
     assert "View traces:" not in captured.out and "╭" not in captured.out
 
 

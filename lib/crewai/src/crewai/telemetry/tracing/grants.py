@@ -27,7 +27,6 @@ from crewai.auth.token import AuthError, get_auth_token
 from crewai.context import get_platform_integration_token
 from crewai.events.listeners.tracing import utils as tracing_utils
 from crewai.events.listeners.tracing.utils import (
-    TRACE_LINK_NOTICE,
     is_tui_mode,
     should_suppress_tracing_messages,
 )
@@ -431,8 +430,7 @@ class GrantSpanExporter(SpanExporter):
             # With no terminal (a coding agent, CI) the panel folds the URL at
             # 80 columns, so the link goes out whole on one line — to stderr,
             # like the agent hint, keeping the program's own stdout clean.
-            notice = f" ({TRACE_LINK_NOTICE})" if ephemeral else ""
-            click.echo(f"View traces: {self._trace_url}{notice}", err=True)
+            click.echo(f"View traces: {self._trace_url}", err=True)
             return
         line = Text("View traces: ", style="white")
         line.append(

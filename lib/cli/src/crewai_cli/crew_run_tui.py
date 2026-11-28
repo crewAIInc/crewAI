@@ -306,7 +306,6 @@ class TraceConsentScreen(ModalScreen[bool]):
 
     def _build_content(self) -> Text:
         from crewai.events.listeners.tracing.utils import (
-            TRACE_LINK_NOTICE,
             TRACE_PROMPT_BODY,
             TRACE_PROMPT_HEADLINE,
         )
@@ -314,7 +313,6 @@ class TraceConsentScreen(ModalScreen[bool]):
         t = Text()
         t.append(f"{TRACE_PROMPT_HEADLINE}\n\n", style=f"bold {_C_TEXT}")
         t.append(f"{TRACE_PROMPT_BODY}\n\n", style=_C_DIM)
-        t.append(f"{TRACE_LINK_NOTICE}\n", style=_C_MUTED)
         t.append(
             f"No answer in {_TRACE_CONSENT_TIMEOUT_SECONDS} seconds is Not now.",
             style=_C_MUTED,

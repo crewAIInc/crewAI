@@ -67,7 +67,11 @@ async def test_session_consent_buttons_and_keys_resolve_execution_worker(
         assert str(screen.query_one("#btn-consent-no", Button).label) == "Not now"
         content = screen._build_content().plain
         assert "See this run step by step?" in content
-        assert "Upload it to CrewAI AMP" in content
+        assert (
+            "Use CrewAI AMP to observe every agent decision, tool call and LLM call."
+            in content
+        )
+        assert "Anyone with the link" not in content
         assert not result.done()
         if action.startswith("click-"):
             assert await pilot.click(f"#btn-consent-{action.removeprefix('click-')}")

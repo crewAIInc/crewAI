@@ -177,9 +177,7 @@ The first time you run a Crew or Flow in an interactive terminal, CrewAI asks:
 ```text
 See this run step by step?
 
-Upload it to CrewAI AMP for a link showing every agent decision, tool call and LLM call.
-
-Anyone with the link can open it for 24 hours.
+Use CrewAI AMP to observe every agent decision, tool call and LLM call.
 
 View trace? [y/N] (20s timeout):
 ```
@@ -203,7 +201,7 @@ When a coding agent starts such a run, CrewAI prints one line to stderr,
 once, so the agent knows how to turn tracing on:
 
 ```text
-To debug runs step by step, run `crewai traces enable` to upload a trace of each run (prompts, inputs, outputs and tool calls).
+To debug runs step by step, run `crewai traces enable`
 ```
 
 The line saves no answer: tracing turns on only when someone runs
@@ -215,7 +213,7 @@ trace without asking, also with no terminal and no login. Without a terminal,
 the link is printed whole on one line to stderr:
 
 ```text
-View traces: <link> (Anyone with the link can open it for 24 hours.)
+View traces: <link>
 ```
 
 This yes is read only from your account's own data folder. A `.env` that
