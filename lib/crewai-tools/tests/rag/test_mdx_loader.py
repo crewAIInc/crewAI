@@ -206,3 +206,82 @@ Final text.
             phrase not in result.content
             for phrase in ["import {", "export {", "<Component>"]
         )
+
+    def test_fenced_code_keeps_imports(self):
+        content = "```python\nimport json\nprint(json.loads('{}'))\n```"
+        result = MDXLoader().load(SourceContent(content))
+        assert result.content == "```python\nimport json\nprint(json.loads('{}'))\n```"
+
+    def test_fenced_code_keeps_comparisons(self):
+        content = "```text\nassert 0 < count and count > 2\n```"
+        result = MDXLoader().load(SourceContent(content))
+        assert "assert 0 < count and count > 2" in result.content
+
+    def test_inline_code_keeps_jsx_like_text(self):
+        content = "Use `List<T>` in the schema."
+        result = MDXLoader().load(SourceContent(content))
+        assert result.content == "Use `List<T>` in the schema."
+
+    def test_inline_code_keeps_html_like_text(self):
+        content = "The `<div>` tag renders a block."
+        result = MDXLoader().load(SourceContent(content))
+        assert "`<div>`" in result.content
+
+    def test_tilde_fence_keeps_code(self):
+        content = "~~~sh\nexport FOO=bar\n~~~"
+        result = MDXLoader().load(SourceContent(content))
+        assert result.content == "~~~sh\nexport FOO=bar\n~~~"
+
+    def test_long_fence_keeps_code(self):
+        content = "````\nimport os\n````"
+        result = MDXLoader().load(SourceContent(content))
+        assert result.content == "````\nimport os\n````"
+
+    def test_fenced_code_blank_lines_are_preserved(self):
+        content = "```python\nx = 1\n\n\n\ny = 2\n```"
+        result = MDXLoader().load(SourceContent(content))
+        assert result.content == "```python\nx = 1\n\n\n\ny = 2\n```"
+
+    def test_mdx_syntax_outside_code_is_still_removed(self):
+        content = "import A from 'a'\n\ntext <B />\n\nexport const x = 1"
+        result = MDXLoader().load(SourceContent(content))
+        assert result.content.strip() == "text"
+
+    def test_jsx_attribute_backticks_are_not_inline_code(self):
+        content = "Attr <Foo bar={`x`} /> here"
+        result = MDXLoader().load(SourceContent(content))
+        assert "<Foo" not in result.content
+        assert result.content.strip() == "Attr  here"
+
+    def test_fenced_block_with_surrounding_mdx(self):
+        content = (
+            "import A from 'a'\n\n"
+            "```python\nimport json\n```\n\n"
+            "<B />\n\n"
+            "export const x = 1"
+        )
+        result = MDXLoader().load(SourceContent(content))
+        assert "import A" not in result.content
+        assert "export const" not in result.content
+        assert "<B" not in result.content
+        assert "```python\nimport json\n```" in result.content
+
+    def test_escaped_backticks_do_not_hide_a_tag(self):
+        content = "Escaped \\`<Widget />\\` here"
+        result = MDXLoader().load(SourceContent(content))
+        assert "<Widget" not in result.content
+        assert result.content.strip() == "Escaped \\`\\` here"
+
+    def test_tag_after_a_code_span_is_not_swallowed(self):
+        content = "Use `x < y` and <Widget /> then `z`."
+        result = MDXLoader().load(SourceContent(content))
+        assert "`x < y`" in result.content
+        assert "`z`" in result.content
+        assert "<Widget" not in result.content
+
+    def test_export_with_a_template_literal_is_fully_removed(self):
+        content = "export const meta = { title: `Hello` }\n\n# Guide"
+        result = MDXLoader().load(SourceContent(content))
+        assert "export" not in result.content
+        assert "`Hello`" not in result.content
+        assert result.content.strip() == "# Guide"

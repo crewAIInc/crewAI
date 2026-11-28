@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import re
 from typing import Any, Final
 
@@ -12,6 +13,150 @@ _EXPORT_PATTERN: Final[re.Pattern[str]] = re.compile(
 )
 _JSX_TAG_PATTERN: Final[re.Pattern[str]] = re.compile(r"<[^>]+>")
 _EXTRA_NEWLINES_PATTERN: Final[re.Pattern[str]] = re.compile(r"\n\s*\n\s*\n")
+
+# A fence line is up to three spaces of indentation followed by a run of at
+# least three backticks or tildes. The closing fence must reuse the same
+# character and be at least as long as the opening one.
+_FENCE_LINE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\n]*)$"
+)
+
+
+def _iter_blocks(content: str) -> Iterator[tuple[bool, str]]:
+    """Split ``content`` into ``(is_code, text)`` pairs.
+
+    Fenced code blocks (backtick or tilde fences, any length) are yielded
+    verbatim as code, everything else as prose. An unterminated fence is
+    treated as code running to the end of the document, matching how
+    Markdown renders it.
+    """
+    lines = content.splitlines(keepends=True)
+    pending: list[str] = []
+    index = 0
+
+    while index < len(lines):
+        opener = _FENCE_LINE_PATTERN.match(lines[index].rstrip("\r\n"))
+        if opener is None:
+            pending.append(lines[index])
+            index += 1
+            continue
+
+        fence = opener.group("fence")
+        marker = fence[0]
+
+        # An info string cannot contain the fence character itself.
+        if marker == "`" and marker in opener.group("info"):
+            pending.append(lines[index])
+            index += 1
+            continue
+
+        closer = re.compile(
+            r"^ {0,3}" + re.escape(marker) + "{" + str(len(fence)) + r",}[ \t]*$"
+        )
+        end = index + 1
+        while end < len(lines) and not closer.match(lines[end].rstrip("\r\n")):
+            end += 1
+
+        if pending:
+            yield False, "".join(pending)
+            pending = []
+
+        if end >= len(lines):
+            yield True, "".join(lines[index:])
+            return
+
+        yield True, "".join(lines[index : end + 1])
+        index = end + 1
+
+    if pending:
+        yield False, "".join(pending)
+
+
+def _iter_inline_code(text: str) -> Iterator[tuple[bool, str]]:
+    """Split prose into ``(is_code, text)`` pairs.
+
+    Inline code spans are delimited by a run of backticks closed by a run of
+    the same length, so ``x`` and ``` `` ``a`b`` `` ``` are handled correctly.
+    Backtick runs without a matching closer stay in the prose.
+
+    The scan steps over escaped characters and over ``<...>`` tags in the same
+    left-to-right pass. An escaped backtick is literal text and never opens a
+    span, and a backtick inside a tag attribute is an attribute value rather
+    than Markdown inline code. Because a tag is only stepped over in the prose,
+    a ``<`` inside a code span cannot start one either.
+    """
+    prose_start = 0
+    index = 0
+    length = len(text)
+
+    while index < length:
+        char = text[index]
+
+        if char == "\\" and index + 1 < length:
+            index += 2
+            continue
+
+        if char == "<":
+            tag = _JSX_TAG_PATTERN.match(text, index)
+            index = tag.end() if tag is not None else index + 1
+            continue
+
+        if char != "`":
+            index += 1
+            continue
+
+        open_end = index
+        while open_end < length and text[open_end] == "`":
+            open_end += 1
+        run = open_end - index
+
+        close_start = -1
+        scan = open_end
+        while scan < length:
+            if text[scan] == "\\" and scan + 1 < length:
+                scan += 2
+                continue
+            if text[scan] != "`":
+                scan += 1
+                continue
+            run_end = scan
+            while run_end < length and text[run_end] == "`":
+                run_end += 1
+            if run_end - scan == run:
+                close_start = scan
+                break
+            scan = run_end
+
+        if close_start == -1:
+            index = open_end
+            continue
+
+        if index > prose_start:
+            yield False, text[prose_start:index]
+        yield True, text[index : close_start + run]
+        index = close_start + run
+        prose_start = index
+
+    if prose_start < length:
+        yield False, text[prose_start:]
+
+
+def _clean_prose(text: str) -> str:
+    """Strip real MDX syntax from a prose segment, leaving code untouched."""
+    # Imports and exports are whole lines and can carry a template literal that
+    # would otherwise be read as an inline code span and survive as residue, so
+    # they are removed before the text is split into code and prose.
+    text = _IMPORT_PATTERN.sub("", text)
+    text = _EXPORT_PATTERN.sub("", text)
+
+    out: list[str] = []
+    for is_code, segment in _iter_inline_code(text):
+        if is_code:
+            out.append(segment)
+            continue
+        cleaned = _JSX_TAG_PATTERN.sub("", segment)
+        out.append(_EXTRA_NEWLINES_PATTERN.sub("\n\n", cleaned))
+    return "".join(out)
 
 
 class MDXLoader(BaseLoader):
@@ -37,16 +182,10 @@ class MDXLoader(BaseLoader):
             return file.read()
 
     def _parse_mdx(self, content: str, source_ref: str) -> LoaderResult:
-        cleaned_content = content
-
-        cleaned_content = _IMPORT_PATTERN.sub("", cleaned_content)
-
-        cleaned_content = _EXPORT_PATTERN.sub("", cleaned_content)
-
-        cleaned_content = _JSX_TAG_PATTERN.sub("", cleaned_content)
-
-        cleaned_content = _EXTRA_NEWLINES_PATTERN.sub("\n\n", cleaned_content)
-        cleaned_content = cleaned_content.strip()
+        parts: list[str] = []
+        for is_code, block in _iter_blocks(content):
+            parts.append(block if is_code else _clean_prose(block))
+        cleaned_content = "".join(parts).strip()
 
         metadata = {"format": "mdx"}
         return LoaderResult(
