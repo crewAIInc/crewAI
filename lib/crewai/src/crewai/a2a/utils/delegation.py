@@ -303,6 +303,7 @@ async def aexecute_a2a_delegation(
     if turn_number is None:
         turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
 
+    started_event_id: list[str | None] = [None]
     try:
         result = await _aexecute_a2a_delegation_impl(
             endpoint=endpoint,
@@ -330,23 +331,30 @@ async def aexecute_a2a_delegation(
             transport=transport,
             accepted_output_modes=accepted_output_modes,
             input_files=input_files,
+            started_event_id=started_event_id,
         )
     except Exception as e:
-        crewai_event_bus.emit(
-            agent_branch,
-            A2ADelegationCompletedEvent(
-                status="failed",
-                result=None,
-                error=str(e),
-                context_id=context_id,
-                is_multiturn=is_multiturn,
-                endpoint=endpoint,
-                metadata=metadata,
-                extensions=list(extensions.keys()) if extensions else None,
-                from_task=from_task,
-                from_agent=from_agent,
-            ),
-        )
+        # a2a_delegation_completed is scope-ending: without a matching
+        # a2a_delegation_started it would pop whatever enclosing scope is
+        # open (e.g. the caller's flow/agent frame) and corrupt later
+        # event parentage. Early failures raise before the started event,
+        # so only emit the terminal event when one was actually emitted.
+        if started_event_id[0] is not None:
+            crewai_event_bus.emit(
+                agent_branch,
+                A2ADelegationCompletedEvent(
+                    status="failed",
+                    result=None,
+                    error=str(e),
+                    context_id=context_id,
+                    is_multiturn=is_multiturn,
+                    endpoint=endpoint,
+                    metadata=metadata,
+                    extensions=list(extensions.keys()) if extensions else None,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
         raise
 
     agent_card_data = result.get("agent_card")
@@ -398,6 +406,7 @@ async def _aexecute_a2a_delegation_impl(
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
     input_files: dict[str, Any] | None = None,
+    started_event_id: list[str | None] | None = None,
 ) -> TaskStateResult:
     """Internal async implementation of A2A delegation."""
     if transport is None:
@@ -481,26 +490,26 @@ async def _aexecute_a2a_delegation_impl(
         a2a_agent_name = agent_card.name
 
     agent_card_dict = agent_card.model_dump(exclude_none=True)
-    crewai_event_bus.emit(
-        agent_branch,
-        A2ADelegationStartedEvent(
-            endpoint=endpoint,
-            task_description=task_description,
-            agent_id=agent_id or endpoint,
-            context_id=context_id,
-            is_multiturn=is_multiturn,
-            turn_number=turn_number,
-            a2a_agent_name=a2a_agent_name,
-            agent_card=agent_card_dict,
-            protocol_version=agent_card.protocol_version,
-            provider=agent_card_dict.get("provider"),
-            skill_id=skill_id,
-            metadata=metadata,
-            extensions=list(extensions.keys()) if extensions else None,
-            from_task=from_task,
-            from_agent=from_agent,
-        ),
+    started_event = A2ADelegationStartedEvent(
+        endpoint=endpoint,
+        task_description=task_description,
+        agent_id=agent_id or endpoint,
+        context_id=context_id,
+        is_multiturn=is_multiturn,
+        turn_number=turn_number,
+        a2a_agent_name=a2a_agent_name,
+        agent_card=agent_card_dict,
+        protocol_version=agent_card.protocol_version,
+        provider=agent_card_dict.get("provider"),
+        skill_id=skill_id,
+        metadata=metadata,
+        extensions=list(extensions.keys()) if extensions else None,
+        from_task=from_task,
+        from_agent=from_agent,
     )
+    crewai_event_bus.emit(agent_branch, started_event)
+    if started_event_id is not None:
+        started_event_id[0] = started_event.event_id
 
     if turn_number == 1:
         agent_id_for_event = agent_id or endpoint
