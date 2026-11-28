@@ -68,7 +68,6 @@ from crewai_cli.authentication.placeholder import (
     discard_rejected_placeholder,
     placeholder_client,
     placeholder_for,
-    remind_placeholder,
 )
 from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.plus_api import PlusAPI
@@ -2025,8 +2024,6 @@ def eval_models(
     # The criteria the comparison was graded on, for the project to edit — only
     # when it has none, exactly as after a Mode 1 evaluation.
     _say_where_the_criteria_live(write_eval_config(finished))
-    if placeholder is not None:
-        remind_placeholder(placeholder)
     if finished.get("status") != "done":
         raise SystemExit(1)
 

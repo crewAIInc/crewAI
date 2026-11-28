@@ -213,13 +213,6 @@ def created_line(token: str = "pat_first") -> list[str]:
     ]
 
 
-def used_line(token: str = "pat_first") -> str:
-    return (
-        f"This used a temporary CrewAI account that expires on {EXPIRY_DATE}. "
-        f"Keep it by signing up at {claim_url(token)}."
-    )
-
-
 # ── crewai deploy ────────────────────────────────────────────────────────────
 
 
@@ -243,7 +236,7 @@ def test_a_coding_agent_with_no_login_gets_an_account_and_the_deploy_goes_ahead(
     for line in created_line():
         assert line in out
     assert "Deployment created successfully!" in out
-    assert out.endswith(used_line())
+    assert "This used a temporary" not in out
 
 
 def test_a_person_at_a_terminal_with_no_login_gets_an_account_too(
@@ -298,7 +291,7 @@ def test_the_saved_account_is_reused_and_no_second_one_created(
     assert amp.bearers(CREWS) == ["Bearer pat_saved"]
     out = flat(capsys.readouterr().out)
     assert "Created a temporary" not in out
-    assert out.endswith(used_line("pat_saved"))
+    assert "This used a temporary" not in out
 
 
 def test_an_expired_account_is_replaced_once(amp, project, coding_agent):
@@ -330,7 +323,7 @@ def test_an_account_amp_refuses_is_replaced_once_and_the_deploy_retried(
         "CrewAI AMP no longer accepts the temporary account (it expired or was "
         "removed), so it was discarded."
     ) in out
-    assert out.endswith(used_line("pat_new"))
+    assert "This used a temporary" not in out
     assert saved_token() == "pat_new"
 
 
@@ -355,7 +348,7 @@ def test_a_push_amp_refuses_is_retried_with_a_new_account(amp, project, coding_a
 
     assert result.exit_code == 0, result.output
     assert amp.bearers(PUSH) == ["Bearer pat_old", "Bearer pat_new"]
-    assert flat(result.output).endswith(used_line("pat_new"))
+    assert "This used a temporary" not in flat(result.output)
 
 
 @pytest.mark.parametrize(
@@ -479,7 +472,7 @@ def test_the_run_apps_deploy_uses_a_new_account_instead_of_a_login(
 
     assert logins == []
     assert amp.bearers(CREWS) == ["Bearer pat_first"]
-    assert flat(capsys.readouterr().out).endswith(used_line())
+    assert "This used a temporary" not in flat(capsys.readouterr().out)
 
 
 def test_the_run_apps_deploy_falls_back_to_a_login_when_amp_creates_none(
@@ -591,7 +584,7 @@ def test_comparing_models_with_no_login_uses_a_new_account(
     assert amp.to(EVALUATIONS)[0].headers["X-Crewai-Organization-Id"] == ORG
     out = flat(capsys.readouterr().out)
     assert created_line()[0] in out
-    assert used_line() in out
+    assert "This used a temporary" not in out
 
 
 def test_comparing_models_at_a_terminal_uses_a_new_account(
@@ -640,7 +633,7 @@ def test_a_comparison_amp_refuses_the_account_for_is_retried_once(
     assert saved_token() == "pat_new"
     out = flat(capsys.readouterr().out)
     assert "no longer accepts the temporary account" in out
-    assert used_line("pat_new") in out
+    assert "This used a temporary" not in out
 
 
 def test_a_second_comparison_refusal_stops_without_a_loop(

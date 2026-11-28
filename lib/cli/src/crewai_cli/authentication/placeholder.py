@@ -37,10 +37,6 @@ KEEP_IT = (
     "Keep it by signing up at {claim_url}, or run `crewai login` to use your "
     "own account instead."
 )
-USED = (
-    "This used a temporary CrewAI account that expires on {date}. "
-    "Keep it by signing up at {claim_url}."
-)
 NOT_CREATED = "A temporary CrewAI account could not be created: {reason}."
 REJECTED = (
     "CrewAI AMP no longer accepts the temporary account (it expired or was "
@@ -180,14 +176,6 @@ def placeholder_client(placeholder: Placeholder, base_url: str) -> PlusAPI:
         api_key=placeholder.token,
         base_url=base_url,
         organization_id=placeholder.organization_uuid,
-    )
-
-
-def remind_placeholder(placeholder: Placeholder) -> None:
-    """After a deploy or evaluation that used it: when it expires and how to keep it."""
-    console.print(
-        Text(USED.format(date=_date(placeholder), claim_url=placeholder.claim_url)),
-        style="yellow",
     )
 
 
