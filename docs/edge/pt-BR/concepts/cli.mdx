@@ -303,6 +303,8 @@ Implemente o crew ou flow no [CrewAI AMP](https://app.crewai.com).
   crewai login
   ```
 
+  Com o provedor padrão você continua logado: quando o token de acesso expira, o CLI o renova com um refresh token salvo, criptografado, ao lado dele. Se a renovação for recusada, execute `crewai login` novamente. Um login dura 72 horas a partir do último uso, e cada uso o estende por mais 72 horas. 30 dias depois do `crewai login` ele termina, não importa quanto você o use, e você faz login novamente. `crewai logout` remove o login salvo apenas desta máquina. Ele não encerra a sessão no provedor de login, e o próprio CLI aplica os limites de 72 horas e 30 dias, então uma cópia do login salvo usada em outro lugar continua válida até o refresh token expirar.
+
 - **Criar um deployment**: Depois de autenticado, você pode criar um deployment para seu crew ou flow a partir da raiz do seu projeto local.
   ```shell Terminal
   crewai deploy create

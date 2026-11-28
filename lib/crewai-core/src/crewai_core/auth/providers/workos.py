@@ -34,3 +34,7 @@ class WorkosProvider(BaseProvider):
         if self.settings.domain is None:
             raise ValueError("Domain is required. Please set it in the configuration.")
         return self.settings.domain
+
+    def get_oauth_scopes(self) -> list[str]:
+        # WorkOS only issues a refresh token when offline_access is requested.
+        return [*super().get_oauth_scopes(), "offline_access"]

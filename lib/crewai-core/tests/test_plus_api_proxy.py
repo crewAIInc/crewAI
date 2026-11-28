@@ -16,12 +16,17 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import threading
+import time
 from typing import NamedTuple, cast
 import urllib.request
 import zipfile
 
 from crewai_core import plus_api
+from crewai_core.auth.oauth2 import Oauth2Settings
+from crewai_core.auth.providers.workos import WorkosProvider
+from crewai_core.auth.token import get_auth_token
 from crewai_core.plus_api import PlusAPI
+from crewai_core.token_manager import TokenManager
 from dotenv import load_dotenv
 import pytest
 
@@ -48,6 +53,7 @@ class _RecordingServer(ThreadingHTTPServer):
         super().__init__(("127.0.0.1", 0), _Recorder)
         self.name = name
         self.seen: list[Seen] = []
+        self.reply: dict[str, str] = {"served_by": name}
 
     @property
     def url(self) -> str:
@@ -61,7 +67,7 @@ class _Recorder(BaseHTTPRequestHandler):
         server.seen.append(
             Seen(self.command, self.path, self.headers.get("Authorization"), body)
         )
-        payload = json.dumps({"served_by": server.name}).encode()
+        payload = json.dumps(server.reply).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
@@ -303,3 +309,85 @@ def test_restoring_the_machine_transport_undoes_what_a_project_env_set(
         "HTTPS_PROXY": "http://machine-proxy.test:3128",
         "OPENAI_API_KEY": "project-key",
     }
+
+
+@pytest.fixture
+def login_server() -> Iterator[_RecordingServer]:
+    yield from _serve("login")
+
+
+@pytest.fixture
+def expired_login(
+    login_server: _RecordingServer, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> _RecordingServer:
+    """A saved login whose access token expired, renewed at ``login_server``."""
+    login_server.reply = {"access_token": "renewed-access"}
+    token_url = f"{login_server.url}/oauth2/token"
+    settings = Oauth2Settings(
+        provider="workos", client_id="client", domain="login.test"
+    )
+    monkeypatch.setattr(
+        Oauth2Settings, "from_settings", classmethod(lambda cls: settings)
+    )
+    monkeypatch.setattr(WorkosProvider, "get_token_url", lambda self: token_url)
+    monkeypatch.setattr(
+        "crewai_core.auth.oauth2.validate_jwt_token",
+        lambda **_: {"exp": int(time.time()) + 3600},
+    )
+    storage = tmp_path / "credentials"
+    storage.mkdir()
+    monkeypatch.setattr(
+        TokenManager, "_get_secure_storage_path", staticmethod(lambda: storage)
+    )
+    TokenManager().save_tokens(
+        "expired-access",
+        int(time.time()) - 60,
+        refresh_token="refresh-1",
+        token_url=token_url,
+    )
+    return login_server
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+@pytest.mark.parametrize(
+    "project_env",
+    [
+        "HTTP_PROXY={proxy}\nhttp_proxy={proxy}\nHTTPS_PROXY={proxy}\n",
+        "SSL_CERT_FILE={missing_ca}\n",
+    ],
+    ids=["proxy", "ca-bundle"],
+)
+def test_a_project_env_does_not_choose_where_the_refresh_token_goes(
+    project_env: str,
+    proxy: _RecordingServer,
+    expired_login: _RecordingServer,
+    tmp_path: Path,
+) -> None:
+    """`crewai run` loads a cloned project's .env into the process before a
+    refresh. Its proxy must not see the long-lived refresh token, and its CA
+    must not vouch for the login provider: a missing CA file would fail the
+    refresh if it were read."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        project_env.format(proxy=proxy.url, missing_ca=tmp_path / "project-ca.pem")
+    )
+    load_dotenv(env_file, override=True)
+
+    assert get_auth_token() == "renewed-access"
+    (seen,) = expired_login.seen
+    assert (seen.method, seen.target) == ("POST", "/oauth2/token")
+    assert b"refresh_token=refresh-1" in seen.body
+    assert proxy.seen == []
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_the_refresh_goes_through_the_proxy_the_machine_names(
+    proxy: _RecordingServer, expired_login: _RecordingServer, machine: dict[str, str]
+) -> None:
+    machine["HTTP_PROXY"] = proxy.url
+    proxy.reply = {"access_token": "renewed-through-proxy"}
+
+    assert get_auth_token() == "renewed-through-proxy"
+    (seen,) = proxy.seen
+    assert seen.target == f"{expired_login.url}/oauth2/token"
+    assert expired_login.seen == []

@@ -295,7 +295,7 @@ class PlusAPI:
 
     @staticmethod
     def _http_client(verify: bool = True) -> httpx.Client:
-        """A client that reaches AMP through the machine's proxy and CA, not a project's .env."""
+        """A client that reaches AMP, or the login provider, through the machine's proxy and CA, not a project's .env."""
         return httpx.Client(**_machine_transport(verify))
 
     def _make_request(

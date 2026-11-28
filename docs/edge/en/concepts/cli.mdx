@@ -457,6 +457,9 @@ Notes:
 
 - The OAuth2 provider and domain are configured via `crewai config` (defaults use `login.crewai.com`)
 - After successful login, the CLI also attempts to authenticate to the Tool Repository automatically
+- With the default provider you stay logged in: when the access token expires, the CLI renews it with a refresh token saved, encrypted, next to it. If the renewal is refused, run `crewai login` again
+- A login lasts 72 hours from its last use, and each use extends it by another 72 hours. 30 days after `crewai login` it ends however often you use it, and you log in again
+- `crewai logout` removes the saved login from this machine only. It does not end the session on the login provider, and the CLI enforces the 72-hour and 30-day limits itself, so a copy of the saved login used elsewhere stays valid until its refresh token expires
 - If you reset your configuration, run `crewai login` again to re-authenticate
 
 ### 12. API Keys

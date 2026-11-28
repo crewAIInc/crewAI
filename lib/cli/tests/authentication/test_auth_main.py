@@ -180,14 +180,16 @@ class TestAuthenticationCommand:
             jwks_url=jwt_config["jwks_url"],
             issuer=jwt_config["issuer"],
             audience=jwt_config["audience"],
+            timeout=30,
         )
 
-        if has_expiration:
-            mock_save_tokens.assert_called_once_with(
-                "test_access_token", future_timestamp
-            )
-        else:
-            mock_save_tokens.assert_called_once_with("test_access_token", 0)
+        mock_save_tokens.assert_called_once_with(
+            "test_access_token",
+            future_timestamp if has_expiration else 0,
+            refresh_token=None,
+            token_url=f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/token",
+            keep_login_time=False,
+        )
 
     @patch("crewai_cli.tools.main.ToolCommand")
     @patch("crewai_cli.authentication.main.Settings")

@@ -194,7 +194,8 @@ class TraceCollectionListener(BaseEventListener):
     def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled."""
         try:
-            return bool(get_auth_token())
+            # Matches the batch manager's client, which never renews the login.
+            return bool(get_auth_token(refresh=False))
         except AuthError:
             return False
 
