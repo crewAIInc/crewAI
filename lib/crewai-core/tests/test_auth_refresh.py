@@ -329,24 +329,97 @@ class TestSilentRefresh:
 
 class TestRefreshFailure:
     def test_rejected_refresh_token_logs_the_user_out(
-        self, endpoint: FakeTokenEndpoint
+        self, endpoint: FakeTokenEndpoint, caplog: pytest.LogCaptureFixture
     ) -> None:
         _save_login()
         endpoint.reply(400, {"error": "invalid_grant"})
 
-        with pytest.raises(AuthError, match="make sure you are logged in"):
+        with (
+            caplog.at_level("WARNING", logger="crewai_core.auth.oauth2"),
+            pytest.raises(AuthError, match="make sure you are logged in"),
+        ):
             get_auth_token()
 
         assert TokenManager().get_refresh_token() is None
+        assert "rejected (invalid_grant)" in caplog.text
+        assert "crewai login" in caplog.text
         with pytest.raises(AuthError, match="make sure you are logged in"):
             get_auth_token()
         assert len(endpoint.requests) == 1
+
+    @pytest.mark.parametrize(
+        ("reply", "logged"),
+        [
+            (
+                httpx.Response(400, json={"error": "invalid_client"}),
+                "HTTP 400 (invalid_client)",
+            ),
+            (
+                httpx.Response(400, json={"error": "invalid_request"}),
+                "HTTP 400 (invalid_request)",
+            ),
+            (
+                httpx.Response(400, json={"error": "unsupported_grant_type"}),
+                "HTTP 400 (unsupported_grant_type)",
+            ),
+            (
+                httpx.Response(401, json={"error": "invalid_client"}),
+                "HTTP 401 (invalid_client)",
+            ),
+            (
+                httpx.Response(400, text="<html>Bad Request</html>"),
+                "HTTP 400 (no error code)",
+            ),
+            (
+                httpx.Response(400, json=["invalid_grant"]),
+                "HTTP 400 (no error code)",
+            ),
+            (
+                httpx.Response(400, json={"error": "refresh-1 is not valid"}),
+                "HTTP 400 (no error code)",
+            ),
+        ],
+        ids=[
+            "invalid_client",
+            "invalid_request",
+            "unsupported_grant_type",
+            "401",
+            "non-json",
+            "not-an-object",
+            "unsafe-error-code",
+        ],
+    )
+    def test_a_rejection_other_than_invalid_grant_keeps_the_login(
+        self,
+        endpoint: FakeTokenEndpoint,
+        clock: FakeClock,
+        caplog: pytest.LogCaptureFixture,
+        reply: httpx.Response,
+        logged: str,
+    ) -> None:
+        _save_login()
+        endpoint.responses.append(reply)
+
+        with (
+            caplog.at_level("WARNING", logger="crewai_core.auth.oauth2"),
+            pytest.raises(AuthError, match="make sure you are logged in"),
+        ):
+            get_auth_token()
+
+        assert TokenManager().get_refresh_token() == ("refresh-1", TOKEN_URL)
+        assert logged in caplog.text
+        assert "The login is kept." in caplog.text
+        assert "refresh-1" not in caplog.text
+        clock.now += 301
+        endpoint.reply(200, {"access_token": "new-access"})
+        assert get_auth_token() == "new-access"
 
     @pytest.mark.parametrize(
         "outcome",
         [
             httpx.ConnectError("offline"),
             httpx.ReadTimeout("slow"),
+            httpx.Response(500, text="Internal Server Error"),
             httpx.Response(503, json={"error": "temporarily_unavailable"}),
         ],
     )

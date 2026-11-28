@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import re
 import time
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 import webbrowser
@@ -17,6 +19,7 @@ from crewai_core.token_manager import TokenManager
 
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 # RFC 8628 makes the device code's `expires_in` required; this covers a
 # self-hosted provider that omits it anyway.
@@ -28,7 +31,23 @@ REFRESH_MARGIN_SECONDS = 60
 # Short: a refresh runs on its caller's way to AMP, inside a crew run or a CLI command.
 _REFRESH_TIMEOUT_SECONDS = 5
 
+# RFC 6749 section 5.2 limits `error` to printable ASCII; anything else, or anything
+# long, is not echoed into a log line.
+_OAUTH_ERROR_CODE = re.compile(r"[A-Za-z0-9_.\-]{1,64}")
+
 TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
+
+
+def _oauth_error_code(response: httpx.Response) -> str | None:
+    """Return the RFC 6749 section 5.2 `error` of a token-endpoint reply, if readable."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    error = body.get("error") if isinstance(body, dict) else None
+    if isinstance(error, str) and _OAUTH_ERROR_CODE.fullmatch(error):
+        return error
+    return None
 
 
 class Oauth2Settings(BaseModel):
@@ -195,11 +214,12 @@ class AuthenticationCommand:
 
         Returns:
             The new access token, or None when there is nothing to refresh or the
-            refresh failed. A refresh token the provider rejects is discarded with
-            the rest of the login, so the user is logged out. A network error, a
-            server error or an unreadable reply keeps it for the next attempt, and
-            a rotated refresh token is kept even when its access token fails
-            validation. A reply lost after the provider rotated the token cannot
+            refresh failed. A refresh token the provider rejects as
+            ``invalid_grant`` is discarded with the rest of the login, so the user
+            is logged out. Any other rejection (such as ``invalid_client``), a
+            network error, a server error or an unreadable reply keeps it for the
+            next attempt, and a rotated refresh token is kept even when its access
+            token fails validation. A reply lost after the provider rotated the token cannot
             be recovered: the next attempt is rejected and the user logs in again.
             A login idle for over 72 hours, or started over 30 days ago, is not
             refreshed: the token manager no longer returns its refresh token.
@@ -231,14 +251,36 @@ class AuthenticationCommand:
                         },
                         timeout=_REFRESH_TIMEOUT_SECONDS,
                     )
-            except httpx.HTTPError:
+            except httpx.HTTPError as e:
+                logger.debug(
+                    "Could not renew the saved CrewAI login: %s", type(e).__name__
+                )
                 return None
 
-            # RFC 6749 section 5.2: invalid_grant and friends come back as 400/401.
+            # RFC 6749 section 5.2: only invalid_grant says the refresh token itself is
+            # dead. invalid_client, invalid_request and the like point at settings or
+            # the provider, and a fix there makes the saved login usable again.
             if response.status_code in (400, 401):
-                self.token_manager.clear_tokens()
+                error = _oauth_error_code(response)
+                if error == "invalid_grant":
+                    self.token_manager.clear_tokens()
+                    logger.warning(
+                        "The saved CrewAI login was rejected (invalid_grant). "
+                        "Run `crewai login` to sign in again."
+                    )
+                else:
+                    logger.warning(
+                        "Could not renew the saved CrewAI login: the login provider "
+                        "answered HTTP %s (%s). The login is kept.",
+                        response.status_code,
+                        error or "no error code",
+                    )
                 return None
             if response.status_code != 200:
+                logger.debug(
+                    "Could not renew the saved CrewAI login: HTTP %s",
+                    response.status_code,
+                )
                 return None
 
             try:
