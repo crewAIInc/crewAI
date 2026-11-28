@@ -14,6 +14,7 @@ historical ``run()`` behavior for sync tools and sync callers.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import copy
 import json
 import os
@@ -257,6 +258,38 @@ def test_async_native_tool_honors_caller_loop_under_kickoff_async() -> None:
 
     seen = _tool_result_seen_by_llm(llm)
     assert "got:expected-item" in seen, f"async tool failed; LLM saw: {seen!r}"
+
+def test_bridged_tool_inherits_kickoff_contextvars() -> None:
+    """The bridged coroutine sees context set by the async kickoff.
+
+    ``run_coroutine_threadsafe`` captures the scheduling thread's context when it
+    enqueues the callback, and ``run_in_kickoff_thread`` copies the kickoff
+    context into the worker, so a contextvar set before the kickoff survives the
+    bridge (execution id, tracing, and integration tokens rely on this).
+    """
+    marker = contextvars.ContextVar("kickoff_marker", default="missing")
+    seen: list[str] = []
+
+    @tool("context_probe")
+    async def context_probe() -> str:
+        """Read the kickoff contextvar from the bridged coroutine."""
+        seen.append(marker.get())
+        return "ok"
+
+    async def scenario() -> str:
+        marker.set("from-kickoff")
+        caller_loop = asyncio.get_running_loop()
+
+        def kickoff() -> str:
+            return run_native_tool_result(
+                context_probe.run, {}, tool=context_probe, caller_loop=caller_loop
+            )
+
+        return await agent_utils.run_in_kickoff_thread(kickoff)
+
+    assert asyncio.run(scenario()) == "ok"
+    assert seen == ["from-kickoff"]
+
 
 def test_inherited_arun_is_treated_as_async() -> None:
     """A class-based tool that inherits a real _arun from a parent must still be
