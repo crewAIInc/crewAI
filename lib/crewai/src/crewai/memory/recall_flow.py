@@ -29,9 +29,17 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_texts,
 )
+from crewai.memory.utils import normalize_scope_path
 
 
 logger = logging.getLogger(__name__)
+
+
+def _within_scope(path: str, prefix: str) -> bool:
+    """Check a scope boundary without matching similarly named siblings."""
+    path = normalize_scope_path(path)
+    prefix = normalize_scope_path(prefix)
+    return prefix == "/" or path == prefix or path.startswith(f"{prefix}/")
 
 
 class RecallState(BaseModel):
@@ -104,6 +112,9 @@ class RecallFlow(Flow[RecallState]):
                 limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
                 min_score=0.0,
             )
+            # Backends may use a broad string prefix. Keep each result inside
+            # the selected scope even when a sibling has the same prefix.
+            raw = [(r, s) for r, s in raw if _within_scope(r.scope, scope)]
             if self.state.time_cutoff and raw:
                 raw = [(r, s) for r, s in raw if r.created_at >= self.state.time_cutoff]
             if not self.state.include_private and raw:
@@ -250,7 +261,7 @@ class RecallFlow(Flow[RecallState]):
     def filter_and_chunk(self) -> list[str]:
         """Select candidate scopes based on LLM analysis."""
         analysis = self.state.query_analysis
-        scope_prefix = (self.state.scope or "/").rstrip("/") or "/"
+        scope_prefix = normalize_scope_path(self.state.scope or "/")
         if analysis and analysis.suggested_scopes:
             candidates = [s for s in analysis.suggested_scopes if s]
         else:
@@ -263,6 +274,11 @@ class RecallFlow(Flow[RecallState]):
                     exc_info=True,
                 )
                 candidates = []
+        candidates = [
+            normalize_scope_path(candidate)
+            for candidate in candidates
+            if _within_scope(candidate, scope_prefix)
+        ]
         if not candidates:
             candidates = [scope_prefix]
         selected_scopes = candidates[:20]
