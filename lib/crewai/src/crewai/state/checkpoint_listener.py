@@ -52,7 +52,7 @@ def _ensure_handlers_registered() -> None:
         _handlers_registered = True
 
 
-def _resolve(value: CheckpointConfig | bool | None) -> CheckpointConfig | None | object:
+def _resolve(value: CheckpointConfig | bool | None) -> CheckpointConfig | object | None:
     """Coerce a checkpoint field value.
 
     Returns:
@@ -153,6 +153,7 @@ def _do_checkpoint(
         )
         state._chain_lineage(cfg.provider, location)
         checkpoint_id: str = cfg.provider.extract_id(location)
+        cfg._record_checkpoint(branch_snapshot, checkpoint_id)
     except Exception as exc:
         crewai_event_bus.emit(
             cfg,
@@ -190,8 +191,12 @@ def _do_checkpoint(
 
     if cfg.max_checkpoints is not None:
         try:
+            scoped_ids = cfg._get_checkpoint_ids(branch_snapshot)
             removed_count: int = cfg.provider.prune(
-                cfg.location, cfg.max_checkpoints, branch=branch_snapshot
+                cfg.location,
+                cfg.max_checkpoints,
+                branch=branch_snapshot,
+                ids=scoped_ids,
             )
         except Exception:
             logger.warning(

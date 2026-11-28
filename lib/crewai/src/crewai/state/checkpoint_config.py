@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+import threading
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.state.provider.json_provider import JsonProvider
 from crewai.state.provider.sqlite_provider import SqliteProvider
+
+
+logger = logging.getLogger(__name__)
 
 
 CheckpointEventType = Literal[
@@ -192,6 +197,20 @@ class CheckpointConfig(BaseModel):
         "When passed via a kickoff method's from_checkpoint parameter, "
         "the crew or flow resumes from this checkpoint.",
     )
+    _checkpoint_ids: dict[str, list[str]] = PrivateAttr(default_factory=dict)
+    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    def _record_checkpoint(self, branch: str, checkpoint_id: str) -> None:
+        """Record a written checkpoint ID under its branch."""
+        with self._lock:
+            branch_ids = self._checkpoint_ids.setdefault(branch, [])
+            if checkpoint_id not in branch_ids:
+                branch_ids.append(checkpoint_id)
+
+    def _get_checkpoint_ids(self, branch: str) -> list[str]:
+        """Return a snapshot of recorded checkpoint IDs for a branch."""
+        with self._lock:
+            return list(self._checkpoint_ids.get(branch, []))
 
     @model_validator(mode="after")
     def _register_handlers(self) -> CheckpointConfig:
@@ -199,6 +218,13 @@ class CheckpointConfig(BaseModel):
 
         if isinstance(self.provider, SqliteProvider) and not Path(self.location).suffix:
             self.location = f"{self.location}.db"
+
+        if self.restore_from is not None:
+            try:
+                restored_id = self.provider.extract_id(str(self.restore_from))
+                self._record_checkpoint("main", restored_id)
+            except (AttributeError, ValueError, TypeError) as exc:
+                logger.debug("Could not record restore_from checkpoint ID: %s", exc)
 
         _ensure_handlers_registered()
         return self
@@ -229,6 +255,13 @@ def apply_checkpoint(instance: Any, from_checkpoint: CheckpointConfig | None) ->
     if from_checkpoint.restore_from is not None:
         restored = type(instance).from_checkpoint(from_checkpoint)
         restored.checkpoint = from_checkpoint.model_copy(update={"restore_from": None})
+        try:
+            restored_id = from_checkpoint.provider.extract_id(
+                str(from_checkpoint.restore_from)
+            )
+            restored.checkpoint._record_checkpoint("main", restored_id)
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("Could not record restore_from checkpoint ID: %s", exc)
         return restored
     instance.checkpoint = from_checkpoint
     return None

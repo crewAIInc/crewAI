@@ -692,6 +692,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if entity.execution_context is not None:
                 apply_execution_context(entity.execution_context)
             if isinstance(entity, cls):
+                entity.checkpoint = config
                 entity._restore_from_checkpoint()
                 return entity
             instance = (
@@ -699,6 +700,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if definition is not None
                 else cls()
             )
+            instance.checkpoint = config
             instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
             instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
             instance.checkpoint_method_counts = entity.checkpoint_method_counts

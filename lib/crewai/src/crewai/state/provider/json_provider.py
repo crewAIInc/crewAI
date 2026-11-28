@@ -95,12 +95,24 @@ class JsonProvider(BaseProvider):
             await f.write(data)
         return str(file_path)
 
-    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
+    def prune(
+        self,
+        location: str,
+        max_keep: int,
+        *,
+        branch: str = "main",
+        ids: list[str] | set[str] | None = None,
+    ) -> int:
         """Remove oldest checkpoint files beyond *max_keep* on a branch."""
         _safe_branch(location, branch)
         branch_dir = os.path.join(location, branch)
         pattern = os.path.join(glob.escape(branch_dir), "*.json")
-        files = sorted(glob.glob(pattern), key=os.path.getmtime)
+        all_files = sorted(glob.glob(pattern), key=os.path.getmtime)
+        if ids is not None:
+            id_set = set(ids)
+            files = [f for f in all_files if self.extract_id(f) in id_set]
+        else:
+            files = all_files
         removed = 0
         for path in files if max_keep == 0 else files[:-max_keep]:
             try:

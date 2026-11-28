@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 from contextlib import closing
+import glob
 import json
 import os
 import sqlite3
@@ -13,6 +14,13 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+try:
+    import lancedb  # noqa: F401
+except ImportError:
+    import sys
+    sys.modules["lancedb"] = MagicMock()
+    sys.modules["lancedb.query"] = MagicMock()
+
 import pytest
 from pydantic import BaseModel
 
@@ -20,7 +28,7 @@ from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
-from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, listen, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -186,6 +194,27 @@ class TestPrune:
 
             JsonProvider().prune(d, max_keep=10, branch="main")
             assert len(os.listdir(branch_dir)) == 1
+
+    def test_prune_with_ids_scopes_deletion(self) -> None:
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            p_a1 = provider.checkpoint("{}", d, branch="main")
+            time.sleep(0.01)
+            p_a2 = provider.checkpoint("{}", d, branch="main")
+            time.sleep(0.01)
+            p_b1 = provider.checkpoint("{}", d, branch="main")
+            time.sleep(0.01)
+            p_b2 = provider.checkpoint("{}", d, branch="main")
+
+            id_b1 = provider.extract_id(p_b1)
+            id_b2 = provider.extract_id(p_b2)
+
+            removed = provider.prune(d, max_keep=1, branch="main", ids=[id_b1, id_b2])
+            assert removed == 1
+            assert os.path.exists(p_a1)
+            assert os.path.exists(p_a2)
+            assert not os.path.exists(p_b1)
+            assert os.path.exists(p_b2)
 
 
 
@@ -562,6 +591,35 @@ class TestSqliteProviderFork:
                 ).fetchone()[0]
             assert main_count == 1
             assert fork_count == 2
+
+    def test_prune_with_ids_scopes_deletion(self) -> None:
+        provider = SqliteProvider()
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "cp.db")
+            loc_a1 = provider.checkpoint("{}", db, branch="main")
+            loc_a2 = provider.checkpoint("{}", db, branch="main")
+            loc_b1 = provider.checkpoint("{}", db, branch="main")
+            loc_b2 = provider.checkpoint("{}", db, branch="main")
+
+            id_a1 = provider.extract_id(loc_a1)
+            id_a2 = provider.extract_id(loc_a2)
+            id_b1 = provider.extract_id(loc_b1)
+            id_b2 = provider.extract_id(loc_b2)
+
+            removed = provider.prune(db, max_keep=1, branch="main", ids=[id_b1, id_b2])
+            assert removed == 1
+
+            with closing(sqlite3.connect(db)) as conn:
+                remaining_ids = {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT id FROM checkpoints WHERE branch = 'main'"
+                    ).fetchall()
+                }
+            assert id_a1 in remaining_ids
+            assert id_a2 in remaining_ids
+            assert id_b1 not in remaining_ids
+            assert id_b2 in remaining_ids
 
     def test_extract_id(self) -> None:
         provider = SqliteProvider()
@@ -1091,4 +1149,216 @@ class TestCallbacksAcrossRestore:
             == "crewai.tools.base_tool._never_cache_function"
         )
         assert len(restored.kickoff().tasks_output) == 2
+
+
+class _SharedTestFlow(Flow):
+    @start()
+    def step_one(self) -> str:
+        return "one"
+
+    @listen(step_one)
+    def step_two(self) -> str:
+        if self.state.get("fail"):
+            raise RuntimeError("intentional step failure")
+        return "two"
+
+    @listen(step_two)
+    def step_three(self) -> str:
+        return "three"
+
+
+class TestSharedCheckpointRetention:
+    """Regression tests for issue #9840: shared checkpoint retention scoping."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_events(self, monkeypatch: pytest.MonkeyPatch) -> Any:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-fake")
+        monkeypatch.setattr(
+            "crewai.state.checkpoint_listener._handlers_registered", False
+        )
+        crewai_event_bus.reset_runtime_state()
+        with (
+            patch.object(OpenAICompletion, "call", return_value="Final Answer: done."),
+            patch.object(OpenAICompletion, "acall", return_value="Final Answer: done."),
+        ):
+            yield
+        crewai_event_bus.reset_runtime_state()
+
+    def _get_stored_checkpoints(self, kind: str, location: str) -> list[str]:
+        if kind == "json":
+            pattern = os.path.join(location, "**", "*.json")
+            return sorted(glob.glob(pattern, recursive=True))
+        if os.path.exists(location):
+            with closing(sqlite3.connect(location)) as conn:
+                return [
+                    f"{location}#{row[0]}"
+                    for row in conn.execute(
+                        "SELECT id FROM checkpoints WHERE branch = 'main' ORDER BY rowid"
+                    )
+                ]
+        return []
+
+    def _wait_for_stable(self, kind: str, location: str) -> list[str]:
+        last, stable = -1, 0
+        for _ in range(50):
+            refs = self._get_stored_checkpoints(kind, location)
+            stable = stable + 1 if len(refs) == last else 0
+            last = len(refs)
+            if stable >= 3:
+                return refs
+            time.sleep(0.05)
+        return refs
+
+    @pytest.mark.parametrize("kind", ["json", "sqlite"])
+    def test_flow_shared_location_preserves_other_runs_checkpoints(
+        self, kind: str, tmp_path: Path
+    ) -> None:
+        loc = str(tmp_path / "checkpoints" if kind == "json" else tmp_path / "shared.db")
+        prov = JsonProvider() if kind == "json" else SqliteProvider()
+
+        # Run A: fails at step_two and writes 1 checkpoint for step_one with max_checkpoints=None
+        cfg_a = CheckpointConfig(
+            location=loc,
+            provider=prov,
+            on_events=["method_execution_finished"],
+            max_checkpoints=None,
+        )
+        try:
+            _SharedTestFlow(checkpoint=cfg_a).kickoff(inputs={"id": "A", "fail": True})
+        except Exception:
+            pass
+
+        a_refs = self._wait_for_stable(kind, loc)
+        assert len(a_refs) >= 1, "Run A should have written at least one checkpoint"
+
+        # Runs B and C: run successfully with max_checkpoints=2
+        for run_id in ("B", "C"):
+            cfg_bc = CheckpointConfig(
+                location=loc,
+                provider=prov,
+                on_events=["method_execution_finished"],
+                max_checkpoints=2,
+            )
+            _SharedTestFlow(checkpoint=cfg_bc).kickoff(inputs={"id": run_id})
+            self._wait_for_stable(kind, loc)
+
+        remaining = self._wait_for_stable(kind, loc)
+        for ref in a_refs:
+            assert ref in remaining, f"Run A's checkpoint {ref} was incorrectly pruned"
+
+    @pytest.mark.parametrize("kind", ["json", "sqlite"])
+    def test_resume_failed_run_after_other_runs_shared_location(
+        self, kind: str, tmp_path: Path
+    ) -> None:
+        loc = str(tmp_path / "checkpoints" if kind == "json" else tmp_path / "shared.db")
+        prov = JsonProvider() if kind == "json" else SqliteProvider()
+
+        cfg_a = CheckpointConfig(
+            location=loc,
+            provider=prov,
+            on_events=["method_execution_finished"],
+            max_checkpoints=3,
+        )
+        try:
+            _SharedTestFlow(checkpoint=cfg_a).kickoff(inputs={"id": "A", "fail": True})
+        except Exception:
+            pass
+
+        a_refs = self._wait_for_stable(kind, loc)
+        assert a_refs, "Run A wrote no checkpoint"
+        resume_ref = a_refs[-1]
+
+        for run_id in ("B", "C"):
+            cfg_other = CheckpointConfig(
+                location=loc,
+                provider=prov,
+                on_events=["method_execution_finished"],
+                max_checkpoints=2,
+            )
+            _SharedTestFlow(checkpoint=cfg_other).kickoff(inputs={"id": run_id})
+            self._wait_for_stable(kind, loc)
+
+        remaining = self._wait_for_stable(kind, loc)
+        assert resume_ref in remaining, "Run A's checkpoint was purged by other runs"
+
+        resumed_cfg = CheckpointConfig(
+            location=loc,
+            provider=prov,
+            on_events=["method_execution_finished"],
+            max_checkpoints=3,
+            restore_from=resume_ref,
+        )
+        resumed_flow = _SharedTestFlow.from_checkpoint(resumed_cfg)
+        resumed_flow.state["fail"] = False
+        resumed_flow.kickoff()
+        assert "three" in (resumed_flow.method_outputs or [])
+
+    @pytest.mark.parametrize("kind", ["json", "sqlite"])
+    def test_crew_shared_location_prune_preserves_other_runs(
+        self, kind: str, tmp_path: Path
+    ) -> None:
+        loc = str(tmp_path / "crew_cps" if kind == "json" else tmp_path / "crews.db")
+        prov = JsonProvider() if kind == "json" else SqliteProvider()
+
+        class _FailLLM(BaseLLM):
+            fail_on: int = 2
+            calls: int = 0
+
+            def call(self, messages, *args, **kwargs):
+                self.calls += 1
+                if self.calls == self.fail_on:
+                    raise RuntimeError("model fail")
+                return "Thought: ok\nFinal Answer: done"
+
+            def supports_function_calling(self):
+                return False
+
+            def supports_stop_words(self):
+                return False
+
+            def get_context_window_size(self):
+                return 4096
+
+        def _make_crew(fail_on: int, maxc: int | None) -> Crew:
+            agent = Agent(
+                role="r",
+                goal="g",
+                backstory="b",
+                llm=_FailLLM(model="m", fail_on=fail_on),
+            )
+            tasks = [
+                Task(description=f"task {i}", expected_output="ok", agent=agent)
+                for i in (1, 2)
+            ]
+            return Crew(
+                agents=[agent],
+                tasks=tasks,
+                verbose=False,
+                checkpoint=CheckpointConfig(
+                    location=loc,
+                    provider=prov,
+                    max_checkpoints=maxc,
+                    on_events=["task_completed"],
+                ),
+            )
+
+        try:
+            _make_crew(fail_on=2, maxc=2).kickoff()
+        except Exception:
+            pass
+
+        a_refs = self._wait_for_stable(kind, loc)
+        assert a_refs, "Crew A wrote no checkpoint"
+
+        for _ in range(2):
+            _make_crew(fail_on=-1, maxc=2).kickoff()
+            self._wait_for_stable(kind, loc)
+
+        remaining = self._wait_for_stable(kind, loc)
+        for ref in a_refs:
+            assert ref in remaining, f"Crew A's checkpoint {ref} was pruned by Crews B/C"
+
 
