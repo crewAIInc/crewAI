@@ -216,6 +216,24 @@ async def test_circular_dependency_detection():
         build_execution_plan(handlers, dependencies)
 
 
+def test_duplicate_dependency_entries_do_not_create_a_false_cycle():
+    """Repeating the same dependency must count once, not as a cycle."""
+    from crewai.events.handler_graph import build_execution_plan
+
+    def handler_a(source, event: DependsTestEvent):
+        pass
+
+    def handler_b(source, event: DependsTestEvent):
+        pass
+
+    plan = build_execution_plan(
+        [handler_a, handler_b],
+        {handler_b: [Depends(handler_a), Depends(handler_a)]},
+    )
+
+    assert [next(iter(level)) for level in plan] == [handler_a, handler_b]
+
+
 @pytest.mark.asyncio
 async def test_handler_without_dependency_runs_normally():
     """Test that handlers without dependencies still work as before."""
