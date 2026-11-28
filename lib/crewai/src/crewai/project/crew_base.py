@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     from crewai import Agent, Task
     from crewai.agents.cache.cache_handler import CacheHandler
     from crewai.crews.crew_output import CrewOutput
-    from crewai.hooks.llm_hooks import LLMCallHookContext
-    from crewai.hooks.tool_hooks import ToolCallHookContext
     from crewai.project.wrappers import (
         CrewInstance,
         OutputJsonClass,
@@ -474,123 +472,53 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
 
     instance._hooks_being_registered = True
 
+    from crewai.hooks.dispatch import _wrap_with_filters
+
     for hook_method in hook_methods.values():
         bound_hook = hook_method.__get__(instance, cls)
 
-        has_tool_filter = hasattr(hook_method, "_filter_tools")
-        has_agent_filter = hasattr(hook_method, "_filter_agents")
+        tools_filter = getattr(hook_method, "_filter_tools", None)
+        agents_filter = getattr(hook_method, "_filter_agents", None)
 
         if hasattr(hook_method, "is_before_llm_call_hook"):
-            if has_agent_filter:
-                agents_filter = hook_method._filter_agents
-
-                def make_filtered_before_llm(
-                    bound_fn: Callable[[LLMCallHookContext], bool | None],
-                    agents_list: list[str],
-                ) -> Callable[[LLMCallHookContext], bool | None]:
-                    def filtered(context: LLMCallHookContext) -> bool | None:
-                        if context.agent and context.agent.role not in agents_list:
-                            return None
-                        return bound_fn(context)
-
-                    return filtered
-
-                before_llm_hook = make_filtered_before_llm(bound_hook, agents_filter)
-            else:
-                before_llm_hook = bound_hook
-
+            before_llm_hook = (
+                _wrap_with_filters(bound_hook, agents_filter, None)
+                if agents_filter is not None
+                else bound_hook
+            )
             register_before_llm_call_hook(before_llm_hook)
             instance._registered_hook_functions.append(
                 ("before_llm_call", before_llm_hook)
             )
 
         if hasattr(hook_method, "is_after_llm_call_hook"):
-            if has_agent_filter:
-                agents_filter = hook_method._filter_agents
-
-                def make_filtered_after_llm(
-                    bound_fn: Callable[[LLMCallHookContext], str | None],
-                    agents_list: list[str],
-                ) -> Callable[[LLMCallHookContext], str | None]:
-                    def filtered(context: LLMCallHookContext) -> str | None:
-                        if context.agent and context.agent.role not in agents_list:
-                            return None
-                        return bound_fn(context)
-
-                    return filtered
-
-                after_llm_hook = make_filtered_after_llm(bound_hook, agents_filter)
-            else:
-                after_llm_hook = bound_hook
-
+            after_llm_hook = (
+                _wrap_with_filters(bound_hook, agents_filter, None)
+                if agents_filter is not None
+                else bound_hook
+            )
             register_after_llm_call_hook(after_llm_hook)
             instance._registered_hook_functions.append(
                 ("after_llm_call", after_llm_hook)
             )
 
         if hasattr(hook_method, "is_before_tool_call_hook"):
-            if has_tool_filter or has_agent_filter:
-                tools_filter = getattr(hook_method, "_filter_tools", None)
-                agents_filter = getattr(hook_method, "_filter_agents", None)
-
-                def make_filtered_before_tool(
-                    bound_fn: Callable[[ToolCallHookContext], bool | None],
-                    tools_list: list[str] | None,
-                    agents_list: list[str] | None,
-                ) -> Callable[[ToolCallHookContext], bool | None]:
-                    def filtered(context: ToolCallHookContext) -> bool | None:
-                        if tools_list and context.tool_name not in tools_list:
-                            return None
-                        if (
-                            agents_list
-                            and context.agent
-                            and context.agent.role not in agents_list
-                        ):
-                            return None
-                        return bound_fn(context)
-
-                    return filtered
-
-                before_tool_hook = make_filtered_before_tool(
-                    bound_hook, tools_filter, agents_filter
-                )
-            else:
-                before_tool_hook = bound_hook
-
+            before_tool_hook = (
+                _wrap_with_filters(bound_hook, agents_filter, tools_filter)
+                if (tools_filter is not None or agents_filter is not None)
+                else bound_hook
+            )
             register_before_tool_call_hook(before_tool_hook)
             instance._registered_hook_functions.append(
                 ("before_tool_call", before_tool_hook)
             )
 
         if hasattr(hook_method, "is_after_tool_call_hook"):
-            if has_tool_filter or has_agent_filter:
-                tools_filter = getattr(hook_method, "_filter_tools", None)
-                agents_filter = getattr(hook_method, "_filter_agents", None)
-
-                def make_filtered_after_tool(
-                    bound_fn: Callable[[ToolCallHookContext], str | None],
-                    tools_list: list[str] | None,
-                    agents_list: list[str] | None,
-                ) -> Callable[[ToolCallHookContext], str | None]:
-                    def filtered(context: ToolCallHookContext) -> str | None:
-                        if tools_list and context.tool_name not in tools_list:
-                            return None
-                        if (
-                            agents_list
-                            and context.agent
-                            and context.agent.role not in agents_list
-                        ):
-                            return None
-                        return bound_fn(context)
-
-                    return filtered
-
-                after_tool_hook = make_filtered_after_tool(
-                    bound_hook, tools_filter, agents_filter
-                )
-            else:
-                after_tool_hook = bound_hook
-
+            after_tool_hook = (
+                _wrap_with_filters(bound_hook, agents_filter, tools_filter)
+                if (tools_filter is not None or agents_filter is not None)
+                else bound_hook
+            )
             register_after_tool_call_hook(after_tool_hook)
             instance._registered_hook_functions.append(
                 ("after_tool_call", after_tool_hook)
@@ -598,7 +526,6 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
 
     if on_methods:
         from crewai.hooks.dispatch import (
-            _wrap_with_filters,
             register as register_interception_hook,
         )
 
@@ -609,7 +536,7 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
             agents_filter = getattr(on_method, "_filter_agents", None)
             hook = (
                 _wrap_with_filters(bound_hook, agents_filter, tools_filter)
-                if (tools_filter or agents_filter)
+                if (tools_filter is not None or agents_filter is not None)
                 else bound_hook
             )
             register_interception_hook(point, hook)

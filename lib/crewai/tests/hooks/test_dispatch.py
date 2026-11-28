@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import time
+from types import SimpleNamespace
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.hook_events import HookDispatchedEvent
@@ -38,6 +39,7 @@ class _Ctx:
     tool_name: str | None = None
     agent: object = None
     agent_role: str | None = None
+    executor: object = None
 
 
 @pytest.fixture(autouse=True)
@@ -156,6 +158,57 @@ class TestOnDecorator:
         dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(agent_role="Writer"))
         dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(agent_role="Researcher"))
         assert seen == ["Researcher"]
+
+    def test_agent_and_tool_filters_skip_contexts_with_missing_values(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_MODEL_CALL, agents=["Researcher"])
+        def agent_hook(ctx):
+            seen.append("agent")
+
+        @on(InterceptionPoint.PRE_TOOL_CALL, tools=["allowed_tool"])
+        def tool_hook(ctx):
+            seen.append("tool")
+
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(agent=None, agent_role=None))
+        dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(tool_name=None))
+        assert seen == []
+
+    def test_agent_filter_falls_back_to_executor_role_when_agent_is_none(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_MODEL_CALL, agents=["Researcher"])
+        def agent_hook(ctx):
+            seen.append(ctx.executor.role)
+
+        dispatch(
+            InterceptionPoint.PRE_MODEL_CALL,
+            _Ctx(agent=None, agent_role=None, executor=SimpleNamespace(role="Writer")),
+        )
+        dispatch(
+            InterceptionPoint.PRE_MODEL_CALL,
+            _Ctx(
+                agent=None,
+                agent_role=None,
+                executor=SimpleNamespace(role="Researcher"),
+            ),
+        )
+        assert seen == ["Researcher"]
+
+    def test_empty_allowlist_filters_match_nothing(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_MODEL_CALL, agents=[])
+        def empty_agent_hook(ctx):
+            seen.append("agent")
+
+        @on(InterceptionPoint.PRE_TOOL_CALL, tools=[])
+        def empty_tool_hook(ctx):
+            seen.append("tool")
+
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(agent_role="Researcher"))
+        dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(tool_name="allowed_tool"))
+        assert seen == []
 
     def test_unregister_resolves_filtered_wrapper(self):
         @on(InterceptionPoint.PRE_TOOL_CALL, tools=["allowed_tool"])
