@@ -451,10 +451,6 @@ def test_the_terminal_question_says_what_the_upload_gives(
         "Upload it to CrewAI AMP for a link showing every agent decision, "
         "tool call and LLM call." in out
     )
-    assert (
-        "The upload includes prompts, inputs, outputs, tool arguments and results."
-        in out
-    )
     assert "Anyone with the link can open it for 24 hours." in out
     assert "View trace? [y/N] (20s timeout):" in out
 

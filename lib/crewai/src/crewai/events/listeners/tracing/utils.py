@@ -572,8 +572,7 @@ def _is_interactive_terminal() -> bool:
 TRACE_PROMPT_HEADLINE = "See this run step by step?"
 TRACE_PROMPT_BODY = (
     "Upload it to CrewAI AMP for a link showing every agent decision, "
-    "tool call and LLM call. "
-    "The upload includes prompts, inputs, outputs, tool arguments and results."
+    "tool call and LLM call."
 )
 TRACE_LINK_NOTICE = "Anyone with the link can open it for 24 hours."
 # Printed once to a coding agent, which cannot answer the question above. It
