@@ -346,6 +346,26 @@ def test_validate_tool_input_with_special_characters():
     assert arguments == expected_arguments
 
 
+def test_validate_tool_input_bare_none_and_mixed_literals():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    arguments = tool_usage._validate_tool_input(
+        '{"a": None, "b": true, "c": false, "ids": [1, None, 3]}'
+    )
+    assert arguments == {"a": None, "b": True, "c": False, "ids": [1, None, 3]}
+    assert arguments["a"] is None
+
+    quoted = tool_usage._validate_tool_input('{"query": "x", "country": "None"}')
+    assert quoted == {"query": "x", "country": "None"}
+
+
 def test_validate_tool_input_none_input():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
