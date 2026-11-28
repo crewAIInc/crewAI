@@ -48,13 +48,19 @@ class BaseKnowledgeSource(BaseModel, ABC):
         """
         if not text:
             return []
+        if self.chunk_size <= 0:
+            raise ValueError(f"chunk_size must be greater than 0, got {self.chunk_size}")
+        if self.chunk_overlap < 0:
+            raise ValueError(f"chunk_overlap must not be negative, got {self.chunk_overlap}")
+        step = self.chunk_size - self.chunk_overlap
+        if step <= 0:
+            raise ValueError(
+                f"chunk_overlap ({self.chunk_overlap}) must be smaller than chunk_size ({self.chunk_size}); "
+                "otherwise the chunks make no forward progress"
+            )
         return [
             text[i : i + self.chunk_size]
-            for i in range(
-                0,
-                max(len(text) - self.chunk_overlap, 1),
-                self.chunk_size - self.chunk_overlap,
-            )
+            for i in range(0, max(len(text) - self.chunk_overlap, 1), step)
         ]
 
     def _save_documents(self) -> None:
