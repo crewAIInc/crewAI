@@ -112,10 +112,36 @@ class SqliteProvider(BaseProvider):
             await db.commit()
         return f"{location}#{checkpoint_id}"
 
-    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
+    def prune(
+        self,
+        location: str,
+        max_keep: int,
+        *,
+        branch: str = "main",
+        ids: list[str] | set[str] | None = None,
+    ) -> int:
         """Remove oldest checkpoint rows beyond *max_keep* on a branch."""
+        if ids is not None and not ids:
+            return 0
+
         with closing(sqlite3.connect(location)) as conn, conn:
-            cursor = conn.execute(_PRUNE, (branch, branch, max_keep))
+            if ids is None:
+                cursor = conn.execute(_PRUNE, (branch, branch, max_keep))
+            else:
+                id_list = list(ids)
+                placeholders = ",".join("?" for _ in id_list)
+                if max_keep == 0:
+                    query = f"DELETE FROM checkpoints WHERE branch = ? AND id IN ({placeholders})"  # noqa: S608
+                    cursor = conn.execute(query, (branch, *id_list))
+                else:
+                    query = f"""
+                    DELETE FROM checkpoints WHERE branch = ? AND id IN ({placeholders}) AND rowid NOT IN (
+                        SELECT rowid FROM checkpoints WHERE branch = ? AND id IN ({placeholders}) ORDER BY rowid DESC LIMIT ?
+                    )
+                    """  # noqa: S608
+                    cursor = conn.execute(
+                        query, (branch, *id_list, branch, *id_list, max_keep)
+                    )
             removed: int = cursor.rowcount
             conn.commit()
         return max(removed, 0)
